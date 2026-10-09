@@ -1,5 +1,6 @@
 // Myzel – Abgriff des Summenausgangs für Aufnahme und Echo-Körner.
 // Sammelt 2048 Frames pro Kanal und schickt sie bitgenau an den Hauptthread.
+// Die Nachricht 'flush' liefert den angefangenen Block sofort (beim Beenden einer Aufnahme).
 class MyzelTap extends AudioWorkletProcessor {
   constructor() {
     super();
@@ -7,6 +8,12 @@ class MyzelTap extends AudioWorkletProcessor {
     this.l = new Float32Array(this.n);
     this.r = new Float32Array(this.n);
     this.i = 0;
+    this.port.onmessage = (e) => {
+      if (e.data !== 'flush') return;
+      const l = this.l.slice(0, this.i), r = this.r.slice(0, this.i);
+      this.i = 0;
+      this.port.postMessage({ l, r, flush: true }, [l.buffer, r.buffer]);
+    };
   }
   process(inputs) {
     const inp = inputs[0];
