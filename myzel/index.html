@@ -724,18 +724,31 @@ function noteX(idx) {
    ===================================================================== */
 const A = { ctx: null, started: false, voices: new Set(), grainVoices: new Set(), tex: {}, texWait: {}, frozen: false, revActive: null, irJob: 0, grains: 0, flushing: false };
 let SR = 48000;
-const MAXV = 24;
+const MOBILE = (() => { try { return matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } })();
+const ANDROID = /Android/i.test(navigator.userAgent);
+// Polyphony is limited by cost, not by count: one unit ≈ one Nebel voice. Cheap engines get more voices.
+const VCOST = { neb: 1, kor: 0.6, hau: 0.3, glo: 0.7, mem: 0.4, sai: 0.35, sch: 0.9 };
+const MAXV = 32;
+let VBUDGET = MOBILE ? 14 : 22;
 
+// Modulated params are evaluated once per 128-frame block instead of per sample ('k-rate'): inaudible for
+// LFOs and vibrato, but 2–4× cheaper for oscillators and biquads. Frequencies used for FM and gains stay a-rate.
+const KR = (p) => { try { if (p && p.automationRate === 'a-rate') p.automationRate = 'k-rate'; } catch (e) {} return p; };
 const G = (v = 1) => { const g = A.ctx.createGain(); g.gain.value = v; return g; };
-const BQ = (type, f, q) => { const b = A.ctx.createBiquadFilter(); b.type = type; b.frequency.value = f; if (q != null) b.Q.value = q; return b; };
+const BQ = (type, f, q) => {
+  const b = A.ctx.createBiquadFilter(); b.type = type; b.frequency.value = f; if (q != null) b.Q.value = q;
+  KR(b.frequency); KR(b.Q); KR(b.gain); KR(b.detune);
+  return b;
+};
 const PAN = (v = 0) => {
-  if (A.ctx.createStereoPanner) { const p = A.ctx.createStereoPanner(); p.pan.value = clamp(v, -1, 1); return p; }
+  if (A.ctx.createStereoPanner) { const p = A.ctx.createStereoPanner(); p.pan.value = clamp(v, -1, 1); KR(p.pan); return p; }
   return A.ctx.createGain();
 };
 function OSC(type, f) {
   const o = A.ctx.createOscillator();
   if (A.waves && A.waves[type]) o.setPeriodicWave(A.waves[type]); else o.type = type || 'sine';
   o.frequency.value = f;
+  KR(o.detune);
   return o;
 }
 function setP(param, v, tc = 0.03) {
@@ -882,11 +895,14 @@ function genTexture(kind, sr, F) {
   return [Lc, Rc];
 }
 const DSPW = { w: null, seq: 0, wait: new Map(), broken: false };
+const DSP_FN = { ir: (...a) => genIR(...a), tex: (...a) => genTexture(...a), ks: (...a) => [genKS(...a)] };
 function dspJob(type, args) {
-  const run = () => (type === 'ir' ? genIR(...args) : genTexture(...args));
+  const run = () => DSP_FN[type](...args);
   if (!DSPW.broken && !DSPW.w) {
     try {
-      const src = genIR.toString() + '\n' + genTexture.toString() + '\nonmessage=function(e){var d=e.data;var r=d.type==="ir"?genIR.apply(null,d.args):genTexture.apply(null,d.args);postMessage({id:d.id,r:r},[r[0].buffer,r[1].buffer]);};';
+      const src = [genIR, genTexture, genKS].map((f) => f.toString()).join('\n') +
+        '\nvar F={ir:genIR,tex:genTexture,ks:function(){return [genKS.apply(null,arguments)];}};' +
+        'onmessage=function(e){var d=e.data;var r=F[d.type].apply(null,d.args);postMessage({id:d.id,r:r},r.map(function(a){return a.buffer;}));};';
       DSPW.w = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
       DSPW.w.onmessage = (e) => { const j = DSPW.wait.get(e.data.id); if (j) { DSPW.wait.delete(e.data.id); j.resolve(e.data.r); } };
       DSPW.w.onerror = () => { DSPW.broken = true; DSPW.w = null; for (const j of DSPW.wait.values()) j.resolve(j.run()); DSPW.wait.clear(); };
@@ -908,7 +924,10 @@ function toBuffer(chans) {
 function initAudio() {
   const AC = window.AudioContext || window.webkitAudioContext;
   if (!AC) throw new Error('Web Audio fehlt');
-  const ctx = new AC({ latencyHint: 'interactive' });
+  // Android: the smallest ("interactive") buffer is often 192 frames against 128-frame render blocks, which leaves
+  // only ~70 % of real time per callback. "balanced" (≈20 ms) absorbs load spikes; iOS ignores the hint.
+  const L = ANDROID ? 'balanced' : 'interactive';
+  const ctx = new AC({ latencyHint: L });
   A.ctx = ctx; SR = ctx.sampleRate;
 
   // shared buffers & waves
@@ -1054,7 +1073,7 @@ function updDrive() {
   if (A.drvKey === key) return;
   A.drvKey = key;
   A.drvShaper.curve = driveCurve(type, amt, mix);
-  const os = mix < 0.001 || type === 'crush' ? 'none' : '4x';
+  const os = mix < 0.001 || type === 'crush' ? 'none' : MOBILE || A.lite ? '2x' : '4x';
   if (A.drvShaper.oversample !== os) A.drvShaper.oversample = os;
 }
 function updRing() { if (!A.ctx) return; setP(A.rngOsc.frequency, P['rng.freq'], 0.02); setP(A.rngDry.gain, 1 - P['rng.mix']); setP(A.rngWet.gain, P['rng.mix']); }
@@ -1152,14 +1171,15 @@ class Voice {
   constructor(eng) {
     this.eng = eng; this.nodes = []; this.srcs = []; this.mods = [];
     this.out = A.ctx.createGain(); this.out.gain.value = 0;
-    this.alive = true; this.released = false; this.t0 = A.ctx.currentTime; this.endAt = Infinity;
+    this.alive = true; this.released = false; this.t0 = A.ctx.currentTime; this.endAt = Infinity; this.relAt = null;
   }
   n(node) { this.nodes.push(node); return node; }
   s(node) { this.srcs.push(node); this.nodes.push(node); return node; }
-  mod(param) { try { A.pitchMod.connect(param); this.mods.push(param); } catch (e) {} }
+  mod(param) { KR(param); try { A.pitchMod.connect(param); this.mods.push(param); } catch (e) {} }
   finish(at) {
     this.endAt = at;
-    for (const s of this.srcs) { try { s.stop(at); } catch (e) {} }
+    // a source may end earlier on its own (_end: inaudible below −60 dB); the last stop() call wins, so keep the earlier one
+    for (const s of this.srcs) { try { s.stop(s._end ? Math.min(at, s._end) : at); } catch (e) {} }
     clearTimeout(this.timer);
     const ms = Math.max(0, (at - A.ctx.currentTime) * 1000) + 150;
     this.timer = setTimeout(() => this.cleanup(), ms);
@@ -1183,8 +1203,9 @@ class Voice {
   }
 }
 function adsrStart(v, t, peak, att) {
+  v.peak = peak; v.att = Math.max(0.003, att); v.tA = t;
   v.out.gain.setValueAtTime(0, t);
-  v.out.gain.linearRampToValueAtTime(peak, t + Math.max(0.003, att));
+  v.out.gain.linearRampToValueAtTime(peak, t + v.att);
 }
 function sustainRelease(v, rel) {
   return () => {
@@ -1192,8 +1213,16 @@ function sustainRelease(v, rel) {
     v.released = true;
     const t = A.ctx.currentTime;
     holdParam(v.out.gain, t);
-    v.out.gain.setTargetAtTime(0, t, Math.max(0.01, rel / 5));
-    v.finish(t + rel * 1.3 + 0.08);
+    // a quick tap ends during a slow attack: finish to at least half the peak so short notes stay audible
+    let t1 = t;
+    if (v.peak && t - v.tA < v.att) {
+      const cur = v.peak * Math.max(0, t - v.tA) / v.att;
+      t1 = t + 0.03;
+      v.out.gain.linearRampToValueAtTime(Math.max(cur, v.peak * 0.5), t1);
+    }
+    v.relAt = t1;
+    v.out.gain.setTargetAtTime(0, t1, Math.max(0.01, rel / 5));
+    v.finish(t1 + rel * 1.3 + 0.08);
   };
 }
 function burstEnv(v, t, peak, att, gate, rel) {
@@ -1201,7 +1230,7 @@ function burstEnv(v, t, peak, att, gate, rel) {
   v.out.gain.setValueAtTime(0, t);
   v.out.gain.linearRampToValueAtTime(peak, t + a);
   v.out.gain.setTargetAtTime(0, t + Math.max(a, gate), Math.max(0.02, rel / 5));
-  v.released = true;
+  v.released = true; v.relAt = t + Math.max(a, gate);
   v.finish(t + Math.max(a, gate) + rel * 1.3 + 0.08);
 }
 
@@ -1248,7 +1277,10 @@ const ENGINES = {
     sustain: true,
     start(v, t, f, y, vel, o) {
       const src = korSource();
-      v.kor = { f, y, next: t, buf: src && src.buf, rev: src && src.rev, ref: src ? src.ref : TEX_F };
+      // grains share four fixed stereo positions per finger instead of one panner each
+      const w = P['v.width'];
+      const pans = [-1, -0.33, 0.33, 1].map((x) => { const p = v.n(PAN(x * w)); p.connect(v.out); return p; });
+      v.kor = { f, y, next: t, buf: src && src.buf, rev: src && src.rev, ref: src ? src.ref : TEX_F, pans };
       const peak = vel * 0.55;
       A.grainVoices.add(v);
       v.setF = (nf) => { v.kor.f = nf; };
@@ -1295,6 +1327,7 @@ const ENGINES = {
         cg.gain.setValueAtTime(0, t); cg.gain.linearRampToValueAtTime(0.5 * P['glo.click'], t + 0.001); cg.gain.setTargetAtTime(0, t + 0.001, 0.006);
         ns.connect(hp).connect(cg).connect(v.out);
         ns.start(t, rand(0, 1.8));
+        ns._end = t + 0.1;
       }
       car.start(t); car2.start(t); mod.start(t);
       v.out.gain.setValueAtTime(0, t);
@@ -1323,6 +1356,7 @@ const ENGINES = {
         g2.gain.setTargetAtTime(0, t + 0.001, decay * 0.45 / 6.9);
         o2.connect(g2).connect(v.out);
         o2.start(t);
+        o2._end = t + 0.031 + decay * 0.45;
       }
       if (P['mem.noise'] > 0.01) {
         const ns = v.s(noiseSrc());
@@ -1332,6 +1366,7 @@ const ENGINES = {
         gn.gain.setTargetAtTime(0, t + 0.001, Math.min(decay * 0.3, 0.25) / 6.9 * 2);
         ns.connect(bp).connect(gn).connect(v.out);
         ns.start(t, rand(0, 1.8));
+        ns._end = t + 0.031 + 2 * Math.min(decay * 0.3, 0.25);
       }
       osc.start(t);
       v.out.gain.setValueAtTime(0, t);
@@ -1344,11 +1379,13 @@ const ENGINES = {
   sai: {
     sustain: false,
     start(v, t, f, y, vel, o) {
-      const bright = Math.round(clamp(P['sai.bright'] * (0.4 + 1.2 * y), 0, 1) * 10) / 10;
-      const buf = ksBuffer(f, bright, P['sai.decay'] * (o.decayMul || 1), P['sai.damp'], P['sai.pos']);
+      const buf = ksBuffer(...ksArgs(f, P['sai.decay'] * (o.decayMul || 1)));
       const s = v.s(A.ctx.createBufferSource()); s.buffer = buf;
       if (s.detune) v.mod(s.detune);
-      let node = s;
+      // finger height: from a dark, fundamental-heavy pluck (bottom) to the open string (top)
+      const lp = v.n(BQ('lowpass', clamp(f * Math.pow(2, 1.5 + 7 * clamp(y, 0, 1)), 200, 20000), -3));
+      s.connect(lp);
+      let node = lp;
       if (P['sai.body'] > 0.01) {
         const pk1 = v.n(BQ('peaking', 210, 1.4)); pk1.gain.value = P['sai.body'] * 9;
         const pk2 = v.n(BQ('peaking', 1150, 1.8)); pk2.gain.value = P['sai.body'] * 5;
@@ -1383,12 +1420,14 @@ const ENGINES = {
         g.gain.setTargetAtTime(0, t + att, di / 6.9);
         o1.connect(g); o2.connect(g); g.connect(v.out);
         o1.start(t); o2.start(t);
+        o1._end = o2._end = t + att + di + 0.02;
       });
       if (P['sch.mallet'] > 0.02) {
         const ns = v.s(noiseSrc()), bp = v.n(BQ('bandpass', clamp(f * 6, 300, 12000), 2)), cg = v.n(G(0));
         cg.gain.setValueAtTime(0, t); cg.gain.linearRampToValueAtTime(0.5 * P['sch.mallet'], t + 0.001); cg.gain.setTargetAtTime(0, t + 0.001, 0.008);
         ns.connect(bp).connect(cg).connect(v.out);
         ns.start(t, rand(0, 1.8));
+        ns._end = t + 0.12;
       }
       v.out.gain.value = vel * 0.55;
       v.released = true;
@@ -1397,19 +1436,15 @@ const ENGINES = {
   },
 };
 
-/* ---------- Karplus-Strong string, rendered per note ---------- */
-const KS_CACHE = new Map();
-function ksBuffer(f, bright, decaySec, damp, pos) {
-  const key = [Math.round(f * 10), bright, decaySec.toFixed(2), damp.toFixed(2), pos.toFixed(2), SR].join('|');
-  const hit = KS_CACHE.get(key);
-  if (hit) { KS_CACHE.delete(key); KS_CACHE.set(key, hit); return hit; }
+/* ---------- Karplus-Strong string: rendered once per pitch, pre-rendered in the background ---------- */
+function genKS(f, bright, decaySec, damp, pos, sr) {
   const dur = Math.min(decaySec * 1.05 + 0.05, 8);
-  const len = Math.max(64, Math.floor(dur * SR));
+  const len = Math.max(64, Math.floor(dur * sr));
   const y = new Float32Array(len);
   const s = 0.5 * damp;                         // loop low-pass amount (0 = bright, 0.5 = classic average)
-  const L = SR / f - s;                         // compensate the filter's group delay
+  const L = sr / f - s;                         // compensate the filter's group delay
   const g = Math.pow(10, -3 / (decaySec * f));  // per-period loss for a T60 of decaySec
-  const exLen = Math.max(2, Math.floor(SR / f));
+  const exLen = Math.max(2, Math.floor(sr / f));
   const ex = new Float32Array(exLen);
   let lp = 0;
   const a = 0.05 + bright * 0.95;
@@ -1430,18 +1465,55 @@ function ksBuffer(f, bright, decaySec, damp, pos) {
   let peak = 0;
   for (let n = 0; n < len; n++) peak = Math.max(peak, Math.abs(y[n]));
   const norm = peak > 0 ? 0.6 / peak : 1;
-  const fade = Math.floor(SR * 0.03);
+  const fade = Math.floor(sr * 0.03);
   for (let n = 0; n < len; n++) { y[n] *= norm; if (n > len - fade) y[n] *= (len - n) / fade; }
-  const buf = A.ctx.createBuffer(1, len, SR);
-  buf.getChannelData(0).set(y);
+  return y;
+}
+const KS_CACHE = new Map();
+KS_CACHE.frames = 0;
+const ksArgs = (f, decaySec) => [f, Math.round(P['sai.bright'] * 20) / 20, decaySec, P['sai.damp'], P['sai.pos']];
+const ksKey = (f, bright, decaySec, damp, pos) => [Math.round(f * 10), bright, decaySec.toFixed(2), damp.toFixed(2), pos.toFixed(2), SR].join('|');
+function ksStore(key, data) {
+  const buf = A.ctx.createBuffer(1, data.length, SR);
+  buf.getChannelData(0).set(data);
   KS_CACHE.set(key, buf);
-  KS_CACHE.frames = (KS_CACHE.frames || 0) + len;
-  while (KS_CACHE.size > 1 && (KS_CACHE.size > 40 || KS_CACHE.frames > 6e6)) {
+  KS_CACHE.frames += data.length;
+  while (KS_CACHE.size > 1 && (KS_CACHE.size > 64 || KS_CACHE.frames > 8e6)) {
     const k0 = KS_CACHE.keys().next().value;
     KS_CACHE.frames -= KS_CACHE.get(k0).length;
     KS_CACHE.delete(k0);
   }
   return buf;
+}
+function ksBuffer(f, bright, decaySec, damp, pos) {
+  const key = ksKey(f, bright, decaySec, damp, pos);
+  const hit = KS_CACHE.get(key);
+  if (hit) { KS_CACHE.delete(key); KS_CACHE.set(key, hit); return hit; }
+  return ksStore(key, genKS(f, bright, decaySec, damp, pos, SR));   // cache miss: render now (rare after pre-rendering)
+}
+// While Saite is in use, render every note of the current scale in the worker so taps never wait for it.
+function saiInUse() {
+  if (P['v.eng'] === 'sai' || P['v.layer'] === 'sai') return true;
+  for (let i = 0; i < 4; i++) if (P['l' + i + '.on'] && P['l' + i + '.eng'] === 'sai') return true;
+  return false;
+}
+function warmKS() {
+  clearTimeout(warmKS.tm);
+  if (!A.ctx) return;
+  warmKS.tm = setTimeout(async () => {
+    if (!saiInUse()) return;
+    const job = (warmKS.job = (warmKS.job || 0) + 1);
+    const ratio = P['v.layer'] === 'sai' && P['v.eng'] !== 'sai' ? Math.pow(2, P['v.layerInt'] / 12) : 1;
+    const freqs = [...new Set(N.notes.map((n) => +(n.f * ratio).toFixed(3)))];
+    for (const f of freqs) {
+      if (job !== warmKS.job) return;   // settings changed again: a newer run takes over
+      const args = ksArgs(f, P['sai.decay']);
+      const key = ksKey(...args);
+      if (KS_CACHE.has(key)) continue;
+      const [data] = await dspJob('ks', [...args, SR]);
+      if (job === warmKS.job && !KS_CACHE.has(key)) ksStore(key, data);
+    }
+  }, 300);
 }
 
 /* ---------- grain sources ---------- */
@@ -1468,6 +1540,7 @@ function texture(kind) {
 function preloadTextures() { for (const k of ['glas', 'chor', 'metall', 'staub']) texture(k); }
 function korSource() {
   if (P['kor.src'] === 'echo') {
+    if (!CAP.node) ensureCapture();
     const now = A.ctx.currentTime;
     if (A.echoCache && now - A.echoCache.at < 1.2) return A.echoCache;
     const e = echoBuffer();
@@ -1478,7 +1551,8 @@ function korSource() {
   return texture(want) || A.tex.glas || Object.values(A.tex)[0] || null;
 }
 const HANN = (() => { const n = 64, c = new Float32Array(n); for (let i = 0; i < n; i++) c[i] = Math.sin(Math.PI * i / (n - 1)) ** 2; return c; })();
-const GRAIN_MAX = 96;
+const GRAIN_MAX = MOBILE ? 80 : 128;   // counts grains already scheduled ahead, too
+const GRAIN_OVERLAP = MOBILE ? 16 : 24;   // most grains sounding at once per finger
 function spawnGrain(v, when) {
   const k = v.kor;
   if (A.grains >= GRAIN_MAX) return;
@@ -1496,35 +1570,47 @@ function spawnGrain(v, when) {
   const src = A.ctx.createBufferSource(); src.buffer = buf; src.playbackRate.value = rate;
   const g = A.ctx.createGain(); g.gain.value = 0;
   const overlap = Math.max(1, P['kor.dens'] * P['kor.size']);
-  const amp = 0.9 / Math.sqrt(Math.min(overlap, 24));
-  const curve = new Float32Array(HANN.length);
-  for (let i = 0; i < curve.length; i++) curve[i] = HANN[i] * amp;
-  try { g.gain.setValueCurveAtTime(curve, when, size); } catch (e) { g.gain.setValueAtTime(amp, when); }
-  const pan = PAN(rand(-1, 1) * P['v.width']);
-  const mod = !!src.detune && P['mov.vib'] + P['mov.drift'] > 0;
-  if (mod) A.pitchMod.connect(src.detune);
-  src.connect(g).connect(pan).connect(v.out);
+  const amp = 0.9 / Math.sqrt(Math.min(overlap, GRAIN_OVERLAP));
+  if (!A.hann || A.hann.amp !== amp) {   // the envelope curve is copied by the browser, so one array can be reused
+    const curve = new Float32Array(HANN.length);
+    for (let i = 0; i < curve.length; i++) curve[i] = HANN[i] * amp;
+    A.hann = { amp, curve };
+  }
+  try { g.gain.setValueCurveAtTime(A.hann.curve, when, size); } catch (e) { g.gain.setValueAtTime(amp, when); }
+  src.connect(g).connect(pick(k.pans));
   src.start(when, pos);
   src.stop(when + size + 0.02);
   A.grains++;
+  let ended = false;
   src.onended = () => {
+    if (ended) return;   // Chromium may fire onended twice for a source that runs out exactly at its stop time
+    ended = true;
     A.grains--;
-    try { if (mod) A.pitchMod.disconnect(src.detune); src.disconnect(); g.disconnect(); pan.disconnect(); } catch (e) {}
+    try { src.disconnect(); g.disconnect(); } catch (e) {}
   };
 }
 
 /* ---------- voice allocation ---------- */
+// Steal the voice that has faded furthest: released voices by the share of their release already elapsed,
+// held voices only when nothing is releasing (oldest first).
 function steal() {
-  let best = null, bestScore = Infinity;
+  const now = A.ctx.currentTime;
+  let best = null, bestScore = -Infinity;
   for (const v of A.voices) {
-    const score = (v.released ? 0 : 1e6) + v.t0;
-    if (score < bestScore) { bestScore = score; best = v; }
+    let score;
+    if (v.released) {
+      const from = v.relAt != null ? v.relAt : v.t0;
+      score = 1e6 + (now - from) / Math.max(0.05, v.endAt - from);
+    } else score = now - v.t0;
+    if (score > bestScore) { bestScore = score; best = v; }
   }
   if (best) { best.kill(); A.voices.delete(best); }
 }
+function voiceLoad() { let c = 0; for (const v of A.voices) c += VCOST[v.eng] || 1; return c; }
 function playNote(eng, t, f, y, vel, o = {}) {
   if (!A.ctx || !ENGINES[eng]) return null;
-  while (A.voices.size >= MAXV) steal();
+  const cost = VCOST[eng] || 1;
+  while (A.voices.size && (A.voices.size >= MAXV || voiceLoad() + cost > VBUDGET)) steal();
   const v = new Voice(eng);
   const pan = v.n(PAN(o.pan || 0));
   v.out.connect(pan); pan.connect(A.voiceBus);
@@ -1601,13 +1687,24 @@ function stopBordun(fast) {
 /* =====================================================================
    Capture: recording, echo ring, meters, backup
    ===================================================================== */
-const TAP_SRC = "class MyzelTap extends AudioWorkletProcessor{constructor(){super();this.n=2048;this.l=new Float32Array(this.n);this.r=new Float32Array(this.n);this.i=0;this.port.onmessage=(e)=>{if(e.data==='flush'){const l=this.l.slice(0,this.i),r=this.r.slice(0,this.i);this.i=0;this.port.postMessage({l:l,r:r,flush:true},[l.buffer,r.buffer])}}}process(inputs){const inp=inputs[0];const L=inp&&inp[0];const R=inp&&(inp[1]||inp[0]);const len=L?L.length:128;for(let k=0;k<len;k++){this.l[this.i]=L?L[k]:0;this.r[this.i]=R?R[k]:0;if(++this.i===this.n){this.port.postMessage({l:this.l,r:this.r},[this.l.buffer,this.r.buffer]);this.l=new Float32Array(this.n);this.r=new Float32Array(this.n);this.i=0}}return true}}registerProcessor('myzel-tap',MyzelTap);";
+const TAP_SRC = "class MyzelTap extends AudioWorkletProcessor{constructor(){super();this.n=2048;this.pool=[];this.l=new Float32Array(this.n);this.r=new Float32Array(this.n);this.i=0;this.port.onmessage=(e)=>{const d=e.data;if(d==='flush'){const l=this.l.slice(0,this.i),r=this.r.slice(0,this.i);this.i=0;this.port.postMessage({l:l,r:r,flush:true},[l.buffer,r.buffer])}else if(d&&d.back&&d.back[0].length===this.n&&this.pool.length<8)this.pool.push(d.back)}}process(inputs){const inp=inputs[0];const L=inp&&inp[0];const R=inp&&(inp[1]||inp[0]);const len=L?L.length:128;for(let k=0;k<len;k++){this.l[this.i]=L?L[k]:0;this.r[this.i]=R?R[k]:0;if(++this.i===this.n){this.port.postMessage({l:this.l,r:this.r},[this.l.buffer,this.r.buffer]);const p=this.pool.pop();if(p){this.l=p[0];this.r=p[1]}else{this.l=new Float32Array(this.n);this.r=new Float32Array(this.n)}this.i=0}}return true}}registerProcessor('myzel-tap',MyzelTap);";
 // state: idle → (armed →) rec → (tail →) idle
 const CAP = { node: null, mode: '', ringL: null, ringR: null, pos: 0, fill: 0, state: 'idle', rec: null, hold: [], mL: 0, mR: 0, pkL: 0, pkR: 0, mr: null, flushWait: null };
 const REC_MAX_S = 20 * 60;
 const SEG_FRAMES = 4 * 48000;             // backup segment size (≈4 s)
 const PART_BYTES = 180 * 1024 * 1024;     // split size when a host refuses one big file
 
+// The tap is created only when it is needed (recording, echo grains). As soon as an AudioWorklet exists, Chrome in a
+// frame and Safari render the whole graph on the worklet thread, which has a lower priority than their real-time audio
+// thread – so plain playing stays on the real-time thread until the first recording.
+function ensureCapture() {
+  if (CAP.node) return Promise.resolve(true);
+  if (!CAP.pending) {
+    CAP.pending = setupCapture().then(() => true, (e) => { console.error(e); toast('Die Aufnahme ist in diesem Browser nicht verfügbar.'); return false; });
+    CAP.pending.then(() => { CAP.pending = null; });
+  }
+  return CAP.pending;
+}
 async function setupCapture() {
   const ctx = A.ctx;
   const n = Math.floor(SR * 8);
@@ -1657,7 +1754,11 @@ function onChunk(l, r, isFlush) {
   if (pl > CAP.mL) CAP.mL = pl; if (pr > CAP.mR) CAP.mR = pr;
   if (CAP.state === 'armed') { CAP.hold.push([l, r]); if (CAP.hold.length > 3) CAP.hold.shift(); return; }
   const rec = CAP.rec;
-  if (!rec || (CAP.state !== 'rec' && CAP.state !== 'tail' && !CAP.flushWait)) return;
+  if (!rec || (CAP.state !== 'rec' && CAP.state !== 'tail' && !CAP.flushWait)) {
+    // not kept: hand the block back to the worklet's pool so its thread does not allocate
+    if (CAP.mode === 'worklet' && !isFlush && len === 2048) { try { CAP.node.port.postMessage({ back: [l, r] }, [l.buffer, r.buffer]); } catch (e) {} }
+    return;
+  }
   pushRec(rec, l, r, pl, pr);
   if (isFlush && CAP.flushWait) { const f = CAP.flushWait; CAP.flushWait = null; f(); return; }
   if (CAP.state === 'tail') {
@@ -1763,7 +1864,11 @@ const takes = [];
 let takeCounter = 0;
 function recToggle() {
   if (!A.started || CAP.finishing) return;
-  if (!CAP.node) { toast('Die Aufnahme wird noch vorbereitet. Versuche es gleich noch einmal.'); return; }
+  if (!CAP.node) {
+    if (!CAP.pending) toast('Aufnahme wird vorbereitet …', 1500);
+    ensureCapture().then((ok) => { if (ok && CAP.state === 'idle') recStart(); });
+    return;
+  }
   if (CAP.state === 'idle') recStart();
   else if (CAP.state === 'armed') { CAP.state = 'idle'; CAP.hold = []; updRecUI(); }
   else if (CAP.state === 'rec') recStop();
@@ -1848,6 +1953,8 @@ function stopCompressed(take) {
     renderTakes();
   };
   try { m.mr.stop(); } catch (e) {}
+  try { A.out.disconnect(A.mdest); } catch (e) {}
+  A.mdest = null;
 }
 
 /* ---------- WAV + ZIP writers (streamed into Blobs, low memory, non-blocking) ---------- */
@@ -2190,14 +2297,18 @@ function grainTick(horizon) {
     const k = v.kor;
     if (!k.buf) { const src = korSource(); if (!src) continue; k.buf = src.buf; k.rev = src.rev; k.ref = src.ref; }
     if (k.next < now) k.next = now + 0.004;
-    const step = Math.max(1 / P['kor.dens'], P['kor.size'] / 24);   // never more than ~24 overlapping grains per finger
+    const step = Math.max(1 / P['kor.dens'], P['kor.size'] / GRAIN_OVERLAP);   // cap overlapping grains per finger
     while (k.next < horizon && k.next < v.endAt) { spawnGrain(v, k.next); k.next += step * rand(0.6, 1.4); }
   }
 }
 function tick() {
-  A.lastTick = performance.now();
+  const nowW = performance.now();
+  // track the worst recent gap between ticks (decays over ~10 s) and look further ahead after main-thread stalls,
+  // so a late tick never leaves a hole in the Puls, Wirbel or grain stream
+  if (A.lastTick) A.jitter = Math.max((nowW - A.lastTick) / 1000, (A.jitter || 0.025) * 0.993);
+  A.lastTick = nowW;
   if (!A.ctx || A.ctx.state !== 'running') return;
-  const horizon = A.ctx.currentTime + 0.12;
+  const horizon = A.ctx.currentTime + clamp(0.07 + 2 * (A.jitter || 0.025), 0.12, 0.35);
   try { seqTick(horizon); rollTick(horizon); grainTick(horizon); previewTick(horizon); } catch (e) { console.error(e); }
 }
 function startClock() {
@@ -2240,6 +2351,7 @@ function onDown(e) {
   if (!A.started) return;
   if (e.preventDefault) e.preventDefault();
   ensureRunning();
+  if (touches.has(e.pointerId)) onUp({ pointerId: e.pointerId });   // never leave a note hanging on a reused pointer id
   if (e.pointerType) { try { cvFx.setPointerCapture(e.pointerId); } catch (err) {} }
   const pt = e.pt || stagePoint(e), n = noteAt(pt.x), now = A.ctx.currentTime;
   const tt = { id: e.pointerId, x: pt.x, y: pt.y, px: pt.px, py: pt.py, col: n.idx, f: n.f, name: n.name, layers: layers(), voices: [], rollNext: null, hue: VIS.hueAt(pt.x) };
@@ -2331,13 +2443,14 @@ const bctx = cvBg.getContext('2d'), fctx = cvFx.getContext('2d');
 const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const CSSV = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const COL = {};
+const HY_MAX = REDUCED ? 120 : MOBILE ? 320 : 520;
 const VIS = {
   w: 0, h: 0, dpr: 1, hue: 28, hy: [], rip: [], spores: [], events: [], lvl: 0, t: 0,
   hueAt(x) { return (this.hue + x * 210) % 360; },
-  touchStart(tt) { this.burst(tt.px, tt.py, tt.hue, 10, 1); },
+  touchStart(tt) { this.burst(tt.px, tt.py, tt.hue, 8, 1); },
   touchEnd(tt) { this.rip.push({ x: tt.px, y: tt.py, r: 6, v: 1.6, life: 0.6, hue: tt.hue }); },
   burst(x, y, hue, n, s) {
-    const max = REDUCED ? 120 : 520;
+    const max = HY_MAX;
     for (let i = 0; i < n && this.hy.length < max; i++) {
       this.hy.push({ x, y, a: rand(0, Math.PI * 2), life: rand(0.7, 1), hue: hue + rand(-25, 25), w: 0.6 + s * 1.6 * Math.random(), sp: 1 + s * 2.4 * Math.random() });
     }
@@ -2346,6 +2459,7 @@ const VIS = {
 };
 function readColors() {
   for (const k of ['loam', 'loam-2', 'line', 'hypha', 'dim', 'spore', 'lumen', 'lilac', 'rose']) COL[k] = CSSV('--' + k);
+  COL.fontNum = CSSV('--font-num');
   COL.lanes = [COL.spore, COL.lumen, COL.lilac, COL.rose];
 }
 function resize() {
@@ -2386,7 +2500,7 @@ function drawBg() {
       const stagger = cw < 26 && cw * 2 >= 24;
       if (cw >= 26 || stagger || nt.root) {
         c.fillStyle = nt.root ? COL.spore : COL.dim;
-        c.font = (cw < 26 ? '500 9px ' : '500 10px ') + CSSV('--font-num');
+        c.font = (cw < 26 ? '500 9px ' : '500 10px ') + COL.fontNum;
         c.fillText(nt.name, clamp(x0 + cw / 2, 12, w - 12), stagger && i % 2 ? h - 22 : h - 10);
       }
     }
@@ -2429,34 +2543,54 @@ function frame(ts) {
     g.addColorStop(0, 'hsla(' + tt.hue + ',90%,72%,0.35)'); g.addColorStop(1, 'hsla(' + tt.hue + ',90%,60%,0)');
     c.fillStyle = g; c.beginPath(); c.arc(tt.px, tt.py, rr * 1.8, 0, Math.PI * 2); c.fill();
   }
-  // hyphae
+  // hyphae: segments are grouped by quantised colour, alpha and width, so each group is one path and one stroke
   c.lineCap = 'round';
-  const hy = VIS.hy, keepH = [];
+  const hy = VIS.hy, keepH = [], buckets = new Map();
   for (const f of hy) {
     const nx = f.x + Math.cos(f.a) * f.sp, ny = f.y + Math.sin(f.a) * f.sp;
-    c.strokeStyle = 'hsla(' + f.hue.toFixed(0) + ',85%,66%,' + (f.life * 0.55).toFixed(3) + ')';
-    c.lineWidth = f.w;
-    c.beginPath(); c.moveTo(f.x, f.y); c.lineTo(nx, ny); c.stroke();
+    const hue = ((f.hue % 360) + 360) % 360;
+    const key = ((hue / 12) | 0) * 100 + Math.min(5, (f.life * 6) | 0) * 10 + (f.w > 1.2 ? 1 : 0);
+    let seg = buckets.get(key);
+    if (!seg) { seg = []; buckets.set(key, seg); }
+    seg.push(f.x, f.y, nx, ny);
     f.x = nx; f.y = ny; f.a += rand(-0.38, 0.38); f.life -= 0.011; f.sp *= 0.995;
-    if (f.life > 0.45 && Math.random() < 0.035 && hy.length + keepH.length < (REDUCED ? 120 : 520)) keepH.push({ x: f.x, y: f.y, a: f.a + pick([-0.7, 0.7]), life: f.life * 0.8, hue: f.hue + 8, w: f.w * 0.7, sp: f.sp });
+    if (f.life > 0.45 && Math.random() < 0.035 && hy.length + keepH.length < HY_MAX) keepH.push({ x: f.x, y: f.y, a: f.a + pick([-0.7, 0.7]), life: f.life * 0.8, hue: f.hue + 8, w: f.w * 0.7, sp: f.sp });
     if (f.life > 0 && f.x > -10 && f.x < w + 10 && f.y > -10 && f.y < h + 10) keepH.push(f);
   }
+  for (const [key, seg] of buckets) {
+    const hueQ = Math.floor(key / 100) * 12 + 6, life = ((Math.floor(key / 10) % 10) + 0.5) / 6;
+    c.strokeStyle = 'hsla(' + hueQ + ',85%,66%,' + (life * 0.55).toFixed(3) + ')';
+    c.lineWidth = key % 10 ? 1.8 : 0.9;
+    c.beginPath();
+    for (let i = 0; i < seg.length; i += 4) { c.moveTo(seg[i], seg[i + 1]); c.lineTo(seg[i + 2], seg[i + 3]); }
+    c.stroke();
+  }
   VIS.hy = keepH;
-  // ripples
-  const keepR = [];
+  // ripples, grouped the same way
+  const keepR = [], rb = new Map();
   for (const r of VIS.rip) {
     r.r += r.v; r.life -= 0.022;
-    c.strokeStyle = 'hsla(' + r.hue.toFixed(0) + ',80%,70%,' + (r.life * 0.5).toFixed(3) + ')';
-    c.lineWidth = 1.2;
-    c.beginPath(); c.arc(r.x, r.y, r.r, 0, Math.PI * 2); c.stroke();
-    if (r.life > 0) keepR.push(r);
+    if (r.life <= 0) continue;
+    const hue = ((r.hue % 360) + 360) % 360, key = ((hue / 12) | 0) * 10 + Math.min(5, (r.life * 6) | 0);
+    let list = rb.get(key);
+    if (!list) { list = []; rb.set(key, list); }
+    list.push(r);
+    keepR.push(r);
+  }
+  c.lineWidth = 1.2;
+  for (const [key, list] of rb) {
+    c.strokeStyle = 'hsla(' + (Math.floor(key / 10) * 12 + 6) + ',80%,70%,' + ((((key % 10) + 0.5) / 6) * 0.5).toFixed(3) + ')';
+    c.beginPath();
+    for (const r of list) { c.moveTo(r.x + r.r, r.y); c.arc(r.x, r.y, r.r, 0, Math.PI * 2); }
+    c.stroke();
   }
   VIS.rip = keepR;
-  // scope
+  // scope (and the output level for the meters while no recording tap exists)
   if (A.analyser) {
     A.analyser.getFloatTimeDomainData(A.scopeBuf);
     const b = A.scopeBuf;
-    let pk = 0; for (let i = 0; i < b.length; i += 4) pk = Math.max(pk, Math.abs(b[i]));
+    let pk = 0; for (let i = 0; i < b.length; i++) { const x = b[i] < 0 ? -b[i] : b[i]; if (x > pk) pk = x; }
+    A.anaPeak = Math.max(A.anaPeak || 0, pk);
     if (pk > 0.01) {
       c.globalCompositeOperation = 'source-over';
       c.strokeStyle = 'hsla(' + ((VIS.hue + 180) % 360).toFixed(0) + ',70%,72%,' + Math.min(0.16, pk * 0.5).toFixed(3) + ')';
@@ -2472,7 +2606,7 @@ function frame(ts) {
   // labels above active fingers
   c.globalCompositeOperation = 'source-over';
   if (touches.size) {
-    c.font = '500 11px ' + CSSV('--font-num'); c.textAlign = 'center';
+    c.font = '500 11px ' + COL.fontNum; c.textAlign = 'center';
     for (const tt of touches.values()) {
       const ly = Math.max(16, tt.py - 46);
       c.fillStyle = 'rgba(17,13,11,0.7)';
@@ -2605,6 +2739,8 @@ function onParamChanged(id) {
   const pre = id.slice(0, id.indexOf('.'));
   if (id === 'v.eng' || id === 'v.layer') { refreshEngineUI(); }
   if (id === 'flt.type') for (const fn of CTL['flt.q'] || []) fn(P['flt.q'], null);
+  if (pre === 'sai' || pre === 't' || id === 'v.eng' || id === 'v.layer' || id === 'v.layerInt' || /^l\d\.(eng|on)$/.test(id)) warmKS();
+  if (id === 'kor.src' && P['kor.src'] === 'echo' && A.started) ensureCapture();
   if (id === 'dly.sync') updInactive();
   if (pre === 't') { buildNotes(); drawBg(); if (A.ctx) retuneBordun(); }
   if (pre === 'l' + id[1] && /^l\d$/.test(pre)) updLaneTabs();
@@ -2637,7 +2773,7 @@ function loadValues(vals, keepUnset) {
   }
   for (const id of PATCH_IDS) for (const fn of CTL[id] || []) fn(P[id], null);
   buildNotes(); drawBg(); refreshEngineUI(); updLaneTabs(); updInactive();
-  if (A.ctx) { applyAll(); seqRetempo(); }
+  if (A.ctx) { applyAll(); seqRetempo(); warmKS(); if (P['kor.src'] === 'echo') ensureCapture(); }
   clearTimeout(saveTimer); saveTimer = setTimeout(saveState, 400);
 }
 function saveState() {
@@ -2782,9 +2918,9 @@ function drawRings() {
     c.globalAlpha = 1;
   }
   c.fillStyle = COL.hypha; c.textAlign = 'center'; c.textBaseline = 'middle';
-  c.font = '500 13px ' + CSSV('--font-num');
+  c.font = '500 13px ' + COL.fontNum;
   c.fillText(Math.round(P['seq.bpm']), cx, cy - 4);
-  c.fillStyle = COL.dim; c.font = '500 8px ' + CSSV('--font-num');
+  c.fillStyle = COL.dim; c.font = '500 8px ' + COL.fontNum;
   c.fillText('BPM', cx, cy + 9);
 }
 
@@ -2810,7 +2946,7 @@ function buildRec() {
 function renderRecInfo() {
   if (!recInfoEl) return;
   const sr = A.ctx ? SR.toLocaleString('de-DE') + ' Hz' : 'Abtastrate des Geräts';
-  const path = CAP.mode === 'worklet' ? 'bitgenau von der Summe abgegriffen' : CAP.mode === 'script' ? 'im Kompatibilitätsmodus abgegriffen (bei hoher Last sind kurze Aussetzer möglich)' : 'Abgriff startet mit dem Klang';
+  const path = CAP.mode === 'worklet' ? 'bitgenau von der Summe abgegriffen' : CAP.mode === 'script' ? 'im Kompatibilitätsmodus abgegriffen (bei hoher Last sind kurze Aussetzer möglich)' : 'bitgenau von der Summe abgegriffen, sobald du zum ersten Mal aufnimmst';
   let save = '';
   if (DL) save = 'Beim Speichern entsteht ein ZIP-Archiv mit der WAV-Datei, deinen Klangeinstellungen und einer Info-Datei.';
   else if (inViewer && dlChecked) save = 'Speichern als Datei ist in dieser Ansicht nicht verfügbar – du kannst aber aufnehmen und anhören.';
@@ -2874,9 +3010,10 @@ function updRecUI() {
 const meterState = { l: 0, r: 0, o: 0 };
 function updateMeters(dt) {
   const decay = Math.pow(0.05, dt);
-  meterState.l = Math.max(CAP.mL, meterState.l * decay);
-  meterState.r = Math.max(CAP.mR, meterState.r * decay);
-  CAP.mL = CAP.mR = 0;
+  const inL = CAP.node ? CAP.mL : A.anaPeak || 0, inR = CAP.node ? CAP.mR : A.anaPeak || 0;
+  meterState.l = Math.max(inL, meterState.l * decay);
+  meterState.r = Math.max(inR, meterState.r * decay);
+  CAP.mL = CAP.mR = 0; A.anaPeak = 0;
   const lvl = Math.max(meterState.l, meterState.r);
   const pct = (g) => clamp((gainToDb(g) + 60) / 60, 0, 1) * 100;
   $('#outMeter').style.width = pct(lvl).toFixed(1) + '%';
@@ -3189,7 +3326,7 @@ function toast(msg, ms = 3200, action) {
   clearTimeout(toast.tm); toast.tm = setTimeout(() => t.classList.remove('show', 'act'), ms);
 }
 function ensureRunning() {
-  if (A.ctx && A.ctx.state !== 'running') { try { A.ctx.resume(); } catch (e) {} }
+  if (A.ctx && A.ctx.state !== 'running') { try { const p = A.ctx.resume(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
 }
 async function keepAwake() {
   try {
@@ -3232,16 +3369,35 @@ function start() {
     clearTimeout(A.resumeTimer);
     if (A.ctx.state === 'running') { showResume(false); return; }
     if (A.userSuspended || document.visibilityState !== 'visible') return;
-    A.resumeTimer = setTimeout(() => { if (A.ctx.state !== 'running' && !A.userSuspended && document.visibilityState === 'visible') showResume(true); }, 600);
+    A.resumeTimer = setTimeout(() => { if (A.ctx.state !== 'running' && !A.userSuspended && document.visibilityState === 'visible' && !touches.size) showResume(true); }, 1500);
   };
   $('#start').hidden = true;
   for (const id of ['bar', 'main', 'quick', 'tabs']) document.getElementById(id).inert = false;
   try { cvFx.focus({ preventScroll: true }); } catch (e) {}
   startClock();
   preloadTextures();
-  setupCapture().catch((e) => { console.error(e); toast('Die Aufnahme ist in diesem Browser nicht verfügbar.'); });
+  warmKS();
+  watchUnderruns();
+  if (P['kor.src'] === 'echo') ensureCapture();
   keepAwake();
   renderRecInfo();
+}
+// Chrome 146+ reports output underruns. If the device drops audio, play fewer voices at once and lighten the drive.
+function watchUnderruns() {
+  const ps = A.ctx.playbackStats || A.ctx.playoutStats;
+  if (!ps) return;
+  const count = () => (ps.underrunEvents != null ? ps.underrunEvents : ps.fallbackFramesEvents) || 0;
+  let last = count();
+  setInterval(() => {
+    if (document.visibilityState !== 'visible' || !A.ctx || A.ctx.state !== 'running') return;
+    const u = count();
+    if (u > last && VBUDGET > 6) {
+      VBUDGET = Math.max(6, Math.round(VBUDGET * 0.8));
+      A.lite = true; A.drvKey = null; updDrive();
+      if (!A.liteHinted) { A.liteHinted = true; toast('Das Gerät kam kurz an seine Grenze – Myzel spielt jetzt etwas weniger Stimmen gleichzeitig.', 5000); }
+    }
+    last = u;
+  }, 1000);
 }
 
 function boot() {
@@ -3273,7 +3429,7 @@ function boot() {
       if (CAP.state === 'idle' && !SEQ.on && !A.bor && !A.frozen) { A.userSuspended = true; try { A.ctx.suspend(); } catch (e) {} }
     }
   });
-  window.addEventListener('blur', releaseAllTouches);
+  window.addEventListener('blur', () => { if (document.visibilityState !== 'visible') releaseAllTouches(); });
   if (IOS) $('#startFine').textContent = 'iPhone: Bleibt es still, den Stummschalter an der Seite ausschalten. Kopfhörer bringen Tiefen und Raum am besten zur Geltung.';
   // the start screen is modal until sound is on
   for (const id of ['bar', 'main', 'quick', 'tabs']) document.getElementById(id).inert = true;
