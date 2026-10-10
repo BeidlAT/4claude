@@ -2106,6 +2106,22 @@ async function offerFile(filename, blob) {
     }
   }
   if (inViewer) { toast('Speichern ist in dieser Ansicht nicht verfügbar.'); return 'error'; }
+  // iPhone/iPad: downloads from a home-screen app are awkward, the share sheet offers "In Dateien sichern".
+  // Sharing needs a fresh tap (preparing the file may take seconds), so the toast carries the button.
+  const IOS_ = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (IOS_ && navigator.canShare) {
+    const file = new File([blob], filename, { type: blob.type || 'application/octet-stream' });
+    if (navigator.canShare({ files: [file] })) {
+      return new Promise((resolve) => {
+        const tm = setTimeout(() => resolve('declined'), 30000);
+        toast('Datei bereit: ' + filename, 30000, { label: 'Sichern …', fn: async () => {
+          clearTimeout(tm);
+          try { await navigator.share({ files: [file], title: filename }); resolve('saved'); }
+          catch (e) { resolve(e && e.name === 'AbortError' ? 'declined' : 'error'); }
+        } });
+      });
+    }
+  }
   anchorSave(blob, filename);
   toast('Download gestartet: ' + filename);
   return 'saved';
@@ -3090,7 +3106,13 @@ const PRESETS = [
     'flt.lfoRate': 0.06, 'flt.lfoDepth': 1, 'mov.pan': 0.7, 'mov.panRate': 0.05, 'cho.mix': 0.35, 'dly.div': '0.5', 'dly.fb': 0.5, 'dly.mix': 0.3, 'rev.size': 7, 'rev.mix': 0.55,
     'l0.on': false, 'l1.on': true, 'l1.eng': 'hau', 'l1.steps': 12, 'l1.puls': 5, 'l1.vol': 0.25, 'l2.on': false, 'l3.on': false, 'seq.bpm': 70 } },
 ];
-let presetCards = [], userListEl, undoBtn, mutAmt = 0.35;
+let presetCards = [], userListEl, undoBtn, installBtn, installEvt = null, mutAmt = 0.35;
+async function installApp() {
+  if (!installEvt) return;
+  const e = installEvt; installEvt = null;
+  if (installBtn) installBtn.hidden = true;
+  try { e.prompt(); await e.userChoice; } catch (err) {}
+}
 function userPresets() {
   try {
     const a = JSON.parse(store.get('myzel.user.v1') || '[]');
@@ -3129,7 +3151,8 @@ function buildPresets() {
     c.dataset.key = p.key; g.append(c); return c;
   });
   undoBtn = h('button', { type: 'button', class: 'btn', disabled: true, onclick: undo }, 'Rückgängig');
-  box.append(section('Klangwelten', 'Laden ersetzt alle Klangeinstellungen', g, h('div', { class: 'row', style: 'margin-top:10px' }, undoBtn)));
+  installBtn = h('button', { type: 'button', class: 'btn primary', hidden: !installEvt, onclick: installApp }, 'Als App installieren');
+  box.append(section('Klangwelten', 'Laden ersetzt alle Klangeinstellungen', g, h('div', { class: 'row', style: 'margin-top:10px' }, undoBtn, installBtn)));
   const mut = h('input', { type: 'range', id: 'mutAmt', min: 0, max: 100, step: 1, value: Math.round(mutAmt * 100), 'aria-label': 'Stärke der Mutation' });
   const mutVal = h('span', { class: 'val' }, Math.round(mutAmt * 100) + ' %');
   mut.style.setProperty('--p', mut.value + '%');
@@ -3162,7 +3185,8 @@ function buildPresets() {
     h('li', null, h('b', null, 'Einfrieren: '), 'Die Schneeflocke hält die Echoschleife endlos fest. Darüber kannst du weiterspielen.'),
     h('li', null, h('b', null, 'Stille: '), 'Stoppt sofort alle Töne, den Bordun, Echo, Hall und den Puls.'),
     h('li', null, h('b', null, 'Doppeltippen '), 'auf den Namen eines Reglers setzt ihn zurück.'),
-    h('li', null, h('b', null, 'iPhone: '), 'Bleibt es still, den Stummschalter an der Seite ausschalten. Das iPhone erkennt höchstens fünf Finger gleichzeitig.'))));
+    h('li', null, h('b', null, 'iPhone: '), 'Bleibt es still, den Stummschalter an der Seite ausschalten. Das iPhone erkennt höchstens fünf Finger gleichzeitig.'),
+    h('li', null, h('b', null, 'Als App, auch offline: '), 'beidlat.github.io/4claude im Browser öffnen, dann „Teilen → Zum Home-Bildschirm“ (iPhone) bzw. „App installieren“ (Android).'))));
   renderUserPresets(); markPresetCards(); updUndo();
   return box;
 }
@@ -3436,6 +3460,10 @@ function boot() {
   try { $('#btnStart').focus({ preventScroll: true }); } catch (e) {}
   if (UI.preset) markPresetCards();
   restoreTakes();
+  // installable web app (outside claude.ai): offer installing, and a reload after an update was stored offline
+  window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; if (installBtn) installBtn.hidden = false; });
+  window.addEventListener('appinstalled', () => { installEvt = null; if (installBtn) installBtn.hidden = true; toast('Myzel ist installiert und startet jetzt auch offline vom Home-Bildschirm.'); });
+  window.addEventListener('myzel-update', () => toast('Eine neue Version von Myzel ist da.', 12000, { label: 'Neu laden', fn: () => location.reload() }));
   requestAnimationFrame(frame);
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => drawBg());
 }
