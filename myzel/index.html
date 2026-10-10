@@ -1201,13 +1201,13 @@ function regenIR(now) {
     const job = ++A.irJob;
     // level 3: four channels = "true stereo" (each side also reverberates into the other)
     const nch = Q.rich ? 4 : 2;
+    A.revWant = nch;
     dspJob('ir', [P['rev.size'], P['rev.damp'], SR, nch]).then((ch) => {
       if (job !== A.irJob || !A.ctx) return;   // a newer request superseded this one
       const conv = A.ctx.createConvolver();
       conv.buffer = toBuffer(ch);
       const g = G(0);
       A.revPre.connect(conv).connect(g).connect(A.revRet);
-      A.revCh = nch;
       const t = A.ctx.currentTime;
       g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(nch === 4 ? IR4_GAIN : 1, t + 0.25);
       const old = A.revActive;
@@ -1646,6 +1646,8 @@ function warmKS() {
     const freqs = new Set(N.notes.map((n) => +(n.f * ratio).toFixed(3)));
     // with a keyboard attached also the three octaves around middle C, so no key has to render a string while playing
     if (MIDI.ports.size) for (let m = 48; m <= 84; m++) freqs.add(+(midiNote(m).f * ratio).toFixed(3));
+    // Puls lanes with Saite play the field's notes shifted by their octave
+    for (let i = 0; i < 4; i++) if (P['l' + i + '.on'] && P['l' + i + '.eng'] === 'sai' && P['l' + i + '.oct']) for (const n of N.notes) freqs.add(+(n.f * Math.pow(2, P['l' + i + '.oct'])).toFixed(3));
     for (const f of freqs) {
       if (job !== warmKS.job) return;   // settings changed again: a newer run takes over
       const args = ksArgs(f, P['sai.decay']);
@@ -1733,7 +1735,7 @@ function spawnGrain(v, when) {
 /* ---------- voice allocation ---------- */
 // Steal the voice that has faded furthest: released voices by the share of their release already elapsed,
 // held voices only when nothing is releasing (oldest first).
-function steal() {
+function steal(fadingOnly) {
   const now = A.ctx.currentTime;
   let best = null, bestScore = -Infinity;
   for (const v of A.voices) {
@@ -1741,10 +1743,12 @@ function steal() {
     if (v.released) {
       const from = v.relAt != null ? v.relAt : v.t0;
       score = 1e6 + (now - from) / Math.max(0.05, v.endAt - from);
-    } else score = now - v.t0;
+    } else if (fadingOnly) continue;
+    else score = now - v.t0;
     if (score > bestScore) { bestScore = score; best = v; }
   }
   if (best) { best.kill(); A.voices.delete(best); }
+  return !!best;
 }
 function voiceLoad() { let c = 0; for (const v of A.voices) c += v.cost; return c; }
 function playNote(eng, t, f, y, vel, o = {}) {
@@ -1777,9 +1781,10 @@ function applyQuality() {
   }
   VBUDGET = Math.max(6, Math.round(Q.budget * (A.budgetScale || 1))); MAXV = Q.maxv;
   if (!A.ctx) return;
-  while (A.voices.size && (A.voices.size > MAXV || voiceLoad() > VBUDGET)) steal();
+  // a lower budget frees what is already fading; held notes keep sounding, new notes respect the new limit
+  while (A.voices.size && (A.voices.size > MAXV || voiceLoad() > VBUDGET) && steal(true));
   A.drvKey = null; updDrive();
-  if (A.revCh && A.revCh !== (Q.rich ? 4 : 2)) regenIR();
+  if (A.revWant && A.revWant !== (Q.rich ? 4 : 2)) regenIR();
   if (A.bor && A.bor.rich !== Q.rich) { stopBordun(); startBordun(); }
 }
 async function calibrate() {
@@ -2714,10 +2719,14 @@ function midiNoteOff(ch, note) {
 function midiCC(cc, val) {
   if (cc === 1) { MIDI.wheel = val / 127; midiRecolor(); }
   else if (cc === 64) {
-    MIDI.sus = val >= 64;
-    if (!MIDI.sus) { for (const id of MIDI.held) if (!MIDI.down.has(id)) onUp({ pointerId: id }); MIDI.held.clear(); }
+    if (val >= 64) MIDI.sus = true; else midiPedalUp();
   } else if (cc === 120 || cc === 123) midiAllOff();
-  else if (cc === 121) { MIDI.wheel = 0; MIDI.press = 0; MIDI.bend = 0; MIDI.sus = false; applyBend(); midiRecolor(); }
+  else if (cc === 121) { midiPedalUp(); MIDI.wheel = 0; MIDI.press = 0; MIDI.bend = 0; applyBend(); midiRecolor(); }
+}
+function midiPedalUp() {
+  MIDI.sus = false;
+  for (const id of MIDI.held) if (!MIDI.down.has(id)) onUp({ pointerId: id });
+  MIDI.held.clear();
 }
 function midiRecolor(only) {
   for (const tt of only ? [only] : touches.values()) {
@@ -2734,8 +2743,10 @@ function applyBend() {
   const t = A.ctx.currentTime, p = A.bendSrc.offset;
   p.cancelScheduledValues(t); p.setTargetAtTime(A.bendCents, t, 0.004);
 }
+// releases every keyboard note and centres the wheels (a wheel at rest sends nothing, so a stale bend would stick)
 function midiAllOff() {
   MIDI.held.clear(); MIDI.down.clear(); MIDI.sus = false;
+  MIDI.wheel = 0; MIDI.press = 0; MIDI.bend = 0; applyBend();
   for (const id of Array.from(touches.keys())) if (isMidi(id)) onUp({ pointerId: id });
 }
 // Which note a key plays. "Skala": every key snaps to the nearest note of the scale, so pitches stay where the keys are
@@ -3117,7 +3128,7 @@ function onParamChanged(id) {
   const pre = id.slice(0, id.indexOf('.'));
   if (id === 'v.eng' || id === 'v.layer') { refreshEngineUI(); }
   if (id === 'flt.type') for (const fn of CTL['flt.q'] || []) fn(P['flt.q'], null);
-  if (pre === 'sai' || pre === 't' || id === 'v.eng' || id === 'v.layer' || id === 'v.layerInt' || /^l\d\.(eng|on)$/.test(id)) warmKS();
+  if (pre === 'sai' || pre === 't' || id === 'v.eng' || id === 'v.layer' || id === 'v.layerInt' || /^l\d\.(eng|on|oct)$/.test(id)) warmKS();
   if (id === 'kor.src' && P['kor.src'] === 'echo' && A.started) ensureCapture();
   if (id === 'dly.sync') updInactive();
   if (pre === 't') { buildNotes(); drawBg(); if (A.ctx) retuneBordun(); }
