@@ -39,3 +39,9 @@ NODE_PATH=$(npm root -g) node tools/browser-func.js        # Bedienung in Chromi
 NODE_PATH=$(npm root -g) node tools/browser-check.js       # Bildschirmfotos
 NODE_PATH=$(npm root -g) node tools/levels.js              # Pegel aller Rituale
 ```
+
+## Vorschau als Claude-Artefakt
+
+`node tools/build-artifact.js ausgabe.html` baut eine einzelne Datei ohne Dokumentgerüst, mit eingebetteter
+Klangmaschine und ohne Service Worker. In dieser Ansicht sind Mikrofon und Neigungssensor gesperrt; Aufnahmen
+werden dort als ZIP gespeichert.

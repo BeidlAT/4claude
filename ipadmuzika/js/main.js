@@ -18,6 +18,7 @@ const App = {
   view: 'werk', hold: false, frameN: 0, wake: null,
 
   boot() {
+    IN_VIEWER = !!(window.claude && typeof window.claude.use === 'function');
     Settings.init();
     Machine.init();
     readPalette();
@@ -152,9 +153,11 @@ const App = {
     this.recLabel();
   },
   recLabel() {
-    const st = Recorder.state;
+    let st = Recorder.state;
+    // die Klangmaschine meldet den Wechsel vom Einzähler in die Aufnahme
+    if (st === 'count' && VIS.recPh >= 2) { Recorder.state = 'rec'; for (const b of $$('.b-rec')) b.dataset.state = 'rec'; st = 'rec'; }
     let txt = 'Aufnahme';
-    if (st === 'count' || (st === 'rec' && VIS.recPh === 1)) { const b = Math.floor(VIS.beat); txt = 'Einzählen ' + Math.max(1, -b); }
+    if (st === 'count' || (st === 'rec' && VIS.recPh === 1)) { const b = Math.floor(VIS.beat); txt = 'Einzählen ' + clamp(-b, 1, 4); }
     else if (st === 'rec') {
       if (Recorder.cur && Recorder.cur.mode === 'takt') {
         const bar = Math.floor(VIS.beat / 4) + 1, bars = Recorder.cur.bars;

@@ -7,7 +7,8 @@ const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const lerp = (a, b, t) => a + (b - a) * t;
 const TAU = Math.PI * 2;
 const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-const IN_VIEWER = !!(window.claude && typeof window.claude.use === 'function');
+// in Claudes Artefakt-Ansicht? Wird beim Start noch einmal geprüft (main.js), falls window.claude später kommt
+let IN_VIEWER = !!(window.claude && typeof window.claude.use === 'function');
 const STANDALONE = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
 const REDUCED_MOTION = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 

@@ -43,7 +43,8 @@ const Pad = {
     const pd = Machine.st.pad;
     this.rows = this.mode === 'mini' ? 1 : clamp(pd.rows | 0, 1, 4);
     this.from = pd.from; this.oct = pd.oct;
-    const lo = this.sk.root0 * Math.pow(2, this.from), hi = this.sk.root0 * Math.pow(2, this.from + this.oct);
+    // jede Reihe liegt eine Oktave über der vorigen: Linien für den ganzen Umfang aller Reihen
+    const lo = this.sk.root0 * Math.pow(2, this.from), hi = this.sk.root0 * Math.pow(2, this.from + this.oct + this.rows - 1);
     this.lines = Skala.lines(this.sk, lo, hi).map((l) => ({ ...l, c: 1200 * Math.log2(l.hz / this.sk.root0), e: 0 }));
     for (const o of this.orbs) o.x = this.c2x(o.c, o.row || 0);
   },
