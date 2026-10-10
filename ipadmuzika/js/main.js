@@ -67,14 +67,19 @@ const App = {
   pickQuality() {
     const q = Settings.get('quality');
     if (q !== 'auto') return q;
-    const t0 = performance.now(), a = new Float32Array(4096);
-    let x = 0, n = 0;
-    while (performance.now() - t0 < 24) {
-      for (let i = 0; i < 4096; i++) { x = x * 0.999 + Math.sin(i * 0.01) * 0.001; a[i] = x; }
-      n++;
+    const a = new Float32Array(4096);
+    let best = 0, x = 0;
+    for (let run = 0; run < 3; run++) {
+      const t0 = performance.now();
+      let n = 0;
+      while (performance.now() - t0 < 12) {
+        for (let i = 0; i < 4096; i++) { x = x * 0.999 + Math.sin(i * 0.01) * 0.001; a[i] = x; }
+        n++;
+      }
+      best = Math.max(best, n / 12);
     }
-    const rate = n / 24;
-    return rate > 9 ? 2 : rate > 4 ? 1 : 0;
+    this.benchRate = best;
+    return best > 9 ? 2 : best > 4 ? 1 : 0;
   },
   async keepAwake() {
     try { if ('wakeLock' in navigator) this.wake = await navigator.wakeLock.request('screen'); } catch (e) { /* egal */ }
@@ -163,6 +168,13 @@ const App = {
     if (!b) return;
     b.setAttribute('aria-pressed', String(!!Ghost.rec || Ghost.layers.length > 0));
     $('#sGhost .lbl').textContent = Ghost.rec ? 'Geist hört zu' : Ghost.layers.length ? 'Geister ' + Ghost.layers.length : 'Geist';
+  },
+
+  // alles Gespielte lösen: gehaltene Töne, Geister, Mikro-Schichten
+  clearPlay() {
+    Pad.releaseAll(); Pad.orbs = []; Ghost.clear();
+    if (this.hold) this.toggleHold(false);
+    Audio.send({ t: 'lyr', op: 'all' }); Audio.send({ t: 'allOff' });
   },
 
   /* --- Ansichten --- */
@@ -266,7 +278,7 @@ const App = {
     Sheet.open('Tempo', h('div', { class: 'tempo' },
       h('div', { class: 'tempo-row' }, h('button', { type: 'button', class: 'btn round', onclick: () => set(Machine.st.tempo - 1), 'aria-label': 'langsamer' }, '−'), big, h('button', { type: 'button', class: 'btn round', onclick: () => set(Machine.st.tempo + 1), 'aria-label': 'schneller' }, '+')),
       h('div', { class: 'tempo-unit' }, 'Schläge pro Minute'), sl, tap,
-      h('div', { class: 'field' }, h('span', { class: 'field-l' }, 'Metronom'), chips([{ id: false, label: 'aus' }, { id: true, label: 'an (nie in der Aufnahme)' }], metro, (v) => { Settings.set('metronom', v); Audio.send({ t: 'click', mode: v ? 2 : (Settings.get('recClick') ? 1 : 0) }); })),
+      h('div', { class: 'field' }, h('span', { class: 'field-l' }, 'Metronom'), chips([{ id: false, label: 'aus' }, { id: true, label: 'an (nie in der Aufnahme)' }], metro, (v) => { Settings.set('metronom', v); Audio.send({ t: 'click', mode: Audio.clickMode() }); })),
       h('p', { class: 'sheet-note' }, 'Stell hier dasselbe Tempo ein wie in Loopy Pro. Uhrwerk, Bandschleife im Takt, Geisterhand und Takt-Aufnahmen folgen ihm.')));
   },
   ritualSheet() {
@@ -274,7 +286,8 @@ const App = {
     for (const r of RITUALE) {
       list.append(h('button', { type: 'button', class: 'ritual', onclick: () => {
         const st = ritualState(r);
-        Machine.load(st); Pad.layout(); Werk.fit(); Sheet.close(); this.toggleHold(false);
+        this.clearPlay();
+        Machine.load(st); Pad.layout(); Werk.fit(); Sheet.close();
         toast('Ritual geladen: ' + r.name, 3500, { label: 'Rückgängig', fn: () => Machine.undo() });
       } }, h('span', { class: 'ritual-n' }, r.name), h('span', { class: 'ritual-t' }, r.text)));
     }
@@ -283,7 +296,7 @@ const App = {
     if (!own.length) mine.append(h('p', { class: 'empty' }, 'Noch keine eigenen Rituale. Sichere die jetzige Maschine unten mit einem Namen.'));
     own.forEach((r, i) => {
       mine.append(h('div', { class: 'ritual own' },
-        h('button', { type: 'button', class: 'ritual-load', onclick: () => { const st = JSON.parse(JSON.stringify(r.st)); if (Machine.load(st)) { Pad.layout(); Werk.fit(); Sheet.close(); toast('Ritual geladen: ' + r.name); } else toast('Dieses Ritual ließ sich nicht laden.'); } },
+        h('button', { type: 'button', class: 'ritual-load', onclick: () => { const st = JSON.parse(JSON.stringify(r.st)); this.clearPlay(); if (Machine.load(st)) { Pad.layout(); Werk.fit(); Sheet.close(); toast('Ritual geladen: ' + r.name); } else toast('Dieses Ritual ließ sich nicht laden.'); } },
           h('span', { class: 'ritual-n' }, r.name), h('span', { class: 'ritual-t' }, new Date(r.date).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }))),
         h('button', { type: 'button', class: 'btn small', onclick: () => this.exportRitual(r) }, 'Als Datei'),
         confirmButton('Löschen', 'Wirklich?', () => { own.splice(i, 1); store.setJson('sw.rituale.v1', own); this.ritualSheet(); }, 'small warn')));
@@ -329,7 +342,7 @@ const App = {
       h('div', { class: 'field' }, h('span', { class: 'field-l' }, 'Leiste im Pad'), chips([{ id: 'links', label: 'links' }, { id: 'rechts', label: 'rechts' }], Settings.get('leiste'), (v) => { Settings.set('leiste', v); $('#padView').classList.toggle('right', v === 'rechts'); })),
       h('div', { class: 'field' }, h('span', { class: 'field-l' }, 'Geisterhand'), chips([1, 2, 4].map((b) => ({ id: b, label: b + (b === 1 ? ' Takt' : ' Takte') })), Settings.get('geistTakte'), (v) => Settings.set('geistTakte', v))),
       h('h3', { class: 'sub' }, 'Werkstatt'),
-      h('div', { class: 'acts-row' }, confirmButton('Maschine neu aufbauen', 'Wirklich alles zurücksetzen?', () => { Machine.load(Machine.fresh()); Werk.fit(); Sheet.close(); toast('Die Maschine steht wieder im Grundzustand.', 4000, { label: 'Rückgängig', fn: () => Machine.undo() }); }, 'warn'))));
+      h('div', { class: 'acts-row' }, confirmButton('Maschine neu aufbauen', 'Wirklich alles zurücksetzen?', () => { this.clearPlay(); Machine.load(Machine.fresh()); Werk.fit(); Sheet.close(); toast('Die Maschine steht wieder im Grundzustand.', 4000, { label: 'Rückgängig', fn: () => Machine.undo() }); }, 'warn'))));
   },
   helpSheet() {
     const sec = (title, ...ps) => h('section', { class: 'help-s' }, h('h3', null, title), ...ps.map((p) => h('p', null, p)));
@@ -358,6 +371,7 @@ const App = {
         if (this.frameN % 2 === 0) Werk.slow(t);
       }
       Pad.frame(t);
+      Audio.flush();
       if (this.frameN % 4 === 0) {
         if (Recorder.state !== 'idle') this.recLabel();
         const lv = clamp((VIS.micDb + 60) / 60, 0, 1);

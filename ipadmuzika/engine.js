@@ -978,7 +978,9 @@ class Kathedrale extends Mod {
     const P = this.v;
     if (Math.abs(P[6] - this.size) > 0.004) this.setSize(P[6]);
     const fzT = P[5] >= 0.5 ? 1 : 0;
-    const decay0 = 0.25 + P[0] * 0.735, damp0 = P[1] * 0.85, shim0 = P[2] * 0.5;
+    const decay0 = 0.25 + P[0] * 0.735, damp0 = P[1] * 0.85;
+    // Schimmer-Rückführung so begrenzen, dass die Schleife bei jeder Raumgröße unter 1 bleibt
+    const shimMax = Math.min(0.5, 0.8 / (0.6 * Math.sqrt(1 / (1 - decay0 * decay0)))), shim0 = P[2] * shimMax;
     const preD = Math.max(1, Math.round(P[3] * SR)), mix = P[4], modD = P[7] * 14 * this.k, wd = P[8];
     const inL = this.ain[0].L, inR = this.ain[0].R, o = this.aout[0], L = o.L, R = o.R;
     const n = this.n, tp = this.tp;
@@ -1521,6 +1523,7 @@ class Engine extends AudioWorkletProcessor {
       case 'tempo': this.bpm = Math.max(20, Math.min(300, m.bpm)); break;
       case 'on': this.noteOn(m.n, m.hz, m.y, m.v); break;
       case 'mv': this.noteMove(m.n, m.hz, m.y); break;
+      case 'mvs': { const a = m.a; for (let i = 0; i + 2 < a.length; i += 3) this.noteMove(a[i], a[i + 1], a[i + 2]); break; }
       case 'off': this.noteOff(m.n); break;
       case 'hold': this.setHold(m.on); break;
       case 'mic': this.micOn = !!m.on; if (!this.micOn) this.micBuf.fill(0); break;

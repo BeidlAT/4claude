@@ -76,8 +76,9 @@ const Skala = {
     return { name, dev, midi };
   },
   // Name der Stufe innerhalb der Tonleiter (für Tonleitern mit Halbtonraster)
+  // Obertonreihe: der Grundton mit Namen, die übrigen Stufen mit ihrer Obertonnummer (9, 10 … 15)
   degreeNoteName(sk, i) {
-    if (sk.scale.ratios) return sk.scale.ratios[i] + ':' + sk.scale.ratios[0];
+    if (sk.scale.ratios) return i === 0 ? NOTE_NAMES[sk.root] : String(sk.scale.ratios[i]);
     return NOTE_NAMES[(sk.root + sk.scale.st[i]) % 12];
   },
   // alle Rasterlinien im Bereich [loHz, hiHz]

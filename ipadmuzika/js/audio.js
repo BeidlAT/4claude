@@ -10,7 +10,7 @@ const VIS = {
 
 const Audio = {
   ctx: null, node: null, ready: false, queue: [], started: false,
-  eids: new Map(), mids: new Map(), nextEid: 1,
+  eids: new Map(), mids: new Map(), types: new Map(), sent: new Map(), nextEid: 1,
   micOn: false, micStream: null, micSrc: null, micEcho: false,
   quality: 1, sr: 48000,
   layers: new Map(),
@@ -51,6 +51,7 @@ const Audio = {
     try { await ctx.resume(); } catch (e) { /* egal */ }
     this.ready = true;
     this.send({ t: 'quality', q: this.quality });
+    this.send({ t: 'click', mode: this.clickMode() });
     this.syncAll();
     for (const m of this.queue) this.node.port.postMessage(m);
     this.queue = [];
@@ -63,15 +64,26 @@ const Audio = {
   },
 
   /* --- Abgleich mit dem Zustand der Maschine --- */
+  // Abgleich nach Unterschieden: Organe, die bleiben, bekommen nur ihre Reglerstände (Töne, Hall und Echo
+  // klingen weiter); verschwundene werden ausgebaut, neue eingesetzt.
   syncAll() {
-    for (const [mid, id] of this.eids) this.send({ t: 'mod-', id });
-    this.eids.clear(); this.mids.clear();
+    const want = new Map(Machine.st.mods.map((m) => [m.id, m]));
+    for (const [mid, id] of [...this.eids]) {
+      const m = want.get(mid);
+      if (!m || m.type !== this.types.get(mid)) { this.send({ t: 'mod-', id }); this.eids.delete(mid); this.mids.delete(id); this.types.delete(mid); this.sent.delete(mid); VIS.mods.delete(mid); }
+    }
     this.sendScale(); this.sendTempo();
-    for (const m of Machine.st.mods) this.sendMod(m);
+    for (const m of Machine.st.mods) {
+      if (!this.eids.has(m.id)) { this.sendMod(m); continue; }
+      const last = this.sent.get(m.id) || {};
+      for (const [k, v] of Object.entries(m.vals)) if (last[k] !== v) this.send({ t: 'p', id: this.eid(m.id), k, v });
+      this.sent.set(m.id, Object.assign({}, m.vals));
+    }
     this.sendPatch();
   },
   sendMod(m) {
     this.send({ t: 'mod+', id: this.eid(m.id), type: m.type, p: engineSpec(m.type, m.vals) });
+    this.types.set(m.id, m.type); this.sent.set(m.id, Object.assign({}, m.vals));
   },
   sendPatch() {
     const a = [], mm = [], tr = [];
@@ -94,9 +106,10 @@ const Audio = {
     switch (ev.k) {
       case 'all': this.syncAll(); break;
       case 'add': this.sendMod(ev.m); this.sendPatch(); break;
-      case 'del': { const id = this.eids.get(ev.id); if (id) { this.send({ t: 'mod-', id }); this.mids.delete(id); } this.eids.delete(ev.id); VIS.mods.delete(ev.id); break; }
+      case 'del': { const id = this.eids.get(ev.id); if (id) { this.send({ t: 'mod-', id }); this.mids.delete(id); } this.eids.delete(ev.id); this.types.delete(ev.id); this.sent.delete(ev.id); VIS.mods.delete(ev.id); break; }
       case 'param': {
         this.send({ t: 'p', id: this.eid(ev.id), k: ev.p, v: ev.v });
+        const last = this.sent.get(ev.id); if (last) last[ev.p] = ev.v;
         const m = Machine.mod(ev.id);
         if (m && m.type === 'atem' && ev.p === 'echo' && this.micOn) this.restartMic();
         break;
@@ -109,10 +122,20 @@ const Audio = {
 
   /* --- Spieltöne --- */
   noteOn(n, hz, y, v) { this.send({ t: 'on', n, hz, y, v }); },
-  noteMove(n, hz, y) { this.send({ t: 'mv', n, hz, y }); },
-  noteOff(n) { this.send({ t: 'off', n }); },
+  // Bewegungen werden gesammelt und einmal pro Bild als eine Nachricht geschickt (entlastet den Audio-Thread)
+  moves: new Map(),
+  noteMove(n, hz, y) { this.moves.set(n, [hz, y]); },
+  flush() {
+    if (!this.moves.size) return;
+    const a = [];
+    for (const [n, [hz, y]] of this.moves) a.push(n, hz, y);
+    this.moves.clear();
+    this.send({ t: 'mvs', a });
+  },
+  noteOff(n) { if (this.moves.has(n)) this.flush(); this.send({ t: 'off', n }); },
   setHold(on) { this.send({ t: 'hold', on }); },
   setQuality(q) { this.quality = q; this.send({ t: 'quality', q }); },
+  clickMode() { return Settings.get('metronom') ? 2 : Settings.get('recClick') ? 1 : 0; },
 
   /* --- Mikrofon --- */
   async micStart() {

@@ -206,7 +206,7 @@ const Recorder = {
     const o = this.opts();
     this.cur = { L: [], R: [], mode: o.mode, bars: o.bars, bpm: Machine.st.tempo, fold: o.fold, date: Date.now() };
     if (o.mode === 'takt') {
-      Audio.send({ t: 'rec', op: 'arm', bars: o.bars, countIn: o.count ? 1 : 0, tail: o.fold ? o.tail * 4 : 0, click: o.click ? 1 : 0 });
+      Audio.send({ t: 'rec', op: 'arm', bars: o.bars, countIn: o.count ? 1 : 0, tail: o.fold ? o.tail * 4 : 0, click: Settings.get('metronom') ? 2 : o.click ? 1 : 0 });
       this.state = o.count ? 'count' : 'rec';
     } else {
       Audio.send({ t: 'rec', op: 'free' });
@@ -321,7 +321,7 @@ const Recorder = {
         h('div', { class: 'field' }, h('span', { class: 'field-l' }, 'Einzähler'), chips([{ id: true, label: '1 Takt' }, { id: false, label: 'ohne' }], o.count, (v) => Settings.set('recCount', v))),
         h('div', { class: 'field' }, h('span', { class: 'field-l' }, 'Nahtlos'), chips([{ id: true, label: 'Nachklang einfalten' }, { id: false, label: 'hart schneiden' }], o.fold, (v) => Settings.set('recFold', v))),
         h('div', { class: 'field' }, h('span', { class: 'field-l' }, 'Nachklang'), chips([1, 2, 4].map((b) => ({ id: b, label: b + (b === 1 ? ' Takt' : ' Takte') })), o.tail, (v) => Settings.set('recTail', v))),
-        h('div', { class: 'field' }, h('span', { class: 'field-l' }, 'Klick'), chips([{ id: true, label: 'im Einzähler' }, { id: false, label: 'still' }], o.click, (v) => Settings.set('recClick', v))),
+        h('div', { class: 'field' }, h('span', { class: 'field-l' }, 'Klick'), chips([{ id: true, label: 'im Einzähler' }, { id: false, label: 'still' }], o.click, (v) => { Settings.set('recClick', v); Audio.send({ t: 'click', mode: Audio.clickMode() }); })),
       );
     }
     body.append(h('div', { class: 'field' }, h('span', { class: 'field-l' }, 'Format'), chips(['s24', 's16', 'f32'].map((f) => ({ id: f, label: 'WAV ' + FMT_INFO[f].label })), Settings.get('recFmt'), (v) => Settings.set('recFmt', v))));

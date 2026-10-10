@@ -13,12 +13,15 @@ const Pad = {
     this.cv = h('canvas', { id: 'padcv', 'aria-label': 'Spielfläche' });
     this.ctx = this.cv.getContext('2d');
     this.bind();
-    Machine.on((ev) => { if (ev.k === 'skala' || ev.k === 'pad' || ev.k === 'all') this.layout(); });
+    Machine.on((ev) => {
+      if (ev.k === 'skala' || ev.k === 'pad' || ev.k === 'all') this.layout();
+      if ((ev.k === 'del' || ev.k === 'all') && !Machine.st.mods.some((m) => m.type === 'atem')) this.orbs = this.orbs.filter((o) => o.kind !== 'layer');
+    });
     Audio.on('layer', (op, m) => this.onLayer(op, m));
     if (window.ResizeObserver) new ResizeObserver(() => this.resize()).observe(document.body);
   },
   attach(host, mode) {
-    this.host = host; this.mode = mode;
+    this.host = host; this.mode = mode; this.shownAt = performance.now();
     host.append(this.cv);
     this.resize();
   },
@@ -274,6 +277,16 @@ const Pad = {
     this.drawOrbs(ctx, now, rh);
     this.drawTouches(ctx, now, rh);
     Ghost.draw(ctx, now, rh);
+    // kurzer Hinweis beim Öffnen des großen Pads, solange noch nichts gespielt wird
+    const age = now - this.shownAt;
+    if (this.mode === 'full' && age < 9000 && !this.touches.size && !this.orbs.length) {
+      ctx.globalAlpha = Math.min(1, (9000 - age) / 1500) * 0.75;
+      ctx.font = 'italic 19px "IM Fell English", Georgia, serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#efe7d6';
+      ctx.fillText('Waagrecht die Tonhöhe, senkrecht die Klangfarbe.', W / 2, H * 0.4);
+      ctx.fillText('HALTEN lässt jeden Ton als Kugel stehen.', W / 2, H * 0.4 + 30);
+      ctx.globalAlpha = 1;
+    }
     if (!Audio.ready) {
       ctx.fillStyle = 'rgba(8,10,18,0.55)'; ctx.fillRect(0, 0, W, H);
       ctx.font = '500 15px "Alegreya Sans", system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
