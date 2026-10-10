@@ -186,7 +186,7 @@ input[type=text] {
 .quick .ctl label { font-size: 11px; color: var(--dim); }
 .quick .val { font-size: 10px; }
 .quick .iconbtn { margin-bottom: 1px; }
-.tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: var(--loam-2); border-top: 1px solid var(--line); }
+.tabs { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); background: var(--loam-2); border-top: 1px solid var(--line); }
 .tab {
   display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 2px 9px; min-width: 0; min-height: 48px;
   background: none; border: 0; color: var(--dim); font: 500 11px/1 var(--font-ui); letter-spacing: .02em;
@@ -194,6 +194,11 @@ input[type=text] {
 .tab svg { width: 20px; height: 20px; }
 .tab[aria-expanded="true"] { color: var(--spore); }
 .tab span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tab { position: relative; }
+.tab .mdot { position: absolute; top: 6px; left: calc(50% + 9px); width: 7px; height: 7px; border-radius: 50%; background: var(--lumen); opacity: 0; transition: opacity .12s; }
+.tab .mdot.conn { opacity: .4; }
+.tab .mdot.on { opacity: 1; transition: none; }
+.note.live { font-variant-numeric: tabular-nums; color: var(--lumen); }
 
 /* ---------- puls panel ---------- */
 .transport { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-bottom: 10px; }
@@ -347,6 +352,7 @@ input[type=text] {
         <li><b>Finger</b><span>Mehrere gleichzeitig; Wischen schlägt Glocken, Trommeln und Saiten an</span></li>
         <li><b>Puls</b><span>Euklidische Rhythmen auf vier Spuren</span></li>
         <li><b>Aufnahme</b><span>Verlustfrei als WAV, direkt von der Summe</span></li>
+        <li><b>Keyboard</b><span>MIDI- oder USB-Keyboard anschließen und losspielen</span></li>
       </ul>
       <button id="btnStart" class="btn primary go" type="button">Klang starten</button>
       <p class="fine" id="startFine">Kopfhörer oder gute Lautsprecher bringen die Tiefen und den Raum am besten zur Geltung.</p>
@@ -376,6 +382,9 @@ const dbToGain = (db) => Math.pow(10, db / 20);
 const gainToDb = (g) => 20 * Math.log10(Math.max(g, 1e-9));
 const dec = (s) => String(s).replace('.', ',');
 const gauss = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+const MOBILE = (() => { try { return matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } })();
+const ANDROID = /Android/i.test(navigator.userAgent);
+const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
   set(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } },
@@ -402,6 +411,7 @@ const ICON = {
   fx: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M5 4v16M12 4v16M19 4v16"/><circle cx="5" cy="9" r="2.2" fill="currentColor"/><circle cx="12" cy="15" r="2.2" fill="currentColor"/><circle cx="19" cy="7" r="2.2" fill="currentColor"/></svg>',
   puls: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8.5" stroke-dasharray="2 3.4"/><circle cx="12" cy="3.5" r="1.8" fill="currentColor"/><circle cx="19.4" cy="16.2" r="1.8" fill="currentColor"/><circle cx="4.6" cy="16.2" r="1.8" fill="currentColor"/></svg>',
   rec: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4" fill="currentColor"/></svg>',
+  dev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M9 12v7M15 12v7"/><path d="M7.5 5h3v7h-3zM13.5 5h3v7h-3z" fill="currentColor" stroke-width="1"/></svg>',
   presets: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c2 3.5 6 4.5 6 9a6 6 0 0 1-12 0c0-4.5 4-5.5 6-9z"/><path d="M12 21v-6"/></svg>',
 };
 
@@ -602,14 +612,21 @@ BOOL('rec.norm', 'Beim Speichern auf −1 dBFS normalisieren', false, { rec: 1 }
 BOOL('rec.arm', 'Erst mit dem ersten Ton starten', false, { rec: 1 });
 BOOL('rec.comp', 'Zusätzlich eine kleine Datei zum Teilen (MP4/WebM)', false, { rec: 1 });
 BOOL('rec.tail', 'Nachklang nach dem Stoppen mit aufnehmen', true, { rec: 1 });
+// Gerät: Rechenleistung, Latenz, MIDI-Keyboard (gelten für dieses Gerät, nicht Teil der Klang-Presets)
+SEL('dev.q', 'Qualitätsstufe', [['1', '1 · Leicht'], ['2', '2 · Voll'], ['3', '3 · Gewaltig']], MOBILE ? '1' : '2', { chips: 1, dev: 1 });
+SEL('dev.lat', 'Latenz', [['min', 'Minimal'], ['std', 'Standard'], ['safe', 'Sicher']], ANDROID ? 'safe' : MOBILE ? 'std' : 'min', { chips: 1, dev: 1 });
+SEL('midi.map', 'Tasten', [['scale', 'Skala'], ['white', 'Weiße Tasten'], ['chrom', 'Chromatisch']], 'scale', { chips: 1, dev: 1 });
+NUM('midi.y', 'Höhe auf der Spielfläche', 0, 1, 0.55, '%', { dev: 1 });
+BOOL('midi.vel', 'Anschlagdynamik', true, { dev: 1 });
+NUM('midi.bend', 'Tonhöhenrad', 0, 12, 2, 'HT', { step: 1, dev: 1, fmt: (v) => (v ? '±' + v + ' HT' : 'aus') });
 
 const GROUP = {
   v: 'Spielweise', t: 'Stimmung', neb: 'Nebel', kor: 'Körner', hau: 'Hauch', glo: 'Glocke', mem: 'Membran', sai: 'Saite', sch: 'Schale',
   drv: 'Verzerrung', rng: 'Ringmodulator', flt: 'Filter', pha: 'Phaser', cho: 'Schweben', dly: 'Echo', rev: 'Hall', mov: 'Bewegung', mst: 'Summe',
-  seq: 'Puls', bor: 'Bordun', rec: 'Aufnahme', l0: 'Spur 1', l1: 'Spur 2', l2: 'Spur 3', l3: 'Spur 4',
+  seq: 'Puls', bor: 'Bordun', rec: 'Aufnahme', dev: 'Gerät', midi: 'MIDI', l0: 'Spur 1', l1: 'Spur 2', l2: 'Spur 3', l3: 'Spur 4',
 };
 const groupOf = (id) => GROUP[id.slice(0, id.indexOf('.'))] || '';
-const PATCH_IDS = Object.keys(PD).filter((id) => !PD[id].rec);
+const PATCH_IDS = Object.keys(PD).filter((id) => !PD[id].rec && !PD[id].dev);
 const P = {};
 for (const id in PD) P[id] = PD[id].d;
 
@@ -724,12 +741,17 @@ function noteX(idx) {
    ===================================================================== */
 const A = { ctx: null, started: false, voices: new Set(), grainVoices: new Set(), tex: {}, texWait: {}, frozen: false, revActive: null, irJob: 0, grains: 0, flushing: false };
 let SR = 48000;
-const MOBILE = (() => { try { return matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } })();
-const ANDROID = /Android/i.test(navigator.userAgent);
-// Polyphony is limited by cost, not by count: one unit ≈ one Nebel voice. Cheap engines get more voices.
-const VCOST = { neb: 1, kor: 0.6, hau: 0.3, glo: 0.7, mem: 0.4, sai: 0.35, sch: 0.9 };
-const MAXV = 32;
-let VBUDGET = MOBILE ? 14 : 22;
+// Polyphony is limited by cost, not by count: one unit ≈ one Nebel voice at level 1. Cheap engines get more voices.
+// Level 1 keeps phones safe, level 2 plays more at once, level 3 gives every voice more oscillators, partials and
+// modes and fills a desktop core up to a budget measured on this device (see calibrate()).
+const VCOST1 = { neb: 1, kor: 0.6, hau: 0.3, glo: 0.7, mem: 0.4, sai: 0.35, sch: 0.9 };
+const VCOST3 = { neb: 1.9, kor: 1.1, hau: 0.75, glo: 1.4, mem: 0.75, sai: 1.2, sch: 2 };   // measured: level-1 cost × (level 3 / level 1)
+const QP = {
+  1: { budget: MOBILE ? 14 : 22, maxv: 32, grainMax: MOBILE ? 80 : 128, overlap: MOBILE ? 16 : 24, os: MOBILE ? '2x' : '4x', rich: false, korDens: 1, cost: VCOST1 },
+  2: { base: MOBILE ? 24 : 40, budget: MOBILE ? 24 : 40, maxv: 64, grainMax: MOBILE ? 128 : 224, overlap: 24, os: '4x', rich: false, korDens: 1, cost: VCOST1 },
+  3: { budget: 48, maxv: 96, grainMax: 640, overlap: 40, os: '4x', rich: true, korDens: 1.75, cost: VCOST3 },
+};
+let Q = QP[1], VBUDGET = Q.budget, MAXV = Q.maxv;
 
 // Modulated params are evaluated once per 128-frame block instead of per sample ('k-rate'): inaudible for
 // LFOs and vibrato, but 2–4× cheaper for oscillators and biquads. Frequencies used for FM and gains stay a-rate.
@@ -791,16 +813,38 @@ function driveCurve(type, amt, mix) {
   }
   return makeShaperCurve((x) => (1 - mix) * x + mix * shape(x), type === 'crush' ? 8192 : 4096);
 }
-const COMP_MAKEUP = [0.33, 1.26, 2.69, 4.29, 5.97, 7.69, 9.43, 11.19, 12.97, 14.75, 16.54]; // dB, measured (Blink/WebKit compressor)
-function compMakeup(c) { const x = clamp(c, 0, 1) * 10, i = Math.min(9, Math.floor(x)), f = x - i; return COMP_MAKEUP[i] * (1 - f) + COMP_MAKEUP[i + 1] * f; }
+// Glue compressor curves. Stage 1: level relative to the threshold (x = level / threshold / 256) → dB above it with a
+// 10 dB soft knee, divided by 64. Stage 2: that amount, scaled by (1 − 1/ratio) → linear gain. Threshold and ratio are
+// plain gains in front of each stage, so they glide without rebuilding a curve.
+const CMP_SPAN = 256, CMP_DB = 64, CMP_KNEE = 10;
+// mean-absolute detector, scaled so playing sounds as loud as with the browser compressor it replaces (all presets
+// within about ±1 dB); without look-ahead single attacks come through up to ~3 dB hotter, the soft ceiling takes them
+const CMP_DET = 1.7;
+const ABS_CURVE = (() => { const n = 2049, c = new Float32Array(n); for (let i = 0; i < n; i++) c[i] = Math.abs((i / (n - 1)) * 2 - 1); return c; })();
+function cmpOverCurve() {
+  const n = 32769, c = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const x = (i / (n - 1)) * 2 - 1;
+    if (x <= 0) continue;
+    const d = 20 * Math.log10(x * CMP_SPAN);   // dB relative to the threshold
+    const over = d <= -CMP_KNEE / 2 ? 0 : d >= CMP_KNEE / 2 ? d : Math.pow(d + CMP_KNEE / 2, 2) / (2 * CMP_KNEE);
+    c[i] = Math.min(1, over / CMP_DB);
+  }
+  return c;
+}
+function cmpGainCurve() {
+  const n = 4097, c = new Float32Array(n);
+  for (let i = 0; i < n; i++) { const u = (i / (n - 1)) * 2 - 1; c[i] = u <= 0 ? 1 : Math.pow(10, -CMP_DB * u / 20); }
+  return c;
+}
 
 /* ---------- heavy buffers (reverb IR, grain textures) are rendered off the main thread ---------- */
-function genIR(sec, damp, sr) {
+function genIR(sec, damp, sr, nch) {
   const len = Math.max(256, Math.floor(sec * sr));
   const tau = sec / 6.9, fadeIn = Math.floor(sr * 0.004);
   const c0 = 0.97, c1 = 0.03 + (1 - damp) * 0.85;
   const out = [];
-  for (let ch = 0; ch < 2; ch++) {
+  for (let ch = 0; ch < (nch || 2); ch++) {
     const d = new Float32Array(len);
     let lp = 0;
     for (let i = 0; i < len; i++) {
@@ -894,6 +938,7 @@ function genTexture(kind, sr, F) {
   }
   return [Lc, Rc];
 }
+const IR4_GAIN = Math.SQRT2;   // a true-stereo IR sums two uncorrelated paths per side at half gain: −3 dB to make up
 const DSPW = { w: null, seq: 0, wait: new Map(), broken: false };
 const DSP_FN = { ir: (...a) => genIR(...a), tex: (...a) => genTexture(...a), ks: (...a) => [genKS(...a)] };
 function dspJob(type, args) {
@@ -916,8 +961,8 @@ function dspJob(type, args) {
   });
 }
 function toBuffer(chans) {
-  const buf = A.ctx.createBuffer(2, chans[0].length, SR);
-  buf.getChannelData(0).set(chans[0]); buf.getChannelData(1).set(chans[1]);
+  const buf = A.ctx.createBuffer(chans.length, chans[0].length, SR);
+  chans.forEach((c, i) => buf.getChannelData(i).set(c));
   return buf;
 }
 
@@ -925,10 +970,12 @@ function initAudio() {
   const AC = window.AudioContext || window.webkitAudioContext;
   if (!AC) throw new Error('Web Audio fehlt');
   // Android: the smallest ("interactive") buffer is often 192 frames against 128-frame render blocks, which leaves
-  // only ~70 % of real time per callback. "balanced" (≈20 ms) absorbs load spikes; iOS ignores the hint.
-  const L = ANDROID ? 'balanced' : 'interactive';
-  const ctx = new AC({ latencyHint: L });
-  A.ctx = ctx; SR = ctx.sampleRate;
+  // only ~70 % of real time per callback, so Android defaults to "Sicher" ("balanced", ≈20 ms).
+  // "Minimal" asks for the smallest buffer the system allows (often 128 frames instead of 10 ms); iOS ignores the hint.
+  const L = P['dev.lat'] === 'min' ? 0 : P['dev.lat'] === 'safe' ? 'balanced' : 'interactive';
+  let ctx;
+  try { ctx = new AC({ latencyHint: L }); } catch (e) { ctx = new AC({ latencyHint: 'interactive' }); }
+  A.ctx = ctx; SR = ctx.sampleRate; A.latMode = P['dev.lat'];
 
   // shared buffers & waves
   A.noise = ctx.createBuffer(1, Math.floor(SR * 2), SR);
@@ -959,6 +1006,13 @@ function initAudio() {
   A.vibLfo = OSC('sine', P['mov.vibRate']); A.vibG = G(P['mov.vib']); A.vibLfo.connect(A.vibG).connect(A.pitchMod);
   A.driftSrc = ctx.createBufferSource(); A.driftSrc.buffer = A.driftBuf; A.driftSrc.loop = true;
   A.driftG = G(P['mov.drift']); A.driftSrc.connect(A.driftG).connect(A.pitchMod);
+  // MIDI pitch wheel (cents) on top, only for voices played from a keyboard
+  A.notePitch = G(1); A.pitchMod.connect(A.notePitch);
+  A.bendSrc = ctx.createConstantSource ? ctx.createConstantSource() : null;
+  if (A.bendSrc) { A.bendSrc.offset.value = 0; A.bendSrc.connect(A.notePitch); }
+  // level 3: four slow, independent wanderings (cents) so unison oscillators drift apart like separate players
+  A.uniLfo = [0.11, 0.17, 0.23, 0.31].map((r) => OSC('sine', r));
+  A.uni = A.uniLfo.map((o) => { const g = G(3.5); o.connect(g); return g; });
 
   // ---- voice bus & insert chain ----
   A.voiceBus = G(1);
@@ -1036,12 +1090,29 @@ function initAudio() {
   A.revIn.connect(A.revPre);
   A.revRet.connect(A.masterSum);
 
-  // ---- master: EQ → level → glue compressor (makeup removed) → soft saturating ceiling (no look-ahead latency) ----
+  // ---- master: EQ → level → glue compressor → soft saturating ceiling, all without look-ahead latency ----
   A.lowSh = BQ('lowshelf', 120); A.highSh = BQ('highshelf', 6500);
   A.masterVol = G(dbToGain(P['mst.vol']));
-  A.comp = ctx.createDynamicsCompressor();
-  A.comp.knee.value = 10; A.comp.attack.value = 0.01; A.comp.release.value = 0.25;
-  A.compTrim = G(1);
+  // Glue compressor from native nodes, without look-ahead (the browser's DynamicsCompressor delays everything by 6 ms).
+  // Detector: mean absolute level of both channels, smoothed fast (≈6 ms, 4th order so bass ripple stays out of the
+  // gain) and slow (≈230 ms); the larger one wins, max(a, b) = (a + b + |a − b|) / 2, so attacks are quick and
+  // sustained passages release slowly. No makeup gain: quiet passages keep their level.
+  A.cmpVca = G(0);
+  const shaper = (curve) => { const w = ctx.createWaveShaper(); w.curve = curve; return w; };
+  A.cmpDet = G(0.25);                                         // ±4 (+12 dBFS) fits the shaper's ±1 range
+  const mono = G(1); mono.channelCount = 1; mono.channelCountMode = 'explicit'; mono.channelInterpretation = 'speakers';
+  const fast1 = BQ('lowpass', 28, -3), fast2 = BQ('lowpass', 28, -3);
+  // a biquad this slow loses its precision; a one-pole IIR (computed in double precision) does not
+  const ap = Math.exp(-1 / (0.23 * SR));
+  const slow = ctx.createIIRFilter ? ctx.createIIRFilter([1 - ap], [1, -ap]) : BQ('lowpass', 2.5, -3);
+  A.cmpDet.connect(shaper(ABS_CURVE)).connect(mono);
+  mono.connect(fast1).connect(fast2); mono.connect(slow);
+  const half = G(0.5), diff = G(1), neg = G(-1), halfD = G(0.5);
+  fast2.connect(half); slow.connect(half);
+  fast2.connect(diff); slow.connect(neg).connect(diff);
+  A.cmpThr = G(1); A.cmpRatio = G(0.5);
+  half.connect(A.cmpThr); diff.connect(shaper(ABS_CURVE)).connect(halfD).connect(A.cmpThr);
+  A.cmpThr.connect(shaper(cmpOverCurve())).connect(A.cmpRatio).connect(shaper(cmpGainCurve())).connect(A.cmpVca.gain);
   A.clipPre = G(0.5);
   A.clip = ctx.createWaveShaper();
   // linear up to −2.5 dBFS, then a tanh knee that never exceeds 0.98 (−0.2 dBFS); inputs up to +6 dBFS stay smooth
@@ -1052,14 +1123,16 @@ function initAudio() {
   }, 8192);
   A.clip.oversample = 'none';
   A.out = G(1);
-  A.masterSum.connect(A.lowSh).connect(A.highSh).connect(A.masterVol).connect(A.comp).connect(A.compTrim).connect(A.clipPre).connect(A.clip).connect(A.out);
+  A.masterSum.connect(A.lowSh).connect(A.highSh).connect(A.masterVol).connect(A.cmpVca).connect(A.clipPre).connect(A.clip).connect(A.out);
+  A.masterVol.connect(A.cmpDet);
   A.out.connect(ctx.destination);
   A.analyser = ctx.createAnalyser(); A.analyser.fftSize = 2048; A.analyser.smoothingTimeConstant = 0.6;
   A.out.connect(A.analyser);
   A.scopeBuf = new Float32Array(A.analyser.fftSize);
 
   // start free-running modulators
-  for (const o of [A.vibLfo, A.driftSrc, A.rngOsc, A.fltLfo, A.phaLfo, A.choL1, A.choL2, A.panLfo, A.wowLfo, A.flutLfo]) o.start();
+  for (const o of [A.vibLfo, A.driftSrc, A.rngOsc, A.fltLfo, A.phaLfo, A.choL1, A.choL2, A.panLfo, A.wowLfo, A.flutLfo, ...A.uniLfo]) o.start();
+  if (A.bendSrc) A.bendSrc.start();
 
   applyAll(true);
   A.started = true;
@@ -1073,7 +1146,8 @@ function updDrive() {
   if (A.drvKey === key) return;
   A.drvKey = key;
   A.drvShaper.curve = driveCurve(type, amt, mix);
-  const os = mix < 0.001 || type === 'crush' ? 'none' : MOBILE || A.lite ? '2x' : '4x';
+  // oversampling costs latency (2x: 128 frames, 4x: 192 frames on the whole voice path), so "Minimal" plays without it
+  const os = mix < 0.001 || type === 'crush' || P['dev.lat'] === 'min' ? 'none' : A.lite ? '2x' : Q.os;
   if (A.drvShaper.oversample !== os) A.drvShaper.oversample = os;
 }
 function updRing() { if (!A.ctx) return; setP(A.rngOsc.frequency, P['rng.freq'], 0.02); setP(A.rngDry.gain, 1 - P['rng.mix']); setP(A.rngWet.gain, P['rng.mix']); }
@@ -1125,14 +1199,17 @@ function regenIR(now) {
   clearTimeout(A.irTimer);
   A.irTimer = setTimeout(() => {
     const job = ++A.irJob;
-    dspJob('ir', [P['rev.size'], P['rev.damp'], SR]).then((ch) => {
+    // level 3: four channels = "true stereo" (each side also reverberates into the other)
+    const nch = Q.rich ? 4 : 2;
+    dspJob('ir', [P['rev.size'], P['rev.damp'], SR, nch]).then((ch) => {
       if (job !== A.irJob || !A.ctx) return;   // a newer request superseded this one
       const conv = A.ctx.createConvolver();
       conv.buffer = toBuffer(ch);
       const g = G(0);
       A.revPre.connect(conv).connect(g).connect(A.revRet);
+      A.revCh = nch;
       const t = A.ctx.currentTime;
-      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(1, t + 0.25);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(nch === 4 ? IR4_GAIN : 1, t + 0.25);
       const old = A.revActive;
       if (old) {
         holdParam(old.g.gain, t); old.g.gain.linearRampToValueAtTime(0, t + 0.25);
@@ -1152,8 +1229,8 @@ function updMaster() {
   if (!A.ctx) return;
   setP(A.lowSh.gain, P['mst.low']); setP(A.highSh.gain, P['mst.high']);
   const c = P['mst.comp'];
-  setP(A.comp.threshold, -6 - c * 30, 0.05); setP(A.comp.ratio, 1.5 + c * 6, 0.05);
-  setP(A.compTrim.gain, dbToGain(-compMakeup(c)), 0.05);
+  const thr = dbToGain(-6 - c * 30), ratio = 1.5 + c * 6;
+  setP(A.cmpThr.gain, 4 * CMP_DET / thr / CMP_SPAN, 0.05); setP(A.cmpRatio.gain, 1 - 1 / ratio, 0.05);
   setP(A.masterVol.gain, dbToGain(P['mst.vol']), 0.03);
 }
 function applyAll(firstIR) {
@@ -1175,7 +1252,9 @@ class Voice {
   }
   n(node) { this.nodes.push(node); return node; }
   s(node) { this.srcs.push(node); this.nodes.push(node); return node; }
-  mod(param) { KR(param); try { A.pitchMod.connect(param); this.mods.push(param); } catch (e) {} }
+  // pitch modulation in cents: vibrato and drift for every voice, plus the pitch wheel for voices played over MIDI
+  mod(param) { KR(param); this.lnk(this.bend ? A.notePitch : A.pitchMod, param); }
+  lnk(src, param) { try { src.connect(param); this.mods.push([src, param]); } catch (e) {} }
   finish(at) {
     this.endAt = at;
     // a source may end earlier on its own (_end: inaudible below −60 dB); the last stop() call wins, so keep the earlier one
@@ -1188,7 +1267,7 @@ class Voice {
     if (!this.alive) return;
     this.alive = false;
     clearTimeout(this.timer);
-    for (const p of this.mods) { try { A.pitchMod.disconnect(p); } catch (e) {} }
+    for (const [src, p] of this.mods) { try { src.disconnect(p); } catch (e) {} }
     for (const n of this.nodes) { try { n.disconnect(); } catch (e) {} }
     try { this.out.disconnect(); } catch (e) {}
     A.voices.delete(this); A.grainVoices.delete(this);
@@ -1245,11 +1324,15 @@ const ENGINES = {
       const filt = v.n(BQ('lowpass', nebCut(y), P['neb.res']));
       const spread = P['neb.spread'], w = P['v.width'];
       const oscs = [];
-      [-1, 0, 1].forEach((k) => {
+      // level 3: seven oscillators across the detune range, each wandering on its own; same loudness as three
+      const ks = Q.rich ? [-1, -2 / 3, -1 / 3, 0, 1 / 3, 2 / 3, 1] : [-1, 0, 1];
+      const og = 0.2 * Math.sqrt(3 / ks.length);
+      ks.forEach((k, i) => {
         const osc = v.s(OSC(P['neb.wave'], f));
         osc.detune.value = k * spread + rand(-2, 2);
         v.mod(osc.detune);
-        osc.connect(v.n(G(0.2))).connect(v.n(PAN(k * 0.75 * w))).connect(filt);
+        if (Q.rich) v.lnk(A.uni[i % 4], osc.detune);
+        osc.connect(v.n(G(og))).connect(v.n(PAN(k * 0.75 * w))).connect(filt);
         oscs.push({ osc, mul: 1 });
       });
       if (P['neb.sub'] > 0.001) {
@@ -1279,7 +1362,7 @@ const ENGINES = {
       const src = korSource();
       // grains share four fixed stereo positions per finger instead of one panner each
       const w = P['v.width'];
-      const pans = [-1, -0.33, 0.33, 1].map((x) => { const p = v.n(PAN(x * w)); p.connect(v.out); return p; });
+      const pans = (Q.rich ? [-1, -0.71, -0.43, -0.14, 0.14, 0.43, 0.71, 1] : [-1, -0.33, 0.33, 1]).map((x) => { const p = v.n(PAN(x * w)); p.connect(v.out); return p; });
       v.kor = { f, y, next: t, buf: src && src.buf, rev: src && src.rev, ref: src ? src.ref : TEX_F, pans };
       const peak = vel * 0.55;
       A.grainVoices.add(v);
@@ -1293,16 +1376,24 @@ const ENGINES = {
     sustain: true,
     start(v, t, f, y, vel, o) {
       const q = P['hau.q'];
-      const ns = v.s(noiseSrc());
       const fc = hauFreq(f, y);
-      const bp = v.n(BQ('bandpass', fc, q));
-      v.mod(bp.detune);
-      const g = v.n(G(hauGain(fc, q) * 0.78));
-      ns.connect(bp).connect(g).connect(v.out);
-      ns.start(t, rand(0, 1.8));
+      // level 3: three bands, slightly apart and spread left to right, each with its own noise
+      const n = Q.rich ? 3 : 1, gn = 0.78 / Math.sqrt(n), bands = [];
+      for (let i = 0; i < n; i++) {
+        const ns = v.s(noiseSrc());
+        const bp = v.n(BQ('bandpass', fc, q));
+        if (n > 1) bp.detune.value = (i - 1) * (8 + 40 / Math.sqrt(q));
+        v.mod(bp.detune);
+        const g = v.n(G(hauGain(fc, q) * gn));
+        ns.connect(bp).connect(g);
+        if (n > 1) g.connect(v.n(PAN((i - 1) * 0.7 * P['v.width']))).connect(v.out); else g.connect(v.out);
+        ns.start(t, rand(0, 1.8));
+        bands.push({ bp, g });
+      }
       const peak = vel;
-      v.setF = (nf, glide) => { v.f = nf; const c = hauFreq(nf, v.y); glideTo(bp.frequency, c, glide); setP(g.gain, hauGain(c, q) * 0.78, 0.05); };
-      v.setY = (ny) => { v.y = ny; const c = hauFreq(v.f, ny); setP(bp.frequency, c, 0.04); setP(g.gain, hauGain(c, q) * 0.78, 0.05); };
+      const retune = (c, glide) => { for (const b of bands) { if (glide != null) glideTo(b.bp.frequency, c, glide); else setP(b.bp.frequency, c, 0.04); setP(b.g.gain, hauGain(c, q) * gn, 0.05); } };
+      v.setF = (nf, glide) => { v.f = nf; retune(hauFreq(nf, v.y), glide || 0); };
+      v.setY = (ny) => { v.y = ny; retune(hauFreq(v.f, ny)); };
       v.f = f; v.y = y;
       if (o.burst) burstEnv(v, t, peak, 0.002, Math.max(0.005, o.gate * 0.1), P['hau.burst'] * (o.decayMul || 1));
       else { adsrStart(v, t, peak, P['hau.att']); v.release = sustainRelease(v, P['hau.rel']); }
@@ -1313,15 +1404,23 @@ const ENGINES = {
     start(v, t, f, y, vel, o) {
       const decay = P['glo.decay'] * (o.decayMul || 1) * (0.6 + 0.8 * y);
       const ratio = P['glo.ratio'], idx = P['glo.index'] * (0.3 + 1.4 * y);
-      const car = v.s(OSC('sine', f)), car2 = v.s(OSC('sine', f + P['glo.beat'])), mod = v.s(OSC('sine', f * ratio));
-      v.mod(car.detune); v.mod(car2.detune); v.mod(mod.detune);
       const dev = Math.min(idx * f * ratio, SR * 0.18);
-      const mg = v.n(G(0));
-      mg.gain.setValueAtTime(dev, t);
-      mg.gain.setTargetAtTime(dev * 0.05, t, Math.max(0.01, decay * P['glo.bright'] * 0.4));
-      mod.connect(mg); mg.connect(car.frequency); mg.connect(car2.frequency);
-      car.connect(v.n(G(0.55))).connect(v.out);
-      car2.connect(v.n(G(0.4))).connect(v.out);
+      // level 3: two bells a few cents apart, left and right, shimmer against each other
+      const sides = Q.rich ? [-1, 1] : [0], k = Q.rich ? 0.68 : 1, srcs = [];
+      for (const side of sides) {
+        const car = v.s(OSC('sine', f)), car2 = v.s(OSC('sine', f + P['glo.beat'])), mod = v.s(OSC('sine', f * ratio * (1 + side * 0.0015)));
+        car.detune.value = car2.detune.value = side * 3.5;
+        v.mod(car.detune); v.mod(car2.detune); v.mod(mod.detune);
+        const mg = v.n(G(0));
+        mg.gain.setValueAtTime(dev, t);
+        mg.gain.setTargetAtTime(dev * 0.05, t, Math.max(0.01, decay * P['glo.bright'] * 0.4));
+        mod.connect(mg); mg.connect(car.frequency); mg.connect(car2.frequency);
+        const dst = side ? v.n(PAN(side * 0.55 * P['v.width'])) : v.out;
+        if (side) dst.connect(v.out);
+        car.connect(v.n(G(0.55 * k))).connect(dst);
+        car2.connect(v.n(G(0.4 * k))).connect(dst);
+        srcs.push(car, car2, mod);
+      }
       if (P['glo.click'] > 0.01) {
         const ns = v.s(noiseSrc()), hp = v.n(BQ('highpass', 2500, 0.7)), cg = v.n(G(0));
         cg.gain.setValueAtTime(0, t); cg.gain.linearRampToValueAtTime(0.5 * P['glo.click'], t + 0.001); cg.gain.setTargetAtTime(0, t + 0.001, 0.006);
@@ -1329,7 +1428,7 @@ const ENGINES = {
         ns.start(t, rand(0, 1.8));
         ns._end = t + 0.1;
       }
-      car.start(t); car2.start(t); mod.start(t);
+      for (const o of srcs) o.start(t);
       v.out.gain.setValueAtTime(0, t);
       v.out.gain.linearRampToValueAtTime(vel * 0.42, t + 0.002);
       v.out.gain.setTargetAtTime(0, t + 0.002, decay / 6.9);
@@ -1345,7 +1444,11 @@ const ENGINES = {
       const osc = v.s(OSC('sine', f * jump)); v.mod(osc.detune);
       osc.frequency.setValueAtTime(f * jump, t);
       osc.frequency.exponentialRampToValueAtTime(f, t + dt);
-      osc.connect(v.out);
+      // level 3 places modes left and right; the centre parts then pass a centre panner so they keep their level
+      // (a stereo voice skips the −3 dB a mono voice gets in its panner)
+      const mid = Q.rich ? v.n(PAN(0)) : v.out;
+      if (Q.rich) mid.connect(v.out);
+      osc.connect(mid);
       if (P['mem.mode2'] > 0.01) {
         const r = P['mem.ratio2'];
         const o2 = v.s(OSC('sine', f * r * jump)); v.mod(o2.detune);
@@ -1354,9 +1457,21 @@ const ENGINES = {
         const g2 = v.n(G(0));
         g2.gain.setValueAtTime(0, t); g2.gain.linearRampToValueAtTime(0.6 * P['mem.mode2'], t + 0.001);
         g2.gain.setTargetAtTime(0, t + 0.001, decay * 0.45 / 6.9);
-        o2.connect(g2).connect(v.out);
+        o2.connect(g2).connect(mid);
         o2.start(t);
         o2._end = t + 0.031 + decay * 0.45;
+        // level 3: two more membrane modes (near the circular drumhead's 2.14 and 2.30), placed left and right
+        if (Q.rich) [[1.34, 0.5, 0.32, -1], [1.44, 0.34, 0.24, 1]].forEach(([rk, lk, dk, side]) => {
+          const o3 = v.s(OSC('sine', f * r * rk * jump)); v.mod(o3.detune);
+          o3.frequency.setValueAtTime(f * r * rk * jump, t);
+          o3.frequency.exponentialRampToValueAtTime(f * r * rk, t + dt);
+          const g3 = v.n(G(0));
+          g3.gain.setValueAtTime(0, t); g3.gain.linearRampToValueAtTime(0.6 * P['mem.mode2'] * lk, t + 0.001);
+          g3.gain.setTargetAtTime(0, t + 0.001, decay * dk / 6.9);
+          o3.connect(g3).connect(v.n(PAN(side * 0.5 * P['v.width']))).connect(v.out);
+          o3.start(t);
+          o3._end = t + 0.031 + decay * dk;
+        });
       }
       if (P['mem.noise'] > 0.01) {
         const ns = v.s(noiseSrc());
@@ -1364,7 +1479,7 @@ const ENGINES = {
         const gn = v.n(G(0));
         gn.gain.setValueAtTime(0, t); gn.gain.linearRampToValueAtTime(1.4 * P['mem.noise'], t + 0.001);
         gn.gain.setTargetAtTime(0, t + 0.001, Math.min(decay * 0.3, 0.25) / 6.9 * 2);
-        ns.connect(bp).connect(gn).connect(v.out);
+        ns.connect(bp).connect(gn).connect(mid);
         ns.start(t, rand(0, 1.8));
         ns._end = t + 0.031 + 2 * Math.min(decay * 0.3, 0.25);
       }
@@ -1379,12 +1494,19 @@ const ENGINES = {
   sai: {
     sustain: false,
     start(v, t, f, y, vel, o) {
-      const buf = ksBuffer(...ksArgs(f, P['sai.decay'] * (o.decayMul || 1)));
-      const s = v.s(A.ctx.createBufferSource()); s.buffer = buf;
-      if (s.detune) v.mod(s.detune);
+      const { buf, rate } = ksBuffer(...ksArgs(f, P['sai.decay'] * (o.decayMul || 1)));
       // finger height: from a dark, fundamental-heavy pluck (bottom) to the open string (top)
       const lp = v.n(BQ('lowpass', clamp(f * Math.pow(2, 1.5 + 7 * clamp(y, 0, 1)), 200, 20000), -3));
-      s.connect(lp);
+      // level 3: a double course like a twelve-string – two strings a few cents apart, left and right
+      const course = Q.rich ? [-1, 1] : [0];
+      for (const side of course) {
+        const s = v.s(A.ctx.createBufferSource()); s.buffer = buf; s.playbackRate.value = rate;
+        if (side) { if (s.detune) s.detune.value = side * 3; else s.playbackRate.value = rate * Math.pow(2, side * 3 / 1200); }
+        if (s.detune) v.mod(s.detune);
+        const g = side ? v.n(G(0.62)) : null;
+        if (side) s.connect(g).connect(v.n(PAN(side * 0.4 * P['v.width']))).connect(lp); else s.connect(lp);
+        s.start(t + (side > 0 ? 0.002 : 0));
+      }
       let node = lp;
       if (P['sai.body'] > 0.01) {
         const pk1 = v.n(BQ('peaking', 210, 1.4)); pk1.gain.value = P['sai.body'] * 9;
@@ -1393,9 +1515,8 @@ const ENGINES = {
       }
       node.connect(v.out);
       v.out.gain.value = vel * 1.5;
-      s.start(t);
       v.released = true;
-      v.finish(t + buf.duration + 0.02);
+      v.finish(t + buf.duration / rate + 0.02);
     },
   },
   sch: {
@@ -1403,7 +1524,9 @@ const ENGINES = {
     start(v, t, f, y, vel, o) {
       const decay = P['sch.decay'] * (o.decayMul || 1);
       const bright = clamp(P['sch.bright'] * (0.5 + y), 0.05, 1);
-      const base = [1, 2.71, 5.15, 8.43];
+      // level 3: two more partials, and each beating pair split left and right
+      const base = Q.rich ? [1, 2.71, 5.15, 8.43, 12.3, 16.9] : [1, 2.71, 5.15, 8.43];
+      const w = P['v.width'];
       const att = 0.002 + (1 - P['sch.mallet']) * 0.025;
       base.forEach((r0, i) => {
         const r = r0 * (1 + P['sch.stretch'] * i * 0.08);
@@ -1418,7 +1541,9 @@ const ENGINES = {
         const g = v.n(G(0));
         g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(amp * 0.32, t + att);
         g.gain.setTargetAtTime(0, t + att, di / 6.9);
-        o1.connect(g); o2.connect(g); g.connect(v.out);
+        if (Q.rich) { o1.connect(v.n(PAN(-0.55 * w))).connect(g); o2.connect(v.n(PAN(0.55 * w))).connect(g); }
+        else { o1.connect(g); o2.connect(g); }
+        g.connect(v.out);
         o1.start(t); o2.start(t);
         o1._end = o2._end = t + att + di + 0.02;
       });
@@ -1473,24 +1598,38 @@ const KS_CACHE = new Map();
 KS_CACHE.frames = 0;
 const ksArgs = (f, decaySec) => [f, Math.round(P['sai.bright'] * 20) / 20, decaySec, P['sai.damp'], P['sai.pos']];
 const ksKey = (f, bright, decaySec, damp, pos) => [Math.round(f * 10), bright, decaySec.toFixed(2), damp.toFixed(2), pos.toFixed(2), SR].join('|');
-function ksStore(key, data) {
+function ksStore(key, data, f) {
   const buf = A.ctx.createBuffer(1, data.length, SR);
   buf.getChannelData(0).set(data);
+  buf._f = f;
   KS_CACHE.set(key, buf);
   KS_CACHE.frames += data.length;
-  while (KS_CACHE.size > 1 && (KS_CACHE.size > 64 || KS_CACHE.frames > 8e6)) {
+  while (KS_CACHE.size > 1 && (KS_CACHE.size > 80 || KS_CACHE.frames > 1e7)) {
     const k0 = KS_CACHE.keys().next().value;
     KS_CACHE.frames -= KS_CACHE.get(k0).length;
     KS_CACHE.delete(k0);
   }
   return buf;
 }
+// → { buf, rate }: the exact string, or – on a miss – the nearest string with the same settings, retuned by playback
+// rate, while the exact one renders in the worker. Only the very first string renders on the spot.
 function ksBuffer(f, bright, decaySec, damp, pos) {
   const key = ksKey(f, bright, decaySec, damp, pos);
   const hit = KS_CACHE.get(key);
-  if (hit) { KS_CACHE.delete(key); KS_CACHE.set(key, hit); return hit; }
-  return ksStore(key, genKS(f, bright, decaySec, damp, pos, SR));   // cache miss: render now (rare after pre-rendering)
+  if (hit) { KS_CACHE.delete(key); KS_CACHE.set(key, hit); return { buf: hit, rate: 1 }; }
+  const tail = key.slice(key.indexOf('|'));
+  let near = null, nd = Math.log(4);   // up to two octaves away
+  for (const [k, b] of KS_CACHE) if (k.endsWith(tail)) { const d = Math.abs(Math.log(f / b._f)); if (d < nd) { nd = d; near = b; } }
+  if (near) {
+    if (!ksBuffer.wait.has(key)) {
+      ksBuffer.wait.add(key);
+      dspJob('ks', [f, bright, decaySec, damp, pos, SR]).then(([data]) => { ksBuffer.wait.delete(key); if (A.ctx && !KS_CACHE.has(key)) ksStore(key, data, f); });
+    }
+    return { buf: near, rate: f / near._f };
+  }
+  return { buf: ksStore(key, genKS(f, bright, decaySec, damp, pos, SR), f), rate: 1 };
 }
+ksBuffer.wait = new Set();
 // While Saite is in use, render every note of the current scale in the worker so taps never wait for it.
 function saiInUse() {
   if (P['v.eng'] === 'sai' || P['v.layer'] === 'sai') return true;
@@ -1504,14 +1643,16 @@ function warmKS() {
     if (!saiInUse()) return;
     const job = (warmKS.job = (warmKS.job || 0) + 1);
     const ratio = P['v.layer'] === 'sai' && P['v.eng'] !== 'sai' ? Math.pow(2, P['v.layerInt'] / 12) : 1;
-    const freqs = [...new Set(N.notes.map((n) => +(n.f * ratio).toFixed(3)))];
+    const freqs = new Set(N.notes.map((n) => +(n.f * ratio).toFixed(3)));
+    // with a keyboard attached also the three octaves around middle C, so no key has to render a string while playing
+    if (MIDI.ports.size) for (let m = 48; m <= 84; m++) freqs.add(+(midiNote(m).f * ratio).toFixed(3));
     for (const f of freqs) {
       if (job !== warmKS.job) return;   // settings changed again: a newer run takes over
       const args = ksArgs(f, P['sai.decay']);
       const key = ksKey(...args);
       if (KS_CACHE.has(key)) continue;
       const [data] = await dspJob('ks', [...args, SR]);
-      if (job === warmKS.job && !KS_CACHE.has(key)) ksStore(key, data);
+      if (job === warmKS.job && !KS_CACHE.has(key)) ksStore(key, data, f);
     }
   }, 300);
 }
@@ -1551,14 +1692,13 @@ function korSource() {
   return texture(want) || A.tex.glas || Object.values(A.tex)[0] || null;
 }
 const HANN = (() => { const n = 64, c = new Float32Array(n); for (let i = 0; i < n; i++) c[i] = Math.sin(Math.PI * i / (n - 1)) ** 2; return c; })();
-const GRAIN_MAX = MOBILE ? 80 : 128;   // counts grains already scheduled ahead, too
-const GRAIN_OVERLAP = MOBILE ? 16 : 24;   // most grains sounding at once per finger
+// Q.grainMax counts grains already scheduled ahead, too; Q.overlap is the most grains sounding at once per finger
 function spawnGrain(v, when) {
   const k = v.kor;
-  if (A.grains >= GRAIN_MAX) return;
+  if (A.grains >= Q.grainMax) return;
   const useRev = Math.random() < P['kor.rev'];
   const buf = useRev ? k.rev : k.buf;
-  let rate = (k.f / k.ref) * Math.pow(2, (gauss() * P['kor.pjit']) / 1200);
+  let rate = (k.f / k.ref) * Math.pow(2, (gauss() * P['kor.pjit'] + (v.bend ? A.bendCents || 0 : 0)) / 1200);
   if (Math.random() < P['kor.oct']) rate *= pick([0.5, 2]);
   rate = clamp(rate, 0.0625, 16);
   const dur = buf.duration;
@@ -1569,8 +1709,8 @@ function spawnGrain(v, when) {
   pos = clamp(pos, 0, Math.max(0, dur - span - 0.001));
   const src = A.ctx.createBufferSource(); src.buffer = buf; src.playbackRate.value = rate;
   const g = A.ctx.createGain(); g.gain.value = 0;
-  const overlap = Math.max(1, P['kor.dens'] * P['kor.size']);
-  const amp = 0.9 / Math.sqrt(Math.min(overlap, GRAIN_OVERLAP));
+  const overlap = Math.max(1, P['kor.dens'] * Q.korDens * P['kor.size']);
+  const amp = 0.9 / Math.sqrt(Math.min(overlap, Q.overlap));
   if (!A.hann || A.hann.amp !== amp) {   // the envelope curve is copied by the browser, so one array can be reused
     const curve = new Float32Array(HANN.length);
     for (let i = 0; i < curve.length; i++) curve[i] = HANN[i] * amp;
@@ -1606,18 +1746,72 @@ function steal() {
   }
   if (best) { best.kill(); A.voices.delete(best); }
 }
-function voiceLoad() { let c = 0; for (const v of A.voices) c += VCOST[v.eng] || 1; return c; }
+function voiceLoad() { let c = 0; for (const v of A.voices) c += v.cost; return c; }
 function playNote(eng, t, f, y, vel, o = {}) {
   if (!A.ctx || !ENGINES[eng]) return null;
-  const cost = VCOST[eng] || 1;
+  const cost = Q.cost[eng] || 1;
   while (A.voices.size && (A.voices.size >= MAXV || voiceLoad() + cost > VBUDGET)) steal();
   const v = new Voice(eng);
+  v.cost = cost; v.bend = !!o.bend;
   const pan = v.n(PAN(o.pan || 0));
   v.out.connect(pan); pan.connect(A.voiceBus);
   A.voices.add(v);
   try { ENGINES[eng].start(v, t, f, clamp(y, 0, 1), vel, o); }
   catch (e) { console.error(e); v.cleanup(); return null; }
   return v;
+}
+
+/* ---------- quality levels ---------- */
+// Myzel measures this device: how much of real time one level-1 Nebel voice takes when rendered offline. Level 3
+// then fills a share of one core (the browser renders all audio on a single real-time thread) and leaves the rest for
+// effects, timing jitter and the screen; level 2 is capped by the same measure on slow machines. Underruns reported
+// by the browser lower the budget further.
+const CAL = { unit: Number(store.get('myzel.cal.v1')) || 0, running: false };
+function applyQuality() {
+  Q = QP[P['dev.q']] || QP[1];
+  const cap = CAL.unit ? Math.floor((P['dev.lat'] === 'min' ? 0.4 : 0.5) / CAL.unit) : 0;
+  if (Q === QP[2]) Q.budget = cap ? clamp(cap, 14, Q.base) : Q.base;
+  if (Q === QP[3]) {
+    Q.budget = cap ? clamp(cap, 24, 360) : 48;
+    Q.maxv = clamp(Math.round(Q.budget * 1.5), 64, 400); Q.grainMax = clamp(Q.budget * 8, 320, 1600);
+  }
+  VBUDGET = Math.max(6, Math.round(Q.budget * (A.budgetScale || 1))); MAXV = Q.maxv;
+  if (!A.ctx) return;
+  while (A.voices.size && (A.voices.size > MAXV || voiceLoad() > VBUDGET)) steal();
+  A.drvKey = null; updDrive();
+  if (A.revCh && A.revCh !== (Q.rich ? 4 : 2)) regenIR();
+  if (A.bor && A.bor.rich !== Q.rich) { stopBordun(); startBordun(); }
+}
+async function calibrate() {
+  if (CAL.running || !A.ctx || typeof OfflineAudioContext === 'undefined') return;
+  CAL.running = true;
+  try {
+    let best = Infinity;
+    for (let run = 0; run < 2; run++) {
+      const units = 24, dur = 1, c = new OfflineAudioContext(2, Math.round(SR * dur), SR);
+      // build real Nebel voices into the offline context: swap the context and the shared modulation for a moment
+      const keepA = { ctx: A.ctx, pitchMod: A.pitchMod, notePitch: A.notePitch }, keepQ = Q, keepP = {};
+      for (const id in PD) if (id.startsWith('neb.')) { keepP[id] = P[id]; P[id] = PD[id].d; }
+      try {
+        A.ctx = c; Q = QP[1];
+        A.pitchMod = A.notePitch = c.createGain();
+        const lfo = c.createOscillator(), lg = c.createGain(); lfo.frequency.value = 4.5; lg.gain.value = 4;
+        lfo.connect(lg).connect(A.pitchMod); lfo.start();
+        for (let i = 0; i < units; i++) {
+          const v = new Voice('neb'), pan = PAN(rand(-0.6, 0.6));
+          v.out.connect(pan).connect(c.destination);
+          ENGINES.neb.start(v, 0, 98 * Math.pow(2, (i % 15) / 7), (i % 5) / 4, 0.7, {});
+        }
+      } finally { Object.assign(A, keepA); Object.assign(P, keepP); Q = keepQ; }
+      const t0 = performance.now();
+      await c.startRendering();
+      best = Math.min(best, (performance.now() - t0) / 1000 / dur / units);
+    }
+    if (Number.isFinite(best) && best > 0) { CAL.unit = best; CAL.fresh = true; store.set('myzel.cal.v1', String(best)); }
+  } catch (e) { console.warn(e); }
+  CAL.running = false;
+  applyQuality();
+  updDevUI();
 }
 function hit(eng, t, f, y, vel, o = {}) {
   const E = ENGINES[eng];
@@ -1644,17 +1838,22 @@ function startBordun() {
   lfo.connect(lg).connect(filt.detune); lfo.start(t);
   const [f1, f2] = borFreqs();
   const oscs = [];
-  [[0, -6, -0.55, 0.22], [0, 6, 0.55, 0.22], [1, -4, -0.3, 0.16], [1, 5, 0.3, 0.16]].forEach(([which, dt, pn, lvl]) => {
+  const parts = [[0, -6, -0.55, 0.22], [0, 6, 0.55, 0.22], [1, -4, -0.3, 0.16], [1, 5, 0.3, 0.16]];
+  // level 3: every oscillator doubled, a few cents apart, each pair drifting on its own
+  const list = Q.rich ? parts.flatMap(([w, dt, pn, lvl]) => [[w, dt - 3, pn * 1.25, lvl * 0.72], [w, dt + 3.5, pn * 0.6, lvl * 0.72]]) : parts;
+  list.forEach(([which, dt, pn, lvl], i) => {
     const o = OSC(P['bor.wave'], which ? f2 : f1);
     o.detune.value = dt;
     A.pitchMod.connect(o.detune);
+    const u = Q.rich ? A.uni[i % 4] : null;
+    if (u) u.connect(o.detune);
     const og = G(lvl), p = PAN(pn);
     o.connect(og).connect(p).connect(filt);
     o.start(t);
-    oscs.push({ o, which, og, p });
+    oscs.push({ o, which, og, p, u });
   });
   g.gain.setTargetAtTime(P['bor.lvl'] * 0.5, t, 1.2);
-  A.bor = { g, filt, lfo, lg, oscs, wave: P['bor.wave'] };
+  A.bor = { g, filt, lfo, lg, oscs, wave: P['bor.wave'], rich: Q.rich };
   noteEvent();
 }
 function retuneBordun() {
@@ -1679,7 +1878,7 @@ function stopBordun(fast) {
   for (const x of b.oscs) x.o.stop(end);
   b.lfo.stop(end);
   setTimeout(() => {
-    for (const x of b.oscs) { try { A.pitchMod.disconnect(x.o.detune); x.o.disconnect(); x.og.disconnect(); x.p.disconnect(); } catch (e) {} }
+    for (const x of b.oscs) { try { A.pitchMod.disconnect(x.o.detune); if (x.u) x.u.disconnect(x.o.detune); x.o.disconnect(); x.og.disconnect(); x.p.disconnect(); } catch (e) {} }
     try { b.lfo.disconnect(); b.lg.disconnect(); b.filt.disconnect(); b.g.disconnect(); } catch (e) {}
   }, (end - t) * 1000 + 200);
 }
@@ -2313,7 +2512,7 @@ function grainTick(horizon) {
     const k = v.kor;
     if (!k.buf) { const src = korSource(); if (!src) continue; k.buf = src.buf; k.rev = src.rev; k.ref = src.ref; }
     if (k.next < now) k.next = now + 0.004;
-    const step = Math.max(1 / P['kor.dens'], P['kor.size'] / GRAIN_OVERLAP);   // cap overlapping grains per finger
+    const step = Math.max(1 / (P['kor.dens'] * Q.korDens), P['kor.size'] / Q.overlap);   // cap overlapping grains per finger
     while (k.next < horizon && k.next < v.endAt) { spawnGrain(v, k.next); k.next += step * rand(0.6, 1.4); }
   }
 }
@@ -2348,13 +2547,15 @@ function layers() {
   return out;
 }
 function touchVel() { return P['v.vel'] * (1 - P['v.human'] * 0.3 * Math.random()); }
+// a keyboard brings its own dynamics and timing: no humanizing for MIDI notes
+const noteVel = (tt) => (tt.vel != null ? tt.vel : touchVel());
 function touchPan(x) { return clamp((x * 2 - 1) * P['v.width'] * 0.8 + rand(-0.15, 0.15) * P['v.width'], -1, 1); }
 function triggerPerc(tt, t, isRoll) {
   let any = false;
   for (const ly of tt.layers) {
     if (ENGINES[ly.eng].sustain) continue;
-    const jit = P['v.human'] * 0.01 * Math.random();
-    hit(ly.eng, t + jit, tt.f * ly.ratio, tt.y, touchVel() * ly.lvl, { pan: touchPan(tt.x) });
+    const jit = tt.vel != null ? 0 : P['v.human'] * 0.01 * Math.random();
+    hit(ly.eng, t + jit, tt.f * ly.ratio, tt.y, noteVel(tt) * ly.lvl, { pan: touchPan(tt.x), bend: tt.bend });
     any = true;
   }
   if (any) visPush({ t, kind: 'hit', x: tt.x, y: tt.y, s: isRoll ? 0.6 : 1, hue: tt.hue });
@@ -2369,11 +2570,11 @@ function onDown(e) {
   ensureRunning();
   if (touches.has(e.pointerId)) onUp({ pointerId: e.pointerId });   // never leave a note hanging on a reused pointer id
   if (e.pointerType) { try { cvFx.setPointerCapture(e.pointerId); } catch (err) {} }
-  const pt = e.pt || stagePoint(e), n = noteAt(pt.x), now = A.ctx.currentTime;
-  const tt = { id: e.pointerId, x: pt.x, y: pt.y, px: pt.px, py: pt.py, col: n.idx, f: n.f, name: n.name, layers: layers(), voices: [], rollNext: null, hue: VIS.hueAt(pt.x) };
+  const pt = e.pt || stagePoint(e), n = e.note || noteAt(pt.x), now = A.ctx.currentTime;
+  const tt = { id: e.pointerId, x: pt.x, y: pt.y, px: pt.px, py: pt.py, col: n.idx, f: n.f, name: n.name, layers: layers(), voices: [], rollNext: null, hue: VIS.hueAt(pt.x), vel: e.vel, bend: !!e.bend, vn: e.vn };
   for (const ly of tt.layers) {
     if (ENGINES[ly.eng].sustain) {
-      const v = playNote(ly.eng, now, n.f * ly.ratio, pt.y, touchVel() * ly.lvl, { pan: touchPan(pt.x) });
+      const v = playNote(ly.eng, now, n.f * ly.ratio, pt.y, noteVel(tt) * ly.lvl, { pan: touchPan(pt.x), bend: tt.bend });
       if (v) tt.voices.push({ v, ly });
     }
   }
@@ -2423,8 +2624,166 @@ function keyNote(e, down) {
   onDown({ pointerId: id, pt: { x, y: e.shiftKey ? 0.85 : 0.55, px: x * VIS.w, py: (e.shiftKey ? 0.15 : 0.45) * VIS.h } });
 }
 
+/* ---------- MIDI keyboards: keys play the field like fingers ---------- */
+// Every message is handled the moment it arrives – no queue, no look-ahead – and the note starts at the audio clock's
+// current time, so the only delay left is the output buffer (Gerät → Latenz) plus the device itself.
+const MIDI = { access: null, state: 'idle', ports: new Map(), wheel: 0, press: 0, bend: 0, sus: false, held: new Set(), down: new Set(), flash: 0, hinted: false };
+const midiId = (ch, note) => 'midi-' + ch + '-' + note;
+const isMidi = (id) => typeof id === 'string' && id.startsWith('midi-');
+// Chromium asks once for MIDI access; Firefox needs an add-on prompt, so there only the button asks
+const MIDI_AUTO = !MOBILE && !!(navigator.userAgentData && navigator.userAgentData.brands);
+function midiBoot() {
+  if (!navigator.requestMIDIAccess) { MIDI.state = 'unsupported'; return; }
+  if (!navigator.permissions || !navigator.permissions.query) return;
+  navigator.permissions.query({ name: 'midi', sysex: false }).then((st) => {
+    if (st.state === 'granted') midiInit(false);
+    else if (st.state === 'denied') { MIDI.state = 'blocked'; updDevUI(); }
+  }, () => {});
+}
+async function midiInit(userAsked) {
+  if (!navigator.requestMIDIAccess) { MIDI.state = 'unsupported'; updDevUI(); return; }
+  if (MIDI.access || MIDI.state === 'asking') return;
+  MIDI.state = 'asking'; updDevUI();
+  try {
+    const acc = await navigator.requestMIDIAccess({ sysex: false });
+    MIDI.access = acc; MIDI.state = 'ready';
+    acc.onstatechange = () => midiScan();
+    midiScan();
+    if (userAsked && !MIDI.ports.size) toast('MIDI ist bereit. Schließe ein Keyboard an – es wird sofort erkannt.', 4500);
+  } catch (e) {
+    MIDI.state = 'blocked';
+    if (userAsked) toast(inViewer ? 'In dieser Ansicht ist MIDI gesperrt. Öffne Myzel als App: beidlat.github.io/4claude' : 'Der Browser hat den MIDI-Zugriff abgelehnt. Erlaube ihn in den Website-Einstellungen.', 6000);
+  }
+  updDevUI();
+}
+// keeps one handler on every connected input; announces keyboards that come and go
+function midiScan() {
+  if (!MIDI.access) return;
+  const seen = new Map();
+  for (const inp of MIDI.access.inputs.values()) {
+    if (inp.state === 'disconnected') continue;
+    if (inp.onmidimessage !== onMidi) inp.onmidimessage = onMidi;
+    seen.set(inp.id, inp.name || 'MIDI-Gerät');
+  }
+  const added = [...seen].filter(([id]) => !MIDI.ports.has(id)).map(([, n]) => n);
+  const gone = [...MIDI.ports].filter(([id]) => !seen.has(id)).map(([, n]) => n);
+  MIDI.ports = seen;
+  if (gone.length) midiAllOff();
+  if (added.length) warmKS();
+  if (added.length) toast('MIDI: ' + added.join(', ') + (A.started ? ' verbunden – einfach losspielen.' : ' erkannt. Tippe auf „Klang starten“, dann spielt es sofort.'), 4500);
+  else if (gone.length) toast('MIDI: ' + gone.join(', ') + ' getrennt.', 3000);
+  updDevUI();
+}
+function onMidi(e) {
+  const d = e.data;
+  if (!d || d.length < 2) return;
+  const st = d[0];
+  if (st >= 0xf0) return;   // clock, active sensing, system messages
+  const type = st & 0xf0, ch = st & 0x0f;
+  if (type === 0x90 && d[2] > 0) midiNoteOn(ch, d[1], d[2]);
+  else if (type === 0x80 || type === 0x90) midiNoteOff(ch, d[1]);
+  else if (type === 0xb0) midiCC(d[1], d[2] || 0);
+  else if (type === 0xe0) { MIDI.bend = ((((d[2] || 0) << 7) | d[1]) - 8192) / 8192; applyBend(); }
+  else if (type === 0xd0) { MIDI.press = d[1] / 127; midiRecolor(); }
+  else if (type === 0xa0) { const tt = touches.get(midiId(ch, d[1])); if (tt) { tt.pp = (d[2] || 0) / 127; midiRecolor(tt); } }
+}
+// height on the field: the chosen base, raised by the modulation wheel and pressure, coloured a little by velocity
+function midiY(tt) {
+  const b = P['midi.y'];
+  return clamp(b + MIDI.wheel * (1 - b) + 0.15 * ((tt.vn != null ? tt.vn : 0.6) - 0.6) + 0.3 * Math.max(MIDI.press, tt.pp || 0), 0, 1);
+}
+function midiNoteOn(ch, note, vel) {
+  MIDI.flash = performance.now();
+  if (!A.started) {
+    if (!MIDI.hinted) { MIDI.hinted = true; toast('Tippe einmal auf „Klang starten“ – danach spielt das Keyboard sofort.', 5000); }
+    return;
+  }
+  const id = midiId(ch, note), m = midiNote(note), vn = vel / 127;
+  MIDI.held.delete(id); MIDI.down.add(id);
+  const tt0 = { vn }, y = midiY(tt0);
+  const v = P['midi.vel'] ? clamp(P['v.vel'] * 1.33 * Math.pow(vn, 1.6), 0.02, 1) : P['v.vel'];
+  onDown({ pointerId: id, pt: { x: m.x, y, px: m.x * VIS.w, py: (1 - y) * VIS.h }, note: m, vel: v, bend: true, vn });
+}
+function midiNoteOff(ch, note) {
+  const id = midiId(ch, note);
+  MIDI.down.delete(id);
+  if (!touches.has(id)) return;
+  if (MIDI.sus) { MIDI.held.add(id); return; }
+  onUp({ pointerId: id });
+}
+function midiCC(cc, val) {
+  if (cc === 1) { MIDI.wheel = val / 127; midiRecolor(); }
+  else if (cc === 64) {
+    MIDI.sus = val >= 64;
+    if (!MIDI.sus) { for (const id of MIDI.held) if (!MIDI.down.has(id)) onUp({ pointerId: id }); MIDI.held.clear(); }
+  } else if (cc === 120 || cc === 123) midiAllOff();
+  else if (cc === 121) { MIDI.wheel = 0; MIDI.press = 0; MIDI.bend = 0; MIDI.sus = false; applyBend(); midiRecolor(); }
+}
+function midiRecolor(only) {
+  for (const tt of only ? [only] : touches.values()) {
+    if (!isMidi(tt.id)) continue;
+    const y = midiY(tt);
+    if (Math.abs(y - tt.y) < 0.004) continue;
+    tt.y = y; tt.py = (1 - y) * VIS.h;
+    for (const { v } of tt.voices) if (v.alive && v.setY) v.setY(y);
+  }
+}
+function applyBend() {
+  A.bendCents = MIDI.bend * P['midi.bend'] * 100;
+  if (!A.ctx || !A.bendSrc) return;
+  const t = A.ctx.currentTime, p = A.bendSrc.offset;
+  p.cancelScheduledValues(t); p.setTargetAtTime(A.bendCents, t, 0.004);
+}
+function midiAllOff() {
+  MIDI.held.clear(); MIDI.down.clear(); MIDI.sus = false;
+  for (const id of Array.from(touches.keys())) if (isMidi(id)) onUp({ pointerId: id });
+}
+// Which note a key plays. "Skala": every key snaps to the nearest note of the scale, so pitches stay where the keys are
+// and nothing sounds out of key. "Weiße Tasten": from the C of the base octave each white key is the next column of the
+// field, a black key repeats the white key below. "Chromatisch": every key its own pitch in the current tuning.
+const WHITE_OF = [0, 0, 1, 1, 2, 3, 3, 4, 4, 5, 5, 6];
+function scaleSteps() {
+  const sc = SCALES[P['t.scale']] || SCALES.mpent;
+  if (sc.free) return null;
+  return sc.r ? sc.r.map((r) => 12 * Math.log2(r)) : sc.s;
+}
+function degNote(d) {
+  const sc = SCALES[P['t.scale']] || SCALES.mpent, n = sc.r ? sc.r.length : sc.s.length;
+  const o = Math.floor(d / n), k = d - o * n;
+  if (sc.r) return { f: N.base * Math.pow(2, o) * sc.r[k], name: sc.lab[k] + (o ? '·' + (o + 1) : '') };
+  const midi = 12 * (P['t.oct'] + 1) + Number(P['t.root']) + 12 * o + sc.s[k];
+  return { f: N.base * Math.pow(2, o) * ratioForSemi(sc.s[k]), name: NOTE_NAMES[((midi % 12) + 12) % 12] + (Math.floor(midi / 12) - 1) };
+}
+function midiNote(m) {
+  const baseMidi = 12 * (P['t.oct'] + 1) + Number(P['t.root']);
+  const steps = scaleSteps(), len = N.notes.length;
+  const edge = (i) => (i < 0 ? 0.004 : 0.996);
+  if (P['midi.map'] === 'chrom' || !steps) {
+    const s = m - baseMidi;
+    let idx;
+    if (N.free) idx = s;
+    else { idx = 0; let bd = Infinity; N.notes.forEach((nt, i) => { const dd = Math.abs(nt.semi - s); if (dd < bd) { bd = dd; idx = i; } }); }
+    const total = N.free ? 12 * P['t.range'] : len - 1;
+    const inside = s >= 0 && s <= 12 * P['t.range'];
+    return { f: clamp(N.base * ratioForSemi(s), 16, 14000), idx, name: NOTE_NAMES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1), x: inside ? noteX(clamp(idx, 0, total)) : edge(s) };
+  }
+  const n = steps.length;
+  let d;
+  if (P['midi.map'] === 'white') {
+    const rel = m - 12 * (P['t.oct'] + 1), o = Math.floor(rel / 12);
+    d = o * 7 + WHITE_OF[rel - o * 12];
+  } else {
+    const s = m - baseMidi, o = Math.floor(s / 12), r = s - o * 12;
+    let best = 0, bd = Infinity;
+    for (let k = 0; k <= n; k++) { const dd = Math.abs(r - (k < n ? steps[k] : 12)); if (dd < bd - 1e-9) { bd = dd; best = k; } }
+    d = o * n + best;
+  }
+  const nt = degNote(d);
+  return { f: clamp(nt.f, 16, 14000), idx: d, name: nt.name, x: d >= 0 && d < len ? noteX(d) : edge(d) };
+}
+
 function panic() {
-  releaseAllTouches();
+  releaseAllTouches(); midiAllOff();
   seqStop();
   if (A.ctx) stopBordun(true);
   if (P['bor.on']) setParam('bor.on', false);
@@ -2455,6 +2814,7 @@ function setFreeze(on) {
    Visuals
    ===================================================================== */
 const cvBg = $('#cvBg'), cvFx = $('#cvFx'), stage = $('#stage');
+let midiDot = null;
 const bctx = cvBg.getContext('2d'), fctx = cvFx.getContext('2d');
 const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const CSSV = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
@@ -2633,6 +2993,8 @@ function frame(ts) {
   }
   updateMeters(dt);
   if (UI.panel === 'puls') drawRings();
+  if (midiDot) midiDot.classList.toggle('on', ts - MIDI.flash < 140);
+  if (UI.panel === 'dev' && ts - (VIS.devT || 0) > 400) { VIS.devT = ts; updDevLive(); }
   requestAnimationFrame(frame);
 }
 
@@ -2761,6 +3123,7 @@ function onParamChanged(id) {
   if (pre === 't') { buildNotes(); drawBg(); if (A.ctx) retuneBordun(); }
   if (pre === 'l' + id[1] && /^l\d$/.test(pre)) updLaneTabs();
   if (pre === 'rec') return;
+  if (PD[id].dev) { onDeviceChanged(id); return; }
   markPresetDirty();
   if (!A.ctx) return;
   switch (pre) {
@@ -2780,6 +3143,27 @@ function onParamChanged(id) {
       break;
   }
 }
+function onDeviceChanged(id) {
+  if (id === 'dev.q') {
+    A.budgetScale = 1; A.lite = false;
+    applyQuality();
+    if (P['dev.q'] !== '1' && A.ctx && !CAL.fresh) calibrate();
+  }
+  if (id === 'dev.lat') {
+    applyQuality();
+    if (A.ctx && P['dev.lat'] !== A.latMode) toast('Der neue Ausgabepuffer gilt nach einem Neustart des Klangs.', 8000, { label: 'Neu starten', fn: restartAudio });
+  }
+  if (id === 'midi.bend') applyBend();
+  if (id === 'midi.y') midiRecolor();
+  if (id === 'midi.map') warmKS();
+  updDevUI();
+}
+// the output buffer is fixed when the audio context is created: save everything and reload (recordings are backed up)
+function restartAudio() {
+  if (CAP.state !== 'idle' || CAP.finishing) { toast('Beende zuerst die Aufnahme.'); return; }
+  saveState();
+  location.reload();
+}
 function patchValues() { const o = {}; for (const id of PATCH_IDS) o[id] = P[id]; return o; }
 function loadValues(vals, keepUnset) {
   for (const id of PATCH_IDS) {
@@ -2794,8 +3178,9 @@ function loadValues(vals, keepUnset) {
 }
 function saveState() {
   store.set('myzel.patch.v1', JSON.stringify({ values: patchValues(), preset: UI.preset || null }));
-  const r = {}; for (const id in PD) if (PD[id].rec) r[id] = P[id];
+  const r = {}, dv = {}; for (const id in PD) { if (PD[id].rec) r[id] = P[id]; if (PD[id].dev) dv[id] = P[id]; }
   store.set('myzel.rec.v1', JSON.stringify(r));
+  store.set('myzel.dev.v1', JSON.stringify(dv));
 }
 function restoreState() {
   try {
@@ -2803,6 +3188,8 @@ function restoreState() {
     if (s && s.values) { for (const id of PATCH_IDS) if (id in s.values) P[id] = sanitize(PD[id], s.values[id]); UI.preset = s.preset || null; }
     const r = JSON.parse(store.get('myzel.rec.v1') || 'null');
     if (r) for (const id in r) if (PD[id] && PD[id].rec) P[id] = sanitize(PD[id], r[id]);
+    const dv = JSON.parse(store.get('myzel.dev.v1') || 'null');
+    if (dv) for (const id in dv) if (PD[id] && PD[id].dev) P[id] = sanitize(PD[id], dv[id]);
   } catch (e) {}
 }
 
@@ -2814,6 +3201,7 @@ const PANELS = [
   { key: 'puls', title: 'Puls', icon: ICON.puls },
   { key: 'rec', title: 'Aufnahme', icon: ICON.rec },
   { key: 'presets', title: 'Presets', icon: ICON.presets },
+  { key: 'dev', title: 'Gerät', icon: ICON.dev },
 ];
 const panelEls = {};
 const engSecs = {};
@@ -3185,6 +3573,7 @@ function buildPresets() {
     h('li', null, h('b', null, 'Einfrieren: '), 'Die Schneeflocke hält die Echoschleife endlos fest. Darüber kannst du weiterspielen.'),
     h('li', null, h('b', null, 'Stille: '), 'Stoppt sofort alle Töne, den Bordun, Echo, Hall und den Puls.'),
     h('li', null, h('b', null, 'Doppeltippen '), 'auf den Namen eines Reglers setzt ihn zurück.'),
+    h('li', null, h('b', null, 'MIDI-Keyboard: '), 'per USB anschließen und losspielen (Chrome oder Edge). Qualitätsstufe, Latenz und Tastenbelegung findest du unter „Gerät“.'),
     h('li', null, h('b', null, 'iPhone: '), 'Bleibt es still, den Stummschalter an der Seite ausschalten. Das iPhone erkennt höchstens fünf Finger gleichzeitig.'),
     h('li', null, h('b', null, 'Als App, auch offline: '), 'beidlat.github.io/4claude im Browser öffnen, dann „Teilen → Zum Home-Bildschirm“ (iPhone) bzw. „App installieren“ (Android).'))));
   renderUserPresets(); markPresetCards(); updUndo();
@@ -3290,12 +3679,91 @@ function dice() {
   toast('Neuer Klang gewürfelt.', 4500, UNDO);
 }
 
+/* ---------- Gerät: quality, latency, MIDI ---------- */
+let devEls = null;
+function buildDev() {
+  const box = h('div');
+  const qInfo = h('p', { class: 'note' }), qLive = h('p', { class: 'note live' });
+  box.append(section('Qualität', 'Wie viele und wie reiche Stimmen gleichzeitig', grid(ctl('dev.q', { label: 'Stufe' })), qInfo, qLive));
+  const latInfo = h('p', { class: 'note' });
+  const latBtn = h('button', { type: 'button', class: 'btn primary', hidden: true, onclick: restartAudio }, 'Klang neu starten');
+  box.append(section('Latenz', 'Zeit vom Anschlag bis zum Ton', grid(ctl('dev.lat', { label: 'Ausgabe' })), latInfo, h('div', { class: 'row' }, latBtn)));
+  const midiStatus = h('p', { class: 'note' });
+  const midiBtn = h('button', { type: 'button', class: 'btn primary', onclick: () => midiInit(true) }, 'MIDI-Keyboard verbinden');
+  box.append(section('MIDI-Keyboard', 'Per USB oder MIDI anschließen und losspielen', midiStatus, h('div', { class: 'row', style: 'margin:2px 0 8px' }, midiBtn),
+    grid(ctl('midi.map'), ctl('midi.y'), ctl('midi.vel'), ctl('midi.bend')),
+    h('ul', { class: 'help', style: 'margin-top:12px' },
+      h('li', null, h('b', null, 'Skala: '), 'jede Taste rastet auf den nächsten Ton der Skala ein – die Tonhöhe bleibt, wo die Taste ist.'),
+      h('li', null, h('b', null, 'Weiße Tasten: '), 'ab dem C der Grundoktave ist jede weiße Taste die nächste Spalte der Spielfläche.'),
+      h('li', null, h('b', null, 'Chromatisch: '), 'jede Taste ihr eigener Ton, in der eingestellten Stimmung.'),
+      h('li', null, h('b', null, 'Modulationsrad und Druck '), 'heben die Klangfarbe, wie ein Finger weiter oben. Fester Anschlag färbt etwas heller.'),
+      h('li', null, h('b', null, 'Tonhöhenrad und Haltepedal '), 'wirken auf die gespielten Töne, nicht auf Puls und Bordun.'))));
+  box.append(section('Computertastatur', null, h('p', { class: 'note' }, 'Ohne Keyboard spielen die Tasten A bis Ö (Grundreihe) die ersten Töne der Spielfläche, mit Umschalt weiter oben.')));
+  devEls = { qInfo, qLive, latInfo, latBtn, midiStatus, midiBtn };
+  updDevUI();
+  return box;
+}
+const msTxt = (sec) => dec((sec * 1000).toFixed(sec < 0.0095 ? 1 : 0)) + ' ms';
+function graphLatency() {
+  // the oversampled drive is the only part of the playing path with a delay (measured in Chromium: 2x 128, 4x 192 frames)
+  if (!A.drvShaper) return 0;
+  return A.drvShaper.oversample === '4x' ? 192 / SR : A.drvShaper.oversample === '2x' ? 128 / SR : 0;
+}
+function updDevUI() {
+  const nm = $('#midiDot');
+  if (nm) nm.classList.toggle('conn', MIDI.ports.size > 0);
+  if (!devEls) return;
+  const lv = P['dev.q'], nNeb = Math.floor(VBUDGET / Q.cost.neb);
+  devEls.qInfo.textContent = lv === '1'
+    ? 'Leicht: sparsam, damit Handys nicht aussetzen. Bis zu ' + nNeb + ' Nebel-Stimmen gleichzeitig; leichtere Klänge wie Hauch, Membran oder Saite entsprechend mehr.'
+    : lv === '2'
+      ? 'Voll: der Klang wie in der ersten Fassung, mit deutlich mehr Stimmen gleichzeitig – bis zu ' + nNeb + ' Nebel-Stimmen. Für neuere Handys und Computer.'
+      : 'Gewaltig: jede Stimme wird reicher – sieben statt drei Oszillatoren im Nebel, Doppelsaiten, zwei Glocken pro Anschlag, mehr Teiltöne und Trommelmoden, doppelt so dichte Körnerwolken und Hall in echtem Stereo. ' +
+        (CAL.running ? 'Myzel misst gerade, wie viel dieses Gerät schafft …' : CAL.unit ? 'Gemessen auf diesem Gerät: bis zu ' + nNeb + ' Nebel-Stimmen gleichzeitig.' : 'Die Stimmenzahl wird beim Klangstart auf diesem Gerät gemessen.') +
+        ' Der Browser rechnet allen Klang auf einem Prozessorkern – Stufe 3 füllt ihn' + (MOBILE ? '; auf Handys kann es knacken.' : '.');
+  updDevLive();
+  // latency
+  let lt;
+  if (!A.ctx) lt = 'Wird beim Klangstart gemessen.';
+  else {
+    const base = A.ctx.baseLatency || 0, out = A.ctx.outputLatency || 0, g = graphLatency();
+    lt = 'Gemessen: Puffer ' + msTxt(base) + (out ? ' + Ausgabegerät ' + msTxt(out) : '') + ' + Klangweg ' + msTxt(g) + ' ≈ ' + msTxt(base + out + g) + '.';
+    if (out > 0.06) lt += ' Das Ausgabegerät selbst ist langsam – Bluetooth-Kopfhörer verzögern oft um 100 bis 300 ms. Zum Spielen besser Kabel oder Lautsprecher.';
+  }
+  const mode = P['dev.lat'];
+  lt += mode === 'min' ? ' Minimal: kleinster Puffer, den das System erlaubt; die Verzerrung läuft ohne Überabtastung (minimal rauer).'
+    : mode === 'std' ? ' Standard: üblicher Puffer der Plattform, Verzerrung mit Überabtastung.'
+      : ' Sicher: größerer Puffer gegen Aussetzer bei hoher Last (Standard auf Android).';
+  if (IOS) lt += ' iPhone und iPad wählen den Puffer selbst.';
+  const pending = !!A.ctx && A.latMode !== mode;
+  if (pending) lt += ' Der neue Puffer gilt nach einem Neustart des Klangs.';
+  devEls.latInfo.textContent = lt;
+  devEls.latBtn.hidden = !pending;
+  // MIDI
+  const names = [...MIDI.ports.values()];
+  const st = MIDI.state;
+  devEls.midiStatus.textContent = st === 'unsupported'
+    ? (IOS ? 'Safari auf iPhone und iPad kann kein Web-MIDI. Am Computer und auf Android geht es mit Chrome oder Edge.' : 'Dieser Browser kann kein Web-MIDI. Nutze Chrome oder Edge.')
+    : st === 'asking' ? 'Warte auf die Erlaubnis des Browsers …'
+      : st === 'blocked' ? (inViewer ? 'In der claude.ai-Ansicht ist MIDI gesperrt. In der App geht es: beidlat.github.io/4claude' : 'Der MIDI-Zugriff ist blockiert. Erlaube „MIDI-Geräte“ in den Website-Einstellungen (Symbol links neben der Adresse) und lade die Seite neu.')
+        : st === 'ready' ? (names.length ? 'Verbunden: ' + names.join(', ') + '. Einfach losspielen.' : 'Bereit – noch kein Keyboard angeschlossen. Einstecken genügt, es wird sofort erkannt.')
+          : MIDI_AUTO ? 'Beim Klangstart fragt der Browser einmal nach der Erlaubnis für MIDI-Geräte.' : 'Noch nicht verbunden. Tippe auf „MIDI-Keyboard verbinden“ und erlaube den Zugriff.';
+  devEls.midiBtn.hidden = !(st === 'idle' && navigator.requestMIDIAccess);
+}
+function updDevLive() {
+  if (!devEls) return;
+  if (!A.ctx) { devEls.qLive.textContent = ''; return; }
+  const load = voiceLoad();
+  devEls.qLive.textContent = 'Jetzt: ' + A.voices.size + (A.voices.size === 1 ? ' Stimme klingt' : ' Stimmen klingen') + ' · ' + Math.round(100 * load / Math.max(1, VBUDGET)) + ' % der Grenze' +
+    (A.grains ? ' · ' + A.grains + ' Körner' : '') + (A.budgetScale && A.budgetScale < 1 ? ' · nach Aussetzern auf ' + Math.round(A.budgetScale * 100) + ' % gesenkt' : '');
+}
+
 /* ---------- sheet + tabs ---------- */
 ICON.hush = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>';
 function buildUI() {
   const tabs = $('#tabs');
   for (const p of PANELS) {
-    const b = h('button', { type: 'button', class: 'tab', id: 'tab-' + p.key, 'aria-expanded': 'false', 'aria-controls': 'sheet', html: p.icon + '<span>' + p.title + '</span>' });
+    const b = h('button', { type: 'button', class: 'tab', id: 'tab-' + p.key, 'aria-expanded': 'false', 'aria-controls': 'sheet', html: p.icon + '<span>' + p.title + '</span>' + (p.key === 'dev' ? '<i id="midiDot" class="mdot" aria-hidden="true"></i>' : '') });
     b.addEventListener('click', () => openPanel(p.key));
     tabs.append(b);
   }
@@ -3304,6 +3772,8 @@ function buildUI() {
   panelEls.puls = buildPuls();
   panelEls.rec = buildRec();
   panelEls.presets = buildPresets();
+  panelEls.dev = buildDev();
+  midiDot = $('#midiDot');
   for (const k in panelEls) { panelEls[k].hidden = true; sheetBody.append(panelEls[k]); }
   const q = $('#quick');
   q.append(ctl('flt.freq', { prefix: 'q-', label: 'Filter' }), ctl('dly.mix', { prefix: 'q-', label: 'Echo' }), ctl('rev.mix', { prefix: 'q-', label: 'Hall' }),
@@ -3329,6 +3799,7 @@ function openPanel(key) {
   for (const p of PANELS) $('#tab-' + p.key).setAttribute('aria-expanded', String(p.key === key));
   sheetBody.scrollTop = 0;
   if (key === 'rec') renderTakes();
+  if (key === 'dev') updDevUI();
 }
 function closePanel() {
   const hadFocus = sheet.contains(document.activeElement);
@@ -3361,7 +3832,6 @@ async function keepAwake() {
     return !!A.wake;
   } catch (e) { return false; }
 }
-const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 // iOS mutes Web Audio while the ring/silent switch is on. A looping silent media element moves the page into the
 // "playback" audio category, which ignores the switch. navigator.audioSession does the same where WebKit honours it.
 function iosUnmute() {
@@ -3402,6 +3872,10 @@ function start() {
   preloadTextures();
   warmKS();
   watchUnderruns();
+  applyBend();
+  if (!MOBILE || P['dev.q'] !== '1') setTimeout(calibrate, 1500);
+  if (MIDI_AUTO && MIDI.state === 'idle') midiInit(false);
+  updDevUI();
   if (P['kor.src'] === 'echo') ensureCapture();
   keepAwake();
   renderRecInfo();
@@ -3415,10 +3889,14 @@ function watchUnderruns() {
   setInterval(() => {
     if (document.visibilityState !== 'visible' || !A.ctx || A.ctx.state !== 'running') return;
     const u = count();
+    A.underruns = u;
     if (u > last && VBUDGET > 6) {
-      VBUDGET = Math.max(6, Math.round(VBUDGET * 0.8));
-      A.lite = true; A.drvKey = null; updDrive();
-      if (!A.liteHinted) { A.liteHinted = true; toast('Das Gerät kam kurz an seine Grenze – Myzel spielt jetzt etwas weniger Stimmen gleichzeitig.', 5000); }
+      A.budgetScale = (A.budgetScale || 1) * 0.8;
+      A.lite = true; applyQuality(); updDevUI();
+      if (!A.liteHinted) {
+        A.liteHinted = true;
+        toast('Das Gerät kam kurz an seine Grenze – Myzel spielt jetzt etwas weniger Stimmen gleichzeitig.' + (A.latMode === 'min' ? ' Knackt es weiter, stelle unter „Gerät“ die Latenz auf „Standard“.' : ''), 7000);
+      }
     }
     last = u;
   }, 1000);
@@ -3426,6 +3904,8 @@ function watchUnderruns() {
 
 function boot() {
   restoreState();
+  applyQuality();
+  midiBoot();
   readColors();
   buildNotes();
   buildUI();
