@@ -5,6 +5,16 @@ Ein Touch-Instrument für ambiente, perkussive, experimentelle und psychedelisch
 - **Als App (auch offline):** https://beidlat.github.io/4claude/ – im Browser öffnen, dann „Teilen → Zum Home-Bildschirm“ (iPhone) bzw. „App installieren“ (Android).
 - **In claude.ai:** https://claude.ai/artifact/HNZYLEaUvtCfkyYWi3SuDr (privat)
 
+## Klänge
+
+- **Klangquellen (14):** gehaltene Klänge Nebel, Körner, Hauch, Obertöne (Obertongesang), Stimme (Vokalchor), Schwarm (Insektenschwarm) und Tiefe (Subbass). Angeschlagen werden Glocke, Membran, Saite, Schale, Kalimba, Gong und Tropfen.
+- **Körner-Quellen:**
+  - Erzeugt: Glasharfe, Chor, Metall, Staub, Wasser, Vögel, Zikaden, Flüstern, Harmonium und Kurzwelle.
+  - Echo (die letzten 8 Sekunden des eigenen Spiels).
+  - Eigene Datei: eine Audiodatei oder Aufnahme mit bis zu 30 Sekunden. Sie wird auf dem Gerät gespeichert, ihr Grundton wird erkannt.
+  - Mikrofon (live).
+- **Aufnahme:** frei oder in Takten (1–64), samplegenau als Schleife.
+
 ## Gerät: Qualität, Latenz, MIDI
 
 - **Qualitätsstufen** (Tab „Gerät“): 1 · Leicht (Handys, wie bisher), 2 · Voll (mehr Stimmen gleichzeitig), 3 · Gewaltig (reichere Stimmen: sieben Oszillatoren im Nebel, Doppelsaiten, zwei Glocken pro Anschlag, mehr Teiltöne und Trommelmoden, dichtere Körner, Hall in echtem Stereo). Stufe 3 misst beim Start, wie viel das Gerät schafft, und füllt einen Prozessorkern – Browser rechnen allen Klang auf einem Echtzeit-Thread.

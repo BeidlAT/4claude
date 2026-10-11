@@ -446,7 +446,9 @@ const NUM = (id, label, min, max, d, unit = '', o = {}) => def(id, Object.assign
 const SEL = (id, label, opts, d, o = {}) => def(id, Object.assign({ kind: 'sel', label, opts, d }, o));
 const BOOL = (id, label, d, o = {}) => def(id, Object.assign({ kind: 'bool', label, d }, o));
 
-const ENG_OPTS = [['neb', 'Nebel'], ['kor', 'Körner'], ['hau', 'Hauch'], ['glo', 'Glocke'], ['mem', 'Membran'], ['sai', 'Saite'], ['sch', 'Schale']];
+// held sounds first, then struck ones
+const ENG_OPTS = [['neb', 'Nebel'], ['kor', 'Körner'], ['hau', 'Hauch'], ['obt', 'Obertöne'], ['stm', 'Stimme'], ['swm', 'Schwarm'], ['tie', 'Tiefe'],
+  ['glo', 'Glocke'], ['mem', 'Membran'], ['sai', 'Saite'], ['sch', 'Schale'], ['klb', 'Kalimba'], ['gng', 'Gong'], ['trp', 'Tropfen']];
 const ENG_NAME = Object.fromEntries(ENG_OPTS);
 const ENG_INFO = {
   neb: 'Schwebende Flächen aus verstimmten Oszillatoren',
@@ -456,6 +458,13 @@ const ENG_INFO = {
   mem: 'Trommelfelle mit Tonhöhensprung',
   sai: 'Gezupfte Saiten nach Karplus-Strong',
   sch: 'Klangschalen mit schwebenden Teiltönen',
+  gng: "Gong und Tamtam – Obertöne blühen nach dem Schlag auf",
+  klb: "Daumenklavier – Metallzungen über einem Holzkasten",
+  obt: "Obertongesang – ein Brummen, aus dem einzelne Obertöne pfeifen",
+  stm: "Vokalchor – die Fingerhöhe formt u, o, a, e, i",
+  swm: "Fremdartiger Insektenschwarm – die Fingerhöhe weckt das Chaos",
+  tie: "Subbass, der in seinen Ton stürzt – vom Dröhnen bis zum 808-Kick",
+  trp: "Wassertropfen – Luftblasen mit aufsteigendem Ton",
 };
 const WAVE_OPTS = [['sine', 'Sinus'], ['triangle', 'Dreieck'], ['sawtooth', 'Säge'], ['square', 'Rechteck'], ['glass', 'Glas'], ['organ', 'Orgel']];
 const pctSigned = (v) => (v > 0.005 ? 'R ' : v < -0.005 ? 'L ' : '') + (Math.abs(v) < 0.005 ? 'Mitte' : Math.round(Math.abs(v) * 100) + ' %');
@@ -489,7 +498,7 @@ NUM('neb.ymod', 'Höhe → Tiefpass', 0, 5, 3, 'oct');
 NUM('neb.att', 'Einschwingen', 0.005, 6, 0.6, 's', { curve: 'exp' });
 NUM('neb.rel', 'Ausklingen', 0.05, 12, 2.5, 's', { curve: 'exp' });
 // Körner
-SEL('kor.src', 'Quelle', [['glas', 'Glasharfe'], ['chor', 'Chor'], ['metall', 'Metall'], ['staub', 'Staub'], ['echo', 'Echo (letzte 8 s)']], 'glas', { chips: 1 });
+SEL('kor.src', 'Quelle', [['glas', 'Glasharfe'], ['chor', 'Chor'], ['metall', 'Metall'], ['staub', 'Staub'], ['wasser', 'Wasser'], ['voegel', 'Vögel'], ['zikaden', 'Zikaden'], ['fluestern', 'Flüstern'], ['orgel', 'Harmonium'], ['funk', 'Kurzwelle'], ['echo', 'Echo (letzte 8 s)'], ['datei', 'Eigene Datei'], ['mikro', 'Mikrofon (live)']], 'glas', { chips: 1 });
 NUM('kor.dens', 'Dichte', 2, 90, 22, '/s', { curve: 'exp' });
 NUM('kor.size', 'Korngröße', 0.015, 0.6, 0.14, 's', { curve: 'exp' });
 NUM('kor.scat', 'Streuung', 0, 1, 0.25, '%');
@@ -532,6 +541,55 @@ NUM('sch.beat', 'Schwebung', 0, 6, 1.5, 'Hz');
 NUM('sch.bright', 'Obertöne', 0.1, 1, 0.55, '%');
 NUM('sch.stretch', 'Spreizung', -0.3, 0.3, 0, '%');
 NUM('sch.mallet', 'Schlägelhärte', 0, 1, 0.4, '%');
+// Gong
+NUM('gng.decay', 'Abklingen', 2, 30, 12, 's', { curve: 'exp' });
+NUM('gng.bloom', 'Aufblühen', 0.05, 4, 0.8, 's', { curve: 'exp' });
+NUM('gng.bright', 'Obertöne', 0, 1, 0.6, '%');
+NUM('gng.glide', 'Tonhöhengleiten', -150, 150, -40, 'ct', { fmt: (v) => (Math.abs(v) < 0.5 ? 'aus' : (v < 0 ? 'sinkt ' : 'steigt ') + Math.round(Math.abs(v)) + ' ct') });
+NUM('gng.beat', 'Schwebung', 0, 4, 0.7, 'Hz');
+NUM('gng.shimmer', 'Schimmer', 0, 1, 0.4, '%');
+// Kalimba
+NUM('klb.decay', 'Abklingen', 0.2, 8, 2.2, 's', { curve: 'exp' });
+NUM('klb.over', 'Obertöne', 0, 1, 0.5, '%');
+NUM('klb.ratio', 'Oberton-Verhältnis', 3, 9, 5.9, '×', { step: 0.01 });
+NUM('klb.thumb', 'Daumen (Klopfen)', 0, 1, 0.45, '%');
+NUM('klb.body', 'Holzkasten', 0, 1, 0.5, '%');
+NUM('klb.buzz', 'Schnarren', 0, 1, 0.15, '%');
+// Obertöne
+NUM('obt.top', 'Obertonbereich', 6, 32, 16, '', { step: 1, fmt: (v) => Math.max(2, Math.round(v / 4)) + '.–' + v + '.' });
+NUM('obt.focus', 'Schärfe', 0, 1, 0.5, '%');
+NUM('obt.body', 'Körper (Grundton)', 0, 1, 0.5, '%');
+NUM('obt.wander', 'Wandern', 0, 1, 0.3, '%');
+NUM('obt.att', 'Einschwingen', 0.005, 4, 0.15, 's', { curve: 'exp' });
+NUM('obt.rel', 'Ausklingen', 0.05, 8, 1.5, 's', { curve: 'exp' });
+// Stimme
+NUM('stm.choir', 'Chorbreite', 0, 40, 12, 'ct');
+NUM('stm.vib', 'Vibrato', 0, 60, 14, 'ct');
+NUM('stm.breath', 'Atem', 0, 1, 0.25, '%');
+NUM('stm.shift', 'Stimmlage', -12, 12, 0, 'HT', { step: 1 });
+NUM('stm.att', 'Einschwingen', 0.005, 6, 0.7, 's', { curve: 'exp' });
+NUM('stm.rel', 'Ausklingen', 0.05, 12, 3, 's', { curve: 'exp' });
+// Schwarm
+NUM('swm.chaos', 'Chaos', 0, 1, 0.5, '%');
+NUM('swm.spread', 'Schwarmbreite', 0, 60, 16, 'ct');
+NUM('swm.unrest', 'Unruhe', 0, 1, 0.5, '%');
+NUM('swm.chirp', 'Zirpen', 0, 1, 0.4, '%');
+NUM('swm.att', 'Einschwingen', 0.005, 6, 0.25, 's', { curve: 'exp' });
+NUM('swm.rel', 'Ausklingen', 0.05, 12, 1.8, 's', { curve: 'exp' });
+// Tiefe
+NUM('tie.oct', 'Oktavlage', -3, 0, -2, '', { step: 1, fmt: (v) => (v ? '−' + Math.abs(v) + (v < -1 ? ' Oktaven' : ' Oktave') : 'wie gespielt') });
+NUM('tie.drop', 'Tonhöhensprung', 0, 36, 12, 'HT');
+NUM('tie.dropT', 'Sprungzeit', 0.005, 1.5, 0.06, 's', { curve: 'exp' });
+NUM('tie.drive', 'Sättigung', 0, 1, 0.5, '%');
+NUM('tie.click', 'Klick', 0, 1, 0.3, '%');
+NUM('tie.rel', 'Ausklingen', 0.05, 8, 0.5, 's', { curve: 'exp' });
+// Tropfen
+NUM('trp.chirp', 'Aufstieg', 0, 3, 1, 'oct');
+NUM('trp.rise', 'Steigzeit', 0.005, 0.6, 0.04, 's', { curve: 'exp' });
+NUM('trp.decay', 'Abklingen', 0.03, 3, 0.5, 's', { curve: 'exp' });
+NUM('trp.rain', 'Regen', 0, 1, 0.35, '%');
+NUM('trp.spread', 'Regendauer', 0.05, 2, 0.3, 's', { curve: 'exp' });
+NUM('trp.splash', 'Aufprall', 0, 1, 0.3, '%');
 // Effekte
 SEL('drv.type', 'Art', [['tube', 'Röhre'], ['fold', 'Falter'], ['crush', 'Bitbrecher']], 'tube', { chips: 1 });
 NUM('drv.amt', 'Stärke', 0, 1, 0.12, '%');
@@ -623,7 +681,7 @@ BOOL('midi.vel', 'Anschlagdynamik', true, { dev: 1 });
 NUM('midi.bend', 'Tonhöhenrad', 0, 12, 2, 'HT', { step: 1, dev: 1, fmt: (v) => (v ? '±' + v + ' HT' : 'aus') });
 
 const GROUP = {
-  v: 'Spielweise', t: 'Stimmung', neb: 'Nebel', kor: 'Körner', hau: 'Hauch', glo: 'Glocke', mem: 'Membran', sai: 'Saite', sch: 'Schale',
+  v: 'Spielweise', t: 'Stimmung', neb: 'Nebel', kor: 'Körner', hau: 'Hauch', glo: 'Glocke', mem: 'Membran', sai: 'Saite', sch: 'Schale', gng: "Gong", klb: "Kalimba", obt: "Obertöne", stm: "Stimme", swm: "Schwarm", tie: "Tiefe", trp: "Tropfen",
   drv: 'Verzerrung', rng: 'Ringmodulator', flt: 'Filter', pha: 'Phaser', cho: 'Schweben', dly: 'Echo', rev: 'Hall', mov: 'Bewegung', mst: 'Summe',
   seq: 'Puls', bor: 'Bordun', rec: 'Aufnahme', dev: 'Gerät', midi: 'MIDI', l0: 'Spur 1', l1: 'Spur 2', l2: 'Spur 3', l3: 'Spur 4',
 };
@@ -746,8 +804,8 @@ let SR = 48000;
 // Polyphony is limited by cost, not by count: one unit ≈ one Nebel voice at level 1. Cheap engines get more voices.
 // Level 1 keeps phones safe, level 2 plays more at once, level 3 gives every voice more oscillators, partials and
 // modes and fills a desktop core up to a budget measured on this device (see calibrate()).
-const VCOST1 = { neb: 1, kor: 0.6, hau: 0.3, glo: 0.7, mem: 0.4, sai: 0.35, sch: 0.9 };
-const VCOST3 = { neb: 1.9, kor: 1.1, hau: 0.75, glo: 1.4, mem: 0.75, sai: 1.2, sch: 2 };   // measured: level-1 cost × (level 3 / level 1)
+const VCOST1 = { neb: 1, kor: 0.6, hau: 0.3, glo: 0.7, mem: 0.4, sai: 0.35, sch: 0.9, gng: 1.4, klb: 1.25, obt: 0.7, stm: 1.05, swm: 1.2, tie: 0.75, trp: 0.7, };
+const VCOST3 = { neb: 1.9, kor: 1.1, hau: 0.75, glo: 1.4, mem: 0.75, sai: 1.2, sch: 2, gng: 2.5, klb: 2.2, obt: 1.7, stm: 2.4, swm: 2.7, tie: 1.5, trp: 1.5, };   // measured: level-1 cost × (level 3 / level 1)
 const QP = {
   1: { budget: MOBILE ? 14 : 22, maxv: 32, grainMax: MOBILE ? 80 : 128, overlap: MOBILE ? 16 : 24, os: MOBILE ? '2x' : '4x', rich: false, korDens: 1, cost: VCOST1 },
   2: { base: MOBILE ? 24 : 40, budget: MOBILE ? 24 : 40, maxv: 64, grainMax: MOBILE ? 128 : 224, overlap: 24, os: '4x', rich: false, korDens: 1, cost: VCOST1 },
@@ -918,6 +976,478 @@ function genTexture(kind, sr, F) {
         }
       });
     });
+  } else if (kind === 'fluestern') {
+    // Flüstern: two voices whispering syllables into each ear – breath noise through gliding formant resonators,
+    // the vowels faintly combed on F so they carry a pitch. Dark "hu, fo, wau" at the start (finger low)
+    // turn into bright, hissing "si, tschi, kiss, pssst" towards the end (finger high).
+    const D = sr / F, RN = 2 ** Math.ceil(Math.log2(D + 2)), g = 0.65, cg = Math.sqrt(1 - g * g);
+    const hiss = (t, dur, bands, voiced, amp, pan, att, rel) => {
+      // noise (the voiced share of it through a comb on F) into band-pass resonators gliding from fa to fb; bands: [fa, fb, bw, gain]
+      const st = Math.max(0, Math.floor(t * sr)), n = Math.min(len - st, Math.floor(dur * sr));
+      const ring = new Float32Array(RN), z = bands.map(() => [0, 0, 0, 0, 0, 0, 0]);   // x1 x2 y1 y2 b0 a1 a2
+      const gL = amp * Math.cos(pan * Math.PI / 2), gR = amp * Math.sin(pan * Math.PI / 2), na = Math.max(1, att * sr), nr = Math.max(1, rel * sr);
+      for (let i = 0; i < n; i++) {
+        if ((i & 15) === 0) bands.forEach(([fa, fb, bw], k) => {
+          const f = fa * Math.pow(fb / fa, i / n), w = TAU * f / sr, al = Math.sin(w) * bw / (2 * f), a0 = 1 + al;
+          z[k][4] = al / a0 * Math.sqrt(1000 / bw); z[k][5] = -2 * Math.cos(w) / a0; z[k][6] = (1 - al) / a0;
+        });
+        const w0 = Math.random() * 2 - 1, rd = i - D, j = Math.floor(rd), fr = rd - j;
+        const c = w0 + (j >= 0 ? g * (ring[j & (RN - 1)] * (1 - fr) + ring[(j + 1) & (RN - 1)] * fr) : 0);
+        ring[i & (RN - 1)] = c;
+        const x = voiced * cg * c + (1 - voiced) * w0;
+        let y = 0;
+        for (let k = 0; k < bands.length; k++) {
+          const s = z[k], o = s[4] * (x - s[1]) - s[5] * s[2] - s[6] * s[3];
+          s[1] = s[0]; s[0] = x; s[3] = s[2]; s[2] = o; y += bands[k][3] * o;
+        }
+        const e = Math.sin(Math.PI / 2 * Math.min(1, i / na, (n - i) / nr)) ** 2;
+        Lc[st + i] += gL * e * y; Rc[st + i] += gR * e * y;
+      }
+    };
+    const V = { u: [330, 800, 2300], o: [470, 880, 2600], a: [820, 1300, 2700], e: [450, 2050, 2850], i: [330, 2350, 3150] };
+    const VOW = ['u', 'u', 'o', 'au', 'a', 'oi', 'ai', 'e', 'i', 'i'];   // dark → bright; diphthongs glide from the first vowel to the second
+    const FR = {   // fricatives as noise bands
+      f: [[2600, 3000, 3500, 0.35]], w: [[1200, 1600, 1800, 0.35]], ch: [[3900, 4300, 1700, 0.7]],
+      sch: [[2700, 2900, 1300, 0.8], [5500, 5500, 3000, 0.25]], s: [[6200, 6600, 2600, 0.6]],
+    };
+    const PL = { p: [[950, 850, 1500, 1]], k: [[2300, 1900, 900, 1]], t: [[4600, 4600, 3000, 0.8]] };   // plosive bursts
+    const ONS = ['h', 'w', 'h', 'f', 'p', 'k', 'ch', 't', 'sch', 's', 'ts'];   // dark → bright
+    const pk = (a, q) => a[Math.min(a.length - 1, Math.max(0, Math.floor((q + (Math.random() - 0.5) * 0.35) * a.length)))];
+    const formants = (a, b, sc) => [0, 1, 2].map((k) => [V[a][k] * sc, V[b][k] * sc, [140, 180, 260][k], [0.7, 0.8, 0.35][k]]);
+    const syll = (t, q, pan, sc) => {   // one syllable starting at t, returns its end
+      const vw = pk(VOW, q), va = vw[0], vb = vw[1] || vw[0], on = pk(ONS, q);
+      let tv = t;
+      if (on === 'h') { hiss(t, 0.08, formants(va, va, sc), 0, 0.5, pan, 0.03, 0.04); tv += 0.05; }
+      else if (PL[on] || on === 'ts') {   // plosive: a short burst, then a breath into the vowel
+        hiss(t, 0.02, PL[on] || PL.t, 0, 1.4, pan, 0.001, 0.016);
+        if (on === 'ts') { hiss(t + 0.012, 0.09, FR.s, 0, 1, pan, 0.01, 0.03); tv += 0.08; } else tv += 0.03;
+      } else { const d = 0.06 + Math.random() * 0.06; hiss(t, d, FR[on], 0, 1, pan, 0.02, 0.03); tv += d - 0.025; }
+      const dv = 0.11 + Math.random() * 0.12;
+      hiss(tv, dv, formants(va, vb, sc), 0.6, 1, pan, 0.025, 0.06);
+      let te = tv + dv;
+      if (Math.random() < 0.1 + 0.6 * q) {   // a closing consonant, more often on the bright side
+        const cd = pk(['ch', 't', 's', 'sch', 's'], q);
+        if (cd === 't') hiss(te - 0.02, 0.02, PL.t, 0, 1.2, pan, 0.001, 0.016);
+        else hiss(te - 0.04, 0.08 + Math.random() * 0.06, FR[cd], 0, 1, pan, 0.02, 0.04);
+        te += 0.05;
+      }
+      return te;
+    };
+    // the second voice is a little smaller (higher formants) and starts a moment later; each word drifts a bit in space
+    for (const [pan, t0, sc] of [[0.2, 0, 1], [0.8, 0.1 + Math.random() * 0.15, 1.12]]) {
+      let t = t0;
+      while (t < 3.2) {
+        const q = t / 3.2, wp = pan + (Math.random() - 0.5) * 0.2;
+        if (q > 0.6 && Math.random() < 0.2) {   // a long "pssst" or "schhh"
+          hiss(t, 0.02, PL.p, 0, 1.2, wp, 0.001, 0.016);
+          hiss(t + 0.015, 0.25 + Math.random() * 0.2, Math.random() < 0.5 ? FR.s : FR.sch, 0, 1, wp, 0.03, 0.08);
+          t += 0.5;
+        } else for (let k = 1 + Math.floor(Math.random() * 3); k > 0 && t < 3.2; k--) t = syll(t, q, wp, sc) + 0.01;
+        const b = 0.06 + Math.random() * 0.12;   // a soft breath between words
+        hiss(t - 0.02, b + 0.06, formants('a', 'e', sc), 0, 0.3, wp, b * 0.6, 0.04);
+        t += b;
+      }
+    }
+    // lift out the rumble below the voices, compress where both whisper at once and round off the rare sharpest peaks,
+    // so the quiet breaths survive the peak normalisation
+    const kh = 1 - Math.exp(-TAU * 160 / sr), pw = new Float32Array(len), kp = 1 - Math.exp(-1 / (sr * 0.006));
+    let h1L = 0, h2L = 0, h1R = 0, h2R = 0, e = 0, mp = 0;
+    for (let i = 0; i < len; i++) {
+      h1L += kh * (Lc[i] - h1L); h2L += kh * (Lc[i] - h1L - h2L); Lc[i] -= h1L + h2L;
+      h1R += kh * (Rc[i] - h1R); h2R += kh * (Rc[i] - h1R - h2R); Rc[i] -= h1R + h2R;
+      pw[i] = e += kp * (Lc[i] * Lc[i] + Rc[i] * Rc[i] - e);
+    }
+    for (let i = len - 1; i >= 0; i--) { pw[i] = e += kp * (pw[i] - e); mp += e; }
+    const thr = 1.2 * mp / len, c2 = 4 * thr;
+    for (let i = 0; i < len; i++) {
+      const gc = pw[i] > thr ? Math.pow(thr / pw[i], 0.45) : 1, l = Lc[i] * gc, r = Rc[i] * gc;
+      Lc[i] = l / Math.sqrt(1 + l * l / c2); Rc[i] = r / Math.sqrt(1 + r * r / c2);
+    }
+  } else if (kind === 'funk') {
+    // Kurzwelle: a shortwave dial at night. Under crackling static a carrier whistles on F; the dial sweeps past
+    // stations whose beat notes swoop in and settle on harmonics of F, a far voice babbles, an interval signal chimes
+    // and morse stations key away. Far and murky at the start (finger low), crisp and busy at the end (finger high).
+    const rnd = (a, b) => a + Math.random() * (b - a), pick = (a) => a[Math.floor(Math.random() * a.length)];
+    const fade = (t, a, b) => 0.5 + 0.5 * Math.sin(TAU * a * t + b) * Math.sin(TAU * a * 0.37 * t + 2 * b);   // slow QSB fading, 0..1
+    const strength = new Float32Array(len);   // how strongly the receiver hears a station: the AGC lifts the static when it fades
+    // tone(st, dur, path, env, amp, pan): a sine with a touch of its octave, path(t) in Hz and env(t) 0..1, t in seconds
+    const tone = (st, dur, path, env, amp, pan) => {
+      const n = Math.min(len - st, Math.floor(dur * sr)), gL = amp * Math.cos(pan * Math.PI / 2), gR = amp * Math.sin(pan * Math.PI / 2);
+      let ph = Math.random() * TAU;
+      for (let i = 0; i < n; i++) {
+        const t = i / sr, f = path(t), e = env(t) * Math.min(1, f / 300);   // the receiver's audio band thins out the lowest beats
+        ph += TAU * f / sr;
+        const s = e * (Math.sin(ph) + 0.15 * Math.sin(2 * ph));
+        Lc[st + i] += gL * s; Rc[st + i] += gR * s; strength[st + i] += 0.5 * e;
+      }
+    };
+    const ramp = (dur, a, r) => (t) => Math.min(1, t / a, Math.max(0, (dur - t) / r));
+    // the carrier: a beat note on F with some hum on 2F and 3F, drifting by a few cents and fluttering a little;
+    // each side listens through its own antenna, so it fades in and out independently left and right
+    const qa = [rnd(0.3, 0.45), rnd(0.3, 0.45)], qb = [rnd(0, TAU), rnd(0, TAU)], fl = rnd(6, 9);
+    let cph = Math.random() * TAU;
+    for (let i = 0; i < len; i++) {
+      const t = i / sr, p = i / len, qL = 0.3 + 0.7 * fade(t, qa[0], qb[0]), qR = 0.3 + 0.7 * fade(t, qa[1], qb[1]);
+      cph += TAU * F * (1 + 0.0012 * Math.sin(TAU * 0.23 * t + qb[0])) / sr;
+      const s = (0.5 - 0.15 * p) * (1 - 0.15 * (1 + Math.sin(TAU * fl * t))) * (Math.sin(cph) + (0.4 - 0.3 * p) * Math.sin(2 * cph) + 0.15 * Math.sin(3 * cph));
+      Lc[i] += 0.7 * qL * s; Rc[i] += 0.7 * qR * s; strength[i] += 0.5 * (qL + qR);
+    }
+    // tuning: the dial sweeps past stations. Most beat notes swoop in from far off and settle on a harmonic of F,
+    // some race down through zero beat and back up again; low, slow sweeps at the start, high, quick ones at the end
+    for (let k = 0; k < 8; k++) {
+      const p = (k + Math.random()) / 8, st = Math.floor(Math.max(0, p - 0.08) * len), dur = rnd(0.35, 0.7), pan = rnd(0.15, 0.85);
+      if (Math.random() < 0.7) {
+        const fh = F * pick(p < 0.3 ? [1, 2, 2] : p < 0.65 ? [2, 3, 4] : [4, 5, 6, 8]), r0 = Math.random() < 0.6 ? rnd(2.5, 5) : rnd(0.15, 0.4), tg = rnd(0.05, 0.14);
+        tone(st, dur, (t) => fh * (1 + (r0 - 1) * Math.exp(-t / tg)), ramp(dur, 0.03, 0.08), rnd(0.4, 0.6), pan);
+      } else {
+        const v = rnd(3500, 6000) * (0.6 + 0.8 * p) * (Math.random() < 0.5 ? 1 : -1), t0 = dur * rnd(0.35, 0.65);
+        tone(st, dur, (t) => 20 + Math.abs(v * (t - t0)), ramp(dur, 0.02, 0.05), rnd(0.25, 0.4), pan);
+      }
+    }
+    // a far voice on a single-sideband station: a buzz on F through a vowel formant that jumps from syllable to syllable
+    {
+      const st = Math.floor(rnd(0.22, 0.3) * len), n = Math.min(len - st, Math.floor(rnd(0.9, 1.2) * sr));
+      const gL = 0.45, gR = 0.75;
+      let th = 0, x1 = 0, x2 = 0, y1 = 0, y2 = 0, a1 = 0, a2 = 0, g = 0, fc = 900, sEnd = 0, sLen = 1, on = 1;
+      for (let i = 0; i < n; i++) {
+        if (i >= sEnd) { sLen = Math.floor(rnd(0.09, 0.22) * sr); sEnd = i + sLen; on = Math.random() < 0.8 ? rnd(0.6, 1) : 0; fc = rnd(450, 2400); }
+        if ((i & 31) === 0) { const w = TAU * fc / sr, r = Math.exp(-w / 8); a1 = 2 * r * Math.cos(w); a2 = -r * r; g = 1 - r; }
+        th += TAU * F * (1 + 0.01 * Math.sin(TAU * 3 * i / sr)) / sr;
+        const x = Math.atan2(0.85 * Math.sin(th), 1 - 0.85 * Math.cos(th)), y = g * (x - x2) + a1 * y1 + a2 * y2;
+        x2 = x1; x1 = x; y2 = y1; y1 = y;
+        const u = 1 - (sEnd - i) / sLen, e = on * Math.sin(Math.PI * Math.min(1, u)) * Math.min(1, (n - i) / (0.03 * sr)) * (0.75 + 0.25 * Math.sin(TAU * 7 * i / sr)), s = 2.5 * e * y;
+        Lc[st + i] += gL * s; Rc[st + i] += gR * s; strength[st + i] += 0.5 * e;
+      }
+    }
+    // an interval signal between broadcasts: a little music-box tune on harmonics of F, fluttering on its way
+    {
+      const st = Math.floor(rnd(0.42, 0.52) * len), tune = pick([[4, 5, 6, 4, 8, 6], [6, 5, 4, 5, 6, 6], [3, 4, 5, 6, 5, 4]]), d = rnd(0.13, 0.17);
+      tune.forEach((h, k) => {
+        const at = st + Math.floor(k * d * sr);
+        if (at < len) tone(at, d * 2.2, () => F * h, (t) => ramp(d * 2.2, 0.004, 0.03)(t) * Math.exp(-t / (d * 0.6)) * (0.7 + 0.3 * Math.sin(TAU * 8 * t)), 0.5, 0.3);
+      });
+    }
+    // morse: stations calling on harmonics of F, keyed with soft edges and a little chirp at each key-down
+    const CODE = { C: '-.-.', Q: '--.-', D: '-..', E: '.', K: '-.-', R: '.-.', T: '-', A: '.-', N: '-.', M: '--', S: '...', O: '---', '5': '.....' };
+    const morse = (st, h, u, text, amp, pan) => {
+      const keys = [];
+      let t = 0;
+      for (const ch of text) {
+        if (ch === ' ') { t += 4 * u; continue; }
+        for (const el of CODE[ch]) { const dd = el === '-' ? 3 * u : u; keys.push([t, t + dd]); t += dd + u; }
+        t += 2 * u;
+      }
+      const n = Math.min(len - st, Math.floor(t * sr)), w = TAU * F * h / sr, gL = amp * Math.cos(pan * Math.PI / 2), gR = amp * Math.sin(pan * Math.PI / 2);
+      const qa = rnd(0.4, 0.7), qb = rnd(0, TAU);
+      let k = 0, ph = 0;
+      for (let i = 0; i < n; i++) {
+        const tt = i / sr;
+        while (k < keys.length - 1 && tt > keys[k][1] + 0.005) k++;
+        const [a, b] = keys[k], e = Math.sin(Math.PI / 2 * Math.min(1, Math.max(0, (tt - a) / 0.005), Math.max(0, (b - tt) / 0.005))) ** 2;
+        ph += w * (1 - 0.004 * Math.exp(-Math.max(0, tt - a) / 0.012));
+        const s = e * (0.4 + 0.6 * fade(tt, qa, qb)) * Math.sin(ph);
+        Lc[st + i] += gL * s; Rc[st + i] += gR * s; strength[st + i] += 0.6 * e;
+      }
+    };
+    const call = () => pick(['CQ CQ DE ', 'CQ DE ', 'QRK ', 'TEST ']) + pick(['DK', 'OE', 'SM', 'RA']) + pick(['5', 'K', 'A', 'T']) + pick(['CQ', 'RN', 'ET', 'OS']) + ' K';
+    morse(Math.floor(rnd(0.5, 0.58) * len), pick([4, 5]), rnd(0.045, 0.06), call(), 0.55, 0.25);
+    morse(Math.floor(rnd(0.68, 0.76) * len), pick([6, 8]), rnd(0.035, 0.045), call(), 0.35, 0.8);
+    morse(Math.floor(rnd(0.3, 0.36) * len), 3, rnd(0.06, 0.07), 'CQ CQ', 0.25, 0.6);
+    // static: two independent noise bands that open up along the buffer, which the receiver's AGC lifts while the
+    // stations fade, and sharp crackles of distant lightning, more and brighter towards the end
+    for (let c = 0; c < 2; c++) {
+      const d = c ? Rc : Lc;
+      let l1 = 0, l2 = 0, lo = 0, ck = 0, cr1 = 0, cr2 = 0;
+      for (let i = 0; i < len; i++) {
+        const p = i / len, k = 0.06 + 0.3 * p;
+        l1 += k * ((Math.random() * 2 - 1) - l1); l2 += k * (l1 - l2); lo += 0.02 * (l2 - lo);
+        if (Math.random() < (20 + 140 * p) / sr) ck = rnd(0.5, 2.5) * (Math.random() < 0.5 ? -1 : 1);
+        const kc = 0.15 + 0.3 * p;
+        cr1 += kc * (ck * (Math.random() * 2 - 1) - cr1); cr2 += kc * (cr1 - cr2); ck *= 0.985;
+        d[i] += 0.9 * Math.max(0.3, 1.3 - 0.6 * strength[i]) * (l2 - lo) + 1.5 * cr2;
+      }
+    }
+    // the receiver: a soft detector bend, an even level so faint stations survive the peak normalisation, no offset
+    const pw = new Float32Array(len), kp = 1 - Math.exp(-1 / (sr * 0.015)), kh = 1 - Math.exp(-TAU * 60 / sr);
+    let e = 0, mp = 0, hL = 0, hR = 0;
+    for (let i = 0; i < len; i++) pw[i] = e += kp * (Lc[i] * Lc[i] + Rc[i] * Rc[i] - e);
+    for (let i = len - 1; i >= 0; i--) { pw[i] = e += kp * (pw[i] - e); mp += e; }
+    const thr = mp / len, c2 = 6 * thr, round = (x) => x / Math.sqrt(1 + x * x / c2);
+    for (let i = 0; i < len; i++) {
+      const g = Math.min(2, Math.pow(thr / pw[i], 0.35)), l = round(Lc[i] * g), r = round(Rc[i] * g);
+      hL += kh * (l - hL); hR += kh * (r - hR);
+      Lc[i] = l - hL; Rc[i] = r - hR;
+    }
+  } else if (kind === 'orgel') {
+    // Harmonium: a reed organ holding a chord on F while the bellows are pumped. Every note speaks on a middle reed
+    // and a celeste reed tuned a little sharp on the left and a little flat on the right, so the chord beats slowly and
+    // the beating wanders across the stereo field; each pedal stroke swells loudness, brightness and breath together.
+    // From a soft, dark 16' and 8' (start, finger low) the stops open up to a full, bright chord (end, finger high).
+    const smooth = (a, b, x) => { const u = Math.min(1, Math.max(0, (x - a) / (b - a))); return u * u * (3 - 2 * u); };
+    const notes = [   // ratio to F, stop weight along the buffer (p = 0..1)
+      [0.5, (p) => 0.6 - 0.35 * p],
+      [1, () => 1],
+      [1.5, (p) => 0.75 * smooth(0.1, 0.35, p)],
+      [2, (p) => 0.65 * smooth(0.25, 0.5, p)],
+      [2.5, (p) => 0.5 * smooth(0.4, 0.65, p)],
+      [3, (p) => 0.4 * smooth(0.6, 0.85, p)],
+    ].map(([m, w]) => ({
+      m, w, beat: 0.5 + Math.random() * 0.9,
+      // [detune in beats, gain left, gain right]: the middle reed on both sides, the sharp celeste left, the flat one right;
+      // each reed turns as a phasor (c, s), advanced by (dc, ds) per sample
+      reeds: [[0, 0.7, 0.7], [1, 1, 0], [-0.8, 0, 1]].map(([b, gl, gr]) => {
+        const th = Math.random() * TAU;
+        return { b, gl, gr, c: Math.cos(th), s: Math.sin(th), dc: 1, ds: 0 };
+      }),
+    }));
+    // bellows: two pedals in turn, each stroke a quick push of air that sags until the next one; a slower swell on top
+    const T = 0.62 + Math.random() * 0.12, sw = Math.random() * TAU;
+    const pressure = (t) => { const u = (t / T) % 1; return 0.55 + 0.3 * (1 - Math.exp(-u * 9)) * Math.exp(-u * 1.4) + 0.15 * Math.sin(TAU * 0.31 * t + sw); };
+    const nz = [[0, 0, 0], [0, 0, 0]];   // breath noise per side: two low-pass poles, minus a slower one for a band around 1–5 kHz
+    const fm = [0, 0, 0, 0, 0, 0, 0, 0];   // nasal formant band-pass state: x1 x2 y1 y2 for left, then right
+    let pr = 0, amp = 0, a1 = 0, a2 = 0, g = 0;
+    for (let i = 0; i < len; i++) {
+      const p = i / len;
+      if ((i & 63) === 0) {
+        // every 64 samples: pressure, stops, brightness (rising with pressure and along the buffer, higher notes darker,
+        // like real reeds) and the reed pitches, which sag a little under pressure
+        pr = pressure(i / sr);
+        const base = 0.72 + 0.16 * pr + 0.1 * p;
+        let ws = 0;
+        for (const nt of notes) {
+          nt.W = nt.w(p); ws += nt.W * nt.W;
+          nt.r = Math.pow(base, Math.sqrt(nt.m));
+          for (const q of nt.reeds) {
+            const w = TAU * (F * nt.m * (1 - 0.003 * pr) + q.b * nt.beat) / sr, k = 1 / Math.hypot(q.c, q.s);
+            q.dc = Math.cos(w); q.ds = Math.sin(w); q.c *= k; q.s *= k;
+          }
+        }
+        amp = (0.45 + 0.55 * pr) / Math.sqrt(ws);
+        const w = TAU * 1150 * (0.85 + 0.4 * pr) / sr, r = Math.exp(-w / 3);   // the formant opens a little with the pressure
+        a1 = 2 * r * Math.cos(w); a2 = -r * r; g = 1 - r;
+      }
+      // each reed a rounded sawtooth: harmonics falling off as r^n / n, summed in closed form from its turning phasor
+      let l = 0, r = 0;
+      for (const nt of notes) {
+        if (nt.W < 0.001) continue;
+        for (const q of nt.reeds) {
+          const c = q.c * q.dc - q.s * q.ds;
+          q.s = q.s * q.dc + q.c * q.ds; q.c = c;
+          const v = nt.W * Math.atan2(nt.r * q.s, 1 - nt.r * c);
+          l += q.gl * v; r += q.gr * v;
+        }
+      }
+      l *= amp; r *= amp;
+      const yl = g * (l - fm[1]) + a1 * fm[2] + a2 * fm[3], yr = g * (r - fm[5]) + a1 * fm[6] + a2 * fm[7];
+      fm[1] = fm[0]; fm[0] = l; fm[3] = fm[2]; fm[2] = yl; fm[5] = fm[4]; fm[4] = r; fm[7] = fm[6]; fm[6] = yr;
+      // breath: wind noise through the reed slots, pulsing with the middle reeds and growing with the pressure
+      for (let c = 0; c < 2; c++) { const z = nz[c]; z[0] += 0.45 * ((Math.random() * 2 - 1) - z[0]); z[1] += 0.45 * (z[0] - z[1]); z[2] += 0.15 * (z[1] - z[2]); }
+      const air = (1.4 + 0.8 * p) * pr * pr * (0.3 + Math.max(0, (l + r) * 0.3));
+      Lc[i] = l + 1.5 * yl + air * (nz[0][1] - nz[0][2]); Rc[i] = r + 1.5 * yr + air * (nz[1][1] - nz[1][2]);
+    }
+    // even out the swell a little and round off the rare peaks where many reeds meet, so the chord survives the peak
+    // normalisation; then block the slight offset that rounding the lopsided reed pulses leaves behind
+    const pw = new Float32Array(len), kp = 1 - Math.exp(-1 / (sr * 0.02)), kh = 1 - Math.exp(-TAU * 30 / sr);
+    let e = 0, mp = 0, hL = 0, hR = 0;
+    for (let i = 0; i < len; i++) pw[i] = e += kp * (Lc[i] * Lc[i] + Rc[i] * Rc[i] - e);
+    for (let i = len - 1; i >= 0; i--) { pw[i] = e += kp * (pw[i] - e); mp += e; }
+    const thr = mp / len, c2 = 4 * thr, round = (x) => x / Math.sqrt(1 + x * x / c2);
+    for (let i = 0; i < len; i++) {
+      const g = Math.min(2, Math.pow(thr / pw[i], 0.3)), l = round(Lc[i] * g), r = round(Rc[i] * g);
+      hL += kh * (l - hL); hR += kh * (r - hR);
+      Lc[i] = l - hL; Rc[i] = r - hR;
+    }
+  } else if (kind === 'voegel') {
+    // Vögel: a small dawn chorus of sine notes that sweep onto multiples of F, so grains still sing the played pitch.
+    // From cooing doves (start, finger low) via whistled phrases and chirps to fast high trills (end, finger high).
+    const note = (st, dur, h, from, tg, fall, vr, vd, amp, pan, h2) => {
+      // the pitch slides from F·h·from onto F·h (time constant tg) and bends by the factor fall towards the end,
+      // with vibrato or a fast warble (rate vr, depth vd); a quieter copy answers from the other side of the clearing
+      const n = Math.min(len - st, Math.floor(dur * sr)), w = TAU * F * h / sr, kg = Math.exp(-1 / (sr * tg)), lf = Math.log(fall);
+      const na = Math.max(1, Math.min(0.012, dur * 0.3) * sr), nr = Math.max(1, Math.min(0.03, dur * 0.4) * sr);
+      const gL = amp * Math.cos(pan * Math.PI / 2), gR = amp * Math.sin(pan * Math.PI / 2), dl = Math.floor((0.06 + 0.06 * pan) * sr);
+      let ph = 0, lg = Math.log(from);
+      for (let i = 0; i < n; i++) {
+        const x = i / n;
+        ph += w * Math.exp(lg + lf * x * x * x) * (1 + vd * Math.sin(TAU * vr * i / sr)); lg *= kg;
+        const e = Math.sin(Math.PI / 2 * Math.min(1, i / na, (n - i) / nr)) ** 2, s = e * (Math.sin(ph) + h2 * Math.sin(2 * ph));
+        Lc[st + i] += gL * s; Rc[st + i] += gR * s;
+        if (st + i + dl < len) { Lc[st + i + dl] += 0.22 * gR * s; Rc[st + i + dl] += 0.22 * gL * s; }
+      }
+    };
+    const pk = (a) => a[Math.floor(Math.random() * a.length)], after = (st, t) => st + Math.floor(t * sr);
+    const bird = (st, r, pan) => {
+      if (r < 0.22) {          // dove: a soft, hollow "hu-huu-hu" on 2F or 3F
+        const h = pk([2, 2, 3]);
+        [[0, 0.16], [0.22, 0.36], [0.64, 0.18]].forEach(([o, d]) => note(after(st, o), d, h, 0.94, 0.05, 0.97, 4, 0.004, 0.45, pan, 0.25));
+      } else if (r < 0.45) {   // blackbird: a fluted phrase stepping between harmonics, each note slurred on and bent off
+        let t = 0;
+        for (let k = 0, cnt = 3 + Math.floor(Math.random() * 3); k < cnt; k++) {
+          const d = 0.07 + Math.random() * 0.13;
+          note(after(st, t), d, pk([4, 5, 6, 6, 8]), 0.85 + Math.random() * 0.3, 0.015, pk([0.8, 0.9, 1, 1.12]), 6, 0.008, 0.55, pan, 0.08);
+          t += d + 0.015 + Math.random() * 0.04;
+        }
+      } else if (r < 0.62) {   // canary: a rolling warble that ends in a short flourish a fifth up
+        const d = 0.22 + Math.random() * 0.25, h = pk([6, 8, 10]);
+        note(st, d, h, 1.08, 0.05, 1, 18 + Math.random() * 14, 0.05 + Math.random() * 0.05, 0.45, pan, 0.05);
+        note(after(st, d + 0.03), 0.09, h * 1.5, 0.75, 0.02, 0.9, 0, 0, 0.4, pan, 0.05);
+      } else if (r < 0.8) {    // sparrow: a few quick "tschilp" sweeps, down onto the note and flicked up
+        const h = pk([8, 10, 12]);
+        for (let k = 0, cnt = 3 + Math.floor(Math.random() * 4); k < cnt; k++) note(after(st, k * 0.09), 0.055, h, 1.45, 0.01, 1.15, 0, 0, 0.7, pan, 0.08);
+      } else {                 // wren: a rapid, accelerating trill of tiny down-sweeps
+        const h = pk([8, 10, 12]), cnt = 12 + Math.floor(Math.random() * 10);
+        let t = 0, gap = 0.065;
+        for (let k = 0; k < cnt; k++) {
+          note(after(st, t), 0.038, h, 1.3, 0.008, 1, 0, 0, 0.8 * Math.sin(Math.PI * (k + 0.5) / cnt), pan, 0.05);
+          t += gap; gap = Math.max(0.035, gap * 0.95);
+        }
+      }
+    };
+    // calls spread evenly along the buffer; the kind of bird follows the position, with some overlap
+    for (let k = 0; k < 24; k++) {
+      const p = (k + Math.random()) / 24;
+      bird(Math.floor(Math.max(0, p - 0.06) * len), p + (Math.random() - 0.5) * 0.25, 0.1 + 0.8 * Math.random());
+    }
+    // even out where several birds sing at once and round off the peaks where their notes meet in phase,
+    // so the lone ones survive the peak normalisation
+    const pw = new Float32Array(len), kp = 1 - Math.exp(-1 / (sr * 0.01));
+    let e = 0, mp = 0;
+    for (let i = 0; i < len; i++) pw[i] = e += kp * (Lc[i] * Lc[i] + Rc[i] * Rc[i] - e);
+    for (let i = len - 1; i >= 0; i--) { pw[i] = e += kp * (pw[i] - e); mp += e; }
+    const thr = mp / len, c2 = 16 * thr;
+    for (let i = 0; i < len; i++) {
+      const g = pw[i] > thr ? Math.pow(thr / pw[i], 0.35) : 1, l = Lc[i] * g, r = Rc[i] * g;
+      Lc[i] = l / Math.sqrt(1 + l * l / c2); Rc[i] = r / Math.sqrt(1 + r * r / c2);
+    }
+  } else if (kind === 'wasser') {
+    // Wasser: a soft stream, babbling small bubbles and pitched drops on F and its harmonics.
+    // The buffer runs from deep, slow gurgling (start, finger low) to bright drips with cave echoes (end, finger high).
+    const bubble = (st, h, dcy, rise, amp, pan) => {
+      // a bubble rings as a sine whose pitch rises into F·h while it shrinks (Minnaert resonance)
+      const n = Math.min(len - st, Math.floor(dcy * 7 * sr)), w = TAU * F * h / sr;
+      const kg = Math.exp(-1 / (sr * dcy * 0.35)), ke = Math.exp(-1 / (sr * dcy)), ka = Math.exp(-F * h / (sr * 0.4));
+      const gL = amp * Math.cos(pan * Math.PI / 2), gR = amp * Math.sin(pan * Math.PI / 2);
+      let ph = 0, dev = rise, e = 1, a = 1;
+      for (let i = 0; i < n; i++) {
+        ph += w * (1 - dev); dev *= kg; e *= ke; a *= ka;
+        const s = (1 - a) * e * Math.sin(ph);
+        Lc[st + i] += gL * s; Rc[st + i] += gR * s;
+      }
+    };
+    const HS = [1, 1, 2, 2, 3, 4, 6, 8];   // the harmonic choice slides up this list along the buffer
+    // stream bed: two independent noise channels, a soft rush that gets brighter towards the end and surges slowly
+    const khp = 1 - Math.exp(-TAU * 300 / sr);
+    for (let c = 0; c < 2; c++) {
+      const d = c ? Rc : Lc, r1 = 0.6 + Math.random(), r2 = 2.3 + Math.random();
+      let l1 = 0, l2 = 0, hp = 0;
+      for (let i = 0; i < len; i++) {
+        const k = 1 - Math.exp(-TAU * (1000 + 2500 * i / len) / sr);
+        l1 += k * ((Math.random() * 2 - 1) - l1); l2 += k * (l1 - l2); hp += khp * (l2 - hp);
+        d[i] += 0.35 * (l2 - hp) * (0.7 + 0.2 * Math.sin(TAU * r1 * i / sr + c * 2) + 0.1 * Math.sin(TAU * r2 * i / sr));
+      }
+    }
+    // babble: many tiny, quick bubbles on the upper harmonics, reaching higher towards the end
+    for (let k = 0; k < 340; k++) {
+      const p = Math.random();
+      bubble(Math.floor(p * len), 3 + Math.floor(Math.random() * (5 + 9 * p)), 0.006 + Math.random() * 0.016, 0.2, 0.05 + Math.random() * 0.1, Math.random());
+    }
+    // main bubbles, spread evenly: large and slow at the start, smaller and higher towards the end;
+    // short ones get more amplitude so every bubble carries about the same energy
+    for (let k = 0; k < 56; k++) {
+      const p = (k + Math.random()) / 56, h = HS[Math.floor(Math.random() * 4 + p * 4)];
+      const dcy = (0.045 + 0.12 * (1 - p)) * (0.6 + Math.random() * 0.8), amp = (0.45 + 0.4 * Math.random()) * Math.sqrt(0.06 / dcy) / Math.pow(h, 0.3);
+      bubble(Math.floor(p * len), h, dcy, 0.12 + 0.3 * (1 - p) * Math.random(), amp, Math.random());
+    }
+    // drips with cave echoes that answer from the other side, mostly towards the end
+    for (let k = 0; k < 18; k++) {
+      const st = Math.floor(Math.sqrt(Math.random()) * len), h = HS[4 + Math.floor(Math.random() * 4)];
+      const pan = Math.random() < 0.5 ? 0.15 : 0.85, gap = Math.floor((0.09 + Math.random() * 0.12) * sr);
+      for (let j = 0; j < 3 && st + j * gap < len; j++) bubble(st + j * gap, h, 0.03, 0.3, 0.6 * Math.pow(0.4, j), j % 2 ? 1 - pan : pan);
+    }
+    // block the slow drift that hundreds of one-sided bubble onsets leave behind
+    const kh = 1 - Math.exp(-TAU * 50 / sr);
+    let hL = 0, hR = 0;
+    for (let i = 0; i < len; i++) { hL += kh * (Lc[i] - hL); hR += kh * (Rc[i] - hR); Lc[i] -= hL; Rc[i] -= hR; }
+    // gently compress where bubbles pile up, then round off the rare sharpest peaks,
+    // so the quiet drips survive the peak normalisation
+    const pw = new Float32Array(len), kp = 1 - Math.exp(-1 / (sr * 0.006));
+    let e = 0, mp = 0;
+    for (let i = 0; i < len; i++) pw[i] = e += kp * (Lc[i] * Lc[i] + Rc[i] * Rc[i] - e);
+    for (let i = len - 1; i >= 0; i--) { pw[i] = e += kp * (pw[i] - e); mp += e; }
+    const thr = 1.5 * mp / len, c2 = 8 * thr;
+    for (let i = 0; i < len; i++) {
+      const g = pw[i] > thr ? Math.pow(thr / pw[i], 0.35) : 1, l = Lc[i] * g, r = Rc[i] * g;
+      Lc[i] = l / Math.sqrt(1 + l * l / c2); Rc[i] = r / Math.sqrt(1 + r * r / c2);
+    }
+  } else if (kind === 'zikaden') {
+    // Zikaden: a cicada choir. Each insect clicks its two tymbals in turn, F times a second, so its buzz lies on the
+    // harmonics of F, and two body resonances lift a band of high harmonics out of it.
+    // From a far, softly swelling dusk choir (start, finger low) to close singers with fast, sharp rhythms (end, finger high).
+    const cicada = (st, dur, h, q, det, glide, amp, pan, song) => {
+      // song(t, x) is the drive at t seconds into the phrase (x = 0..1 of it); glide lets the resonance sink at the end (wee-oo);
+      // a phrase may start before the buffer (st < 0), so the low end is already in full song
+      const n = Math.min(len - st, Math.floor(dur * sr)), inc = F * Math.pow(2, det / 1200) / sr;
+      const near = pan < 0.5 ? Lc : Rc, far = pan < 0.5 ? Rc : Lc, dl = Math.round(Math.abs(pan - 0.5) * 2 * 0.0007 * sr);
+      const gN = amp * Math.cos(Math.min(pan, 1 - pan) * Math.PI / 2), gF = amp * Math.sin(Math.min(pan, 1 - pan) * Math.PI / 2);
+      let ph = Math.random(), side = 0, carry = 0, x1 = 0, x2 = 0, y1 = 0, y2 = 0, z1 = 0, z2 = 0;
+      let a1 = 0, a2 = 0, g1 = 0, b1 = 0, b2 = 0, g2 = 0;
+      for (let i = 0; i < n; i++) {
+        if ((i & 63) === 0) {   // band-pass resonators (zeros at DC and Nyquist) on F·h and F·h·1.5
+          const hh = h * (1 - glide * Math.max(0, i / n - 0.55) / 0.45);
+          let w = TAU * F * hh / sr, r = Math.exp(-w / (2 * q));
+          a1 = 2 * r * Math.cos(w); a2 = -r * r; g1 = 1 - r;
+          w *= 1.5; r = Math.exp(-w / (1.4 * q));
+          b1 = 2 * r * Math.cos(w); b2 = -r * r; g2 = 1 - r;
+        }
+        // tymbal clicks, placed between samples so the pulse rate stays exactly on F; the second tymbal is weaker
+        let x = carry; carry = 0;
+        ph += inc;
+        if (ph >= 1) { ph -= 1; side ^= 1; const e = song(i / sr, i / n) * (side ? 1 : 0.6), fr = ph / inc; x += e * fr; carry = e * (1 - fr); }
+        const y = g1 * (x - x2) + a1 * y1 + a2 * y2, z = g2 * (x - x2) + b1 * z1 + b2 * z2;
+        x2 = x1; x1 = x; y2 = y1; y1 = y; z2 = z1; z1 = z;
+        const s = y + 0.5 * z, j = st + i;
+        if (j >= 0) near[j] += gN * s;
+        if (j + dl >= 0 && j + dl < len) far[j + dl] += gF * s;
+      }
+    };
+    const rnd = (a, b) => a + Math.random() * (b - a), env = (x) => Math.sin(Math.PI * Math.min(1, x)) ** 0.7;
+    // the far choir: the whole buffer long, swelling together in slow waves that roll across the field
+    const wave = rnd(0.5, 0.7);
+    for (let k = 0; k < 6; k++) {
+      const pan = (k + 0.5) / 6, tr = rnd(28, 40);
+      cicada(0, len / sr, 7 + k * 0.8 + rnd(0, 1), rnd(20, 30), rnd(-9, 9), 0, 0.65, pan,
+        (t) => (0.1 + 0.9 * (0.5 + 0.5 * Math.sin(TAU * (wave * t - pan * 0.3))) ** 2) * (0.85 + 0.15 * Math.sin(TAU * tr * t)));
+    }
+    // close singers along the buffer: long rasping swells low down, pulsed calls in the middle, quick ticking trills at the top
+    const N = 18;
+    for (let k = 0; k < N; k++) {
+      const p = (k + Math.random()) / N, r = p + rnd(-0.15, 0.15), pan = rnd(0.1, 0.9), h = Math.round(6 + 11 * p + rnd(0, 3));
+      if (r < 0.38) {
+        const dur = rnd(0.9, 1.6), tr = rnd(18, 34), dp = rnd(0.3, 0.7);
+        cicada(Math.floor((p - 0.12) * len), dur, h, 16, rnd(-6, 6), 0.25, 1, pan,
+          (t, x) => env(x) * (1 - dp * (0.5 + 0.5 * Math.sin(TAU * tr * t))));
+      } else if (r < 0.7) {
+        const dur = rnd(0.6, 1.2), cr = rnd(4, 8), duty = rnd(0.4, 0.6);
+        cicada(Math.floor((p - 0.08) * len), dur, h, 12, rnd(-6, 6), 0.12, 1, pan,
+          (t, x) => { const u = (t * cr) % 1; return u < duty ? env(x) * Math.sin(Math.PI * u / duty) ** 2 : 0; });
+      } else {
+        const dur = rnd(0.4, 0.9), cr = rnd(14, 22), duty = rnd(0.3, 0.45);
+        cicada(Math.floor((p - 0.05) * len), dur, h, 9, rnd(-6, 6), 0, 0.9, pan,
+          (t, x) => { const u = (t * cr) % 1; return u < duty ? env(x) * Math.sin(Math.PI * u / duty) : 0; });
+      }
+    }
+    // even out where several singers overlap or pause, so the lone ones survive the peak normalisation; round off the
+    // sharpest clicks, then block the slow offset that rounding their lopsided ringing leaves behind
+    const pw = new Float32Array(len), kp = 1 - Math.exp(-1 / (sr * 0.01)), kh = 1 - Math.exp(-TAU * 70 / sr);
+    let e = 0, mp = 0, hL = 0, hR = 0;
+    for (let i = 0; i < len; i++) pw[i] = e += kp * (Lc[i] * Lc[i] + Rc[i] * Rc[i] - e);
+    for (let i = len - 1; i >= 0; i--) { pw[i] = e += kp * (pw[i] - e); mp += e; }
+    const thr = mp / len, c2 = 2.5 * thr, round = (x) => x / Math.sqrt(1 + x * x / c2);
+    for (let i = 0; i < len; i++) {
+      const g = Math.min(1.6, Math.sqrt(thr / pw[i])), l = round(Lc[i] * g), r = round(Rc[i] * g);
+      hL += kh * (l - hL); hR += kh * (r - hR);
+      Lc[i] = l - hL; Rc[i] = r - hR;
+    }
   } else {
     let lpL = 0, lpR = 0;
     for (let i = 0; i < len; i++) {
@@ -1561,6 +2091,712 @@ const ENGINES = {
       v.finish(t + decay + 0.1);
     },
   },
+  gng: {
+    sustain: false,
+    // plate modes as ratios to the hum: the low ones answer the strike at once, the high ones bloom up after it
+    low: [[1, 0.6], [1.52, 0.35], [1.73, 0.8], [2.33, 0.6], [2.69, 0.4], [3.18, 0.3]],
+    high: [[3.91, 0.8], [4.11, 0.7], [4.62, 0.5], [5.29, 0.55], [6.3, 0.6], [6.71, 0.5], [7.34, 0.45], [8.01, 0.35],
+      [8.98, 0.4], [9.68, 0.35], [10.9, 0.3], [11.82, 0.3], [12.4, 0.25], [13.6, 0.2], [14.9, 0.2], [15.7, 0.15],
+      [17.2, 0.12], [18.6, 0.1], [20.3, 0.08]],
+    // a whole group of modes in one oscillator: on a grid of 1/16 of the hum they fit one periodic wave, whose
+    // 16-cycle period is far too slow to be heard; spread phases keep the group free of peaks
+    wave(key, modes, stretch) {
+      key += stretch;
+      if (!A.waves[key]) {
+        const re = new Float32Array(340), im = new Float32Array(340);
+        modes.forEach(([r, a], i) => { const k = Math.round(r * stretch * 16), ph = i * i * 0.7; re[k] += a * Math.cos(ph); im[k] += a * Math.sin(ph); });
+        A.waves[key] = A.ctx.createPeriodicWave(re, im);
+      }
+      return key;
+    },
+    start(v, t, f, y, vel, o) {
+      // finger height is the strike: higher hits harder – an earlier, brighter bloom, a wider bend, a longer ring
+      const decay = P['gng.decay'] * (o.decayMul || 1) * (0.8 + 0.4 * y) * clamp(Math.pow(220 / f, 0.3), 0.6, 1.6);
+      const bloom = P['gng.bloom'] * (1.5 - y);
+      const bright = P['gng.bright'] * (0.3 + 0.7 * y);
+      const att = 0.002 + 0.006 * (1 - y);
+      // a hard swing stiffens the plate: every mode starts off pitch and settles as the swing narrows
+      const bend = -P['gng.glide'] * (0.3 + 0.9 * y), settle = clamp(decay * 0.08, 0.3, 3);
+      const w = P['v.width'], rich = Q.rich;
+      // level 3 places parts left and right; the centre parts then pass a centre panner so they keep their level
+      const mid = rich ? v.n(PAN(0)) : v.out;
+      if (rich) mid.connect(v.out);
+      // an envelope: struck to `hit`, swelling on to `amp` over `rise`, then ringing out over `ring`
+      const env = (hit, amp, rise, ring) => {
+        const g = v.n(G(0)), top = t + Math.max(rise, att);
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(hit, t + att);
+        if (rise > att) g.gain.linearRampToValueAtTime(amp, top);
+        g.gain.setTargetAtTime(0, top, ring / 6.9);
+        return g;
+      };
+      const osc = (type, fr, dst, stop, uni) => {
+        const s = v.s(OSC(type, fr));
+        s.detune.setValueAtTime(bend * rand(0.6, 1.4), t);
+        s.detune.setTargetAtTime(0, t, settle * rand(0.7, 1.3));
+        v.mod(s.detune);
+        if (rich) v.lnk(A.uni[uni], s.detune);
+        s.connect(dst);
+        s.start(t);
+        s._end = stop + 0.02;
+      };
+      // the hum: the lowest mode rings longest, so its decay is the voice's own and the plate's envelopes ride on top
+      // of it (a ring of 2.33 decays on top makes 0.7 overall, 1.5 makes 0.6). Its twin in the low group sits a few Hz
+      // off, and the two beat slowly
+      v.out.gain.setValueAtTime(0, t);
+      v.out.gain.linearRampToValueAtTime(vel * 0.13, t + att);
+      v.out.gain.setTargetAtTime(0, t + att, decay / 6.9);
+      osc('sine', f, mid, t + decay, 0);
+      // level 3: two plates' worth of modes, stretched against each other, left and right, at the same loudness
+      const banks = rich ? [[-1, 1, 0.59, 1, 1], [1, 1.023, 0.83, -0.7, 2]] : [[0, 1, 0.59, 1, 1]], lvl = rich ? 0.52 : 1;
+      for (const [side, stretch, pmr, twin, uni] of banks) {
+        const dst = side ? v.n(PAN(side * 0.7 * w)) : mid;
+        if (side) dst.connect(v.out);
+        const lowG = env(1.4 * lvl, 1.4 * lvl, 0, decay * 2.33);
+        lowG.connect(dst);
+        osc(this.wave('gngL', this.low, stretch), (f + P['gng.beat'] * twin) / 16, lowG, t + decay * 0.7, uni);
+        if (bright < 0.005) continue;
+        // the high modes pass a delay line whose time wobbles: an inharmonic tone spreads every mode into a cloud of
+        // sidebands as the bloom swells, a slow random jitter smears them into hiss – the higher, the wider
+        const dl = v.n(A.ctx.createDelay(0.02)), highG = env(2 * bright * (0.1 + 0.3 * y) * lvl, 2 * bright * lvl, bloom, decay * 1.5);
+        dl.delayTime.value = 0.006;
+        highG.connect(dl).connect(dst);
+        osc(this.wave('gngH', this.high, stretch), f / 16, highG, t + bloom + decay * 0.6, uni + 1);
+        // the spread's depth counts in cycles of the hum, so every pitch blooms alike – but its cloud stays below 18 kHz
+        const top = Math.min(f * 16, 16000);
+        const depth = Math.min((0.03 + 0.14 * bright) / f, (18000 - top) / (2 * Math.PI * top * f * pmr), 0.0025);
+        // it swells with the bloom and fades as an exponential ramp: Chrome cuts a decay toward 0 off below 4.5e-5,
+        // which is still a lot for a depth counted in seconds
+        const pm = v.s(OSC('sine', f * pmr)), pmG = v.n(G(0));
+        KR(pmG.gain);
+        pmG.gain.setValueAtTime(depth * (0.05 + 0.15 * y), t);
+        pmG.gain.linearRampToValueAtTime(depth, t + bloom * 1.2);
+        pmG.gain.exponentialRampToValueAtTime(depth * 0.001, t + bloom * 1.2 + decay * 0.5);
+        v.mod(pm.detune);
+        pm.connect(pmG).connect(dl.delayTime);
+        pm.start(t);
+        pm._end = t + bloom * 1.2 + decay * 0.6 + 0.02;
+        // the shimmer: white noise played very slowly is a smooth random wobble of about 100 Hz
+        if (P['gng.shimmer'] > 0.005) {
+          const jit = v.s(noiseSrc());
+          jit.playbackRate.value = 0.002;
+          jit.connect(v.n(G(P['gng.shimmer'] ** 2 * 0.0006))).connect(dl.delayTime);
+          jit.start(t, rand(0, 1.8));
+          jit._end = pm._end;
+        }
+      }
+      v.released = true;
+      v.finish(t + att + decay + 0.1);
+    },
+  },
+  klb: {
+    sustain: false,
+    // bottle-cap slack: the caps only touch the plate while the tine swings wider than 0.3, so they tick once a cycle
+    slack: makeShaperCurve((x) => (x > 0.3 ? (x - 0.3) / 0.7 : 0), 1024),
+    start(v, t, f, y, vel, o) {
+      // the tine itself: nearly a sine, with a hint of 2nd and 3rd harmonic from its lopsided swing
+      if (!A.waves.tine) A.waves.tine = A.ctx.createPeriodicWave(new Float32Array(4), new Float32Array([0, 1, 0.08, 0.03]));
+      // short high tines ring shorter than long low ones; a higher finger lets the tine ring longer and brighter
+      const decay = P['klb.decay'] * (o.decayMul || 1) * (0.6 + 0.8 * y) * clamp(Math.pow(262 / f, 0.3), 0.55, 1.6);
+      const w = P['v.width'], rich = Q.rich;
+      // level 3 places parts left and right; the centre parts then pass a centre panner so they keep their level
+      const mid = rich ? v.n(PAN(0)) : v.out;
+      if (rich) mid.connect(v.out);
+      const sides = rich ? [-0.5, 0.5].map((x) => { const p = v.n(PAN(x * w)); p.connect(v.out); return p; }) : null;
+      // the wooden box: a Helmholtz resonance that the thumb's knock and the low tines make bloom
+      const body = P['klb.body'];
+      const box = v.n(BQ('bandpass', 205, 7));
+      box.connect(v.n(G(body * 3.2))).connect(mid);
+      // level 3: the box's lid joins the knock as a second, higher wood mode, off to one side
+      const lid = rich ? v.n(BQ('bandpass', 690, 5)) : null;
+      if (lid) lid.connect(v.n(G(body * 1.6))).connect(sides[0]);
+      // a plucked tine starts a little sharp and settles as its swing narrows
+      const sharp = 5 + 10 * vel;
+      const mode = (type, fr, cents, dst, uni) => {
+        const osc = v.s(OSC(type, fr));
+        osc.detune.setValueAtTime(cents + sharp, t);
+        osc.detune.setTargetAtTime(cents, t, 0.04);
+        v.mod(osc.detune);
+        if (uni != null) v.lnk(A.uni[uni], osc.detune);
+        osc.connect(dst);
+        osc.start(t);
+        return osc;
+      };
+      const fade = (amp, ring) => {
+        const g = v.n(G(0));
+        g.gain.setValueAtTime(amp, t);
+        g.gain.setTargetAtTime(0, t, ring / 6.9);
+        return g;
+      };
+      const tine = v.n(G(1));
+      tine.connect(mid);
+      tine.connect(v.n(G(0.3))).connect(box);
+      const fund = mode('tine', f, 0, tine);
+      // the tine's bending modes (a clamped bar: about 6× and 17×) shimmer metallic and fade far sooner than the tone
+      const ratio = P['klb.ratio'];
+      const oAmp = 0.55 * P['klb.over'] * (0.3 + 0.7 * y) * (0.7 + 0.4 * vel);
+      const ring = decay * (0.05 + 0.2 * y);
+      if (oAmp > 0.003 && f * ratio < 16000) {
+        // level 3: the bending mode splits into a beating pair, left and right, each drifting on its own
+        const pair = rich ? [[-1, 0.72], [1, 0.72]] : [[0, 1]];
+        for (const [s, k] of pair) {
+          const g = fade(oAmp * k, ring);
+          mode('sine', f * ratio, s * 2.5, g, rich ? (s < 0 ? 1 : 2) : null)._end = t + ring + 0.02;
+          g.connect(s ? sides[(s + 1) / 2] : tine);
+        }
+        if (f * ratio * 2.8 < 16000) {
+          const g = fade(oAmp * 0.4, ring * 0.3);
+          mode('sine', f * ratio * 2.8, 0, g)._end = t + ring * 0.3 + 0.02;
+          g.connect(tine);
+        }
+      }
+      // level 3: the octave tine next door rings along in sympathy, softly and a little late
+      if (rich && f * 2 < 12000) {
+        const g = v.n(G(0));
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.08, t + 0.15);
+        g.gain.setTargetAtTime(0, t + 0.15, decay * 0.7 / 6.9);
+        mode('sine', f * 2, 0, g, 3)._end = t + 0.17 + decay * 0.7;
+        g.connect(sides[1]);
+      }
+      // thumb: a soft, dull knock of flesh on metal, mostly heard through the box; brighter higher up
+      if (P['klb.thumb'] > 0.01) {
+        const ns = v.s(noiseSrc()), lp = v.n(BQ('lowpass', 300 + 1200 * y * y, 0.7)), tg = v.n(G(0));
+        tg.gain.setValueAtTime(0, t);
+        tg.gain.linearRampToValueAtTime(P['klb.thumb'] * 1.6, t + 0.003);
+        tg.gain.setTargetAtTime(0, t + 0.003, 0.006);
+        ns.connect(lp).connect(tg);
+        tg.connect(v.n(G(0.4))).connect(mid);
+        tg.connect(v.n(G(30))).connect(box);
+        if (lid) tg.connect(v.n(G(12))).connect(lid);
+        ns.start(t, rand(0, 1.8));
+        ns._end = t + 0.08;
+      }
+      // Schnarren: bottle caps on the plate rattle in time with the tine's swing; harder plucks and more buzz rattle
+      // longer, and the rattle stops before the tone (level 3: two caps, left and right, each in its own band)
+      const buzz = P['klb.buzz'];
+      if (buzz > 0.01) {
+        const len = decay * (0.15 + 0.45 * buzz) * (0.5 + 0.7 * vel);
+        const swing = v.n(G(0)), contact = v.n(A.ctx.createWaveShaper());
+        contact.curve = this.slack;
+        swing.gain.setValueAtTime(1, t);
+        swing.gain.setTargetAtTime(0, t, len / 1.2);
+        fund.connect(swing).connect(contact);
+        for (const s of rich ? [-1, 1] : [0]) {
+          const ns = v.s(noiseSrc()), rg = v.n(G(0)), bp = v.n(BQ('bandpass', (2400 + 2600 * y) * (1 + s * 0.12), 1.4));
+          contact.connect(rg.gain);
+          ns.connect(rg).connect(bp).connect(v.n(G(Math.pow(buzz, 0.8) * (rich ? 2.7 : 3.6)))).connect(s ? sides[(s + 1) / 2] : mid);
+          ns.start(t, rand(0, 1.8));
+          ns._end = t + len + 0.05;
+        }
+      }
+      v.out.gain.setValueAtTime(0, t);
+      // a stereo voice gains in the voice panner off centre, so level 3 plays a little softer
+      v.out.gain.linearRampToValueAtTime(vel * (rich ? 0.29 : 0.32), t + 0.0025);
+      v.out.gain.setTargetAtTime(0, t + 0.0025, decay / 6.9);
+      v.released = true;
+      v.finish(t + decay + 0.1);
+    },
+  },
+  obt: {
+    sustain: true,
+    // a pressed, buzzing voice: the first twenty harmonics about equally strong, so any one of them can be singled out
+    wave() {
+      if (A.waves.obtGlottis) return;
+      const n = 64, re = new Float32Array(n), im = new Float32Array(n);
+      for (let k = 1; k < n; k++) im[k] = 1 / Math.sqrt(1 + (k / 20) * (k / 20));
+      A.waves.obtGlottis = A.ctx.createPeriodicWave(re, im, { disableNormalization: true });
+    },
+    // the wandering melody: a slow random walk over whole steps −4..4 (stored as −1..1) with short glides between
+    // them, a minute long and looping seamlessly; every voice starts somewhere else in it
+    walk() {
+      if (A.obtWalk) return A.obtWalk;
+      const sr = 3000, buf = A.ctx.createBuffer(1, sr * 60, sr), d = buf.getChannelData(0), gl = Math.floor(0.12 * sr);
+      for (let i = 0, cur = 0; i < d.length;) {
+        const hold = Math.floor(rand(0.5, 1.6) * sr);
+        const next = d.length - i < hold + gl || Math.random() < 0.3 ? 0 : clamp(cur + pick([-2, -1, -1, 1, 1, 2]), -4, 4);
+        for (let k = 0; k < hold && i < d.length; k++, i++) d[i] = (cur + (next - cur) * (k < gl ? (1 - Math.cos(Math.PI * k / gl)) / 2 : 1)) / 4;
+        cur = next;
+      }
+      return (A.obtWalk = buf);
+    },
+    // finger height picks the harmonic that sings: two octaves of the series up to 'Obertonbereich', kept below 6 kHz
+    harm(f, y) {
+      const top = P['obt.top'], lo = Math.max(2, Math.round(top / 4));
+      const hi = Math.max(lo, Math.min(top, Math.floor(6000 / f)));
+      return Math.round(lo + clamp(y, 0, 1) * (hi - lo));
+    },
+    start(v, t, f, y, vel, o) {
+      this.wave();
+      const w = P['v.width'], kq = 1 + 5 * P['obt.focus'], wander = P['obt.wander'];
+      // optional wandering: the walk, faster with more 'Wandern', moves the spotlights to neighbouring harmonics
+      let steps = null;
+      if (wander > 0.001) { steps = v.s(A.ctx.createBufferSource()); steps.buffer = this.walk(); steps.loop = true; steps.playbackRate.value = 0.5 + 0.8 * wander; }
+      // one singer: a buzz whose drone sits under a low-pass a few harmonics up (opening towards the top like a
+      // mouth), and its spotlight, two narrow band-passes in a row on the note, detuned up to the chosen harmonic
+      // (Q keeps the band narrower than the harmonic spacing). Level 3: a second singer a few cents apart on the
+      // other side, whistling a quieter 3:2 above the first and wandering the other way.
+      const bodyC = (ny) => 1200 * Math.log2(2.5 + 5 * ny), bodyG = 0.9 * P['obt.body'] * (Q.rich ? 0.65 : 1);
+      const singers = (Q.rich ? [[-4, -0.5, 1, 1, 0.75], [4, 0.5, 1.5, -1, 0.45]] : [[0, 0, 1, 1, 1]]).map(([det, pan, mul, dir, lvl], i) => {
+        const osc = v.s(OSC('obtGlottis', f)); osc.detune.value = det;
+        const lp = v.n(BQ('lowpass', f, 0.7)); lp.detune.value = bodyC(y);
+        const a = v.n(BQ('bandpass', f)), b = v.n(BQ('bandpass', f));
+        for (const p of [osc.detune, a.detune, b.detune]) { v.mod(p); if (Q.rich) v.lnk(A.uni[i], p); }
+        let ws = null;
+        if (steps) { ws = v.n(A.ctx.createWaveShaper()); steps.connect(ws); ws.connect(a.detune); ws.connect(b.detune); }
+        const out = Q.rich ? v.n(PAN(pan * w)) : v.out;
+        if (Q.rich) out.connect(v.out);
+        osc.connect(lp).connect(v.n(G(bodyG))).connect(out);
+        const g = v.n(G(0));
+        osc.connect(a).connect(b).connect(g).connect(out);
+        return { osc, lp, a, b, g, ws, det, mul, dir, lvl };
+      });
+      // tuning: singer s on harmonic n of the note, whistling stronger the higher it sits; the shaper turns walk
+      // steps into the cents of whole harmonics around it (a few steps with little 'Wandern', all of them with full),
+      // never above the 6 kHz ceiling
+      const harmC = (s, n) => 1200 * Math.log2(Math.round(n * s.mul)) + s.det;
+      const tune = () => {
+        const cap = Math.max(v.h, Math.floor(6000 / v.f));
+        for (const s of singers) {
+          s.Q = kq * Math.round(v.h * s.mul); s.gain = 0.9 * s.lvl * Math.sqrt(v.h / 8);
+          if (!s.ws) continue;
+          const c = new Float32Array(9);
+          for (let i = 0; i < 9; i++) {
+            const d = i - 4, e = Math.sign(d) * Math.floor(Math.abs(d) * wander + 0.25);
+            c[i] = harmC(s, clamp(v.h + s.dir * e, 2, cap)) - harmC(s, v.h);
+          }
+          s.ws.curve = c;
+        }
+        return cap;
+      };
+      v.f = f; v.y = y; v.h = this.harm(f, y); v.cap = tune();
+      // onset: the spotlight scoops up from an octave below, like the mouth closing round a jaw harp's twang
+      for (const s of singers) {
+        s.g.gain.value = s.gain;
+        for (const bp of [s.a, s.b]) { bp.Q.value = s.Q; bp.detune.setValueAtTime(harmC(s, v.h) - 1200, t); bp.detune.setTargetAtTime(harmC(s, v.h), t, 0.03); }
+      }
+      for (const s of v.srcs) { if (s === steps) s.start(t, rand(0, 60)); else s.start(t); }
+      // finger moves: the spotlight glides on as soon as the height selects another harmonic
+      const retarget = () => {
+        const h = this.harm(v.f, v.y), cap = Math.max(h, Math.floor(6000 / v.f));
+        if (h === v.h && cap === v.cap) return;
+        v.h = h; v.cap = tune();
+        for (const s of singers) {
+          setP(s.g.gain, s.gain, 0.05);
+          for (const bp of [s.a, s.b]) { glideTo(bp.detune, harmC(s, h), 0.15); setP(bp.Q, s.Q, 0.05); }
+        }
+      };
+      v.setF = (nf, glide) => {
+        v.f = nf;
+        for (const s of singers) for (const x of [s.osc, s.lp, s.a, s.b]) glideTo(x.frequency, nf, glide);
+        retarget();
+      };
+      v.setY = (ny) => { v.y = ny; for (const s of singers) setP(s.lp.detune, bodyC(ny), 0.05); retarget(); };
+      // in the Puls a short twang: a quick attack under the scoop, a little hotter to sit with the other engines
+      const peak = vel * (o.burst ? 0.135 : 0.105);
+      if (o.burst) burstEnv(v, t, peak, Math.min(P['obt.att'], 0.03), o.gate, Math.min(P['obt.rel'], 2));
+      else { adsrStart(v, t, peak, P['obt.att']); v.release = sustainRelease(v, P['obt.rel']); }
+    },
+  },
+  stm: {
+    sustain: true,
+    // vowels u – o – a – e – i from bottom to top: formant frequencies (Hz), bandwidths (Hz) and peak levels (dB)
+    vowels: [
+      [[325, 700, 2600], [60, 70, 160], [0, -14, -32]],
+      [[450, 800, 2800], [70, 80, 130], [0, -9, -24]],
+      [[800, 1150, 2850], [80, 90, 130], [0, -5, -22]],
+      [[400, 1800, 2750], [60, 100, 130], [-1, -6, -13]],
+      [[290, 2100, 2950], [55, 100, 130], [-2, -6, -12]],
+    ],
+    // three formants [Hz, Q, gain] for pitch f, finger height y and vocal tract size (ratio)
+    formants(f, y, tract) {
+      const p = clamp(y, 0, 1) * 4, i = Math.min(3, Math.floor(p)), x = p - i, a = this.vowels[i], b = this.vowels[i + 1];
+      return [0, 1, 2].map((j) => {
+        let F = Math.min(a[0][j] * Math.pow(b[0][j] / a[0][j], x) * tract, 16000);
+        if (!j) F = Math.max(F, f * 1.1);   // high voices lift the first formant onto the fundamental, as sopranos do
+        // never narrower than the harmonic spacing allows, so every note finds a harmonic in every formant
+        const bw = Math.max(a[1][j] + (b[1][j] - a[1][j]) * x, f * 0.7);
+        // more effort higher up: the upper formants grow with y
+        const lvl = dbToGain(a[2][j] + (b[2][j] - a[2][j]) * x) * [1, 0.7 + 0.6 * y, 0.5 + 1.5 * y][j];
+        // undo the source roll-off at this formant, so the table levels hold for every pitch (deep basses stay darker)
+        const k = F / f;
+        return [F, F / bw, lvl * Math.min(k * Math.sqrt(1 + (k / 14) ** 2), 40)];
+      });
+    },
+    start(v, t, f, y, vel, o) {
+      // glottal source: harmonics fall like a sawtooth, twice as fast above the 14th (built once per audio context);
+      // odd and even harmonics a quarter turn apart, so the wave swings as far up as down and the drive adds no DC
+      if (!A.waves.stmGlottis) {
+        const n = 96, re = new Float32Array(n), im = new Float32Array(n);
+        for (let k = 1; k < n; k++) (k % 2 ? re : im)[k] = 1 / k / Math.sqrt(1 + (k / 14) ** 2);
+        A.waves.stmGlottis = A.ctx.createPeriodicWave(re, im);
+      }
+      const w = P['v.width'], choir = P['stm.choir'], vib = P['stm.vib'];
+      const tract = Math.pow(2, P['stm.shift'] / 12);
+      v.f = f; v.y = y;
+      // breath: one noise whispers through all formants, with an aspirated "h" at the onset; less of it higher up,
+      // where the upper formants open
+      const airGain = () => 5 * P['stm.breath'] * Math.pow(0.15, v.y);
+      const ns = v.s(noiseSrc()), breath = v.n(G(0));
+      breath.gain.setValueAtTime(airGain() * 2.5, t);
+      breath.gain.setTargetAtTime(airGain(), t + 0.02, 0.08);
+      ns.connect(breath);
+      // level 3: six singers in two groups left and right, each group with its own slightly different vocal tract
+      const ks = Q.rich ? [-1, -0.6, -0.2, 0.2, 0.6, 1] : [-1, 0, 1];
+      const sides = Q.rich ? [-1, 1] : [0];
+      // as loud as three singers; a little less, because a stereo voice gains in the voice panner off centre
+      const og = Q.rich ? 0.29 : 0.46;
+      const singers = [], banks = [];
+      for (const side of sides) {
+        const inp = v.n(G(og));
+        breath.connect(inp);
+        // a natural vibrato per group that sets in after the onset; every other singer swings the opposite way
+        const lfo = v.s(OSC('sine', rand(4.6, 5.6)));
+        const vp = v.n(G(0)), vn = v.n(G(0));
+        lfo.connect(vp); lfo.connect(vn);
+        vp.gain.setValueAtTime(0, t); vp.gain.linearRampToValueAtTime(0, t + 0.25); vp.gain.linearRampToValueAtTime(vib, t + 1.4);
+        vn.gain.setValueAtTime(0, t); vn.gain.linearRampToValueAtTime(0, t + 0.25); vn.gain.linearRampToValueAtTime(-vib, t + 1.4);
+        ks.forEach((k, i) => {
+          if (sides.length > 1 && (i % 2 ? 1 : -1) !== side) return;
+          const osc = v.s(OSC('stmGlottis', f));
+          const d = (k + rand(-0.2, 0.2)) * choir + rand(-2, 2);
+          // each singer slides into the note from slightly below
+          osc.detune.setValueAtTime(d - rand(20, 45), t);
+          osc.detune.setTargetAtTime(d, t, 0.06);
+          v.mod(osc.detune);
+          if (Q.rich) v.lnk(A.uni[i % 4], osc.detune);
+          (singers.length % 2 ? vn : vp).connect(osc.detune);
+          osc.connect(inp);
+          singers.push(osc);
+        });
+        const dst = side ? v.n(PAN(side * 0.5 * w)) : v.out;
+        if (side) dst.connect(v.out);
+        const bank = { tract: tract * (1 + side * 0.03), bp: [], g: [] };
+        this.formants(f, y, bank.tract).forEach(([F, q, gain]) => {
+          const bp = v.n(BQ('bandpass', F, q)), g = v.n(G(gain));
+          inp.connect(bp).connect(g).connect(dst);
+          bank.bp.push(bp); bank.g.push(g);
+        });
+        // the vowel never quite stands still: the two lower formants sway apart on the slow shared drifts (±40 ct)
+        const u = (Math.random() * 4) | 0;
+        [0, 1].forEach((j) => {
+          const sway = v.n(G((j ? -1 : 1) * rand(10, 13)));
+          v.lnk(A.uni[(u + j * 2) % 4], sway);
+          sway.connect(bank.bp[j].detune);
+        });
+        banks.push(bank);
+      }
+      for (const s of v.srcs) { if (s === ns) s.start(t, rand(0, 1.8)); else s.start(t); }
+      const retune = (glide) => {
+        for (const b of banks) this.formants(v.f, v.y, b.tract).forEach(([F, q, gain], j) => {
+          if (glide != null) glideTo(b.bp[j].frequency, F, glide); else setP(b.bp[j].frequency, F, 0.05);
+          setP(b.bp[j].Q, q, 0.05); setP(b.g[j].gain, gain, 0.05);
+        });
+        setP(breath.gain, airGain(), 0.05);
+      };
+      v.setF = (nf, glide) => { v.f = nf; for (const s of singers) glideTo(s.frequency, nf, glide); retune(glide); };
+      v.setY = (ny) => { v.y = ny; retune(); };
+      const peak = vel * 0.5;
+      if (o.burst) burstEnv(v, t, peak, P['stm.att'], o.gate, Math.min(P['stm.rel'], 3));
+      else { adsrStart(v, t, peak, P['stm.att']); v.release = sustainRelease(v, P['stm.rel']); }
+    },
+  },
+  swm: {
+    sustain: true,
+    // chirp rhythm: trills of 2–6 round pulses (20–50 ms) with pauses between them, 8 s long and looping;
+    // built once, every swarm starts somewhere else in it
+    chirps() {
+      if (A.swmChirps) return A.swmChirps;
+      const buf = A.ctx.createBuffer(1, SR * 8, SR), d = buf.getChannelData(0);
+      for (let i = Math.floor(0.1 * SR); i < d.length - SR;) {
+        const len = Math.floor(rand(0.02, 0.05) * SR), gap = Math.floor(len * rand(0.5, 1.2)), a = rand(0.6, 1);
+        for (let k = 2 + Math.floor(rand(0, 5)); k > 0; k--, i += len + gap)
+          for (let j = 0; j < len; j++) d[i + j] = a * Math.sin(Math.PI * j / len) ** 2;
+        i += Math.floor(rand(0.12, 0.8) * SR);
+      }
+      return (A.swmChirps = buf);
+    },
+    start(v, t, f, y, vel, o) {
+      const w = P['v.width'], spread = P['swm.spread'], unrest = P['swm.unrest'];
+      // three insects per swarm [harmonic, detune (× spread), level at the bottom, at the top]: a calm one on the
+      // note, the cricket on the 3rd harmonic and a buzzer on the 2nd. The calm one bends the cricket's pitch;
+      // cricket and buzzer bend each other in a loop closed by a short delay, so the overtones keep stirring
+      // themselves up while nothing bends the calm one and the note stays clear.
+      // Level 3: two swarms, left and right and apart in tuning, whose loops join into one
+      const kinds = [[1, -1, 1, 0.45], [3, 0.4, 0.03, 1], [2, 1, 0.05, 0.35]];
+      const sides = Q.rich ? [-1, 1] : [0];
+      const g0 = Q.rich ? 0.175 : 0.3;
+      // finger height = chaos and density: louder overtones, stronger coupling (FM index of the calm one on the
+      // cricket for brightness, of the loop for unrest; less on high notes, whose sparse harmonics would drown in
+      // the sidebands), a faster and deeper flutter, quicker and stronger trills and an open filter. Insects above
+      // 0.3 × the sample rate stay silent
+      const level = (k, nf, ny) => (nf * k[0] > SR * 0.3 ? 0 : g0 * (k[2] + (k[3] - k[2]) * ny ** 1.5));
+      const index = (nf, ny, loop) => {
+        const c = P['swm.chaos'] * Math.min(1, Math.sqrt(250 / nf));
+        return loop ? Math.min(0.6, c * (0.3 + 0.9 * ny * ny)) : Math.min(4, c * (0.5 + 2 * ny + 6 * ny ** 3));
+      };
+      const flight = (ny) => (0.4 + 7.6 * ny) * (0.3 + 1.4 * unrest);
+      const depth = (ny) => Math.min(0.9, unrest * (0.6 + 0.9 * ny));
+      const trill = (ny) => 0.5 + ny;
+      const flare = (ny) => g0 * P['swm.chirp'] * 1.5 * ny;
+      // a low-pass that opens with height, and a high-pass just below the note for the sidebands the coupled sines
+      // throw down towards 0 Hz
+      const cut = (nf, ny) => clamp(nf * Math.pow(2, 0.6 + 4.4 * ny), 150, 14000);
+      const lp = v.n(BQ('lowpass', cut(f, y), 0.7)), hp = v.n(BQ('highpass', f * 0.7, 0.7));
+      lp.connect(hp).connect(v.out);
+      const swarms = sides.map((side, s) => {
+        const mix = v.n(G(1));
+        if (side) mix.connect(v.n(PAN(side * 0.6 * w))).connect(lp); else mix.connect(lp);
+        // flight: one smooth random curve bends the calm one and the buzzer one way and the cricket the other, and
+        // makes the whole swarm flutter
+        const fly = v.s(A.ctx.createBufferSource());
+        fly.buffer = A.driftBuf; fly.loop = true; fly.playbackRate.value = flight(y);
+        const wander = v.n(G(spread * 1.5 + 4)), counter = v.n(G(-(spread * 1.5 + 4))), trem = v.n(G(depth(y)));
+        fly.connect(wander); fly.connect(counter); fly.connect(trem).connect(mix.gain);
+        fly.start(t, rand(0, A.driftBuf.duration));
+        const ins = kinds.map((k, j) => {
+          const osc = v.s(OSC('sine', f * k[0]));
+          osc.detune.value = (k[1] + side * 0.5) * spread;
+          v.mod(osc.detune);
+          if (Q.rich) v.lnk(A.uni[(s * 3 + j) % 4], osc.detune);
+          (j === 1 ? counter : wander).connect(osc.detune);
+          const amp = v.n(G(level(k, f, y)));
+          osc.connect(amp).connect(mix);
+          osc.start(t);
+          return { osc, k, amp };
+        });
+        // the cricket flares up and swoops a semitone up in the trill rhythm
+        const trills = v.s(A.ctx.createBufferSource());
+        trills.buffer = this.chirps(); trills.loop = true; trills.playbackRate.value = trill(y);
+        const up = v.n(G(flare(y))), swoop = v.n(G(f * 3 * 0.06));
+        trills.connect(up).connect(ins[1].amp.gain);
+        trills.connect(swoop).connect(ins[1].osc.frequency);
+        trills.start(t, rand(0, trills.buffer.duration));
+        return { ins, fly, trem, trills, up, swoop };
+      });
+      // links [from, to]: each bends the other's pitch by up to index × its own frequency; the last one closes the loop
+      const loop = swarms.flatMap((x) => [x.ins[1], x.ins[2]]);
+      const pairs = [...swarms.map((x) => [x.ins[0], x.ins[1]]), ...loop.map((a, i) => [a, loop[(i + 1) % loop.length]])];
+      const dev = (i, nf, ny) => Math.min(index(nf, ny, i >= swarms.length) * nf * pairs[i][0].k[0], SR * 0.08);
+      const links = pairs.map(([a, b], i) => {
+        const g = v.n(G(dev(i, f, y)));
+        if (i === pairs.length - 1) {
+          const d = v.n(A.ctx.createDelay(0.05));
+          d.delayTime.value = rand(0.004, 0.009);
+          a.osc.connect(d).connect(g);
+        } else a.osc.connect(g);
+        g.connect(b.osc.frequency);
+        return g;
+      });
+      v.f = f; v.y = y;
+      const retune = () => {
+        const nf = v.f, ny = v.y;
+        links.forEach((g, i) => setP(g.gain, dev(i, nf, ny), 0.05));
+        setP(lp.frequency, cut(nf, ny), 0.05); setP(hp.frequency, nf * 0.7, 0.05);
+        for (const x of swarms) {
+          for (const a of x.ins) setP(a.amp.gain, level(a.k, nf, ny), 0.05);
+          setP(x.fly.playbackRate, flight(ny), 0.1); setP(x.trem.gain, depth(ny), 0.05);
+          setP(x.trills.playbackRate, trill(ny), 0.1); setP(x.up.gain, flare(ny), 0.05); setP(x.swoop.gain, nf * 3 * 0.06, 0.05);
+        }
+      };
+      v.setF = (nf, glide) => { v.f = nf; for (const x of swarms) for (const a of x.ins) glideTo(a.osc.frequency, nf * a.k[0], glide); retune(); };
+      v.setY = (ny) => { v.y = ny; retune(); };
+      // a Puls hit is short: a little hotter, so it sits with the other engines
+      const peak = vel * (o.burst ? 0.68 : 0.47);
+      if (o.burst) burstEnv(v, t, peak, Math.min(P['swm.att'], 0.03), o.gate, Math.min(P['swm.rel'], 2));
+      else { adsrStart(v, t, peak, P['swm.att']); v.release = sustainRelease(v, P['swm.rel']); }
+    },
+  },
+  tie: {
+    sustain: true,
+    // one soft-clipping curve for all voices: tanh(6x), so the input level decides how hard the growl is driven
+    curve: null,
+    // the note an octave or two down, but never below 30 Hz
+    base(f) { let fb = f * Math.pow(2, P['tie.oct']); while (fb < 30) fb *= 2; return fb; },
+    // finger height is the drive: how hard sine and octave hit the curve (from a soft octave to a buzzing growl) and
+    // how loud the overtones then sit against the sub, at the same overall level. The growl's own fundamental is
+    // measured here too (one period, 64 points), so the sub can take it back out
+    drive(y) {
+      const dr = P['tie.drive'], u = 0.5 + 10 * dr * y, m = dr * (0.3 + 2.1 * y);
+      let ss = 0, b1 = 0;
+      for (let i = 0; i < 64; i++) {
+        const th = i * Math.PI / 32, x = Math.tanh(u * (Math.sin(th) + 0.5 * Math.sin(2 * th)));
+        ss += x * x; b1 += x * Math.sin(th);
+      }
+      b1 /= 32;
+      const s = 1 / Math.sqrt(1 + m * m), mk = m * s * Math.sqrt(0.5 / (ss / 64 - b1 * b1 / 2));
+      return { g: u / 6, mk, s, fund: mk * b1 };
+    },
+    start(v, t, f, y, vel, o) {
+      if (!this.curve) this.curve = makeShaperCurve((x) => Math.tanh(6 * x));
+      const fb = this.base(f), w = P['v.width'], rich = Q.rich;
+      // the 808 fall: every oscillator starts higher (at most at 3 kHz) and settles on the note, fast at first, then gently
+      const jump = Math.min(Math.pow(2, P['tie.drop'] / 12), Math.max(1, 3000 / fb)), tau = P['tie.dropT'] / 5;
+      const osc = (fr) => {
+        const s = v.s(OSC('sine', fr));
+        if (jump > 1.001) { s.frequency.setValueAtTime(fr * jump, t); s.frequency.setTargetAtTime(fr, t, tau); }
+        v.mod(s.detune);
+        s.start(t);
+        return s;
+      };
+      // level 3 places parts left and right; the centre parts then pass a centre panner so they keep their level
+      const mid = rich ? v.n(PAN(0)) : v.out;
+      if (rich) mid.connect(v.out);
+      // the sub: a plain sine, always in the middle
+      const sub = osc(fb), subG = v.n(G(0));
+      sub.connect(subG).connect(mid);
+      // the growl: the sub and its octave driven together. In phase they form a point-symmetric wave, which the curve
+      // fills with every overtone, even and odd, and which stays symmetric – no offset, also not in the drive effect
+      // after the voice. Its fundamental lines up with the sub's, so the sub's gain simply subtracts it again.
+      // Level 3: two growls left and right, hollower (odd overtones) on one side and warmer (even ones) on the other;
+      // the octave's share in them swings slowly against each other, so the colours wander from side to side while
+      // their sum – and the sub – stays steady
+      const growls = [], k = rich ? 0.5 : 1;
+      let o2 = null, g1 = null;
+      if (P['tie.drive'] > 0.005) {
+        o2 = osc(fb * 2); g1 = v.n(G(0));
+        sub.connect(g1);
+        for (const side of rich ? [-1, 1] : [0]) {
+          const g2 = v.n(G(0)), sh = v.n(A.ctx.createWaveShaper()), mk = v.n(G(0));
+          sh.curve = this.curve;
+          g1.connect(sh); o2.connect(g2).connect(sh);
+          let dst = mid, sw = null;
+          if (side) {
+            dst = v.n(PAN(side * 0.9 * w)); dst.connect(v.out);
+            // one slow drift moves the octave's share, up on one side and down on the other
+            sw = v.n(G(0)); v.lnk(A.uni[1], sw); sw.connect(g2.gain);
+          }
+          sh.connect(mk).connect(dst);
+          growls.push({ g2, mk, sw, side });
+        }
+      }
+      const shape = (ny, tc) => {
+        const d = this.drive(ny), set = (p, x) => (tc ? setP(p, x, tc) : (p.value = x));
+        set(subG.gain, d.s - (o2 ? d.fund : 0));
+        if (g1) set(g1.gain, d.g);
+        for (const x of growls) {
+          set(x.g2.gain, d.g * (0.5 + 0.1 * x.side)); set(x.mk.gain, d.mk * k);
+          if (x.sw) set(x.sw.gain, x.side * 0.15 * d.g / A.uni[1].gain.value);
+        }
+      };
+      shape(y, 0);
+      // the beater: a few milliseconds of band-passed noise, brighter higher up
+      if (P['tie.click'] > 0.01) {
+        const ns = v.s(noiseSrc()), bp = v.n(BQ('bandpass', 1300 * Math.pow(2, 1.6 * y), 0.8)), cg = v.n(G(0));
+        cg.gain.setValueAtTime(0, t); cg.gain.linearRampToValueAtTime(0.9 * P['tie.click'], t + 0.0015); cg.gain.setTargetAtTime(0, t + 0.0015, 0.005);
+        ns.connect(bp).connect(cg).connect(mid);
+        ns.start(t, rand(0, 1.8));
+        ns._end = t + 0.06;
+      }
+      v.setF = (nf, glide) => {
+        const nb = this.base(nf);
+        glideTo(sub.frequency, nb, glide);
+        if (o2) glideTo(o2.frequency, nb * 2, glide);
+      };
+      v.setY = (ny) => shape(ny, 0.04);
+      const peak = vel * 0.16, rel = P['tie.rel'];
+      if (o.burst) burstEnv(v, t, peak * 1.6, 0.003, o.gate * 0.8, rel * (o.decayMul || 1));
+      else { adsrStart(v, t, peak, 0.003); v.release = sustainRelease(v, rel); }
+    },
+  },
+  trp: {
+    sustain: false,
+    // the chirp's shape: an ease-out from the bubble's first ring up to the note, fast at first, landing softly
+    ease: Float32Array.from({ length: 24 }, (_, i) => Math.pow(1 - i / 23, 3)),
+    // the scale's note nearest to a frequency, in any octave: rain drops fall in key
+    inKey(fr) {
+      let best = fr, bd = 1;
+      for (const nt of N.notes) {
+        const d = Math.log2(fr / nt.f), r = d - Math.round(d);
+        if (Math.abs(r) < bd) { bd = Math.abs(r); best = fr * Math.pow(2, -r); }
+      }
+      return best;
+    },
+    // a small drop rings harder: its bubble swings past linear and the tone turns glassy with a few odd harmonics
+    // (two shades in the upper half, one wave each); bigger drops ring as a round sine
+    wave(y) {
+      const k = Math.max(0, Math.round(y * 4) - 2), key = 'trp' + k, b = (k / 2) ** 2;
+      if (!A.waves[key]) A.waves[key] = A.ctx.createPeriodicWave(new Float32Array(8), new Float32Array([0, 1, 0, 0.45 * b, 0, 0.2 * b, 0, 0.08 * b]));
+      return key;
+    },
+    start(v, t, f, y, vel, o) {
+      // finger height is the drop's size: a big drop (bottom) bloops up from just below and rings round, a small one
+      // (top) chirps further and faster, rings glassy and ticks brighter as it hits; high notes ring shorter
+      const decay = P['trp.decay'] * (o.decayMul || 1) * clamp(Math.pow(330 / f, 0.3), 0.55, 1.6);
+      const depth = P['trp.chirp'] * (0.2 + 1.6 * y), rise = P['trp.rise'] * (1.3 - 0.6 * y);
+      const w = P['v.width'], rich = Q.rich, wave = this.wave(y);
+      // every drop starts on a one-sided swing at its lowest pitch: a gentle high-pass keeps that thump free of DC
+      const bus = v.n(BQ('highpass', 30, 0.6));
+      bus.connect(v.out);
+      // level 3 places drops left and right; the centre parts then pass a centre panner so they keep their level
+      const mid = rich ? v.n(PAN(0)) : bus;
+      if (rich) mid.connect(bus);
+      let end = t;
+      // a bubble rings as a damped tone: as it pinches off, its resonance shoots up to the note (the chirp), then it
+      // keeps creeping upward while it rises and fades – the deeper the chirp, the further it creeps. The chirp starts
+      // no lower than 50 Hz
+      const drop = (at, fr, amp, dec, dep, rt, dst, uni) => {
+        dep = Math.min(dep, Math.max(0, Math.log2(fr / 50)));
+        const osc = v.s(OSC(wave, fr)), g = v.n(G(0));
+        osc.frequency.setValueCurveAtTime(this.ease.map((e) => fr * Math.pow(2, -dep * e)), at, rt);
+        osc.frequency.linearRampToValueAtTime(fr * (1 + 0.08 * dep), at + rt + dec);
+        v.mod(osc.detune);
+        if (uni != null) v.lnk(A.uni[uni], osc.detune);
+        g.gain.setValueAtTime(0, at);
+        g.gain.linearRampToValueAtTime(amp, at + 0.0008);
+        g.gain.setTargetAtTime(0, at + 0.0008, dec / 6.9);
+        osc.connect(g).connect(dst);
+        osc.start(at);
+        osc._end = at + dec * 1.15 + 0.02;
+        end = Math.max(end, osc._end);
+      };
+      // the impact: one noise source for all drops, ticking briefly as each of them hits the surface
+      const splash = P['trp.splash'], ticks = splash > 0.01 ? v.n(G(0)) : null;
+      const tick = (at, amp) => {
+        if (!ticks) return;
+        ticks.gain.setValueAtTime(0, at);
+        ticks.gain.linearRampToValueAtTime(amp * splash, at + 0.0005);
+        ticks.gain.setTargetAtTime(0, at + 0.0005, 0.0015 + 0.003 * (1 - y));
+      };
+      // the drop itself, a hair off pitch each time (level 3: two bubbles side by side, left and right, drifting)
+      const d0 = depth * rand(0.9, 1.1), dec0 = decay * rand(0.9, 1.1);
+      if (rich) [-1, 1].forEach((s, i) => {
+        const p = v.n(PAN(s * 0.35 * w));
+        p.connect(bus);
+        drop(t, f * Math.pow(2, (s * 5 + rand(-3, 3)) / 1200), 0.5, dec0, d0, rise, p, i);
+      });
+      else drop(t, f * Math.pow(2, rand(-3, 3) / 1200), 1, dec0, d0, rise, mid);
+      tick(t, 1.4);
+      // rain: smaller drops splash off and fall back over the next moments – higher, softer, shorter, each on a note
+      // of the scale, thinning out as they go. A harder hit throws more; a big drop throws a few droplets just above
+      // its own note that fall back soon and ring briefly, a small one a spray of tiny ones high up. Each droplet lands
+      // somewhere in its own share of the time, so they spread out instead of clumping (at most 10 per hit, level 3: 15)
+      const reach = 0.5 + 0.5 * y;
+      const spread = P['trp.spread'] * reach, x = P['trp.rain'] * (2 + 6 * vel) * (0.15 + 1.45 * y) * (rich ? 1.5 : 1);
+      const n = Math.min(Math.floor(x + Math.random()), rich ? 15 : 10);
+      const times = Array.from({ length: n }, (_, k) => 0.02 + spread * Math.pow((k + Math.random()) / n, 1.6));
+      for (const dt of times) {
+        const at = t + dt, fade = 1 - 0.6 * dt / (spread + 0.02);
+        let fr = this.inKey(f * Math.pow(2, rand(0.25, 0.9) + 1.5 * y * y));
+        while (fr > 7000) fr /= 2;
+        const amp = rand(0.25, 0.55) * fade * (rich ? 0.8 : 1);
+        const dst = rich ? v.n(PAN(rand(-0.8, 0.8) * w)) : mid;
+        if (rich) dst.connect(bus);
+        drop(at, fr, amp, decay * reach * rand(0.2, 0.45), depth * rand(0.7, 1.3), rise * rand(0.5, 0.9), dst);
+        tick(at, amp);
+      }
+      if (ticks) {
+        const ns = v.s(noiseSrc()), bp = v.n(BQ('bandpass', 1500 + 5000 * y, 0.8));
+        ns.connect(bp).connect(ticks).connect(mid);
+        ns.start(t, rand(0, 1.8));
+        ns._end = t + (times.length ? times[times.length - 1] : 0) + 0.05;
+      }
+      // a stereo voice gains in the voice panner off centre, so level 3 plays a little softer
+      v.out.gain.value = vel * (rich ? 0.62 : 0.67);
+      v.released = true;
+      v.finish(end + 0.1);
+    },
+  },
 };
 
 /* ---------- Karplus-Strong string: rendered once per pitch, pre-rendered in the background ---------- */
@@ -1682,8 +2918,18 @@ function texture(kind) {
   }
   return null;
 }
-function preloadTextures() { for (const k of ['glas', 'chor', 'metall', 'staub']) texture(k); }
+function preloadTextures() { for (const k of ['glas', 'chor', 'metall', 'staub', 'fluestern', 'funk', 'orgel', 'voegel', 'wasser', 'zikaden']) texture(k); }
+// sources that are not generated: a loaded file (or take) and the live microphone
+const LIVE_SRC = new Set(['echo', 'datei', 'mikro']);
 function korSource() {
+  if (P['kor.src'] === 'datei') {
+    if (A.userTex) return A.userTex;
+    if (!A.userTexWarned) { A.userTexWarned = true; toast('Noch keine eigene Datei geladen – unter „Klang → Körner“ auf „Audiodatei laden …“ tippen.', 5000); }
+  }
+  if (P['kor.src'] === 'mikro') {
+    const m = micSource();
+    if (m) return m;
+  }
   if (P['kor.src'] === 'echo') {
     if (!CAP.node) ensureCapture();
     const now = A.ctx.currentTime;
@@ -1692,9 +2938,146 @@ function korSource() {
     if (e) { A.echoCache = { buf: e, rev: reversed(e), ref: N.notes[Math.floor(N.notes.length / 2)].f, at: now }; return A.echoCache; }
     if (!A.echoWarned) { toast('Das Echo ist noch leer – spiele zuerst etwas, dann greifen die Körner darauf zu.'); A.echoWarned = true; }
   }
-  const want = P['kor.src'] === 'echo' ? 'glas' : P['kor.src'];
+  const want = LIVE_SRC.has(P['kor.src']) ? 'glas' : P['kor.src'];
   return texture(want) || A.tex.glas || Object.values(A.tex)[0] || null;
 }
+/* ---------- own material for the grains: an audio file or a take, kept on the device ---------- */
+const USER_MAX_S = 30;
+const USERTEX = { pending: null, name: '' };
+async function loadUserFile(file) {
+  if (!file) return;
+  toast('„' + file.name + '“ wird gelesen …', 2500);
+  try {
+    const ab = await file.arrayBuffer();
+    const dctx = A.ctx || new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(2, 1, 48000);
+    const dec = await new Promise((res, rej) => { const pr = dctx.decodeAudioData(ab, res, rej); if (pr && pr.then) pr.then(res, rej); });
+    const n = Math.min(dec.length, Math.floor(USER_MAX_S * dec.sampleRate));
+    const L = dec.getChannelData(0).slice(0, n), R = (dec.numberOfChannels > 1 ? dec.getChannelData(1) : dec.getChannelData(0)).slice(0, n);
+    useUserMaterial({ L, R, sr: dec.sampleRate, name: file.name.replace(/\.[^.]+$/, '') }, dec.length > n);
+  } catch (e) { console.warn(e); toast('Diese Datei kann der Browser nicht lesen. WAV, MP3, M4A oder OGG gehen meistens.', 5000); }
+}
+async function takeToGrains(tk) {
+  if (!(await ensureTakeData(tk))) { toast('Die Daten dieser Aufnahme sind nicht mehr vorhanden.'); return; }
+  const n = Math.min(tk.frames, Math.floor(USER_MAX_S * tk.sr));
+  const L = concatF32(tk.L).slice(0, n), R = concatF32(tk.R).slice(0, n);
+  useUserMaterial({ L, R, sr: tk.sr, name: tk.name }, tk.frames > n);
+}
+// normalise, fade the ends, guess a pitch, keep it on the device and switch the grains to it
+function useUserMaterial(d, cut) {
+  let pk = 0;
+  for (const a of [d.L, d.R]) for (let i = 0; i < a.length; i++) { const x = a[i] < 0 ? -a[i] : a[i]; if (x > pk) pk = x; }
+  if (pk < 1e-4) { toast('Die Datei ist (fast) still.'); return; }
+  const g = 0.8 / pk, fade = Math.min(Math.floor(d.sr * 0.01), d.L.length >> 2), n = d.L.length;
+  for (let i = 0; i < n; i++) { let e = g; if (i < fade) e *= i / fade; else if (i > n - fade) e *= (n - i) / fade; d.L[i] *= e; d.R[i] *= e; }
+  d.ref = guessPitch(d.L, d.sr) || TEX_F;
+  setUserTex(d);
+  idbDo('segs', 'readwrite', (st) => st.put({ take: 'usertex', i: 0, L: d.L.buffer, R: d.R.buffer, sr: d.sr, name: d.name, ref: d.ref }));
+  if (P['kor.src'] !== 'datei') setParam('kor.src', 'datei');
+  toast('Körner spielen jetzt „' + d.name + '“' + (cut ? ' (die ersten ' + USER_MAX_S + ' Sekunden)' : '') + (d.ref !== TEX_F ? ' – Grundton erkannt, die Spielfläche spielt es in Tonhöhe.' : '.'), 5500);
+}
+function setUserTex(d) {
+  USERTEX.name = d.name; USERTEX.info = d;
+  if (!A.ctx) { USERTEX.pending = d; updUserTexUI(); return; }
+  USERTEX.pending = null;
+  const buf = A.ctx.createBuffer(2, d.L.length, d.sr);
+  buf.getChannelData(0).set(d.L); buf.getChannelData(1).set(d.R);
+  A.userTex = { buf, rev: reversed(buf), ref: d.ref };
+  for (const v of A.grainVoices) if (P['kor.src'] === 'datei') { v.kor.buf = null; }   // running fingers pick it up
+  updUserTexUI();
+}
+async function restoreUserTex() {
+  const rec = await idbDo('segs', 'readonly', (st) => st.get(['usertex', 0]));
+  if (rec && rec.L) setUserTex({ L: new Float32Array(rec.L), R: new Float32Array(rec.R), sr: rec.sr, name: rec.name, ref: rec.ref || TEX_F });
+}
+// autocorrelation on the loudest 85 ms: a clear period between 55 and 1100 Hz becomes the reference pitch
+function guessPitch(x, sr) {
+  const win = Math.floor(sr * 0.085);
+  if (x.length < win * 2) return 0;
+  let best = 0, at = 0;
+  for (let i = 0; i + win < x.length; i += win >> 1) { let e = 0; for (let k = i; k < i + win; k += 4) e += x[k] * x[k]; if (e > best) { best = e; at = i; } }
+  const lo = Math.floor(sr / 1100), hi = Math.floor(sr / 55);
+  let e0 = 0; for (let k = 0; k < win; k++) e0 += x[at + k] * x[at + k];
+  const cs = [];
+  let top = 0;
+  for (let lag = lo; lag <= hi && at + win + lag < x.length; lag++) {
+    let c = 0; for (let k = 0; k < win; k++) c += x[at + k] * x[at + k + lag];
+    c /= e0 || 1; cs.push(c); if (c > top) top = c;
+  }
+  if (top < 0.75) return 0;
+  // the shortest period that correlates almost as well as the best one (multiples of the period correlate too)
+  for (let i = 1; i < cs.length - 1; i++) {
+    if (cs[i] < 0.92 * top || cs[i] < cs[i - 1] || cs[i] < cs[i + 1]) continue;
+    const den = cs[i - 1] - 2 * cs[i] + cs[i + 1], d = den ? 0.5 * (cs[i - 1] - cs[i + 1]) / den : 0;   // parabolic peak between lags
+    return sr / (lo + i + clamp(d, -0.5, 0.5));
+  }
+  return 0;
+}
+let userTexEl = null;
+function updUserTexUI() {
+  if (!userTexEl) return;
+  userTexEl.textContent = USERTEX.name ? 'Geladen: „' + USERTEX.name + '“' + (USERTEX.info && USERTEX.info.ref !== TEX_F ? ' · Grundton ' + Math.round(USERTEX.info.ref) + ' Hz' : ' · ohne festen Grundton') : 'Noch keine eigene Datei. Bis zu ' + USER_MAX_S + ' Sekunden werden verwendet und auf diesem Gerät gespeichert.';
+}
+
+/* ---------- live microphone as grain material (8 s ring, refreshed while you play) ---------- */
+const MIC = { on: false, starting: false, stream: null, src: null, node: null, ringL: null, ringR: null, pos: 0, fill: 0, cache: null };
+async function micStart() {
+  if (MIC.on || MIC.starting || !A.ctx) return;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('Hier gibt es keinen Zugriff auf das Mikrofon.', 4000); return; }
+  MIC.starting = true;
+  try {
+    MIC.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    if (!(await ensureCapture())) throw new Error('kein Abgriff');
+    const n = Math.floor(SR * 8);
+    MIC.ringL = new Float32Array(n); MIC.ringR = new Float32Array(n); MIC.pos = 0; MIC.fill = 0; MIC.cache = null;
+    MIC.src = A.ctx.createMediaStreamSource(MIC.stream);
+    if (CAP.mode === 'worklet') {
+      MIC.node = new AudioWorkletNode(A.ctx, 'myzel-tap', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit', channelInterpretation: 'speakers' });
+      MIC.node.port.onmessage = (e) => { micChunk(e.data.l, e.data.r); if (!e.data.flush && e.data.l.length === 2048) { try { MIC.node.port.postMessage({ back: [e.data.l, e.data.r] }, [e.data.l.buffer, e.data.r.buffer]); } catch (err) {} } };
+    } else {
+      MIC.node = A.ctx.createScriptProcessor(4096, 2, 2);
+      MIC.node.onaudioprocess = (ev) => { const ib = ev.inputBuffer; micChunk(ib.getChannelData(0), ib.numberOfChannels > 1 ? ib.getChannelData(1) : ib.getChannelData(0)); };
+    }
+    MIC.src.connect(MIC.node);
+    MIC.mute = G(0); MIC.node.connect(MIC.mute).connect(A.ctx.destination);
+    MIC.on = true;
+    toast('Mikrofon an: Die Körner greifen auf die letzten Sekunden zu. Mit Kopfhörern gibt es keine Rückkopplung.', 5500);
+  } catch (e) {
+    console.warn(e); micStop();
+    toast(e && e.name === 'NotAllowedError' ? (inViewer ? 'In dieser Ansicht ist das Mikrofon gesperrt. In der App geht es: beidlat.github.io/4claude' : 'Der Zugriff auf das Mikrofon wurde abgelehnt.') : 'Das Mikrofon lässt sich nicht öffnen.', 5500);
+  }
+  MIC.starting = false;
+  updUserTexUI();
+}
+function micStop() {
+  if (MIC.stream) for (const tr of MIC.stream.getTracks()) tr.stop();
+  for (const n of [MIC.src, MIC.node, MIC.mute]) { try { if (n) n.disconnect(); } catch (e) {} }
+  MIC.stream = MIC.src = MIC.node = MIC.mute = null; MIC.on = false; MIC.cache = null;
+}
+function micChunk(l, r) {
+  const n = MIC.ringL.length;
+  for (let i = 0; i < l.length; i++) { MIC.ringL[MIC.pos] = l[i]; MIC.ringR[MIC.pos] = r[i]; if (++MIC.pos === n) MIC.pos = 0; }
+  MIC.fill = Math.min(n, MIC.fill + l.length);
+}
+// the last seconds of the microphone, normalised; rebuilt at most every 0.6 s
+function micSource() {
+  if (!MIC.on) {
+    if (!MIC.hinted) { MIC.hinted = true; toast('Mikrofon ist aus – unter „Klang → Körner“ auf „Mikrofon (live)“ tippen.', 4500); }
+    return null;
+  }
+  const now = A.ctx.currentTime;
+  if (MIC.cache && now - MIC.cache.at < 0.6) return MIC.cache;
+  const fill = MIC.fill, n = MIC.ringL.length;
+  if (fill < SR * 0.5) return MIC.cache;
+  const buf = A.ctx.createBuffer(2, fill, SR), L = buf.getChannelData(0), R = buf.getChannelData(1);
+  let k = (MIC.pos - fill + n) % n, pk = 0;
+  for (let i = 0; i < fill; i++) { L[i] = MIC.ringL[k]; R[i] = MIC.ringR[k]; const x = Math.abs(L[i]); if (x > pk) pk = x; if (++k === n) k = 0; }
+  if (pk < 0.003) return MIC.cache;   // silence: keep the last material
+  const g = Math.min(40, 0.8 / pk);
+  for (let i = 0; i < fill; i++) { L[i] *= g; R[i] *= g; }
+  MIC.cache = { buf, rev: reversed(buf), ref: N.notes[Math.floor(N.notes.length / 2)].f, at: now };
+  return MIC.cache;
+}
+
 const HANN = (() => { const n = 64, c = new Float32Array(n); for (let i = 0; i < n; i++) c[i] = Math.sin(Math.PI * i / (n - 1)) ** 2; return c; })();
 // Q.grainMax counts grains already scheduled ahead, too; Q.overlap is the most grains sounding at once per finger
 function spawnGrain(v, when) {
@@ -2066,6 +3449,7 @@ async function restoreTakes() {
   }
   takeCounter = takes.reduce((n, t) => Math.max(n, Number((/^Aufnahme (\d+)/.exec(t.name) || /(\d+)$/.exec(t.name) || [])[1]) || 0), takeCounter);
   renderTakes();
+  restoreUserTex();
   if (takes.some((t) => t.recovered)) toast('Eine unterbrochene Aufnahme wurde wiederhergestellt.');
 }
 async function ensureTakeData(tk) {
@@ -3360,6 +4744,11 @@ function onParamChanged(id) {
   if (id === 'flt.type') for (const fn of CTL['flt.q'] || []) fn(P['flt.q'], null);
   if (pre === 'sai' || pre === 't' || id === 'v.eng' || id === 'v.layer' || id === 'v.layerInt' || /^l\d\.(eng|on|oct)$/.test(id)) warmKS();
   if (id === 'kor.src' && P['kor.src'] === 'echo' && A.started) ensureCapture();
+  if (id === 'kor.src') {
+    if (P['kor.src'] === 'mikro' && A.started && !UI.loading) micStart();
+    if (P['kor.src'] !== 'mikro' && MIC.on) micStop();
+    if (P['kor.src'] === 'datei' && !A.userTex && !USERTEX.pending && !UI.loading && userFileIn) userFileIn.click();
+  }
   if (id === 'dly.sync') updInactive();
   if (id === 'rec.len' || id === 'rec.bars' || id === 'seq.bpm') { renderBarInfo(); if (CAP.state === 'idle') updRecUI(); }
   if (id === 'rec.bars') barRecue();
@@ -3447,6 +4836,7 @@ const PANELS = [
   { key: 'dev', title: 'Gerät', icon: ICON.dev },
 ];
 const panelEls = {};
+let userFileIn = null;
 const engSecs = {};
 function buildKlang() {
   const box = h('div');
@@ -3455,8 +4845,16 @@ function buildKlang() {
     const ids = Object.keys(PD).filter((id) => id.startsWith(k + '.'));
     const s = section(name, ENG_INFO[k], grid(...ctls(ids)));
     s.hidden = true; engSecs[k] = s;
-    if (k === 'kor') s.append(h('p', { class: 'note' }, 'Senkrecht wählst du die Stelle im Klangmaterial, waagrecht die Tonhöhe. „Echo“ körnt die letzten acht Sekunden deines eigenen Spiels.'));
-    if (k === 'neb' || k === 'kor' || k === 'hau') s.append(h('p', { class: 'note' }, 'Klingt, solange der Finger liegt; Schieben ändert Tonhöhe und Farbe. Im Puls erklingt ein kurzer Stoß.'));
+    if (k === 'kor') {
+      userFileIn = h('input', { type: 'file', accept: 'audio/*,.wav,.mp3,.m4a,.aac,.ogg,.flac', hidden: true });
+      userFileIn.addEventListener('change', () => { const f = userFileIn.files && userFileIn.files[0]; userFileIn.value = ''; loadUserFile(f); });
+      userTexEl = h('p', { class: 'note' });
+      s.append(h('div', { class: 'row', style: 'margin-top:10px' },
+        h('button', { type: 'button', class: 'btn', onclick: () => userFileIn.click() }, 'Audiodatei laden …'), userFileIn), userTexEl);
+      s.append(h('p', { class: 'note' }, 'Senkrecht wählst du die Stelle im Klangmaterial, waagrecht die Tonhöhe. „Echo“ körnt die letzten acht Sekunden deines eigenen Spiels, „Eigene Datei“ eine geladene Audiodatei oder Aufnahme, „Mikrofon“ die letzten Sekunden, die das Mikrofon hört.'));
+      updUserTexUI();
+    }
+    if (ENGINES[k].sustain) s.append(h('p', { class: 'note' }, 'Klingt, solange der Finger liegt; Schieben ändert Tonhöhe und Farbe. Im Puls erklingt ein kurzer Stoß.'));
     else s.append(h('p', { class: 'note' }, 'Schlägt beim Berühren an. Mit „Wischen schlägt an“ auch bei jedem Tonwechsel unterwegs, mit „Wirbel“ wiederholt im Tempo des Pulses.'));
     box.append(s);
   }
@@ -3641,6 +5039,7 @@ function renderTakes() {
     const actions = h('div', { class: 'take-actions' },
       h('button', { type: 'button', class: 'btn', 'aria-pressed': String(playing), onclick: () => playTake(tk), html: (playing ? ICON.stop : ICON.play) + (playing ? 'Stopp' : tk.bars ? 'Als Schleife anhören' : 'Anhören') }),
       saveBtn, splitBtn,
+      h('button', { type: 'button', class: 'btn', onclick: () => takeToGrains(tk) }, 'Als Körner-Quelle'),
       tk.comp && canSave() ? h('button', { type: 'button', class: 'btn', onclick: () => offerFile('myzel-' + slug(tk.name) + '-' + stamp(tk.date) + '.' + tk.compExt, tk.comp) }, 'Kleine Datei (' + tk.compExt.toUpperCase() + ')') : null,
       del);
     const meta = h('div', { class: 'take-meta' },
@@ -3762,6 +5161,62 @@ const PRESETS = [
     'hau.color': 0, 'hau.q': 28, 'hau.sweep': 1.5, 'hau.att': 0.6, 'hau.rel': 2.5, 'neb.wave': 'triangle', 'neb.cut': 900, 'neb.att': 1, 'neb.rel': 3,
     'flt.lfoRate': 0.06, 'flt.lfoDepth': 1, 'mov.pan': 0.7, 'mov.panRate': 0.05, 'cho.mix': 0.35, 'dly.div': '0.5', 'dly.fb': 0.5, 'dly.mix': 0.3, 'rev.size': 7, 'rev.mix': 0.55,
     'l0.on': false, 'l1.on': true, 'l1.eng': 'hau', 'l1.steps': 12, 'l1.puls': 5, 'l1.vol': 0.25, 'l2.on': false, 'l3.on': false, 'seq.bpm': 70 } },
+  { key: 'obertonhoehle', name: 'Obertonhöhle', tags: 'Drone · Obertöne', desc: 'Ein brummender Grundton, aus dem einzelne Obertöne pfeifen; tief darunter pocht der Subbass.', v: {
+    'v.eng': 'obt', 't.root': '2', 't.scale': 'dpent', 't.oct': 2, 't.range': 2,
+    'obt.top': 16, 'obt.focus': 0.75, 'obt.body': 0.6, 'obt.wander': 0.55, 'obt.att': 0.6, 'obt.rel': 4,
+    'flt.freq': 12000, 'cho.mix': 0.2, 'dly.div': '1.5', 'dly.fb': 0.45, 'dly.mix': 0.25, 'dly.tone': 3000, 'rev.size': 10, 'rev.damp': 0.4, 'rev.mix': 0.6,
+    'mov.drift': 5, 'mov.vib': 2, 'mst.comp': 0.4, 'seq.bpm': 54,
+    'l0.on': true, 'l0.eng': 'tie', 'l0.steps': 16, 'l0.puls': 2, 'l0.div': '0.25', 'l0.oct': -1, 'l0.vol': 0.7, 'l0.bright': 0.25,
+    'l1.on': false, 'l2.on': false, 'l3.on': true, 'l3.eng': 'gng', 'l3.steps': 13, 'l3.puls': 1, 'l3.div': '1', 'l3.deg': 0, 'l3.vol': 0.35, 'l3.bright': 0.3,
+    'bor.on': true, 'bor.oct': 1, 'bor.lvl': 0.3, 'bor.int': '2', 'bor.cut': 260, 'bor.breath': 0.3 } },
+  { key: 'geisterchor', name: 'Geisterchor', tags: 'Ambient · Stimmen', desc: 'Ein schwebender Chor, der mit der Fingerhöhe die Vokale wechselt – über fernen Schalen.', v: {
+    'v.eng': 'stm', 'v.layer': 'sch', 'v.layerLvl': 0.18, 'v.layerInt': 12, 't.root': '9', 't.scale': 'dor', 't.oct': 3, 't.range': 2,
+    'stm.choir': 20, 'stm.vib': 16, 'stm.breath': 0.35, 'stm.shift': 0, 'stm.att': 1.4, 'stm.rel': 5,
+    'sch.decay': 16, 'sch.bright': 0.4, 'cho.mix': 0.4, 'cho.depth': 0.6, 'dly.div': '2', 'dly.fb': 0.45, 'dly.mix': 0.25, 'dly.tone': 2600,
+    'rev.size': 12, 'rev.damp': 0.55, 'rev.mix': 0.65, 'mov.drift': 8, 'mov.pan': 0.3, 'seq.bpm': 60,
+    'l0.on': false, 'l1.on': false, 'l2.on': false, 'l3.on': true, 'l3.eng': 'sch', 'l3.steps': 11, 'l3.puls': 2, 'l3.div': '1', 'l3.deg': 7, 'l3.vol': 0.35 } },
+  { key: 'regenwald', name: 'Regenwald', tags: 'Perkussiv · Natur', desc: 'Tropfen, Kalimbas und körnige Vogelstimmen in verschobenen Kreisen; ein Schwarm summt darüber.', v: {
+    'v.eng': 'trp', 't.root': '7', 't.scale': 'mpent', 't.oct': 3, 't.range': 3,
+    'trp.chirp': 1.2, 'trp.decay': 0.6, 'trp.rain': 0.4, 'kor.src': 'voegel', 'kor.dens': 14, 'kor.size': 0.18, 'kor.scat': 0.5, 'kor.att': 0.05, 'kor.rel': 1.2,
+    'klb.decay': 1.8, 'klb.buzz': 0.1, 'swm.chaos': 0.35, 'swm.chirp': 0.6,
+    'dly.div': '0.75', 'dly.fb': 0.4, 'dly.mix': 0.3, 'rev.size': 3.5, 'rev.mix': 0.4, 'mov.pan': 0.35, 'seq.bpm': 96, 'seq.swing': 0.15,
+    'l0.on': true, 'l0.eng': 'trp', 'l0.steps': 16, 'l0.puls': 7, 'l0.div': '0.25', 'l0.deg': 5, 'l0.oct': 0, 'l0.walk': 0.6, 'l0.prob': 0.7, 'l0.vol': 0.55, 'l0.bright': 0.6, 'l0.pan': -0.3,
+    'l1.on': true, 'l1.eng': 'klb', 'l1.steps': 12, 'l1.puls': 5, 'l1.div': '0.25', 'l1.deg': 2, 'l1.walk': 0.4, 'l1.prob': 0.85, 'l1.vol': 0.5, 'l1.bright': 0.5, 'l1.pan': 0.35,
+    'l2.on': true, 'l2.eng': 'kor', 'l2.steps': 9, 'l2.puls': 2, 'l2.div': '0.5', 'l2.deg': 8, 'l2.oct': 1, 'l2.vol': 0.35, 'l2.bright': 0.75, 'l2.pan': 0.6,
+    'l3.on': true, 'l3.eng': 'swm', 'l3.steps': 7, 'l3.puls': 1, 'l3.div': '1', 'l3.deg': 0, 'l3.vol': 0.25, 'l3.bright': 0.4 } },
+  { key: 'kalimbatraum', name: 'Kalimbatraum', tags: 'Perkussiv · Polyrhythmus', desc: 'Zwei Kalimbas im Fünf-gegen-Sieben über einem weichen Subbass, Tropfen fallen dazwischen.', v: {
+    'v.eng': 'klb', 't.root': '4', 't.scale': 'akebono', 't.oct': 3, 't.range': 3,
+    'klb.decay': 2.6, 'klb.over': 0.55, 'klb.thumb': 0.4, 'klb.body': 0.6, 'klb.buzz': 0.2, 'tie.drive': 0.35, 'tie.rel': 0.4,
+    'dly.div': '0.75', 'dly.fb': 0.45, 'dly.pp': 0.9, 'dly.mix': 0.35, 'rev.size': 4, 'rev.mix': 0.35, 'seq.bpm': 104,
+    'l0.on': true, 'l0.eng': 'klb', 'l0.steps': 8, 'l0.puls': 5, 'l0.div': '0.25', 'l0.deg': 0, 'l0.walk': 0.5, 'l0.vol': 0.6, 'l0.bright': 0.5, 'l0.pan': -0.4,
+    'l1.on': true, 'l1.eng': 'klb', 'l1.steps': 12, 'l1.puls': 7, 'l1.div': '0.25', 'l1.deg': 4, 'l1.oct': 1, 'l1.walk': 0.3, 'l1.prob': 0.9, 'l1.vol': 0.45, 'l1.bright': 0.6, 'l1.pan': 0.45,
+    'l2.on': true, 'l2.eng': 'tie', 'l2.steps': 16, 'l2.puls': 3, 'l2.div': '0.25', 'l2.deg': 0, 'l2.oct': -1, 'l2.vol': 0.7, 'l2.bright': 0.3,
+    'l3.on': true, 'l3.eng': 'trp', 'l3.steps': 11, 'l3.puls': 2, 'l3.div': '0.25', 'l3.deg': 9, 'l3.walk': 0.6, 'l3.vol': 0.3, 'l3.bright': 0.5, 'l3.pan': 0.2 } },
+  { key: 'kurzwelle', name: 'Kurzwellenritual', tags: 'Experimentell · Funk', desc: 'Gekörntes Rauschen fremder Sender über einem Subbass; Insekten, Trommeln und ein leierndes Echo.', v: {
+    'v.eng': 'kor', 'v.layer': 'tie', 'v.layerLvl': 0.45, 'v.layerInt': -12, 't.root': '4', 't.scale': 'phrdom', 't.oct': 3, 't.range': 2,
+    'kor.src': 'funk', 'kor.dens': 30, 'kor.size': 0.18, 'kor.scat': 0.6, 'kor.pjit': 20, 'kor.oct': 0.2, 'kor.rev': 0.3, 'kor.att': 0.3, 'kor.rel': 2,
+    'tie.drive': 0.6, 'swm.chaos': 0.7, 'drv.amt': 0.35, 'drv.mix': 0.4, 'rng.freq': 87, 'rng.mix': 0.2, 'pha.mix': 0.5, 'pha.rate': 0.09,
+    'dly.div': '0.75', 'dly.fb': 0.6, 'dly.wow': 0.6, 'dly.mix': 0.4, 'rev.size': 6, 'rev.mix': 0.45, 'seq.bpm': 78,
+    'l0.on': true, 'l0.eng': 'mem', 'l0.steps': 16, 'l0.puls': 5, 'l0.oct': -1, 'l0.vol': 0.7, 'l0.bright': 0.3,
+    'l1.on': true, 'l1.eng': 'swm', 'l1.steps': 10, 'l1.puls': 3, 'l1.div': '0.5', 'l1.deg': 3, 'l1.vol': 0.35, 'l1.bright': 0.7, 'l1.pan': 0.5,
+    'l2.on': true, 'l2.eng': 'tie', 'l2.steps': 8, 'l2.puls': 1, 'l2.div': '0.5', 'l2.oct': -1, 'l2.vol': 0.6, 'l2.bright': 0.5,
+    'l3.on': false } },
+  { key: 'zikadennacht', name: 'Zikadennacht', tags: 'Ambient · Nacht', desc: 'Ein Zikadenchor aus Körnern über tiefem Bordun, ab und zu fällt ein Tropfen.', v: {
+    'v.eng': 'kor', 'v.layer': 'hau', 'v.layerLvl': 0.25, 'v.layerInt': 12, 't.root': '1', 't.scale': 'insen', 't.oct': 3, 't.range': 2,
+    'kor.src': 'zikaden', 'kor.dens': 40, 'kor.size': 0.09, 'kor.scat': 0.5, 'kor.pjit': 10, 'kor.att': 1.2, 'kor.rel': 3,
+    'hau.q': 24, 'hau.att': 1, 'hau.rel': 3, 'cho.mix': 0.3, 'dly.div': '1', 'dly.fb': 0.4, 'dly.mix': 0.25, 'rev.size': 9, 'rev.mix': 0.55,
+    'mov.pan': 0.5, 'mov.panRate': 0.04, 'seq.bpm': 66,
+    'l0.on': true, 'l0.eng': 'tie', 'l0.steps': 16, 'l0.puls': 4, 'l0.div': '0.25', 'l0.oct': -1, 'l0.vol': 0.45, 'l0.bright': 0.3,
+    'l1.on': true, 'l1.eng': 'trp', 'l1.steps': 12, 'l1.puls': 3, 'l1.div': '0.5', 'l1.deg': 6, 'l1.walk': 0.5, 'l1.prob': 0.6, 'l1.vol': 0.3, 'l1.bright': 0.6,
+    'l2.on': false, 'l3.on': false,
+    'bor.on': true, 'bor.oct': 1, 'bor.lvl': 0.3, 'bor.int': '1.5', 'bor.cut': 300, 'bor.wave': 'triangle' } },
+  { key: 'gongbad', name: 'Gongbad', tags: 'Meditation · Gong', desc: 'Große Gongs, deren Obertöne nach dem Schlag aufblühen, über einem singenden Oberton-Bordun.', v: {
+    'v.eng': 'gng', 'v.layer': 'obt', 'v.layerLvl': 0.3, 'v.layerInt': 12, 't.root': '2', 't.scale': 'hira', 't.oct': 2, 't.range': 3,
+    'gng.decay': 18, 'gng.bloom': 1.4, 'gng.bright': 0.6, 'gng.glide': -60, 'gng.beat': 0.6, 'gng.shimmer': 0.5,
+    'obt.focus': 0.7, 'obt.body': 0.3, 'obt.wander': 0.6, 'obt.att': 2, 'obt.rel': 6,
+    'flt.freq': 9000, 'flt.lfoRate': 0.03, 'flt.lfoDepth': 0.8, 'dly.mix': 0.15, 'rev.size': 14, 'rev.damp': 0.5, 'rev.mix': 0.6, 'mov.drift': 6, 'seq.bpm': 50,
+    'l0.on': false, 'l1.on': false, 'l2.on': false, 'l3.on': true, 'l3.eng': 'gng', 'l3.steps': 9, 'l3.puls': 1, 'l3.div': '1', 'l3.deg': 0, 'l3.oct': -1, 'l3.vol': 0.45, 'l3.bright': 0.4,
+    'bor.on': true, 'bor.oct': 1, 'bor.lvl': 0.25, 'bor.int': '2', 'bor.cut': 220 } },
 ];
 let presetCards = [], userListEl, undoBtn, installBtn, installEvt = null, mutAmt = 0.35;
 async function installApp() {
@@ -3906,7 +5361,7 @@ function mutate(amount) {
     else if (d.kind === 'sel' && Math.random() < amount * 0.15) vals[id] = pick(d.opts)[0];
     else if (d.kind === 'bool' && Math.random() < amount * 0.06) vals[id] = !P[id];
   }
-  if (vals['kor.src'] === 'echo' && P['kor.src'] !== 'echo') vals['kor.src'] = P['kor.src'];
+  if (LIVE_SRC.has(vals['kor.src']) && vals['kor.src'] !== P['kor.src']) vals['kor.src'] = P['kor.src'];
   UI.loading = true; loadValues(safeify(vals), true); UI.loading = false;
   UI.preset = null; markPresetCards();
   toast('Klang mutiert.', 4500, UNDO);
@@ -3927,7 +5382,7 @@ function dice() {
   vals['v.layer'] = Math.random() < 0.35 ? pick(ENG_OPTS)[0] : 'off';
   vals['t.root'] = String((Math.random() * 12) | 0);
   vals['t.scale'] = pick(Object.keys(SCALES).filter((k) => k !== 'chrom'));
-  vals['kor.src'] = pick(['glas', 'chor', 'metall', 'staub']);
+  vals['kor.src'] = pick(PD['kor.src'].opts.map((o) => o[0]).filter((k) => !LIVE_SRC.has(k)));
   vals['flt.type'] = Math.random() < 0.7 ? 'lowpass' : pick(['bandpass', 'highpass', 'notch']);
   if (vals['flt.type'] === 'lowpass') vals['flt.freq'] = fromNorm(PD['flt.freq'], rand(0.6, 1));
   r('drv.mix', 0, 0.6); r('drv.amt', 0, 0.5); r('rng.mix', 0, 0.35); r('pha.mix', 0, 0.6); r('cho.mix', 0, 0.6);
@@ -4145,6 +5600,7 @@ function start() {
   startClock();
   preloadTextures();
   warmKS();
+  if (USERTEX.pending) setUserTex(USERTEX.pending);
   watchUnderruns();
   applyBend();
   if (!MOBILE || P['dev.q'] !== '1') setTimeout(calibrate, 1500);
