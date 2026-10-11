@@ -2914,11 +2914,14 @@ function texture(kind) {
       if (!A.ctx) return;
       const buf = toBuffer(ch);
       A.tex[kind] = { buf, rev: reversed(buf), ref: TEX_F };
+      // fingers that started on the fallback switch to the material they asked for
+      if (kind === P['kor.src']) for (const v of A.grainVoices) v.kor.buf = null;
     });
   }
   return null;
 }
-function preloadTextures() { for (const k of ['glas', 'chor', 'metall', 'staub', 'fluestern', 'funk', 'orgel', 'voegel', 'wasser', 'zikaden']) texture(k); }
+// at start only the fallback and the chosen material; every other texture renders (in the worker) when it is chosen
+function preloadTextures() { if (!LIVE_SRC.has(P['kor.src'])) texture(P['kor.src']); texture('glas'); }
 // sources that are not generated: a loaded file (or take) and the live microphone
 const LIVE_SRC = new Set(['echo', 'datei', 'mikro']);
 function korSource() {
@@ -2943,14 +2946,51 @@ function korSource() {
 }
 /* ---------- own material for the grains: an audio file or a take, kept on the device ---------- */
 const USER_MAX_S = 30;
+const USER_MAX_BYTES = 25 * 1024 * 1024;   // whole-file decoding only below this (a long file decodes to hundreds of MB)
+// Only the first ~35 s are needed. Streams that decode from their beginning (MP3, OGG, FLAC, ADTS-AAC) are cut after
+// a generous byte budget; a WAV gets a header patched to its shortened data. Other formats (M4A …) return null.
+async function leadingSlice(file) {
+  const head = new Uint8Array(await file.slice(0, 64 * 1024).arrayBuffer());
+  const str = (o, n) => String.fromCharCode(...head.subarray(o, o + n));
+  if (str(0, 4) === 'RIFF' && str(8, 4) === 'WAVE') {
+    const dv = new DataView(head.buffer);
+    let o = 12, rate = 0;
+    while (o + 8 <= head.length) {
+      const id = str(o, 4), size = dv.getUint32(o + 4, true);
+      if (id === 'fmt ') rate = dv.getUint32(o + 16, true);   // bytes per second
+      if (id === 'data') {
+        if (!rate) return null;
+        const want = Math.min(size, Math.ceil(35 * rate / 4) * 4), total = o + 8 + want;
+        if (want >= size) return file.arrayBuffer();
+        const ab = await file.slice(0, total).arrayBuffer(), d = new DataView(ab);
+        d.setUint32(4, total - 8, true); d.setUint32(o + 4, want, true);
+        return ab;
+      }
+      o += 8 + size + (size & 1);
+    }
+    return null;
+  }
+  let skip = 0;
+  if (str(0, 3) === 'ID3') skip = 10 + ((head[6] & 127) << 21 | (head[7] & 127) << 14 | (head[8] & 127) << 7 | (head[9] & 127));   // tag with cover art
+  const sync = skip > 0 || (head[0] === 0xff && (head[1] & 0xe0) === 0xe0);   // MP3 (ID3 tag or frames) or ADTS AAC
+  const budget = str(0, 4) === 'fLaC' ? 8e6 : str(0, 4) === 'OggS' || sync ? 2.5e6 : 0;
+  if (!budget) return null;
+  return file.size <= skip + budget ? file.arrayBuffer() : file.slice(0, skip + budget).arrayBuffer();
+}
 const USERTEX = { pending: null, name: '' };
 async function loadUserFile(file) {
   if (!file) return;
   toast('„' + file.name + '“ wird gelesen …', 2500);
   try {
-    const ab = await file.arrayBuffer();
     const dctx = A.ctx || new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(2, 1, 48000);
-    const dec = await new Promise((res, rej) => { const pr = dctx.decodeAudioData(ab, res, rej); if (pr && pr.then) pr.then(res, rej); });
+    const decode = (ab) => new Promise((res, rej) => { const pr = dctx.decodeAudioData(ab, res, rej); if (pr && pr.then) pr.then(res, rej); });
+    const head = await leadingSlice(file);
+    let dec = null;
+    if (head) { try { dec = await decode(head); } catch (e) { dec = null; } }
+    if (!dec) {
+      if (file.size > USER_MAX_BYTES) { toast('Diese Datei ist zu groß. Kürze sie auf ein paar Minuten (oder nimm WAV, MP3, OGG oder FLAC).', 6000); return; }
+      dec = await decode(await file.arrayBuffer());
+    }
     const n = Math.min(dec.length, Math.floor(USER_MAX_S * dec.sampleRate));
     const L = dec.getChannelData(0).slice(0, n), R = (dec.numberOfChannels > 1 ? dec.getChannelData(1) : dec.getChannelData(0)).slice(0, n);
     useUserMaterial({ L, R, sr: dec.sampleRate, name: file.name.replace(/\.[^.]+$/, '') }, dec.length > n);
@@ -2959,8 +2999,14 @@ async function loadUserFile(file) {
 async function takeToGrains(tk) {
   if (!(await ensureTakeData(tk))) { toast('Die Daten dieser Aufnahme sind nicht mehr vorhanden.'); return; }
   const n = Math.min(tk.frames, Math.floor(USER_MAX_S * tk.sr));
-  const L = concatF32(tk.L).slice(0, n), R = concatF32(tk.R).slice(0, n);
+  const L = headF32(tk.L, n), R = headF32(tk.R, n);
   useUserMaterial({ L, R, sr: tk.sr, name: tk.name }, tk.frames > n);
+}
+function headF32(list, n) {
+  const out = new Float32Array(n);
+  let o = 0;
+  for (const a of list) { if (o >= n) break; const k = Math.min(a.length, n - o); out.set(k === a.length ? a : a.subarray(0, k), o); o += k; }
+  return out;
 }
 // normalise, fade the ends, guess a pitch, keep it on the device and switch the grains to it
 function useUserMaterial(d, cut) {
@@ -3024,9 +3070,15 @@ async function micStart() {
   if (MIC.on || MIC.starting || !A.ctx) return;
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('Hier gibt es keinen Zugriff auf das Mikrofon.', 4000); return; }
   MIC.starting = true;
+  const gen = (MIC.gen = (MIC.gen || 0) + 1);
+  // iOS: the "playback" session (set at start against the silent switch) allows no input
+  try { if (navigator.audioSession) navigator.audioSession.type = 'play-and-record'; } catch (e) {}
   try {
-    MIC.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    if (gen !== MIC.gen || P['kor.src'] !== 'mikro') { for (const tr of stream.getTracks()) tr.stop(); micStop(); return; }   // switched away meanwhile
+    MIC.stream = stream;
     if (!(await ensureCapture())) throw new Error('kein Abgriff');
+    if (gen !== MIC.gen || P['kor.src'] !== 'mikro') { micStop(); return; }
     const n = Math.floor(SR * 8);
     MIC.ringL = new Float32Array(n); MIC.ringR = new Float32Array(n); MIC.pos = 0; MIC.fill = 0; MIC.cache = null;
     MIC.src = A.ctx.createMediaStreamSource(MIC.stream);
@@ -3044,14 +3096,17 @@ async function micStart() {
   } catch (e) {
     console.warn(e); micStop();
     toast(e && e.name === 'NotAllowedError' ? (inViewer ? 'In dieser Ansicht ist das Mikrofon gesperrt. In der App geht es: beidlat.github.io/4claude' : 'Der Zugriff auf das Mikrofon wurde abgelehnt.') : 'Das Mikrofon lässt sich nicht öffnen.', 5500);
+  } finally {
+    if (gen === MIC.gen) MIC.starting = false;
   }
-  MIC.starting = false;
   updUserTexUI();
 }
 function micStop() {
+  MIC.gen = (MIC.gen || 0) + 1; MIC.starting = false;   // also cancels a request that is still open
   if (MIC.stream) for (const tr of MIC.stream.getTracks()) tr.stop();
   for (const n of [MIC.src, MIC.node, MIC.mute]) { try { if (n) n.disconnect(); } catch (e) {} }
   MIC.stream = MIC.src = MIC.node = MIC.mute = null; MIC.on = false; MIC.cache = null;
+  try { if (navigator.audioSession && navigator.audioSession.type === 'play-and-record') navigator.audioSession.type = 'playback'; } catch (e) {}
 }
 function micChunk(l, r) {
   const n = MIC.ringL.length;
@@ -4733,6 +4788,17 @@ function setParam(id, v, src) {
   P[id] = v;
   for (const fn of CTL[id] || []) fn(v, src);
   if (changed) { onParamChanged(id); clearTimeout(saveTimer); saveTimer = setTimeout(saveState, 400); }
+  if (id === 'kor.src') korSourcePicked();
+}
+// a tap on a grain source (also on the one already chosen): open the microphone or the file picker – both need the tap
+function korSourcePicked() {
+  syncMic();
+  if (P['kor.src'] === 'datei' && !A.userTex && !USERTEX.pending && userFileIn) userFileIn.click();
+}
+// the microphone is open exactly while "Mikrofon (live)" is the source
+function syncMic() {
+  if (P['kor.src'] !== 'mikro') { if (MIC.on || MIC.starting) micStop(); }
+  else if (A.started && !MIC.on && !MIC.starting) micStart();
 }
 function updInactive() {
   for (const w of CTLWRAP['dly.ms'] || []) w.classList.toggle('inactive', !!P['dly.sync']);
@@ -4744,11 +4810,7 @@ function onParamChanged(id) {
   if (id === 'flt.type') for (const fn of CTL['flt.q'] || []) fn(P['flt.q'], null);
   if (pre === 'sai' || pre === 't' || id === 'v.eng' || id === 'v.layer' || id === 'v.layerInt' || /^l\d\.(eng|on|oct)$/.test(id)) warmKS();
   if (id === 'kor.src' && P['kor.src'] === 'echo' && A.started) ensureCapture();
-  if (id === 'kor.src') {
-    if (P['kor.src'] === 'mikro' && A.started && !UI.loading) micStart();
-    if (P['kor.src'] !== 'mikro' && MIC.on) micStop();
-    if (P['kor.src'] === 'datei' && !A.userTex && !USERTEX.pending && !UI.loading && userFileIn) userFileIn.click();
-  }
+  if (id === 'kor.src' && A.ctx && !LIVE_SRC.has(P['kor.src'])) texture(P['kor.src']);
   if (id === 'dly.sync') updInactive();
   if (id === 'rec.len' || id === 'rec.bars' || id === 'seq.bpm') { renderBarInfo(); if (CAP.state === 'idle') updRecUI(); }
   if (id === 'rec.bars') barRecue();
@@ -4805,7 +4867,8 @@ function loadValues(vals, keepUnset) {
   }
   for (const id of PATCH_IDS) for (const fn of CTL[id] || []) fn(P[id], null);
   buildNotes(); drawBg(); refreshEngineUI(); updLaneTabs(); updInactive(); renderBarInfo();
-  if (A.ctx) { applyAll(); seqRetempo(); warmKS(); if (P['kor.src'] === 'echo') ensureCapture(); }
+  if (A.ctx) { applyAll(); seqRetempo(); warmKS(); if (P['kor.src'] === 'echo') ensureCapture(); if (!LIVE_SRC.has(P['kor.src'])) texture(P['kor.src']); }
+  syncMic();
   clearTimeout(saveTimer); saveTimer = setTimeout(saveState, 400);
 }
 function saveState() {
@@ -5598,7 +5661,7 @@ function start() {
   for (const id of ['bar', 'main', 'quick', 'tabs']) document.getElementById(id).inert = false;
   try { cvFx.focus({ preventScroll: true }); } catch (e) {}
   startClock();
-  preloadTextures();
+  setTimeout(preloadTextures, 0);   // after the reverb's job, which initAudio queued first
   warmKS();
   if (USERTEX.pending) setUserTex(USERTEX.pending);
   watchUnderruns();
