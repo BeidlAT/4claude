@@ -1692,9 +1692,8 @@ function initAudio() {
   A.mwWet.connect(A.masterVol);
   A.masterVol.connect(A.cmpDet);
   // monitoring only (what you hear, not what is recorded): dim and mono check
-  A.monDim = G(1); A.monSt = G(1); A.monMo = G(0);
-  A.monMo.channelCount = 1; A.monMo.channelCountMode = 'explicit'; A.monMo.channelInterpretation = 'speakers';
-  A.out.connect(A.monDim); A.monDim.connect(A.monSt).connect(ctx.destination); A.monDim.connect(A.monMo).connect(ctx.destination);
+  A.monSt = G(1); A.monMo = null;
+  A.out.connect(A.monSt).connect(ctx.destination);
   A.analyser = ctx.createAnalyser(); A.analyser.fftSize = 2048; A.analyser.smoothingTimeConstant = 0.6;
   A.out.connect(A.analyser);
   A.scopeBuf = new Float32Array(A.analyser.fftSize);
@@ -1872,10 +1871,11 @@ function applyAll(firstIR) {
 /* =====================================================================
    Mischpult: one channel strip per sound layer
    ===================================================================== */
-// in → [Tiefen-/Höhenschnitt, EQ, Sättigung] → Pegel → [Breite and Balance as one 2×2 matrix] → Pumpen → Stumm → into
-// the insert chain or straight into the sum, plus post-fader sends to echo and hall. The bracketed blocks are switched
-// in (with a short crossfade) only while they do something: at the default settings a strip is a few plain gains –
-// exactly transparent, so presets sound as before, and silent when nothing plays (the browser then skips the work).
+// Pegel (input gain: fader × Puls group) → [Tiefen-/Höhenschnitt, EQ, Sättigung] → [Breite and Balance as one 2×2
+// matrix] → Pumpen → into the insert chain or straight into the sum, plus post-fader sends to echo and hall; mute and
+// solo close the dry path and the sends. The bracketed blocks are switched in (with a short crossfade) only while they
+// do something: at the default settings a strip is five plain gains – exactly transparent, so presets sound as before,
+// cheap, and silent when nothing plays (the browser then skips the work).
 const MIX = { s: {}, list: [], src: [], meter: false, duckT: [] };
 const stripIn = (k) => (MIX.s[k] ? MIX.s[k].in : A.voiceBus);
 function buildStrips() {
@@ -1884,12 +1884,11 @@ function buildStrips() {
   for (const d of STRIPS) {
     const st = { k: d.k, d, ret: !!d.ret, lane: d.lane, proc: null, procOn: false, mat: null, matOn: false, to: {}, dTo: null, duckOn: false };
     st.in = G(1); st.in.channelCount = 2; st.in.channelCountMode = 'explicit'; st.in.channelInterpretation = 'speakers';
-    st.byp = G(1); st.wet = G(0); st.fader = G(1); st.mBy = G(1); st.mWet = G(0); st.duck = G(1); st.mute = G(1); st.dry = G(1);
-    st.in.connect(st.byp).connect(st.fader); st.wet.connect(st.fader);
-    st.fader.connect(st.mBy).connect(st.duck); st.mWet.connect(st.duck);
-    st.duck.connect(st.mute).connect(st.dry);
-    if (!st.ret) { st.eS = G(1); st.mute.connect(st.eS); }
-    if (d.k !== 'rev') { st.hS = G(1); st.mute.connect(st.hS); }
+    st.byp = G(1); st.wet = G(0); st.mBy = G(1); st.mWet = G(0); st.duck = G(1); st.dry = G(1);
+    st.in.connect(st.byp).connect(st.mBy).connect(st.duck).connect(st.dry);
+    st.wet.connect(st.mBy); st.mWet.connect(st.duck);
+    if (!st.ret) { st.eS = G(1); st.duck.connect(st.eS); }
+    if (d.k !== 'rev') { st.hS = G(1); st.duck.connect(st.hS); }
     MIX.s[d.k] = st; MIX.list.push(st); if (!st.ret) MIX.src.push(st);
   }
 }
@@ -1906,10 +1905,9 @@ function updMix(inst) {
 function updStrip(st, inst) {
   if (!A.ctx) return;
   const p = 'x' + st.k + '.', set = inst ? setNow : (q, v) => setP(q, v, 0.012);
-  set(st.fader.gain, stripGain(st));
+  set(st.in.gain, stripGain(st));
   matUpd(st, inst);
-  if (st.eS) set(st.eS.gain, P[p + 'dly']);
-  if (st.hS) set(st.hS.gain, (st.k === 'dly' ? 0.3 : 1) * P[p + 'rev']);
+  gates(st, set);
   procUpd(st, inst);
   const duck = P[p + 'duck'] > 0;
   if (st.duckOn && !duck) setP(st.duck.gain, 1, 0.02);
@@ -1933,10 +1931,15 @@ function updSolo(inst) {
     if (st.ret) { if (anyRet && !solo) on = false; }
     else { if (anySrc && !solo) on = false; if (anyRet && !solo) dry = false; }
     st.silent = !on; st.dryOff = !dry;
-    const set = inst ? setNow : (q, v) => setP(q, v, 0.008);
-    if (!st.switching) set(st.mute.gain, on ? 1 : 0);
-    set(st.dry.gain, dry ? 1 : 0);
+    gates(st, inst ? setNow : (q, v) => setP(q, v, 0.008));
   }
+}
+// the dry path and the sends: closed by mute and solo, the dry path also while a route switch moves it
+function gates(st, set) {
+  const p = 'x' + st.k + '.', on = !st.silent;
+  set(st.dry.gain, on && !st.dryOff && !st.switching ? 1 : 0);
+  if (st.eS) set(st.eS.gain, on ? P[p + 'dly'] : 0);
+  if (st.hS) set(st.hS.gain, on ? (st.k === 'dly' ? 0.3 : 1) * P[p + 'rev'] : 0);
 }
 // dry path: through the insert chain or straight into the sum; a move fades the channel out and back in
 function wireStrip(st) {
@@ -1946,7 +1949,7 @@ function wireStrip(st) {
   if (st.switching) return;
   st.switching = true;
   const t = A.ctx.currentTime;
-  holdParam(st.mute.gain, t); st.mute.gain.linearRampToValueAtTime(0, t + 0.015);
+  holdParam(st.dry.gain, t); st.dry.gain.linearRampToValueAtTime(0, t + 0.015);
   setTimeout(() => {
     st.switching = false;
     if (!A.ctx) return;
@@ -2020,10 +2023,10 @@ function matUpd(st, inst) {
   st.matOn = on;
   clearTimeout(st.matT);
   const set = inst ? setNow : (q, v) => setP(q, v, 0.006);
-  if (on) { st.fader.connect(st.mat.sp); set(st.mBy.gain, 0); set(st.mWet.gain, 1); }
+  if (on) { st.byp.connect(st.mat.sp); st.wet.connect(st.mat.sp); set(st.mBy.gain, 0); set(st.mWet.gain, 1); }
   else {
     set(st.mBy.gain, 1); set(st.mWet.gain, 0);
-    st.matT = setTimeout(() => { if (!st.matOn) { try { st.fader.disconnect(st.mat.sp); } catch (e) {} } }, 120);
+    st.matT = setTimeout(() => { if (!st.matOn) { try { st.byp.disconnect(st.mat.sp); st.wet.disconnect(st.mat.sp); } catch (e) {} } }, 120);
   }
 }
 function makeProc() {
@@ -2108,8 +2111,18 @@ function duckDepth(st, now) {
   return 0.94 * d * (age < 0.012 ? 1 : Math.exp(-(age - 0.012) / (e.rel / 4)));
 }
 // monitoring: dim (−20 dB) and mono check change only what you hear; recordings and meters stay untouched
-function setMonMono(on) { if (!A.ctx) return; A.monoChk = !!on; setP(A.monSt.gain, on ? 0 : 1, 0.008); setP(A.monMo.gain, on ? 1 : 0, 0.008); }
-function setMonDim(on) { if (!A.ctx) return; A.dim = !!on; setP(A.monDim.gain, on ? 0.1 : 1, 0.015); }
+function updMonitor() {
+  if (!A.ctx) return;
+  if (A.monoChk && !A.monMo) {
+    A.monMo = G(0); A.monMo.channelCount = 1; A.monMo.channelCountMode = 'explicit'; A.monMo.channelInterpretation = 'speakers';
+    A.out.connect(A.monMo).connect(A.ctx.destination);
+  }
+  const g = A.dim ? 0.1 : 1;
+  setP(A.monSt.gain, A.monoChk ? 0 : g, 0.01);
+  if (A.monMo) setP(A.monMo.gain, A.monoChk ? g : 0, 0.01);
+}
+function setMonMono(on) { A.monoChk = !!on; updMonitor(); }
+function setMonDim(on) { A.dim = !!on; updMonitor(); }
 
 /* ---------- metering ---------- */
 // Each strip is tapped after fader, width, balance and "Pumpen", before mute (a muted channel still shows what it would do).
@@ -5465,7 +5478,8 @@ let userFileIn = null;
 const engSecs = {};
 function buildKlang() {
   const box = h('div');
-  box.append(section('Klangquelle', 'Was ein Finger spielt', grid(ctl('v.eng', { label: 'Für die Spielfläche' }))));
+  box.append(section('Klangquelle', 'Was ein Finger spielt', grid(ctl('v.eng', { label: 'Für die Spielfläche' }), ctl('v.oct'), ctl('v.deg')),
+    h('p', { class: 'note' }, 'Tonstufe verschiebt um Stufen der Skala – so bleibt jeder Ton in der Tonart. Lautstärke, Klangfarbe und Raum jeder Ebene regelst du im Mixer.')));
   for (const [k, name] of ENG_OPTS) {
     const ids = Object.keys(PD).filter((id) => id.startsWith(k + '.'));
     const s = section(name, ENG_INFO[k], grid(...ctls(ids)));
@@ -5483,7 +5497,7 @@ function buildKlang() {
     else s.append(h('p', { class: 'note' }, 'Schlägt beim Berühren an. Mit „Wischen schlägt an“ auch bei jedem Tonwechsel unterwegs, mit „Wirbel“ wiederholt im Tempo des Pulses.'));
     box.append(s);
   }
-  box.append(section('Zweite Ebene', 'Ein zweiter Klang auf jedem Finger', grid(ctl('v.layer', { label: 'Ebene' }), ctl('v.layerLvl'), ctl('v.layerInt'))));
+  box.append(section('Zweite Ebene', 'Ein zweiter Klang auf jedem Finger', grid(ctl('v.layer', { label: 'Ebene' }), ctl('v.layerLvl'), ctl('v.layerInt'), ctl('v.layerDeg'))));
   box.append(section('Spielweise', null, grid(ctl('v.roll'), ctl('v.strum'), ctl('v.glide'), ctl('v.vel'), ctl('v.human'), ctl('v.width'))));
   box.append(section('Stimmung', null, grid(ctl('t.root'), ctl('t.scale'), ctl('t.oct'), ctl('t.range'), ctl('t.a4'), ctl('t.just'))));
   return box;
