@@ -804,8 +804,8 @@ let SR = 48000;
 // Polyphony is limited by cost, not by count: one unit ≈ one Nebel voice at level 1. Cheap engines get more voices.
 // Level 1 keeps phones safe, level 2 plays more at once, level 3 gives every voice more oscillators, partials and
 // modes and fills a desktop core up to a budget measured on this device (see calibrate()).
-const VCOST1 = { neb: 1, kor: 0.6, hau: 0.3, glo: 0.7, mem: 0.4, sai: 0.35, sch: 0.9, gng: 1.4, klb: 1.25, obt: 0.7, stm: 1.05, swm: 1.2, tie: 0.75, trp: 0.7, };
-const VCOST3 = { neb: 1.9, kor: 1.1, hau: 0.75, glo: 1.4, mem: 0.75, sai: 1.2, sch: 2, gng: 2.5, klb: 2.2, obt: 1.7, stm: 2.4, swm: 2.7, tie: 1.5, trp: 1.5, };   // measured: level-1 cost × (level 3 / level 1)
+const VCOST1 = { neb: 1, kor: 0.6, hau: 0.3, glo: 0.7, mem: 0.4, sai: 0.35, sch: 0.9, gng: 1.55, klb: 1.25, obt: 0.75, stm: 1.05, swm: 1.2, tie: 0.75, trp: 0.7 };
+const VCOST3 = { neb: 1.9, kor: 1.1, hau: 0.75, glo: 1.4, mem: 0.75, sai: 1.2, sch: 2, gng: 2.8, klb: 2.2, obt: 1.85, stm: 2.4, swm: 2.7, tie: 1.5, trp: 1.5 };   // measured: level-1 cost × (level 3 / level 1)
 const QP = {
   1: { budget: MOBILE ? 14 : 22, maxv: 32, grainMax: MOBILE ? 80 : 128, overlap: MOBILE ? 16 : 24, os: MOBILE ? '2x' : '4x', rich: false, korDens: 1, cost: VCOST1 },
   2: { base: MOBILE ? 24 : 40, budget: MOBILE ? 24 : 40, maxv: 64, grainMax: MOBILE ? 128 : 224, overlap: 24, os: '4x', rich: false, korDens: 1, cost: VCOST1 },
@@ -1380,8 +1380,8 @@ function genTexture(kind, sr, F) {
       Lc[i] = l / Math.sqrt(1 + l * l / c2); Rc[i] = r / Math.sqrt(1 + r * r / c2);
     }
   } else if (kind === 'zikaden') {
-    // Zikaden: a cicada choir. Each insect clicks its two tymbals in turn, F times a second, so its buzz lies on the
-    // harmonics of F, and two body resonances lift a band of high harmonics out of it.
+    // Zikaden: a cicada choir. Each insect's tymbals click F times a second, so its buzz lies on the harmonics of F,
+    // and two body resonances lift a band of high harmonics out of it.
     // From a far, softly swelling dusk choir (start, finger low) to close singers with fast, sharp rhythms (end, finger high).
     const cicada = (st, dur, h, q, det, glide, amp, pan, song) => {
       // song(t, x) is the drive at t seconds into the phrase (x = 0..1 of it); glide lets the resonance sink at the end (wee-oo);
@@ -1389,7 +1389,7 @@ function genTexture(kind, sr, F) {
       const n = Math.min(len - st, Math.floor(dur * sr)), inc = F * Math.pow(2, det / 1200) / sr;
       const near = pan < 0.5 ? Lc : Rc, far = pan < 0.5 ? Rc : Lc, dl = Math.round(Math.abs(pan - 0.5) * 2 * 0.0007 * sr);
       const gN = amp * Math.cos(Math.min(pan, 1 - pan) * Math.PI / 2), gF = amp * Math.sin(Math.min(pan, 1 - pan) * Math.PI / 2);
-      let ph = Math.random(), side = 0, carry = 0, x1 = 0, x2 = 0, y1 = 0, y2 = 0, z1 = 0, z2 = 0;
+      let ph = Math.random(), carry = 0, x1 = 0, x2 = 0, y1 = 0, y2 = 0, z1 = 0, z2 = 0;
       let a1 = 0, a2 = 0, g1 = 0, b1 = 0, b2 = 0, g2 = 0;
       for (let i = 0; i < n; i++) {
         if ((i & 63) === 0) {   // band-pass resonators (zeros at DC and Nyquist) on F·h and F·h·1.5
@@ -1399,10 +1399,11 @@ function genTexture(kind, sr, F) {
           w *= 1.5; r = Math.exp(-w / (1.4 * q));
           b1 = 2 * r * Math.cos(w); b2 = -r * r; g2 = 1 - r;
         }
-        // tymbal clicks, placed between samples so the pulse rate stays exactly on F; the second tymbal is weaker
+        // tymbal clicks, placed between samples so the pulse rate stays exactly on F; all alike, since any click-to-click
+        // difference (a weaker second tymbal) would repeat only every 2/F and add a buzz an octave down
         let x = carry; carry = 0;
         ph += inc;
-        if (ph >= 1) { ph -= 1; side ^= 1; const e = song(i / sr, i / n) * (side ? 1 : 0.6), fr = ph / inc; x += e * fr; carry = e * (1 - fr); }
+        if (ph >= 1) { ph -= 1; const e = song(i / sr, i / n), fr = ph / inc; x += e * fr; carry = e * (1 - fr); }
         const y = g1 * (x - x2) + a1 * y1 + a2 * y2, z = g2 * (x - x2) + b1 * z1 + b2 * z2;
         x2 = x1; x1 = x; y2 = y1; y1 = y; z2 = z1; z1 = z;
         const s = y + 0.5 * z, j = st + i;
@@ -2094,7 +2095,7 @@ const ENGINES = {
   gng: {
     sustain: false,
     // plate modes as ratios to the hum: the low ones answer the strike at once, the high ones bloom up after it
-    low: [[1, 0.6], [1.52, 0.35], [1.73, 0.8], [2.33, 0.6], [2.69, 0.4], [3.18, 0.3]],
+    low: [[1.52, 0.35], [1.73, 0.8], [2.33, 0.6], [2.69, 0.4], [3.18, 0.3]],
     high: [[3.91, 0.8], [4.11, 0.7], [4.62, 0.5], [5.29, 0.55], [6.3, 0.6], [6.71, 0.5], [7.34, 0.45], [8.01, 0.35],
       [8.98, 0.4], [9.68, 0.35], [10.9, 0.3], [11.82, 0.3], [12.4, 0.25], [13.6, 0.2], [14.9, 0.2], [15.7, 0.15],
       [17.2, 0.12], [18.6, 0.1], [20.3, 0.08]],
@@ -2109,10 +2110,18 @@ const ENGINES = {
       }
       return key;
     },
+    // the plates: [side, stretch, ratio of the spread, twin's beat, unison bus]. Level 3: two plates' worth of modes,
+    // stretched against each other, left and right
+    banks() { return Q.rich ? [[-1, 1, 0.59, 1, 1], [1, 1.023, 0.83, -0.7, 2]] : [[0, 1, 0.59, 1, 1]]; },
+    // a periodic wave computes all its tables when it is created, some ms on a phone: Myzel calls this while the gong
+    // is in use, as it warms up Saite's strings, so the first strike does not have to
+    warm() { for (const [, s] of this.banks()) { this.wave('gngL', this.low, s); this.wave('gngH', this.high, s); } },
     start(v, t, f, y, vel, o) {
       // finger height is the strike: higher hits harder – an earlier, brighter bloom, a wider bend, a longer ring
       const decay = P['gng.decay'] * (o.decayMul || 1) * (0.8 + 0.4 * y) * clamp(Math.pow(220 / f, 0.3), 0.6, 1.6);
-      const bloom = P['gng.bloom'] * (1.5 - y);
+      // the swell has to peak while the plate still rings: beyond a tenth of the ring at mid height (less for a harder
+      // strike, whose high modes start louder) the voice would fade faster than they rise
+      const bloom = Math.min(P['gng.bloom'], decay * 0.1) * (1.5 - y);
       const bright = P['gng.bright'] * (0.3 + 0.7 * y);
       const att = 0.002 + 0.006 * (1 - y);
       // a hard swing stiffens the plate: every mode starts off pitch and settles as the swing narrows
@@ -2141,20 +2150,24 @@ const ENGINES = {
         s._end = stop + 0.02;
       };
       // the hum: the lowest mode rings longest, so its decay is the voice's own and the plate's envelopes ride on top
-      // of it (a ring of 2.33 decays on top makes 0.7 overall, 1.5 makes 0.6). Its twin in the low group sits a few Hz
-      // off, and the two beat slowly
+      // of it (a ring of 2.33 decays on top makes 0.7 overall, 1.5 makes 0.6). Its twin rings with the low modes,
+      // 'Schwebung' Hz off, and the two beat slowly
       v.out.gain.setValueAtTime(0, t);
-      v.out.gain.linearRampToValueAtTime(vel * 0.13, t + att);
+      v.out.gain.linearRampToValueAtTime(vel * 0.125, t + att);
       v.out.gain.setTargetAtTime(0, t + att, decay / 6.9);
       osc('sine', f, mid, t + decay, 0);
-      // level 3: two plates' worth of modes, stretched against each other, left and right, at the same loudness
-      const banks = rich ? [[-1, 1, 0.59, 1, 1], [1, 1.023, 0.83, -0.7, 2]] : [[0, 1, 0.59, 1, 1]], lvl = rich ? 0.52 : 1;
-      for (const [side, stretch, pmr, twin, uni] of banks) {
+      // level 3: both plates at the same loudness as one
+      const lvl = rich ? 0.52 : 1;
+      for (const [side, stretch, pmr, twin, uni] of this.banks()) {
         const dst = side ? v.n(PAN(side * 0.7 * w)) : mid;
         if (side) dst.connect(v.out);
-        const lowG = env(1.4 * lvl, 1.4 * lvl, 0, decay * 2.33);
+        // the low modes keep the hum's tuning; the twin is a sine of its own, about 0.3 × the hum, so the beat moves
+        // nothing else
+        const lowG = env(1.15 * lvl, 1.15 * lvl, 0, decay * 2.33), twinG = v.n(G(0.27));
         lowG.connect(dst);
-        osc(this.wave('gngL', this.low, stretch), (f + P['gng.beat'] * twin) / 16, lowG, t + decay * 0.7, uni);
+        twinG.connect(lowG);
+        osc(this.wave('gngL', this.low, stretch), f / 16, lowG, t + decay * 0.7, uni);
+        osc('sine', f + P['gng.beat'] * twin, twinG, t + decay * 0.7, uni);
         if (bright < 0.005) continue;
         // the high modes pass a delay line whose time wobbles: an inharmonic tone spreads every mode into a cloud of
         // sidebands as the bloom swells, a slow random jitter smears them into hiss – the higher, the wider
@@ -2193,6 +2206,15 @@ const ENGINES = {
     sustain: false,
     // bottle-cap slack: the caps only touch the plate while the tine swings wider than 0.3, so they tick once a cycle
     slack: makeShaperCurve((x) => (x > 0.3 ? (x - 0.3) / 0.7 : 0), 1024),
+    // the thumb's knock: 80 ms of fixed noise, the same on every note. Fresh noise from a random spot rang the box's
+    // narrow band up to 8 dB louder or softer by chance; this seed rings box and lid within 1 dB of that spread's median.
+    // Built at 48 kHz whatever the context's rate, so it is the same on every device
+    knock() {
+      if (A.klbKnock) return A.klbKnock;
+      const buf = A.ctx.createBuffer(1, 3840, 48000), d = buf.getChannelData(0);
+      for (let i = 0, s = 163; i < d.length; i++) { s = (Math.imul(s, 1664525) + 1013904223) | 0; d[i] = s / 2147483648; }
+      return (A.klbKnock = buf);
+    },
     start(v, t, f, y, vel, o) {
       // the tine itself: nearly a sine, with a hint of 2nd and 3rd harmonic from its lopsided swing
       if (!A.waves.tine) A.waves.tine = A.ctx.createPeriodicWave(new Float32Array(4), new Float32Array([0, 1, 0.08, 0.03]));
@@ -2260,17 +2282,21 @@ const ENGINES = {
         g.connect(sides[1]);
       }
       // thumb: a soft, dull knock of flesh on metal, mostly heard through the box; brighter higher up
-      if (P['klb.thumb'] > 0.01) {
-        const ns = v.s(noiseSrc()), lp = v.n(BQ('lowpass', 300 + 1200 * y * y, 0.7)), tg = v.n(G(0));
+      const thumb = P['klb.thumb'];
+      if (thumb > 0.01) {
+        const ns = v.s(A.ctx.createBufferSource()), lp = v.n(BQ('lowpass', 300 + 1200 * y * y, 0.7)), tg = v.n(G(0));
+        ns.buffer = this.knock();
         tg.gain.setValueAtTime(0, t);
-        tg.gain.linearRampToValueAtTime(P['klb.thumb'] * 1.6, t + 0.003);
+        tg.gain.linearRampToValueAtTime(thumb * 1.6, t + 0.003);
         tg.gain.setTargetAtTime(0, t + 0.003, 0.006);
         ns.connect(lp).connect(tg);
         tg.connect(v.n(G(0.4))).connect(mid);
-        tg.connect(v.n(G(30))).connect(box);
-        if (lid) tg.connect(v.n(G(12))).connect(lid);
-        ns.start(t, rand(0, 1.8));
-        ns._end = t + 0.08;
+        // past the default thumb × box (0.225) the wood's ring grows only with the square root of that product:
+        // both at full ring 6.5 dB above the default instead of 13 dB
+        const wood = Math.sqrt(0.225 / Math.max(thumb * body, 0.225));
+        tg.connect(v.n(G(30 * wood))).connect(box);
+        if (lid) tg.connect(v.n(G(12 * wood))).connect(lid);
+        ns.start(t);
       }
       // Schnarren: bottle caps on the plate rattle in time with the tine's swing; harder plucks and more buzz rattle
       // longer, and the rattle stops before the tone (level 3: two caps, left and right, each in its own band)
@@ -2308,83 +2334,95 @@ const ENGINES = {
       A.waves.obtGlottis = A.ctx.createPeriodicWave(re, im, { disableNormalization: true });
     },
     // the wandering melody: a slow random walk over whole steps −4..4 (stored as −1..1) with short glides between
-    // them, a minute long and looping seamlessly; every voice starts somewhere else in it
+    // them, a minute long and looping seamlessly; every voice starts somewhere else in it. The k-rate detune needs no
+    // more than 125 points a second, so the first note builds it in a few hundred steps; they sit in a buffer at the
+    // lowest rate (3 kHz) that plays 24× slower, the source interpolating between them
     walk() {
       if (A.obtWalk) return A.obtWalk;
-      const sr = 3000, buf = A.ctx.createBuffer(1, sr * 60, sr), d = buf.getChannelData(0), gl = Math.floor(0.12 * sr);
+      const pps = 125, buf = A.ctx.createBuffer(1, pps * 60, 3000), d = buf.getChannelData(0), gl = Math.round(0.12 * pps);
       for (let i = 0, cur = 0; i < d.length;) {
-        const hold = Math.floor(rand(0.5, 1.6) * sr);
+        const hold = Math.round(rand(0.5, 1.6) * pps);
         const next = d.length - i < hold + gl || Math.random() < 0.3 ? 0 : clamp(cur + pick([-2, -1, -1, 1, 1, 2]), -4, 4);
-        for (let k = 0; k < hold && i < d.length; k++, i++) d[i] = (cur + (next - cur) * (k < gl ? (1 - Math.cos(Math.PI * k / gl)) / 2 : 1)) / 4;
-        cur = next;
+        for (let k = 0; k < gl && i < d.length; k++, i++) d[i] = (cur + (next - cur) * (1 - Math.cos(Math.PI * k / gl)) / 2) / 4;
+        d.fill(next / 4, i, i + hold - gl);
+        i += hold - gl; cur = next;
       }
       return (A.obtWalk = buf);
     },
-    // finger height picks the harmonic that sings: two octaves of the series up to 'Obertonbereich', kept below 6 kHz
+    // the highest harmonic a spotlight may sing on note f: the last one below 6 kHz, but at least the 2nd
+    cap(f) { return Math.max(2, Math.floor(6000 / f)); },
+    // finger height picks the harmonic that sings: two octaves of the series up to 'Obertonbereich'; on high notes
+    // both ends stay under the ceiling and y keeps up to an octave of harmonics below it
     harm(f, y) {
-      const top = P['obt.top'], lo = Math.max(2, Math.round(top / 4));
-      const hi = Math.max(lo, Math.min(top, Math.floor(6000 / f)));
+      const top = P['obt.top'], hi = Math.min(top, this.cap(f)), lo = Math.max(2, Math.min(Math.round(top / 4), Math.ceil(hi / 2)));
       return Math.round(lo + clamp(y, 0, 1) * (hi - lo));
     },
     start(v, t, f, y, vel, o) {
       this.wave();
       const w = P['v.width'], kq = 1 + 5 * P['obt.focus'], wander = P['obt.wander'];
-      // optional wandering: the walk, faster with more 'Wandern', moves the spotlights to neighbouring harmonics
+      // optional wandering: the walk (its minute squeezed into the buffer), faster with more 'Wandern', moves the
+      // spotlights to neighbouring harmonics
       let steps = null;
-      if (wander > 0.001) { steps = v.s(A.ctx.createBufferSource()); steps.buffer = this.walk(); steps.loop = true; steps.playbackRate.value = 0.5 + 0.8 * wander; }
+      if (wander > 0.001) {
+        steps = v.s(A.ctx.createBufferSource()); steps.buffer = this.walk(); steps.loop = true;
+        steps.playbackRate.value = (0.5 + 0.8 * wander) * steps.buffer.duration / 60;
+      }
       // one singer: a buzz whose drone sits under a low-pass a few harmonics up (opening towards the top like a
       // mouth), and its spotlight, two narrow band-passes in a row on the note, detuned up to the chosen harmonic
-      // (Q keeps the band narrower than the harmonic spacing). Level 3: a second singer a few cents apart on the
-      // other side, whistling a quieter 3:2 above the first and wandering the other way.
+      // (Q = kq·n keeps the band 1/kq of the harmonic spacing wide). Level 3: a second singer a few cents apart on
+      // the other side, whistling a quieter 3:2 above the first and wandering the other way.
       const bodyC = (ny) => 1200 * Math.log2(2.5 + 5 * ny), bodyG = 0.9 * P['obt.body'] * (Q.rich ? 0.65 : 1);
       const singers = (Q.rich ? [[-4, -0.5, 1, 1, 0.75], [4, 0.5, 1.5, -1, 0.45]] : [[0, 0, 1, 1, 1]]).map(([det, pan, mul, dir, lvl], i) => {
         const osc = v.s(OSC('obtGlottis', f)); osc.detune.value = det;
         const lp = v.n(BQ('lowpass', f, 0.7)); lp.detune.value = bodyC(y);
         const a = v.n(BQ('bandpass', f)), b = v.n(BQ('bandpass', f));
         for (const p of [osc.detune, a.detune, b.detune]) { v.mod(p); if (Q.rich) v.lnk(A.uni[i], p); }
-        let ws = null;
-        if (steps) { ws = v.n(A.ctx.createWaveShaper()); steps.connect(ws); ws.connect(a.detune); ws.connect(b.detune); }
+        v.mod(lp.detune);   // the body's cutoff follows the pitch wheel, too
+        // the walk drives two shapers: the spotlight's detune and its Q
+        let ws = null, wq = null;
+        if (steps) {
+          ws = v.n(A.ctx.createWaveShaper()); wq = v.n(A.ctx.createWaveShaper());
+          steps.connect(ws); steps.connect(wq);
+          for (const bp of [a, b]) { ws.connect(bp.detune); wq.connect(bp.Q); }
+        }
         const out = Q.rich ? v.n(PAN(pan * w)) : v.out;
         if (Q.rich) out.connect(v.out);
         osc.connect(lp).connect(v.n(G(bodyG))).connect(out);
         const g = v.n(G(0));
         osc.connect(a).connect(b).connect(g).connect(out);
-        return { osc, lp, a, b, g, ws, det, mul, dir, lvl };
+        return { osc, lp, a, b, g, ws, wq, det, mul, dir, lvl };
       });
-      // tuning: singer s on harmonic n of the note, whistling stronger the higher it sits; the shaper turns walk
-      // steps into the cents of whole harmonics around it (a few steps with little 'Wandern', all of them with full),
-      // never above the 6 kHz ceiling
-      const harmC = (s, n) => 1200 * Math.log2(Math.round(n * s.mul)) + s.det;
+      // tuning: singer s on harmonic n of the note; the shapers turn walk steps into the cents and the Q of whole
+      // harmonics around it (±4 steps move one from the bottom of 'Wandern' on, every step moves at full), never
+      // above the ceiling. The Q curve adds to the walk's lowest Q, so Q stays positive while a new harmonic glides in
+      const harmC = (s, n) => 1200 * Math.log2(Math.round(n * s.mul)) + s.det, harmQ = (s, n) => kq * Math.round(n * s.mul);
+      const wv = 0.1875 + 0.8125 * wander, reach = (d) => Math.sign(d) * Math.floor(Math.abs(d) * wv + 0.25);
       const tune = () => {
-        const cap = Math.max(v.h, Math.floor(6000 / v.f));
         for (const s of singers) {
-          s.Q = kq * Math.round(v.h * s.mul); s.gain = 0.9 * s.lvl * Math.sqrt(v.h / 8);
+          const ns = s.ws ? Array.from({ length: 9 }, (_, i) => clamp(v.h + s.dir * reach(i - 4), 2, v.cap)) : [v.h];
+          s.Q = harmQ(s, Math.min(...ns));
           if (!s.ws) continue;
-          const c = new Float32Array(9);
-          for (let i = 0; i < 9; i++) {
-            const d = i - 4, e = Math.sign(d) * Math.floor(Math.abs(d) * wander + 0.25);
-            c[i] = harmC(s, clamp(v.h + s.dir * e, 2, cap)) - harmC(s, v.h);
-          }
-          s.ws.curve = c;
+          s.ws.curve = Float32Array.from(ns, (n) => harmC(s, n) - harmC(s, v.h));
+          s.wq.curve = Float32Array.from(ns, (n) => harmQ(s, n) - s.Q);
         }
-        return cap;
       };
-      v.f = f; v.y = y; v.h = this.harm(f, y); v.cap = tune();
+      // whistling stronger the higher it sits, fading out before the band reaches Nyquist (the 3:2 singer, extreme notes)
+      const level = (s) => 0.9 * s.lvl * Math.sqrt(v.h / 8) * clamp((0.45 * SR - Math.round(v.h * s.mul) * v.f) / (0.1 * SR), 0, 1);
+      v.f = f; v.y = y; v.h = this.harm(f, y); v.cap = this.cap(f); tune();
       // onset: the spotlight scoops up from an octave below, like the mouth closing round a jaw harp's twang
       for (const s of singers) {
-        s.g.gain.value = s.gain;
+        s.g.gain.value = s.gain = level(s);
         for (const bp of [s.a, s.b]) { bp.Q.value = s.Q; bp.detune.setValueAtTime(harmC(s, v.h) - 1200, t); bp.detune.setTargetAtTime(harmC(s, v.h), t, 0.03); }
       }
-      for (const s of v.srcs) { if (s === steps) s.start(t, rand(0, 60)); else s.start(t); }
-      // finger moves: the spotlight glides on as soon as the height selects another harmonic
+      for (const s of v.srcs) { if (s === steps) s.start(t, rand(0, s.buffer.duration)); else s.start(t); }
+      // finger moves: the spotlight glides on as soon as the height selects another harmonic (or the ceiling moves)
       const retarget = () => {
-        const h = this.harm(v.f, v.y), cap = Math.max(h, Math.floor(6000 / v.f));
-        if (h === v.h && cap === v.cap) return;
-        v.h = h; v.cap = tune();
-        for (const s of singers) {
-          setP(s.g.gain, s.gain, 0.05);
-          for (const bp of [s.a, s.b]) { glideTo(bp.detune, harmC(s, h), 0.15); setP(bp.Q, s.Q, 0.05); }
+        const h = this.harm(v.f, v.y), cap = this.cap(v.f);
+        if (h !== v.h || cap !== v.cap) {
+          v.h = h; v.cap = cap; tune();
+          for (const s of singers) for (const bp of [s.a, s.b]) { glideTo(bp.detune, harmC(s, h), 0.15); setP(bp.Q, s.Q, 0.05); }
         }
+        for (const s of singers) { const g = level(s); if (g !== s.gain) setP(s.g.gain, (s.gain = g), 0.05); }
       };
       v.setF = (nf, glide) => {
         v.f = nf;
@@ -2435,12 +2473,13 @@ const ENGINES = {
       const tract = Math.pow(2, P['stm.shift'] / 12);
       v.f = f; v.y = y;
       // breath: one noise whispers through all formants, with an aspirated "h" at the onset; less of it higher up,
-      // where the upper formants open
-      const airGain = () => 5 * P['stm.breath'] * Math.pow(0.15, v.y);
-      const ns = v.s(noiseSrc()), breath = v.n(G(0));
-      breath.gain.setValueAtTime(airGain() * 2.5, t);
-      breath.gain.setTargetAtTime(airGain(), t + 0.02, 0.08);
-      ns.connect(breath);
+      // where the upper formants open, and on notes below 110 Hz, where the pitch-compensated formant gains lift it
+      const airGain = (fr) => 5 * P['stm.breath'] * Math.pow(0.15, v.y) * Math.min(1, fr / 110);
+      // the "h" lives in a node of its own that nothing retunes, so a finger move at the onset keeps it whole
+      const ns = v.s(noiseSrc()), breath = v.n(G(0)), air = v.n(G(airGain(f)));
+      breath.gain.setValueAtTime(2.5, t);
+      breath.gain.setTargetAtTime(1, t + 0.02, 0.08);
+      ns.connect(breath).connect(air);
       // level 3: six singers in two groups left and right, each group with its own slightly different vocal tract
       const ks = Q.rich ? [-1, -0.6, -0.2, 0.2, 0.6, 1] : [-1, 0, 1];
       const sides = Q.rich ? [-1, 1] : [0];
@@ -2449,7 +2488,7 @@ const ENGINES = {
       const singers = [], banks = [];
       for (const side of sides) {
         const inp = v.n(G(og));
-        breath.connect(inp);
+        air.connect(inp);
         // a natural vibrato per group that sets in after the onset; every other singer swings the opposite way
         const lfo = v.s(OSC('sine', rand(4.6, 5.6)));
         const vp = v.n(G(0)), vn = v.n(G(0));
@@ -2487,14 +2526,49 @@ const ENGINES = {
         banks.push(bank);
       }
       for (const s of v.srcs) { if (s === ns) s.start(t, rand(0, 1.8)); else s.start(t); }
-      const retune = (glide) => {
-        for (const b of banks) this.formants(v.f, v.y, b.tract).forEach(([F, q, gain], j) => {
-          if (glide != null) glideTo(b.bp[j].frequency, F, glide); else setP(b.bp[j].frequency, F, 0.05);
-          setP(b.bp[j].Q, q, 0.05); setP(b.g[j].gain, gain, 0.05);
-        });
-        setP(breath.gain, airGain(), 0.05);
+      // the singers' pitch glide (as glideTo runs it), so the formants can follow the pitch actually sung
+      let gl = { t0: t, from: f, to: f, tc: 0.004 };
+      const pitchAt = (at) => gl.to + (gl.from - gl.to) * Math.exp(-(at - gl.t0) / gl.tc);
+      // everything that depends on pitch and finger height, and its values at pitch fr
+      const params = [air.gain, ...banks.flatMap((b) => b.bp.flatMap((bp, j) => [bp.frequency, bp.Q, b.g[j].gain]))];
+      const values = (fr) => [airGain(fr), ...banks.flatMap((b) => this.formants(fr, v.y, b.tract).flat())];
+      // their schedule: points [time, values], then an ease towards end. Kept here rather than held in the params,
+      // because Chromium's cancelAndHoldAtTime inside a setTargetAtTime lets a following ramp start from 0.
+      const x0 = values(f);
+      let plan = { pts: [[0, x0]], end: x0, tc: 0.05 };
+      const valuesAt = (at) => {
+        const { pts, end, tc } = plan, i = pts.findIndex(([ti]) => ti > at);
+        if (i < 0) {
+          const [tl, xl] = pts[pts.length - 1], k = Math.exp(-(at - tl) / tc);
+          return end.map((x, m) => x + (xl[m] - x) * k);
+        }
+        const [ta, xa] = pts[i - 1], [tb, xb] = pts[i];
+        return xa.map((x, m) => x + (xb[m] - x) * (at - ta) / (tb - ta));
       };
-      v.setF = (nf, glide) => { v.f = nf; for (const s of singers) glideTo(s.frequency, nf, glide); retune(glide); };
+      // during a glide, frequency, width and the pitch-compensated gain follow the singers a quarter octave at a time
+      // and ease in with them for the last stretch: set for the target at once, the strong low harmonics of a falling
+      // voice would sweep through narrow, boosted resonances (a rising one would sink). Height alone glides in quickly.
+      const retune = () => {
+        const now = A.ctx.currentTime, oct = Math.log2(pitchAt(now) / gl.to), gliding = Math.abs(oct) > 0.02;
+        const n = gliding ? Math.ceil(Math.abs(oct) * 4) : 0, pts = [[now, valuesAt(now)]];
+        for (let i = 1; i < n; i++) {
+          const fr = gl.to * Math.pow(2, oct * (1 - i / n));
+          pts.push([gl.t0 + gl.tc * Math.log((gl.from - gl.to) / (fr - gl.to)), values(fr)]);
+        }
+        plan = { pts, end: values(gl.to), tc: gliding ? Math.max(0.05, gl.tc) : 0.05 };
+        params.forEach((p, m) => {
+          p.cancelScheduledValues(now);
+          pts.forEach(([ti, x], i) => { if (i) p.linearRampToValueAtTime(x[m], ti); else p.setValueAtTime(x[m], ti); });
+          p.setTargetAtTime(plan.end[m], pts[pts.length - 1][0], plan.tc);
+        });
+      };
+      v.setF = (nf, glide) => {
+        const now = A.ctx.currentTime, tc = Math.max(0.004, glide / 3);
+        if (nf === gl.to && tc === gl.tc) return;   // the glide in flight already leads there
+        gl = { t0: now, from: pitchAt(now), to: nf, tc };
+        v.f = nf; for (const s of singers) glideTo(s.frequency, nf, glide);
+        retune();
+      };
       v.setY = (ny) => { v.y = ny; retune(); };
       const peak = vel * 0.5;
       if (o.burst) burstEnv(v, t, peak, P['stm.att'], o.gate, Math.min(P['stm.rel'], 3));
@@ -2516,33 +2590,52 @@ const ENGINES = {
       }
       return (A.swmChirps = buf);
     },
+    // flight curve: 512 smooth random points over 16 s, looping, so even the fastest flutter only repeats after 9 s;
+    // smooth enough for a low sample rate. Built once, every swarm starts somewhere else in it
+    flutter() {
+      if (A.swmFly) return A.swmFly;
+      const sr = 3000, buf = A.ctx.createBuffer(1, sr * 16, sr), d = buf.getChannelData(0), pts = 512, v = [];
+      for (let i = 0; i < pts; i++) v.push(rand(-1, 1));
+      v.push(v[0]);
+      for (let i = 0; i < d.length; i++) {
+        const p = i * pts / d.length, k = Math.floor(p), m = (1 - Math.cos((p - k) * Math.PI)) / 2;
+        d[i] = v[k] * (1 - m) + v[k + 1] * m;
+      }
+      return (A.swmFly = buf);
+    },
     start(v, t, f, y, vel, o) {
       const w = P['v.width'], spread = P['swm.spread'], unrest = P['swm.unrest'];
       // three insects per swarm [harmonic, detune (× spread), level at the bottom, at the top]: a calm one on the
-      // note, the cricket on the 3rd harmonic and a buzzer on the 2nd. The calm one bends the cricket's pitch;
-      // cricket and buzzer bend each other in a loop closed by a short delay, so the overtones keep stirring
-      // themselves up while nothing bends the calm one and the note stays clear.
+      // note, the cricket on the 3rd harmonic and a buzzer on the 2nd, both a little sharp of it. The calm one bends
+      // the cricket's pitch; cricket and buzzer bend each other in a loop closed by a short delay, so the overtones
+      // keep stirring themselves up while nothing bends the calm one and the note stays clear.
       // Level 3: two swarms, left and right and apart in tuning, whose loops join into one
-      const kinds = [[1, -1, 1, 0.45], [3, 0.4, 0.03, 1], [2, 1, 0.05, 0.35]];
+      const kinds = [[1, 0, 1, 0.45], [3, 0.4, 0.03, 1], [2, 1, 0.05, 0.35]];
       const sides = Q.rich ? [-1, 1] : [0];
       const g0 = Q.rich ? 0.175 : 0.3;
       // finger height = chaos and density: louder overtones, stronger coupling (FM index of the calm one on the
       // cricket for brightness, of the loop for unrest; less on high notes, whose sparse harmonics would drown in
       // the sidebands), a faster and deeper flutter, quicker and stronger trills and an open filter. Insects above
-      // 0.3 × the sample rate stay silent
-      const level = (k, nf, ny) => (nf * k[0] > SR * 0.3 ? 0 : g0 * (k[2] + (k[3] - k[2]) * ny ** 1.5));
+      // 0.3 × the sample rate stay silent, and so do the cricket's flares
+      const mute = (k, nf) => nf * k[0] > SR * 0.3;
+      const level = (k, nf, ny) => (mute(k, nf) ? 0 : g0 * (k[2] + (k[3] - k[2]) * ny ** 1.5));
       const index = (nf, ny, loop) => {
         const c = P['swm.chaos'] * Math.min(1, Math.sqrt(250 / nf));
         return loop ? Math.min(0.6, c * (0.3 + 0.9 * ny * ny)) : Math.min(4, c * (0.5 + 2 * ny + 6 * ny ** 3));
       };
-      const flight = (ny) => (0.4 + 7.6 * ny) * (0.3 + 1.4 * unrest);
+      // speed through the flight curve (32 points a second at 1)
+      const flight = (ny) => (0.05 + 0.95 * ny) * (0.3 + 1.4 * unrest);
       const depth = (ny) => Math.min(0.9, unrest * (0.6 + 0.9 * ny));
       const trill = (ny) => 0.5 + ny;
-      const flare = (ny) => g0 * P['swm.chirp'] * 1.5 * ny;
+      const flare = (nf, ny) => (mute(kinds[1], nf) ? 0 : g0 * P['swm.chirp'] * 1.5 * ny);
       // a low-pass that opens with height, and a high-pass just below the note for the sidebands the coupled sines
-      // throw down towards 0 Hz
+      // throw down towards 0 Hz. Their frequencies follow the note (× 2^0.6 and × 0.7) and glide with the insects;
+      // height and the limits act on the low-pass's detune, vibrato and the pitch wheel on both detunes
       const cut = (nf, ny) => clamp(nf * Math.pow(2, 0.6 + 4.4 * ny), 150, 14000);
-      const lp = v.n(BQ('lowpass', cut(f, y), 0.7)), hp = v.n(BQ('highpass', f * 0.7, 0.7));
+      const lpf = (nf) => nf * Math.pow(2, 0.6), open = (nf, ny) => 1200 * Math.log2(cut(nf, ny) / lpf(nf));
+      const lp = v.n(BQ('lowpass', lpf(f), 0.7)), hp = v.n(BQ('highpass', f * 0.7, 0.7));
+      lp.detune.value = open(f, y);
+      v.mod(lp.detune); v.mod(hp.detune);
       lp.connect(hp).connect(v.out);
       const swarms = sides.map((side, s) => {
         const mix = v.n(G(1));
@@ -2550,10 +2643,10 @@ const ENGINES = {
         // flight: one smooth random curve bends the calm one and the buzzer one way and the cricket the other, and
         // makes the whole swarm flutter
         const fly = v.s(A.ctx.createBufferSource());
-        fly.buffer = A.driftBuf; fly.loop = true; fly.playbackRate.value = flight(y);
+        fly.buffer = this.flutter(); fly.loop = true; fly.playbackRate.value = flight(y);
         const wander = v.n(G(spread * 1.5 + 4)), counter = v.n(G(-(spread * 1.5 + 4))), trem = v.n(G(depth(y)));
         fly.connect(wander); fly.connect(counter); fly.connect(trem).connect(mix.gain);
-        fly.start(t, rand(0, A.driftBuf.duration));
+        fly.start(t, rand(0, fly.buffer.duration));
         const ins = kinds.map((k, j) => {
           const osc = v.s(OSC('sine', f * k[0]));
           osc.detune.value = (k[1] + side * 0.5) * spread;
@@ -2568,7 +2661,7 @@ const ENGINES = {
         // the cricket flares up and swoops a semitone up in the trill rhythm
         const trills = v.s(A.ctx.createBufferSource());
         trills.buffer = this.chirps(); trills.loop = true; trills.playbackRate.value = trill(y);
-        const up = v.n(G(flare(y))), swoop = v.n(G(f * 3 * 0.06));
+        const up = v.n(G(flare(f, y))), swoop = v.n(G(f * 3 * 0.06));
         trills.connect(up).connect(ins[1].amp.gain);
         trills.connect(swoop).connect(ins[1].osc.frequency);
         trills.start(t, rand(0, trills.buffer.duration));
@@ -2589,18 +2682,32 @@ const ENGINES = {
         return g;
       });
       v.f = f; v.y = y;
-      const retune = () => {
-        const nf = v.f, ny = v.y;
-        links.forEach((g, i) => setP(g.gain, dev(i, nf, ny), 0.05));
-        setP(lp.frequency, cut(nf, ny), 0.05); setP(hp.frequency, nf * 0.7, 0.05);
+      // while the insects glide to a new note (time constant tc, until end), the bending glides along with the same
+      // time constant, so its depth and the pitches move in step; otherwise it follows height quickly
+      let gl = { end: 0, tc: 0.05 };
+      // height, and what the note only gates or limits; never a param that setF glides (setP would cancel the glide)
+      const shape = () => {
+        const nf = v.f, ny = v.y, tc = A.ctx.currentTime < gl.end ? gl.tc : 0.05;
+        links.forEach((g, i) => setP(g.gain, dev(i, nf, ny), tc));
+        setP(lp.detune, open(nf, ny), 0.05);
         for (const x of swarms) {
           for (const a of x.ins) setP(a.amp.gain, level(a.k, nf, ny), 0.05);
           setP(x.fly.playbackRate, flight(ny), 0.1); setP(x.trem.gain, depth(ny), 0.05);
-          setP(x.trills.playbackRate, trill(ny), 0.1); setP(x.up.gain, flare(ny), 0.05); setP(x.swoop.gain, nf * 3 * 0.06, 0.05);
+          setP(x.trills.playbackRate, trill(ny), 0.1); setP(x.up.gain, flare(nf, ny), 0.05);
         }
       };
-      v.setF = (nf, glide) => { v.f = nf; for (const x of swarms) for (const a of x.ins) glideTo(a.osc.frequency, nf * a.k[0], glide); retune(); };
-      v.setY = (ny) => { v.y = ny; retune(); };
+      // what is proportional to the note glides with the insects, so the filters stay in step with them
+      v.setF = (nf, glide) => {
+        if (nf !== v.f) gl = { end: A.ctx.currentTime + glide, tc: Math.max(0.004, glide / 3) };
+        v.f = nf;
+        for (const x of swarms) {
+          for (const a of x.ins) glideTo(a.osc.frequency, nf * a.k[0], glide);
+          glideTo(x.swoop.gain, nf * 3 * 0.06, glide);
+        }
+        glideTo(lp.frequency, lpf(nf), glide); glideTo(hp.frequency, nf * 0.7, glide);
+        shape();
+      };
+      v.setY = (ny) => { v.y = ny; shape(); };
       // a Puls hit is short: a little hotter, so it sits with the other engines
       const peak = vel * (o.burst ? 0.68 : 0.47);
       if (o.burst) burstEnv(v, t, peak, Math.min(P['swm.att'], 0.03), o.gate, Math.min(P['swm.rel'], 2));
@@ -2611,27 +2718,43 @@ const ENGINES = {
     sustain: true,
     // one soft-clipping curve for all voices: tanh(6x), so the input level decides how hard the growl is driven
     curve: null,
-    // the note an octave or two down, but never below 30 Hz
-    base(f) { let fb = f * Math.pow(2, P['tie.oct']); while (fb < 30) fb *= 2; return fb; },
-    // finger height is the drive: how hard sine and octave hit the curve (from a soft octave to a buzzing growl) and
-    // how loud the overtones then sit against the sub, at the same overall level. The growl's own fundamental is
-    // measured here too (one period, 64 points), so the sub can take it back out
-    drive(y) {
-      const dr = P['tie.drive'], u = 0.5 + 10 * dr * y, m = dr * (0.3 + 2.1 * y);
+    // the note an octave or two down. Below the key's lowest octave (its root between 24 and 48 Hz) a note folds up, so
+    // a line wraps at the root, as a bass changes register, instead of somewhere inside the scale
+    base(f) {
+      let r = N.base, fb = f * Math.pow(2, P['tie.oct']);
+      while (r >= 48) r /= 2;
+      while (r < 24) r *= 2;
+      while (fb < r * 0.999) fb *= 2;
+      return fb;
+    },
+    // finger height is the drive: how hard sine and octave hit the curve (u, from a soft octave to a buzzing growl) and
+    // how loud the overtones then sit against the sub (m), at the same overall level. High notes hold u back so what
+    // folds back above Nyquist stays about 40 dB down, and the growl fades out from SR/16 to SR/8
+    drive(y, fb) {
+      const dr = P['tie.drive'], sr = A.ctx.sampleRate, m = dr * (0.3 + 2.1 * y) * clamp(2 - 16 * fb / sr, 0, 1);
+      return { u: clamp(sr / (10 * fb) - 0.5, 0.1, 0.5 + 10 * dr * y), m, s: 1 / Math.sqrt(1 + m * m) };
+    },
+    // one growl with octave share a: its own fundamental b1 (measured over one period, 64 points), which the sub takes
+    // back out, and the gain that brings the remaining overtones to m times the sub
+    growl(d, a) {
       let ss = 0, b1 = 0;
       for (let i = 0; i < 64; i++) {
-        const th = i * Math.PI / 32, x = Math.tanh(u * (Math.sin(th) + 0.5 * Math.sin(2 * th)));
+        const th = i * Math.PI / 32, x = Math.tanh(d.u * (Math.sin(th) + a * Math.sin(2 * th)));
         ss += x * x; b1 += x * Math.sin(th);
       }
       b1 /= 32;
-      const s = 1 / Math.sqrt(1 + m * m), mk = m * s * Math.sqrt(0.5 / (ss / 64 - b1 * b1 / 2));
-      return { g: u / 6, mk, s, fund: mk * b1 };
+      return { b1, mk: d.m * d.s * Math.sqrt(0.5 / (ss / 64 - b1 * b1 / 2)) };
     },
     start(v, t, f, y, vel, o) {
       if (!this.curve) this.curve = makeShaperCurve((x) => Math.tanh(6 * x));
-      const fb = this.base(f), w = P['v.width'], rich = Q.rich;
-      // the 808 fall: every oscillator starts higher (at most at 3 kHz) and settles on the note, fast at first, then gently
-      const jump = Math.min(Math.pow(2, P['tie.drop'] / 12), Math.max(1, 3000 / fb)), tau = P['tie.dropT'] / 5;
+      const sr = A.ctx.sampleRate, fb = this.base(f), w = P['v.width'], rich = Q.rich;
+      // a growl needs some drive and its octave in the clean range
+      const driven = P['tie.drive'] > 0.005 && fb < sr / 8;
+      // the 808 fall: every oscillator starts higher and settles on the note, fast at first, then gently. It starts at
+      // most at 3 kHz, and with a growl at most where the strongest drive still stays clean (the cap in drive, inverted)
+      const top = driven ? Math.min(3000, sr / (10 * (this.drive(1, fb).u + 0.5))) : 3000;
+      const jump = Math.min(Math.pow(2, P['tie.drop'] / 12), Math.max(1, top / fb)), tau = P['tie.dropT'] / 5;
+      const dropEnd = jump > 1.001 ? t + 5 * tau : t;
       const osc = (fr) => {
         const s = v.s(OSC('sine', fr));
         if (jump > 1.001) { s.frequency.setValueAtTime(fr * jump, t); s.frequency.setTargetAtTime(fr, t, tau); }
@@ -2647,39 +2770,43 @@ const ENGINES = {
       sub.connect(subG).connect(mid);
       // the growl: the sub and its octave driven together. In phase they form a point-symmetric wave, which the curve
       // fills with every overtone, even and odd, and which stays symmetric – no offset, also not in the drive effect
-      // after the voice. Its fundamental lines up with the sub's, so the sub's gain simply subtracts it again.
-      // Level 3: two growls left and right, hollower (odd overtones) on one side and warmer (even ones) on the other;
-      // the octave's share in them swings slowly against each other, so the colours wander from side to side while
-      // their sum – and the sub – stays steady
+      // after the voice. Its fundamental lines up with the sub's, so the sub, inverted and scaled to it, takes it out
+      // again before the growl's level gain: neither that gain nor a panner can touch the sub.
+      // Level 3: two growls left and right, hollower (less octave, odd overtones) on one side and warmer (even ones) on
+      // the other; their levels swing slowly against each other, so the colours wander from side to side
       const growls = [], k = rich ? 0.5 : 1;
       let o2 = null, g1 = null;
-      if (P['tie.drive'] > 0.005) {
+      if (driven) {
         o2 = osc(fb * 2); g1 = v.n(G(0));
         sub.connect(g1);
         for (const side of rich ? [-1, 1] : [0]) {
-          const g2 = v.n(G(0)), sh = v.n(A.ctx.createWaveShaper()), mk = v.n(G(0));
+          const g2 = v.n(G(0)), sh = v.n(A.ctx.createWaveShaper()), cut = v.n(G(0)), mk = v.n(G(0));
           sh.curve = this.curve;
           g1.connect(sh); o2.connect(g2).connect(sh);
+          sh.connect(mk); sub.connect(cut).connect(mk);
           let dst = mid, sw = null;
           if (side) {
             dst = v.n(PAN(side * 0.9 * w)); dst.connect(v.out);
-            // one slow drift moves the octave's share, up on one side and down on the other
-            sw = v.n(G(0)); v.lnk(A.uni[1], sw); sw.connect(g2.gain);
+            // one slow drift moves the level, up on one side and down on the other
+            sw = v.n(G(0)); v.lnk(A.uni[1], sw); sw.connect(mk.gain);
           }
-          sh.connect(mk).connect(dst);
-          growls.push({ g2, mk, sw, side });
+          mk.connect(dst);
+          growls.push({ a: 0.5 + 0.1 * side, g2, cut, mk, sw, side });
         }
       }
-      const shape = (ny, tc) => {
-        const d = this.drive(ny), set = (p, x) => (tc ? setP(p, x, tc) : (p.value = x));
-        set(subG.gain, d.s - (o2 ? d.fund : 0));
-        if (g1) set(g1.gain, d.g);
+      // the base and finger height the gains are set for
+      let cb = fb, cy = y;
+      const shape = (tc) => {
+        const d = this.drive(cy, cb), set = (p, x) => (tc ? setP(p, x, tc) : (p.value = x));
+        set(subG.gain, d.s);
+        if (g1) set(g1.gain, d.u / 6);
         for (const x of growls) {
-          set(x.g2.gain, d.g * (0.5 + 0.1 * x.side)); set(x.mk.gain, d.mk * k);
-          if (x.sw) set(x.sw.gain, x.side * 0.15 * d.g / A.uni[1].gain.value);
+          const gr = this.growl(d, x.a);
+          set(x.g2.gain, x.a * d.u / 6); set(x.cut.gain, -gr.b1); set(x.mk.gain, gr.mk * k);
+          if (x.sw) set(x.sw.gain, x.side * 0.5 * gr.mk * k / A.uni[1].gain.value);
         }
       };
-      shape(y, 0);
+      shape(0);
       // the beater: a few milliseconds of band-passed noise, brighter higher up
       if (P['tie.click'] > 0.01) {
         const ns = v.s(noiseSrc()), bp = v.n(BQ('bandpass', 1300 * Math.pow(2, 1.6 * y), 0.8)), cg = v.n(G(0));
@@ -2688,12 +2815,18 @@ const ENGINES = {
         ns.start(t, rand(0, 1.8));
         ns._end = t + 0.06;
       }
+      // a slide keeps the octave fold of its first note (only below 16 Hz it folds again). During the fall every move
+      // takes over its time constant, so jitter leaves the fall as it is and a new note is reached at its speed
+      const mul = fb / f;
       v.setF = (nf, glide) => {
-        const nb = this.base(nf);
-        glideTo(sub.frequency, nb, glide);
-        if (o2) glideTo(o2.frequency, nb * 2, glide);
+        const g = A.ctx.currentTime < dropEnd ? 3 * tau : glide;
+        cb = nf * mul;
+        while (cb < 16) cb *= 2;
+        glideTo(sub.frequency, cb, g);
+        if (o2) glideTo(o2.frequency, cb * 2, g);
+        shape(Math.max(0.004, g / 3));
       };
-      v.setY = (ny) => shape(ny, 0.04);
+      v.setY = (ny) => { cy = ny; shape(0.04); };
       const peak = vel * 0.16, rel = P['tie.rel'];
       if (o.burst) burstEnv(v, t, peak * 1.6, 0.003, o.gate * 0.8, rel * (o.decayMul || 1));
       else { adsrStart(v, t, peak, 0.003); v.release = sustainRelease(v, rel); }
@@ -2734,9 +2867,11 @@ const ENGINES = {
       let end = t;
       // a bubble rings as a damped tone: as it pinches off, its resonance shoots up to the note (the chirp), then it
       // keeps creeping upward while it rises and fades – the deeper the chirp, the further it creeps. The chirp starts
-      // no lower than 50 Hz
+      // no lower than 50 Hz and takes at most 0.4 of the ring time, so it lands on the note while the drop still rings
+      // (−24 dB at the latest): a long Steigzeit glides slowly only on a long ring, and the rain lands in key
       const drop = (at, fr, amp, dec, dep, rt, dst, uni) => {
         dep = Math.min(dep, Math.max(0, Math.log2(fr / 50)));
+        rt = Math.min(rt, 0.4 * dec);
         const osc = v.s(OSC(wave, fr)), g = v.n(G(0));
         osc.frequency.setValueCurveAtTime(this.ease.map((e) => fr * Math.pow(2, -dep * e)), at, rt);
         osc.frequency.linearRampToValueAtTime(fr * (1 + 0.08 * dep), at + rt + dec);
