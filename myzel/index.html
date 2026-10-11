@@ -1952,7 +1952,8 @@ async function setupCapture() {
 }
 function onChunk(l, r, isFlush, f) {
   const n = CAP.ringL.length, len = l.length;
-  if (f == null) f = CAP.ringF;
+  // an older cached tap without positions: estimate the first block from the clock, then count on
+  if (f == null) f = CAP.chunks ? CAP.ringF : Math.max(0, Math.round(A.ctx.currentTime * SR) - len);
   let pl = 0, pr = 0;
   for (let i = 0; i < len; i++) {
     const a = l[i], b = r[i];
@@ -1962,7 +1963,7 @@ function onChunk(l, r, isFlush, f) {
     if (aa > pl) pl = aa; if (bb > pr) pr = bb;
   }
   CAP.fill = Math.min(n, CAP.fill + len);
-  CAP.ringF = f + len; CAP.chunks = (CAP.chunks || 0) + 1;
+  if (len) { CAP.ringF = f + len; CAP.chunks = (CAP.chunks || 0) + 1; }   // an empty flush must not move the clock
   if (pl > CAP.mL) CAP.mL = pl; if (pr > CAP.mR) CAP.mR = pr;
   if (CAP.bar) {
     const kept = barChunk(l, r, f, len, pl, pr);
@@ -2052,7 +2053,7 @@ function putSegment(rec, i, from, to) {
   idbDo('segs', 'readwrite', (st) => st.put({ take: rec.id, i, L: L.buffer, R: R.buffer }));
 }
 function takeMeta(t) {
-  return { id: t.id, name: t.name, sr: t.sr, frames: t.frames, peak: t.peak, date: t.date.getTime(), patch: t.patch, saved: !!t.saved, done: !!t.done, bars: t.bars || 0, bpm: t.bpm || 0 };
+  return { id: t.id, name: t.name, sr: t.sr, frames: t.frames, peak: t.peak, date: t.date.getTime(), patch: t.patch, saved: !!t.saved, done: !!t.done, bars: t.bars || 0, bpm: t.bpm || 0, seamless: !!t.seamless };
 }
 async function restoreTakes() {
   if (!(await idbOpen())) return;
@@ -2060,7 +2061,8 @@ async function restoreTakes() {
   metas.sort((a, b) => b.date - a.date);
   for (const m of metas) {
     if (takes.some((t) => t.id === m.id)) continue;
-    takes.push({ id: m.id, name: m.name, sr: m.sr, frames: m.frames, peak: m.peak, date: new Date(m.date), patch: m.patch || {}, saved: m.saved, done: true, L: null, R: null, restored: true, recovered: !m.done, comp: null, bars: m.done ? m.bars || 0 : 0, bpm: m.bpm || 0 });
+    // an interrupted bar take is just audio: drop a bar count an older version put into its name
+    takes.push({ id: m.id, name: m.done ? m.name : m.name.replace(/ · \d+ Takte?( · [\d.,]+ BPM)?/, ''), sr: m.sr, frames: m.frames, peak: m.peak, date: new Date(m.date), patch: m.patch || {}, saved: m.saved, done: true, L: null, R: null, restored: true, recovered: !m.done, comp: null, bars: m.done ? m.bars || 0 : 0, bpm: m.bpm || 0, seamless: !!m.seamless });
   }
   takeCounter = takes.reduce((n, t) => Math.max(n, Number((/^Aufnahme (\d+)/.exec(t.name) || /(\d+)$/.exec(t.name) || [])[1]) || 0), takeCounter);
   renderTakes();
@@ -2086,6 +2088,7 @@ const takes = [];
 let takeCounter = 0;
 function recToggle() {
   if (!A.started || CAP.finishing) return;
+  if (CAP.state === 'idle' && performance.now() < (CAP.quietUntil || 0)) return;
   if (!CAP.node) {
     if (!CAP.pending) toast('Aufnahme wird vorbereitet …', 1500);
     // a new tap needs a few blocks before its stream runs without gaps
@@ -2115,7 +2118,7 @@ function noteEvent(t) {
   if (P['rec.len'] !== 'bars') { beginRec(CAP.hold); return; }
   CAP.hold = [];
   const at = t != null ? t : A.ctx.currentTime;
-  beginBar(SEQ.on ? timeAt(Math.floor(beatAt(at) / 4 + 1e-6) * 4) : at);
+  beginBar(SEQ.on ? timeAt(Math.floor(beatAt(at) / 4 + 1e-6) * 4) : at, SEQ.on);
 }
 function newRec(extra) {
   return Object.assign({ id: Date.now(), name: 'Aufnahme ' + (++takeCounter), sr: SR, L: [], R: [], frames: 0, peak: 0, date: new Date(), patch: patchValues(),
@@ -2151,29 +2154,45 @@ function recStop() {
 // the downbeat lands on sample 0. If nothing keeps sounding at the end, the tail is laid over the start: the loop
 // then continues seamlessly instead of jumping from reverb into silence.
 function barGrid() { const bpm = SEQ.on ? SEQ.bpm : P['seq.bpm']; return { bpm, barF: 4 * 60 / bpm * SR }; }
-function barStart() {
-  const now = A.ctx.currentTime;
-  if (SEQ.on) {
-    // the next downbeat – or the one just passed, if REC came a moment late (the ring keeps the last 8 s)
-    const prev = Math.floor(beatAt(now) / 4) * 4;
-    beginBar(timeAt(now - timeAt(prev) < 0.2 ? prev : prev + 4));
-  } else if (P['rec.arm']) { CAP.state = 'armed'; CAP.hold = []; updRecUI(); }
-  else beginBar(now);
+// what the player hears now: the audio clock minus the output delay
+const heardT = () => A.ctx.currentTime - (A.ctx.baseLatency || 0) - (A.ctx.outputLatency || 0);
+const latF = () => Math.round(graphLatency() * SR);
+// the downbeat a REC tap means on the Puls clock: the one just heard if the tap came a moment late and the ring still
+// holds it, otherwise the next one
+function nextDownbeat() {
+  const heard = heardT(), prev = Math.floor(beatAt(heard) / 4 + 1e-9) * 4;
+  const inRing = Math.round(timeAt(prev) * SR) + latF() >= CAP.ringF - CAP.fill;
+  return heard - timeAt(prev) < 0.2 && inRing ? prev : prev + 4;
 }
-function beginBar(t0) {
+function barStart() {
+  if (SEQ.on) beginBar(timeAt(nextDownbeat()), true);
+  else if (P['rec.arm']) { CAP.state = 'armed'; CAP.hold = []; updRecUI(); }
+  else beginBar(A.ctx.currentTime, false);
+}
+// grid: the window sits on the Puls's bar lines and may only move by whole bars
+function beginBar(t0, grid) {
   const { bpm, barF } = barGrid(), bars = P['rec.bars'];
-  let f0 = Math.round(t0 * SR) + Math.round(graphLatency() * SR);
-  const total = Math.round(bars * barF);
-  // samples that already passed come from the ring
-  const have = CAP.ringF - CAP.fill;
-  if (f0 < have) f0 = have;
-  CAP.bar = { f0, f1: f0 + total, total, barF, bars, bpm, stopAt: 0 };
-  CAP.rec = newRec({ name: 'Aufnahme ' + (takeCounter + 1) + ' · ' + bars + (bars === 1 ? ' Takt' : ' Takte') + ' · ' + Math.round(bpm) + ' BPM', bars, bpm: Math.round(bpm * 100) / 100 });
+  let f0 = Math.round(t0 * SR) + latF();
+  const total = Math.round(bars * barF), have = CAP.ringF - CAP.fill;
+  if (f0 < have) f0 = grid ? f0 + Math.round(Math.ceil((have - f0) / barF - 1e-9) * barF) : have;
+  CAP.bar = { f0, f1: f0 + total, total, barF, bars, bpm, grid, stopAt: 0 };
+  // music already running before the window (the Puls, the drone, frozen echo) makes the loop seamless by itself
+  CAP.rec = newRec({ bars, bpm: Math.round(bpm * 100) / 100, liveStart: !!(SEQ.on || A.bor || A.frozen) });
   CAP.pkL = CAP.pkR = 0;
   CAP.hold = [];
   CAP.state = 'cue';
   if (f0 < CAP.ringF) barChunkFromRing(f0, Math.min(CAP.ringF, CAP.bar.f1));
   updRecUI();
+}
+// while a bar take waits for its downbeat nothing is kept yet: a new tempo, a different length or a (re)started Puls
+// moves the window to the new grid
+function barRecue() {
+  if (CAP.state !== 'cue' || !CAP.bar || !A.ctx) return;
+  const b = CAP.bar, { bpm, barF } = barGrid();
+  const t0 = SEQ.on ? timeAt(Math.ceil(beatAt(A.ctx.currentTime) / 4 - 1e-9) * 4) : A.ctx.currentTime;
+  b.f0 = Math.round(t0 * SR) + latF(); b.barF = barF; b.bpm = bpm; b.grid = SEQ.on;
+  b.bars = P['rec.bars']; b.total = Math.round(b.bars * barF); b.f1 = b.f0 + b.total;
+  CAP.rec.bars = b.bars; CAP.rec.bpm = Math.round(bpm * 100) / 100; CAP.rec.liveStart = !!(SEQ.on || A.bor || A.frozen);
 }
 function barChunkFromRing(fa, fz) {
   const n = CAP.ringL.length, len = fz - fa;
@@ -2184,18 +2203,23 @@ function barChunkFromRing(fa, fz) {
   barChunk(L, R, fa, len, absPeak(L), absPeak(R));
 }
 function absPeak(a) { let p = 0; for (let i = 0; i < a.length; i++) { const x = a[i] < 0 ? -a[i] : a[i]; if (x > p) p = x; } return p; }
+const TAIL_MAX_S = 8;
 // keeps the part of a block that falls into the window (or the tail); returns true if the block itself was stored
 function barChunk(l, r, f, len, pl, pr) {
   const b = CAP.bar, rec = CAP.rec;
-  let kept = false;
   if (CAP.state === 'cue' || CAP.state === 'rec') {
-    // the tap's first block can begin a few render quanta after the window (just created): move the window, keep its length
-    if (CAP.state === 'cue' && f > b.f0) { b.f0 = f; b.f1 = f + b.total; }
+    // the tap's first block can begin after the window's start (a tap just created): on the Puls grid wait for the next
+    // bar line, otherwise begin with this block – the length stays the same either way
+    if (CAP.state === 'cue' && f > b.f0) {
+      b.f0 += b.grid ? Math.round(Math.ceil((f - b.f0) / b.barF - 1e-9) * b.barF) : f - b.f0;
+      b.f1 = b.f0 + b.total;
+    }
     // a gap in the tap's stream inside the window becomes silence, so the take keeps its exact length
     const exp = b.f0 + rec.frames;
     if (CAP.state === 'rec' && f > exp && exp < b.f1) { const g = Math.min(f, b.f1) - exp; pushRec(rec, new Float32Array(g), new Float32Array(g), 0, 0); }
     // (never take a frame twice, should a block overlap what is already kept)
     const a = Math.max(f, b.f0, CAP.state === 'rec' ? exp : -Infinity), z = Math.min(f + len, b.f1);
+    let kept = false;
     if (z > a) {
       if (CAP.state === 'cue') {
         CAP.state = 'rec';
@@ -2205,48 +2229,55 @@ function barChunk(l, r, f, len, pl, pr) {
       if (a === f && z === f + len) { pushRec(rec, l, r, pl, pr); kept = true; }
       else { const ls = l.slice(a - f, z - f), rs = r.slice(a - f, z - f); pushRec(rec, ls, rs, absPeak(ls), absPeak(rs)); }
     }
-    if (f + len < b.f1) return kept;
+    if (f + len < b.f1 || CAP.state === 'cue') return kept;
     // the window is complete: hold the ring-out for the loop's start, or finish
     if (P['rec.tail'] && !b.noFold && !soundGoesOn()) {
       CAP.state = 'tail'; rec.tailL = []; rec.tailR = []; rec.tailFrames = 0; rec.quiet = 0;
+      if (rec.segFrames) backupSegment(rec);   // the finished window is safe even if the page dies during the ring-out
       updRecUI();
-      if (f + len > b.f1) { const o = b.f1 - f; barTail(l.slice(o), r.slice(o)); }
-      return kept;
+      return f + len > b.f1 ? barChunk(l, r, f, len, pl, pr) || kept : kept;   // the rest of this block is tail
     }
     finishRec();
     return kept;
   }
   if (CAP.state === 'tail') {
+    const e = b.f1 + rec.tailFrames;
+    if (f > e) {   // a gap in the stream: silence, so the ring-out stays in place
+      const g = Math.min(f - e, Math.round(SR * TAIL_MAX_S));
+      barTail(new Float32Array(g), new Float32Array(g));
+      if (CAP.state !== 'tail') return false;
+    }
     const a = Math.max(f, b.f1 + rec.tailFrames);
-    if (a < f + len) { barTail(a === f ? l : l.slice(a - f), a === f ? r : r.slice(a - f)); kept = a === f; }
+    if (a < f + len) { const whole = a === f; barTail(whole ? l : l.slice(a - f), whole ? r : r.slice(a - f)); return whole; }
   }
-  return kept;
+  return false;
 }
+// the ring-out, up to 8 s (also longer than a short loop: folding wraps it around)
 function barTail(l, r) {
-  const rec = CAP.rec, room = Math.min(rec.frames, Math.round(SR * 8)) - rec.tailFrames;
-  if (room <= 0) { finishRec(); return; }
+  const rec = CAP.rec, room = Math.round(SR * TAIL_MAX_S) - rec.tailFrames;
+  if (room <= 0) { rec.tailCapped = true; finishRec(); return; }
   if (l.length > room) { l = l.slice(0, room); r = r.slice(0, room); }
   rec.tailL.push(l); rec.tailR.push(r); rec.tailFrames += l.length;
-  const pk = Math.max(absPeak(l), absPeak(r));
-  rec.quiet = pk < 0.002 ? rec.quiet + l.length : 0;   // done after 0.4 s below −54 dBFS, at most 8 s or one loop length
-  if (rec.quiet >= SR * 0.4 || rec.tailFrames >= Math.min(rec.frames, SR * 8)) finishRec();
+  rec.quiet = Math.max(absPeak(l), absPeak(r)) < 0.002 ? rec.quiet + l.length : 0;   // done after 0.4 s below −54 dBFS
+  if (rec.quiet >= SR * 0.4) finishRec();
+  else if (rec.tailFrames >= SR * TAIL_MAX_S) { rec.tailCapped = true; finishRec(); }
 }
-// REC during a bar recording ends it with the current bar; a second press stops at once (no longer an exact loop)
+// REC during a bar recording ends it with the bar the player is hearing; a second tap stops at once (then not a loop)
 function barStop() {
-  const b = CAP.bar, nowF = Math.round(A.ctx.currentTime * SR) + Math.round(graphLatency() * SR);
+  const b = CAP.bar;
   if (!b.stopAt) {
-    const k = clamp(Math.ceil((nowF - b.f0) / b.barF - 1e-9), 1, b.bars);
+    const heardF = Math.round(heardT() * SR) + latF();
+    const k = clamp(Math.max(Math.ceil((heardF - b.f0) / b.barF - 1e-9), Math.ceil(CAP.rec.frames / b.barF - 1e-9)), 1, b.bars);
     b.stopAt = k; b.f1 = b.f0 + Math.round(k * b.barF); b.total = b.f1 - b.f0;
     CAP.rec.bars = k;
-    CAP.rec.name = CAP.rec.name.replace(/· \d+ Takte?/, '· ' + k + (k === 1 ? ' Takt' : ' Takte'));
-    toast(k === b.bars ? 'Endet wie geplant nach ' + k + (k === 1 ? ' Takt.' : ' Takten.') : 'Endet mit Takt ' + k + '. Nochmal tippen beendet sofort.', 3000);
+    toast((k === b.bars ? 'Endet wie geplant nach ' + k + (k === 1 ? ' Takt.' : ' Takten.') : 'Endet mit Takt ' + k + '.') + ' Nochmal tippen beendet sofort.', 3000);
     updRecUI();
     return;
   }
-  // immediately: the window ends now; collect what the tap still holds
+  // immediately: the window ends with what has been rendered; collect what the tap still holds
+  const nowF = Math.round(A.ctx.currentTime * SR) + latF();
   b.f1 = Math.max(b.f0 + 1, Math.min(b.f1, nowF)); b.total = b.f1 - b.f0; b.noFold = true;
   CAP.rec.bars = 0;
-  CAP.rec.name = CAP.rec.name.replace(/ · \d+ Takte?/, '');
   if (CAP.mode === 'worklet') {
     CAP.flushWait = () => {};
     CAP.node.port.postMessage('flush');
@@ -2259,25 +2290,34 @@ function barCancel() {
   updRecUI();
   toast('Aufnahme abgebrochen.', 1800);
 }
-// adds the ring-out to the first samples of the take (in place), rewrites the affected backup segments
+// adds the ring-out to the first samples of the take (in place, wrapping around a loop shorter than the ring-out) and
+// rewrites the affected backup segments; a ring-out cut by the 8 s limit fades over 40 ms instead of stopping with a step
 function foldTail(rec) {
-  if (!rec.tailL || !rec.tailFrames) return;
-  let ci = 0, co = 0, last = 0;
+  if (!rec.tailL || !rec.tailFrames || !rec.frames) return;
+  if (rec.tailCapped) {
+    let left = Math.min(rec.tailFrames, Math.round(SR * 0.04));
+    const n = left;
+    for (let t = rec.tailL.length - 1; t >= 0 && left > 0; t--) {
+      const tl = rec.tailL[t], tr = rec.tailR[t];
+      for (let i = tl.length - 1; i >= 0 && left > 0; i--, left--) { const g = (n - left) / n; tl[i] *= g; tr[i] *= g; }
+    }
+  }
+  let ci = 0, co = 0, wrapped = false;
   for (let t = 0; t < rec.tailL.length; t++) {
     const tl = rec.tailL[t], tr = rec.tailR[t];
     for (let i = 0; i < tl.length; i++) {
-      while (ci < rec.L.length && co >= rec.L[ci].length) { ci++; co = 0; }
-      if (ci >= rec.L.length) break;
+      while (co >= rec.L[ci].length) { co = 0; if (++ci >= rec.L.length) { ci = 0; wrapped = true; } }
       rec.L[ci][co] += tl[i]; rec.R[ci][co] += tr[i];
       co++;
     }
   }
-  last = Math.min(ci, rec.L.length - 1);
+  const last = wrapped ? rec.L.length - 1 : ci;
   let pk = rec.peak;
   for (let c = 0; c <= last; c++) pk = Math.max(pk, absPeak(rec.L[c]), absPeak(rec.R[c]));
   rec.peak = pk;
   for (const [i, from, to] of rec.segs || []) if (from <= last) putSegment(rec, i, from, to);
   rec.tailL = rec.tailR = null;
+  rec.folded = true;
 }
 function finishRec() {
   const r = CAP.rec;
@@ -2289,8 +2329,14 @@ function finishRec() {
     CAP.finishing = false;
     CAP.rec = null; CAP.bar = null;
     r.done = true;
-    if (bar) foldTail(r);
-    const take = { id: r.id, name: r.name, sr: r.sr, L: r.L, R: r.R, frames: r.frames, peak: r.peak, date: r.date, patch: r.patch, comp: null, compExt: '', saved: false, done: true, bars: r.bars || 0, bpm: r.bpm || 0 };
+    let seamless = false;
+    if (bar) {
+      foldTail(r);
+      if (r.bars) r.name += ' · ' + r.bars + (r.bars === 1 ? ' Takt' : ' Takte') + ' · ' + Math.round(r.bpm) + ' BPM';
+      seamless = !!r.bars && (r.folded || (r.liveStart && soundGoesOn()));
+      if (bar.stopAt && !bar.noFold) CAP.quietUntil = performance.now() + 600;   // the second tap the toast invited may come just late
+    }
+    const take = { id: r.id, name: r.name, sr: r.sr, L: r.L, R: r.R, frames: r.frames, peak: r.peak, date: r.date, patch: r.patch, comp: null, compExt: '', saved: false, done: true, bars: r.bars || 0, bpm: r.bpm || 0, seamless };
     stopCompressed(take);
     CAP.pkL = CAP.pkR = 0;
     updRecUI();
@@ -2531,7 +2577,7 @@ async function saveTake(tk, btn, split) {
         'Datei: ' + name + '.wav',
         'Format: WAV, ' + tk.sr + ' Hz, ' + fi.label + ', Stereo',
         'Dauer: ' + fmtDur((to - from) / tk.sr) + (parts > 1 ? ' (gesamt ' + fmtDur(tk.frames / tk.sr) + ')' : ''),
-        ...(tk.bars ? ['Länge: ' + tk.bars + (tk.bars === 1 ? ' Takt' : ' Takte') + ' im 4/4-Takt bei ' + dec(String(tk.bpm)) + ' BPM = ' + tk.frames.toLocaleString('de-DE') + ' Samples. Beginnt auf der Eins und läuft nahtlos als Schleife.'] : []),
+        ...(tk.bars ? ['Länge: ' + tk.bars + (tk.bars === 1 ? ' Takt' : ' Takte') + ' im 4/4-Takt bei ' + dec(String(tk.bpm)) + ' BPM = ' + tk.frames.toLocaleString('de-DE') + ' Samples, beginnt auf der Eins' + (tk.seamless ? ' und läuft nahtlos als Schleife.' : '.')] : []),
         'Spitzenpegel der Aufnahme: ' + dec(gainToDb(tk.peak).toFixed(1)) + ' dBFS' + (norm ? ' (beim Speichern auf −1 dBFS normalisiert)' : ''),
         'Aufgenommen: ' + tk.date.toLocaleString('de-DE'),
         '',
@@ -2613,9 +2659,13 @@ const SEQ = { on: false, anchorT: 0, anchorB: 0, bpm: 84, lanes: [0, 1, 2, 3].ma
 const beatAt = (t) => SEQ.anchorB + (t - SEQ.anchorT) * SEQ.bpm / 60;
 const timeAt = (b) => SEQ.anchorT + (b - SEQ.anchorB) * 60 / SEQ.bpm;
 function seqRetempo() {
-  if (!SEQ.on || !A.ctx) { SEQ.bpm = P['seq.bpm']; return; }
-  const now = A.ctx.currentTime;
-  SEQ.anchorB = beatAt(now); SEQ.anchorT = now; SEQ.bpm = P['seq.bpm'];
+  if (!SEQ.on || !A.ctx) SEQ.bpm = P['seq.bpm'];
+  else { const now = A.ctx.currentTime; SEQ.anchorB = beatAt(now); SEQ.anchorT = now; SEQ.bpm = P['seq.bpm']; }
+  barRecue();
+  if (CAP.bar && CAP.state === 'rec' && Math.abs(P['seq.bpm'] - CAP.bar.bpm) > 0.01 && !CAP.bar.tempoHinted) {
+    CAP.bar.tempoHinted = true;
+    toast('Die laufende Schleife behält ihr Tempo (' + Math.round(CAP.bar.bpm) + ' BPM); das neue gilt ab der nächsten Aufnahme.', 4500);
+  }
 }
 function euclid(steps, pulses, rot) {
   steps = Math.max(1, steps | 0); pulses = clamp(pulses | 0, 0, steps);
@@ -2671,10 +2721,11 @@ function seqStart() {
   SEQ.anchorT = A.ctx.currentTime + 0.06; SEQ.anchorB = 0; SEQ.bpm = P['seq.bpm'];
   SEQ.lanes.forEach((L) => { L.n = 0; L.div = divBeats(P['l' + SEQ.lanes.indexOf(L) + '.div']); L.walk = 0; L.cur = -1; L.last = 0; });
   SEQ.on = true;
+  barRecue();
   keepAwake();
   updPulsUI();
 }
-function seqStop() { SEQ.on = false; SEQ.lanes.forEach((L) => (L.cur = -1)); updPulsUI(); }
+function seqStop() { SEQ.on = false; SEQ.lanes.forEach((L) => (L.cur = -1)); barRecue(); updPulsUI(); }
 
 function rollInterval() { return (4 / Number(P['v.roll'])) * 60 / P['seq.bpm']; }
 function rollTick(horizon) {
@@ -3311,6 +3362,7 @@ function onParamChanged(id) {
   if (id === 'kor.src' && P['kor.src'] === 'echo' && A.started) ensureCapture();
   if (id === 'dly.sync') updInactive();
   if (id === 'rec.len' || id === 'rec.bars' || id === 'seq.bpm') { renderBarInfo(); if (CAP.state === 'idle') updRecUI(); }
+  if (id === 'rec.bars') barRecue();
   if (pre === 't') { buildNotes(); drawBg(); if (A.ctx) retuneBordun(); }
   if (pre === 'l' + id[1] && /^l\d$/.test(pre)) updLaneTabs();
   if (pre === 'rec') return;
@@ -3363,7 +3415,7 @@ function loadValues(vals, keepUnset) {
     P[id] = v;
   }
   for (const id of PATCH_IDS) for (const fn of CTL[id] || []) fn(P[id], null);
-  buildNotes(); drawBg(); refreshEngineUI(); updLaneTabs(); updInactive();
+  buildNotes(); drawBg(); refreshEngineUI(); updLaneTabs(); updInactive(); renderBarInfo();
   if (A.ctx) { applyAll(); seqRetempo(); warmKS(); if (P['kor.src'] === 'echo') ensureCapture(); }
   clearTimeout(saveTimer); saveTimer = setTimeout(saveState, 400);
 }
@@ -3547,7 +3599,7 @@ function renderBarInfo() {
   const bars = P['rec.bars'], bpm = P['seq.bpm'], sec = bars * 4 * 60 / bpm;
   barInfoEl.textContent = bars + (bars === 1 ? ' Takt' : ' Takte') + ' im 4/4-Takt bei ' + Math.round(bpm) + ' BPM (Tempo unter „Puls“) = ' + fmtDur(sec) + '. ' +
     'Läuft der Puls, beginnt die Aufnahme auf der nächsten Eins, sonst sofort – oder mit dem ersten Ton, wenn „Erst mit dem ersten Ton starten“ an ist. ' +
-    'Die Datei ist auf das Sample genau so lang und läuft nahtlos als Schleife; mit „Nachklang“ wird der Ausklang an den Anfang gelegt. Tippen während der Aufnahme beendet sie mit dem laufenden Takt.';
+    'Die Datei ist auf das Sample genau so lang. Läuft der Puls schon vor dem Start, geht die Schleife von selbst nahtlos weiter; sonst legt „Nachklang“ den Ausklang an den Anfang, wenn am Ende nichts mehr klingt. Tippen während der Aufnahme beendet sie mit dem laufenden Takt, ein zweites Tippen sofort.';
 }
 function renderRecInfo() {
   if (!recInfoEl) return;
@@ -3637,7 +3689,7 @@ function updateMeters(dt) {
     const k = clamp(Math.floor(pos / bar.barF) + 1, 1, bar.stopAt || bar.bars), n = bar.stopAt || bar.bars;
     $('#recLabel').textContent = k + '/' + n;
     if (recTimeEl) recTimeEl.textContent = 'Takt ' + k + '/' + n;
-    if (recSubEl) recSubEl.textContent = fmtDur(Math.max(0, pos) / SR) + ' von ' + fmtDur(bar.total / SR) + (bar.stopAt && bar.stopAt < bar.bars ? ' · endet mit diesem Takt' : ' · tippen beendet mit dem laufenden Takt');
+    if (recSubEl) recSubEl.textContent = fmtDur(Math.max(0, pos) / SR) + ' von ' + fmtDur(bar.total / SR) + (bar.stopAt ? ' · endet mit Takt ' + bar.stopAt + ' – nochmal tippen beendet sofort' : ' · tippen beendet mit dem laufenden Takt');
   } else if (CAP.rec && (CAP.state === 'rec' || CAP.state === 'tail')) {
     const t = fmtDur(CAP.rec.frames / SR);
     $('#recLabel').textContent = t;
