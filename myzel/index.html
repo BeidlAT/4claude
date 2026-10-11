@@ -186,7 +186,7 @@ input[type=text] {
 .quick .ctl label { font-size: 11px; color: var(--dim); }
 .quick .val { font-size: 10px; }
 .quick .iconbtn { margin-bottom: 1px; }
-.tabs { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); background: var(--loam-2); border-top: 1px solid var(--line); }
+.tabs { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); background: var(--loam-2); border-top: 1px solid var(--line); }
 .tab {
   display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 2px 9px; min-width: 0; min-height: 48px;
   background: none; border: 0; color: var(--dim); font: 500 11px/1 var(--font-ui); letter-spacing: .02em;
@@ -309,6 +309,7 @@ input[type=text] {
   .recbtn .dot, .recbig .big i { animation: none !important; }
   .toast, .sw .knob, .sw .knob::after, .ctl { transition: none; }
 }
+/*@@MIXER-CSS@@*/
 </style>
 
 <div id="app" lang="de">
@@ -5245,7 +5246,8 @@ function frame(ts) {
     }
   }
   updateMeters(dt);
-  if (UI.panel === 'puls') drawRings();
+  const pan = UI.panel && panelOf(UI.panel);
+  if (pan && pan.frame) pan.frame(dt, ts);
   if (midiDot) midiDot.classList.toggle('on', ts - MIDI.flash < 140);
   if (UI.panel === 'dev' && ts - (VIS.devT || 0) > 400) { VIS.devT = ts; updDevLive(); }
   requestAnimationFrame(frame);
@@ -5465,14 +5467,17 @@ function restoreState() {
 
 /* ---------- panels ---------- */
 const sheet = $('#sheet'), sheetBody = $('#sheetBody'), sheetTitle = $('#sheetTitle');
+// build: the panel's content; optional open/close: called when it shows or hides; frame(dt, ts): every frame while open
 const PANELS = [
-  { key: 'klang', title: 'Klang', icon: ICON.klang },
-  { key: 'fx', title: 'Effekte', icon: ICON.fx },
-  { key: 'puls', title: 'Puls', icon: ICON.puls },
-  { key: 'rec', title: 'Aufnahme', icon: ICON.rec },
-  { key: 'presets', title: 'Presets', icon: ICON.presets },
-  { key: 'dev', title: 'Gerät', icon: ICON.dev },
+  { key: 'klang', title: 'Klang', icon: ICON.klang, build: buildKlang },
+  { key: 'fx', title: 'Effekte', icon: ICON.fx, build: buildFx },
+  { key: 'puls', title: 'Puls', icon: ICON.puls, build: buildPuls, frame: (dt, ts) => { drawRings(); if (typeof pulsMixFrame === 'function') pulsMixFrame(dt, ts); },
+    open: () => { if (typeof pulsMixOpen === 'function') pulsMixOpen(); }, close: () => { if (typeof pulsMixClose === 'function') pulsMixClose(); } },
+  { key: 'rec', title: 'Aufnahme', icon: ICON.rec, build: buildRec, open: renderTakes },
+  { key: 'presets', title: 'Presets', icon: ICON.presets, build: buildPresets },
+  { key: 'dev', title: 'Gerät', icon: ICON.dev, build: buildDev, open: updDevUI },
 ];
+/*@@MIXER-JS@@*/
 const panelEls = {};
 let userFileIn = null;
 const engSecs = {};
@@ -5550,6 +5555,7 @@ function buildPuls() {
     g.hidden = i !== UI.lane; return g;
   });
   box.append(section('Spuren', 'Impulse verteilt auf Schritte', h('div', { class: 'lanehead' }, ringCv, lanes), ...laneGrids));
+  if (typeof buildPulsMix === 'function') box.append(buildPulsMix());
   box.append(section('Bordun', 'Liegender Grundton unter allem', grid(ctl('bor.on'), ctl('bor.lvl'), ctl('bor.int'), ctl('bor.oct'), ctl('bor.wave'), ctl('bor.cut'), ctl('bor.breath'))));
   return box;
 }
@@ -6136,12 +6142,7 @@ function buildUI() {
     b.addEventListener('click', () => openPanel(p.key));
     tabs.append(b);
   }
-  panelEls.klang = buildKlang();
-  panelEls.fx = buildFx();
-  panelEls.puls = buildPuls();
-  panelEls.rec = buildRec();
-  panelEls.presets = buildPresets();
-  panelEls.dev = buildDev();
+  for (const p of PANELS) panelEls[p.key] = p.build();
   midiDot = $('#midiDot');
   for (const k in panelEls) { panelEls[k].hidden = true; sheetBody.append(panelEls[k]); }
   const q = $('#quick');
@@ -6158,22 +6159,28 @@ function buildUI() {
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && UI.panel) closePanel(); });
   refreshEngineUI(); updLaneTabs(); updPulsUI(); updRecUI(); updInactive();
 }
+const panelOf = (key) => PANELS.find((p) => p.key === key);
 function openPanel(key) {
   if (UI.panel === key) { closePanel(); return; }
+  const prev = UI.panel && panelOf(UI.panel);
+  if (prev && prev.close) prev.close();
   UI.panel = key;
   UI.opener = document.getElementById('tab-' + key);
   sheet.hidden = false;
+  sheet.dataset.panel = key;
   for (const k in panelEls) panelEls[k].hidden = k !== key;
-  sheetTitle.textContent = PANELS.find((p) => p.key === key).title.toLowerCase();
+  sheetTitle.textContent = panelOf(key).title.toLowerCase();
   for (const p of PANELS) $('#tab-' + p.key).setAttribute('aria-expanded', String(p.key === key));
   sheetBody.scrollTop = 0;
-  if (key === 'rec') renderTakes();
-  if (key === 'dev') updDevUI();
+  if (panelOf(key).open) panelOf(key).open();
 }
 function closePanel() {
   const hadFocus = sheet.contains(document.activeElement);
+  const prev = UI.panel && panelOf(UI.panel);
+  if (prev && prev.close) prev.close();
   UI.panel = null;
   sheet.hidden = true;
+  delete sheet.dataset.panel;
   for (const p of PANELS) $('#tab-' + p.key).setAttribute('aria-expanded', 'false');
   if (hadFocus && UI.opener) UI.opener.focus({ preventScroll: true });
 }
