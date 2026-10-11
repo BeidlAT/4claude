@@ -3733,23 +3733,7 @@ function updDevUI() {
         (CAL.running ? 'Myzel misst gerade, wie viel dieses Gerät schafft …' : CAL.unit ? 'Gemessen auf diesem Gerät: bis zu ' + nNeb + ' Nebel-Stimmen gleichzeitig.' : 'Die Stimmenzahl wird beim Klangstart auf diesem Gerät gemessen.') +
         ' Der Browser rechnet allen Klang auf einem Prozessorkern – Stufe 3 füllt ihn' + (MOBILE ? '; auf Handys kann es knacken.' : '.');
   updDevLive();
-  // latency
-  let lt;
-  if (!A.ctx) lt = 'Wird beim Klangstart gemessen.';
-  else {
-    const base = A.ctx.baseLatency || 0, out = A.ctx.outputLatency || 0, g = graphLatency();
-    lt = 'Gemessen: Puffer ' + msTxt(base) + (out ? ' + Ausgabegerät ' + msTxt(out) : '') + ' + Klangweg ' + msTxt(g) + ' ≈ ' + msTxt(base + out + g) + '.';
-    if (out > 0.06) lt += ' Das Ausgabegerät selbst ist langsam – Bluetooth-Kopfhörer verzögern oft um 100 bis 300 ms. Zum Spielen besser Kabel oder Lautsprecher.';
-  }
-  const mode = P['dev.lat'];
-  lt += mode === 'min' ? ' Minimal: kleinster Puffer, den das System erlaubt; die Verzerrung läuft ohne Überabtastung (minimal rauer).'
-    : mode === 'std' ? ' Standard: üblicher Puffer der Plattform, Verzerrung mit Überabtastung.'
-      : ' Sicher: größerer Puffer gegen Aussetzer bei hoher Last (Standard auf Android).';
-  if (IOS) lt += ' iPhone und iPad wählen den Puffer selbst.';
-  const pending = !!A.ctx && A.latMode !== mode;
-  if (pending) lt += ' Der neue Puffer gilt nach einem Neustart des Klangs.';
-  devEls.latInfo.textContent = lt;
-  devEls.latBtn.hidden = !pending;
+  updLatText();
   // MIDI
   const names = [...MIDI.ports.values()];
   const st = MIDI.state;
@@ -3761,8 +3745,29 @@ function updDevUI() {
           : MIDI_AUTO ? 'Beim Klangstart fragt der Browser einmal nach der Erlaubnis für MIDI-Geräte.' : 'Noch nicht verbunden. Tippe auf „MIDI-Keyboard verbinden“ und erlaube den Zugriff.';
   devEls.midiBtn.hidden = !(st === 'idle' && navigator.requestMIDIAccess);
 }
+// The browser reports these values; it opens the output when the sound starts, so after changing the audio driver
+// (for example its buffer size) a restart lets it measure again. Refreshed live while the panel is open.
+function updLatText() {
+  if (!devEls) return;
+  let lt;
+  if (!A.ctx) lt = 'Wird beim Klangstart gemessen.';
+  else {
+    const base = A.ctx.baseLatency || 0, out = A.ctx.outputLatency || 0, g = graphLatency();
+    lt = 'Vom Browser gemeldet: Puffer ' + msTxt(base) + (out ? ' + Ausgabegerät ' + msTxt(out) : '') + ' + Klangweg ' + msTxt(g) + ' ≈ ' + msTxt(base + out + g) + '.';
+    if (out > 0.04) lt += ' Das Ausgabegerät meldet viel Verzögerung – meist ein großer Puffer im Audiotreiber (in dessen Einstellungen verkleinern), Bluetooth (100 bis 300 ms) oder Lautsprecher am Monitor.';
+  }
+  const mode = P['dev.lat'];
+  lt += mode === 'min' ? ' Minimal: kleinster Puffer, den das System erlaubt; die Verzerrung läuft ohne Überabtastung (minimal rauer).'
+    : mode === 'std' ? ' Standard: üblicher Puffer der Plattform, Verzerrung mit Überabtastung.'
+      : ' Sicher: größerer Puffer gegen Aussetzer bei hoher Last (Standard auf Android).';
+  if (IOS) lt += ' iPhone und iPad wählen den Puffer selbst.';
+  if (A.ctx) lt += A.latMode !== mode ? ' Der neue Puffer gilt nach einem Neustart des Klangs.' : ' Nach Änderungen am Audiotreiber den Klang neu starten, dann misst der Browser neu.';
+  if (devEls.latInfo.textContent !== lt) devEls.latInfo.textContent = lt;
+  devEls.latBtn.hidden = !A.ctx;
+}
 function updDevLive() {
   if (!devEls) return;
+  updLatText();
   if (!A.ctx) { devEls.qLive.textContent = ''; return; }
   const load = voiceLoad();
   devEls.qLive.textContent = 'Jetzt: ' + A.voices.size + (A.voices.size === 1 ? ' Stimme klingt' : ' Stimmen klingen') + ' · ' + Math.round(100 * load / Math.max(1, VBUDGET)) + ' % der Grenze' +
