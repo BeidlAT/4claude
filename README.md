@@ -71,6 +71,33 @@ In Grundstellung klingt alles bitgenau wie ohne Mixer.
     - Auf iPhone und iPad haben Safari und alle iOS-Browser kein MIDI. Apps wie „Web MIDI Browser“ oder „Bluefy“ könnten es nachrüsten; das ist ungetestet.
     - In der claude.ai-Ansicht ist MIDI gesperrt.
 
+## Gestik (Bewegung)
+
+Das Handy wird Teil des Instruments: Finger, Tasten oder der Puls wählen die Töne, die Bewegung des Geräts formt sie. Einschalten unter „Gerät → Gestik einschalten“; die Erlaubnis wird in diesem Tipp angefragt. Gestik verändert nie das Preset: Alles läuft über eine eigene Modulationsschicht, ohne „Preset geändert“.
+
+- **Das Gerät „Gestik“** steht neben den Keyboards. Es hat 5 Achsen (Neigen ↔, Neigen ↕, Bebung, Drehen, Ladung) und 3 Ereignisse (Wenden, Ruhe, Schütteln), alle mit „Zuweisen“ auf jedes Ziel lernbar. Die Wasserwaage zeigt die Neigung: Doppeltipp setzt den Nullpunkt, Ziehen neigt ohne Sensor.
+- **Die Musik ist die Kupplung:** Gestik wirkt, solange ein Ton klingt (Finger, Taste oder Haltepedal). Der Nullpunkt ist die Haltung beim ersten Anschlag, Loslassen führt alles zurück. Festhalten friert die Form ein: ein Pad „Gestik festhalten“, auf Wunsch auch das Haltepedal. Wahlweise wirkt sie „Immer“ oder nur mit einer „Taste“.
+- **Sechs Funktionen:**
+  - **Anlehnen:** Vor- und Zurückneigen formt die Klangfarbe der gehaltenen Töne. Seitlich biegt es den neuesten Ton (bei einem Akkord den obersten) nach einer kleinen Ruhezone zur Nachbarstufe der Skala und rastet ab 80 % ein. Bebung ist ein Vibrato aus dem Handgelenk. Tragen gibt es auf Wunsch.
+  - **Ladung:** Schütteln lädt das Myzel auf (dichtere Körner, Regen, ein vollerer Puls, leierndes Echo). Danach entlädt es sich über 0,3 bis 30 s. Schwenken, also Kreisen wie mit einem Weinglas, lässt gehaltene Töne singen.
+  - **Schlafen:** Display nach unten friert den Klang ein (Freeze-Kadenz, Stille oder Szene B). Zurückdrehen weckt ihn. Nach einer halben Minute klingt der Schweif aus, und nach langem Schlaf wacht Myzel still auf. Liegt das Handy still auf dem Display, ruhen Berührungen; in der Hand, etwa im Liegen über dem Gesicht, weckt es ein Finger auf dem Display.
+  - **Fährte:** Bewegung wird im Takt mitgeschrieben. Ein Tipp macht die letzten 1, 2 oder 4 Takte zur Schleife, die mit jedem Durchgang verblasst. Sie nimmt auch jeden anderen stetigen Regler auf, deshalb nützt sie auch am Computer.
+  - **Sporenregen:** Gespielte Töne werden leuchtende Keime. Geneigte Sporen rollen darüber und spielen sie im Raster des Pulses, auf einem eigenen Mixer-Kanal „Regen“ (im Pult, sobald es regnen kann). Flach hingelegt wird es still; an einem Ständer zählt die Waagerechte, und eine von Hand gezogene Neigung bleibt stehen.
+  - **Funkstrecke:** sendet die Gestik als MIDI (14-Bit-NRPN auf Kanal 16), etwa per USB an einen Computer. Myzel erkennt sie dort als „Gestik (Handy)“. Ob ein Handy dafür einen MIDI-Ausgang bekommt, ist ungetestet.
+- **Rezepte:** Manche Presets bringen Gestik-Einstellungen mit. Sie wirken, solange Gestik an ist; eigene Zuweisungen gehen vor.
+- **Messen:** Rate, Gyroskop, Vorzeichen und die Verzögerung (Klopf-Messung mit dem Mikrofon). „Spur aufnehmen“ speichert 30 s Rohdaten für Fehlerberichte.
+- **Plattformen:**
+  - **Android-Handys:** alles, Haptik nur hier. Bebung, Drehen und Schwenken brauchen ein Gyroskop; fehlt es, sagt die Karte das.
+  - **iPhone und iPad:** Die Erlaubnis kommt im Tipp. Auf dem iPad ist Bebung zuerst aus (zu schwer fürs Handgelenk), der Sporenregen geht gut auf dem Schoß. Mit Gestik bekommen iPhone und iPad erstmals die Zuordnungen.
+  - **Computer:** meist ohne Sensor. Dort zieht man die Wasserwaage, nimmt Regler mit der Fährte auf oder holt ein Handy per Funkstrecke.
+  - **claude.ai-Ansicht:** Bewegung ist gesperrt. Wasserwaage, Sporenregen und Fährte gehen trotzdem.
+- **Ehrliche Grenzen:**
+  - Der Browser liefert Bewegung mit etwa 60 Hz und geschätzt 40 bis 100 ms Verzögerung. Deshalb formt, lädt und lenkt Gestik nur; sie wählt nie Töne und löst keine frei getimten Schläge aus.
+  - Der Bildschirm muss an bleiben. Myzel hält ihn wach, das kostet Akku.
+  - Starkes Neigen kann die Ansicht drehen. Dagegen helfen die Drehsperre des Geräts oder „Vollbild mit Drehsperre“ (Android).
+  - Systemgesten wie „Schütteln zum Widerrufen“ kann eine Web-App nicht abfangen.
+  - Die Schwellen passen sich dem Grundrauschen des Geräts an. Getestet ist alles mit simulierten Sensoren, auf echten Geräten noch kaum.
+
 ## Aufbau
 
 | Pfad | Inhalt |
