@@ -55,7 +55,21 @@ In Grundstellung klingt alles bitgenau wie ohne Mixer.
 
 - **Qualitätsstufen** (Tab „Gerät“): 1 · Leicht (Handys, wie bisher), 2 · Voll (mehr Stimmen gleichzeitig), 3 · Gewaltig (reichere Stimmen: sieben Oszillatoren im Nebel, Doppelsaiten, zwei Glocken pro Anschlag, mehr Teiltöne und Trommelmoden, dichtere Körner, Hall in echtem Stereo). Stufe 3 misst beim Start, wie viel das Gerät schafft, und füllt einen Prozessorkern – Browser rechnen allen Klang auf einem Echtzeit-Thread.
 - **Latenz:** Der Klangweg hat keine Verzögerung mehr. Der Summen-Kompressor ist aus einfachen Web-Audio-Bausteinen nachgebaut, ohne die 6 ms Vorlauf des eingebauten Kompressors. „Minimal“ verlangt den kleinsten Ausgabepuffer, oft rund 3 statt 10 ms, und spielt die Verzerrung ohne Überabtastung, die 2,7 bis 4 ms kosten würde. Das Panel zeigt die gemessene Latenz.
-- **MIDI-Keyboard** (Chrome/Edge auf Computer und Android, nicht Safari/iOS): anschließen und spielen; der Browser fragt am Computer beim ersten Start einmal nach der Erlaubnis. Tasten: Skala (rastet ein), weiße Tasten (Spalte für Spalte) oder chromatisch. Anschlagdynamik, Modulationsrad und Druck (Klangfarbe), Tonhöhenrad, Haltepedal, Hot-Plug.
+- **Keyboard & Controller** (Tab „Gerät“; Chrome, Edge oder Samsung Internet auf Computer und Android):
+  - **USB:** einstecken und spielen. Der Browser fragt einmal nach der Erlaubnis; auf Handys startet „Mit Keyboard starten“ Klang und MIDI in einem Tipp.
+  - **Bluetooth:** „Bluetooth-Keyboard koppeln“ verbindet Bluetooth-MIDI-Keyboards direkt aus dem Browser, ohne Zusatz-App. Das ist nötig, weil Android-Chrome in den Einstellungen gekoppelte Keyboards nicht sieht. Nach einem Neuladen genügt „Wieder verbinden“.
+  - **Geräteprofile:** KORG nanoKEY Studio (Regler, X-Y-Pad als Finger auf der Spielfläche, Touch Scale, Pads als Töne oder Auslöser), KORG microKEY Air (Joystick, Sustain), nanoKONTROL2 (steuert den Mixer), nanoPAD2, Akai MPK mini, Arturia MiniLab 3/KeyStep, Novation Launchkey Mini und weitere. Dazu die üblichen General-MIDI-Regler.
+  - **Zuweisen:** MIDI-Lernen für jeden Regler in der App, auch im Mixer. Dazu ein MIDI-Monitor.
+  - **Weitere Funktionen:**
+    - MPE (Seaboard, LUMI, LinnStrument …);
+    - Anschlagkurven;
+    - Programmwechsel lädt Presets;
+    - Start/Stop und MIDI-Clock vom Gerät (der Puls folgt);
+    - Puls-Tempo an ein Keyboard senden (Arpeggiator folgt, nur über USB);
+    - mehrere Geräte gleichzeitig.
+  - **Plattformen:**
+    - Auf iPhone und iPad haben Safari und alle iOS-Browser kein MIDI. Apps wie „Web MIDI Browser“ oder „Bluefy“ könnten es nachrüsten; das ist ungetestet.
+    - In der claude.ai-Ansicht ist MIDI gesperrt.
 
 ## Aufbau
 
