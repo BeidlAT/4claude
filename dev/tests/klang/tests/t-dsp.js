@@ -9,8 +9,8 @@ const note = (name, f, y, o = {}) => R({ name, po: Object.assign({ rich: !!o.ric
   msgs: (o.on === false ? [] : [[o.at || 0, { on: o.at || 0, f, y, vel: o.vel == null ? 0.75 : o.vel, burst: o.burst, gate: o.gate, seed: o.seed || 1234 }]]).concat(o.off != null ? [[o.off, { off: o.off }]] : []).concat(o.msgs || []) });
 
 // -- the contract
-L.ok(['myzel-blow', 'myzel-scan', 'myzel-null', 'myzel-tap'].every((k) => D.procs[k]) || ['myzel-blow', 'myzel-scan', 'myzel-null'].every((k) => D.procs[k]), 'module registers myzel-blow, myzel-scan, myzel-null: ' + Object.keys(D.procs).join(', '));
-for (const name of ['myzel-blow', 'myzel-scan']) {
+L.ok(['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-null'].every((k) => D.procs[k]), 'module registers myzel-blow, myzel-scan, myzel-bow, myzel-null: ' + Object.keys(D.procs).join(', '));
+for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow']) {
   const r = note(name, 220, 0.6, { at: 0.3, dur: 0.6 });
   const pre = L.rms(r.L, 0, Math.floor(0.3 * SR) - 1), post = L.rms(r.L, Math.floor(0.33 * SR), Math.floor(0.6 * SR));
   L.ok(pre === 0 && post > 1e-3, `${name}: a note posted ahead waits for its time (silent before 0.3 s, ${L.db(post).toFixed(1)} dB after)`);
@@ -26,19 +26,22 @@ for (const name of ['myzel-blow', 'myzel-scan']) {
 // -- every knob at its extremes, pitches 16 Hz … 8 kHz, bursts and held, both levels: bounded, finite, ends
 {
   let x = 99; const rnd = () => { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; return (x >>> 0) / 4294967296; };
-  for (const name of ['myzel-blow', 'myzel-scan']) {
+  for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow']) {
     let worst = 0, bad = 0, notDone = 0;
-    const keys = name === 'myzel-blow' ? ['atem', 'mund', 'blatt', 'luft', 'zunge'] : ['masse', 'feder', 'mitte', 'daempfung', 'hammer', 'holz'];
+    const keys = name === 'myzel-blow' ? ['atem', 'mund', 'blatt', 'luft', 'zunge'] : name === 'myzel-bow' ? ['druck', 'bogen', 'daempfung', 'schwebung', 'harz'] : ['masse', 'feder', 'mitte', 'daempfung', 'hammer', 'holz'];
     for (let i = 0; i < 40; i++) {
       const prm = {}; for (const k of keys) prm[k] = i < 4 ? [0, 1, 0, 1][i] * (k.length % 2 ? 1 : 1) : rnd() < 0.3 ? Math.round(rnd()) : rnd();
+      if (name === 'myzel-bow') prm.koerper = ['glas', 'schale', 'stab', 'zunge', 'teich'][i % 5];
       const f = [16, 30, 55, 220, 1000, 3000, 8000][i % 7] * (0.9 + 0.2 * rnd()), y = i % 5 === 0 ? 1 : i % 5 === 1 ? 0 : rnd(), rich = i % 2 === 1, burst = i % 3 === 0;
-      const r = note(name, f, y, { prm, rich, burst, gate: burst ? 0.02 + rnd() : 0, off: burst ? null : 1.0, dur: 4, vel: rnd(), msgs: name === 'myzel-scan' ? [[0.5, { hammer: 1 }], [0.55, { hammer: 1 }], [0.6, { hammer: 1 }]] : [] });
+      // (a bow's modes ring as Dämpfung and the body say – up to 16 s: it must end within two of its rings)
+      const ring = name === 'myzel-bow' ? (0.4 + 6 * (1 - prm.daempfung) * (1 - prm.daempfung)) * { glas: 0.6, schale: 2.5, stab: 1.6, zunge: 0.35, teich: 2 }[prm.koerper] : 0;
+      const r = note(name, f, y, { prm, rich, burst, gate: burst ? 0.02 + rnd() : 0, off: burst ? null : 1.0, dur: Math.max(4, 2 + 2 * ring), vel: rnd(), msgs: name === 'myzel-scan' ? [[0.5, { hammer: 1 }], [0.55, { hammer: 1 }], [0.6, { hammer: 1 }]] : [] });
       const pk = Math.max(L.peak(r.L), r.R ? L.peak(r.R) : 0);
       if (L.nanCount(r.L) || (r.R && L.nanCount(r.R))) bad++;
       worst = Math.max(worst, pk); if (r.alive) notDone++;
     }
     L.ok(!bad && worst <= 1.2, `${name}: 40 random knob sets (extremes included, 16 Hz–8 kHz, L1/L3, held/burst, shakes): no NaN, peak ${worst.toFixed(3)} (≤ 1.2)`);
-    L.ok(notDone === 0, `${name}: every one of them ends within 3 s after its end (${notDone} still running)`);
+    L.ok(notDone === 0, `${name}: every one of them ends within ${name === 'myzel-bow' ? 'two rings' : '3 s'} after its end (${notDone} still running)`);
   }
 }
 // -- reed: tuning holds across Mund (loss) and Blatt (reed opening), 110–1760 Hz
@@ -61,5 +64,19 @@ for (const name of ['myzel-blow', 'myzel-scan']) {
   }
   L.ok(worstA <= -40, `ring: update artefacts ≤ −40 dB at every setting (worst ${worstA.toFixed(1)} dB)`);
   L.ok(worstP <= 1.5, `ring: pitch at every setting within 1.5 ct (worst ${worstP.toFixed(2)} ct)`);
+}
+// -- Harz: a body changed while a note sounds rebuilds its bands without a blow-up; after underruns (lite) at most
+// three bands; a glide of an octave in 50 ms stays bounded and lands in tune
+{
+  const sw = R({ name: 'myzel-bow', po: { seed: 1, prm: { koerper: 'glas' } }, dur: 2, params: { freq: 330, hoehe: 0.6 }, msgs: [[0, { on: 0, f: 330, y: 0.6, vel: 0.8 }], [0.6, { set: { koerper: 'teich' } }], [1.1, { set: { koerper: 'zunge' } }]] });
+  L.ok(!L.nanCount(sw.L) && L.peak(sw.L) < 1 && L.rms(sw.L, 1.6 * SR, 2 * SR) > 1e-3, `bow: the body changed twice under a sounding note – bounded (peak ${L.peak(sw.L).toFixed(2)}) and sounding on`);
+  // (after underruns the processor computes three bands from the next block on: the others' filters stay at rest)
+  const lt = R({ name: 'myzel-bow', po: { rich: true, lite: 1, seed: 1, prm: { koerper: 'glas' } }, ch: 2, dur: 0.5, params: { freq: 220, hoehe: 0.6 }, msgs: [[0, { on: 0, f: 220, y: 0.6, vel: 0.8 }]] });
+  const fu = R({ name: 'myzel-bow', po: { rich: true, seed: 1, prm: { koerper: 'glas' } }, ch: 2, dur: 0.5, params: { freq: 220, hoehe: 0.6 }, msgs: [[0, { on: 0, f: 220, y: 0.6, vel: 0.8 }]] });
+  const busy = (nd) => [...nd.z1].filter((x) => x !== 0).length;
+  L.ok(fu.node.J === 10 && busy(fu.node) === 10 && busy(lt.node) === 3 && !L.nanCount(lt.L), `bow: level 3 rings ${busy(fu.node)} bands (Glas: five pairs), after underruns ${busy(lt.node)}`);
+  const gl = R({ name: 'myzel-bow', po: { seed: 1, prm: { koerper: 'stab', schwebung: 0 } }, dur: 2.2, params: (t) => ({ freq: t < 1 ? 220 : 220 * Math.pow(2, Math.min(1, (t - 1) / 0.05)), hoehe: 0.55 }), msgs: [[0, { on: 0, f: 220, y: 0.55, vel: 0.8 }]] });
+  const c = L.cents(L.combPitch(gl.L, SR, 440, 1.6, 16384, 1), 440);
+  L.ok(!L.nanCount(gl.L) && L.peak(gl.L) < 1 && Math.abs(c) <= 3, `bow: an octave's glide in 50 ms stays bounded and lands at ${c.toFixed(2)} ct`);
 }
 process.exit(L.summary() ? 1 : 0);

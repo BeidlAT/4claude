@@ -173,6 +173,7 @@ out = TANH(yo*gain + harz*F*fr)
 - **Höhe (Gestik)**: forward tilt = more pressure (towards roughness); Bebung = vibrato on glass. **Puls**: strokes with seed, good at ≥ 1/8 at 120 bpm; faster lanes become plucked modes (intended). regen 0.
 - **Presets**: Glaswiese (§5).
 - **Acceptance**: f0 |err| ≤ 5 ct at 110/220/440/880/1568 Hz for all bodies after correction; t90 ≤ 0.8 s held (p 0.45); mode 1 dominant (mode 2 ≤ −20 dB) at p 0.2–0.7; h2/h3 of the output rise monotonically with y (F path); burst 112 ms ≥ −20 dB rel. held RMS; after release ring T60 within ±30 % of the Dämpfung mapping; no NaN; peak ≤ −1 dBFS; cost ≤ 1.2 / 2.0; L3 within ±1.5 dB; dice(): no silent corner (y 0 → flautando audible ≥ −35 dB).
+- **As built (stage 3):** the banded waveguides and the bow table above, with every acceptance row met and the check's fixes; the measured changes of letter (in-band onset seed, the band's group delay in the loss, the bow's contact fixed with the pattern turning past the listeners, measured bowl ratios, the friction path's level and colour, a rough contact, the Teich's scream and water, no second tongue) – see `dev/HANDOFF.md` „Notes from stage 3“.
 
 ### 3.2 hlm Halm – `myzel-blow` (reed, flute, flame)
 
