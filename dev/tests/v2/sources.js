@@ -9,7 +9,8 @@ const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) process
   await page.goto('http://127.0.0.1:8790/new-inst/index.html');
   await page.waitForFunction(() => !!window.__M);
   await page.click('#btnStart'); await page.waitForTimeout(500);
-  await page.click('#tab-klang'); await page.click('#p-v-eng [data-val="kor"]'); await page.waitForTimeout(200);
+  const pickEng = async (k) => { await page.click('#p-v-eng .kq-name'); await page.click('.kq-fams .chip[data-fam="alle"]'); await page.click(`.kq-tile[data-k="${k}"] .kq-pick`); await page.click('.kq-done'); };   // (stage 1b: the chips became the row + library)
+  await page.click('#tab-klang'); await pickEng('kor'); await page.waitForTimeout(200);
   // own file via the picker
   const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('#p-kor-src [data-val="datei"]')]);
   await chooser.setFiles('/tmp/claude-0/-home-user-4claude/c8d0b4bd-0d4c-545f-b176-6770c99f7009/scratchpad/v2/src2/ton330.wav');

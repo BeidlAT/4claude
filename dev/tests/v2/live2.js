@@ -11,7 +11,8 @@ const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) process
   await page.click('#btnStart'); await page.waitForTimeout(1500);
   let r = await page.evaluate(() => ({ tex: Object.keys(window.__M.A.tex).sort(), ir: !!window.__M.A.revActive }));
   ok(r.ir && r.tex.join() === 'glas', 'start renders the reverb and only the chosen texture: ' + r.tex.join());
-  await page.click('#tab-klang'); await page.click('#p-v-eng [data-val="kor"]');
+  const pickEng = async (k) => { await page.click('#p-v-eng .kq-name'); await page.click('.kq-fams .chip[data-fam="alle"]'); await page.click(`.kq-tile[data-k="${k}"] .kq-pick`); await page.click('.kq-done'); };   // (stage 1b: the chips became the row + library)
+  await page.click('#tab-klang'); await pickEng('kor');
   await page.click('#p-kor-src [data-val="voegel"]'); await page.waitForTimeout(1500);
   r = await page.evaluate(() => Object.keys(window.__M.A.tex).sort().join());
   ok(/voegel/.test(r), 'a chosen texture renders on demand: ' + r);
