@@ -4,7 +4,7 @@ name: Myzel veröffentlichen
 
 on:
   push:
-    branches: [ccr-c7c5d0a6-cus3ip, main]
+    branches: [ccr-c7c5d0a6-cus3ip, ccr-d21a93b2-oncy3v, main]   # (each session's branch: add it here)
     paths: ['myzel/**', '.github/workflows/pages.yml']
   workflow_dispatch:
 

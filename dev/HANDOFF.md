@@ -24,7 +24,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Claude-Session: <this session's URL>
 ```
 
-**App:** `myzel/index.html`, a single file of about 1.3 MB (German UI, vanilla JS + Web Audio). Each push deploys GitHub Pages (https://beidlat.github.io/4claude/).
+**App:** `myzel/index.html`, a single file of about 1.4 MB (German UI, vanilla JS + Web Audio). Each push deploys GitHub Pages (https://beidlat.github.io/4claude/) – only from the branches listed in `.github/workflows/pages.yml`: add the session's branch there in the first commit.
 
 **claude.ai version:** the artifact https://claude.ai/artifact/HNZYLEaUvtCfkyYWi3SuDr, private, capability `downloads` (republished after every stage).
 - Republish it with the Artifact tool: `url` + `file_path` = `myzel/index.html`.
