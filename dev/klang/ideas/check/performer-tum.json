@@ -1,0 +1,53 @@
+{
+  "key": "tum",
+  "name": "Tümpel",
+  "lens": "performer",
+  "novel": "rare",
+  "prior": "Waterphones are plentiful as sample instruments: Soniccouture G80 Waterphone (Kontakt Player, chromatically tuned playable tines, bowed articulations; VS: soniccouture.com, synthtopia.com), Soundyan Interstellar Waterphone (three sampled waterphones, VST3/AU/standalone, a 'Virtual Bow' feature, 49 USD; VS: kvraudio.com, adsrsounds.com), maker site waterphone.pl (VS). Physical/modal models of water-filled metal exist in research: Chowdhury et al. DAFx 2020 modal water bottles (JUCE VST/AU, water level as a parameter; VS: github jatinchowdhury18/modal-waterbottles, dafx2020 paper 24); Droplets water-drop synth (VS: gumroad). Tilt as a synth controller exists generically: FYOUMBOX (Android accelerometer synth, prototype; VS: itch.io), WaveMaker (phone accelerometer/gyro shaping synth sounds; VS: producthunt), Air Violin (motion; VS: mwm.ai). No waterphone acoustics or physical-model paper was found (extended search: only modal-synthesis frameworks, Modalys, cymbals; VS: dafx.de), so the cantilever ratios remain theory (Euler-Bernoulli, A via synthesis.md §3.7). In-app: Schale = harmonic bowl partials with beating pairs (V code-map §4); synthesis.md §3.9/§5 lists 'Waterphone mit Neigungs-Wasser' as unoccupied (V). Unoccupied after 3 searches (1 extended): a synthesized waterphone whose water is the phone's tilt and whose bow/mallet is chosen by touch duration.",
+  "feasible": "native",
+  "costEst": 0.9,
+  "cost_detail": {
+    "L1": "4 OSC+Gain 0.36 + noise source 0.03 + scratch bandpass + Gain 0.09 + bowl peaking BQ 0.06 + LP 6 kHz 0.06 + mallet click path + 4 A.uni param connections (~ free) + the shared water ConstantSource->Gain (singleton, once) ~ 0.65-0.8 (V webaudio.md §4: 0.03 per node, BQ 0.06) -> 0.9, the class of Schale 0.9 (V APP 2081); the idea's 1.0 is safe",
+    "L3": "7 OSC, L/R pans, second bowl resonance ~ 1.6-1.8 (Schale L3 2.0, Gong 2.8, V APP 2082)",
+    "shared": "A.tumWater integrated in tick() (V APP 6032-6041); Formen target 'tum' as a js:1 target like trp (V APP 9458, modVal 9497) fed by the tilt derivative - MOD values are smoothed, differencing per tick works (A); without Gestik A.driftBuf (8-s random walk, V APP 2818)",
+    "bow": "a true bow needs the banded-waveguide processor (V synthesis.md §2.10: worklet ~ 1-2 units, inventor hrz) - not in this native design",
+    "phone": "x1.0-1.5 (A); 0.9 per voice = 15 voices on the mobile level-1 budget (V APP 2083)"
+  },
+  "failure_modes": [
+    "Pseudo-bow = sine swells: a bowed rod's stick-slip puts a harmonic series on the rod's mode (what makes a bowed waterphone scream); sines fading in with flutter are Schale with a slow attack plus a noise band - the swell and scratch carry the illusion at low Hoehe, 'oben schreien alle Staebe' needs harmonics (A; STK BandedWG bows exactly this, V synthesis.md §2.10).",
+    "Cantilever ratios 1 : 6.27 : 17.55 on rods whose f0 is the played note put the 'partials' 2.6 and 4.1 octaves up (330 Hz -> 2.07 and 5.8 kHz) = separate high notes, not timbre; real rods are short (f0 ~ 0.5-3 kHz) and the bowl supplies the dense metal. One peaking filter at 180*(1+0.3x) Hz + LP 6 kHz is a weak bowl -> every note a sparse 3-4-sine chord; partials above 0.45*SR must be dropped for high notes (V code-map §11).",
+    "Polyphony mush: 3 rods per finger at 'schief' (+-40 ct) = a sour triad per note; three fingers = 9-12 detuned sines through one peak = cluster; 'rein' makes every note a scale triad, the engine dictates the harmony. Two rods + one partial is the honest default (the real instrument answers a strike with 1-3 rods).",
+    "Water as one global detune of all rods (+-60*wasser ct) plus the bowl peak: on the instrument the bowl's resonances move while the rods keep pitch (a wah/glissando of the body); bending the whole chord reads as chorus/pitch-bend of the mix and, with Bebung on top, seasick - good horror, but the bowl should move more (+-1 octave of the peaking frequency) and the rods less (+-15-25 ct).",
+    "Tipp/Halten at 150 ms works for fingers (mallet at touch, bow only if the finger stays) but Puls gates decide it: at 120 BPM eighths (gate 225 ms) every step is a mallet, quarters (450 ms) give a 0.45-s stroke - the 'gestrichene Akkordwolke' needs steps >= 500 ms; and hit() wraps a sustain engine in burstEnv(att, gate 0.22, rel) (V APP 5080-5085, 3517-3524) -> rel must be the Nachklang (3 s) or the mallet ring is cut at gate + rel/5.",
+    "Shared water needs a drive: tilt *change* via a new Formen target; without Gestik only the quiet drift - on desktop and MIDI the water never sloshes unless strikes also slosh it (vel -> impulse), which the spec lacks.",
+    "Cost ~ 0.9 per voice is fine for fingers and four lanes, but Sporenregen with Tuempel (hit -> mallet only) costs 0.9 per drop versus Tropfen 0.7 - RG_VMAX fills fast (V code-map §7).",
+    "Identity against Schale in a mix: Schale is the harmonic bowl, Tuempel the inharmonic rods plus water; without harmonics on the bow and a denser bowl the difference is 'Schale mit Vibrato'."
+  ],
+  "fixes": [
+    "rods as a cached PeriodicWave with 4-6 harmonics (A.waves.tumRod) through a per-voice lowpass whose cutoff is the bow pressure (Hoehe): mallet = closed (sine-like), bow = opening -> the scream for free, no extra oscillators",
+    "rod f0 one to two octaves above the note for the 'partials' (or short-rod ratios 1 : 2.76 : 5.4 like a free bar), bowl as a short IR (ConvolverNode <= 100 ms via genIR, V webaudio.md §7) or two peaking filters; drop partials > 0.45*SR",
+    "default 2 rods; +-3 ct random per rod; water: bowl +-1 octave, rods +-20 ct; strikes slosh the water (vel -> impulse into A.tumWater)",
+    "Puls: rel = nachklang in burstEnv; bow stroke when gate >= 0.3 s reaching 70 % by gate end",
+    "later: the inventor-hrz banded-waveguide processor as the L3 bow"
+  ],
+  "verdict": "Selten: das Waterphone gibt es reichlich als Sample-Instrument (Soniccouture G80 mit gestrichenen Artikulationen, Soundyan Interstellar Waterphone mit „Virtual Bow“, 49 $), modale Modelle wassergefüllten Metalls nur in der Forschung (Chowdhury DAFx 2020, Wasserflaschen), Neigung als Synth-Controller generisch (FYOUMBOX, WaveMaker) – unbesetzt ist die Verbindung: synthetisierte Stäbe, deren Wasser die Handy-Neigung ist und deren Bogen die Haltedauer wählt; ein Akustik-Paper zum Waterphone fand sich nicht, die Kragbalken-Verhältnisse bleiben Theorie. Nativ und bezahlbar (≈ 0,9 wie Schale, Stufe 3 ≈ 1,8), Tick, Formen-Ziel und driftBuf existieren, nur die Neigungs-Ableitung und das Singleton-Wasser sind neu. Der Pseudo-Bogen aus Sinus-Schwellern ist die Schwachstelle: ein gestrichener Stab trägt eine Obertonreihe (Stick-Slip), drei Sinus mit Flattern und Kratzband sind Schale mit langsamem Einschwingen, die Kragbalken-Teiltöne 6,27 und 17,55 liegen 2,6 und 4,1 Oktaven über dem Ton und wirken als eigene Noten, die eine Peaking-Schale bei 180 Hz ist dünn, und drei schiefe Stäbe je Finger werden im Akkord zum Cluster – mit Obertonwellen je Stab hinter einem Tiefpass, den die Höhe öffnet (Schrei gratis), kürzeren Stäben oder einer Körper-IR, zwei Stäben als Vorgabe und Wasser, das vor allem die Schale (±1 Oktave) und weniger die Stäbe (±20 ct) bewegt, wird daraus das Gestik-Aushängeschild. Im Puls entscheidet das Gate: Achtel bei 120 BPM sind immer Schlägel, erst Schritte ≥ 0,5 s streichen, und burstEnv braucht rel = Nachklang, sonst endet jeder Klirrschlag nach 0,22 s.",
+  "sources": [
+    "https://www.soniccouture.com/en/products/g80-waterphone/",
+    "https://www.synthtopia.com/?p=139936",
+    "https://www.kvraudio.com/product/interstellar-waterphone-by-soundyan/details",
+    "https://www.adsrsounds.com/product/software/soundyan-interstellar-waterphone-sound-texture-virtual-instrument/",
+    "https://github.com/jatinchowdhury18/modal-waterbottles",
+    "https://dafx2020.mdw.ac.at/proceedings/papers/DAFx2020_paper_24.pdf",
+    "https://aquanode.gumroad.com/l/dropletswatervst",
+    "https://fyoum.itch.io/fyoumbox-accelerometer-synth",
+    "https://www.producthunt.com/products/wavemaker/makers",
+    "https://mwm.ai/apps/airviolin/6757504318",
+    "https://waterphone.pl/waterphone-instrument/",
+    "ideas/performer.md §0 §2 §13 (V)",
+    "research/synthesis.md §2.9 §2.10 §3.7 §3.9 §5 (V)",
+    "research/webaudio.md §4 §7 (V)",
+    "research/code-map.md §4 §6 §7 §11 (V)",
+    "APP: VCOST 2081-2082, QP 2083, driftBuf 2818, A.uni 2840, burstEnv 3517-3524, hit 5080-5085, tick 6032-6041, MODT 9458, modVal 9497 (V)"
+  ],
+  "marks": "V = source read in this session, VS = WebSearch result summary (page itself not read), M = measured (sim/perf_bio2_sim.py -> sim/perf_bio2_sim.out), APP = app code line in /home/user/4claude/myzel/index.html, A = inference"
+}

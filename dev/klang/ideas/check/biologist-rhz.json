@@ -1,0 +1,55 @@
+{
+  "key": "rhz",
+  "name": "Rhizom",
+  "lens": "biologist",
+  "novel": "rare",
+  "prior": "Spiking networks as sound sources exist: sonicLAB SSNN 'Spiking and Sounding Neural Network' (960 neurons in 32 layers driving 8 engines; the NNnotes plugin turns spikes into MIDI notes; VS: sonicfield.org). Propagation/chain-reaction sequencers are a whole app genre: Grid Music (pulses travel along grid connections and trigger notes; VS: cdm.link), synthPond by Zach Gage (hard-edged nodes release waves when hit by waves = chain reactions; VS: creativeapplications.net), NodeBeat (octave nodes pulse to note nodes in proximity; VS), Nodal (node/edge network traversed by players; VS: nodalmusic.com), Senode graph sequencer (VS: apps.apple.com), Otomata by Batuhan Bozkurt 2011 (cellular automaton, cells hitting walls play notes; VS: 404techsupport). Eurorack 'neuron' modules are threshold/Boolean (ARC Artificial Neural Network; VS: synthtopia, matrixsynth), not avalanche nets. Neuronal avalanches / critical branching (Beggs & Plenz 2003, size exponent -3/2, branching parameter ~1; VS: jneurosci.org) and sandpile/SOC (VS: arxiv 1903.05129, PMC10062440) appear only as neuroscience; no instrument, sequencer or sonification built on them was found (2 standard + 1 extended search). In-app: Tropfen already answers a hit with up to 10 in-key droplets over the next second (V APP 4583-4598), i.e. the gesture 'hit -> scattered scale pings' exists; Sporenregen rains without propagation (V). Unoccupied: an avalanche-and-exhaustion network over the scale degrees, shared by fingers and lanes, as a playable percussion engine.",
+  "feasible": "worklet",
+  "costEst": 0.65,
+  "cost_detail": {
+    "L1_as_specified": "worklet node 0.06 + detune k-rate param 0.03 + 17 LIF states per block (negligible) + 8 pings x 2 partials (Holz = 1 + 1.5 means two rotations per ping) = 16 complex rotations ~ 0.55 (V webaudio.md §4: 16-resonator bank 0.61 incl. node) -> ~ 0.65; the idea's 0.55 counts one partial per ping",
+    "ping_pool": "[M] a full sweep at Weg 40 ms (two fronts) makes 50 pings/s; with Glimmen tau 0.12 s a ping stays above -40 dB for 0.55 s (-60 dB: 0.83 s) -> 28 (41) concurrent pings versus a pool of 8 -> pool 16 with active-only processing: average load ~ 0.3 (4-7 pings per hit), cap ~ 0.65-0.7",
+    "L3": "25 nodes, 2 partials, stereo by pitch, pool 24 ~ 1.0-1.1",
+    "voice_life": "struck engine: v.released = true at once; the voice must finish from a 'done' port message (pings < -60 dB and no charge in transit), not at a fixed 2.5 s - otherwise 8 hits/s x 2.5 s x 0.65 ~ 13 units = the whole mobile level-1 budget (V APP 2083: 14)",
+    "architecture_alternative": "the net is an event process with 20-80 ms steps and needs no sample accuracy: run it as one JS object in tick() (event queue with exact times, analytic leak) and render pings in a per-voice worklet ping pool or as native OSC+Gain pairs scheduled ahead (Tropfen pattern, V APP 4546-4560; 0.09 per ping, cap 12 -> worst 1.1, average 0.3-0.5). This settles ownership (which voice renders a node two voices cover), scale changes, N.free and panic() on the main thread, and the native variant works without audioWorklet",
+    "phone": "x1.0-1.5 (A); shared module-scope NET works in one AudioWorkletGlobalScope (V webaudio.md §3)"
+  },
+  "failure_modes": [
+    "[M] The LIF chain as specified does not avalanche at its defaults: threshold 1, w = Reiz*(0.5+y) = 0.5 at y 0.5, Streuung 0.3 -> the largest packet is 0.65 and the strike overflow vel*0.5 adds 0.35 at vel 0.7: a neighbour never reaches 1 (300 seeds: cascade size 1 in 100 % at vel <= 0.7; vel 1.0: size 2 in 76 %). At y = 1 (w 0.75) mean size 4.8-6.8, whole net 3-6 %; at Reiz 1.0 (w = 1) it runs away (162 firings in 3 s, a perpetual wave). 'sigma = 2w' is a branching-process formula; a deterministic threshold makes a switch (silent below w ~ 0.75, runaway at w >= 1), not a ride through criticality.",
+    "[M] Probabilistic transmission (each edge delivers a full charge with probability w, w/3 for i+-2) produces exactly the promised behaviour: mean size 2.8 (y 0) -> 6.1 (y 0.5) -> 26 (y 1, with re-firing after the refractory time), durations 0.06 -> 0.16 -> 0.74 s; at y 0.5: 9 % single, 28 % 2-3, 40 % 4-8, 19 % 9-16, 4 % whole net ('mal ein Nachbar, mal die ganze Wiese'). But a 1-D chain has no critical point: sizes are geometric (two fronts with a per-step survival), Hoehe is a smooth run-length slope, not a phase transition - musically better than a switch, scientifically not 'Kritikalitaet'.",
+    "[M] Long-range edges (+-4 = fifth, +-7 = octave at weight 0.5) make the activity self-sustaining (mean 45-122 firings, 59-86 % hit the 2.5-s cap at y >= 0.5) -> a Tonnetz topology needs weights <= 0.2 and the hard caps on firings per cascade.",
+    "Audible identity: the cascade walks adjacent scale degrees at 12-50 notes/s = a fast run or 'ripple' up and down from the struck note; it differs from Tropfen's random in-key rain only by contiguity, the wood/metal ping and exhaustion. In Puls at 8 hits/s each step grows a 4-7-note sputter ([M] 4.2-6.8 firings per strike) -> a lane becomes continuous marimba rain unless lanes play at low Hoehe (seqTick passes 'bright' as y, V APP 5980) or hits with short gates scale Reiz down.",
+    "[M] Exhaustion at Erholung 0.3 s is barely audible: with strikes every 125 ms P(size >= 3) is still 0.77 versus 0.86 at 1-s gaps; the 'breathing net' needs Erholung 0.6-1 s (and then dense Puls really does exhaust it, which the struck node's guaranteed ping must cover).",
+    "Ownership in a shared net: two voices covering node i both read c_i >= 1 in the same block; sequential processors mean the first one fires and the second's packets in transit die with its voice. Packets must live in the shared scope and carry an owner, so the lane or finger that charged a node renders its ping on its own bus/strip (mixer per lane, V code-map §6).",
+    "[M] Ping pool 8 versus 28-41 concurrent pings in a full sweep -> stealing inside the pool during the engine's signature event; two partials per ping doubles the rotations the idea did not count.",
+    "Held note = nothing: struck engines get no setY after the hit (V code-map §6 triggerPerc); Hoehe and Gestik tilt only set the field's excitability for the next tap - the player cannot steer a running avalanche.",
+    "Scale coupling: absolute scale indices from N.notes (V APP 2056) must be re-derived on every scale change and the shared arrays cleared in panic() and Schlafen; N.free falls back to a voice-local net (V biologist.md §12)."
+  ],
+  "fixes": [
+    "transmission probabilistic (p = w, full-charge packets), leak kept as memory; caps: <= 40 firings and <= 2.5 s per cascade, w clamped <= 0.8; Erholung default 0.6 s, Reiz 0.5",
+    "net as a JS event process in tick() with exact event times; pings in a per-voice worklet pool (16, active-only) or native OSC pairs with a cap of 12 (works without a worklet); packets carry the owner voice",
+    "'done' message -> v.finish(now + 0.05); lanes use bright as y; short gates scale the overflow",
+    "optional Tonnetz edges (fifth, octave) at weight <= 0.2 for real branching and heavier tails",
+    "describe it as 'Lawinen durch die Tonstufen', not criticality; draw the running front in the field (visPush) so the exhaustion is seen as well as heard"
+  ],
+  "verdict": "Selten, nicht neu: spikende Netze als Klangquelle gibt es (sonicLAB SSNN, NNnotes macht aus Spikes Noten), Ausbreitungs-Sequencer sind ein ganzes App-Genre (Grid Music, synthPond-Kettenreaktionen, NodeBeat, Nodal, Senode, Otomata), Lawinen und Kritikalität nur als Hirnforschung (Beggs & Plenz 2003) – unbesetzt ist das Lawinennetz über den Skalenstufen mit Erschöpfung, das Finger und Spuren teilen. Die Mechanik, wie spezifiziert, spielt aber nicht: ein Schwellen-LIF mit w = 0,5 lawint bei vel ≤ 0,7 nie (300 Läufe: immer Größe 1), bei y = 1 mittlere Größe 5–7, bei Reiz 1,0 läuft es durch (162 Feuerungen in 3 s) – „σ = 2w“ ist eine Verzweigungsformel, die Schwelle macht daraus einen Schalter; mit probabilistischer Weitergabe (Kante feuert mit p = w) entsteht genau das Versprochene (mittlere Größe 2,8 → 6 → 26 über y, bei y 0,5: 9 % Einzelschlag, 40 % 4–8 Knoten, 4 % ganze Wiese), nur geometrisch verteilt statt 1/f, weil eine Kette keinen kritischen Punkt hat – als Instrument besser (Rampe statt Schalter). Worklet-machbar, ≈ 0,65 (zwei Teiltöne je Ping; der Pool muss 16 statt 8 fassen, ein Komplettdurchlauf hat 28–41 Pings gleichzeitig), Stufe 3 ≈ 1,1; sauberer: Netz als JS-Ereignisprozess im Tick, Pings im Worklet-Pool oder nativ nach Tropfen-Muster mit Deckel – dann läuft es auch ohne Worklet, die Besitzfrage im geteilten Netz ist gelöst, und die Stimme muss per ‚fertig'-Nachricht enden statt nach festen 2,5 s (sonst frisst ein Puls mit 8 Schlägen/s das ganze Mobil-Budget). Klanglich: Schlag plus gestimmter Lauf durch die Nachbarstufen (12–50 Töne/s) – von Tropfens Regen durch Zusammenhang, Holz/Metall-Ping und Erschöpfung unterscheidbar; im Puls bei 8 Schlägen/s ein Dauerregen (4–7 Pings je Schlag), die Erschöpfung bei 0,3 s kaum hörbar (0,6–1 s nötig), gehalten passiert nichts – ein starkes Puls- und Regen-Instrument, kein Halteton.",
+  "sources": [
+    "https://sonicfield.org/sonic-lab-ssnn-spiking-sounding-neural-network",
+    "https://cdm.link/newswires/grid-music-goes-beyond-traditional-synths-sequencers-through-its-unique-generative-propagation-model/",
+    "https://www.creativeapplications.net/iphone/synthpond-iphone-maxmsp",
+    "https://www.creativeapplications.net/iphone/nodebeat-iphone-ipad-of",
+    "https://nodalmusic.com/",
+    "https://apps.apple.com/us/app/senode-graph-sequencer/id1298766877",
+    "https://www.404techsupport.com/2011/04/17/otomata-the-spirograph-of-making-music",
+    "https://synthtopia.com/?p=90400",
+    "https://www.jneurosci.org/content/jneuro/23/35/11167.full.pdf",
+    "https://arxiv.org/pdf/1903.05129",
+    "https://pmc.ncbi.nlm.nih.gov/articles/PMC10062440/",
+    "ideas/biologist.md §9 §11 §12 (V)",
+    "research/webaudio.md §3 §4 §10 (V)",
+    "research/code-map.md §3 §5 §6 (V)",
+    "APP: trp 4512-4612, seqTick 5980, QP 2083, N.notes 2056 (V)",
+    "ideas/check/sim/perf_bio2_sim.py, perf_bio2_sim.out (M)"
+  ],
+  "marks": "V = source read in this session, VS = WebSearch result summary (page itself not read), M = measured (sim/perf_bio2_sim.py -> sim/perf_bio2_sim.out), APP = app code line in /home/user/4claude/myzel/index.html, A = inference"
+}

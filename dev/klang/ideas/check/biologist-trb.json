@@ -1,0 +1,47 @@
+{
+  "key": "trb",
+  "name": "Trieb",
+  "lens": "biologist",
+  "novel": "rare",
+  "prior": "L-system sound synthesis exists academically: Manousakis 'Musical L-Systems' (Sonology MA 2006: branched L-systems as parallel streams, hierarchical L-systems driving a granular engine; VS: modularbrains.net PDF), CCRMA student project 'Non-Standard Sound Synthesis with L-Systems' (VS: ccrma.stanford.edu) – both map grammar strings to notes/parameters/grains, not partial-ratio trees. Per-partial evolving additive synths are mainstream: AudioThing Materia 2026 (96 partials, one 128-point envelope each, lows sustain while uppers decay; VS: audiothing.net, synthanatomy), Image-Line Harmor (time×frequency partial image, Blur; VS: wikipedia), NI Razor (VS), Madrona Labs Sumu 2024 (64 partial pairs, one ADSR per partial, motile positions; VS: sonicstate, cdm.link), Unusable Engineering 'Partials & Discrepancies' (128 partials/voice, slot-based timbre motion; VS: kvraudio). Plant metaphor: Sonic Charge Synplant 1/2 ('a Gene defines a sound and how it will grow', Genopatch) = genetic parameter space, not spectral growth in time (VS; A). Birth–death processes are standard math with no audio application found (VS). In-app: Obertöne (one lit overtone, wander), Gong bloom (fixed order), inventor Böe (harmonics lock by wind) (V). Unoccupied after 3 searches (2 extended): a branching process over partial ratios (ρ_child = ρ_parent·r) with birth, lifetime, death and conserved sap as a playable held tone.",
+  "feasible": "worklet",
+  "costEst": 0.7,
+  "cost_detail": {
+    "L1": "16 complex rotations ≈ 0.55 (bench: 16-resonator modal 0.61 incl. node, V webaudio.md §4) + 3 k-rate params 0.09 + growth step every 1024 samples and slow RMS (negligible) → ≈ 0.65–0.7 at full crown, ≈ 0.3 with 4–6 living partials; the budget must count the peak",
+    "L3": "32 slots, L/R by depth ≈ 1.2–1.3",
+    "phone": "×1.0–1.5 (A)",
+    "fallback": "native lite: 6 sine OscillatorNodes + gains with tick()-scheduled births/deaths ≈ 0.4 (0.03 per node, V §4); a full native 16-partial tree ≈ 1.0 and cannot bend each partial without extra LFO nodes → worklet preferred"
+  },
+  "failure_modes": [
+    "Time-scale mismatch: first bud at 0.5 s, 6–10 partials by 5 s, lives 3–20 s, while touch notes last 0.5–3 s → the player mostly hears a sine with one bud (a soft Nebel-sub); in the 0.22-s Puls nothing grows at all (the idea admits this).",
+    "Organ/Shepard cluster: pure sines with slow fades and no transients are an additive pad; the fifth spiral 1·1.5·2.25·3.375 reads as a quartal/quintal chord, the golden spiral as a bell cluster – Razor/Materia without the UI unless the behaviour (birth swell, death breathing) is audible, which it is not at a full, settled crown.",
+    "Pitch identity: a full crown of 9/4, 27/8… partials makes the virtual pitch of one note ambiguous and turns chords ('Wald') into clusters; Krone default must cap ≤ 2.5 octaves with the consonant table dominant below y ≈ 0.5.",
+    "Puls hit: stem + 3–5 branches within 30 ms under burstEnv = an inharmonic organ stab without a transient; per-hit seeds only vary the chord slightly → weak as a lane voice unless the branches enter staggered (5–20 ms steps = a spectral strum, 'Aufblühen').",
+    "RMS normalisation pumps when branches are born or die; needs ≥ 300 ms slew and a cap on upward gain or the intended 'Todes-Atmen' reads as compressor pumping.",
+    "Per-partial Biegung ±(2–6)·Holz cents at 0.05–0.3 Hz over many voices sums to a slow chorus wash (Nebel-like); keep Holz low by default.",
+    "L3 peak load: 32 living rotations per voice × polyphony; cost scales with population, so a 'Wald' at L3 is the expensive case."
+  ],
+  "fixes": [
+    "vel = first growth kick: 3–4 partials by 1 s; Wuchs default faster",
+    "tree memory per scale degree (seed, age, slots kept ≈ 30 s): re-playing a note continues its tree",
+    "micro-life per partial: amplitude breath 0.1–0.3 Hz, brief noisiness ('Rinde') at birth, death as a short dip",
+    "Knospe as a staggered 5–20 ms spectral strum in Puls; Krone ≤ 2.5 oct default",
+    "RMS slew ≥ 300 ms, gain-up cap; native 6-partial lite as fallback"
+  ],
+  "verdict": "Selten: L-System-Klangsynthese existiert akademisch (Manousakis 2006, CCRMA), Teilton-für-Teilton-Hüllkurven liefern Materia, Harmor, Razor, Sumu und „Partials & Discrepancies“, die Pflanzen-Metapher trägt Synplant – aber ein Verzweigungsprozess über Teilton-Verhältnisse mit Geburt, Lebensdauer, Tod und erhaltenem Saft ist nirgends spielbar. Worklet-machbar, ≈ 0,7 Einheiten bei voller Krone (0,3 bei 4–6 Teiltönen), Stufe 3 ≈ 1,3, native Lite-Variante mit 6 Teiltönen (≈ 0,4) als Rückfall. Musikalisch droht der Orgel-/Shepard-Brei: reine Sinus mit langsamen Einblendungen sind eine additive Fläche, deren Identität nur im Verhalten liegt – und das spielt in 5–20 s, während Touch-Noten 0,5–3 s dauern; im 0,22-s-Puls wächst nichts. Trägt nur mit schnellerem erstem Schub (3–4 Teiltöne bis 1 s), Baum-Gedächtnis je Tonstufe (der Baum steht beim nächsten Anschlag noch), Mikro-Leben je Teilton (Atmen, Rinde) und einer gestaffelten Knospe (5–20 ms Spektral-Strum) als Puls-Geste – dann ein eigenständiger Haltetonerzeuger für Ambient, kein Allround-Puls-Klang.",
+  "sources": [
+    "https://modularbrains.net/wp-content/uploads/Stelios-Manousakis-Musical-L-systems.pdf",
+    "https://ccrma.stanford.edu/~elisse/256A/final/Non-Standard%20Sound%20Synthesis%20with%20L-Systems.pdf",
+    "https://www.audiothing.net/instruments/materia/",
+    "https://synthanatomy.com/2026/10/audiothing-materia-resynthesizes-any-sample-into-an-additive-synth-patch.html",
+    "https://en.wikipedia.org/wiki/Harmor",
+    "https://sonicstate.com/news/2024/05/15/madrona-labs-releases-sumu-synth/",
+    "https://cdm.link/sumu-arrives/",
+    "https://www.kvraudio.com/product/partials-and-discrepancies-by-unusable-engineering/details",
+    "https://www.yahoo.com/entertainment/bored-same-old-analogue-emulations-100020308.html (Synplant)",
+    "https://wiredspace.wits.ac.za/bitstreams/ff91ecfb-5897-44da-b0c1-451e8572cde8/download (birth–death processes)",
+    "ideas/biologist.md §2 (V)",
+    "research/webaudio.md §4 §10 (V)"
+  ],
+  "marks": "V = source read in this session, VS = WebSearch result summary (page itself blocked by proxy), M = measured (sim/bio_sim.py, sim/bio_sim.out), APP = app code line, A = inference"
+}

@@ -1,0 +1,50 @@
+{
+  "key": "frs",
+  "name": "Frost",
+  "lens": "biologist",
+  "novel": "rare",
+  "prior": "The phenomenon is real and explained as claimed: the falling chirp is dispersion of flexural waves in the ice plate, high frequencies outrun low ones, near the crack you hear only a snap (UT Austin's Hamilton in Live Science; VS: livescience.com/48309; sciencerendezvous.ca; discovermagazine.com); the air-coupled flexural wave is used to estimate ice thickness from a microphone (Romeyn, UiT; VS: munin.uit.no 10037/29340; The Cryosphere 15, 2021) and the dispersion scales with frequency x thickness (VS: researchgate 'Determination of Ice Thickness on Lakes and Canals Using Audio Sound') - so 'Dicke' as the Hoehe mapping has a physical basis; the Star Wars blaster was the same effect on a guy wire (VS: livescience). No synthesis instrument of singing ice was found (2 standard + 1 extended search): the market has field-recording libraries - Soundiron Icescapes (skipped stones on a frozen pond, i.e. exactly these chirps, sampled; VS: soundiron.com), Soniccouture Geosonics (Chris Watson 'Ice & Water'; VS: sonicstate), Luftrum Bioscape (icy rivers; VS: native-instruments.com), Rast Sound Ice Element (VS: kvraudio) - and Ben Moren's album 'Singing Ice' (field recordings through physical-modelling resonators; VS: mcad.edu). Procedural audio knows the 'chirped impact' atom for drops into liquid (van den Doel; VS: researchgate), which is Tropfen's building block. The falling sine chirp itself is the oldest pitch-envelope cliche ('laser', 'zap') in every synth (A). In-app: Tropfen = chirp up + glassy ring + in-key rain + tick (V APP 4512-4612); Frost is Tropfen mirrored, with bar/plate ratios 1 : 2.76 : 5.1 (uniform bar 1 : 2.756 : 5.404, V synthesis.md §2.9/§3.10) plus groan and crack echoes. Unoccupied: a playable singing lake as an instrument; the novelty lives in the ensemble (chirp + plate ring + groan + travelling cracks), not in the chirp.",
+  "feasible": "native",
+  "costEst": 0.65,
+  "cost_detail": {
+    "L1": "always: chirp OSC+Gain 0.09 + 3 Klirr OSC+Gain 0.27 + HP 30 Hz 0.06 = 0.42; conditional: groan (OSC + LFO OSC + Gain + LP ~ 0.15, y < 0.4), crack (noise + HP + Gain ~ 0.09 plus 2-3 echo chirps 0.18-0.27, vel > 0.6) -> typical ~ 0.5, peak ~ 0.95 (V webaudio.md §4: 0.03 per native node, OSC+Gain 0.09); the idea's 0.6 forgets the echo chirps; VCOST is one number per engine (V APP 5015) -> 0.65, like Tropfen 0.7 which also carries 10 drops",
+    "L3": "2 chirps +-6 ct, 4 Klirr partials, 3 echo chirps, pans ~ 1.2",
+    "automation": "frequency.setValueCurveAtTime with 32 points over 0.12-0.47 s = the Tropfen pattern (24 points, V APP 4546); frequency stays a-rate, detune k-rate via v.mod() carries Bebung (V APP 3464)",
+    "phone": "x1.0-1.5 (A); no worklet, works in every browser; Rassel/Sporenregen call hit() -> struck engine plays unchanged (V code-map §7)"
+  },
+  "failure_modes": [
+    "[M] The specified chirp curve f(t) = f + (f_hi - f)/(1 + (t/t0)^2) does not land on the note: with t0 = T/4 it ends 1321 ct sharp, T/10 305 ct, T/30 37 ct - and at T/30 the chirp spends 86 % of T within one octave of the note (a 40-ms zap followed by a slow landing). Subtract the end offset, or use the dispersion law directly: f(t) = f*(T/t)^2 from t_hi = T*sqrt(f/f_hi) (0.22 T for 440 -> 9 kHz): 49 % of T above 2f, 28 % above 4f = a real 'piuu'.",
+    "Laser cliche: one chirp per tap with a fixed slope and fixed echo offsets (60/140/260 ms) repeats identically - a 1980s game 'pew'; the lake's identity is in flurries of chirps whose slope and length encode distance (a longer path = a longer, duller chirp) and in the broadband snap of a near crack; the spec's echoes are only quieter, not slower.",
+    "Material overlap: three sines at 1 : 2.76 : 5.1 with 0.8-3 s decay are Glocke/Schale/Tropfen material; the downward chirp and the groan are Frost's only signatures, and the groan is conditional (y < 0.4).",
+    "Target device: the groan (40-120 Hz triangle -> LP 200 Hz) is inaudible on phone speakers (roll-off below ~ 300 Hz, A) - thick ice collapses into 'slow chirp + long bell ring' on the phone; fine on headphones and iPad.",
+    "Held note = nothing after the tap (struck, no setY); expression is Hoehe-before-tap and vel only. As a melodic lead every note is a 'pew' -> a sound-effect engine; strong as Puls colour, Sporenregen 'Eisregen' and Rassel - but Rassel at several hits/s with random pans becomes a laser battle unless Rassel forces thin ice (short chirps).",
+    "Puls at 8 hits/s with 3 echo chirps and 3-s rings keeps ~ 30 oscillators alive per lane; steal() removes released voices by progress (V APP 4997-5011) so rings are cut early under load - acceptable, but a stolen voice also loses its travelling echoes.",
+    "The biologist's own ranking: 4/6 on the novelty checklist, weakest of the ten, cut candidate (V biologist.md §11); next to Tropfen in the library it reads as 'Tropfen rückwärts'."
+  ],
+  "fixes": [
+    "chirp from the dispersion law; per-chirp random distance -> slope and duration; echoes longer and duller (LP tracking), a 10-ms broadband snap on near cracks, 2-4 chirps per hard tap as a flurry",
+    "cheaper and stronger for the owner's UI problem: fold Frost into Tropfen - allow trp.chirp negative (downward from f_hi), add a Material SEL (Wasser/Eis: PeriodicWave vs 2.76/5.1 sines), let 'rain' become echo chirps when Eis -> ~ 70 % of Frost without a 15th chip",
+    "if kept as an engine: groan with a 2nd harmonic at 2f so phones hear it, Rassel/Sporenregen with y >= 0.6 forced, finish at the last ring's -60 dB, RG_S + Rassel lists (V code-map §7)"
+  ],
+  "verdict": "Selten: der singende See ist als Phänomen belegt (Dispersion der Biegewellen, Live Science/Hamilton; Eisdicke aus dem Mikrofon-Chirp, Romeyn 2021) und als Feldaufnahme in Bibliotheken zu kaufen (Soundiron Icescapes – geworfene Steine auf dem Teich, Geosonics, Bioscape), ein synthetisiertes, spielbares Instrument fand sich nicht – doch der fallende Sinus-Chirp selbst ist das älteste Pitch-Envelope-Klischee („Laser“), Neuheit liegt nur im Ensemble aus Chirp, Plattenklirren, Ächzen und laufenden Rissen. Nativ und billig (≈ 0,65; die Echo-Chirps fehlen in der Kostenschätzung der Idee, Spitze ≈ 0,95; Stufe 3 ≈ 1,2), ohne Worklet, die Tropfen-Automation passt eins zu eins. Die Spezifikation landet messbar nicht auf dem Ton (Kurve endet je nach t0 37–1321 Cent zu hoch) und ein Chirp je Tipp mit fester Steigung und festen Echo-Abständen wird zum Spielautomaten-„pew“; aus Eis wird es erst mit dem Dispersionsgesetz f ∝ 1/t², zufälliger Entfernung je Chirp (länger und dumpfer = weiter weg), einem Knackstoß für nahe Risse und Chirp-Schwärmen – und auf dem Handy-Lautsprecher fehlt das Ächzen ohnehin. Gehalten passiert nichts, als Melodiequelle ist jeder Ton ein „pew“; es trägt als Puls-Farbe, Eisregen und Rassel, und das Meiste davon (≈ 70 %) bekäme Tropfen mit negativem Chirp und einem Material-Schalter Wasser/Eis ohne 15. Chip – genau die Platzfrage, die der Auftrag stellt.",
+  "sources": [
+    "https://livescience.com/48309-acoustics-of-ice-skipping-rocks.html",
+    "https://www.sciencerendezvous.ca/activities/2020/12/30/hear-ice-sing/",
+    "https://www.discovermagazine.com/singing-ice-is-just-the-tip-of-the-iceberg-43253",
+    "https://munin.uit.no/handle/10037/29340",
+    "https://tc.copernicus.org/articles/15/2939/2021/",
+    "https://www.researchgate.net/publication/275062284_Determination_of_Ice_Thickness_on_Lakes_and_Canals_Using_Audio_Sound",
+    "https://soundiron.com/products/icescapes",
+    "https://www.sonicstate.com/news/2013/08/08/put-the-sound-of-real-soundscapes-in-your-pads-and-soundscapes/",
+    "https://www.native-instruments.com/products/bioscape",
+    "https://www.kvraudio.com/product/ice-element-by-rast-sound/details",
+    "https://www.mcad.edu/news/moren-host-album-release-listening-party",
+    "https://www.researchgate.net/publication/221274192_Physically-based_Models_for_Liquid_Sounds",
+    "ideas/biologist.md §10 §11 (V)",
+    "research/synthesis.md §2.9 §2.20 §3.10 (V)",
+    "research/webaudio.md §4 (V)",
+    "APP: trp 4512-4612, playNote cost 5015, steal 4997-5011, Voice.mod 3464 (V)",
+    "ideas/check/sim/perf_bio2_sim.py, perf_bio2_sim.out (M)"
+  ],
+  "marks": "V = source read in this session, VS = WebSearch result summary (page itself not read), M = measured (sim/perf_bio2_sim.py -> sim/perf_bio2_sim.out), APP = app code line in /home/user/4claude/myzel/index.html, A = inference"
+}

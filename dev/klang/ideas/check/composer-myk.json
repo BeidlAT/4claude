@@ -1,0 +1,45 @@
+{
+  "key": "myk",
+  "name": "Mykorrhiza",
+  "lens": "composer",
+  "novel": "rare",
+  "prior": "Voice-to-voice modulation gated by envelopes is the SOMA Lyra-8 mechanism (8 voices, pairs cross-FM only while a note is triggered, influence decays with the envelope; V: research/musicians.md §2.1) and exists in software as Lira-8 (Mike Moreno, free Pd-based VST3/AU/LV2/standalone, 2020, 8 touch-sensor voices triggered by MIDI C1–G1; VS: cdm.link 2020, mikemorenodsp.gumroad.com, bonedo.de) and Mononoke (Bram Bos, iOS/AUv3 2020: 2×4 voices that feed back into one another, 'one large FM synth in which each voice is an independently playable operator', pads latch; VS: apps.apple.com id1492577124, V: musicians.md §2.8). Eurorack: 4ms Ensemble Oscillator (up to 16 voices on scale intervals with a Cross FM control in three modes; VS: thomann.de – routing not verified), Hampshire Electronics Apollo (engine-to-engine TZFM/AM; VS: modulargrid.net). In-app: Schwarm already closes a cross-FM ring of oscillators through a DelayNode inside one voice (V: APP 4348–4356). Nothing found that couples held notes on a scale grid polyphonically per finger in a touch app besides Mononoke's latched pads → rare, not new.",
+  "feasible": "native",
+  "costEst": 0.3,
+  "cost_detail": {
+    "L1": "per voice osc + soft shaper + ownDly + ownG + modG (+ a per-voice tanh shaper after the fix) = 5–6 nodes ≈ 0.18 + oscillator with a-rate frequency input ≈ 0.1 → ≈ 0.3 (idea: 0.35); native-node costs from webaudio.md §4 (≈ 0.03 per node)",
+    "L3": "two oscillators L/R + second delay tap ≈ 0.55–0.6 (idea: 0.7)",
+    "field": "singletons gain + shaper + delay ≈ 0.1 once (idea: 0.1)",
+    "graph": "cycle through osc.frequency ← modG ← mykDly ← mykField ← v.out is legal: a cycle containing a DelayNode has delayTime clamped to ≥ one render quantum (V: webaudio.md §7, spec 7768–7770); Schwarm uses the same construction (V: APP 4350–4355). Measured here: the 128-sample loop delay is NOT what destabilises the network (D = 1 is no better at idx 2.2) → native is sufficient, no worklet needed.",
+    "phone": "×1.0–1.5 (A)"
+  },
+  "measurements": [
+    "Delayed self-FM as specified (tanh field, own share subtracted after the nonlinearity, eigen 0.35, voice peak 0.5), single voice at 220 Hz [M: research/bench/myk_check.js]: harmonicity 1.0 at idx ≤ 1.1, 0.40 at idx 2.2 (the default kopplung at y = 1), 0 at ≥ 4.4 – and at idx 2.2 it depends on pitch: within one octave harmonicity goes 0.40 (220 Hz) → 1.0 (262–311 Hz) → 0 (349–415 Hz), because the subtraction cannot be exact behind the tanh and the residual self-loop phase depends on pitch × 128 samples.",
+    "Linear field with exact, time-aligned own-subtraction and a per-voice tanh on the modulator [M: myk_check2.js]: single voice harmonic at all idx with eigen 0; with eigen 0.15 harmonic up to idx 2.2 at every semitone (pitch dependence gone), chaotic from idx 4.4.",
+    "Cross-FM pair (fifth) at idx 2.2, eigen 0 [M: myk_check2/3.js]: harmonicity vs the common fundamental 1.0 at 220 Hz but 0.17 at 110 Hz, 0.32 at 294 Hz, 0.00 at 392 Hz – and the same at loop delay D = 1, 32 or 512 → the instability is the index, not the quantum delay. Triad at idx 2.2: 0.25; five-note cluster: 0.33 (= chaos).",
+    "Index map (fifth at 110–523 Hz, D = 128): harmonic (≥ 0.96) at every pitch for idx ≤ 1.2; 0.55–0.99 at 1.6; triad harmonic up to idx 1.2 [M: myk_check3.js].",
+    "Consonance colour at idx 0.8 [M]: fifth 1.0, major third 1.0, octave 1.0 vs fourth 0.5, tritone 0.5, semitone 0.28 (harmonicity vs the common fundamental / vs 220 Hz) → the idea's 'konsonant = harmonische Seitenbänder, dissonant = Klirren' holds there and only there.",
+    "Burst: a hit at idx 4.4, peak 0.8 over a held fifth drops the chord's harmonicity from 1.0 to 0.18 and lifts the centroid 285 → 497 Hz for the hit's duration – 'der Schlag spricht durch die Haltenden' is audible, as a chaos stab [M]."
+  ],
+  "failure_modes": [
+    "Defaults are in the chaos zone: kopplung 2.2 at y = 1 with eigen 0.35 makes a single held note growl or not depending on the note (harmonicity 1.0 to 0 across one octave) and any chord of ≥ 3 notes inharmonic noise; the consonance/dissonance colour the pitch promises exists only for idx ≈ 0.4–1.2.",
+    "The tanh field defeats the own-subtraction: with saturation before the subtraction the residual self-FM is pitch-dependent (and differs between 44.1 and 48 kHz devices); 'eigen' as specified is not a clean self-FM amount.",
+    "A single finger is dull: with correct subtraction one voice is a sine/triangle/organ with at most mild self-FM (Obertöne/Nebel territory); the engine only exists with ≥ 2 fingers or a Puls lane of its own – the Spielhilfe must say so and the library preview must play an interval.",
+    "Puls lane alone (no held chord): each hit is a 0.22 s sine blip with mild self-FM = a plain sine pluck; the 'Überschuss ×2' only adds chaos to the blip itself. Hits become interesting only through holders.",
+    "1/√n renormalisation at every start/finish steps the coupling of all held voices (zipper/timbre jump when a finger lands or lifts); needs a slewed gain (setTargetAtTime 30–50 ms).",
+    "FM via a-rate frequency with deviation idx·f·field goes through zero at |field| > 1/idx → below ≈ 0.45 of full scale at idx 2.2 (legit TZFM, part of the Klirren) but at high notes idx·f must be capped (dev < 0.18·SR as the idea says; at 2 kHz that caps idx at 4.3).",
+    "Loudness coupling: v.out carries envelope × velocity × peak constant, so the effective index scales with how loud each voice is (velocity, mixer level of layer 2 and Puls lanes do not matter because the field is pre-fader, but velocity does) – quiet notes modulate less, which is musical but makes 'kopplung' feel inconsistent across velocities.",
+    "Identity against Schwarm: at idx > 1.5 the network sounds like Schwarm's insect chaos; Mykorrhiza must own the harmonic band (0.4–1.2) and the interval colour, Schwarm the chaos."
+  ],
+  "fixes": [
+    "linear shared field (no shared tanh), exact time-aligned own-subtraction, per-voice tanh WaveShaper on the modulator (one extra node, ≈ 0.03) – measured: pitch dependence disappears",
+    "kopplung range 0.2–3 with default 0.8; Höhe maps idx 0.3 → 1.2 (harmonic/interval zone); Gestik agitation and the burst Überschuss may push to 2–3 (deliberate chaos), labelled 'Erregung'",
+    "eigen range 0–0.3, default 0.1 (self-FM as colour only)",
+    "field gain slewed (setTargetAtTime 40 ms) on every voice start/finish; cap idx·f at 0.18·SR",
+    "single-finger body: 'farbe = Orgel' default with 3 harmonics and a slow 2-oscillator beat so one note is not a bare sine; or a small field feedback (mykDly → mykField × 0.3) so lone Puls hits ring through the network",
+    "Spielhilfe: 'braucht zwei Finger – Quinten und Terzen singen, Sekunden klirren'; library preview plays a fifth then adds a semitone"
+  ],
+  "verdict": "Selten, nicht neu: hüllkurven-gegatete Stimmen-Kreuzmodulation ist der Lyra-8-Mechanismus, als freies Plugin Lira-8 (2020) und als iOS-App Mononoke (Bram Bos: jede Stimme ein spielbarer Operator, Pads rasten) im Handel, polyphone Cross-FM auf Skalenintervallen gibt es im 4ms Ensemble Oscillator; unbesetzt ist nur die Fassung pro Finger auf Myzels Tonleiter mit Puls ins selbe Feld. Nativ machbar und billig (≈ 0,3 / 0,6 + Feld 0,1): der Zyklus über den DelayNode ist erlaubt und bewährt (Schwarm), und die Messung zeigt, dass die 128-Sample-Schleife nicht das Problem ist – bei D = 1 ist es nicht besser. Das Problem sind die Vorgaben: bei kopplung 2,2 und eigen 0,35 hinter dem tanh-Feld knurrt eine einzelne Note je nach Tonhöhe (Harmonizität 1,0 bis 0 innerhalb einer Oktave), Quinten sind bei 220 Hz rein und bei 392 Hz Chaos, jeder Dreiklang ist Rauschen – die versprochene Intervallfarbe (Quinte/Terz/Oktave harmonisch, Tritonus/Sekunde klirrend) existiert gemessen nur für idx ≈ 0,4–1,2. Mit linearem Feld plus exakter Eigenanteil-Subtraktion und tanh je Stimme, kopplung-Vorgabe 0,8 (Höhe 0,3–1,2, Erregung darüber als bewusste Chaoszone), eigen 0,1 und geslewter 1/√n-Normierung ist es eine echte, musikalische Stimmen-Interaktion, die Myzel noch nicht hat – allerdings eine, die mit einem Finger langweilig bleibt (Sinus mit Hauch von FM) und als reine Puls-Quelle nur Sinus-Blips liefert; sie braucht zwei Finger oder Puls unter gehaltenem Akkord, und die Spielhilfe muss das sagen.",
+  "sources_bench": ["research/bench/myk_check.js (+ .out.json): as specified", "research/bench/myk_check2.js (+ .out.json): linear field, exact subtraction", "research/bench/myk_check3.js (+ .out.json): delay vs index map"],
+  "marks": "V = source read, VS = WebSearch summary, M = measured here, A = inference"
+}

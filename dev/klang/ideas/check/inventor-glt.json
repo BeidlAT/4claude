@@ -1,0 +1,27 @@
+{
+  "key": "glt",
+  "name": "Glut",
+  "lens": "inventor",
+  "date": "2026-10-13",
+  "source_md": "glt.md",
+  "novel": "rare",
+  "prior": "Rhizomatic Plasmonic (desktop, self-oscillating delay-based waveguide + ladder filter, MPE; V: kvraudio.com/product/plasmonic-by-rhizomatic); NoInputMixer iOS/macOS 2023 (V: cdm.link/2023/09/noinputmixer-brings-hardware-feedback-to-ios-and-macos/); GeoShred Guitar/Feedback on the 2D pad, lock onto a feedback harmonic (V: moforte.com/?p=23024); AudioThing Lines (feedback multi-effect as synth); Ableton Roar feedback routing, MIDI-pitched feedback in 12.2 (V: ableton.com blog); Soma Lyra-8 self-oscillating delay voice; DSI DSM03 tuned feedback delay with noise; Instruo tanh[3], Bastl Dark Matter, EQD Afterneath, VCV Send; Landscape Stereo Field, Make Noise Strega; Halldorophone / Feedback Cell (NIME 2017/2023); clarinet/flute waveguides (STK, Faust physmodels.lib). Not found: a touch instrument with one pitched feedback loop per finger whose loop gain sits on finger height with threshold, mode jump and afterglow as playing axes.",
+  "feasible": "worklet",
+  "costEst": 0.45,
+  "costNative": 0.35,
+  "costL3": 0.9,
+  "costNotes": "Native loop is legal and sample-accurate above the 128-frame floor (delayTime clamped only to a minimum of one quantum in a cycle; V: spec_index.bs:7768-7770, cr_delay_handler.cc): n = ceil(f*128/SR) periods, bandpass Q 8-20 picks mode n, usable to ~2 kHz; 10 nodes ~0.35 units. Worklet: node 0.06 + 3 params 0.09 + frac delay/biquad/tanh/noise ~0.3 -> ~0.45; L3 two cross-coupled loops, 2x tanh ~0.85-0.9. Worklet is canonical: near threshold G-1 ~0.003 at 1.7 kHz while linear-interpolated delay loses up to 0.06 dB/pass -> processor must compensate interpolation loss; Glimmen random walk and Puls state injection are sample-level.",
+  "soundHeld": "Threshold region (y 0.3-0.6) is a built-in soft knee (limit-cycle amplitude 0 -> 0.97 for G 1.0 -> 1.3): whistle-swell into saturated tone, afterglow after lift-off; nothing in Myzel self-sustains. But the settled limit cycle is a static saturated sine (Tiefe with drive): the instrument lives in its transitions and needs a Glimmen random walk on G and tau.",
+  "soundBurst": "With Klopfer + G 1.2 for the gate: at 220 Hz a 100 ms gate saturates inside the gate (tick -> swell -> tone -> afterglow); at 55 Hz it is 5.5 periods = a damped bandpass ping (cheap Membran) and the perceived onset lands 50-100 ms late. Burst mode must inject the loop state directly (x0 ~0.5*vel) so the tone exists at frame 1.",
+  "failureModes": [
+    "Sustained state is a static saturated sine -> Glimmen: slow random walk +-0.02-0.04 on G at 0.2-1 Hz plus +-2 ct flutter on tau (L3: two detuned cross-coupled loops)",
+    "G per period is pitch-dependent by 16x across four octaves (flare 0.78 s at 55 Hz vs 50 ms at 880 Hz; afterglow 'G 0.9' = 1.2 s at 55 Hz, 37 ms at 1.76 kHz) -> define growth/decay per second: G = exp(r*tau), loop loss compensated",
+    "Odd clipper never seeds even modes: Sprung to m = 2 grows from the noise floor as a whoosh, m = 3 flips cleanly -> default Sprung 3 or asymmetric Hitze bias; decide by ear",
+    "Puls hits arrive late / low notes become pings -> inject loop state in burst mode, keep the swell for gates >= 300 ms",
+    "y < 0.3 must not be near-silent (dice(), Puls random presets land there) -> Klopfer levelled so y = 0 is a soft pinged tone",
+    "Level: limit cycle ~0.97 peak per voice -> scale ~0.3 before Kasten; five saturated sines sum coherently",
+    "Native-only: side modes at f(1 +- 1/n) above 375 Hz carry Zunder noise as a halo at Q 8 -> Q >= 12",
+    "Contract: afterglow lives in the loop, so v.release ramps G and calls finish(t1 + T60) instead of closing v.out.gain"
+  ],
+  "verdict": "Rare, not new: Plasmonic sells the self-oscillating waveguide on desktop, GeoShred has touch-locked feedback harmonics inside its guitar model, NoInputMixer is feedback-on-a-phone, and delay + bandpass + tanh with G > 1 is documented modular practice (Instruo tanh[3], Lines, Lyra-8, DSM03), but no app puts one pitched feedback loop per finger with the gain under the finger. Feasible: the native loop is legal and sample-accurate above the 128-frame floor (~0.35 units, good to ~2 kHz), the worklet (~0.45 / 0.9) is needed for loop-loss compensation at the threshold, Glimmen and Puls state injection. Danger: the sustained state is a static saturated sine (Tiefe with drive); the instrument lives in its transitions, so G must be defined per second and pitch-compensated, a slow Glimmen random walk added, and Puls bursts must inject the loop state or hits land 50-100 ms late. Keep it, with those three as acceptance criteria."
+}

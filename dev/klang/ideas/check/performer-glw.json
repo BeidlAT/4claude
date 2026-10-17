@@ -1,0 +1,54 @@
+{
+  "key": "glw",
+  "name": "Glühwurm",
+  "lens": "performer",
+  "novel": "rare",
+  "prior": "Kuramoto / firefly synchronisation exists as instruments, none of them a touch instrument coupling fingers and a sequencer: Våld Labs KURARE (open beta Sept 2026: polyphonic swarm synth, POPULATE up to 32 oscillators per swarm, DECOUPLE from synced tones to drifting clouds; VS: matrixsynth.com) is the newest and closest - a swarm inside one note, not fingers finding each other; Chiral Audio Foxfire (16-voice Kuramoto chorus that drifts, partially syncs, locks; VS: rekkerd.org); Luci modules by NLnRi for VCV Rack (firefly pulse synchronisation, 'Firefly Pulse' patch; VS via check biologist-glw.json, V); Kuramoto Drone browser synth (VS: mi.wrocenter.pl); Max/MSP Kuramoto-on-GPU patch (VS: cycling74.com); Processing synchronization library with a firefly example (VS: github archive-for-processing); Complexity Explorables 'Ride my Kuramotocycle' (VS). Academic: Mirollo & Strogatz 1990, Lem SMC 2019, NIME 2024 coupled oscillator networks (V: biologist-glw.json); Ermentrout 1991 'An adaptive model for synchrony in the firefly Pteroptyx malaccae' (J. Math. Biol. 29:571, DOI 10.1007/BF00164052: adaptation of the free-running period gives perfect synchrony; VS), frequency-adaptive Kuramoto (Taylor/Ott/Restrepo arXiv 0906.2124; inertial/hysteretic variants arXiv 1901.04804; VS). The Vactrol LPG is standard Eurorack (V performer.md §1 via musicians.md). In-app: biologist.md §1 proposes the same name/key as a worklet population under one finger (V); the adversarial check of that variant (V: biologist-glw.json) already asked to merge the two. Unoccupied after 2 searches here (plus the 3 of the sister check): the fingers themselves (and the Puls) as the coupled population of a touch instrument.",
+  "feasible": "native",
+  "costEst": 0.3,
+  "cost_detail": {
+    "L1": "OSC 0.03 + WaveShaper 0.03 + lowpass BQ 0.06 + 2 Gain 0.06 + k-rate detune ~ 0.2-0.3 (V webaudio.md §4); automation <= 4 setTargetAtTime calls per blink x <= 8 Hz = 32 events/s per voice - cheap, past events are dropped from the timeline (A); the idea's 0.35 is safe",
+    "field": "Kuramoto in tick() every 25 ms (V APP 6032-6041): <= 10 voices -> 100 sin per tick, nothing; Puls phase from beatAt() exists (V APP 5382); blinks scheduled in the horizon 0.12-0.35 s (V APP 6039) at exact times, so jitter < 1 ms, but a blink already scheduled cannot follow a fast Hoehe move (rate x0.5-2) -> small timing errors on fast moves (A)",
+    "L3": "2 OSC +-4 ct via A.uni (V APP 2840) + a second firefly per finger ~ 0.5; with oversample '2x' on the fold ~ 8-10 biquads more (V webaudio.md §7) ~ 0.9 -> recommend no oversampling (the fold is soft, the lowpass follows), so L3 ~ 0.5",
+    "phone": "x1.0-1.5 (A); no worklet, works everywhere; cheapest held engine in the catalogue after Hauch"
+  },
+  "failure_modes": [
+    "[M] The default coupling does not deliver the pitch: K 0.8 with rates 1.5 Hz +-8 %: 2 fingers lock (r > 0.95 for 1 s) in 93 % of runs with a median of 1.6 s, 3 fingers in 77 % (median 3.4 s, up to 17 s), 5 fingers in 27 % (r 0.73) - pairs snap within 2 s like an LFO, chords of 4-5 fingers stay loose; '5-20 s finding each other' is the exception. Two-oscillator condition K >= |dOmega| with |dOmega| up to 1.51 rad/s: 22 % of pairs can never lock at K 0.8.",
+    "[M] Hoehe = rate x0.5-2 destroys the synchronisation it is meant to stage: fingers at y 0.45/0.5/0.55 (rates +-7 %) lock in 20 % (median 12.9 s), at +-0.1 y (+-15 %) in 7 %, at y 0.25/0.5/0.75 (x0.71-x1.41) never - even at K 3 (max). Phase coupling only locks oscillators of nearly equal rate; the described 'Blinkraten ziehen sich zueinander' is frequency adaptation (Ermentrout 1991, the real P. malaccae mechanism), which the spec does not contain.",
+    "[M] With frequency adaptation (omega_i += dt*adapt*(K/N)*sum sin) the pitch becomes true: +-15 % rates at K 0.8, adapt 1.0 -> 100 % locked, median 10 s (2-19 s); 5 fingers at the same y -> 100 % in a median 5.7 s - but x0.71-x1.41 still fails (7 % in 40 s): the y->rate range must shrink to <= +-0.25 octave or snap to 1:2:3 ratios.",
+    "One finger = an LPG-gated triangle at 1.5 Hz = a tremolo/auto-pluck pad (Nebel + square LFO); heat memory and the glut floor are subtle. The engine's identity needs >= 2 fingers or the Puls, which the performer admits - in the library it would be the one held engine that is dull solo, and dice()/Sporenregen/presets mostly play it solo.",
+    "Locked state = chord strobe in unison = trance gate; the identity is the transition. Pure phase coupling keeps a natural flam (r 0.9-0.97 in the sim, phase lag asin(dOmega/K)), adaptation removes it (r -> 1.00) -> adaptation must stop short (95 %) or jitter must be re-drawn, or the settled field is an LFO after all. Takt-Rast plus Puls phase makes it a sidechain gate on the grid: fine on stage, but then the 'big firefly' is quantisation.",
+    "Burst = one LPG pluck per lane step (Buchla bongo: distinct from Membran/Glocke, good), but each lane hit kicks every held phase with 0.5*K_p*sin(theta_p - theta_i): at 8 hits/s the field is dragged onto the grid in < 1 s -> kick <= 0.1 or only on accented steps.",
+    "Released voices 'glow until rel' (0.1-6 s) while listed in A.glwField: if they stop blinking the field changes abruptly, if they keep coupling they steer live fingers -> define: released voices keep blinking, stop coupling, leave the field at finish.",
+    "Fold pre-gain 0.6 + 1.6*fold*y reaches 2.2x into sin(1.5*pi*x) at y 1 = three folds of a triangle without oversampling at L1 -> aliasing sheen on high notes (A); cap pre at ~ 1.4 or lowpass before the fold."
+  ],
+  "fixes": [
+    "frequency adaptation (Ermentrout): omega_i += dt*adapt*(K/N)*sum sin(theta_j - theta_i), adapt 0.5-1.0, relaxing to the own rate when alone; K default 1.2; Hoehe -> rate range +-0.25 octave (or none: Hoehe = fold/glow only) with 1:2:3 snapping to the lowest finger when |log ratio| < 0.2",
+    "keep a flam: adapt only to 95 % of the difference, per-finger +-5 % jitter re-drawn every ~ 10 s",
+    "lane kick <= 0.1*K_p; Takt-Rast default when SEQ.on, free when not; released voices blink but do not couple",
+    "L3 without shaper oversampling (pre-lowpass); 2 fireflies per finger",
+    "merge with biologist.md §1: this native per-finger design is the engine (works without a worklet), the worklet population is the L3 option; Spielhilfe 'zwei Finger gleich hoch – sie finden sich'; draw blinks in the field (visPush)"
+  ],
+  "verdict": "Selten, nicht neu: Kuramoto-/Leuchtkäfer-Synchronisation gibt es als Schwarm-Synth (Våld Labs KURARE 2026: Populate/Decouple), als Kuramoto-Chorus (Chiral Audio Foxfire), als VCV-Module (Luci), Browser-Drone und Max-Patch – unbesetzt bleibt, dass die Finger eines Touch-Instruments (und der Puls) selbst die gekoppelte Population sind; biologist.md schlägt denselben Namen vor, die Schwester-Prüfung verlangt schon die Zusammenführung. Nativ und mit ≈ 0,3 die zweitbilligste Halte-Engine (Stufe 3 ≈ 0,5 ohne Shaper-Oversampling, 0,9 damit), Tick, Puls-Phase (beatAt) und Horizont-Planung existieren. Gemessen hält die Spezifikation ihr Versprechen nicht: bei K 0,8 rasten zwei Finger in 1,6 s ein wie ein LFO, fünf Finger nur in 27 % der Läufe, und sobald die Finger verschieden hoch liegen (Höhe = Rate ×0,5–2), synchronisiert gar nichts mehr (±7 % Rate: 20 %, ±15 %: 7 %, ±0,25 Höhe: 0 % selbst bei K 3) – Phasenkopplung rastet nur fast gleiche Raten ein, das beschriebene „Blinkraten ziehen sich zueinander“ ist Frequenz-Adaptation (Ermentrout 1991, der echte Pteroptyx-Mechanismus), und mit ihr stimmt alles (±15 % Raten: 100 % Sync, Median 10 s; fünf Finger 5,7 s). Mit Adaptation, enger Höhe-Rate-Spanne (≤ ±¼ Oktave oder 1:2:3-Raster), erhaltenem Flam und kleinem Spur-Schubs ist es die Bühnennummer, die der Performer meint; allein gespielt bleibt es ein LPG-Tremolo-Pad – das einzige Halte-Instrument der Liste, das solo langweilt –, und im Puls ein hübscher Buchla-Bongo-Pluck, der die Fläche mitreißt.",
+  "sources": [
+    "https://www.matrixsynth.com/2026/09/vald-labs-kurare-every-note-is-crowd.html",
+    "https://rekkerd.org/chiral-audio-launches-effect-plugins-defined-by-real-equations/",
+    "https://patchstorage.com/firefly-pulse/",
+    "https://mi.wrocenter.pl/en/kuramoto-drone/",
+    "https://cycling74.com/forums/-patch-sharing-kuramoto-coupled-oscillators-on-the-gpu",
+    "https://github.com/archive-for-processing/processing-synchronization",
+    "https://complexity-explorables.org/explorables/ride-my-kuramotocycle",
+    "https://dx.doi.org/10.1007/BF00164052",
+    "https://arxiv.org/pdf/0906.2124",
+    "https://arxiv.org/pdf/1901.04804",
+    "https://www.smc2019.uma.es/articles/P3/P3_09_SMC2019_paper.pdf",
+    "https://nime.org/proc/nime2024_60/",
+    "ideas/performer.md §0 §1 §13 §15 (V)",
+    "ideas/biologist.md §1 (V)",
+    "ideas/check/biologist-glw.json (V)",
+    "research/webaudio.md §4 §7 (V)",
+    "APP: tick 6032-6041, beatAt 5382, A.uni 2840, schuetteln 8604, makeShaperCurve 2147 (V)",
+    "ideas/check/sim/perf_bio2_sim.py, perf_bio2_sim.out (M)"
+  ],
+  "marks": "V = source read in this session, VS = WebSearch result summary (page itself not read), M = measured (sim/perf_bio2_sim.py -> sim/perf_bio2_sim.out), APP = app code line in /home/user/4claude/myzel/index.html, A = inference"
+}

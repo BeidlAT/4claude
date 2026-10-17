@@ -1,0 +1,35 @@
+{
+  "key": "amo",
+  "name": "Amöbe",
+  "lens": "composer",
+  "novel": "rare",
+  "prior": "Reused from the earlier complete check (amo.md, same lens). GENDY is 30+ years old and open-source: SuperCollider Gendy1/2/3 (V: research/src/sc_GendynUGens.cpp, sc_Gendy3.schelp; Gendy3 = per-period duration normalisation = the idea's pitch lock), Csound gendy/gendyx/gendyc (V: cs_gendy.c), gendyflext for Pd/Max (VS: github.com/ssfrr/gendyflext – breakpoints 'gravitate towards target waveforms' = the idea's Rückkehr zum Seed-Polygon), VCV Rack docB Gendy and Coalescent GENDYN (V/VS), Gendy.js Web Audio 2016 (V: github abbernie/gendy, ScriptProcessor, no pitch lock), Radna 'Dynamic Stochastic Wavetable Synthesis' DAFx 2023 (VS). Shipping instruments: Xenos (Raphael Radna, free VST3/AU/LV2 2022, 10 distributions, pitch quantiser, VS: musicradar/kvraudio/github README) and iGendyn (Nick Collins, iPhone 2009, multitouch + accelerometer GENDYN, VS: synthtopia 2009, cdm.link) – so 'auf Touch-Instrumenten unbekannt' is historically false, but no current touch/mobile instrument has it. No Eurorack hardware found (2 searches incl. extended). Unoccupied: pitch-locked GENDY under a finger with Höhe = unrest, shake → burst → heal, velocity-seeded Puls hits, GENDY as a bass voice.",
+  "feasible": "worklet",
+  "costEst": 0.5,
+  "cost_detail": {
+    "L1_as_specified": "≈ 0.52 with the specified 2× oversampling + half-band (node 0.06 + 3 k-rate params 0.09 + core lerp 0.1 + 1-pole/DC 0.04 + oversampling 0.2–0.3) [A from webaudio.md §4 measurements]",
+    "L1_recommended": "≈ 0.3 without oversampling but with K limited by period (K_eff = min(K, floor(T/6))) and inverse-CDF tables for the distributions; per-period Math.tan Cauchy draws at K = 24 / 2 kHz alone would cost ≈ 0.66 units",
+    "L3": "two amoebas L/R, K ≤ 24: ≈ 0.6 without / ≈ 1.0 with oversampling; idea said 0.25/0.5 (forgets its own half-band)",
+    "phone": "×1.0–1.5 (A)",
+    "fallback": "none native (shape changes every period) → engine hidden without audioWorklet"
+  },
+  "failure_modes": [
+    "Above ≈ 1 kHz a 12-point polygon has 2–4 samples per segment = aliased hiss; oversampling cannot restore a shape that has no samples (limit K by period, Spielhilfe 'lebt unten').",
+    "Level and DC wander (random polygon RMS ±10 dB, non-zero mean per period; SC help opens with 'LOUD!') → thumps when burstEnv closes v.out.gain, DC on mixer meters.",
+    "Cauchy default with a raw ±4 clamp crackles at the 'calm' end (P(|D|>1) = 50 %), so y = 0 is never quiet.",
+    "Narrow sweet spot: the GENDY identity lives at a ≈ 0.05–0.2, i.e. y ≈ 0.25–0.55 with a = 0.02 + 0.6·y²; above y ≈ 0.7 it is noise, and Gestik Höhe offsets push it there.",
+    "Puls: 'first three periods with a·4' = 6.8 ms at 440 Hz, inside the 20 ms burst attack → inaudible; in 0.22 s at a ≈ 0.05 the polygon barely moves → every hit the same static buzzy blip.",
+    "Rückkehr pulls amplitudes only; durations drift freely → healing is partial.",
+    "Identity: at low unrest a static buzzy wavetable (Körner/Obertöne territory), at high unrest Hauch with a pitch; distinct only in the middle band and through behaviour."
+  ],
+  "fixes": [
+    "K_eff by period (≥ 6 samples per segment); first point pinned to 0, per-period RMS normalisation with slew, 1-pole DC blocker ≈ 15 Hz",
+    "SC's normalised Cauchy (c = atan(10·a)) or default verteilung = linear with Cauchy as the 'Ausreißer' choice; exponential map a = 0.01·30^y",
+    "Zucken as a 30–40 ms time window, att 0.005 for bursts, re-seed per hit from (vel, random), short dur-walk burst on onset",
+    "apply the Rückkehr pull to durations as well (before renormalisation)",
+    "default finger height in the sweet spot; Spielhilfe: 'Höhe = Unruhe, Schütteln = Ausbruch, lebt unten'"
+  ],
+  "verdict": "Selten, nicht neu: GENDY ist in SC/Csound/Pd/Max/VCV/JS quelloffen und als freies Plugin Xenos im Handel, ein Touch+Neigungs-GENDY (iGendyn, 2009) und das „Zurückstreben zur Zielform“ (gendyflext) gab es schon – der Neuheitstext übertreibt; unbesetzt sind tonhöhenfestes GENDY unter dem Finger mit Höhe = Unruhe, heilende Schüttel-Ausbrüche, velocity-gesäte Puls-Stöße und GENDY als Bass. Worklet-machbar und billig: ≈ 0,3 Einheiten ohne das spezifizierte 2×-Oversampling, ≈ 0,5 damit, Stufe 3 ≈ 1,0 – sofern die Verteilungen aus Tabellen gezogen werden (Math.tan je Periode kostet allein 0,66). Wie geschrieben versagt es über ≈ 1 kHz (Zischen), wandert in Pegel und DC, knistert am „ruhigen“ Ende wegen der roh geklemmten Cauchy-Vorgabe, und das Puls-Zucken verschwindet im 20-ms-Anstieg, alle Stöße klingen gleich. Mit den fünf Korrekturen (K je Periode, Normierung/DC-Sperre, normierte Cauchy oder Linear-Default, zeitbasiertes Zucken mit Neusaat je Stoß, Pull auch auf Dauern) ist es eine eigenständige, musikalische Quelle von 50–500 Hz und eine echte Verhaltens-Neuheit; ohne sie eine laute, summende Wavetable, die zu Rauschen wird.",
+  "sources": ["ideas/check/amo.md (full earlier check, sources inline)", "research/synthesis.md §2.4", "research/webaudio.md §4, §10", "research/src/sc_GendynUGens.cpp, sc_Gendy3.schelp, cs_gendy.c"],
+  "marks": "V = source read, VS = WebSearch summary, A = inference; reused from amo.md"
+}

@@ -1,0 +1,37 @@
+{
+  "key": "dax",
+  "name": "Dachs",
+  "lens": "inventor",
+  "novel": "new",
+  "prior": "No synth, plugin, app, module or sample library that models or even samples the daxophone was found in two extended searches; results are the acoustic instrument only (Wikipedia https://en.wikipedia.org/wiki/Daxophone; EMI page https://emi.wesleyhicks.art/daxophone; Reichel plans) and one musician resynthesizing daxophone recordings with Rossum Panharmonium (VS: https://llllllll.co/t/daxophones-and-hans-reichel/57763). Generic ingredients exist: bowed beams/cantilevers in Modalys (bow + objects, V synthesis.md) and Mutable Elements (V), beam resonators (struck, no bow) in Chromaphone 3 / RipplerX (VS: https://synthanatomy.com/?p=92741), bowed strings in Tracktion Outersect Modeler and Physical Audio Modus (VS: https://musicradar.com/news/physical-audio-modus-synth-plugin). Cantilever ratios 1:6.27:17.55 are Euler-Bernoulli theory (A, not measured on a daxophone). Rated 'new' because nothing playable is comparable to a daxophone; the generic 'bowed modal beam + formant filter' part is rare, not new.",
+  "feasible": "worklet",
+  "costEst": 1.0,
+  "cost_detail": {
+    "measured": "Same processor as Harz: 4 modes 104 ns, 8 modes 185 ns -> ~27 ns per mode + ~23 ns fixed; 3 modes ≈ 85 ns ≈ 0.70 units loop [M, interpolated].",
+    "L1": "0.70 + node 0.06 + 3-4 params 0.12 + 2 native peaking biquads + 1 lowpass 0.09-0.18 = 0.95-1.05 (idea said 0.8: slightly optimistic)",
+    "L3": "5 modes + second tongue (5 modes, ±6 ct) ≈ 10 modes ≈ 1.9 loop + 0.3 ≈ 2.0-2.2 (idea said 1.5); a 3-mode second tongue keeps it ≈ 1.7",
+    "phone": "x1.0-1.5 (A)"
+  },
+  "measurements": [
+    "Bowed cantilever set (1, 6.27, 17.55; gains 0.995/0.99/0.98) at 220 Hz: output is a near-pure sine on mode 1 (rms -12 dB), mode 2 at -60..-68 dB, mode 3 at -78 dB, h2 -47 dB: the bow's harmonics (2f, 3f) fall between the inharmonic bands and are filtered out; the inharmonic modes only speak on transients [M].",
+    "'Reibungshysterese' (bow-table offset drifting with the friction force, 4 strengths x 2 pressures): no subharmonics at f/2 or f/3 (<= -50 dB below f1, mostly < -80 dB); it only lowers the level (0 -> -22 -> -43 -> -51 dB) [M]. A static friction offset (asymmetry 0.03-0.15) likewise: no subharmonics, level drops to -37..-101 dB [M].",
+    "Pressure: as in Harz, p >= 0.8 weakens (-42 dB), p 0.95 silent; sweet spot 0.2-0.6 [M].",
+    "Burst (K=5, seed): a 60/110/220 ms stroke at 220 Hz reaches -45/-43/-38 dB vs -12 dB sustained [M]; modes ring after release only if the bow contact is faded out (Harz result).",
+    "Mode 3 (17.55 f) exceeds 0.45 SR above f ≈ 1.2 kHz and must be dropped; mode 2 above ≈ 3.4 kHz [A from ratios]."
+  ],
+  "failure_modes": [
+    "The 'voice' is not in the model: the cantilever modes contribute nothing audible under the bow, so the character rests on two native formant peaks on a bowed sine - audibly the same family as Obertoene (buzz + 2 bandpasses) with a slower attack.",
+    "'Knurren'/subharmonics as specified (hysteresis offset) do not occur; the growl axis would be silent or just quieter.",
+    "Same onset (0.3-0.8 s) and choke-at-high-pressure problems as Harz; 'Biss' (bite) needs an explicit impulse into the modes.",
+    "Formants by ear only; tongue length -> f ∝ 1/L² quadratic glissando is a mapping choice, not verified against the instrument."
+  ],
+  "fixes": [
+    "mix the friction force F to the output (stick-slip harmonics + noise), then the formants shape something non-sinusoidal",
+    "real growl mechanism: second coupled tongue a few Hz apart (beating/combination tones, cf. Kehlchen pair test -24 dB sub) or a period-doubling exciter (asymmetric two-mass); or modulate bow velocity at 20-60 Hz ('Knurren' as motor gesture)",
+    "transients: impulse + short stroke on every onset so the 6.27x/17.55x modes are heard; Bund quantiser and 1/L² glides as the daxophone's signature",
+    "if the library is full, fold into Harz as body 'Zunge' (loses Kehle/Bund)"
+  ],
+  "verdict": "Das Daxophon ist tatsächlich unbesetzt (kein Plugin, keine App, kein Modul, nicht einmal eine Sample-Library gefunden), machbar und bezahlbar (≈1,0 Einheiten inkl. dreier nativer Filter, Stufe 3 eher 2,0 als 1,5). Aber der vorgeschlagene DSP liefert den Charakter nicht: gestrichene Kragbalkenmoden 1:6,27:17,55 ergeben einen fast reinen Sinus auf Modus 1 (Modus 2 bei −60 dB, h2 −47 dB), die 'Reibungshysterese' erzeugt gemessen keine Subharmonischen, nur Pegelverlust, und die Stimme käme allein aus zwei nativen Formant-Biquads – das ist Obertöne mit Bogen. Distinkt wird es nur mit Reibkraft-Ausgang, Biss-Transienten (dann klingen die inharmonischen Moden nach), Bund-Raster plus quadratischen Glissandi und einem echten Knurr-Mechanismus (zweite gekoppelte Zunge oder Bogengeschwindigkeits-Modulation); sonst als Körper 'Zunge' in Harz falten.",
+  "sources_bench": ["research/bench/bow_check.js (regime/dax, dax_hyst)", "research/bench/bow_check2.js (dax_off)", "research/bench/bow_check3.js"],
+  "marks": "V = source read, VS = WebSearch summary, M = measured here, A = inference"
+}

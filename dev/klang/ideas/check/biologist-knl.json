@@ -1,0 +1,51 @@
+{
+  "key": "knl",
+  "name": "Knolle",
+  "lens": "biologist",
+  "novel": "rare",
+  "prior": "Adaptive just intonation is a 20-year-old tool: Hermode Tuning in Logic Pro/Cubase (analyses fifths/thirds, retunes to pure sizes; VS: arxiv 1706.04338, periodicos.ufes.br), Kontakt 'Dynamic Pure Tuning' (VS), Pivotuner 2023 (VST3/AU MIDI effect, real-time adaptive pure intonation with an 'adaptive tuning center'; VS: arxiv 2306.03873), Stange/Wick/Hinrichsen 2017 (linear-equation dynamic JI; VS), alt-tuner (REAPER), Mutabor, LMSO Nuscale (VS: xen.wiki Adaptive JI), Schwär/Müller ISMIR 2021 (gradient-descent real-time intonation; VS), Hayward Tuning Vine NIME 2015 (VS), patents US 4248119 (chord detector → root → JI chord tones, 1981) and US 7807908 (VS: uspto). A sounding root that listens to chords is the Auto Bass Chord of every arranger keyboard since the Yamaha PSR-60 (1985, 'automatic bass chord function'; Casio auto accompaniment since 1979; VS: smemmusic.ch, wikipedia) – without JI or confidence swell. Dusk Audio Chord Analyzer detects root/bass from MIDI without sound (VS). Virtual pitch (Terhardt), SHS (Hermes), Parncutt's root model are analysis literature, not instruments (A). In-app: Nebel `sub`, Tiefe, inventor Gespinst, composer Mykorrhiza (V: ideas). Unoccupied after 3 searches (1 extended): a confidence-weighted sounding root organism (SHS over held voices and lanes) combined with an adaptive-JI pull in a touch instrument.",
+  "feasible": "native",
+  "costEst": 0.4,
+  "cost_detail": {
+    "L1": "per voice 2 OSC (PeriodicWave + sine) + LP + 2 Gain + ConstantSource v.ji ≈ 7 nodes ≈ 0.25–0.4 (Hauch 0.3 has a similar count; detune automation raises it) → 0.4 fair",
+    "singleton": "A.knl: 2 OSC + LP + Gain ≈ 0.15–0.3 once while alive; not a Voice → never stolen → add to voiceLoad() permanently while alive (Q.cost is per voice, V code-map §5)",
+    "search": "knlTick every 60 ms: 240–480 candidates × ≤ 12 voices ≈ 6k flops → negligible on the main thread",
+    "L3": "+1 unison OSC L/R, Knolle 3rd partial + stereo ≈ 0.75 + 0.45",
+    "fallback": "none needed (native); works without audioWorklet"
+  },
+  "failure_modes": [
+    "The signature is inaudible on the target device: the Knolle sits at f0/2–f0/4 (≈ 55–130 Hz) behind LP 400 Hz; phone speakers roll off below ≈ 300–500 Hz (A) and the LP removes the partials that would carry it; the JI pull (±14 cents) is heard only as vanishing beats after ≥ 1–2 s of a held chord → on a phone the engine is a soft Faserton (Nebel/Obertöne family); fine on headphones/iPad.",
+    "One finger = a sub-oscillator (Nebel already has `sub`); the organism needs ≥ 2 held notes or a lane → the least distinctive of the four in single-finger play.",
+    "[A from the score formula] Arpeggio flicker in Puls: each 0.22-s hit sounds alone, so f0 = f/2 jumps with every step (the old root scores 0 against a non-harmonic new note, the 1.15 hysteresis cannot hold it) → with Trägheit 0.8 s the Knolle glides C→E→G = a seasick bass; needs a harmonic memory (notes stay in the candidate set with weights decaying over 1–2 s), root changes only when the windowed score beats 1.15× the old one, lane hits at half weight.",
+    "JI pull on sustained notes: every root flip re-bends all held notes by up to ±35 cents (tc 0.4 s) = audible glissandi on pads; with sus chords, clusters, modal/microtonal scales or N.free the search is noisy → scale Zug by the same confidence (score/Σw)² as the Knolle level; Zug 0 when N.free (V APP 2027).",
+    "MIDI/MPE: v.ji sums into the same detune as the bend bus (AudioParam inputs sum, V webaudio.md §7) – fine, but per-note MPE slides plus JI pull fight; pause Zug during glides and while MPE bend ≠ 0.",
+    "Singleton bookkeeping: lazy A.knl dies 3 s after the last voice; panic() (APP 8305) and Schlafen must kill it; bus choice (fin vs lane strip) decides whether the mixer can balance it; it never gets stolen, so it must be counted in voiceLoad() by hand.",
+    "Scoped to its own engine the Knolle is heard only when every finger plays Knolle; its value is larger engine-agnostic (listen to all held voices) and as an Ebene-2 layer."
+  ],
+  "fixes": [
+    "harmonic memory 1–2 s in the root search; windowed hysteresis; lane hits half weight",
+    "Zug and Knolle level both ∝ confidence²; Zug 0 for N.free; pause during glides/MPE bends",
+    "Knolle LP ≥ 1 kHz with y tilt, partials 1·0.7·0.5·0.3 so it carries on phone speakers; field lamp for the found root",
+    "search over all held voices of any engine (engine-agnostic), offer Knolle as the Ebene-2 layer under other engines",
+    "own return or 'fin' with a level param; count the singleton in voiceLoad(); kill in panic()/Schlafen"
+  ],
+  "verdict": "Selten: adaptive reine Stimmung ist seit 20 Jahren Werkzeug (Hermode in Logic/Cubase, Kontakt Dynamic Pure Tuning, Pivotuner 2023, alt-tuner, Mutabor; Patent US 4248119 mit Akkord-Grundtonerkennung → JI), und ein zuhörender Bass-Grundton ist die Auto-Bass-Chord-Funktion jedes Arranger-Keyboards seit 1985 – neu ist nur die Verbindung als klingender, vertrauensgewichteter Organismus mit Zug auf die Haltetöne; die Stimme selbst (PeriodicWave + Tiefpass + Sub) ist Nebel/Obertöne-Gebiet. Nativ und billig (≈ 0,4 je Stimme + 0,3 Singleton, Suche vernachlässigbar). Musikalisch wackelt die Signatur genau dort, wo Myzel lebt: auf dem Handy-Lautsprecher verschwindet die Knolle (55–130 Hz hinter LP 400 Hz), mit einem Finger ist sie ein Sub-Oszillator, im Puls springt die Grundtonsuche mit jedem Arpeggio-Schlag (ein Ton allein setzt f0 = f/2, die Hysterese greift nicht) → seekranker Bass, und Zug biegt Haltetöne bei jedem Grundtonwechsel um bis zu 35 Cent. Mit harmonischem Gedächtnis (1–2 s abklingende Kandidatenmenge), Zug und Pegel beide ∝ Vertrauen², hellerer Knolle (LP ≥ 1 kHz) und – wichtiger – einer Suche über alle gehaltenen Stimmen statt nur der eigenen Engine wäre sie der Bass, der Myzel zuhört, und als Ebene-2-Schicht wertvoller denn als eigene Klangquelle.",
+  "sources": [
+    "https://arxiv.org/pdf/1706.04338",
+    "https://arxiv.org/pdf/2306.03873",
+    "https://periodicos.ufes.br/j-ubimus/article/download/52349/36473/191784",
+    "https://en.xen.wiki/w/Adaptive_JI",
+    "https://www.audiolabs-erlangen.com/content/05_fau/professor/00_mueller/03_publications/2021_SchwaerRM_Intonation_ISMIR.pdf",
+    "https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/4248119",
+    "https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/7807908",
+    "https://duskaudio.com/plugins/chord-analyzer/",
+    "https://nime.org/proc/rhayward2015",
+    "https://www.smemmusic.ch/en/yamaha-psr-60-portatone-arranger-keyboard",
+    "https://en.wikipedia.org/wiki/List_of_Casio_keyboards",
+    "ideas/biologist.md §4 §12 (V)",
+    "research/webaudio.md §7 (V)",
+    "research/code-map.md §5 (V)",
+    "APP: N.free 2027, panic 8305, steal 4997 (V)"
+  ],
+  "marks": "V = source read in this session, VS = WebSearch result summary (page itself blocked by proxy), M = measured (sim/bio_sim.py, sim/bio_sim.out), APP = app code line, A = inference"
+}

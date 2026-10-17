@@ -1,0 +1,49 @@
+{
+  "key": "glw",
+  "name": "Glühwurm",
+  "lens": "biologist",
+  "novel": "rare",
+  "prior": "Pulse-coupled / Kuramoto synchronisation exists as playable tools, all outside touch apps: Luci modules by NLnRi for VCV Rack 'emulate light pulse synchronization observed in swarms of fireflies' (3×3 cell matrix, Influence input; patch 'Firefly Pulse', VS: patchstorage.com/firefly-pulse/); Chiral Audio Foxfire = Kuramoto model as a 16-voice chorus-ensemble effect that drifts, partially syncs, locks (VS: rekkerd.org 2025); 'Kuramoto Drone' browser piece (VS: mi.wrocenter.pl); Max/MSP Kuramoto-on-GPU patch (VS: cycling74 forum). Academic/artistic: Mirollo & Strogatz 1990 (VS: iasi.cnr.it PDF), Nolan Lem SMC 2019 coupled-oscillator synthesis (VS), NIME 2024 'Coupled Oscillator Networks' Kuramoto vs Janus (VS: nime.org/proc/nime2024_60), Döbereiner & Pirrò installation 'Contingency and Synchronization' (Kuramoto, VS: researchcatalogue.net) and xCoAx 2023 'Speculative Sound Synthesis: Synchronization' (VS). In-app: performer.md §1 proposes the same name/key independently (one Kuramoto firefly per finger, native + tick, Puls phase as a big firefly, rate snapping to beat subdivisions) (V); Tropfen/Körner are random and never order (V). Unoccupied after 3 searches (1 extended): a pulse-coupled population *inside one finger* with Höhe = coupling and finger/lane coupling in a touch instrument.",
+  "feasible": "worklet",
+  "costEst": 0.5,
+  "cost_detail": {
+    "L1": "node 0.06 + 3 k-rate params 0.09 + 16 phase integrations per block (negligible) + 6 pings × 2 complex rotations (h_i partial and the ×2.76 partial, which the idea lists but does not count) = 12 rotations ≈ 0.4 (bench: 16 rotations = 0.55 without node, V webaudio.md §4) → ≈ 0.5–0.55; idea said 0.45",
+    "L3": "32 fireflies, stereo output, 2 partials per ping, chord flash widening ≈ 0.85–0.9",
+    "phone": "×1.0–1.5 (A)",
+    "fallback": "none for this concept: a native population would need ≈ 80 scheduled events/s per voice on the main thread (A); performer's native one-firefly-per-finger variant (0.35) is a different, weaker instrument (needs ≥ 2 fingers to hear anything) → engine hidden without audioWorklet",
+    "shared_state": "module-scope GLOW ring works within one AudioWorkletGlobalScope (V webaudio.md §3); ≤ 1 block (2.7 ms) delay, inaudible"
+  },
+  "failure_modes": [
+    "[M] Density contradiction: 16 fireflies × 5 Hz = 81 firings/s in the dispersed state, not the described '5–10 pings/s' → the unordered state is a Körner/Tropfen-like shimmer rain; a sparse flicker needs N·R ≈ 20–40/s (N = 8, R = 4 Hz → 32/s).",
+    "[M] No slow emergence: with all-to-all kicks on every firing, ε ≥ 0.2 (y ≥ 0.45 at ε_max = 1) reaches r > 0.9 within the first cycle (< 0.5 s); ε = 0.1 gives partial clusters (r ≈ 0.67, seed-dependent lock 0.6–7.6 s). 'Ordnung entsteht in 2–4 s' lives only in a narrow band ε ≈ 0.05–0.15 → Höhe acts as a switch, not a slope, unless ε_max ≈ 0.15–0.2 or coupling is local (each firefly hears 3–4 neighbours).",
+    "Locked state = a repeating chord ping at 5 Hz (an LFO-gated sine once settled); rate spread keeps r ≈ 0.90–0.94 [M] = a flam/cluster, good, but identity lives in the transition → rates must keep drifting (random walk, σ ≥ 0.3) so the field never fully settles.",
+    "Ping timbre = sine pings at h ∈ {1,2,3,4} plus a ×2.76 partial: Tropfen/Kalimba/Glocke territory; in Puls a hit is one chord flash plus ≈ 15 pings in 220 ms (at 80/s) = a short glassy shimmer, distinct from Tropfen by density and by its effect on held fields, not by timbre.",
+    "Beat coupling: Kuramoto locks only if R ≈ T/k; without rate snapping to Puls subdivisions (performer's Rate-Raster) the field and the lanes fight → Takt-Rast must be the default when SEQ.on, not an option.",
+    "Lane flashes with strength 1 at ε_max = 1 snap every held field on each hit (over-coupling); Nachbarn kick must be ≤ 0.3·ε.",
+    "Level: 16 simultaneous pings → √n cap (+12 dB over one ping) still needs the Ping-Pool-Deckel and a peak reference like Tropfen (0.62)."
+  ],
+  "fixes": [
+    "N = 8–12 at L1, R default 3–4 Hz; 2nd partial always on and counted",
+    "ε_max ≈ 0.15–0.2 with y² mapping, or local topology (k = 3–4 neighbours per firefly), tuned so y ≈ 0.6 locks in ≈ 2 s",
+    "rate random walk (σ ≥ 0.3 oct) so the locked field keeps a flam",
+    "Takt-Rast default when SEQ.on; lane kicks ≤ 0.3·ε",
+    "merge with performer.md: worklet population (biologist) + Puls phase / rate snapping (performer); Spielhilfe 'Höhe = Ordnung'"
+  ],
+  "verdict": "Selten, nicht neu: Pulskopplung à la Mirollo–Strogatz/Kuramoto gibt es als VCV-Module (Luci/NLnRi, „Firefly Pulse“), als Kuramoto-Chorus-Effekt (Chiral Audio Foxfire), als Browser-Drone und in NIME/SMC-Arbeiten (Lem 2019, Döbereiner/Pirrò) – unbesetzt ist die Wiese unter einem Finger mit Höhe = Kopplung und Finger-/Puls-Kopplung; performer.md schlägt denselben Namen vor (ein Käfer je Finger, nativ) → zusammenführen: Population im Worklet (biologist) + Puls-Phase/Takt-Rast (performer). Worklet-machbar, ≈ 0,5 Einheiten (der 2. Teilton verdoppelt die Rotationen), Stufe 3 ≈ 0,9, ohne Worklet kein Ersatz. Die Spezifikation widerspricht sich messbar: 16 × 5 Hz = 81 Pings/s im zerstreuten Zustand (Körner-Regen statt „5–10/s“), und mit Alle-mit-allen-Schubsen rastet die Wiese bei ε ≥ 0,2 (y ≥ 0,45) binnen einer Periode ein (< 0,5 s) – Ordnung „entsteht“ nur im schmalen Band ε ≈ 0,05–0,15. Mit N ≈ 8–12, ε_max ≈ 0,15–0,2 (oder lokaler Nachbarschaft), Ratendrift und Takt-Rast als Vorgabe wird die Höhe zur hörbaren Rampe vom Funkeln zum Puls und das Ganze zur Bühnennummer, die der Performer meint; im Puls bleibt es ein kurzer gläserner Schimmer-Schlag, der sich von Tropfen nur durch Dichte und seine Wirkung auf die Flächen unterscheidet.",
+  "sources": [
+    "https://patchstorage.com/firefly-pulse/",
+    "https://rekkerd.org/chiral-audio-launches-effect-plugins-defined-by-real-equations/",
+    "https://mi.wrocenter.pl/en/kuramoto-drone/",
+    "https://cycling74.com/forums/-patch-sharing-kuramoto-coupled-oscillators-on-the-gpu",
+    "https://nime.org/proc/nime2024_60/",
+    "https://www.smc2019.uma.es/articles/P3/P3_09_SMC2019_paper.pdf",
+    "https://www.researchcatalogue.net/view/552571/614285",
+    "https://2023.xcoax.org/pdf/doebereiner.pdf",
+    "https://www.iasi.cnr.it/~vbonifaci/semcn/Mirollo1990.pdf",
+    "ideas/performer.md §1 (V)",
+    "ideas/biologist.md §1 (V)",
+    "research/webaudio.md §3 §4 §10 (V)",
+    "ideas/check/sim/bio_sim.py, bio_sim.out (M)"
+  ],
+  "marks": "V = source read in this session, VS = WebSearch result summary (page itself blocked by proxy), M = measured (sim/bio_sim.py, sim/bio_sim.out), APP = app code line, A = inference"
+}

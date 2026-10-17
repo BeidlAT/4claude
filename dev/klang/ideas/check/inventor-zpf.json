@@ -1,0 +1,25 @@
+{
+  "key": "zpf",
+  "name": "Zapfen",
+  "lens": "inventor",
+  "date": "2026-10-13",
+  "source_md": "zpf.md",
+  "novel": "rare",
+  "prior": "STK Shakers type 19 Guiro / Csound `guiro` (PhISEM, 128 teeth, fixed 2500/4000 Hz resonances, scrape rate from controller velocity; V: raw.githubusercontent.com/thestk/stk/master/src/Shakers.cpp, csound.com/manual/opcodes/guiro/); pulsar synthesis rhythm<->tone continuum (Roads/de Campo; Hieroglyphic Plume Eurorack 2024, V: synthanatomy.com/2024/06/hieroglyphic-plume.html; iPulsaret iOS, V: apps.apple.com/pg/app/ipulsaret/id565880268; NUKLEAR, RayBlaster); Elements bouncy-particle/bow exciters, Plaits particle engine (V: research/src/mi_*); friction/scrape synthesis research (Conan 2013/14 hal-01050522; Avanzini/Serafin/Rocchesso 2005; SDT sdt.scraping~; Agarwal/Traer/McDermott 2021 arxiv 2112.08984). Not found: a touch instrument putting finger height on a tooth-scrape rate with a quantised Rast ladder and a tuned wooden body.",
+  "feasible": "worklet",
+  "costEst": 0.45,
+  "costL3": 0.85,
+  "costNotes": "Worklet per voice: node 0.06 + 3 k-rate params 0.09 + phase accumulator, windowed impulse, noise table, 4 resonators ~40 ns/sample -> ~0.45 (idea 0.35 is ~30 % optimistic); L3 (12 resonators, stereo) ~0.8-0.9. Native stand-in is genuinely good: looped 64-scale impulse buffer with playbackRate = R/R_buf + 3-4 biquad bodies with v.mod(detune) ~0.2 units, should be the L1/mobile path.",
+  "soundHeld": "Low/mid Hoehe (3-60 Hz): ticking wooden tock with a tuned tail, subharmonic-locked by Rast; good self-player layer. At the top (R = f) it collapses into ordinary pulse/formant synthesis unless spacing irregularity, noise and detune-on-rate stay in.",
+  "soundBurst": "Distinctive: the sin^2 Strich (accelerate-decelerate) is a real gueiro stroke; 30-60 ms gates degrade gracefully to a 5-10-tick blip.",
+  "failureModes": [
+    "Top of range = cheap pulse-train lead; 64-entry amplitude table only adds tremolo at R/64 -> need per-tooth spacing irregularity (+-2-5 %) and noise component",
+    "Integer impulse placement -> +-18 cents jitter at 1 kHz, +-35 at 2 kHz -> fractional (windowed-sinc/Hann sub-sample) placement mandatory",
+    "Detune on body modes is wrong above ~30 Hz: perceived pitch is R -> Bebung/Hoehe/pitch wheel must modulate R when Rast engaged",
+    "Rast transition free->locked clicks; hysteresis plus 30-60 ms rate slew, slew each locked step too",
+    "|dy/dt| injection amplifies touch/tilt jitter into permanent Kratzen -> dead zone < 0.02/s, 50 ms leaky integrator, clamp below Rast lock",
+    "Pitch-tracking 0.5 f body with T60 <= 200 ms reads as woodblock = Membran with ticks; body variants need different mode ratios and damping",
+    "Worklet adds little over the 0.2-unit native path at L1; keep worklet for L3"
+  ],
+  "verdict": "Rare, not new: the gueiro (STK/Csound PhISEM), the rhythm-to-tone pulsar continuum (Roads; Plume, iPulsaret) and friction/scrape synthesis (Conan, SDT) all exist, but no playable touch instrument puts finger height on the scrape rate with a quantised Rast and a tuned body. Feasible on phones as a worklet at ~0.45/0.85 units, and surprisingly well as native nodes at ~0.2 (looped scale buffer + biquads), which should be the mobile path. Distinctive as a Puls hit (the sin^2 Strich) and as a slow ticking layer; the held note at the top collapses into ordinary pulse/formant synthesis unless spacing irregularity, fractional impulse placement and detune-on-rate are built in from day one. Keep it, with those three fixes as acceptance criteria."
+}

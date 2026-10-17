@@ -1,0 +1,23 @@
+const { chromium } = require('/opt/node22/lib/node_modules/playwright');
+const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) process.exitCode = 1; };
+(async () => {
+  const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
+  const page = await (await browser.newContext({ viewport: { width: 1280, height: 800 } })).newPage();
+  const errors = []; page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto('http://127.0.0.1:8790/new-inst/index.html');
+  await page.waitForFunction(() => !!window.__M);
+  await page.click('#btnStart'); await page.waitForTimeout(400);
+  await page.click('#tab-dev'); await page.waitForTimeout(300);
+  const t0 = await page.evaluate(() => { const A = window.__M.A; Object.defineProperty(A.ctx, 'outputLatency', { value: 0.072, configurable: true }); Object.defineProperty(A.ctx, 'baseLatency', { value: 0.01, configurable: true }); return document.querySelector('#sheetBody').innerText; });
+  await page.waitForTimeout(700);
+  const t1 = await page.evaluate(() => { Object.defineProperty(window.__M.A.ctx, 'outputLatency', { value: 0.012, configurable: true }); return document.querySelector('#sheetBody').innerText; });
+  await page.waitForTimeout(700);
+  const t2 = await page.evaluate(() => document.querySelector('#sheetBody').innerText);
+  const line = (t) => (t.match(/Vom Browser gemeldet[^\n]*/) || [''])[0];
+  console.log(line(t1).slice(0, 110)); console.log(line(t2).slice(0, 110));
+  ok(/Ausgabegerät 72 ms/.test(t1) && /≈ 82 ms/.test(t1) && /Audiotreiber/.test(t1), 'shows 72 ms with the driver hint');
+  ok(/Ausgabegerät 12 ms/.test(t2) && /≈ 22 ms/.test(t2) && !/meldet viel/.test(t2), 'updates live to 12 ms while the panel is open');
+  ok(await page.evaluate(() => [...document.querySelectorAll('#sheetBody button')].some((b) => b.textContent === 'Klang neu starten' && !b.hidden)), 'restart button always offered');
+  ok(!errors.length, 'no errors');
+  await browser.close();
+})();

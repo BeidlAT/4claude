@@ -1,0 +1,41 @@
+{
+  "key": "rau",
+  "name": "Raupe",
+  "lens": "composer",
+  "novel": "rare",
+  "prior": "Waveset repetition exists as offline/effect tools only: CDP DISTORT REPEAT (Wishart, Audible Design 1994; V: research/synthesis.md §2.5), the SuperCollider Wavesets quark (de Campo; analyses a sound file into wavesets, VS: quark.sccode.org/Wavesets/Help/Wavesets.html), Unfiltered Audio Dent (distortion effect with a waveset step sequencer and probability controls, VS: soundonsound.com/reviews/unfiltered-audio-dent), SoundMagic Waveset Harmonic Distortion (Michael Norris, VS: michaelnorris.info), and a 2021 UFMG/SMC paper (Martins & Padovani) that notes a VST implementation exists and that real-time versions carry a noticeable analysis delay (VS: repositorio.ufmg.br/handle/1843/54833). Three searches (two extended) found no Eurorack module, Max/M4L/VCV/Reaktor device, AUv3 or app that repeats wavesets, and none that pitch-locks them. Nearest mainstream mechanism: sample-to-wavetable extraction at zero crossings (HALion Wavetable Editor marker extraction VS: steinberg.help; Serum/Vital/Pigments sample import A) – Raupe is in effect a live, continuously advancing zero-crossing wavetable scan with the repeat count under the finger and the Körner library (incl. microphone and echo) as material. Rated rare: niche/academic tools only, no playable instrument; not new because the mechanism = Wishart repeat + wavetable-from-sample. In-app relative: Körner (grains of the same material; V: APP 3569–3584, 4953–4995).",
+  "feasible": "worklet",
+  "costEst": 0.4,
+  "cost_detail": {
+    "measured": "Node 22 x64 prototype of the specified reader (lerp read, raised-cosine crossfade, 1-pole, per-waveset zero-crossing scan + RMS), warmed, 10 s per setting [M: research/bench/rau_check2.js]: 12–22 ns/sample (0.10–0.18 units loop) for R ≥ 4 or f ≤ 220 Hz; tonal material at R = 1 rises with wavesets/s: 880 Hz 47 ns (0.39), 1760 Hz 74 ns (0.61) because every waveset change scans ≈ 2 material periods + RMS; noise material 20–36 ns.",
+    "L1": "loop 0.15–0.4 + node 0.06 + 3 params 0.09 ≈ 0.3 (typical) … 0.75 (R = 1, high notes, tonal material); with a precomputed waveset table per material (zero-crossing index + RMS computed once on transfer) the loop is flat ≈ 0.15 → L1 ≈ 0.3. Idea's 0.3 is the best case.",
+    "L3": "two heads L/R ≈ 0.6–1.0 (idea: 0.55)",
+    "material": "textures are 3.2 s stereo (V: APP 4718, TEX_F = 220) → ≈ 600 KB mono per transfer, fine; MIC.ringL and CAP.ringL (8 s mono each) live on the main thread (V: APP 4886–4950, 5260–5270, setupCapture) → post a 1–2 s window (≤ 384 KB) every 0.6–1.2 s like micSource()/echoBuffer() already do; no 'myzel-ohr' processor needed.",
+    "phone": "×1.0–1.5 (A)"
+  },
+  "measurements": [
+    "Waveset statistics of synthetic Myzel-like materials [M: rau_check.js]: tonal 220 Hz texture → ≈ 120 wavesets/s, length 87–233 samples with sieb 1 ms (≈ one period); 5-voice chorus → 48–402; band-passed noise (Staub-like) → 409/s, mean 74 samples at sieb 1 ms, 583/s mean 40 at 0.2 ms, 185/s at 4 ms.",
+    "Resampling ratio L/T (decimation when playing above the material pitch): at 880 Hz 95 % of tonal wavesets have ratio > 2 and 48 % > 4; at 1760 Hz 100 % > 2, 95 % > 4 → the specified 1-pole lowpass cannot prevent aliasing there [M].",
+    "DC: repeated wavesets of beating material carry a mean of up to +0.08 (chor, 110 Hz, R = 64) → needs a DC blocker [M].",
+    "RMS normalisation with +12 dB cap on noise material produced peaks > 1.0 at nominal 0.2 RMS → cap the gain by peak as well [M]."
+  ],
+  "failure_modes": [
+    "Aliasing above ≈ 440 Hz with tonal material (ratio > 2) – the 1-pole at 0.4·SR·T/L is far too weak for decimation by 2–8; the default range 130–520 Hz is just inside, Puls octaves and MIDI are not.",
+    "Formant shift is the identity and the limit: pitch lock by resampling = the single-cycle 'chipmunk' – material played an octave up sounds half as deep; the pitch text sells this as 'Formant wandert mit', musicians will hear 'sample played too fast'.",
+    "Noise materials (Staub, Wasser, Zikaden, Kurzwelle) have 40–80-sample wavesets: at R = 1 every period is a different noise snippet stretched to T → a dark pitched hiss close to Hauch; at R = 64 a 0.3 s buzz per waveset = the real Wishart stutter. The engine is only distinct at R ≥ 8 → default y must land there.",
+    "Puls: 0.22 s gate with R from Puls brightness at a fixed 'stelle' → identical hits unless the head advances per hit; the crossfade attack (glatt·T) plus burstEnv ≥ 3 ms is fine, but with R = 64 one hit never leaves the first waveset (= a static wavetable blip).",
+    "Silence in the material: the zero-crossing search stalls (bounded at 4096) and the +12 dB normalisation lifts the noise floor; echo and mic material are mostly silence between notes.",
+    "DC from asymmetric wavesets and clicks when 'richtung = zurück' reverses wavesets whose end slope ≠ start slope (a reversed waveset still starts and ends at zero, so this is mild).",
+    "Höhe = R = round(2^(6y)): the top half of the finger travel (R 8–64) is where the character lives and the bottom (R 1–3) is mushy; Gestik Höhe offsets of ±0.3 move the sound across that boundary."
+  ],
+  "fixes": [
+    "per-waveset scratch copy decimated with a short FIR when L/T > 1.5 (cost ≈ 0.1 units) or true PSOLA (natural-length waveset overlap-added at period T, formants preserved, 2–4 overlapping readers)",
+    "waveset table per material computed once on transfer (zero crossings, RMS, peak) → flat cost, no stalls on silence, 'stelle' becomes an index",
+    "DC blocker 15 Hz; gain = min(0.2/rms, 0.9/peak)",
+    "y → R exponential but starting at 2 (R = round(2·2^(5y))), default y in the stutter zone; Puls: head advances one waveset per hit per lane (the caterpillar crawls with the rhythm)",
+    "material default 'glas' or 'chor' (tonal, one waveset ≈ one period); for live mic/echo use sieb 2–4 ms"
+  ],
+  "verdict": "Selten: Waveset-Wiederholung gibt es nur offline (CDP, SC-Wavesets-Quark) oder als Effekt (Unfiltered Audio Dent, SoundMagic), keine App, kein Modul, kein spielbares Instrument – und mit Tonhöhen-Rastung niemand; der nächste Verwandte ist die Wavetable-aus-Sample-Extraktion an Nulldurchgängen (HALion, Serum, Vital), Raupe ist deren lebende, kriechende Variante über Myzels Körner-Material samt Mikrofon und Echo. Worklet-machbar, gemessen 12–22 ns/Sample im Normalfall (≈ 0,3 Einheiten mit Node und Parametern), aber bis 0,75 bei R = 1 auf hohen Tönen mit tonalem Material, weil jeder Waveset-Wechsel zwei Materialperioden scannt – eine einmal je Material berechnete Waveset-Tabelle macht die Kosten flach; der eigene Echo-/Mikro-Ring des Apps reicht als Material, „myzel-ohr“ ist unnötig. Klanglich versagt die Spezifikation oberhalb ≈ 440 Hz (95 % der Wavesets werden um > 2 dezimiert, der Einpol-Tiefpass hält kein Aliasing auf), bei Rauschmaterial mit R ≤ 3 klingt es wie dunkles Hauch, bei stillem Material stockt die Suche und die Normierung hebt den Rauschteppich, und Puls-Stöße an derselben Stelle sind identisch. Mit dezimierter Scratch-Kopie oder echtem PSOLA, Waveset-Tabelle, DC-Sperre, R ab 2 exponentiell mit Vorgabe im Stotterbereich und einem Kopf, der je Puls-Stoß weiterkriecht, ist es ein wirklich eigener, pitch-gerasteter Stotter-Flötenklang aus dem eigenen Spiel – ohne diese Korrekturen ein aliasendes Sample-zu-schnell.",
+  "sources_bench": ["research/bench/rau_check.js (+ .out.json): waveset statistics, aliasing ratio, DC", "research/bench/rau_check2.js (+ .out.json): reader cost, warmed"],
+  "marks": "V = source read, VS = WebSearch summary, M = measured here, A = inference"
+}

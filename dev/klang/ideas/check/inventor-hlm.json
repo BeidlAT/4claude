@@ -1,0 +1,40 @@
+{
+  "key": "hlm",
+  "name": "Halm",
+  "lens": "inventor",
+  "novel": "rare",
+  "prior": "Self-oscillating jet/reed waveguides with breath-controlled register are established in the physical-modelling niche and partly mainstream: SWAM VariFlute / Alto Flute on iOS (physical flute models, breath/MPE, iPad usable as 'expressive touch controller'; VS: https://apps.apple.com/us/app/swam-variflute/id6747028179, https://apps.apple.com/app/id1458088770), Respiro (Imoxplus, wind physical-modelling synth, breath/MPE, iOS player; VS: https://www.kvraudio.com/product/respiro-by-imoxplus/details), Erica Synths Steampipe (hardware, 'overblow' by modulating the loop filters, VS: https://www.soundonsound.com/news/erica-synths-launch-steampipe, https://vintageking.com/erica-synths-steampipe-polyphonic-modeling-synthesizer-demo-deal) and its Reaktor ancestor, Tracktion Outersect Modeler (reed/brass models; VS: https://www.bhphotovideo.com/c/product/1899088-REG/tracktion_outersect_modeler_physical_modeling.html), Logic Sculpture 'Blow' (V synthesis.md), STK/Faust/Csound wgclar/flute (V: research/src/stk_Flute.cpp, stk_Clarinet.cpp; https://csound.com/manual/opcodes/wgclar/). No touch instrument found that maps finger height to breath with an audible threshold and register jumps on a phone (A); Smule Ocarina used microphone breath (A, not verified). Rated 'rare': the DSP is well known, the Hoehe=Atem play is the only new part.",
+  "feasible": "worklet",
+  "costEst": 0.45,
+  "cost_detail": {
+    "measured": "JS reimplementation of STK Clarinet 29 ns/sample = 0.24 units loop; STK Flute (bore + jet delay + one-pole + DC blocker) 34 ns = 0.28 [M, research/bench/blow_check.js]. A bidirectional open-pipe flute (two tubes, head/foot terminations) is ~2x the flute loop (A).",
+    "L1": "0.24-0.28 + node 0.06 + 3-4 params 0.09-0.12 ≈ 0.4-0.45 (idea said 0.6: conservative)",
+    "L3": "second bore ±4 ct ≈ 0.7-0.8 (idea said 1.1)",
+    "phone": "x1.0-1.5 (A)"
+  },
+  "measurements": [
+    "Reed (clarinet): oscillation threshold at breath 0.15 at all pitches 110-2500 Hz; tuning 0-1 ct with delay = SR/(2f) - 1.5 samples (no table needed); onset t90 235/130/75/175/40/30 ms at 110/220/440/880/1500/2500 Hz (breath 0.8, 10 ms ramp), 45-165 ms at 440 Hz depending on breath (0.8 fastest); decay after breath stop 5-55 ms; odd harmonics dominate (h2 -50..-70 dB, h3 -4..-24 dB) [M].",
+    "Reed at breath 1.3: silence (-113..-240 dB) - the reed slams shut (reflection clamps at 1) and the oscillation dies; there is no 'Quietschen' regime, only choke above ≈ 1.2 [M].",
+    "Flute (STK single delay, bore tuned to 2f/3 as in STK): threshold breath 0.9 at all pitches; silence at breath >= 1.6 -> playable window 0.9-1.5; below threshold only -58 dB noise through the bore (48 dB under the tone) [M].",
+    "Flute registers vs jet ratio J/D at breath 1.2: 0.32 -> 1.52x bore, 0.25 -> 2.45x, 0.20 -> 2.51x, 0.15 -> 3.5x, 0.40 -> 1.47x, 0.50 -> ambiguous/3.4x: the loop's sign inversion gives modes at odd multiples of f_bore/2, so 'overblowing' jumps by 5/3 (≈ 884 ct) and 7/5, not by an octave [M]. The idea's J = D·0.5/(1+2p) sweeps exactly through these.",
+    "Bidirectional open pipe (research/bench/flute2_check.js, crude embouchure scattering): breath 0.9 -> weak tone near 1x, breath 1.2 -> ≈ 2x register (1.75-2.16x depending on J/D), 1.6 -> silence; within a register the pitch moves with the jet delay by up to ±240 ct -> register-dependent delay compensation is mandatory (matches Faust's 'this model is out of tune' note) [M].",
+    "Flute onset 50-215 ms (fast at high breath), decay after breath stop 95/160/460 ms at bore 587/293/147 Hz (the bore rings; only the reed is 'knackig') [M].",
+    "Flute above ≈ 1.2 kHz (bore 1173 Hz, D = 38 samples): output -26 dB at 0.78x - the model breaks; the reed works to 2500 Hz (D = 8 samples) [M]."
+  ],
+  "failure_modes": [
+    "Reed: P = 0.25 + 0.9y as proposed starts above threshold (no 'Luft' regime at y=0) and ends near the choke; remap to ≈ 0.05 + 1.1y with the breath noise added outside the loop.",
+    "Flute: narrow pressure window (0.9-1.5) and sixth/tritone register jumps in the cheap STK bore; octave registers need the two-tube bore plus per-register tuning tables - the 'physikalisches Überblasen' is the expensive, risky half.",
+    "Low notes speak slowly (reed 235 ms at 110 Hz, ~0.5 s at 55 Hz); Puls bass hits with 60-110 ms gates will be soft or missing.",
+    "Register jumps change pitch, so Myzel's pitch grid (setF) must retune the bore per register or accept the ornament as a fixed interval.",
+    "Timbre range within a register is modest (level + brightness); the 'Hauch' overlap is avoided only through the threshold and the register behaviour."
+  ],
+  "fixes": [
+    "ship the reed model as default (works first time); flute as second 'Rohr' only with the bidirectional bore, a (register, J/D) tuning table and a pitch ceiling ≈ 1 kHz",
+    "explicit air-noise path outside the loop (filtered noise ∝ max(0, P_thr - P)) so 'Luft -> Ton' is continuous",
+    "Puls: start breath above the sweet spot (0.8-1.0 reed) with a 1 ms ramp; add a tongue click (impulse) for gates < 60 ms",
+    "high-pressure 'Quietschen' as an explicit effect (reed stiffness drop + noise), not from the physics"
+  ],
+  "verdict": "Günstigste der vier (29–34 ns/Sample ≈ 0,45 Einheiten) und das Rohrblatt funktioniert auf Anhieb: Schwelle bei Atem 0,15, Stimmung auf 1 Cent mit −1,5 Samples Kompensation, Einschwingen 45–235 ms (tonhöhenabhängig), Ausklingen 5–55 ms (knackig), ungerade Harmonische – aber über Atem ≈ 1,2 würgt es ab (kein 'Quietschen'), das Atem-Mapping muss also 0,05–1,15 statt 0,25–1,15 sein. Die Flöte ist der Risikoteil: Spielfenster nur Atem 0,9–1,5, das STK-Einzeldelay überbläst in 1,5:2,5:3,5-Registern (Sexte statt Oktave), ein beidseitiges Rohr springt zwar ≈ 1×→2×, aber die Tonhöhe hängt um Hunderte Cent am Jet-Delay und über ~1,2 kHz kippt das Modell. Empfehlung: Rohrblatt als Standard, Flöte nur mit registerabhängiger Kompensationstabelle und Luft-Rauschpfad außerhalb der Schleife; das Novum liegt im Höhe-=-Atem-Spiel, nicht im DSP (SWAM, Respiro, Steampipe, Sculpture existieren).",
+  "sources_bench": ["research/bench/blow_check.js", "research/bench/flute2_check.js", "research/bench/*.out.json"],
+  "marks": "V = source read, VS = WebSearch summary, M = measured here, A = inference"
+}

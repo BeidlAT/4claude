@@ -1,0 +1,26 @@
+{
+  "key": "rnk",
+  "name": "Ranke",
+  "lens": "inventor",
+  "date": "2026-10-13",
+  "source_md": "rnk.md",
+  "novel": "rare",
+  "prior": "Csound scanu/scans/scanu2 reference implementation (V: research/src/cs_scansyn.c, cs_manual_scanu.xml); Qu-Bit Scanned Eurorack 2018 (Mass/Stiffness/Damping, 4 hammer shapes, inject input; V: synthtopia.com/content/2018/10/10/qu-bit-scanned-...; musictech.com review 'organic, rawer, unique'); Humanoid Sound Systems Scanned Synth Pro / Enzyme 2014 (V: soundonsound.com review: 'inaudible or distorted, small changes large effects'); Fellusive Nettle 2021 free VST3/AU, key = hammer (V: kvraudio.com/product/nettle-by-fellusive); Smartelectronix ScanSynth never released; NI Skanner XT is not scanned synthesis; MI-GEN~ mass-interaction in gen~; iOS mass-spring touch synths (Anckorage Spring, Baby Audio Atoms 2024) without a scan head; patent US 6,647,359 (filed 1999) expired. Not found: any browser or phone/touch implementation of scanned synthesis; the finger-as-hammer mapping is the inventors' own Radio-Baton intent (V: ccrma.stanford.edu/~juanig/descrips/osgrilos.html).",
+  "feasible": "worklet",
+  "costEst": 0.4,
+  "costL3": 0.55,
+  "costNotes": "Physics negligible (ring, nearest-neighbour springs, N = 48 at U = 400 Hz ~5 ops/sample); the scan dominates (~30-45 ns/sample ~0.2 units) + node 0.06 + 3 params 0.09 + DC-HP/LP/RMS ~0.04 -> ~0.4 (idea 0.3 ~30 % optimistic); L3 96 masses + second scan head + stereo ~0.55. No viable native stand-in with live hammering (crossfaded buffers = 25-50 Hz timbre steps, 30+ ms hammer latency) -> hide engine without worklet. Build 0.25 ms per node, Puls at 16ths fine.",
+  "soundHeld": "Signature: each spatial mode k of the ring = harmonic k, breathing at its own slow rate omega_k, i.e. a dispersing bump travelling round the ring; partials move coherently, unlike Obertoene-with-LFOs or a wavetable sweep; pushed above ~20 Hz the AM becomes sidebands = the 'elektrisch' buzz. But with damping > 0 the held note dies in seconds and a constant force at p yields a static bump -> needs a real sustain drive (low-rate noise force or periodic re-hammer at Bebung rate).",
+  "soundBurst": "Hammer bump -> sharp pulse-like cycle dispersing in 50-300 ms into a rounder tone = a boing with dispersion; burstEnv on v.out.gain works unchanged. At 60-120 ms gates the dispersion has not happened -> generic narrow-pulse stab unless physics tempo U (or k_s) is scaled x2-4 for bursts.",
+  "failureModes": [
+    "Hammer position on a uniform ring is inaudible: cyclic chain is translation-invariant, hitting at p vs p' = pure time shift of the periodic waveform -> 'dieselbe Note an drei Hoehen = drei Instrumente' is false as specified; fix: clamp one mass (standing waves, p works like pluck position), scan a segment, or map Hoehe to hammer width/damping",
+    "Narrow sweet spot (SOS on Scanned Synth Pro; Csound manual 'very unstable... blow up'): six 0-1 knobs must be pre-scaled into the stable, audible window (omega*dt < 2, decay 0.3-8 s, m >= 0.1)",
+    "Update-rate buzz: state changes every 1/U with linear interpolation put inharmonic sidebands +-U around every harmonic -> make the update pitch-synchronous (U = f/n at scan-phase wrap), cheaper and cleaner",
+    "RMS normalisation pumps (lifts residual DC bump and numerical noise into hiss, swells the tail) -> no AGC; scale by hammer energy at on, soft-clip with shared tanh table",
+    "Held sustain needs drive, otherwise 'held' = 'struck with long release'",
+    "Lo-fi images: 48-point shape with 2-point interpolation = 48-sample wavetable grit -> 4-point cubic reads or N = 64-96 at L1 plus pitch-tracking LP",
+    "Puls hits too short to evolve -> scale physics tempo x2-4 for bursts",
+    "Mode 0 (uniform displacement) drifts as DC with weak centering -> DC high-pass mandatory; flush |state| < 1e-18 per block"
+  ],
+  "verdict": "Build it: it is the cheapest worklet engine (~0.4), the finger-as-hammer mapping is genuinely unoccupied on web/phone, and the coherent dispersing-bump timbre is unlike anything in Myzel. But the pitch overclaims novelty (Qu-Bit Scanned, Enzyme, Nettle exist) and has one physics error that voids its headline mapping (hammer position on a uniform ring is inaudible), plus two choices that will produce artefacts (running-RMS AGC, free-running update rate). With a clamped or segment-scanned ring, Hoehe = hammer width/damping, pitch-synchronous updates and no AGC, it should sound distinctive as both held note and Puls hit; without those fixes it will sound like a hard-to-control lo-fi wavetable."
+}

@@ -1,0 +1,37 @@
+{
+  "key": "khl",
+  "name": "Kehlchen",
+  "lens": "inventor",
+  "novel": "rare",
+  "prior": "Syrinx models exist as research code and a few obscure products: Xoxos 'Oscine Tract', free Windows 32-bit VST 'modeling the songbird vocal tract, also known as the syrinx' (VS: https://plugins4free.com/plugin/1251); Dillon Bastan 'Songbird' Max for Live, 32 birds each with a 'syrinx model' built from wavefolding/AM/FM, i.e. not physical (VS: https://www.musicradar.com/news/dillon-bastan-songbird-m4l); Cherry Audio F_BIRDZ bird-call generator module (VS: https://store.cherryaudio.com/modules/f-birdz); zekearneodo/syrinxsynth (Python, Mindlin model; https://github.com/zekearneodo/syrinxsynth), saguileran/birdsongs (Python ODE model of syrinx+trachea+beak; https://github.com/saguileran/birdsongs), 'electronic syrinx' analog integrator (PRE 72, 2005; https://journals.aps.org/pre/abstract/10.1103/PhysRevE.72.051926), Kahrs & Avanzini 'Computer Synthesis of Bird Songs and Calls' (https://www.researchgate.net/publication/2566778_Computer_Synthesis_Of_Bird_Songs_And_Calls), 'Physiologically driven avian vocal synthesizer' (https://www.researchgate.net/publication/43020855_Physiologically_driven_avian_vocal_synthesizer), Smith & Smith avian vocal tract waveguides (VS). No Eurorack module and no touch app with a playable labia oscillator found (A). Myzel-internal: Koerner texture 'voegel' and Schwarm (FM chirps) are not labia models.",
+  "feasible": "worklet",
+  "costEst": 0.4,
+  "cost_detail": {
+    "measured": "Labia ODE (2 semi-implicit Euler substeps) + 2 trachea biquads + beak one-pole + noise: 27 ns/sample = 0.22 units loop [M, research/bench/syrinx_check3.js].",
+    "L1": "0.22 + node 0.06 + 3-4 params 0.09-0.12 ≈ 0.4 (idea said 0.5)",
+    "L3": "second labia pair + coupling ≈ 0.6-0.7 (idea said 0.9)",
+    "phone": "x1.0-1.5 (A)"
+  },
+  "measurements": [
+    "Threshold works: b < 0 decays to silence; b > 0 oscillates; amplitude follows sqrt(B/C) (rms 0.32 -> 1.22 for b 0.05 -> 0.8 at C 0.3, ratio 3.9 vs 4.0 predicted) [M].",
+    "Chip onsets: t90 = 64/23/7 ms at 500 Hz, 16/6/2 ms at 2 kHz, 8/3/1 ms at 4 kHz for b 0.1/0.3/1.0; decay after b -> -0.3: 2-10 ms [M]. Fast enough for any Puls gate; also means no natural ring - every syllable's tail must come from the native envelope/trachea.",
+    "Pitch error vs nominal (eps = (2πf)²): 0 ct at 220-880 Hz for b <= 0.3, -50..-81 ct at b = 1.0 for 220-880 Hz, +10/+34/+65 ct at 2.5 kHz and +19/+75/+210 ct at 4.5 kHz for b 0.05/0.3/1.0 [M, research/bench/syrinx_check.js]: the shift depends on both f and B, so a 1-D eps table is not enough.",
+    "'Rauheit' D (D·x²·v·|x| term, 0.5/3/10): no period doubling (f/2 at -57..-105 dB), only amplitude loss (peak 1.27 -> 0.54) [M]. Trachea reflection fed back into the drive (G 0.1-0.9, 0.15-1 ms): pitch pulling (-35..+90 ct) and stronger h3, still no subharmonics (f/2 <= -48 dB) [M, syrinx_check2.js].",
+    "Two labia pairs with 100 ct offset and strong shared-pressure coupling (K 2): f/2 content -24 dB, f/4 -29 dB (beating/combination tones); at 10-20 ct offset only -38..-50 dB [M]. This is the Stufe-3 'Drossel' feature and the only verified roughness."
+  ],
+  "failure_modes": [
+    "The roughness axis as specified is inert: 'rau' at high finger height would just be quieter; roughness needs another mechanism (asymmetric two-mass labia, turbulence noise modulated by pressure, or the pair).",
+    "Pitch calibration is 2-D (f, B); without a frequency-locked correction inside the processor, pressure changes bend the pitch by up to 2 semitones at high f (could be sold as 'Vogel', but breaks the pitch grid and MIDI).",
+    "Held note = a theremin-like near-sine with pressure-loudness; bird-likeness comes from 20-50 Hz motor gestures (pressure/tension modulation shaping syllables), which a finger or Gestik cannot supply fast enough - without a built-in syllable generator it will not sound like a bird when held.",
+    "Chips are short and bright (1.2-2.8 kHz trachea formants); in a mix they read as 'sine blips' unless the trachea/beak filters and noise are rich; risk of 'Sinus mit Vibrato' the idea itself names."
+  ],
+  "fixes": [
+    "frequency-locked loop in the processor (zero-crossing period estimate -> eps correction, time constant ~20 ms) or a 2-D (f, B) table",
+    "roughness = pressure turbulence noise + optional pair (L3) rather than the D term; or an asymmetric two-mass labia model (A, untested)",
+    "syllable generator: internal gesture envelopes (B and eps trajectories 20-80 ms) triggered per onset and modulated by Hoehe/Gestik; Puls lanes trigger syllables",
+    "trachea length as a parameter (two biquads) and beak lowpass tied to Hoehe for the 'Schnabel' timbre"
+  ],
+  "verdict": "Billig (27 ns/Sample ≈ 0,4 Einheiten), Schwelle, Chip-Einsätze (1–64 ms) und Silbenabriss (2–10 ms) stimmen, Amplitude ∝ √(B/C) bestätigt – als Puls-Quelle ('Chips', Sporenregen-Schwarm) überzeugend. Zwei Versprechen fallen: der Rauheitsterm D erzeugt keine Periodenverdopplung (Subharmonische ≤ −57 dB, nur Pegelverlust), auch Trachea-Rückkopplung nicht – erst das Lippenpaar (Stufe 3, 100 ct Versatz, starke Kopplung) liefert −24 dB Zwischentöne; und die Tonhöhe weicht nichtlinear um +10…+210 ct (hoch) bzw. −50…−80 ct (tief, hoher Druck) ab, abhängig von f und B, braucht also eine 2-D-Korrektur oder einen Frequenz-Nachregler im Prozessor. Gehalten ist es ohne Silben-Generator ein Theremin mit Druck-Lautstärke; die Vogelhaftigkeit entsteht durch Motorgesten (20–50 Hz Druck-/Spannungs-Modulation), die der Finger allein nicht liefert – ein eingebauter Silben-Generator (Gestik-/Puls-getaktet) wäre Pflicht. Novum selten: Xoxos Oscine Tract, Bastan Songbird (M4L), F_BIRDZ und Forschungscode existieren, keine Touch-App.",
+  "sources_bench": ["research/bench/syrinx_check.js", "research/bench/syrinx_check2.js", "research/bench/syrinx_check3.js"],
+  "marks": "V = source read, VS = WebSearch summary, M = measured here, A = inference"
+}

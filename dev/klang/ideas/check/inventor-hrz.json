@@ -1,0 +1,43 @@
+{
+  "key": "hrz",
+  "name": "Harz",
+  "lens": "inventor",
+  "novel": "rare",
+  "prior": "Mechanism (banded waveguide + bow table) is published and shipped in niche tools: STK BandedWG/Essl-Cook ICMC'99/'02 (V: research/src/stk_BandedWG.cpp; https://ccrma.stanford.edu/~carmenng/250b/icmc2002.pdf), Faust glassHarmonica.dsp/tibetanBowl.dsp (V: research/src; https://scm.cri.minesparis.psl.eu/git/Faustine.git/blob/e77e9feca3956347ffeb6d58e97ec3b423ec99aa:/interpretor/faust-0.9.47mr3/examples/faust-stk/glassHarmonica.dsp), Mutable Elements bow mode (V: research/src/mi_elements_resonator.cc), Modalys bow (V synthesis.md §2.9), Michon's real-time singing-bowl model with rub-board controller (VS: https://ccrma.stanford.edu/~rmichon/publications/doc/NIME15-tibetan.pdf), Serafin NIME 2004 generalized friction controller for saw/bowl/glass harmonica (VS: https://nime.org/proc/nime2004_serafin/), AAU 'Electronic Armonica' with banded-WG engine (VS: https://vbn.aau.dk/en/publications/electronic-armonica-a-tangible-musical-interface-inspired-by-the-). Touch bowing with finger pressure exists for strings: FingerFiddle iOS (touch contact area = pressure; VS: https://www.kvraudio.com/product/fingerfiddle-by-matthias-demoucron/reviews/5685), SWAM Solo Strings iPad 'virtual bowing touch surface' (VS: https://apps.apple.com/app-bundle/swam-solo-strings-bundle/id1565559825), GeoShred cello/viola models (VS, page not fetchable: https://moforte.com/help/effects/cello.html). Closest consumer bowl app: Glideophone Singing Bowls iPad, 'trace a loop and a bowl rings', synthesized from inharmonic partials – additive, no friction (VS: https://apps.apple.com/app/id6777526433). No phone/tablet touch instrument with a friction-model bowed glass/bowl/bar found (A).",
+  "feasible": "worklet",
+  "costEst": 1.05,
+  "cost_detail": {
+    "measured": "JS reimplementation of STK BandedWG, Node 22 x64 (research/bench/bow_check.js): 4 modes 104 ns/sample = 0.86 Nebel units loop-only, 5 modes 127 ns = 1.05, 7 modes (bowl doublets) 163 ns = 1.35, 8 modes 185 ns = 1.53 [M]. Typed-array state inside the loop; locals could save ~20-30 % (A).",
+    "L1": "4 modes 0.86 + node 0.06 + 3-4 k-rate params 0.09-0.12 (webaudio.md §4) = 1.0-1.05",
+    "L3": "8 modes with doublets, stereo write: 1.53 + 0.18 = 1.7-1.8",
+    "phone": "x1.0-1.5 vs this Xeon core, applies to the Nebel unit equally (webaudio.md §4, A)"
+  },
+  "measurements": [
+    "Tuning: sustained bowed mode 1 lands +2..+12 ct sharp (110 Hz +10/+12, 220 Hz +4/+6, 440 Hz +2/+4, 1568 Hz +2/+4) for STK integer delay vs fractional+compensated delay; the 32-Hz bandpass centre dominates the loop frequency, so delay compensation barely matters and the residual is systematic (resonator peak slightly above pole angle) -> correctable per mode [M].",
+    "Onset with STK coupling (bow force / N): t90 = 1.0-1.9 s at 110/440/1760 Hz; growth per period only ~1.5-4.8 % (negative-resistance slope of the bow table). Without the /N division (K=5): t90 220-310 ms, nearly pitch-independent; with per-mode excitation weights (needed, see next) t90 320-830 ms [M].",
+    "Mode race: with flat excitation weights and strong coupling the bow locks onto mode 2 (1021 Hz at f=440, p>=0.3) or mode 3 (730 Hz at f=110) because higher modes grow faster per second; weights 1/0.5/0.3/0.2/0.15 make mode 1 win at all tested pitches and pressures (m2 <= -53 dB) [M].",
+    "Pressure regimes do not exist in this DSP: output stays near-sinusoidal at every pressure (h2 -45..-56 dB, h3 -50 dB; mode 2 only -20..-60 dB); p >= 0.8 (slope < 2.8) slows the onset, p >= 0.9 chokes to silence (table clamps at 0.98 = permanent stick). Sweet spot p 0.3-0.6 [M].",
+    "Bow velocity window: vt 0.02 silent, 0.05 weak and may lock on mode 2, 0.1-0.2 full level, 0.4 weaker and 1.35 s onset [M].",
+    "Friction force F = dv*table(dv) itself carries the stick-slip character: even harmonics (h2 -25..-29 dB abs, h3 -31) plus 75-97 % non-harmonic (noise-like) energy that grows with pressure (F rms -24 dB at p 0.1 -> -12 dB at p 0.7) [M]. Mixing F into the output is the cheap way to give 'Druck' an audible effect.",
+    "Puls/burst: a 60/110/220 ms stroke reaches -41/-36/-23 dB (220 Hz) and -43/-47/-39 dB (440 Hz) vs -9 dB sustained; with the bow contact faded out at release the modes ring with no audible decay for >1 s at loop gain 0.999 (T60 ~ 15-60 s) [M]. With the bow left 'on' (STK behaviour) the resting bow damps everything within 100 ms (-117 dB) [M].",
+    "Loop gain must stay >= ~0.98 for bowed operation: the Uniform Bar preset (0.9/period) never speaks under the bow (-110..-128 dB after 1.5 s) [M].",
+    "High pitch: 1000 Hz keeps 5 modes (min delay 4.1 samples), 2500 Hz 3 modes; fine with fractional delay [M]."
+  ],
+  "failure_modes": [
+    "Held note swells for 0.3-0.8 s (physically plausible for glass/bowl, but 'percussive' use is out); with STK coupling it would be 1-2 s = broken.",
+    "Finger height as pressure: upper 20 % of travel = silence (choke), no multiphonic regime; needs remap y -> p in [0.15, 0.7] and the F-path for roughness.",
+    "Mode selection races: without weights the note can come out a 2.32x or 4.25x partial instead of the fundamental (unpredictable per note).",
+    "Puls hits 20-35 dB quieter than held notes unless every gate < ~300 ms gets an impulse/pluck seed and gain compensation; after release the ring is endless unless 'Daempfung' maps to loop gain (0.98-0.9995).",
+    "Tuning +4..+12 ct sharp must be calibrated; Saege/Teich bodies untested."
+  ],
+  "fixes": [
+    "excitation weights per mode (STK excitation_[k]) e.g. 1/0.5/0.3/0.2/0.15; bow force without /N",
+    "y -> p = 0.15 + 0.55*y; add 'Harz' = F path mixed to output (0..0.5), noise fraction rises with p",
+    "bow contact K ramps to 0 on release (20 ms) so modes ring; Daempfung -> loop gain 0.98..0.9995",
+    "Puls: impulse into delays + stroke for any gate < 300 ms, burst peak x3-10",
+    "per-mode centre correction from the measured offsets (or resonator peak formula)"
+  ],
+  "verdict": "Machbar und preislich wie geschätzt (gemessen 104 ns/Sample für 4 Moden ≈ 1,0 Einheiten, 8 Moden ≈ 1,7), Novum nur 'selten': Banded-WG-Streichen gibt es in STK/Faust/Elements/Modalys, Touch-Bogen mit Druck in FingerFiddle/SWAM, aber keine Touch-App mit Reibungs-Glas/Schale. Drei Spielversprechen fallen im beschriebenen DSP durch: Einschwingen 1–2 s mit STK-Kopplung (ohne /N 0,3–0,8 s), 'Druck' erzeugt keine Regime (Ausgang bleibt bei jedem Druck fast Sinus, h2 −45 dB) und würgt ab p ≳ 0,8 ab, und ohne Modengewichte gewinnt oft Modus 2 oder 3 statt des Grundtons. Alles behebbar (Gewichte 1/0,5/0,3, Druckbereich 0,15–0,7, Reibkraft F direkt in den Ausgang als Harz-Rauheit, Bogenkontakt beim Loslassen ausblenden, Zupfimpuls für jeden Puls-Hit < 300 ms, Cent-Korrektur) – dann ist es Myzels erste echte Reibung mit eigenem Charakter; ohne diese Änderungen ist es 'Schale mit langsamem Einschwingen'.",
+  "sources_bench": ["research/bench/bow_check.js", "research/bench/bow_check2.js", "research/bench/bow_check3.js", "research/bench/*.out.json"],
+  "marks": "V = source read (research/src), VS = WebSearch result summary (pages not fetchable through the proxy), M = measured here (Node 22 x64, 48 kHz), A = inference"
+}
