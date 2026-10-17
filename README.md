@@ -7,7 +7,10 @@ Ein Touch-Instrument für ambiente, perkussive, experimentelle und psychedelisch
 
 ## Klänge
 
-- **Klangquellen (16)** in fünf Familien – Luft: Hauch, Obertöne, Stimme, Halm · Dunst: Nebel, Körner, Schwarm · Holz: Ranke, Saite · Erz: Glocke, Schale, Gong, Kalimba · Erde: Tiefe, Membran, Tropfen. Neu: **Halm** (selbstschwingendes Rohrblatt – die Fingerhöhe ist der Atem) und **Ranke** (ein Ring aus Massen und Federn, angestoßen und abgetastet). Beide rechnen in einem AudioWorklet, das erst geladen wird, wenn man sie wählt; ohne Worklet spielen sie vereinfacht als Hauch bzw. Nebel.
+- **Klangquellen (18)** in fünf Familien – Luft: Hauch, Obertöne, Stimme, Halm, Elmsfeuer · Dunst: Nebel, Körner, Schwarm · Holz: Ranke, Saite, Jahresring · Erz: Glocke, Schale, Gong, Kalimba · Erde: Tiefe, Membran, Tropfen.
+  - **Halm** (selbstschwingendes Rohrblatt – die Fingerhöhe ist der Atem) und **Ranke** (ein Ring aus Massen und Federn, angestoßen und abgetastet) rechnen in einem AudioWorklet, das erst geladen wird, wenn man sie wählt; ohne Worklet spielen sie vereinfacht als Hauch bzw. Nebel.
+  - **Elmsfeuer:** Netzbrummen, Korona-Knistern, Lichtbogen – die Fingerhöhe ist die Spannung; das Knistern zündet den Bogen, im Puls ein Zap.
+  - **Jahresring:** ein Holzstab – die Fingerhöhe ist der Treffpunkt (Mitte rund, auf der Knotenlinie hohl, am Ende hell). Der Stab lebt in einem Jahr (Frühling, Sommer, Herbst mit Laub, Winter mit Eisriss) und altert beim Spielen ein wenig; „Verjüngen“ und Schlafen setzen ihn zurück. Auch als Klang der Rassel.
 - **Klangquellen wählen:** eine Zeile ‹ Name › an jeder Stelle (Spielfläche, Ebene 2, Puls-Spuren, Mixer, Sporenregen); die Pfeile blättern mit kurzer Probe, ein Tipp öffnet die Bibliothek mit Suche, Familien, Favoriten, „Zuletzt“ und „Überrasch mich“.
 - **Körner-Quellen:**
   - Erzeugt: Glasharfe, Chor, Metall, Staub, Wasser, Vögel, Zikaden, Flüstern, Harmonium und Kurzwelle.

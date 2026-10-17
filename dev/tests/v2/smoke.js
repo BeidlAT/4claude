@@ -39,11 +39,11 @@ fs.mkdirSync(OUT, { recursive: true });
   };
   // start recording
   await page.click('#btnRec');
-  const engines = ['neb', 'kor', 'hau', 'glo', 'mem', 'sai', 'sch'];
-  const names = { neb: 'Nebel', kor: 'Körner', hau: 'Hauch', glo: 'Glocke', mem: 'Membran', sai: 'Saite', sch: 'Schale' };
+  const engines = ['neb', 'kor', 'hau', 'glo', 'mem', 'sai', 'sch', 'elm', 'jrg'];
+  const pickEng = async (k) => { await page.click('#p-v-eng .kq-name'); await page.click('.kq-fams .chip[data-fam="alle"]'); await page.click(`.kq-tile[data-k="${k}"] .kq-pick`); await page.click('.kq-done'); };   // (stage 1b: the chips became the row + library)
   await page.click('#tab-klang');
   for (const e of engines) {
-    await page.locator('#p-v-eng .chip', { hasText: names[e] }).click();
+    await pickEng(e);
     console.log('eng', e, JSON.stringify(await page.evaluate(() => ({ iw: innerWidth, vv: visualViewport.scale, cv: document.getElementById('cvFx').width, st: document.getElementById('stage').getBoundingClientRect().width }))));
     try { await page.click('#btnClose', { timeout: 3000 }); } catch (err) { await page.screenshot({ path: OUT + '/fail.png' }); throw err; }
     await tap(0.3, 0.6, 700, [0.7, 0.4]);

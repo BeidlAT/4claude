@@ -1,5 +1,5 @@
 #!/bin/sh
-# klang stage 1 (worklet module, Halm, Ranke) and 1b (the Klangquellen library): all suites. Builds the test slots kd/kn (current app) and kbase
+# klang stage 1 (worklet module, Halm, Ranke), 1b (the Klangquellen library) and 2 (Elmsfeuer, Jahresring): all suites. Builds the test slots kd/kn (current app) and kbase
 # (klang/index.base.html, the app before stage 1, for the parity check); needs the static server on :8790
 # (cd ../../v2 && python3 -m http.server 8790 &). Exit code ≠ 0 if any suite fails. Logs and renders in out/.
 #   env: SKIP_BENCH=1 skips the offline bench (≈ 4 min), COST_ROUNDS=n for its cost rounds (default 4)
@@ -15,7 +15,7 @@ sh "$S/v2/mk.sh" /home/user/4claude/myzel kl >/dev/null   # stage 1b, the librar
 sh "$S/v2/mk.sh" "$D/../work/base-src" kbase >/dev/null
 printf '<!doctype html><meta charset="utf-8"><iframe id="f" src="kn-inst/index.html" style="width:780px;height:880px"></iframe>' > "$S/v2/kn-frame.html"
 cd "$D" || exit 1
-SUITES="t-dsp t-parity t-eng-live t-lib-row t-lib-lib t-lib-a11y t-lib-migr t-lib-fb t-lib-shots"
+SUITES="t-dsp t-parity t-eng-live t-eng-native t-lib-row t-lib-lib t-lib-a11y t-lib-migr t-lib-fb t-lib-shots"
 [ -z "$SKIP_BENCH" ] && SUITES="$SUITES bench"
 rc=0
 for t in $SUITES; do

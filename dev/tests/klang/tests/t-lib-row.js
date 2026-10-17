@@ -16,7 +16,7 @@ const L = require('./dsplib'), K = require('./klh');
   });
   L.ok(r.role === 'group' && r.n === 3 && r.h >= 44 && !r.small && r.pid === 'v.eng' && !r.chips, 'field: #p-v-eng is a group of ‹ name › (' + r.h + ' px, all targets ≥ 44 px), data-pid kept, no chips');
   L.ok(/Nebel · Dunst/.test(r.name) && /Klangquelle für die Spielfläche: Nebel, Dunst, hält\. Bibliothek öffnen/.test(r.label), 'name line „' + r.name + '“, label „' + r.label + '“');
-  L.ok(r.order === 'hau obt stm hlm neb kor swm rnk sai glo sch gng klb tie mem trp', 'ENG_OPTS by family (' + r.order + ')');
+  L.ok(r.order === 'hau obt stm hlm elm neb kor swm rnk sai jrg glo sch gng klb tie mem trp', 'ENG_OPTS by family (' + r.order + ')');
   // ‹ › step and probe
   await page.click('#p-v-eng .kq-step:last-child'); await page.waitForTimeout(120);
   r = await M(() => ({ eng: window.__M.P['v.eng'], pr: [...window.__M.A.voices].filter((v) => v.alive && v.probe && !v.probeEnd).map((v) => v.eng), say: document.querySelector('#kqSay').textContent }));
@@ -119,7 +119,7 @@ const L = require('./dsplib'), K = require('./klh');
     return o;
   });
   L.ok(r.has && /Membran · Erde/.test(r.name) && r.prev === 'klb' && r.next === 'mem', 'mixer „Regen“: row „' + r.name + '“; ‹ passes Tiefe (held) to Kalimba, › back to Membran');
-  L.ok(r.first && r.rgs === 'sai glo sch klb mem trp', 'nothing before Saite can rain (‹ disabled); RG_S derived: ' + r.rgs);
+  L.ok(r.first && r.rgs === 'sai jrg glo sch klb mem trp', 'nothing before Saite can rain (‹ disabled); RG_S derived: ' + r.rgs);
   L.ok(r.card === true, 'the Gestik card has the rain row too (' + r.card + ')');
   // the bar's chip: glyphs, and a long press opens the library on the field
   await M(() => { const M = window.__M; M.closePanel(); M.setParam('v.eng', 'hlm'); M.setParam('v.layer', 'glo'); });
