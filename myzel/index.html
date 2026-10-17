@@ -1520,12 +1520,172 @@ body.mlearn #stage::after { content: ""; position: absolute; inset: 0; backgroun
 .mxg-f[data-short="1"] .mxg-tag small { display: none; }
 /* 360 px phones ("side" strips): the Summe's "Verdichtung" sits at the screen's edge – nudge it in */
 .mx[data-strip="side"] .mx-sum .k1 .mx-kl { translate: -6px 0; letter-spacing: -.02em; }
+/* ---------- Klangquellen: the row at every place a source is chosen, and the library inside the sheet ---------- */
+.kq-g { flex: none; width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.kq-g.loading { animation: kqPulse .8s ease-in-out infinite alternate; }
+@keyframes kqPulse { to { opacity: .3; } }
+.eng-g { display: inline-flex; gap: 2px; flex: none; color: var(--spore); }
+.eng-g:empty { display: none; }
+.eng-g .kq-g { width: 16px; height: 16px; }
+.eng-g .kq-g + .kq-g { color: var(--lilac); }
+.eng-chip .fbdot { width: 6px; height: 6px; border-radius: 50%; background: var(--rose); flex: none; }
+.kq > .ctl-row { align-items: center; min-height: 22px; }
+.kq.bare > .ctl-row { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.kq-dice { flex: none; width: 44px; height: 44px; margin: -11px -10px -11px 0; padding: 0; display: grid; place-items: center; border: 0; border-radius: 50%; background: none; color: var(--dim); }
+.kq-dice svg { width: 20px; height: 20px; }
+.kq-dice:hover { color: var(--hypha); }
+.sec-h:has(.kq-dice) { align-items: center; }
+.kq-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: stretch; min-height: 46px; margin-top: 4px;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--bark-2); overflow: hidden; }
+.kq-step { width: 44px; padding: 0; border: 0; background: none; color: var(--dim); display: grid; place-items: center; }
+.kq-step svg { width: 18px; height: 18px; }
+.kq-step:hover:not(:disabled) { color: var(--hypha); }
+.kq-step:disabled { opacity: .28; cursor: default; }
+.kq-step:focus-visible, .kq-name:focus-visible { outline-offset: -3px; border-radius: 10px; }
+.kq-name { display: grid; grid-template-columns: 22px minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 9px; align-items: center; align-content: center;
+  min-width: 0; padding: 4px 10px; border: 0; border-left: 1px solid var(--line); border-right: 1px solid var(--line); background: none; text-align: left; color: var(--hypha);
+  -webkit-touch-callout: none; touch-action: pan-y; }
+.kq-name .kq-g { grid-row: 1 / 3; color: var(--spore); }
+.kq-name:hover { background: rgba(240, 230, 216, .03); }
+.kq-name.held { background: rgba(255, 179, 92, .1); }
+.kq-n { font: 500 13.5px/1.25 var(--font-ui); color: var(--hypha); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.kq-n small { color: var(--dim); font-size: 11.5px; font-weight: 400; }
+.kq-i { font: 400 11.5px/1.3 var(--font-ui); color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.kq-fb { color: var(--rose); }
+.kq-row.off .kq-g, .kq-row.off .kq-n { color: var(--dim); }
+
+/* the library: one element in the sheet, over the panel; the sheet grows like it does for the mixer */
+#sheet { position: relative; }
+.sheet[data-lib] { height: max(58%, calc(100% - 132px)); max-height: none; }
+@media (max-height: 780px) and (orientation: portrait) { .sheet[data-lib] { height: max(58%, calc(100% - 118px)); } }
+#app:has(#sheet[data-lib]:not([hidden])) .quick { display: none; }
+.kq-lib { position: absolute; inset: 0; z-index: 20; display: flex; flex-direction: column; background: var(--bark); border-radius: inherit; }
+.kq-head { flex: none; display: flex; align-items: center; gap: 6px; min-height: 52px; padding: 4px var(--gut) 4px 6px; border-bottom: 1px solid var(--line); touch-action: none; }
+.kq-head .kq-back { width: 44px; height: 44px; border: 0; background: none; color: var(--hypha); }
+.kq-head .kq-back svg { width: 20px; height: 20px; }
+.kq-head h2 { flex: 1; min-width: 0; margin: 0; display: grid; gap: 1px; }
+.kq-head h2 small { font: 500 10.5px/1.2 var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
+.kq-head h2 span { font: 400 18px/1.1 var(--font-display); letter-spacing: .02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kq-head .btn { min-height: 40px; }
+.kq-search { flex: none; position: relative; display: block; margin: 10px var(--gut) 0; }
+.kq-search svg { position: absolute; left: 14px; top: 50%; width: 16px; height: 16px; translate: 0 -50%; color: var(--dim); pointer-events: none; }
+.kq-search input { width: 100%; min-height: 44px; padding: 0 14px 0 38px; border-radius: 999px; border: 1px solid var(--line); background: var(--loam); color: var(--hypha);
+  font: 400 16px var(--font-ui); -webkit-user-select: text; user-select: text; }
+.kq-search input::placeholder { color: var(--dim); opacity: .8; }
+.kq-search input::-webkit-search-cancel-button { filter: grayscale(1) brightness(1.6); }
+.kq-fams { flex: none; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 8px var(--gut); gap: 6px;
+  -webkit-mask: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent); mask: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent); }
+.kq-fams.kq-a0 { -webkit-mask: linear-gradient(90deg, #000 calc(100% - 24px), transparent); mask: linear-gradient(90deg, #000 calc(100% - 24px), transparent); }
+.kq-fams.kq-a1 { -webkit-mask: linear-gradient(90deg, transparent, #000 24px); mask: linear-gradient(90deg, transparent, #000 24px); }
+.kq-fams.kq-a0.kq-a1 { -webkit-mask: none; mask: none; }
+.kq-fams::-webkit-scrollbar { display: none; }
+.kq-fams .chip { flex: none; min-height: 44px; min-width: 44px; padding: 5px 13px; }
+.kq-fams .chip.ico { padding: 0; display: grid; place-items: center; }
+.kq-fams .chip.ico svg { width: 19px; height: 19px; }
+.kq-fams .chip.ico[aria-checked="true"] svg { stroke: var(--ink); }
+#sheetBody .lanehead ~ .grid > .kq { scroll-margin-top: 170px; }
+.kq-list { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; padding: 0 var(--gut) 12px; scrollbar-width: thin; scrollbar-color: rgba(240, 230, 216, .14) transparent; }
+.kq-fh { position: sticky; top: 0; z-index: 1; margin: 0; padding: 10px 0 6px; background: var(--bark);
+  font: 600 12px/1.2 var(--font-ui); letter-spacing: .1em; text-transform: uppercase; color: var(--spore); }
+.kq-fh small { color: var(--dim); letter-spacing: 0; text-transform: none; font-weight: 400; font-size: 12px; }
+.kq-why { margin: 0 0 6px; font-size: 12px; color: var(--dim); }
+.kq-tile { display: grid; grid-template-columns: minmax(0, 1fr) 44px 44px; align-items: stretch; min-height: 56px; border-bottom: 1px solid var(--line); }
+.kq-tile:last-child { border-bottom: 0; }
+.kq-pick { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto auto; grid-template-rows: auto auto; column-gap: 8px; row-gap: 1px; align-items: center; align-content: center;
+  min-width: 0; padding: 7px 0; border: 0; background: none; text-align: left; color: var(--hypha); -webkit-touch-callout: none; }
+.kq-pick .kq-g { grid-row: 1 / 3; width: 24px; height: 24px; justify-self: center; color: var(--hypha); opacity: .9; }
+.kq-pick .kq-n { font-weight: 600; font-size: 14px; }
+.kq-pick .kq-i { grid-column: 2 / 5; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: 12px; line-height: 1.3; }
+.kq-art { font: 500 9.5px/1 var(--font-num); letter-spacing: .06em; text-transform: uppercase; color: var(--dim); }
+.kq-cost { font: 400 9px/1 var(--font-num); letter-spacing: .12em; color: var(--dim); }
+.kq-cost b { font-weight: 400; color: var(--lumen); }
+.kq-pick[aria-checked="true"], .kq-pick[aria-checked="true"] .kq-n, .kq-pick[aria-checked="true"] .kq-g { color: var(--spore); opacity: 1; }
+.kq-tile.on { box-shadow: inset 3px 0 0 var(--spore); background: linear-gradient(90deg, rgba(255, 179, 92, .07), transparent 70%); }
+.kq-tile.on .kq-pick { padding-left: 0; }
+.kq-pick[aria-disabled="true"] { opacity: .42; cursor: not-allowed; }
+.kq-pick:focus-visible { outline-offset: -2px; border-radius: 8px; }
+.kq-fav, .kq-hear { padding: 0; border: 0; background: none; color: var(--dim); display: grid; place-items: center; border-radius: 50%; }
+.kq-fav svg, .kq-hear svg { width: 18px; height: 18px; }
+.kq-fav[aria-pressed="true"] { color: var(--spore); }
+.kq-fav[aria-pressed="true"] svg { fill: currentColor; }
+.kq-hear:hover, .kq-fav:hover { color: var(--hypha); }
+.kq-hear.playing { color: var(--lumen); }
+.kq-foot { flex: none; display: flex; align-items: center; gap: 8px; padding: 6px var(--gut) max(6px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line); }
+.kq-foot .btn { min-height: 44px; }
+.kq-foot .btn svg { width: 18px; height: 18px; }
+.kq-live { flex: 1; min-width: 0; margin: 0; font-size: 12px; color: var(--dim); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kq-empty { padding: 22px 4px; color: var(--dim); font-size: 13px; text-align: center; }
+.kq-empty .btn { margin-top: 10px; }
+/* a column of 440 px: the sentence keeps one line, the tile 50 px (a pointer, no finger) */
+@media (min-width: 900px) and (pointer: fine) {
+  .kq-tile { min-height: 50px; }
+  .kq-pick { padding: 5px 0; }
+  .kq-pick .kq-i { -webkit-line-clamp: 1; }
+}
+@media (min-width: 900px), (orientation: landscape) and (max-height: 540px) {
+  .sheet[data-lib] { height: auto; }
+  /* beside the wide mixer: the library keeps the width of a panel, at the sheet's right edge */
+  .sheet[data-panel="mix"] .kq-lib { left: auto; width: min(440px, 100%); border-left: 1px solid var(--line); box-shadow: -12px 0 36px rgba(0, 0, 0, .4); }
+}
+/* landscape phones: one row for back, search, the die and Fertig – the list keeps the height (title and the live
+   line stay for screen readers) */
+@media (orientation: landscape) and (max-height: 540px) {
+  .kq-lib { display: grid; grid-template-columns: 50px minmax(0, 1fr) 44px auto; grid-template-rows: 54px auto minmax(0, 1fr); align-items: center; column-gap: 4px; }
+  .kq-head, .kq-foot { display: contents; }
+  .kq-head h2, .kq-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .kq-back { grid-area: 1 / 1; margin-left: 6px; }
+  .kq-search { grid-area: 1 / 2; margin: 0; }
+  .kq-sur { grid-area: 1 / 3; width: 44px; padding: 0; border: 0; }
+  .kq-sur span { display: none; }
+  .kq-done { grid-area: 1 / 4; margin-right: var(--gut); }
+  .kq-fams { grid-area: 2 / 1 / 3 / -1; padding-top: 2px; padding-bottom: 6px; border-top: 0; }
+  .kq-list { grid-area: 3 / 1 / 4 / -1; align-self: stretch; border-top: 1px solid var(--line); }
+  .kq-pick .kq-i { -webkit-line-clamp: 1; }
+  .kq-tile { min-height: 50px; }
+}
+.sec-h h3 .kq-g { width: 16px; height: 16px; vertical-align: -3px; margin-right: 7px; }
+.kq-hoehe { margin: -4px 0 10px; color: var(--hypha); font-size: 12.5px; }
+.kq-ab { display: inline-block; margin-left: 6px; padding: 0 4px; border: 1px solid rgba(134, 240, 208, .35); border-radius: 4px; font: 500 9px/13px var(--font-num); color: var(--lumen); vertical-align: 1px; }
+.lane-tab small .kq-g { width: 11px; height: 11px; vertical-align: -1.5px; margin-right: 4px; }
+@media (pointer: coarse) { .kq-step, .kq-fav, .kq-hear { min-height: 44px; } }
+@media (prefers-reduced-motion: no-preference) { .kq-lib:not([hidden]) { animation: kqIn .18s ease-out; } @keyframes kqIn { from { opacity: 0; translate: 0 12px; } } }
+@media (prefers-reduced-motion: reduce) { .kq-g.loading { animation: none; opacity: .55; } }
 </style>
+<!-- Klangquellen-Glyphen: one stroke motif per source (24 × 24, currentColor; the <svg> that uses one sets the stroke) -->
+<svg class="kq-sprite" aria-hidden="true" focusable="false" style="position:absolute;width:0;height:0;overflow:hidden"><defs>
+<symbol id="g-neb" viewBox="0 0 24 24"><path d="M3 8.5c2.2-1.6 4.4-1.6 6.6 0s4.4 1.6 6.6 0c1.4-1 2.8-1.3 4.2-.8M3 13c2.2-1.6 4.4-1.6 6.6 0s4.4 1.6 6.6 0c1.4-1 2.8-1.3 4.2-.8"/><path d="M5.5 17.5c1.8-1.2 3.6-1.2 5.4 0s3.6 1.2 5.4 0" opacity=".55"/></symbol>
+<symbol id="g-kor" viewBox="0 0 24 24"><g fill="currentColor" stroke="none"><circle cx="6" cy="8" r="1.3"/><circle cx="11" cy="5.4" r="1"/><circle cx="15.6" cy="8.4" r="1.6"/><circle cx="9.2" cy="12.4" r="1.7"/><circle cx="14.2" cy="14" r="1.1"/><circle cx="18.6" cy="12" r="1"/><circle cx="6.2" cy="16.6" r="1"/><circle cx="11.6" cy="18.6" r="1.3"/><circle cx="17.2" cy="18" r="1.5"/></g></symbol>
+<symbol id="g-hau" viewBox="0 0 24 24"><path d="M3 8h10M3 12h13M3 16h7"/><path d="M16 8h2.5M19 12h1.5M13 16h3" opacity=".55"/></symbol>
+<symbol id="g-obt" viewBox="0 0 24 24"><path d="M3 19.5h18"/><g fill="currentColor" stroke="none"><circle cx="6" cy="15.4" r="1.7"/><circle cx="10" cy="12" r="1.45"/><circle cx="14" cy="8.8" r="1.2"/><circle cx="18" cy="6" r="1"/></g></symbol>
+<symbol id="g-stm" viewBox="0 0 24 24"><path d="M3.5 12c2.8-4.4 14.2-4.4 17 0-2.8 4.8-14.2 4.8-17 0z"/><ellipse cx="12" cy="12.2" rx="4.2" ry="1.7" fill="currentColor" stroke="none"/></symbol>
+<symbol id="g-swm" viewBox="0 0 24 24"><path d="M12 12.6c.9-1.2 2.6-.6 2.5.9-.1 2-2.6 2.9-4.3 1.9-2.2-1.3-2.1-4.4-.2-5.9 2.5-2 6.3-1 7.6 1.8" opacity=".7"/><g fill="currentColor" stroke="none"><circle cx="19.4" cy="9" r="1.2"/><circle cx="17.8" cy="16.2" r="1"/><circle cx="5.8" cy="7.2" r="1.1"/><circle cx="5.2" cy="15.8" r="1.3"/><circle cx="12" cy="19.8" r=".9"/><circle cx="11.2" cy="4.4" r=".9"/></g></symbol>
+<symbol id="g-hlm" viewBox="0 0 24 24"><path d="M10.6 21.5c.4-6.2 1.8-12.2 5.4-18.5M9.4 16.4l2.6.4M10.8 10.6l2.8.6"/><path d="M11.9 13.6c-2.6-.7-4.4-2.7-5-5.6 2.6.4 4.4 2.4 5 5.6z"/></symbol>
+<symbol id="g-rnk" viewBox="0 0 24 24"><path d="M3.5 20.5c3-1 5-3.4 6-7 .8-3 3-5.4 6-5.4 2.4 0 4 1.7 4 3.8 0 1.8-1.4 3.2-3.1 3.2-1.5 0-2.6-1.1-2.6-2.5 0-1.1.9-2 2-2"/><path d="M9.6 13.8c-1.9-.4-3.2-1.8-3.6-3.8 1.9.3 3.2 1.6 3.6 3.8z"/></symbol>
+<symbol id="g-sai" viewBox="0 0 24 24"><path d="M3 15.5 12 9.6l9 5.9M3 12.5v6M21 12.5v6"/><circle cx="12" cy="9.6" r="1.8" fill="currentColor" stroke="none"/></symbol>
+<symbol id="g-glo" viewBox="0 0 24 24"><path d="M6.4 16.5c.4-6.8 1.9-11 5.6-11s5.2 4.2 5.6 11M4.5 16.5h15M12 3v2.5"/><circle cx="12" cy="19.3" r="1.4" fill="currentColor" stroke="none"/></symbol>
+<symbol id="g-sch" viewBox="0 0 24 24"><path d="M3.5 11.5h17c0 4.7-3.8 8.5-8.5 8.5s-8.5-3.8-8.5-8.5z"/><path d="M8.5 7.5c1.2-1.1 2.3-1.1 3.5 0s2.3 1.1 3.5 0" opacity=".6"/></symbol>
+<symbol id="g-gng" viewBox="0 0 24 24"><circle cx="12" cy="13.5" r="7.5"/><circle cx="12" cy="13.5" r="3"/><path d="M12 2.5V6"/></symbol>
+<symbol id="g-klb" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="10" rx="2.2"/><path d="M8 3.5v10M12 5.5v8M16 3.5v10"/></symbol>
+<symbol id="g-tie" viewBox="0 0 24 24"><path d="M12 3.5v13M7.5 12.5l4.5 4.5 4.5-4.5M5 20.5h14"/></symbol>
+<symbol id="g-mem" viewBox="0 0 24 24"><ellipse cx="12" cy="9" rx="8" ry="3"/><path d="M4 9v6.4c0 1.7 3.6 3.1 8 3.1s8-1.4 8-3.1V9"/><circle cx="12" cy="9" r="1.2" fill="currentColor" stroke="none"/></symbol>
+<symbol id="g-trp" viewBox="0 0 24 24"><path d="M12 3.5c2.8 4.2 6 7.6 6 11a6 6 0 0 1-12 0c0-3.4 3.2-6.8 6-11z"/><path d="M9.3 15.2a2.8 2.8 0 0 0 2 2.6" opacity=".6"/></symbol>
+<symbol id="g-hrz" viewBox="0 0 24 24"><circle cx="12" cy="15" r="5.5"/><path d="M3.5 8.2c5.6-3.4 11.4-3.4 17 0M3.5 8.2h17"/></symbol>
+<symbol id="g-boe" viewBox="0 0 24 24"><path d="M4 5.5v14M8.5 5.5v14M13 5.5v14"/><path d="M14.5 9c2.4 0 4-1 6-2.5M14.5 14c2.4 0 4.4.8 6 2.2" opacity=".6"/></symbol>
+<symbol id="g-elm" viewBox="0 0 24 24"><path d="M13.5 3 7 13h5l-1.5 8L17 11h-5l1.5-8z"/></symbol>
+<symbol id="g-amo" viewBox="0 0 24 24"><path d="M12 4.5c3.6-.4 6.8 2.3 7 5.6.2 2.8-1.9 3.6-1.6 6-.3 2.6-3.2 3.9-5.7 3.1-2-.6-3.3-.1-5.2-.6-2.5-.7-3.6-3.6-2.5-5.9 1-2 .2-3.4 1.8-5.6 1.1-1.5 2.5-2.4 4.2-2.6z"/><circle cx="11" cy="11" r="1.3" fill="currentColor" stroke="none"/></symbol>
+<symbol id="g-shn" viewBox="0 0 24 24"><path d="M3 15.5h18M7.5 15.5c0-4.6 3.2-7.5 7.5-7.5"/><circle cx="15" cy="8" r="1.5" fill="currentColor" stroke="none"/></symbol>
+<symbol id="g-zpf" viewBox="0 0 24 24"><path d="M12 3.5c3.6 2.5 5.5 6 5.5 9.5 0 4-2.5 7.5-5.5 7.5S6.5 17 6.5 13c0-3.5 1.9-7 5.5-9.5z"/><path d="M7.2 10.6c1.7 1.4 3.2 1.4 4.8 0 1.6 1.4 3.1 1.4 4.8 0M6.7 14.6c1.8 1.4 3.6 1.4 5.3 0 1.8 1.4 3.6 1.4 5.3 0" opacity=".6"/></symbol>
+<symbol id="g-gsp" viewBox="0 0 24 24"><path d="M12 3v18M3.5 7.5l17 9M3.5 16.5l17-9"/><path d="M12 7.6l3.8 2.2v4.4L12 16.4l-3.8-2.2V9.8z" opacity=".7"/></symbol>
+<symbol id="g-glt" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/><path d="M12 4v2.5M12 17.5V20M4 12h2.5M17.5 12H20M6.3 6.3l1.8 1.8M15.9 15.9l1.8 1.8M17.7 6.3l-1.8 1.8M8.1 15.9l-1.8 1.8" opacity=".7"/></symbol>
+<symbol id="g-mdr" viewBox="0 0 24 24"><path d="M12 4.5a7.5 7.5 0 0 1 7.5 7.5c0 2.2-1 4.2-2.5 5.6M4.5 12A7.5 7.5 0 0 1 9 5.1"/><g fill="currentColor" stroke="none"><circle cx="9" cy="19.4" r="1"/><circle cx="12.6" cy="20.1" r=".8"/><circle cx="6" cy="16.4" r="1.1"/></g></symbol>
+<symbol id="g-jrg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12.6" cy="12.4" r="5"/><circle cx="13" cy="12.6" r="2"/></symbol>
+<symbol id="g-off" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5" stroke-dasharray="2.4 3.2"/></symbol>
+</defs></svg>
 
 <div id="app" lang="de">
   <header class="bar" id="bar">
     <div class="logo" aria-hidden="true">myzel</div>
-    <button id="engChip" class="eng-chip" type="button" aria-controls="sheet" aria-label="Klangquelle: Nebel. Einstellungen öffnen"><span class="lbl">Klang</span><span id="engName">Nebel</span></button>
+    <button id="engChip" class="eng-chip" type="button" aria-controls="sheet" aria-label="Klangquelle: Nebel. Einstellungen öffnen"><span class="lbl">Klang</span><span id="engGlyph" class="eng-g" aria-hidden="true"></span><span id="engName">Nebel</span></button>
     <button id="btnPuls" class="iconbtn" type="button" aria-pressed="false" aria-label="Puls" title="Puls starten oder anhalten" data-act="puls"></button>
     <button id="btnFreeze" class="iconbtn" type="button" aria-pressed="false" aria-label="Echo einfrieren" title="Echo einfrieren" data-act="freeze"></button>
     <button id="btnGk" class="gk-ico" type="button" hidden aria-label="Gestik" title="Gestik" data-st="aus"><svg viewBox="0 0 32 32" aria-hidden="true"><circle class="trk" cx="16" cy="16" r="13"/><circle class="lad" cx="16" cy="16" r="13" pathLength="100" stroke-dasharray="0 100"/><g class="spo"><circle cx="16" cy="16" r="3.3"/><path d="M16 11.2V8.4M16 20.8v2.8M11.2 16H8.4M20.8 16h2.8M12.6 12.6l-2-2M19.4 19.4l2 2M19.4 12.6l2-2M12.6 19.4l-2 2"/></g><text class="zz" x="22.5" y="10.5">z</text></svg></button>
@@ -1563,7 +1723,7 @@ body.mlearn #stage::after { content: ""; position: absolute; inset: 0; backgroun
       <ul>
         <li><b>Waagrecht</b><span>Tonhöhe, eingerastet in die gewählte Skala</span></li>
         <li><b>Senkrecht</b><span>Klangfarbe – oben hell, unten dunkel</span></li>
-        <li><b>Finger</b><span>Mehrere gleichzeitig; Wischen schlägt Glocken, Trommeln und Saiten an</span></li>
+        <li><b>Finger</b><span id="startFingerLine">Mehrere gleichzeitig; Wischen schlägt Holz, Erz und Erde an</span></li>
         <li><b>Puls</b><span>Euklidische Rhythmen auf vier Spuren</span></li>
         <li><b>Aufnahme</b><span>Verlustfrei als WAV, direkt von der Summe</span></li>
         <li><b>Keyboard</b><span id="startKeysLine">MIDI-Keyboard oder Controller per USB oder Bluetooth verbinden – Tasten spielen, Regler und Pads steuern</span></li>
@@ -1661,32 +1821,49 @@ const NUM = (id, label, min, max, d, unit = '', o = {}) => def(id, Object.assign
 const SEL = (id, label, opts, d, o = {}) => def(id, Object.assign({ kind: 'sel', label, opts, d }, o));
 const BOOL = (id, label, d, o = {}) => def(id, Object.assign({ kind: 'bool', label, d }, o));
 
-// held sounds first, then struck ones
-const ENG_OPTS = [['neb', 'Nebel'], ['kor', 'Körner'], ['hau', 'Hauch'], ['obt', 'Obertöne'], ['stm', 'Stimme'], ['swm', 'Schwarm'], ['tie', 'Tiefe'],
-  ['glo', 'Glocke'], ['mem', 'Membran'], ['sai', 'Saite'], ['sch', 'Schale'], ['klb', 'Kalimba'], ['gng', 'Gong'], ['trp', 'Tropfen']];
-const ENG_NAME = Object.fromEntries(ENG_OPTS);
-const ENG_INFO = {
-  neb: 'Schwebende Flächen aus verstimmten Oszillatoren',
-  kor: 'Granulare Wolken aus winzigen Klangkörnern',
-  hau: 'Gefiltertes Rauschen – von Wind bis Pfeifen',
-  glo: 'FM-Glocken mit unharmonischen Obertönen',
-  mem: 'Trommelfelle mit Tonhöhensprung',
-  sai: 'Gezupfte Saiten nach Karplus-Strong',
-  sch: 'Klangschalen mit schwebenden Teiltönen',
-  gng: "Gong und Tamtam – Obertöne blühen nach dem Schlag auf",
-  klb: "Daumenklavier – Metallzungen über einem Holzkasten",
-  obt: "Obertongesang – ein Brummen, aus dem einzelne Obertöne pfeifen",
-  stm: "Vokalchor – die Fingerhöhe formt u, o, a, e, i",
-  swm: "Fremdartiger Insektenschwarm – die Fingerhöhe weckt das Chaos",
-  tie: "Subbass, der in seinen Ton stürzt – vom Dröhnen bis zum 808-Kick",
-  trp: "Wassertropfen – Luftblasen mit aufsteigendem Ton",
+// Klangquellen. The library's axis is the world a sound comes from (FAM: Luft … Erde); how it plays (hält = sounds while
+// the finger lies, schlägt = struck at the touch, beides = struck and held) is a word on its tile. ENG_META holds one
+// line per source that this version has – n (name), fam, art ('haelt' | 'schlaegt' | 'beides'), i (the sentence: ≤ 52
+// characters, the point first – a row on a 360 px phone shows about 40), tags (search, German and English), hoehe
+// (what the field's height plays, shown in its section), regen: 0 (never strikes in the Sporenregen), hear.gate (the
+// library's short probe), rich (what level 3 adds). Its order within a family is the order of ‹ ›, of the MIDI
+// stepping and of the library. A new source = one line here + its ENGINES entry + its glyph #g-<key> in the sprite.
+const FAM = [['luft', 'Luft', 'Atem, Wind, Stimmen, Funken'], ['dunst', 'Dunst', 'Wolken aus Teilchen und Zufall'],
+  ['holz', 'Holz', 'Saiten, Stäbe, Bogen'], ['erz', 'Erz', 'Metall, das nachklingt'], ['erde', 'Erde', 'Felle, Tiefe, Fäulnis, Wasser']];
+const FAM_NAME = Object.fromEntries(FAM.map((f) => [f[0], f[1]]));
+const ENG_META = {
+  hau: { n: 'Hauch', fam: 'luft', art: 'haelt', i: 'Gefiltertes Rauschen – von Wind bis Pfeifen', tags: 'rauschen noise wind pfeifen atem breath luft' },
+  obt: { n: 'Obertöne', fam: 'luft', art: 'haelt', i: 'Obertongesang – ein Brummen, aus dem einzelne Obertöne pfeifen', tags: 'oberton obertongesang kehlgesang throat singing overtone drone' },
+  stm: { n: 'Stimme', fam: 'luft', art: 'haelt', i: 'Vokalchor – die Fingerhöhe formt u, o, a, e, i', tags: 'stimme chor vokal voice choir gesang vowel' },
+  hlm: { n: 'Halm', fam: 'luft', art: 'haelt', i: 'Rohrblatt – der Atem ist die Höhe', tags: 'rohrblatt klarinette flöte flute flamme atem blasen reed wind', hoehe: 'Atemdruck', hear: { gate: 1.0 }, rich: 'Stufe 3: zweites Rohr, ±4 Cent' },
+  neb: { n: 'Nebel', fam: 'dunst', art: 'haelt', i: 'Schwebende Flächen aus verstimmten Oszillatoren', tags: 'fläche pad drone wolke oszillator verstimmt ambient synth' },
+  kor: { n: 'Körner', fam: 'dunst', art: 'haelt', i: 'Granulare Wolken aus winzigen Klangkörnern', tags: 'granular grain körner textur wolke cloud' },
+  swm: { n: 'Schwarm', fam: 'dunst', art: 'haelt', i: 'Fremdartiger Insektenschwarm – die Fingerhöhe weckt das Chaos', tags: 'insekten schwarm chaos fm swarm insect' },
+  rnk: { n: 'Ranke', fam: 'holz', art: 'beides', i: 'Ein Ring aus Massen, den der Finger anstößt', tags: 'scanned synthesis masse feder hammer ring', hoehe: 'Hammerbreite', hear: { gate: 1.2 }, rich: 'Stufe 3: mehr Massen, zweiter Abtastkopf' },
+  sai: { n: 'Saite', fam: 'holz', art: 'schlaegt', i: 'Gezupfte Saiten nach Karplus-Strong', tags: 'saite string karplus zupfen pluck gitarre guitar harfe harp' },
+  glo: { n: 'Glocke', fam: 'erz', art: 'schlaegt', i: 'FM-Glocken mit unharmonischen Obertönen', tags: 'glocke bell fm metall metal' },
+  sch: { n: 'Schale', fam: 'erz', art: 'schlaegt', i: 'Klangschalen mit schwebenden Teiltönen', tags: 'klangschale singing bowl schale tibet metall' },
+  gng: { n: 'Gong', fam: 'erz', art: 'schlaegt', i: 'Gong und Tamtam – Obertöne blühen nach dem Schlag auf', tags: 'gong tamtam metall metal', regen: 0 },
+  klb: { n: 'Kalimba', fam: 'erz', art: 'schlaegt', i: 'Daumenklavier – Metallzungen über einem Holzkasten', tags: 'kalimba mbira daumenklavier thumb piano zunge' },
+  tie: { n: 'Tiefe', fam: 'erde', art: 'haelt', i: 'Subbass, der in seinen Ton stürzt – vom Dröhnen bis zum 808-Kick', tags: 'bass sub 808 kick drone tief low' },
+  mem: { n: 'Membran', fam: 'erde', art: 'schlaegt', i: 'Trommelfelle mit Tonhöhensprung', tags: 'trommel drum fell membran perkussion percussion tom pauke' },
+  trp: { n: 'Tropfen', fam: 'erde', art: 'schlaegt', i: 'Wassertropfen – Luftblasen mit aufsteigendem Ton', tags: 'tropfen wasser drop water blase bubble regen' },
 };
+// sources of later versions (and the reserves): a preset that names one says so once and plays Nebel instead
+const ENG_LATER = { hrz: 'Harz', glt: 'Glut', boe: 'Böe', amo: 'Amöbe', shn: 'Sehne', zpf: 'Zapfen', elm: 'Elmsfeuer', mdr: 'Moder', gsp: 'Gespinst', jrg: 'Jahresring', khl: 'Kehlchen', rhz: 'Rhizom', unk: 'Unke', fle: 'Flechte', blz: 'Balz' };
+// a key that was renamed (old: new), applied before a patch is checked; keys are never reused
+const ENG_ALIAS = {};
+// the one flat order (‹ ›, MIDI stepping, dice, the mixer's source text): by family, in ENG_META's order within it
+const ENG_OPTS = FAM.flatMap(([f]) => Object.keys(ENG_META).filter((k) => ENG_META[k].fam === f).map((k) => [k, ENG_META[k].n]));
+const ENG_NAME = Object.fromEntries(ENG_OPTS);
+const ENG_INFO = Object.fromEntries(ENG_OPTS.map(([k]) => [k, ENG_META[k].i]));
+const ART_WORD = { haelt: 'hält', schlaegt: 'schlägt', beides: 'beides' };
 const WAVE_OPTS = [['sine', 'Sinus'], ['triangle', 'Dreieck'], ['sawtooth', 'Säge'], ['square', 'Rechteck'], ['glass', 'Glas'], ['organ', 'Orgel']];
 const pctSigned = (v) => (v > 0.005 ? 'R ' : v < -0.005 ? 'L ' : '') + (Math.abs(v) < 0.005 ? 'Mitte' : Math.round(Math.abs(v) * 100) + ' %');
 
 // Spielweise
-SEL('v.eng', 'Klangquelle', ENG_OPTS, 'neb', { chips: 1 });
-SEL('v.layer', 'Zweite Ebene', [['off', 'Aus'], ...ENG_OPTS], 'off', { chips: 1 });
+SEL('v.eng', 'Klangquelle', ENG_OPTS, 'neb', { lib: 1 });
+SEL('v.layer', 'Zweite Ebene', [['off', 'Aus'], ...ENG_OPTS], 'off', { lib: 1 });
 NUM('v.layerLvl', 'Lautstärke Ebene', 0, 1, 0.5, '%');
 NUM('v.layerInt', 'Intervall Ebene', -24, 24, 12, 'HT', { step: 1 });
 SEL('v.roll', 'Wirbel beim Halten (Schlagklänge)', [['off', 'Aus'], ['4', '1/4'], ['8', '1/8'], ['12', '1/8 T'], ['16', '1/16'], ['24', '1/16 T'], ['32', '1/32']], 'off', { chips: 1 });
@@ -1811,6 +1988,20 @@ NUM('trp.decay', 'Abklingen', 0.03, 3, 0.5, 's', { curve: 'exp' });
 NUM('trp.rain', 'Regen', 0, 1, 0.35, '%');
 NUM('trp.spread', 'Regendauer', 0.05, 2, 0.3, 's', { curve: 'exp' });
 NUM('trp.splash', 'Aufprall', 0, 1, 0.3, '%');
+// Halm (worklet: Höhe is the breath – these shape the reed around it)
+NUM('hlm.atem', 'Atem (Druck)', 0, 1, 0.5, '%');
+NUM('hlm.mund', 'Mund (Helligkeit)', 0, 1, 0.4, '%');
+NUM('hlm.blatt', 'Blatt (weich)', 0, 1, 0.5, '%');
+NUM('hlm.luft', 'Luft (Rauschen)', 0, 1, 0.4, '%');
+NUM('hlm.zunge', 'Zunge (Anstoß)', 0, 1, 0.5, '%');
+// Ranke (worklet: Höhe is the hammer's width)
+const rnkT60 = (v) => 8 * Math.pow(0.3 / 8, v);   // Dämpfung → decay of a struck ring (s)
+NUM('rnk.masse', 'Masse', 0, 1, 0.5, '%');
+NUM('rnk.feder', 'Feder', 0, 1, 0.5, '%');
+NUM('rnk.mitte', 'Mitte (Rückstellung)', 0, 1, 0.3, '%');
+NUM('rnk.daempfung', 'Dämpfung', 0, 1, 0.4, '', { fmt: (v) => 'Nachklang ' + dec(rnkT60(v).toFixed(1)) + ' s' });
+NUM('rnk.hammer', 'Hammerhärte', 0, 1, 0.5, '%');
+NUM('rnk.holz', 'Holz (Unregelmäßigkeit)', 0, 1, 0.3, '%');
 // Effekte
 SEL('drv.type', 'Art', [['tube', 'Röhre'], ['fold', 'Falter'], ['crush', 'Bitbrecher']], 'tube', { chips: 1 });
 NUM('drv.amt', 'Stärke', 0, 1, 0.12, '%');
@@ -1865,7 +2056,7 @@ const LANE_DEF = [
 LANE_DEF.forEach((d, i) => {
   const p = 'l' + i + '.';
   BOOL(p + 'on', 'Spur aktiv', d.on);
-  SEL(p + 'eng', 'Klang', ENG_OPTS, d.eng, { chips: 1, small: 1 });
+  SEL(p + 'eng', 'Klang', ENG_OPTS, d.eng, { lib: 1 });
   NUM(p + 'steps', 'Schritte', 1, 32, d.steps, '', { step: 1, fmt: (v) => String(v) });
   NUM(p + 'puls', 'Impulse', 0, 32, d.puls, '', { step: 1, fmt: (v) => String(v) });
   NUM(p + 'rot', 'Versatz', 0, 31, d.rot, '', { step: 1, fmt: (v) => String(v) });
@@ -1952,7 +2143,7 @@ BOOL('midi.pads', 'Pads als Auslöser', false, { dev: 1 });
 BOOL('midi.std', 'Standard-Zuordnungen', true, { dev: 1 });
 
 const GROUP = {
-  v: 'Spielweise', t: 'Stimmung', neb: 'Nebel', kor: 'Körner', hau: 'Hauch', glo: 'Glocke', mem: 'Membran', sai: 'Saite', sch: 'Schale', gng: "Gong", klb: "Kalimba", obt: "Obertöne", stm: "Stimme", swm: "Schwarm", tie: "Tiefe", trp: "Tropfen",
+  v: 'Spielweise', t: 'Stimmung', neb: 'Nebel', kor: 'Körner', hau: 'Hauch', glo: 'Glocke', mem: 'Membran', sai: 'Saite', sch: 'Schale', gng: "Gong", klb: "Kalimba", obt: "Obertöne", stm: "Stimme", swm: "Schwarm", tie: "Tiefe", trp: "Tropfen", hlm: 'Halm', rnk: 'Ranke',
   drv: 'Verzerrung', rng: 'Ringmodulator', flt: 'Filter', pha: 'Phaser', cho: 'Schweben', dly: 'Echo', rev: 'Hall', mov: 'Bewegung', mst: 'Summe',
   seq: 'Puls', bor: 'Bordun', rec: 'Aufnahme', dev: 'Gerät', midi: 'MIDI', l0: 'Spur 1', l1: 'Spur 2', l2: 'Spur 3', l3: 'Spur 4',
 };
@@ -2078,8 +2269,10 @@ let SR = 48000;
 // Polyphony is limited by cost, not by count: one unit ≈ one Nebel voice at level 1. Cheap engines get more voices.
 // Level 1 keeps phones safe, level 2 plays more at once, level 3 gives every voice more oscillators, partials and
 // modes and fills a desktop core up to a budget measured on this device (see calibrate()).
-const VCOST1 = { neb: 1, kor: 0.6, hau: 0.3, glo: 0.7, mem: 0.4, sai: 0.35, sch: 0.9, gng: 1.55, klb: 1.25, obt: 0.75, stm: 1.05, swm: 1.2, tie: 0.75, trp: 0.7 };
-const VCOST3 = { neb: 1.9, kor: 1.1, hau: 0.75, glo: 1.4, mem: 0.75, sai: 1.2, sch: 2, gng: 2.8, klb: 2.2, obt: 1.85, stm: 2.4, swm: 2.7, tie: 1.5, trp: 1.5 };   // measured: level-1 cost × (level 3 / level 1)
+// hlm, rnk (worklet engines): klang bench cost.js – 24 voices against 24 Nebel voices offline, scaled to this table by
+// the native engines measured alongside (Hauch, Obertöne, Nebel L3), +15 % margin
+const VCOST1 = { neb: 1, kor: 0.6, hau: 0.3, glo: 0.7, mem: 0.4, sai: 0.35, sch: 0.9, gng: 1.55, klb: 1.25, obt: 0.75, stm: 1.05, swm: 1.2, tie: 0.75, trp: 0.7, hlm: 0.65, rnk: 0.6 };
+const VCOST3 = { neb: 1.9, kor: 1.1, hau: 0.75, glo: 1.4, mem: 0.75, sai: 1.2, sch: 2, gng: 2.8, klb: 2.2, obt: 1.85, stm: 2.4, swm: 2.7, tie: 1.5, trp: 1.5, hlm: 1.25, rnk: 1.25 };   // measured: level-1 cost × (level 3 / level 1)
 const QP = {
   1: { budget: MOBILE ? 14 : 22, maxv: 32, grainMax: MOBILE ? 80 : 128, overlap: MOBILE ? 16 : 24, os: MOBILE ? '2x' : '4x', rich: false, korDens: 1, cost: VCOST1 },
   2: { base: MOBILE ? 24 : 40, budget: MOBILE ? 24 : 40, maxv: 64, grainMax: MOBILE ? 128 : 224, overlap: 24, os: '4x', rich: false, korDens: 1, cost: VCOST1 },
@@ -2950,6 +3143,7 @@ function initAudio() {
 
   applyAll(true);
   A.started = true;
+  dspMaybe();   // a worklet engine is selected (restored patch): its module now, before the first note
 }
 
 /* ---------- insert chain ---------- */
@@ -3478,6 +3672,7 @@ class Voice {
     for (const [src, p] of this.mods) { try { src.disconnect(p); } catch (e) {} }
     for (const n of this.nodes) { try { n.disconnect(); } catch (e) {} }
     try { this.out.disconnect(); } catch (e) {}
+    if (this.wk) { try { this.wk.port.postMessage({ kill: 1 }); } catch (e) {} }
     A.voices.delete(this); A.grainVoices.delete(this);
   }
   kill() {
@@ -4610,6 +4805,29 @@ const ENGINES = {
       v.finish(end + 0.1);
     },
   },
+  // ---- worklet engines (klang): the processor is exciter + resonator, envelopes stay native on v.out ----
+  // Halm: a reed blown by the finger's height (myzel-blow). Below a quarter of the field only air, then the tone speaks;
+  // a Puls hit is a tongue stroke at the sweet spot. Without AudioWorklet it plays as Hauch.
+  hlm: {
+    sustain: true, needs: 'worklet', fallback: 'hau',
+    start(v, t, f, y, vel, o) {
+      wkVoice(v, 'myzel-blow', f, y, { prm: wkPrm('hlm'), on: { on: t, f, y, vel, burst: !!o.burst, gate: o.burst ? o.gate : 0, seed: wkSeed() } });
+      const peak = vel * 0.9;
+      if (o.burst) burstEnv(v, t, peak, 0.002, o.gate, 0.08 * (o.decayMul || 1));
+      else wkHold(v, t, peak, 0.004, 0.08);
+    },
+  },
+  // Ranke: scanned synthesis on a ring of masses (myzel-scan). Touch = a hammer (Höhe: wide and soft → narrow and
+  // bright), held = a steady push keeps the form alive; Puls = hammer only, the ring three times faster. Stand-in: Nebel.
+  rnk: {
+    sustain: true, needs: 'worklet', fallback: 'neb',
+    start(v, t, f, y, vel, o) {
+      wkVoice(v, 'myzel-scan', f, y, { prm: wkPrm('rnk'), seed: wkSeed(), on: { on: t, f, y, vel, burst: !!o.burst, gate: o.burst ? o.gate : 0, seed: wkSeed() } });
+      const peak = vel * 1.25;   // (the ring's output is spiky: the processor keeps ≥ 2 dB headroom below its soft clip)
+      if (o.burst) burstEnv(v, t, peak, 0.003, o.gate, 0.4 * (o.decayMul || 1));
+      else wkHold(v, t, peak, 0.003, 0.6);
+    },
+  },
 };
 
 /* ---------- Karplus-Strong string: rendered once per pitch, pre-rendered in the background ---------- */
@@ -5012,14 +5230,15 @@ function steal(fadingOnly, soft) {
 function voiceLoad() { let c = 0; for (const v of A.voices) c += v.cost; return c; }
 function playNote(eng, t, f, y, vel, o = {}) {
   if (!A.ctx || !ENGINES[eng]) return null;
-  const cost = Q.cost[eng] || 1;
+  const as = ENGINES[eng].needs ? wkPlays(eng) : eng;   // a worklet engine without its module: its stand-in
+  const cost = Q.cost[as] || 1;
   while (A.voices.size && (A.voices.size >= MAXV || voiceLoad() + cost > VBUDGET)) steal();
   const v = new Voice(eng);
-  v.cost = cost; v.bend = o.bend || false;
+  v.cost = cost; v.bend = o.bend || false; v.as = as;
   const pan = v.n(PAN(o.pan || 0));
   v.out.connect(pan); pan.connect(o.bus || stripIn('fin'));
   A.voices.add(v);
-  try { ENGINES[eng].start(v, t, f, clamp(y, 0, 1), vel, o); }
+  try { ENGINES[as].start(v, t, f, clamp(y, 0, 1), vel, o); }
   catch (e) { console.error(e); v.cleanup(); return null; }
   return v;
 }
@@ -5154,6 +5373,580 @@ function stopBordun(fast) {
    Capture: recording, echo ring, meters, backup
    ===================================================================== */
 const TAP_SRC = "class MyzelTap extends AudioWorkletProcessor{constructor(){super();this.n=2048;this.pool=[];this.l=new Float32Array(this.n);this.r=new Float32Array(this.n);this.i=0;this.f0=0;this.done=0;this.base=-Infinity;this.port.onmessage=(e)=>{const d=e.data;if(d==='flush'){const l=this.l.slice(0,this.i),r=this.r.slice(0,this.i);this.i=0;this.port.postMessage({l:l,r:r,f:this.f0,flush:true},[l.buffer,r.buffer])}else if(d&&d.back&&d.back[0].length===this.n&&this.pool.length<8)this.pool.push(d.back)}}process(inputs){const inp=inputs[0];const L=inp&&inp[0];const R=inp&&(inp[1]||inp[0]);const len=L?L.length:128;const est=currentFrame-this.done;if(est>this.base){if(this.i>0){const l=this.l.slice(0,this.i),r=this.r.slice(0,this.i);this.port.postMessage({l:l,r:r,f:this.f0},[l.buffer,r.buffer]);this.i=0}this.base=est}const fq=this.base+this.done;for(let k=0;k<len;k++){if(this.i===0)this.f0=fq+k;this.l[this.i]=L?L[k]:0;this.r[this.i]=R?R[k]:0;if(++this.i===this.n){this.port.postMessage({l:this.l,r:this.r,f:this.f0},[this.l.buffer,this.r.buffer]);const p=this.pool.pop();if(p){this.l=p[0];this.r=p[1]}else{this.l=new Float32Array(this.n);this.r=new Float32Array(this.n)}this.i=0}}this.done+=len;return true}}registerProcessor('myzel-tap',MyzelTap);";
+
+/* =====================================================================
+   Worklet engines – one shared AudioWorklet module (klang SPEC §2)
+   ===================================================================== */
+// Everything inside myzelDsp() runs in the AudioWorklet scope: it is copied by toString() into one Blob module (as
+// genTexture goes into the worker), so it must not touch anything outside itself. One scope per audio context: the
+// tables are built once and shared by every voice. A processor is exciter + resonator only – envelopes, pan and bus
+// stay native on the voice (v.out), so stealing, vFade, the mixer and recordings treat these voices like any other.
+function myzelDsp() {
+  const SR = sampleRate;
+  // ---- tables (SR-independent where possible; everything that depends on SR reads sampleRate) ----
+  const TANH = new Float32Array(2050);   // tanh(x), x in [-8, 8], 128 steps per unit
+  for (let i = 0; i < 2050; i++) TANH[i] = Math.tanh(i / 128 - 8);
+  const tanh = (x) => { if (x >= 8) return 1; if (!(x > -8)) return x === x ? -1 : 0; const p = (x + 8) * 128, i = p | 0; return TANH[i] + (p - i) * (TANH[i + 1] - TANH[i]); };
+  const EXP2 = new Float32Array(1202);   // 2^(c/1200), c in [-600, 600] cents
+  for (let i = 0; i < 1202; i++) EXP2[i] = Math.pow(2, (i - 600) / 1200);
+  const cents = (c) => { if (c > -600 && c < 600) { const p = c + 600, i = p | 0; return EXP2[i] + (p - i) * (EXP2[i + 1] - EXP2[i]); } return Math.pow(2, c / 1200); };
+  const SIN = new Float32Array(4097);    // one period, phase in [0, 1)
+  for (let i = 0; i < 4097; i++) SIN[i] = Math.sin(2 * Math.PI * i / 4096);
+  const NOISE = new Float32Array(65536);  // white, ±1, xorshift32
+  { let s = 0x9E3779B9 | 0; for (let i = 0; i < 65536; i++) { s ^= s << 13; s ^= s >>> 17; s ^= s << 5; NOISE[i] = s / 2147483648; } }
+  // ---- building blocks (state in fields: for block-rate use; inner loops copy into locals – 8× faster, bench) ----
+  class PRNG { constructor(seed) { this.s = (seed | 0) || 0x2545F491; } next() { let s = this.s; s ^= s << 13; s ^= s >>> 17; s ^= s << 5; this.s = s; return (s >>> 0) / 4294967296; } }
+  class OnePole { constructor(c = 1) { this.c = c; this.y = 0; } set(c) { this.c = c; } tick(x) { return (this.y += this.c * (x - this.y)); } }
+  class DcBlock { constructor(hz = 20) { this.r = 1 - 2 * Math.PI * hz / SR; this.x1 = 0; this.y1 = 0; } tick(x) { const y = x - this.x1 + this.r * this.y1; this.x1 = x; this.y1 = y; return y; } }
+  class Allpass1 { constructor(a = 0) { this.a = a; this.x1 = 0; this.y1 = 0; } set(a) { this.a = a; } tick(x) { const y = -this.a * x + this.x1 + this.a * this.y1; this.x1 = x; this.y1 = y; return y; } }
+  class FracDelay {   // ring buffer; d = delay in samples (1 = the sample written last)
+    constructor(maxLen) { let n = 8; while (n < maxLen + 4) n <<= 1; this.b = new Float32Array(n); this.m = n - 1; this.w = 0; }
+    write(x) { this.b[this.w] = x; this.w = (this.w + 1) & this.m; }
+    readL(d) { const i = d | 0, f = d - i, b = this.b, m = this.m, w = this.w; const a = b[(w - i) & m]; return a + f * (b[(w - i - 1) & m] - a); }
+    read3(d) {   // Lagrange 3rd order, centred (d ≥ 2)
+      const i = d | 0, p = d - i + 1, b = this.b, m = this.m, w = this.w + 1 - i;
+      return -(p - 1) * (p - 2) * (p - 3) / 6 * b[w & m] + p * (p - 2) * (p - 3) / 2 * b[(w - 1) & m] - p * (p - 1) * (p - 3) / 2 * b[(w - 2) & m] + p * (p - 1) * (p - 2) / 6 * b[(w - 3) & m];
+    }
+  }
+  class Reso {   // complex rotation: a decaying sinusoid at f, excited by x
+    constructor() { this.re = 0; this.im = 0; this.c = 1; this.s = 0; }
+    set(f, t60) { const r = Math.pow(0.001, 1 / (Math.max(1e-3, t60) * SR)), w = 2 * Math.PI * f / SR; this.c = r * Math.cos(w); this.s = r * Math.sin(w); }
+    tick(x) { const re = this.re * this.c - this.im * this.s + x; this.im = this.re * this.s + this.im * this.c; this.re = re; return this.im; }
+  }
+  class Biquad {   // direct form II transposed
+    constructor() { this.b0 = 1; this.b1 = this.b2 = this.a1 = this.a2 = 0; this.z1 = this.z2 = 0; }
+    bp(f, q) { const w = 2 * Math.PI * Math.min(f, 0.45 * SR) / SR, al = Math.sin(w) / (2 * q), a0 = 1 + al; this.b0 = al / a0; this.b1 = 0; this.b2 = -al / a0; this.a1 = -2 * Math.cos(w) / a0; this.a2 = (1 - al) / a0; return this; }
+    peak(f, q, db) { const A = Math.pow(10, db / 40), w = 2 * Math.PI * Math.min(f, 0.45 * SR) / SR, al = Math.sin(w) / (2 * q), a0 = 1 + al / A; this.b0 = (1 + al * A) / a0; this.b1 = -2 * Math.cos(w) / a0; this.b2 = (1 - al * A) / a0; this.a1 = this.b1; this.a2 = (1 - al / A) / a0; return this; }
+    tick(x) { const y = this.b0 * x + this.z1; this.z1 = this.b1 * x - this.a1 * y + this.z2; this.z2 = this.b2 * x - this.a2 * y; return y; }
+  }
+  const flush = (x) => (x < 1e-18 && x > -1e-18 ? 0 : x);
+  const pd1 = (c, f) => { const p = 1 - c, w = 2 * Math.PI * f / SR; return Math.atan2(p * Math.sin(w), 1 - p * Math.cos(w)) / w; };   // phase delay (samples) of y += c·(x − y) at f
+
+  // ---- the processor contract (SPEC §2.3) ----
+  // k-rate params freq, detune (the voice's pitch bus: vibrato, drift, Bebung, wheel, a finger's bend) and hoehe; the
+  // note {on:t, f, y, vel, gate, burst, seed} in processorOptions.on (with prm: the engine's knobs); the rest over the
+  // port, each message at its frame: {off:t, k} {set:{…}} {clear:t} {lite:0|1} {hammer} (Ranke), and {kill:1} at once
+  // (the voice is gone). After `off` (or a burst's gate) the processor reports {done:1} once its output stayed below
+  // −100 dB for 8 blocks and returns false (collectable).
+  class MyzelProc extends AudioWorkletProcessor {
+    static get parameterDescriptors() {
+      return [
+        { name: 'freq', defaultValue: 220, minValue: 16, maxValue: 8000, automationRate: 'k-rate' },
+        { name: 'detune', defaultValue: 0, minValue: -4800, maxValue: 4800, automationRate: 'k-rate' },
+        { name: 'hoehe', defaultValue: 0.5, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
+      ];
+    }
+    constructor(o) {
+      super();
+      this.po = (o && o.processorOptions) || {};
+      this.q = []; this.act = false; this.off = false; this.silent = 0; this.dead = false; this.lite = this.po.lite ? 1 : 0;   // lite: after underruns, level 3's second bore/head is left out
+      this.f = 220; this.y = 0.5; this.gN = 0; this.gS = 0; this.g = 1;
+      this.port.onmessage = (e) => { const m = e.data; if (!m) return; if (m.kill) this.dead = true; else this.q.push(m); };
+      if (this.po.on) this.q.push(this.po.on);   // the note itself comes with the node: no port latency (offline renders deliver port messages only at the next suspend)
+    }
+    process(inputs, outputs, params) {
+      if (this.dead) return false;
+      const out = outputs[0], L = out && out[0];
+      if (!L) return true;
+      const R = out.length > 1 ? out[1] : null, n = L.length;   // never assume 128
+      const fq = params.freq, dt = params.detune, ho = params.hoehe;
+      const f = fq[0] * cents(dt[0]);
+      this.f = f > 16 ? f : 16; this.y = ho[0];
+      let pos = 0;
+      const q = this.q;
+      while (q.length) {
+        const m = q[0], tm = m.on != null ? m.on : m.off != null ? m.off : m.t;
+        const at = tm == null ? 0 : Math.round((tm - currentTime) * SR);
+        if (at >= n) break;   // later
+        if (at > pos) { if (this.act) this.seg(L, R, pos, at); pos = at; }
+        q.shift();
+        this.msg(m);
+      }
+      if (this.act && pos < n) this.seg(L, R, pos, n);
+      if (!this.act) return true;
+      let e = 0;
+      for (let i = 0; i < n; i++) e += L[i] * L[i];
+      if (!(e < 1e6)) { this.reset(); L.fill(0); if (R) R.fill(0); e = 0; }   // NaN or a blow-up: clear, keep running
+      if (this.off) {
+        if (e < n * 1e-10) { if (++this.silent > 8) { this.act = false; this.dead = true; this.port.postMessage({ done: 1 }); return false; } }
+        else this.silent = 0;
+      }
+      return true;
+    }
+    // render [a, b) and apply the 5 ms click ramp (on, clear) on top
+    seg(L, R, a, b) {
+      this.render(L, R, a, b);
+      if (this.gN > 0) {
+        let g = this.g, k = this.gS, c = this.gN;
+        for (let i = a; i < b; i++) { if (c > 0) { g += k; c--; } L[i] *= g; if (R) R[i] *= g; }
+        this.g = g; this.gN = c;
+        if (c === 0 && this.clearing) { this.clearing = false; this.reset(); this.act = false; }
+      } else if (this.g !== 1) { const g = this.g; for (let i = a; i < b; i++) { L[i] *= g; if (R) R[i] *= g; } }
+    }
+    ramp(to) { const n = Math.max(1, Math.round(0.005 * SR)); this.gS = (to - this.g) / n; this.gN = n; }
+    msg(m) {
+      if (m.set) this.set(m.set);
+      if (m.lite != null) this.lite = m.lite ? 1 : 0;
+      if (m.on != null) { if (this.act) this.ramp(1); else { this.g = 0; this.ramp(1); } this.act = true; this.off = false; this.silent = 0; this.start(m); }
+      else if (m.off != null) { this.off = true; this.stop(m); }
+      else if (m.clear != null) { if (this.act) { this.clearing = true; this.ramp(0); } }
+      else this.extra(m);
+    }
+    set() {} start() {} stop() {} extra() {} reset() {} render() {}
+  }
+
+  // ---- Halm: myzel-blow – reed (STK clarinet), Höhe = breath (SPEC §3.2) ----
+  // One bore = one delay line read with Lagrange-3, a one-pole loss (Mund) and the reed table r = r0 − 0.3·Δp; tuned by
+  // subtracting the loss's phase delay at f (D = SR/2f − pd, ≤ 2 ct). Measured in this loop (klang/tests): the tone
+  // speaks above P_thr = 0.60 − 1.33·(r0 − 0.69) and the reed slams shut above P_ch = 1.12 − 3.93·(r0 − 0.69), at every
+  // pitch – so Höhe maps into that window: below y 0.27 only air (filtered noise outside the loop), then the tone,
+  // brighter and louder with breath (the bell, see render), at the very top squeezed against the choke and wavering:
+  // the tone chokes and comes back (Quietschen).
+  const BLOW_OUT = 0.71, BLOW_Y0 = 0.27;   // level: the standard phrase as loud as Nebel/Glocke/Membran (klang/tests/bench.js)
+  class Blow extends MyzelProc {
+    constructor(o) {
+      super(o);
+      const po = this.po, len = Math.ceil(SR / 32) + 8;
+      this.rich = !!po.rich;
+      this.bA = new FracDelay(len); this.bB = this.rich ? new FracDelay(len) : null;
+      this.p = { atem: 0.5, mund: 0.4, blatt: 0.5, luft: 0.4, zunge: 0.5 };
+      if (po.prm) this.set(po.prm);
+      this.vel = 0.75;
+      this.reset();
+    }
+    reset() {
+      this.bA.b.fill(0); if (this.bB) this.bB.b.fill(0);
+      this.br = 0; this.ap = 0; this.nl = 0; this.sw = 0; this.lzA = this.lzB = 0; this.DA = this.DB = 0; this.az1 = this.az2 = 0; this.rA = this.rB = this.qA = this.qB = 0;
+      this.dxA = this.dyA = this.dxB = this.dyB = 0; this.tn = 0; this.click = 0; this.ns = this.ns || 0x1234567;
+    }
+    set(p) { for (const k in p) if (k in this.p) this.p[k] = +p[k] || 0; }
+    start(m) {
+      this.vel = m.vel != null ? m.vel : 0.75; this.burst = !!m.burst; this.gate = m.burst ? Math.max(1, Math.round((m.gate || 0.22) * SR)) : 0;
+      this.ns = (m.seed | 0) || 0x1234567;
+      const z = this.p.zunge;
+      this.tn = this.tn0 = Math.round((0.004 + 0.008 * z) * SR);   // tongue: a noise burst into the bore, 4–12 ms
+      this.tA = (0.2 + 0.8 * z) * (0.5 + 0.7 * this.vel);
+      this.bc = 1 / (0.001 * SR); this.att = Math.round(0.04 * SR); // breath steps in with a 1 ms ramp
+      if (this.burst && m.gate < 0.06) this.click = 0.6 + 0.6 * this.vel;   // a very short Puls gate: a click into the tube
+    }
+    stop() { this.bc = 1 / (0.005 * SR); }   // breath to 0 within ≈ 15 ms
+    // breath for a height: under the threshold up to y0, then across the window (Atem and velocity widen the stride)
+    breath(y, thr, ch) {
+      if (y < BLOW_Y0) return thr * 0.92 * y / BLOW_Y0;
+      const k = (y - BLOW_Y0) / (1 - BLOW_Y0) * (0.6 + 0.8 * this.p.atem) * (0.8 + 0.27 * this.vel);
+      return thr + (ch - thr) * Math.min(0.97, 0.02 + 0.91 * k);
+    }
+    render(L, R, a, b) {
+      const p = this.p, n = b - a;
+      let f = this.f; if (f > SR / 6) f = SR / 6;
+      const y = this.y, r0 = 0.64 + 0.14 * p.blatt, thr = 0.6 - 1.33 * (r0 - 0.69), ch = 1.12 - 3.93 * (r0 - 0.69);
+      // breath target: during a Puls gate the sweet spot whatever the height, then nothing
+      let bt;
+      if (this.off) bt = 0;
+      else if (this.burst) { bt = thr + 0.55 * (ch - thr); if (this.gate <= n) { this.gate = 0; this.off = true; this.stop(); } else this.gate -= n; }
+      else bt = this.breath(y, thr, ch);
+      if (this.att > 0 && !this.off && bt > thr) bt = Math.min(bt + 0.2 * (ch - thr), thr + 0.9 * (ch - thr));   // the attack blows harder: the tone speaks sooner
+      if (this.att > 0 && (this.att -= n) <= 0 && !this.off) this.bc = 1 / (0.006 * SR);   // after the attack: follow Höhe smoothly
+      // Quietschen: squeezed against the choke and wavering (a slow random walk, ≈ 5 Hz) – over it the reed shuts for a
+      // moment: the tone chokes and comes back
+      const sq = y > 0.9 && !this.burst ? (y - 0.9) / 0.1 : 0;
+      if (sq > 0 && !this.off) {
+        let s = this.ns; s ^= s << 13; s ^= s >>> 17; s ^= s << 5; this.ns = s;
+        this.sw += 0.08 * (s * 4.656612873e-10 - this.sw);
+        bt += (ch - bt) * 0.9 * sq + sq * sq * 0.4 * (ch - thr) * Math.max(-1.5, Math.min(1.5, this.sw * 8.5));
+      }
+      const nAmt = 0.45 * (1 + 3 * sq);
+      // The bore's loss sits at a fixed multiple of f (10–18 f, Mund): with less loss above that the reed jumps at random
+      // into an upper regime (5th/7th harmonic over the fundamental – measured in a third of the notes at y 0.5), so the
+      // tone itself stays in one register; the brightness that follows the breath comes from outside the loop: the
+      // bell radiates the highs above 3f more (second order), and a soft clip adds an odd edge
+      const kb = Math.min(1, Math.max(0, (this.br - thr) / (ch - thr)));
+      // (a stereo voice passes the voice's panner at full gain, a mono one at −3 dB: level 3 plays √½ as loud inside)
+      const og = this.rich ? BLOW_OUT * Math.SQRT1_2 : BLOW_OUT, lc = 1 - Math.exp(-2 * Math.PI * Math.min(0.45 * SR, f * (10 + 8 * p.mund)) / SR), rad = 0.5 + 8 * kb, lvl = og * (0.55 + 0.45 * kb) / (1 + 0.25 * rad), sk = 0.3 + 0.7 * kb, sn = 1 / sk;
+      const rc = 1 - Math.exp(-2 * Math.PI * Math.min(3 * f, 0.4 * SR) / SR);
+      // bore lengths (a glide moves D per sample across the block)
+      const DtA = Math.max(2, SR / (2 * f * (this.rich ? cents(-4) : 1)) - pd1(lc, f)), DtB = this.rich ? Math.max(2, SR / (2 * f * cents(4)) - pd1(lc, f)) : 0;
+      let DA = this.DA || DtA, DB = this.DB || DtB;
+      const dDA = (DtA - DA) / n, dDB = (DtB - DB) / n, gl = dDA !== 0 || dDB !== 0;
+      // Lagrange-3 weights: per block while the bore holds its length, per sample during a glide
+      let di = DA | 0, pp = DA - di + 1, h0 = -(pp - 1) * (pp - 2) * (pp - 3) / 6, h1 = pp * (pp - 2) * (pp - 3) / 2, h2 = -pp * (pp - 1) * (pp - 3) / 2, h3 = pp * (pp - 1) * (pp - 2) / 6;
+      let ei = DB | 0, qq = DB - ei + 1, k0 = -(qq - 1) * (qq - 2) * (qq - 3) / 6, k1 = qq * (qq - 2) * (qq - 3) / 2, k2 = -qq * (qq - 1) * (qq - 3) / 2, k3 = qq * (qq - 1) * (qq - 2) / 6;
+      // air: noise through a resonant lowpass near the bore's lowest modes (a hiss through a tube), ∝ how far the
+      // breath is below the tone, and only while the finger is down
+      const fa = Math.min(Math.max(2 * f, 150), 4000), w0 = 2 * Math.PI * fa / SR, al = Math.sin(w0) / 3, a0 = 1 + al, cw = Math.cos(w0);
+      const ab0 = (1 - cw) / 2 / a0, aa1 = -2 * cw / a0, aa2 = (1 - al) / a0, luft = 0.25 * og * p.luft, ithr = 1 / thr, apT = this.off ? 0 : 1;
+      let az1 = this.az1, az2 = this.az2, ap = this.ap;
+      let br = this.br, bc = this.bc, nl = this.nl, s = this.ns, tn = this.tn, tA = this.tA / Math.max(1, this.tn0);
+      let lzA = this.lzA, lzB = this.lzB, dxA = this.dxA, dyA = this.dyA, dxB = this.dxB, dyB = this.dyB, rA = this.rA, rB = this.rB, qA = this.qA, qB = this.qB;
+      const bA = this.bA.b, mA = this.bA.m, bB = this.bB ? this.bB.b : null, mB = this.bB ? this.bB.m : 0;
+      let wA = this.bA.w, wB = this.bB ? this.bB.w : 0;
+      const dcR = 1 - 2 * Math.PI * 20 / SR, two = !!bB && !this.lite;
+      let click = this.click; this.click = 0;
+      for (let i = a; i < b; i++) {
+        br += bc * (bt - br); ap += bc * (apT - ap);
+        s ^= s << 13; s ^= s >>> 17; s ^= s << 5;
+        const wn = s * 4.656612873e-10;
+        nl += 0.12 * (wn - nl);
+        let pA = br * (1 + nAmt * nl);
+        if (tn > 0) { pA += tA * tn * wn; tn--; }   // tongue: a decaying noise burst
+        pA += click; click = 0;
+        // bore A
+        if (gl) { DA += dDA; di = DA | 0; pp = DA - di + 1; h0 = -(pp - 1) * (pp - 2) * (pp - 3) / 6; h1 = pp * (pp - 2) * (pp - 3) / 2; h2 = -pp * (pp - 1) * (pp - 3) / 2; h3 = pp * (pp - 1) * (pp - 2) / 6; }
+        let j = wA + 1 - di;
+        let bore = h0 * bA[j & mA] + h1 * bA[(j - 1) & mA] + h2 * bA[(j - 2) & mA] + h3 * bA[(j - 3) & mA];
+        lzA += lc * (bore - lzA);
+        let dp = -0.95 * lzA - pA, r = r0 - 0.3 * dp;
+        if (r > 1) r = 1; else if (r < -1) r = -1;
+        bA[wA] = pA + dp * r; wA = (wA + 1) & mA;
+        rA += rc * (bore - rA); const hA = bore - rA; qA += rc * (hA - qA);
+        let o = bore + rad * (hA - qA);                 // the bell: highs above 3f radiate more (second order)
+        const d0 = o - dxA + dcR * dyA; dxA = o; dyA = d0; o = tanh(sk * d0) * sn * lvl;   // more breath, a harder edge (odd)
+        // air
+        const ag = luft * ap * (1 - br * ithr);
+        if (ag > 0) { const ya = ab0 * wn + az1; az1 = 2 * ab0 * wn - aa1 * ya + az2; az2 = ab0 * wn - aa2 * ya; o += ag * ya; }
+        L[i] = o;
+        if (two) {
+          if (gl) { DB += dDB; ei = DB | 0; qq = DB - ei + 1; k0 = -(qq - 1) * (qq - 2) * (qq - 3) / 6; k1 = qq * (qq - 2) * (qq - 3) / 2; k2 = -qq * (qq - 1) * (qq - 3) / 2; k3 = qq * (qq - 1) * (qq - 2) / 6; }
+          j = wB + 1 - ei;
+          bore = k0 * bB[j & mB] + k1 * bB[(j - 1) & mB] + k2 * bB[(j - 2) & mB] + k3 * bB[(j - 3) & mB];
+          lzB += lc * (bore - lzB);
+          dp = -0.95 * lzB - pA; r = r0 - 0.3 * dp;
+          if (r > 1) r = 1; else if (r < -1) r = -1;
+          bB[wB] = pA + dp * r; wB = (wB + 1) & mB;
+          rB += rc * (bore - rB); const hB = bore - rB; qB += rc * (hB - qB);
+          let o2 = bore + rad * (hB - qB);
+          const d1 = o2 - dxB + dcR * dyB; dxB = o2; dyB = d1; o2 = tanh(sk * d1) * sn * lvl;
+          if (ag > 0) o2 += ag * az2;   // the same air, a little apart
+          R[i] = o2;
+        } else if (R) R[i] = o;
+      }
+      this.br = br; this.ap = ap; this.nl = flush(nl); this.ns = s; this.tn = tn; this.lzA = flush(lzA); this.lzB = flush(lzB); this.rA = flush(rA); this.rB = flush(rB); this.qA = flush(qA); this.qB = flush(qB);
+      this.dxA = dxA; this.dyA = flush(dyA); this.dxB = dxB; this.dyB = flush(dyB); this.az1 = flush(az1); this.az2 = flush(az2);
+      this.DA = gl ? DA : DtA; this.DB = gl ? DB : DtB; this.bA.w = wA; if (this.bB) this.bB.w = wB;
+    }
+  }
+
+  // ---- Ranke: myzel-scan – scanned synthesis on a ring of masses (SPEC §3.6) ----
+  // N masses on a ring, mass 0 clamped (standing waves: where and how wide the hammer hits is audible). The physics runs
+  // in seconds, independent of pitch, and is stepped on a grid locked to the scan (kU steps per period on low notes,
+  // one every nU periods on high ones, see sched) – so every stepping artefact lands on a harmonic of f. The scan
+  // reads the ring through a 2N-point table, crossfading the previous and the current state across each interval.
+  // Held = hammer, then a mirrored push and light taps keep the form moving (see step); no AGC: the gain is fixed.
+  const SCAN_OUT = 0.7, RNK_HIT = 2, RNK_SWELL = 0.8, RNK_PUSH = 0.04, RNK_TAP = 0.5, RNK_TAPS = 3, RNK_WOBBLE = 0.3, RNK_DLAP = 3, RNK_DSYM = 13.8 / 0.6, RNK_UMAX = 400, RNK_THETA = 0.52;
+  class Scan extends MyzelProc {
+    constructor(o) {
+      super(o);
+      const po = this.po;
+      this.rich = !!po.rich; const N = this.N = this.rich ? 96 : 48;
+      // x[N] = v[N] = 0 stand for the clamped mass 0 seen from mass N − 1 (the ring closes there)
+      this.x = new Float64Array(N + 1); this.v = new Float64Array(N + 1); this.mi = new Float64Array(N); this.dm = new Float64Array(N);
+      this.dv = new Float64Array(N); this.cp = new Float64Array(N + 1); this.den = new Float64Array(N + 1); this.dp = new Float64Array(N + 1); this.vo = new Float64Array(N + 1); this.dtK = 0;
+      this.F = new Float64Array(N + 1); this.fz = new Float64Array(3); this.fi = -1;
+      this.sl = 1; this.dmul = 1;
+      this.pv = new Float32Array(2 * N + 2); this.dl = new Float32Array(2 * N + 2);
+      this.p = { masse: 0.5, feder: 0.5, mitte: 0.3, daempfung: 0.4, hammer: 0.5, holz: 0.3 };
+      this.rng = new PRNG(po.seed || 7);
+      this.rnd = new Float64Array(2 * N); for (let i = 0; i < 2 * N; i++) this.rnd[i] = this.rng.next() * 2 - 1;
+      if (po.prm) this.set(po.prm);
+      this.tempo = 1; this.drive = 0; this.dmul = 1; this.g = 1; this.gain = this.rich ? SCAN_OUT * Math.SQRT1_2 : SCAN_OUT;   // (stereo: √½, see Blow)
+      this.reset(); this.coef();
+    }
+    reset() {
+      this.x.fill(0); this.v.fill(0); this.pv.fill(0); this.dl.fill(0); this.F.fill(0); this.fz.fill(0); this.fi = -1;
+      this.ph = 0; this.cyc = 0; this.sg = 0; this.nU = 1; this.kU = 1; this.dcx = this.dcy = this.dcx2 = this.dcy2 = 0; this.l1 = this.l2 = this.r1 = this.r2 = 0;
+    }
+    set(p) { for (const k in p) if (k in this.p) this.p[k] = +p[k] || 0; if (this.mi) this.coef(); }
+    // physical constants from the six knobs, all in seconds: the ring's slowest mode R1 (Feder), the centring rate (Mitte),
+    // the decay T60 0.3–8 s (Dämpfung, Höhe blends it), the mass (Masse, ×¼…×4) with Holz's per-mass irregularity
+    coef() {
+      const p = this.p, N = this.N, rnd = this.rnd;
+      const R1 = 0.25 * Math.pow(2, 7 * p.feder), m = Math.pow(4, 2 * (p.masse - 0.5));
+      this.ks = Math.pow(Math.PI * R1 / Math.sin(Math.PI / (2 * N)), 2);
+      const rc = 12 * Math.pow(p.mitte, 1.5); this.kc = Math.pow(2 * Math.PI * rc, 2);
+      const t60 = 8 * Math.pow(0.3 / 8, p.daempfung) * (1 / (0.6 + 0.8 * (1 - this.y)));
+      const d = 13.8 / t60;
+      // Holz: uneven masses and losses – mirrored about the middle, so the ring stays symmetric and the mirrored push
+      // keeps to the even modes (an uneven ring couples them back: a wobble of ≈ 1 ct at 55–82 Hz, measured)
+      for (let i = 0; i < N; i++) { const j = Math.min(i, N - i); this.mi[i] = 1 / (m * (1 + 0.1 * p.holz * rnd[j])); this.dm[i] = d * (1 + 0.3 * p.holz * rnd[N + j]); }
+      this.mi[0] = 0;
+      this.dlap = RNK_DLAP;   // extra loss of the short modes (Laplacian damping): a hit rounds off within ≈ 0.5 s
+      this.yC = this.y; this.damp();
+      // the held push spreads like the hammer: wide and round low on the field, one sharp corner at the top
+      const wp = Math.max(0, Math.round((5 - 5 * this.y) * N / 48)), pw = this.pw = new Float64Array(wp + 1); let sw = 0;
+      for (let j = 0; j <= wp; j++) { pw[j] = 0.5 + 0.5 * Math.cos(Math.PI * j / (wp + 1)); sw += j ? 2 * pw[j] : pw[j]; }
+      for (let j = 0; j <= wp; j++) pw[j] /= sw;
+    }
+    // (the losses are meant in real time: divided by the bass slow-down sl, which slows the modes, not the decay)
+    damp() { for (let i = 0; i < this.N; i++) this.dv[i] = (this.dm[i] * this.dmul + 2 * this.dlap + 0.5 * RNK_DSYM) / this.sl; this.dtK = 0; }
+    start(m) {
+      this.vel = m.vel != null ? m.vel : 0.75; this.burst = !!m.burst;
+      this.gate = m.burst ? Math.max(1, Math.round((m.gate || 0.22) * SR)) : 0;
+      if (m.seed) { this.rng = new PRNG(m.seed); for (let i = 0; i < 2 * this.N; i++) this.rnd[i] = this.rng.next() * 2 - 1; }
+      // a Puls hit runs the ring faster so it disperses inside short gates – up to 3× from 440 Hz up; bass notes less
+      // (their modes would breathe at rates near f: half-harmonic sidebands, an octave-down growl)
+      this.tempo = this.burst ? 1 + 2 * Math.min(1, this.f / 440) : 1; this.dmul = 1;   // (coef() below refreshes the damping)
+      this.drive = this.burst ? 0 : (0.5 + this.p.hammer) * this.vel; this.dr = 0; this.tap = 0.3;
+      this.y = m.y != null ? m.y : this.y; this.coef();
+      this.hit(RNK_HIT, Math.round(this.N / 3));
+      this.snap(true);
+      this.ph = 0; this.cyc = 0; this.sg = 0; this.sched(this.f);
+    }
+    stop() { this.drive = 0; this.dmul = 3; this.damp(); }   // let go: no push, more loss (and the fade in step)
+    extra(m) { if (m.hammer && this.act && !this.off) { this.hit(RNK_HIT * Math.min(1, m.hammer), Math.round(this.N * (0.25 + 0.5 * this.rng.next()))); } }   // a shake: one more hammer, anywhere
+    // the hammer: a dent and a push around position c, width 12 − 9·y masses (at 48), harder = more peaked; the gain
+    // is fixed (no AGC)
+    hit(amp, c) {
+      const N = this.N, x = this.x, v = this.v, w = Math.max(3, (12 - 9 * this.y) * N / 48), ex = 1 + 3 * this.p.hammer;
+      amp *= Math.sqrt(7.5 * N / 48 / w);   // the same energy at every width: narrow is brighter, not quieter
+      // a hard hammer leaves more of a dent (displacement: every mode at once, bright and spiky), a soft one more of a
+      // push (velocity: the dent grows while it spreads, rounder, 6–7 dB less crest)
+      const hx = 0.3 + 0.4 * this.p.hammer, hv = 40 * (1 - 0.5 * this.p.hammer);
+      for (let i = 1; i < N; i++) {
+        let d = i - c; if (d > N / 2) d -= N; else if (d < -N / 2) d += N;
+        if (d > -w && d < w) { const k = Math.pow(0.5 + 0.5 * Math.cos(Math.PI * d / w), ex) * amp; x[i] += k * hx; v[i] += k * hv; }
+      }
+    }
+    // the scan table: the ring at 2N points – the masses and cubic midpoints between them, (9(b + c) − (a + d))/16 –
+    // read linearly per sample (cheaper than a cubic per sample, same images); padded by two for the wrap. The update
+    // crossfades: pv = the previous table, dl = new − previous; first: no crossfade
+    snap(first) {
+      const N = this.N, x = this.x, pv = this.pv, dl = this.dl, M = 2 * N;
+      for (let i = 0; i < N; i++) {
+        const a = x[i === 0 ? N - 1 : i - 1], b = x[i], c = x[i + 1 < N ? i + 1 : 0], d = x[i + 2 < N ? i + 2 : i + 2 - N], m = 0.5625 * (b + c) - 0.0625 * (a + d), j = 2 * i;
+        if (first) { pv[j] = b; dl[j] = 0; pv[j + 1] = m; dl[j + 1] = 0; }
+        else { let nv = pv[j] + dl[j]; pv[j] = nv; dl[j] = b - nv; nv = pv[j + 1] + dl[j + 1]; pv[j + 1] = nv; dl[j + 1] = m - nv; }
+      }
+      pv[M] = pv[0]; dl[M] = dl[0]; pv[M + 1] = pv[1]; dl[M + 1] = dl[1];
+    }
+    // the update grid for this pitch: at least 110 Hz (Puls: 330, the ring runs three times faster) – kU updates per
+    // period on low notes, so fast modes are not sampled below their rate –, at most 400 Hz (Puls 1200) – one update
+    // every nU periods on high ones. Always a whole ratio to f: every artefact of the stepping lands on a harmonic.
+    sched(f) {
+      const lo = this.burst ? 700 : 220, hi = this.burst ? 1200 : RNK_UMAX;
+      const kU = f < lo ? Math.ceil(lo / f) : 1, nU = f > hi ? Math.ceil(f / hi) : 1;
+      const sl = f < 110 ? Math.pow(f / 110, 0.8) : 1;   // below 110 Hz the ring moves slower (see step)
+      if (sl !== this.sl) { this.sl = sl; this.damp(); }
+      if (kU === this.kU && nU === this.nU) return false;
+      this.kU = kU; this.nU = nU; return true;
+    }
+    // one update: simulate nU/(kU·f)·tempo seconds in one θ-step (θ = RNK_THETA, a little past Crank–Nicolson) –
+    // unconditionally stable, so no substeps however stiff the ring (96 masses at level 3 would need 4–8 explicit ones);
+    // the price is a tridiagonal solve (Thomas, factors cached while dt holds). Past ½ the fastest modes lose a third
+    // per step instead of flipping sign every update (Crank–Nicolson's limit: a growl at f/2, measured in Puls hits at
+    // 110 Hz); the slow modes, the ones that breathe, keep their decay. Below 110 Hz the ring moves slower (its fast modes would otherwise breathe at rates near f:
+    // sidebands between the harmonics, and a pitch that wanders by a few cents)
+    step() {
+      if (this.yC !== this.y && Math.abs(this.yC - this.y) > 0.01) this.coef();   // Höhe moved: damping, finger width
+      const N = this.N, x = this.x, v = this.v, mi = this.mi, dv = this.dv, F = this.F, cp = this.cp, den = this.den, dp = this.dp, vo = this.vo;
+      const T = this.nU / (this.kU * this.f) * this.tempo * this.sl;
+      const th = RNK_THETA, ks = this.ks, k0 = 2 * ks + this.kc, ds = RNK_DSYM * 0.5 / this.sl, dl = this.dlap / this.sl;
+      const q = th * th * T * T, h = th * T, gm = -(q * ks + h * dl), qr = th * (1 - th) * T * T, hr = (1 - th) * T, gr = -(qr * ks + hr * dl);
+      if (this.dtK !== T) {   // A = I + M⁻¹(θ²T²·K + θT·C): factor once per dt
+        this.dtK = T; let c = 0;
+        for (let i = 1; i < N; i++) { const ai = mi[i] * gm, d = 1 + mi[i] * (q * k0 + h * dv[i]) - ai * c; den[i] = 1 / d; c = cp[i] = ai / d; }
+      }
+      // held: a steady push near the hammer holds a form (the tone keeps its pitch line), spread like the hammer; its
+      // strength wanders around 4 Hz by ±60 %, and a second push further round wakes more of the slow modes. Both push
+      // in mirrored pairs (+F at c, −F at N − c): that moves only the even modes, whose scans are pure sine-phase
+      // harmonics – the harmonics breathe in level only. Anything else mixes modes of different phase into one
+      // harmonic, i.e. a pitch wobble (measured 5–13 ct at 55–110 Hz with a single or a wandering push point)
+      if (this.drive > 0) {   // (the push comes in over ≈ RNK_SWELL s: first the hit rings)
+        this.dr += (1 - this.dr) * (1 - Math.exp(-this.nU / (this.kU * this.f * RNK_SWELL)));
+        const fz = this.fz, k = 1 - Math.exp(-2 * Math.PI * 4 * T), nk = 1.73 / Math.sqrt(k / (2 - k)), Ft = this.ks * this.drive * this.dr * RNK_PUSH;
+        const c0 = Math.round(0.27 * N), c1 = Math.round(0.42 * N), pw = this.pw, wp = pw.length - 1;   // (not ⅓: a mirrored pair there cancels every third harmonic)
+        for (let j = 0; j < 2; j++) fz[j] += k * ((this.rng.next() * 2 - 1) - fz[j]);
+        const f0 = Ft * (1 + RNK_WOBBLE * Math.max(-1.5, Math.min(1.5, fz[0] * nk))), f1 = 0.5 * Ft * RNK_WOBBLE * Math.max(-2, Math.min(2, fz[1] * nk));
+        F.fill(0);
+        for (let j = -wp; j <= wp; j++) { const w = f0 * pw[j < 0 ? -j : j]; F[c0 + j] = w; F[N - c0 - j] = -w; }
+        F[c1] = f1; F[N - c1] = -f1; this.fi = 1;
+        // stroking: light taps at random (≈ 3 per second), as wide as the hammer – Höhe keeps shaping the held tone
+        if ((this.tap -= this.nU / (this.kU * this.f)) <= 0) {
+          this.tap = -Math.log(1 - 0.95 * this.rng.next()) / RNK_TAPS;
+          const a = this.drive * this.dr * RNK_TAP * (0.4 + 1.2 * this.y) * (0.5 + this.rng.next());   // higher = harder strokes
+          this.hit(a, c0); this.hit(-a, N - c0);
+        }
+      } else if (this.fi >= 0) { F.fill(0); this.fi = -1; }
+      // springs to both neighbours, centring, damping (own + the short modes' + the symmetric part, see RNK_DSYM – its
+      // mirrored half explicit): right side, forward sweep, back substitution, then x by the trapezoid
+      let pd = 0;
+      for (let i = 1; i < N; i++) {
+        const vi = v[i], mt = mi[i];
+        const r = vi - mt * ((qr * k0 + hr * dv[i]) * vi + gr * (v[i - 1] + v[i + 1])) + T * mt * (ks * (x[i - 1] + x[i + 1]) - k0 * x[i] + F[i] - ds * v[N - i]);
+        vo[i] = vi; pd = dp[i] = (r - mt * gm * pd) * den[i];
+      }
+      let vn = 0, big = 0;
+      for (let i = N - 1; i >= 1; i--) { vn = v[i] = dp[i] - cp[i] * vn; const xi = x[i] + hr * vo[i] + h * vn; x[i] = xi; if (xi > big) big = xi; else if (-xi > big) big = -xi; }
+      if (big > 3) for (let i = 1; i < N; i++) if (x[i] > 3 || x[i] < -3) x[i] = 4 * tanh(x[i] / 4);   // soft limit ±4
+      // after the end the hand stops the ring: form and motion fade (T60 0.6 s) – more damping alone would not do it,
+      // a slack ring (Feder and Mitte low) is then overdamped and creeps back over seconds, still sounding
+      if (this.off) { const k = Math.exp(-23 * this.nU / (this.kU * this.f)); for (let i = 1; i < N; i++) { x[i] *= k; v[i] *= k; } }
+      for (let i = 1; i < N; i++) { x[i] = flush(x[i]); v[i] = flush(v[i]); }
+      this.snap(false);
+    }
+    render(L, R, a, b) {
+      const f = this.f, M = 2 * this.N, pv = this.pv, dl = this.dl, two = !!R && !this.lite;
+      if (this.burst && !this.off) { if (this.gate <= b - a) { this.gate = 0; this.off = true; this.stop(); } else this.gate -= b - a; }
+      const inc = f / SR;
+      let ph = this.ph, cyc = this.cyc, nU = this.nU, kU = this.kU, sg = this.sg;
+      const fc = Math.min((5 + 11 * this.y) * f, 0.4 * SR), lc = 1 - Math.exp(-2 * Math.PI * fc / SR), dcR = 1 - 2 * Math.PI * 20 / SR, g = this.gain;
+      let dcx = this.dcx, dcy = this.dcy, l1 = this.l1, l2 = this.l2, dcx2 = this.dcx2, dcy2 = this.dcy2, r1 = this.r1, r2 = this.r2;
+      // in runs between update points (kU per period, or one every nU periods): the inner loops carry no branch and no
+      // call; the crossfade al goes 0 → 1 across each update interval
+      let i = a;
+      while (i < b) {
+        let e;
+        const pb = (sg + 1) / kU;   // the next update point (in scan phase; 1 = the wrap)
+        if (ph + inc >= pb) {   // this sample crosses it: update first, then it renders with the new state
+          ph += inc;
+          const wrap = ph >= 1;
+          if (wrap) ph -= 1;
+          sg = wrap ? 0 : sg + 1;
+          if (kU > 1 || (wrap && ++cyc >= nU)) { cyc = 0; this.step(); }
+          if (wrap && this.sched(f)) { nU = this.nU; kU = this.kU; cyc = 0; }   // the grid changes only at a wrap
+          ph -= inc; e = i + 1;
+        } else { e = i + Math.floor((pb - ph) / inc); if (e > b) e = b; }   // (the table's padding covers rounding)
+        const cm = kU > 1 ? kU : 1 / nU, c0 = kU > 1 ? -sg : cyc / nU, ci = inc * cm;
+        let al = c0 + ph * cm;
+        if (!two) {
+          for (; i < e; i++) {
+            ph += inc; al += ci;
+            const u = ph * M, k = u | 0, a0 = pv[k] + al * dl[k];
+            const o = a0 + (u - k) * (pv[k + 1] + al * dl[k + 1] - a0);
+            const d = o - dcx + dcR * dcy; dcx = o; dcy = d;
+            l1 += lc * (d - l1); l2 += lc * (l1 - l2);
+            L[i] = l2 * g;
+          }
+        } else {
+          for (; i < e; i++) {
+            ph += inc; al += ci;
+            const u = ph * M, k = u | 0, a0 = pv[k] + al * dl[k];
+            const o = a0 + (u - k) * (pv[k + 1] + al * dl[k + 1] - a0);
+            const d = o - dcx + dcR * dcy; dcx = o; dcy = d;
+            l1 += lc * (d - l1); l2 += lc * (l1 - l2);
+            L[i] = l2 * g;
+            let u2 = u + M * 0.5; if (u2 >= M) u2 -= M;   // second head half a ring away
+            const k2 = u2 | 0, b0 = pv[k2] + al * dl[k2];
+            const o2 = b0 + (u2 - k2) * (pv[k2 + 1] + al * dl[k2 + 1] - b0);
+            const d2 = o2 - dcx2 + dcR * dcy2; dcx2 = o2; dcy2 = d2;
+            r1 += lc * (d2 - r1); r2 += lc * (r1 - r2);
+            R[i] = r2 * g;
+          }
+        }
+      }
+      // soft clip above ±0.8 (the ring is bounded, the gain fixed: rare – only stacked shake hammers get there)
+      for (let j = a; j < b; j++) { const o = L[j]; if (o > 0.8 || o < -0.8) L[j] = o > 0 ? 0.8 + 0.2 * tanh(5 * o - 4) : -0.8 + 0.2 * tanh(5 * o + 4); }
+      if (two) for (let j = a; j < b; j++) { const o = R[j]; if (o > 0.8 || o < -0.8) R[j] = o > 0 ? 0.8 + 0.2 * tanh(5 * o - 4) : -0.8 + 0.2 * tanh(5 * o + 4); }
+      else if (R) R.set(L.subarray(a, b), a);
+      this.ph = ph; this.cyc = cyc; this.sg = sg;
+      this.dcx = dcx; this.dcy = flush(dcy); this.l1 = flush(l1); this.l2 = flush(l2); this.dcx2 = dcx2; this.dcy2 = flush(dcy2); this.r1 = flush(r1); this.r2 = flush(r2);
+    }
+  }
+
+  // an empty voice: the per-node price of the contract (SPEC §8 step 1 gate, ≈ 0.06 + 0.03 per param)
+  class Null extends MyzelProc { render(L, R, a, b) { for (let i = a; i < b; i++) L[i] = 0; } }
+  for (const [k, C] of [['myzel-blow', Blow], ['myzel-scan', Scan], ['myzel-null', Null]]) registerProcessor(k, C);
+  return { SIN, NOISE, Reso, Biquad, Allpass1, OnePole, DcBlock, FracDelay, PRNG };   // (for later processors; unused here)
+}
+// end myzelDsp
+// The module: the processors above plus the recording tap (registered only if tap-worklet.js did not already – a name
+// registered twice throws, and an exception in a module fails the whole addModule).
+const MYZEL_DSP_SRC = '(' + myzelDsp + ')();\ntry {\n' + TAP_SRC + '\n} catch (e) {}\n';
+// Loading (klang SPEC §2.1): the module is added to a context only when a worklet engine is selected somewhere (Klang,
+// Ebene 2, a lane, Gestik's strike), restored from a patch or heard in the library – never inside the first touch.
+// As soon as an AudioWorklet exists, Chrome in a frame and Safari render the whole graph on the worklet thread, so a
+// session that only plays the old engines keeps the real-time thread. Offline contexts (tests, calibrate) load their
+// own copy: await ensureDSP(ctx) before rendering. Without AudioWorklet (old WebViews, blocked blob: URLs) a worklet
+// engine plays its stand-in (ENGINES[k].fallback) and keeps its key in the patch.
+// DSP.state for the UI: '' not asked yet · 'laden' loading · 'ok' · 'kein' this browser cannot (stand-ins play).
+const DSP = { state: '', toldFrame: false };
+const WORKLET_ENGINES = new Set(['hrz', 'hlm', 'glt', 'boe', 'amo', 'rnk', 'shn', 'zpf', 'mdr', 'gsp', 'khl']);
+A.workletOK = false; A.workletBroken = new Set();
+function dspWanted() {
+  const g = GK.p ? [GK.p.rgS, GK.p.rasS] : [];
+  return [P['v.eng'], P['v.layer'], P['l0.eng'], P['l1.eng'], P['l2.eng'], P['l3.eng'], ...g].some((k) => WORKLET_ENGINES.has(k));
+}
+function ensureDSP(ctx = A.ctx) {   // idempotent per context; resolves true when the processors are registered
+  if (!ctx) return Promise.resolve(false);
+  if (ctx.__dsp) return ctx.__dsp;
+  const live = ctx === A.ctx && !(typeof OfflineAudioContext !== 'undefined' && ctx instanceof OfflineAudioContext);
+  if (!ctx.audioWorklet || !window.AudioWorkletNode) {
+    ctx.__dsp = Promise.resolve(false);
+    if (live) { A.workletOK = false; dspState('kein'); toast('Dieser Browser spielt die neuen Quellen vereinfacht (kein AudioWorklet).', 6000); }
+    return ctx.__dsp;
+  }
+  if (live) dspState('laden');
+  ctx.__dsp = (async () => {
+    // the Blob first: no sibling file ships (one would have to be rebuilt with every change of the source above, and
+    // a stale one would win); a sibling myzel-dsp.js is only the way out where a CSP forbids blob: (the tap's order is
+    // the other way round – its file exists)
+    const urls = [];
+    try { urls.push(URL.createObjectURL(new Blob([MYZEL_DSP_SRC], { type: 'text/javascript' }))); } catch (e) {}
+    try { urls.push(new URL('myzel-dsp.js', document.baseURI).href); } catch (e) {}
+    for (const u of urls) {
+      try { await ctx.audioWorklet.addModule(u); } catch (e) { continue; }
+      ctx.__dspOK = true;
+      if (ctx === A.ctx) { A.workletOK = true; if (live) dspState('ok'); }
+      return true;
+    }
+    if (ctx === A.ctx) { A.workletOK = false; if (live) { dspState('kein'); toast('Dieser Browser spielt die neuen Quellen vereinfacht (kein AudioWorklet).', 6000); } }
+    return false;
+  })();
+  // Chrome in a frame renders a worklet graph on a thread of lower priority: say once where it plays best
+  if (live && !DSP.toldFrame) { DSP.toldFrame = true; let framed = false; try { framed = window.top !== window; } catch (e) { framed = true; } if (framed) toast('Im eigenen Tab öffnen – dort läuft der Klang auf dem Echtzeit-Thread.', 6000); }
+  return ctx.__dsp;
+}
+function dspState(s) { DSP.state = s; wkUiSync(); if (MX.root) mxSrcAll(); kqSyncAll(); }
+// the engine sections say when this browser plays a stand-in (the library UI shows „⌁ spielt als …“ itself)
+function wkUiSync() {
+  for (const k of WORKLET_ENGINES) {
+    const s = engSecs[k]; if (!s || !s.wkNote) continue;
+    const fb = DSP.state === 'kein' || A.workletBroken.has(k);
+    s.wkNote.hidden = !fb;
+    if (fb) s.wkNote.textContent = '⌁ Dieser Browser spielt ' + ENG_NAME[k] + ' vereinfacht als ' + ENG_NAME[ENGINES[k].fallback] + ' (kein AudioWorklet).';
+  }
+}
+const dspMaybe = () => { if (A.ctx && dspWanted()) ensureDSP(); };
+// the engine a key really plays now: itself, or its stand-in while the module is missing (or still loading)
+function wkPlays(k) {
+  const E = ENGINES[k];
+  if (!E || E.needs !== 'worklet') return k;
+  return A.ctx && A.ctx.__dspOK && !A.workletBroken.has(k) ? k : E.fallback;
+}
+// for texts: "Halm", or "Halm (als Hauch)" when this browser cannot play it
+const engLabel = (k) => (ENGINES[k] && ENGINES[k].needs === 'worklet' && (DSP.state === 'kein' || A.workletBroken.has(k)) ? ENG_NAME[k] + ' (als ' + ENG_NAME[ENGINES[k].fallback] + ')' : ENG_NAME[k]);
+// a worklet voice: one AudioWorkletNode, k-rate freq/detune/hoehe (detune on the voice's pitch bus: vibrato, drift,
+// Bebung, wheel, a finger's bend); the processor posts {done} when it fell silent after its end – the voice is then
+// freed at once. A processor that throws marks the engine broken for the session (it plays its stand-in from then on).
+function wkVoice(v, proc, f, y, po) {
+  const node = v.n(new AudioWorkletNode(A.ctx, proc, { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [Q.rich ? 2 : 1], processorOptions: Object.assign({ rich: !!Q.rich, lite: A.lite ? 1 : 0 }, po) }));
+  const pf = node.parameters.get('freq'), py = node.parameters.get('hoehe');
+  pf.value = clamp(f, 16, 8000); py.value = clamp(y, 0, 1);
+  v.mod(node.parameters.get('detune'));
+  node.connect(v.out);
+  v.wk = node;
+  node.port.onmessage = (e) => { if (e.data && e.data.done && v.alive && v.released) v.finish(Math.min(v.endAt, A.ctx.currentTime + 0.03)); };
+  node.onprocessorerror = () => { A.workletBroken.add(v.eng); console.warn('Klangquelle ' + v.eng + ': Prozessorfehler'); if (v.alive) v.cleanup(); dspState(DSP.state); };
+  v.setF = (nf, glide) => glideTo(pf, clamp(nf, 16, 8000), glide);
+  v.setY = (ny) => setP(py, clamp(ny, 0, 1), 0.04);
+  return node;
+}
+// the engine's own parameters for its processor (live changes follow through {set})
+const WK_IDS = {};
+function wkPrm(k) {
+  const ids = WK_IDS[k] || (WK_IDS[k] = Object.keys(PD).filter((id) => id.startsWith(k + '.')));
+  const o = {}; for (const id of ids) o[id.slice(k.length + 1)] = P[id];
+  return o;
+}
+const wkSeed = () => ((Math.random() * 2147483647) | 0) || 1;
+// held: the native release on v.out and the processor's own end ({off}: breath stops, the ring loses its drive)
+function wkHold(v, t, peak, att, rel) {
+  adsrStart(v, t, peak, att);
+  const r = sustainRelease(v, rel);
+  v.release = (k) => { if (v.alive && !v.released && v.wk) v.wk.port.postMessage({ off: A.ctx.currentTime }); r(k); };
+}
+// Gestik: each swing of a shake is one more hammer on every Ranke ring that sounds (KONZEPT §2.6)
+function wkShake(e) { for (const v of A.voices) if (v.alive && !v.released && v.wk && v.as === 'rnk') v.wk.port.postMessage({ hammer: 0.3 + 0.7 * clamp(e.v, 0, 1) }); }   // (as strong as a touch at a full swing: the held ring carries its push and taps)
+
 // state: idle → (armed →) (cue →) rec → (tail →) idle; 'cue' waits for the downbeat of a recording in bars.
 // ringF is the audio-clock frame that follows the newest sample in the ring; bar holds the window of a bar recording.
 const CAP = { node: null, mode: '', ringL: null, ringR: null, pos: 0, fill: 0, ringF: 0, state: 'idle', rec: null, bar: null, hold: [], mL: 0, mR: 0, pkL: 0, pkR: 0, mr: null, flushWait: null };
@@ -5181,8 +5974,9 @@ async function setupCapture() {
     const urls = [];
     try { urls.push(new URL('tap-worklet.js', document.baseURI).href); } catch (e) {}
     try { urls.push(URL.createObjectURL(new Blob([TAP_SRC], { type: 'text/javascript' }))); } catch (e) {}
+    if (ctx.__dsp && await ctx.__dsp) urls.splice(0, urls.length, null);   // the engine module (klang) holds myzel-tap already
     for (const url of urls) {
-      try { await ctx.audioWorklet.addModule(url); } catch (e) { continue; }
+      if (url) try { await ctx.audioWorklet.addModule(url); } catch (e) { continue; }
       try {
         node = new AudioWorkletNode(ctx, 'myzel-tap', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit', channelInterpretation: 'speakers' });
         node.port.onmessage = (e) => onChunk(e.data.l, e.data.r, e.data.flush, e.data.f);
@@ -7049,7 +7843,8 @@ midiTarget('morph', 'Morph A↔B', null, { group: 'Mixer', cont: true, get: () =
 // the active engine's two most expressive parameters, whichever engine plays
 const MACRO = { neb: ['neb.cut', 'neb.res'], kor: ['kor.dens', 'kor.size'], hau: ['hau.color', 'hau.q'], glo: ['glo.index', 'glo.ratio'], mem: ['mem.drop', 'mem.decay'],
   sai: ['sai.bright', 'sai.decay'], sch: ['sch.bright', 'sch.beat'], gng: ['gng.bloom', 'gng.bright'], klb: ['klb.over', 'klb.buzz'], obt: ['obt.focus', 'obt.wander'],
-  stm: ['stm.vib', 'stm.choir'], swm: ['swm.chaos', 'swm.unrest'], tie: ['tie.drive', 'tie.drop'], trp: ['trp.chirp', 'trp.rain'] };
+  stm: ['stm.vib', 'stm.choir'], swm: ['swm.chaos', 'swm.unrest'], tie: ['tie.drive', 'tie.drop'], trp: ['trp.chirp', 'trp.rain'],
+  hlm: ['hlm.atem', 'hlm.blatt'], rnk: ['rnk.feder', 'rnk.daempfung'] };
 const macroId = (k) => (MACRO[P['v.eng']] || MACRO.neb)[k];
 midiTarget('macro.a', 'Klang-Makro A', null, { group: 'Klang', cont: true, pidf: () => macroId(0) });
 midiTarget('macro.b', 'Klang-Makro B', null, { group: 'Klang', cont: true, pidf: () => macroId(1) });
@@ -8303,6 +9098,7 @@ function midiNote(m) {
 }
 
 function panic() {
+  kqHoldEnd(); kqProbeEnd();
   slpPanic(); rgPanic();
   releaseAllTouches(); midiAllOff();
   seqStop();
@@ -8768,8 +9564,9 @@ const GK_KEY = 'myzel.gestik.v1';
 const GK_AX = ['tiltX', 'tiltY', 'bebung', 'drehen', 'ladung'], GK_EV = ['wenden', 'ruhe', 'schuetteln'];
 const GK_AXN = ['Neigen ↔', 'Neigen ↕', 'Bebung', 'Drehen', 'Ladung'], GK_EVN = ['Wenden', 'Ruhe', 'Schütteln'];
 const GK_ZERO = { tiltX: 0, tiltY: 0, bebung: 0, drehen: 0, ladung: 0 };
-// Sporenregen's strikes: the engines that strike (their sound as the patch sets them)
-const RG_S = [['trp', 'Tropfen'], ['klb', 'Kalimba'], ['glo', 'Glocke'], ['sch', 'Schale'], ['mem', 'Membran'], ['sai', 'Saite']];
+// Sporenregen's strikes: the engines that strike (their sound as the patch sets them) – all struck sources but those
+// whose ENG_META says regen: 0 (Gong: its bloom outlasts the spores)
+const RG_S = ENG_OPTS.filter(([k]) => ENGINES[k] && !ENGINES[k].sustain && ENG_META[k].regen !== 0);
 const GK = {
   on: false, want: false, perm: '', live: false, last: 0, R: null, src: null, raw: Object.assign({}, GK_ZERO), out: Object.assign({}, GK_ZERO),
   ev: { wenden: false, ruhe: false, schuetteln: false }, engaged: false, frozen: false, susD: false, holdPad: false, key: false, zt: 0,
@@ -8820,6 +9617,7 @@ function gkCheck() {
   if (typeof GK.p.fs !== 'string') GK.p.fs = '';
   if (!['aus', 'anl', 'regen', 'eigene'].includes(GK.p.neigen)) GK.p.neigen = 'anl';
   if (!['keime', 'harfe'].includes(GK.p.rgArt)) GK.p.rgArt = 'keime';
+  if (ENG_ALIAS[GK.p.rgS]) GK.p.rgS = ENG_ALIAS[GK.p.rgS];
   if (!RG_S.some((x) => x[0] === GK.p.rgS)) GK.p.rgS = 'trp';
   if (!['auto', '8', '16', '8t', 'frei'].includes(GK.p.rgQ)) GK.p.rgQ = 'auto';
   GK.p.rgN = clamp(Math.round(Number(GK.p.rgN) || 10), 8, 16);
@@ -10907,6 +11705,7 @@ function rgSub(out, raw, evs) {
   for (const e of evs) if (e.type === 'peak') rgSprinkle(e.v);
 }
 gkSub(rgSub);
+gkSub((out, raw, evs) => { if (raw === GK_ZERO || SLP.on || !A.ctx) return; for (const e of evs) if (e.type === 'peak') wkShake(e); });
 // where a spore is at audio time t (between the ends of two ticks; not across a wrap): [u, v] or null
 function rgPos(s, t) {
   const H = s.h;
@@ -10970,9 +11769,9 @@ function rgSpore(s) {
 // the mixer's "Regen" (its Fruchtkörper: Quelle): what rains, the strike, the way to the settings
 function rgQuelle() {
   const txt = h('p', { class: 'note' });
-  const ch = gkChips('Anschlag des Regens', RG_S, () => GK.p.rgS, (v) => { gkSet('rgS', v); gkCardSync(); el.sync(); });
+  const ch = kqRow(kqTarget('rgS'), { id: 'mxd-kq-rgS', label: 'Anschlag', where: 'Kanal Regen' });
   const go = h('button', { type: 'button', class: 'btn ghost mxd-link', onclick: () => gkIcoTap() }, 'Sporenregen in Gestik einstellen ›');
-  const el = h('div', { class: 'mxd-qbody', 'data-k': 'rgn' }, txt, h('div', { class: 'mxd-fld' }, h('span', { class: 'mxd-lab' }, 'Anschlag'), ch), go);
+  const el = h('div', { class: 'mxd-qbody', 'data-k': 'rgn' }, txt, ch, go);
   el.sync = () => {
     ch.sync();
     const t = rgOn() ? 'Der Sporenregen spielt deine Töne mit ' + rgName() + (GK.p.rgArt === 'harfe' ? ' – als Harfe über die Spalten.' : ', wenn eine Spore einen Keim trifft.') : GK.on ? 'Still: wähle in Gestik „Neigen formt: Sporenregen“.' : 'Still: der Sporenregen klingt, wenn Gestik an ist und „Neigen formt: Sporenregen“ gewählt ist.';
@@ -12065,6 +12864,7 @@ function ctl(id, opts = {}) {
     return wrap;
   }
   if (d.kind === 'sel') {
+    if (d.lib) { const T = kqTarget(id); return kqRow(T, { id: did, label: opts.label || d.label, pid, where: opts.prefix === 'mxd-' ? 'Kanal ' + T.ch : null }); }
     if (d.chips) {
       const lab = h('div', { class: 'lab', id: did + '-l' }, opts.label || d.label);
       const box = h('div', { class: 'chips' + (d.small ? ' small' : ''), role: 'radiogroup', 'aria-label': name, id: did });
@@ -12126,6 +12926,8 @@ function updInactive() {
 function onParamChanged(id) {
   const pre = id.slice(0, id.indexOf('.'));
   if (id === 'v.eng' || id === 'v.layer') { refreshEngineUI(); }
+  if (KQ_PIDS.includes(id) && !UI.loading) kqUsed(P[id]);
+  if ((id === 'v.eng' || id === 'v.layer' || /^l\d\.eng$/.test(id)) && WORKLET_ENGINES.has(P[id])) dspMaybe();
   if (id === 'flt.type') for (const fn of CTL['flt.q'] || []) fn(P['flt.q'], null);
   if (pre === 'sai' || pre === 't' || id === 'v.eng' || id === 'v.layer' || id === 'v.layerInt' || id === 'v.oct' || id === 'v.deg' || id === 'v.layerDeg' || /^l\d\.(eng|on|oct)$/.test(id)) warmKS();
   if (id === 'kor.src' && P['kor.src'] === 'echo' && A.started) ensureCapture();
@@ -12157,12 +12959,16 @@ function onParamChanged(id) {
     case 'neb':
       if (id === 'neb.cut' || id === 'neb.ymod' || id === 'neb.res') for (const t of touches.values()) for (const { v } of t.voices) if (v.alive && v.eng === 'neb') { v.setY(modY(t)); setP(v.filt.Q, P['neb.res']); }
       break;
+    case 'hlm': case 'rnk':   // the sounding voices follow at once (the processor reads its knobs per block)
+      for (const v of A.voices) if (v.alive && v.wk && v.as === pre) v.wk.port.postMessage({ set: wkPrm(pre) });
+      break;
   }
 }
 function onDeviceChanged(id) {
   if (id === 'dev.q') {
     A.budgetScale = 1; A.lite = false;
     applyQuality();
+    kqSyncAll();
     if (P['dev.q'] !== '1' && A.ctx && !CAL.fresh) calibrate();
   }
   if (id === 'dev.lat') {
@@ -12187,6 +12993,7 @@ function restartAudio() {
 }
 function patchValues() { const o = {}; for (const id of PATCH_IDS) o[id] = P[id]; return o; }
 function loadValues(vals, keepUnset) {
+  KQ.miss = []; vals = engKeysIn(vals);
   for (const id of PATCH_IDS) {
     const d = PD[id];
     const v = vals && Object.prototype.hasOwnProperty.call(vals, id) ? sanitize(d, vals[id]) : keepUnset ? P[id] : d.d;
@@ -12194,7 +13001,7 @@ function loadValues(vals, keepUnset) {
   }
   for (const id of PATCH_IDS) for (const fn of CTL[id] || []) fn(P[id], null);
   buildNotes(); drawBg(); refreshEngineUI(); updLaneTabs(); updInactive(); renderBarInfo();
-  if (A.ctx) { applyAll(); seqRetempo(); warmKS(); if (P['kor.src'] === 'echo') ensureCapture(); if (!LIVE_SRC.has(P['kor.src'])) texture(P['kor.src']); }
+  if (A.ctx) { applyAll(); seqRetempo(); warmKS(); dspMaybe(); if (P['kor.src'] === 'echo') ensureCapture(); if (!LIVE_SRC.has(P['kor.src'])) texture(P['kor.src']); }
   syncMic();
   clearTimeout(saveTimer); saveTimer = setTimeout(saveState, 400);
 }
@@ -12207,7 +13014,7 @@ function saveState() {
 function restoreState() {
   try {
     const s = JSON.parse(store.get('myzel.patch.v1') || 'null');
-    if (s && s.values) { for (const id of PATCH_IDS) if (id in s.values) P[id] = sanitize(PD[id], s.values[id]); UI.preset = s.preset || null; }
+    if (s && s.values) { const v = engKeysIn(s.values); for (const id of PATCH_IDS) if (id in v) P[id] = sanitize(PD[id], v[id]); UI.preset = s.preset || null; }
     const r = JSON.parse(store.get('myzel.rec.v1') || 'null');
     if (r) for (const id in r) if (PD[id] && PD[id].rec) P[id] = sanitize(PD[id], r[id]);
     const dv = JSON.parse(store.get('myzel.dev.v1') || 'null');
@@ -12809,10 +13616,10 @@ function mxSrcText(k) {
   const c = MXK[k];
   // a keyboard's expression (CC 11) below full: said where the sound would be missed
   const ex = MIDI.expr < 0.995 ? 'Ausdruck ' + Math.round(Math.sqrt(MIDI.expr) * 100) + ' %' : '';
-  if (k === 'fin') return ex || ENG_NAME[P['v.eng']] || '';
-  if (k === 'eb2') return P['v.layer'] === 'off' ? 'aus' : ex || ENG_NAME[P['v.layer']];
+  if (k === 'fin') return ex || engLabel(P['v.eng']) || '';
+  if (k === 'eb2') return P['v.layer'] === 'off' ? 'aus' : ex || engLabel(P['v.layer']);
   if (k === 'rgn') return rgOn() ? (GK.p.rgArt === 'harfe' ? 'Harfe · ' : '') + rgName() : 'aus';   // Sporenregen: its strike, or silent
-  if (c.kind === 'lane') return P['l' + c.lane + '.on'] ? ENG_NAME[P['l' + c.lane + '.eng']] : 'aus';
+  if (c.kind === 'lane') return P['l' + c.lane + '.on'] ? engLabel(P['l' + c.lane + '.eng']) : 'aus';
   if (k === 'bor') return P['bor.on'] ? fmt(PD['bor.wave'], P['bor.wave']) + ' ' + (MX_BOR[P['bor.int']] || '') : 'aus';
   // the app writes a dotted value as "1/8 ·", which reads like a dangling separator here: "1/8." as in a score
   if (k === 'dly') return P['dly.sync'] ? fmt(PD['dly.div'], P['dly.div']).replace(' ·', '.') : fmt(PD['dly.ms'], P['dly.ms']);
@@ -17006,14 +17813,29 @@ function mxPbDraw(R) {
 const panelEls = {};
 let userFileIn = null;
 const engSecs = {};
+// how the new sources play (the older ones share the two general notes)
+const ENG_NOTE = {
+  hlm: 'Die Höhe ist der Atem: unten nur Luft, ab etwa einem Viertel spricht das Rohr an, weiter oben lauter und heller, ganz oben würgt das Blatt. Aufsetzen ist ein Zungenstoß, im Puls ein kurzer Stoß.',
+  rnk: 'Aufsetzen schlägt den Ring an – unten breit und weich, oben schmal und hell; gehalten hält ein leiser Druck die Form in Bewegung. Im Puls ein Hammerschlag, Schütteln (Gestik) schlägt nach.',
+};
 function buildKlang() {
   const box = h('div');
-  box.append(section('Klangquelle', 'Was ein Finger spielt', grid(ctl('v.eng', { label: 'Für die Spielfläche' }), ctl('v.oct'), ctl('v.deg')),
-    h('p', { class: 'note' }, 'Tonstufe verschiebt um Stufen der Skala – so bleibt jeder Ton in der Tonart. Lautstärke, Klangfarbe und Raum jeder Ebene regelst du im Mixer.')));
+  // the source: one row (‹ name ›, the library behind the name), the die in the section's head – then pitch
+  const eng = ctl('v.eng', { label: 'Für die Spielfläche' });
+  eng.classList.add('bare');
+  const src = section('Klangquelle', null, eng, grid(ctl('v.oct'), ctl('v.deg')));
+  src.firstChild.firstChild.append(h('span', { class: 'mx-sr' }, ' – was ein Finger spielt'));
+  src.firstChild.append(eng.dice);
+  box.append(src);
   for (const [k, name] of ENG_OPTS) {
     const ids = Object.keys(PD).filter((id) => id.startsWith(k + '.'));
     const s = section(name, ENG_INFO[k], grid(...ctls(ids)));
     s.hidden = true; engSecs[k] = s;
+    const M = ENG_META[k];
+    s.querySelector('h3').prepend(kqGlyph(k));
+    if (M.hoehe) s.firstChild.after(h('p', { class: 'note kq-hoehe' }, 'Höhe: ' + M.hoehe));
+    // the two knobs a keyboard's Klang-Makro A and B move
+    (MACRO[k] || []).forEach((id, i) => { const w = s.querySelector('[data-pid="' + id + '"] label'); if (w) w.append(h('span', { class: 'kq-ab', title: 'Klang-Makro ' + 'AB'[i] + ' (Keyboard und Controller)', 'aria-hidden': 'true' }, 'AB'[i])); });
     if (k === 'kor') {
       userFileIn = h('input', { type: 'file', accept: 'audio/*,.wav,.mp3,.m4a,.aac,.ogg,.flac', hidden: true });
       userFileIn.addEventListener('change', () => { const f = userFileIn.files && userFileIn.files[0]; userFileIn.value = ''; loadUserFile(f); });
@@ -17023,11 +17845,16 @@ function buildKlang() {
       s.append(h('p', { class: 'note' }, 'Senkrecht wählst du die Stelle im Klangmaterial, waagrecht die Tonhöhe. „Echo“ körnt die letzten acht Sekunden deines eigenen Spiels, „Eigene Datei“ eine geladene Audiodatei oder Aufnahme, „Mikrofon“ die letzten Sekunden, die das Mikrofon hört.'));
       updUserTexUI();
     }
-    if (ENGINES[k].sustain) s.append(h('p', { class: 'note' }, 'Klingt, solange der Finger liegt; Schieben ändert Tonhöhe und Farbe. Im Puls erklingt ein kurzer Stoß.'));
+    if (ENGINES[k].needs) { s.wkNote = h('p', { class: 'note', hidden: true }); s.append(s.wkNote); }
+    if (M.rich) { s.richNote = h('p', { class: 'note', hidden: !Q.rich }, M.rich); s.append(s.richNote); }
+    if (ENG_NOTE[k]) s.append(h('p', { class: 'note' }, ENG_NOTE[k]));
+    else if (ENGINES[k].sustain) s.append(h('p', { class: 'note' }, 'Klingt, solange der Finger liegt; Schieben ändert Tonhöhe und Farbe. Im Puls erklingt ein kurzer Stoß.'));
     else s.append(h('p', { class: 'note' }, 'Schlägt beim Berühren an. Mit „Wischen schlägt an“ auch bei jedem Tonwechsel unterwegs, mit „Wirbel“ wiederholt im Tempo des Pulses.'));
     box.append(s);
   }
-  box.append(section('Zweite Ebene', 'Ein zweiter Klang auf jedem Finger', grid(ctl('v.layer', { label: 'Ebene' }), ctl('v.layerLvl'), ctl('v.layerInt'), ctl('v.layerDeg'))));
+  wkUiSync();
+  box.append(section('Zweite Ebene', 'Ein zweiter Klang auf jedem Finger', grid(ctl('v.layer', { label: 'Ebene' }), ctl('v.layerLvl'), ctl('v.layerInt'), ctl('v.layerDeg')),
+    h('p', { class: 'note' }, 'Tonstufe verschiebt um Stufen der Skala – so bleibt jeder Ton in der Tonart. Lautstärke, Klangfarbe und Raum jeder Ebene regelst du im Mixer.')));
   box.append(section('Spielweise', null, grid(ctl('v.roll'), ctl('v.strum'), ctl('v.glide'), ctl('v.vel'), ctl('v.human'), ctl('v.width'))));
   box.append(section('Stimmung', null, grid(ctl('t.root'), ctl('t.scale'), ctl('t.oct'), ctl('t.range'), ctl('t.a4'), ctl('t.just'))));
   return box;
@@ -17042,10 +17869,472 @@ function refreshEngineUI() {
     first.after(engSecs[a]);
     if (b !== 'off' && b !== a) engSecs[a].after(engSecs[b]);
   }
-  const label = ENG_NAME[a] + (b !== 'off' && b !== a ? ' + ' + ENG_NAME[b] : '');
+  const two = b !== 'off' && b !== a, label = ENG_NAME[a] + (two ? ' + ' + ENG_NAME[b] : '');
   $('#engName').textContent = label;
-  $('#engChip').setAttribute('aria-label', 'Klangquelle: ' + label + '. Einstellungen öffnen');
+  const gl = $('#engGlyph'), fb = kqFb(a) || (two && kqFb(b));
+  gl.replaceChildren(kqGlyph(a), ...(two ? [kqGlyph(b)] : []));
+  let dot = $('#engChip .fbdot');
+  if (fb && !dot) { dot = h('span', { class: 'fbdot' }); $('#engChip').append(dot); }
+  if (dot) { dot.hidden = !fb; dot.title = fb ? 'spielt als ' + ENG_NAME[kqFb(a) || kqFb(b)] : ''; }
+  $('#engChip').setAttribute('aria-label', 'Klangquelle: ' + ENG_NAME[a] + (two ? ', dazu ' + ENG_NAME[b] : '') + (fb ? ' (vereinfacht)' : '') + '. Einstellungen öffnen; lange drücken öffnet die Bibliothek');
+  for (const k in engSecs) if (engSecs[k].richNote) engSecs[k].richNote.hidden = !Q.rich;
 }
+/* ---------- Klangquellen: the row at every place a source is chosen, and the library ---------- */
+// Every place a source is chosen – the field, the second layer, the four Puls lanes, their copies in the mixer's
+// Fruchtkörper, the Sporenregen – shows one row: ‹ · glyph, name · family, sentence · ›. ‹ › step to the neighbour in
+// ENG_OPTS (no wrap; sources the place cannot take are passed) and play a short probe – not while that place sounds
+// (a held finger, its running lane, the rain); a tap on the name opens the library, holding the name plays the source
+// for as long as it is held; the die picks a surprise (the source only, never its knobs) with Rückgängig.
+// The library lives once in the sheet, over the panel; the sheet grows as it does for the mixer, so about 130 px of the
+// field stay playable – tap a tile, then try it with a finger. Search, the family row (★ Favoriten, ⟲ Zuletzt, Alle and
+// the five families), tiles (glyph, name, how it plays, cost dots with the voices this device has for it, the sentence,
+// ★ and ▶). It opens on the family of the chosen source. Favourites and the recent ones are this device's
+// (myzel.klang.v1), never the patch's.
+const KQ_KEY = 'myzel.klang.v1';
+const KQ_PIDS = ['v.eng', 'v.layer', 'l0.eng', 'l1.eng', 'l2.eng', 'l3.eng'];
+const KQ = { fav: [], recent: [], T: null, fam: '', q: '', where: '', el: null, probe: null, hold: null, rows: new Set(), miss: [], openers: new Set(), opener: null,
+  save() { store.set(KQ_KEY, JSON.stringify({ fav: this.fav, recent: this.recent })); } };
+(() => { try { const o = JSON.parse(store.get(KQ_KEY) || 'null'); if (o && typeof o === 'object') { if (Array.isArray(o.fav)) KQ.fav = o.fav.filter((k) => typeof k === 'string').slice(0, 64); if (Array.isArray(o.recent)) KQ.recent = o.recent.filter((k) => typeof k === 'string').slice(0, 7); } } catch (e) {} })();
+const KQ_ICO = {
+  prev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg>',
+  next: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 5.5 16 12l-6.5 6.5"/></svg>',
+  dice: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3.6"/><g fill="currentColor" stroke="none"><circle cx="8.6" cy="8.6" r="1.35"/><circle cx="15.4" cy="8.6" r="1.35"/><circle cx="12" cy="12" r="1.35"/><circle cx="8.6" cy="15.4" r="1.35"/><circle cx="15.4" cy="15.4" r="1.35"/></g></svg>',
+  star: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.8l2.5 5.2 5.7.7-4.2 3.9 1.1 5.6L12 16.4l-5.1 2.8 1.1-5.6-4.2-3.9 5.7-.7z"/></svg>',
+  recent: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.6 12a7.4 7.4 0 1 0 2.2-5.2"/><path d="M4.4 4.6v3.8h3.8M12 8v4.4l2.8 1.8"/></svg>',
+  play: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.8v12.4L18.2 12z"/></svg>',
+  find: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg>',
+};
+const SVGNS = 'http://www.w3.org/2000/svg';
+const kqHref = (k) => '#g-' + (k === 'off' || !ENG_META[k] ? 'off' : k);
+function kqGlyph(k, cls) {
+  const s = document.createElementNS(SVGNS, 'svg'), u = document.createElementNS(SVGNS, 'use');
+  s.setAttribute('class', 'kq-g' + (cls ? ' ' + cls : '')); s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('aria-hidden', 'true');
+  u.setAttribute('href', kqHref(k)); s.append(u);
+  return s;
+}
+const listDe = (a, w = 'und') => (a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' ' + w + ' ' + a[a.length - 1]);
+const kqKeysOf = (f) => ENG_OPTS.map((o) => o[0]).filter((k) => ENG_META[k].fam === f);
+// a worklet source this browser plays as its stand-in (the key stays in the patch), and one whose module still loads
+const kqFb = (k) => (ENGINES[k] && ENGINES[k].needs === 'worklet' && (DSP.state === 'kein' || A.workletBroken.has(k)) ? ENGINES[k].fallback : '');
+const kqLoading = (k) => !!(ENGINES[k] && ENGINES[k].needs === 'worklet' && DSP.state === 'laden');
+// cost in units of a level-1 Nebel voice → dots, a word, the voices this device has for it
+function kqCost(k) {
+  const c = Q.cost[k] || 1, n = Math.max(1, Math.floor(VBUDGET / c));
+  return { dots: c <= 0.5 ? 1 : c <= 1 ? 2 : 3, word: c <= 0.5 ? 'gering' : c <= 1 ? 'mittel' : 'hoch', n, txt: 'Kosten ' + dec(c.toFixed(2)) + ' – etwa ' + n + ' Stimmen auf diesem Gerät' };
+}
+// families by how their sources play – for the help texts (generated, never a list of sources)
+function famPlay() {
+  const hold = FAM.filter(([f]) => kqKeysOf(f).length && kqKeysOf(f).every((k) => ENG_META[k].art === 'haelt')).map((f) => f[1]);
+  const strike = FAM.filter(([f]) => kqKeysOf(f).some((k) => ENG_META[k].art !== 'haelt')).map((f) => f[1]);
+  return { hold, strike };
+}
+// search: name, family, how it plays, sentence, height word, tags; ö = oe = o, ß = ss
+const kqNorm = (s) => String(s).toLowerCase().replace(/ß/g, 'ss').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/([aou])e/g, '$1');
+const KQ_HAY = {};
+const kqHay = (k) => KQ_HAY[k] || (KQ_HAY[k] = kqNorm([ENG_META[k].n, FAM_NAME[ENG_META[k].fam], ART_WORD[ENG_META[k].art], ENG_META[k].i, ENG_META[k].hoehe || '', ENG_META[k].tags || ''].join(' ')));
+
+// the places a source is chosen: get/set, the choices, what it cannot take (and why), how a probe sounds there, and
+// whether it sounds right now (then ‹ › do not probe – no stray note in a performance)
+const KQ_T = {};
+function kqTarget(key) {
+  if (KQ_T[key]) return KQ_T[key];
+  const all = () => ENG_OPTS, ok = () => '', mid = () => noteAt(0.5);
+  let T;
+  if (key === 'v.eng') T = { where: 'Spielfläche', dat: 'die Spielfläche', ch: 'Klang', opts: all, allow: ok, busy: () => touches.size > 0,
+    probe: () => { const nt = mid(); return { f: lyF(layers()[0], nt.f, nt.idx), y: 0.5, vel: P['v.vel'], bus: stripIn('fin') }; } };
+  else if (key === 'v.layer') T = { where: 'zweite Ebene', dat: 'die zweite Ebene', ch: 'Ebene 2', opts: () => PD['v.layer'].opts, allow: ok, busy: () => touches.size > 0,
+    probe: () => { const nt = mid(); return { f: lyF({ ratio: Math.pow(2, P['v.layerInt'] / 12), deg: P['v.layerDeg'] }, nt.f, nt.idx), y: 0.5, vel: P['v.vel'] * Math.max(0.35, P['v.layerLvl']), bus: stripIn('eb2') }; } };
+  else if (/^l\d\.eng$/.test(key)) {
+    const i = +key[1], p = 'l' + i + '.';
+    T = { where: 'Spur ' + (i + 1), dat: 'Spur ' + (i + 1), ch: 'Spur ' + (i + 1), lane: i, opts: all, allow: ok, busy: () => SEQ.on && !!P[p + 'on'],
+      // the lane's own note (its step and octave, without its walk), brightness, level, balance and gate, through its channel
+      probe: () => {
+        const len = N.free ? 12 * P['t.range'] + 1 : N.notes.length, idx = clamp(P[p + 'deg'], 0, Math.max(0, len - 1));
+        const f = (N.free ? N.base * ratioForSemi(idx) : N.notes[idx].f) * Math.pow(2, P[p + 'oct']);
+        return { f, y: P[p + 'bright'], vel: Math.max(0.3, P[p + 'vol']), pan: P[p + 'pan'], gate: divBeats(P[p + 'div']) * 60 / seqBpm() * 0.9, strike: true, bus: stripIn('l' + i) };
+      } };
+  } else if (key === 'rgS') T = { where: 'Sporenregen', dat: 'den Sporenregen', ch: 'Regen', opts: all, get: () => GK.p.rgS,
+    set: (k) => { gkSet('rgS', k); if (k === 'sai') warmKS(); gkCardSync(); kqUsed(k); kqSyncRows(); const q = MXD.qu.rgn; if (q && q.sync) q.sync(); },
+    allow: (k) => (ENGINES[k].sustain ? 'hält – der Regen braucht einen Anschlag' : ENG_META[k].regen === 0 ? 'blüht zu lange nach für den Regen' : ''),
+    why: 'Der Regen schlägt an – gehaltene Quellen sind hier grau.', quiet: (k) => ENGINES[k].sustain, busy: () => RG.on && RG.k.length > 0,
+    probe: () => ({ f: mid().f, y: 0.5, vel: 0.7, strike: true, bus: stripIn('rgn') }) };
+  else return null;
+  T.key = key;
+  if (!T.get) { T.id = key; T.get = () => P[key]; T.set = (k) => setParam(key, k); }
+  return (KQ_T[key] = T);
+}
+function kqUsed(k) {
+  if (!ENG_META[k]) return;
+  KQ.recent = [k, ...KQ.recent.filter((x) => x !== k)].slice(0, 7);
+  KQ.save();
+}
+function kqSyncRows() { for (const f of KQ.rows) f(); }
+// after a change of the module's state, the quality level or the favourites: every row, the open library, the bar
+function kqSyncAll() { kqSyncRows(); if (KQ.T) kqRender(); refreshEngineUI(); }
+// a polite word for screen readers: in the library its footer, else a hidden region
+function kqSay(msg) {
+  const el = KQ.T && KQ.live ? KQ.live : $('#kqSay');
+  if (!el) return;
+  el.textContent = msg || (KQ.T ? kqCount() : '');
+}
+const kqCount = () => ENG_OPTS.length + ' Quellen' + (KQ.fav.filter((k) => ENG_META[k]).length ? ' · ' + KQ.fav.filter((k) => ENG_META[k]).length + ' ★' : '');
+
+/* hearing: one probe at a time, through the place's own channel and effects; it changes nothing in the patch */
+function kqProbeEnd() {
+  const v = KQ.probe; KQ.probe = null;
+  if (v && v.alive && A.ctx) { v.probeEnd = true; vFade(v); }
+  if (KQ.el) for (const b of KQ.el.querySelectorAll('.kq-hear.playing')) b.classList.remove('playing');
+}
+function kqHear(T, k, held) {
+  if (!A.ctx || !A.started || !T || k === 'off' || !ENGINES[k]) return null;
+  ensureRunning();
+  kqProbeEnd();
+  const E = ENGINES[k], M = ENG_META[k] || {}, o = T.probe(), now = A.ctx.currentTime + 0.01, opt = { pan: o.pan || 0, bus: o.bus };
+  // a worklet source loads its module now – until it stands, the probe sounds as the stand-in
+  if (E.needs === 'worklet' && !A.ctx.__dspOK) { ensureDSP().then(kqSyncAll); kqSyncAll(); }
+  let v;
+  if (held) v = playNote(k, now, o.f, o.y, o.vel, opt);
+  else if (o.strike || !E.sustain) v = hit(k, now, o.f, o.y, o.vel, Object.assign({ gate: o.gate || 0.4 }, opt));
+  else v = playNote(k, now, o.f, o.y, o.vel, Object.assign({ burst: true, gate: (M.hear && M.hear.gate) || 1.2 }, opt));
+  if (v) { v.probe = true; KQ.probe = v; }
+  return v;
+}
+function kqHold(T, k) { const v = kqHear(T, k, true); KQ.hold = v; return v; }
+function kqHoldEnd() {
+  const v = KQ.hold; KQ.hold = null;
+  if (v && v.alive && !v.released && v.release) v.release(1);
+}
+// a long press (≥ 400 ms without moving 8 px) plays while held; dragging up and down then moves the height. The tap
+// that ends it is swallowed (el._heldT). sel: delegate to the element under the finger
+function kqPress(el, start, end, sel, ms = 400) {
+  el.addEventListener('contextmenu', (e) => { if (!sel || e.target.closest(sel)) e.preventDefault(); });
+  el.addEventListener('touchmove', (e) => { if (el._holding && e.cancelable) e.preventDefault(); }, { passive: false });
+  el.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    const t = sel ? e.target.closest(sel) : el;
+    if (!t) return;
+    const x0 = e.clientX, y0 = e.clientY;
+    let v = null, fired = false;
+    const tm = setTimeout(() => { fired = true; el._holding = true; try { el.setPointerCapture(e.pointerId); } catch (err) {} v = start(t); }, ms);
+    const mv = (ev) => {
+      if (ev.pointerId !== e.pointerId) return;
+      const dy = ev.clientY - y0;
+      if (!fired) { if (Math.hypot(ev.clientX - x0, dy) > 8) done(ev); return; }
+      if (v && v.alive && v.setY) v.setY(clamp(0.5 - dy / 160, 0, 1));
+    };
+    const done = (ev) => {
+      if (ev.pointerId !== e.pointerId) return;
+      clearTimeout(tm);
+      el.removeEventListener('pointermove', mv); el.removeEventListener('pointerup', done); el.removeEventListener('pointercancel', done);
+      if (fired) { el._holding = false; el._heldT = performance.now(); kqHoldEnd(); if (end) end(t); }
+    };
+    el.addEventListener('pointermove', mv); el.addEventListener('pointerup', done); el.addEventListener('pointercancel', done);
+  });
+}
+const kqSwallow = (el) => performance.now() - (el._heldT || 0) < 450;
+
+/* choosing */
+function kqStepTo(T, d) {
+  const L = T.opts(), i = L.findIndex((o) => o[0] === T.get());
+  for (let j = i + d; j >= 0 && j < L.length; j += d) if (L[j][0] === 'off' || !T.allow(L[j][0])) return L[j][0];
+  return null;
+}
+// how: 'step' (‹ ›: no probe while the place sounds), 'pick' (a tile: always a probe), 'quiet' (no probe)
+function kqChoose(T, k, how) {
+  const why = k === 'off' ? '' : T.allow(k);
+  if (why) { kqSay(ENG_NAME[k] + ': ' + why + '.'); return false; }
+  if (T.get() !== k) T.set(k);
+  if (k === 'off') kqProbeEnd();
+  else if (how === 'pick' || (how === 'step' && !T.busy())) kqHear(T, k);
+  kqSay(k === 'off' ? 'Zweite Ebene aus' : ENG_NAME[k] + ' gewählt für ' + (KQ.T === T && KQ.where !== T.where ? KQ.where : T.dat));
+  return true;
+}
+function kqStep(T, d) { const k = kqStepTo(T, d); return k != null && kqChoose(T, k, 'step'); }
+// a surprise: a source the place can take, not the chosen one, one never chosen lately first; in the library from the
+// tiles in view. The row's die says it in a toast with Rückgängig
+function kqSurprise(T, inline) {
+  if (!T) return null;
+  const cur = T.get();
+  const keys = !inline && KQ.list ? [...KQ.list.querySelectorAll('.kq-tile')].map((t) => t.dataset.k) : T.opts().map((o) => o[0]);
+  const pool = keys.filter((k) => k !== 'off' && k !== cur && ENG_META[k] && !T.allow(k));
+  if (!pool.length) { if (!inline) kqSay('Keine andere Quelle in dieser Ansicht.'); return null; }
+  const fresh = pool.filter((k) => !KQ.recent.includes(k));
+  const k = pick(fresh.length ? fresh : pool);
+  kqChoose(T, k, 'pick');
+  if (inline) toast('Überraschung: ' + ENG_NAME[k] + ' – ' + ENG_INFO[k], 6000, { label: 'Rückgängig', fn: () => { kqChoose(T, cur, 'quiet'); kqSay(cur === 'off' ? 'Zweite Ebene wieder aus' : 'Wieder ' + ENG_NAME[cur]); } });
+  else { kqRender(k); kqSay('Zufall: ' + ENG_NAME[k]); }
+  return k;
+}
+
+/* the row */
+function kqRow(T, o = {}) {
+  const did = o.id || 'kq-' + T.key.replace(/\./g, '-'), labId = did + '-l';
+  const lab = h('div', { class: 'lab', id: labId }, o.label || 'Klangquelle');
+  const dice = h('button', { type: 'button', class: 'kq-dice', title: 'Überrasch mich', 'aria-label': 'Überrasch mich: eine zufällige Klangquelle für ' + T.dat, html: KQ_ICO.dice, onclick: () => kqSurprise(T, true) });
+  const prev = h('button', { type: 'button', class: 'kq-step', 'aria-label': 'Vorige Klangquelle', title: 'Vorige Klangquelle', html: KQ_ICO.prev });
+  const next = h('button', { type: 'button', class: 'kq-step', 'aria-label': 'Nächste Klangquelle', title: 'Nächste Klangquelle', html: KQ_ICO.next });
+  const g = kqGlyph('neb'), nm = h('span', { class: 'kq-n' }), inf = h('span', { class: 'kq-i' });
+  const name = h('button', { type: 'button', class: 'kq-name', 'aria-haspopup': 'dialog', 'aria-expanded': 'false', 'aria-controls': 'kqLib', title: 'Bibliothek öffnen – lange drücken: anhören' }, g, nm, inf);
+  const row = h('div', { class: 'kq-row', role: 'group', 'aria-labelledby': labId, id: did }, prev, name, next);
+  const where = o.where || T.where;
+  const step = (d) => { kqStep(T, d); if (document.activeElement && document.activeElement.disabled) name.focus(); };
+  prev.addEventListener('click', () => step(-1));
+  next.addEventListener('click', () => step(1));
+  name.addEventListener('click', () => { if (!kqSwallow(name)) kqOpen(T, { opener: name, where }); });
+  name.addEventListener('keydown', (e) => { if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.altKey && !e.metaKey) { e.preventDefault(); step(e.key === 'ArrowRight' ? 1 : -1); } });
+  kqPress(name, () => { const k = T.get(); if (k === 'off') return null; name.classList.add('held'); return kqHold(T, k); }, () => name.classList.remove('held'));
+  const sync = () => {
+    const k = T.get(), off = k === 'off', M = ENG_META[k], fb = off ? '' : kqFb(k);
+    g.firstChild.setAttribute('href', kqHref(k)); g.classList.toggle('loading', kqLoading(k));
+    const fam = off ? 'keine zweite Ebene' : M ? FAM_NAME[M.fam] : '';
+    nm.replaceChildren(off ? 'Aus' : ENG_NAME[k] || k, h('small', null, ' · ' + fam));
+    inf.replaceChildren(...(fb ? [h('span', { class: 'kq-fb' }, '⌁ spielt als ' + ENG_NAME[fb]), ' · '] : []), off ? 'Tippen öffnet die Bibliothek' : ENG_INFO[k] || '');
+    name.setAttribute('aria-label', 'Klangquelle für ' + T.dat + ': ' + (off ? 'aus' : (ENG_NAME[k] || k) + (M ? ', ' + fam + ', ' + ART_WORD[M.art] : '') + (fb ? ', spielt als ' + ENG_NAME[fb] : '')) + '. Bibliothek öffnen');
+    prev.disabled = kqStepTo(T, -1) == null; next.disabled = kqStepTo(T, 1) == null;
+    row.classList.toggle('off', off);
+  };
+  KQ.rows.add(sync);
+  if (T.id) bindCtl(T.id, sync); else sync();
+  const wrap = h('div', { class: 'ctl wide kq', 'data-pid': o.pid || null }, h('div', { class: 'ctl-row' }, lab, dice), row);
+  wrap.sync = sync; wrap.dice = dice; wrap.row = row;
+  return wrap;
+}
+
+/* the library */
+function kqBuild() {
+  const back = h('button', { type: 'button', class: 'iconbtn kq-back', 'aria-label': 'Zurück', title: 'Zurück', html: KQ_ICO.prev, onclick: () => kqClose() });
+  const title = h('h2', { id: 'kqTitle' });
+  const done = h('button', { type: 'button', class: 'btn primary kq-done', onclick: () => kqClose() }, 'Fertig');
+  const head = h('div', { class: 'kq-head' }, back, title, done);
+  const search = h('input', { type: 'search', id: 'kqSearch', placeholder: 'Suchen – Name, Stichwort', 'aria-label': 'Klangquellen durchsuchen', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', enterkeyhint: 'search' });
+  const fams = h('div', { class: 'chips kq-fams', role: 'radiogroup', 'aria-label': 'Familie' });
+  const famBtns = [['fav', KQ_ICO.star, 'Favoriten'], ['recent', KQ_ICO.recent, 'Zuletzt'], ['alle', 'Alle'], ...FAM.map(([f, n]) => [f, n])].map(([f, t, al]) => {
+    const b = h('button', al ? { type: 'button', class: 'chip ico', role: 'radio', 'aria-checked': 'false', tabindex: '-1', 'aria-label': al, title: al, html: t } : { type: 'button', class: 'chip', role: 'radio', 'aria-checked': 'false', tabindex: '-1' }, al ? null : t);
+    b.dataset.fam = f; fams.append(b); return b;
+  });
+  const list = h('div', { class: 'kq-list', role: 'radiogroup', 'aria-label': 'Klangquelle', 'aria-describedby': 'kq-keys' });
+  const sur = h('button', { type: 'button', class: 'btn ghost kq-sur', 'aria-label': 'Überrasch mich', title: 'Überrasch mich: eine zufällige Quelle aus dieser Ansicht', html: KQ_ICO.dice + '<span>Überrasch mich</span>', onclick: () => kqSurprise(KQ.T, false) });
+  const live = h('p', { class: 'kq-live', 'aria-live': 'polite' });
+  const keys = h('p', { id: 'kq-keys', hidden: true }, 'Pfeiltasten wandern durch die Quellen, Leertaste oder Eingabe wählt und spielt kurz, Umschalt und Leertaste hält sie länger, f markiert als Favorit, h hört an, ein Buchstabe springt zur nächsten Quelle mit diesem Anfang. Escape schließt.');
+  const el = h('div', { class: 'kq-lib', id: 'kqLib', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'kqTitle', hidden: true },
+    head, h('label', { class: 'kq-search', html: KQ_ICO.find }, search), fams, list, h('div', { class: 'kq-foot' }, sur, live), keys);
+  Object.assign(KQ, { el, title, search, fams, famBtns, list, live, sur });
+  sheet.append(el);
+  search.addEventListener('input', () => { KQ.q = search.value; kqRender(); kqSay(KQ.q.trim() ? (list.querySelectorAll('.kq-tile').length || 'Keine') + ' Treffer' : ''); });
+  search.addEventListener('keydown', (e) => { if (e.key === 'ArrowDown' || (e.key === 'Enter' && !e.isComposing)) { const t = list.querySelector('.kq-pick[tabindex="0"]'); if (t) { e.preventDefault(); t.focus(); } } });
+  const famGo = (b, focus) => {
+    KQ.fam = b.dataset.fam; KQ.q = ''; search.value = ''; kqRender(); kqSay(''); list.scrollTop = 0;
+    if (focus) b.focus({ preventScroll: true });
+    kqFamShow(b);
+  };
+  fams.addEventListener('click', (e) => { const b = e.target.closest('.chip'); if (b) famGo(b, false); });
+  fams.addEventListener('keydown', (e) => {
+    const i = famBtns.indexOf(document.activeElement); if (i < 0) return;
+    const j = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? Math.min(famBtns.length - 1, i + 1) : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? Math.max(0, i - 1) : e.key === 'Home' ? 0 : e.key === 'End' ? famBtns.length - 1 : -1;
+    if (j < 0) return;
+    e.preventDefault(); famGo(famBtns[j], true);
+  });
+  const fade = () => { fams.classList.toggle('kq-a0', fams.scrollLeft <= 4); fams.classList.toggle('kq-a1', fams.scrollLeft + fams.clientWidth >= fams.scrollWidth - 4); };
+  fams.addEventListener('scroll', fade, { passive: true });
+  KQ.famFade = fade;
+  list.addEventListener('click', (e) => {
+    if (kqSwallow(list)) return;
+    const tile = e.target.closest('.kq-tile'); if (!tile) return;
+    const k = tile.dataset.k;
+    if (e.target.closest('.kq-fav')) kqFav(k);
+    else if (e.target.closest('.kq-hear')) kqHearTile(k);
+    else if (e.target.closest('.kq-pick')) kqPick(k);
+  });
+  kqPress(list, (t) => {
+    const k = t.closest('.kq-tile').dataset.k;
+    if (k === 'off' || !KQ.T) return null;
+    const v = kqHold(KQ.T, k), hb = t.closest('.kq-tile').querySelector('.kq-hear');
+    if (hb) hb.classList.add('playing');
+    return v;
+  }, (t) => { const hb = t.closest('.kq-tile') && t.closest('.kq-tile').querySelector('.kq-hear'); if (hb) hb.classList.remove('playing'); }, '.kq-pick, .kq-hear', 350);
+  list.addEventListener('keydown', kqListKey);
+  // modal: Tab stays inside
+  el.addEventListener('keydown', (e) => {
+    if (e.key !== 'Tab') return;
+    const f = [...el.querySelectorAll('button, input')].filter((x) => !x.disabled && x.tabIndex >= 0 && x.getClientRects().length);
+    if (!f.length) return;
+    const a = f[0], z = f[f.length - 1];
+    if (e.shiftKey && (document.activeElement === a || !el.contains(document.activeElement))) { e.preventDefault(); z.focus(); }
+    else if (!e.shiftKey && (document.activeElement === z || !el.contains(document.activeElement))) { e.preventDefault(); a.focus(); }
+  });
+  // a swipe down on the head closes it
+  head.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('button')) return;
+    const y0 = e.clientY, id = e.pointerId;
+    const mv = (ev) => { if (ev.pointerId === id && ev.clientY - y0 > 56) { up(ev); kqClose(); } };
+    const up = (ev) => { if (ev.pointerId !== id) return; head.removeEventListener('pointermove', mv); head.removeEventListener('pointerup', up); head.removeEventListener('pointercancel', up); };
+    try { head.setPointerCapture(id); } catch (err) {}
+    head.addEventListener('pointermove', mv); head.addEventListener('pointerup', up); head.addEventListener('pointercancel', up);
+  });
+}
+// a family chip in view, clear of the row's fading right edge
+function kqFamShow(b) {
+  const f = KQ.fams.getBoundingClientRect(), r = b.getBoundingClientRect();
+  if (r.right > f.right - 28) KQ.fams.scrollLeft += r.right - f.right + 28;
+  else if (r.left < f.left + 12) KQ.fams.scrollLeft += r.left - f.left - 12;
+}
+function kqListKey(e) {
+  const picks = [...KQ.list.querySelectorAll('.kq-pick')], i = picks.indexOf(document.activeElement);
+  if (i < 0) return;
+  const k = picks[i].closest('.kq-tile').dataset.k, mods = e.ctrlKey || e.metaKey || e.altKey;
+  let j = -1;
+  if (e.key === 'ArrowDown' || e.key === 'ArrowRight') j = Math.min(picks.length - 1, i + 1);
+  else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') j = Math.max(0, i - 1);
+  else if (e.key === 'Home') j = 0;
+  else if (e.key === 'End') j = picks.length - 1;
+  else if (e.key === ' ' || e.key === 'Enter') {
+    e.preventDefault();
+    if (e.repeat) return;
+    if (e.key === ' ' && e.shiftKey && k !== 'off') { const v = kqHold(KQ.T, k); if (v) setTimeout(() => { if (KQ.hold === v) kqHoldEnd(); }, 1200); }
+    else kqPick(k);
+    return;
+  } else if (!mods && (e.key === 'f' || e.key === 'F')) { e.preventDefault(); kqFav(k); return; }
+  else if (!mods && (e.key === 'h' || e.key === 'H')) { e.preventDefault(); kqHearTile(k); return; }
+  else if (!mods && e.key.length === 1 && /\p{L}/u.test(e.key)) {
+    const c = kqNorm(e.key)[0];
+    for (let n = 1; n <= picks.length; n++) { const p = picks[(i + n) % picks.length], kk = p.closest('.kq-tile').dataset.k; if (kqNorm(kk === 'off' ? 'aus' : ENG_NAME[kk])[0] === c) { j = (i + n) % picks.length; break; } }
+    if (j < 0) return;
+  }
+  if (j < 0) return;
+  e.preventDefault();
+  picks[i].tabIndex = -1; picks[j].tabIndex = 0; picks[j].focus(); picks[j].scrollIntoView({ block: 'nearest' });
+}
+function kqPick(k) {
+  const T = KQ.T; if (!T) return;
+  if (kqChoose(T, k, 'pick')) kqRender(k);
+}
+function kqFav(k) {
+  if (!ENG_META[k]) return;
+  const on = !KQ.fav.includes(k);
+  KQ.fav = on ? [...KQ.fav, k] : KQ.fav.filter((x) => x !== k);
+  KQ.save();
+  kqRender(k);
+  kqSay(ENG_NAME[k] + (on ? ' ist jetzt Favorit' : ' ist kein Favorit mehr'));
+}
+function kqHearTile(k) {
+  if (!KQ.T || k === 'off') return;
+  const v = kqHear(KQ.T, k), b = KQ.list.querySelector('.kq-tile[data-k="' + k + '"] .kq-hear');
+  if (!v) { if (!A.started) kqSay('Starte zuerst den Klang.'); return; }
+  if (b) { b.classList.add('playing'); setTimeout(() => { if (KQ.probe !== v || !v.alive) b.classList.remove('playing'); }, 1500); }
+  kqSay(ENG_NAME[k] + ' – zum Anhören');
+}
+function kqTile(T, k, cur) {
+  const off = k === 'off', M = ENG_META[k] || {}, why = off ? '' : T.allow(k), fb = off ? '' : kqFb(k), on = k === cur, kids = [kqGlyph(k, kqLoading(k) ? 'loading' : '')];
+  let label;
+  if (off) {
+    kids.push(h('b', { class: 'kq-n' }, 'Aus'), h('span', { class: 'kq-art' }), h('span', { class: 'kq-cost' }), h('span', { class: 'kq-i' }, 'Keine zweite Ebene – jeder Finger spielt einen Klang'));
+    label = 'Aus: keine zweite Ebene';
+  } else {
+    const c = kqCost(k);
+    kids.push(h('b', { class: 'kq-n' }, M.n), h('span', { class: 'kq-art' }, ART_WORD[M.art]),
+      h('span', { class: 'kq-cost', title: c.txt, 'aria-hidden': 'true', html: '<b>' + '●'.repeat(c.dots) + '</b>' + '○'.repeat(3 - c.dots) }),
+      h('span', { class: 'kq-i' }, ...(fb ? [h('span', { class: 'kq-fb' }, '⌁ spielt als ' + ENG_NAME[fb]), ' · '] : []), why && !(T.quiet && T.quiet(k)) ? why[0].toUpperCase() + why.slice(1) : M.i));
+    label = M.n + ', ' + FAM_NAME[M.fam] + ', ' + ART_WORD[M.art] + ', Kosten ' + c.word + ', etwa ' + c.n + ' Stimmen. ' + (why ? 'Nicht für ' + T.dat + ': ' + why + '. ' : '') + M.i + '.' + (fb ? ' Spielt hier als ' + ENG_NAME[fb] + '.' : '') + (KQ.fav.includes(k) ? ' Favorit.' : '');
+  }
+  const pk = h('button', { type: 'button', class: 'kq-pick', role: 'radio', 'aria-checked': String(on), 'aria-disabled': why ? 'true' : null, tabindex: '-1', 'aria-label': label }, ...kids);
+  const tile = h('div', { class: 'kq-tile' + (on ? ' on' : ''), 'data-k': k }, pk);
+  if (off) tile.append(h('span'), h('span'));
+  else tile.append(h('button', { type: 'button', class: 'kq-fav', tabindex: '-1', 'aria-pressed': String(KQ.fav.includes(k)), 'aria-label': M.n + ' als Favorit', title: 'Favorit', html: KQ_ICO.star }),
+    h('button', { type: 'button', class: 'kq-hear', tabindex: '-1', 'aria-label': M.n + ' anhören', title: 'Anhören – lange drücken: halten', html: KQ_ICO.play }));
+  return tile;
+}
+// the list for the family row's choice (or the search); keep: the key whose tile keeps the focus (it had it)
+function kqRender(keep) {
+  const T = KQ.T; if (!T || !KQ.el) return;
+  const cur = T.get(), q = kqNorm(KQ.q.trim()), list = KQ.list;
+  const hadFocus = list.contains(document.activeElement), fk = keep || (hadFocus && document.activeElement.closest('.kq-tile') ? document.activeElement.closest('.kq-tile').dataset.k : null);
+  KQ.famBtns.forEach((b, i) => { const on = !q && b.dataset.fam === KQ.fam; b.setAttribute('aria-checked', String(on)); b.tabIndex = on || (q && i === 2) ? 0 : -1; });
+  const groups = [], all = ENG_OPTS.map((o) => o[0]);
+  if (q) groups.push({ h: 'Suche', sub: (n) => n + (n === 1 ? ' Treffer' : ' Treffer'), ks: all.filter((k) => kqHay(k).includes(q)), empty: 'search' });
+  else if (KQ.fam === 'fav') groups.push({ h: 'Favoriten', sub: (n) => n ? String(n) : '', ks: KQ.fav.filter((k) => ENG_META[k]), empty: 'fav' });
+  else if (KQ.fam === 'recent') groups.push({ h: 'Zuletzt', sub: () => 'gewählt, ohne die jetzige', ks: KQ.recent.filter((k) => ENG_META[k] && k !== cur).slice(0, 6), empty: 'recent' });
+  else for (const [f, n, s] of FAM) if (KQ.fam === 'alle' || KQ.fam === f) groups.push({ h: n, sub: (c) => c + ' · ' + s, ks: kqKeysOf(f) });
+  const out = [];
+  let why = false;
+  groups.forEach((g, gi) => {
+    out.push(h('h3', { class: 'kq-fh' }, g.h, h('small', null, g.sub(g.ks.length) ? ' · ' + g.sub(g.ks.length) : '')));
+    if (gi === 0 && T.key === 'v.layer' && !q) out.push(kqTile(T, 'off', cur));
+    if (T.why && !why && g.ks.some((k) => T.allow(k))) { out.push(h('p', { class: 'kq-why' }, T.why)); why = true; }
+    for (const k of g.ks) out.push(kqTile(T, k, cur));
+    if (!g.ks.length && g.empty) {
+      const msg = g.empty === 'fav' ? 'Tippe ★ auf einer Quelle – sie landet hier.' : g.empty === 'recent' ? 'Was du wählst, landet hier – die sechs letzten.' : 'Nichts gefunden – versuch „Wind“, „Fell“ oder „Bass“.';
+      const p = h('div', { class: 'kq-empty' }, h('p', { style: 'margin:0' }, msg));
+      if (g.empty === 'search') p.append(h('button', { type: 'button', class: 'btn ghost', html: KQ_ICO.dice + '<span>Überrasch mich</span>', onclick: () => { KQ.q = ''; KQ.search.value = ''; KQ.fam = 'alle'; kqRender(); kqSurprise(T, false); } }));
+      out.push(p);
+    }
+  });
+  list.replaceChildren(...out);
+  const picks = [...list.querySelectorAll('.kq-pick')];
+  const t = (fk && picks.find((p) => p.closest('.kq-tile').dataset.k === fk)) || picks.find((p) => p.getAttribute('aria-checked') === 'true') || picks[0];
+  if (t) t.tabIndex = 0;
+  if (t && hadFocus) t.focus({ preventScroll: true });
+  if (KQ.famFade) KQ.famFade();
+  KQ.sur.disabled = !picks.some((p) => { const k = p.closest('.kq-tile').dataset.k; return k !== 'off' && k !== cur && !T.allow(k); });
+}
+// t: a place (kqTarget); o.opener: the button to return to, o.where: the place in its words ("Kanal Spur 2")
+function kqOpen(T, o = {}) {
+  if (!T) return;
+  if (!KQ.el) kqBuild();
+  if (sheet.hidden) openPanel(o.panel || 'klang');
+  if (KQ.T) { kqHoldEnd(); kqProbeEnd(); }
+  for (const b of KQ.openers) b.setAttribute('aria-expanded', 'false');
+  KQ.openers.clear();
+  KQ.T = T; KQ.where = o.where || T.where; KQ.opener = o.opener || (document.activeElement !== document.body ? document.activeElement : null);
+  if (o.opener && o.opener.hasAttribute('aria-expanded')) { o.opener.setAttribute('aria-expanded', 'true'); KQ.openers.add(o.opener); }
+  const cur = T.get(), M = ENG_META[cur === 'off' ? P['v.eng'] : cur];
+  KQ.fam = M ? M.fam : 'alle'; KQ.q = ''; KQ.search.value = '';
+  KQ.title.replaceChildren(h('small', null, 'Klangquelle für'), h('span', null, KQ.where.toLowerCase()));
+  KQ.el.hidden = false;
+  sheet.dataset.lib = T.key;
+  kqRender();
+  kqSay('');
+  const on = KQ.list.querySelector('.kq-pick[tabindex="0"]');
+  if (on) on.scrollIntoView({ block: 'nearest' });
+  const fc = KQ.famBtns.find((b) => b.dataset.fam === KQ.fam);
+  KQ.fams.scrollLeft = 0;
+  if (fc) kqFamShow(fc);
+  // a phone's keyboard would cover the tiles: the search takes the focus only with a fine pointer
+  ((MOBILE || o.focusTile) && on ? on : KQ.search).focus({ preventScroll: true });
+}
+function kqClose(refocus = true) {
+  if (!KQ.T) return;
+  kqHoldEnd(); kqProbeEnd();
+  const inside = KQ.el.contains(document.activeElement);
+  KQ.el.hidden = true;
+  delete sheet.dataset.lib;
+  KQ.T = null;
+  for (const b of KQ.openers) b.setAttribute('aria-expanded', 'false');
+  KQ.openers.clear();
+  const op = KQ.opener; KQ.opener = null;
+  if (refocus && inside && op && op.isConnected && op.getClientRects().length) op.focus({ preventScroll: true });
+  $('#kqSay').textContent = '';
+}
+// a preset or a stored patch names a source this version lacks: renamed keys follow ENG_ALIAS, the others are noted
+// (they load as the default, as they always did) for one hint
+function engKeysIn(vals) {
+  if (!vals || typeof vals !== 'object') return vals;
+  let out = vals;
+  for (const id of KQ_PIDS) {
+    if (!Object.prototype.hasOwnProperty.call(vals, id) || typeof vals[id] !== 'string') continue;
+    let k = vals[id];
+    if (ENG_ALIAS[k]) { if (out === vals) out = Object.assign({}, vals); out[id] = k = ENG_ALIAS[k]; }
+    if (k !== 'off' && !ENG_META[k]) KQ.miss.push([id, k]);
+  }
+  return out;
+}
+function engMissSay() {
+  if (!KQ.miss.length) return '';
+  const q = (n) => '„' + n + '“', names = [...new Set(KQ.miss.map(([, k]) => q(ENG_LATER[k] || k)))];
+  const subs = [...new Set(KQ.miss.map(([id]) => (id === 'v.eng' ? ENG_NAME[P[id]] + ' gewählt' : id === 'v.layer' ? 'zweite Ebene aus' : 'Spur ' + (+id[1] + 1) + ' spielt ' + ENG_NAME[P[id]])))];
+  KQ.miss = [];
+  return (names.length > 1 ? 'Klangquellen ' + listDe(names) + ' gibt' : 'Klangquelle ' + names[0] + ' gibt') + ' es in dieser Version nicht – ' + listDe(subs) + '.';
+}
+
 function buildFx() {
   const box = h('div');
   box.append(h('p', { class: 'note', style: 'margin-top:12px' }, 'Signalweg: Verzerrung → Ringmodulator → Filter → Phaser → Schweben → Kreisen, dann parallel Echo und Hall in die Summe.'));
@@ -17096,7 +18385,7 @@ function updLaneTabs() {
     b.classList.toggle('off', !P[p + 'on']);
     const sm = b.querySelectorAll('small');
     sm[0].textContent = 'E(' + Math.min(P[p + 'puls'], P[p + 'steps']) + ',' + P[p + 'steps'] + ')';
-    sm[1].textContent = P[p + 'on'] ? ENG_NAME[P[p + 'eng']] : 'aus';
+    sm[1].replaceChildren(...(P[p + 'on'] ? [kqGlyph(P[p + 'eng']), ENG_NAME[P[p + 'eng']]] : ['aus']));
   });
 }
 function updPulsUI() {
@@ -17437,7 +18726,9 @@ function loadPreset(p) {
   rzPreset(p);   // its Gestik recipe (none: the player's own settings) – before a user preset's own Gestik settings
   presetExtraLoad(p);
   markPresetCards();
-  toast('„' + p.name + '“ geladen.' + rzSay(), 4500, UNDO);
+  kqUsed(P['v.eng']);
+  const miss = engMissSay();
+  toast('„' + p.name + '“ geladen.' + rzSay() + (miss ? ' ' + miss : ''), miss ? 8000 : 4500, UNDO);
 }
 function markPresetCards() { for (const c of presetCards) c.setAttribute('aria-current', String(c.dataset.key === UI.preset)); }
 function markPresetDirty() { if (UI.preset && !UI.loading) { UI.preset = null; markPresetCards(); } }
@@ -17477,8 +18768,9 @@ function buildPresets() {
       h('button', { type: 'button', class: 'btn', onclick: exportPreset }, 'Klang als Datei exportieren'),
       h('button', { type: 'button', class: 'btn', onclick: () => file.click() }, 'Datei importieren'), file)));
   box.append(section('Spielhilfe', null, h('ul', { class: 'help' },
-    h('li', null, h('b', null, 'Halten: '), 'Nebel, Körner und Hauch klingen, solange der Finger liegt. Schieben ändert Tonhöhe und Farbe.'),
-    h('li', null, h('b', null, 'Tippen und Wischen: '), 'Glocke, Membran, Saite und Schale schlagen beim Berühren an – mit „Wischen schlägt an“ auch bei jedem Tonwechsel unterwegs.'),
+    h('li', null, h('b', null, 'Klangquelle: '), ENG_OPTS.length + ' Quellen in ' + FAM.length + ' Familien – ' + listDe(FAM.map((f) => f[1])) + '. ‹ › wechseln zur Nachbarin und spielen sie kurz an, Tippen auf den Namen öffnet die Bibliothek mit Suche, ★ Favoriten und ▶ Anhören; der Würfel überrascht.'),
+    h('li', null, h('b', null, 'Halten: '), 'Die Quellen aus ' + listDe(famPlay().hold) + ' klingen, solange der Finger liegt – wie jede, auf deren Kachel „hält“ steht. Schieben ändert Tonhöhe und Farbe.'),
+    h('li', null, h('b', null, 'Tippen und Wischen: '), 'Die Quellen aus ' + listDe(famPlay().strike) + ' schlagen beim Berühren an (auf der Kachel: „schlägt“ oder „beides“) – mit „Wischen schlägt an“ auch bei jedem Tonwechsel unterwegs.'),
     h('li', null, h('b', null, 'Wirbel: '), 'Unter „Klang → Spielweise“ wiederholt ein gehaltener Finger seinen Ton im Tempo des Pulses.'),
     h('li', null, h('b', null, 'Einfrieren: '), 'Die Schneeflocke hält die Echoschleife endlos fest. Darüber kannst du weiterspielen.'),
     h('li', null, h('b', null, 'Stille: '), 'Stoppt sofort alle Töne, den Bordun, Echo, Hall und den Puls.'),
@@ -17746,7 +19038,7 @@ function updDevUI() {
   if (!devEls || !devEls.qInfo) return;
   const lv = P['dev.q'], nNeb = Math.floor(VBUDGET / Q.cost.neb);
   devEls.qInfo.textContent = lv === '1'
-    ? 'Leicht: sparsam, damit Handys nicht aussetzen. Bis zu ' + nNeb + ' Nebel-Stimmen gleichzeitig; leichtere Klänge wie Hauch, Membran oder Saite entsprechend mehr.'
+    ? 'Leicht: sparsam, damit Handys nicht aussetzen. Bis zu ' + nNeb + ' Nebel-Stimmen gleichzeitig; leichtere Klänge wie ' + listDe(ENG_OPTS.map((o) => o[0]).filter((k) => k !== 'neb').sort((x, y) => VCOST1[x] - VCOST1[y]).slice(0, 3).map((k) => ENG_NAME[k]), 'oder') + ' entsprechend mehr.'
     : lv === '2'
       ? 'Voll: der Klang wie in der ersten Fassung, mit deutlich mehr Stimmen gleichzeitig – bis zu ' + nNeb + ' Nebel-Stimmen. Für neuere Handys und Computer.'
       : 'Gewaltig: jede Stimme wird reicher – sieben statt drei Oszillatoren im Nebel, Doppelsaiten, zwei Glocken pro Anschlag, mehr Teiltöne und Trommelmoden, doppelt so dichte Körnerwolken und Hall in echtem Stereo. ' +
@@ -18287,7 +19579,7 @@ function rgCardUI(C, it) {
   const row = (lab, el) => h('div', { class: 'gk-set' }, h('div', { class: 'lab' }, lab), el);
   const set = (k) => (v) => { gkSet(k, v); gkCardSync(); };
   C.rgArt = gkChips('Art des Sporenregens', [['keime', 'Keime'], ['harfe', 'Harfe']], () => GK.p.rgArt, set('rgArt'));
-  C.rgS = gkChips('Anschlag des Regens', RG_S, () => GK.p.rgS, (v) => { gkSet('rgS', v); if (v === 'sai') warmKS(); gkCardSync(); });
+  C.rgS = kqRow(kqTarget('rgS'), { id: 'gk-kq-rgS', label: 'Anschlag' });
   C.rgQ = gkChips('Raster des Regens', [['auto', 'Auto'], ['8', '1/8'], ['16', '1/16'], ['8t', '1/8T'], ['frei', 'frei']], () => GK.p.rgQ, set('rgQ'));
   C.rgK = gkChips('Keime bleiben', [[2, '2 Takte'], [4, '4 Takte'], [8, '8 Takte']], () => GK.p.rgK, (v) => { gkSet('rgK', +v); gkCardSync(); });
   const sl = (k, lab, min, max, step, txt, aria) => {
@@ -18303,7 +19595,7 @@ function rgCardUI(C, it) {
   C.rgTxt = h('p', { class: 'note' }); C.rgQTxt = h('p', { class: 'note' }); C.rgSum = h('span', { class: 'gk-sum' });
   C.rgNRow = sl('rgN', 'Sporen', 8, 16, 1, (v) => String(GK.p.rgArt === 'harfe' ? Math.max(2, Math.round(v / 4)) : v), 'Wie viele Sporen rollen');
   return h('details', { class: 'kc-more gk-anl gk-rg', open: KC.open.gkr || null, ontoggle: (e) => { kcKeep('gkr', e.target.open); gkCardSync(); } }, h('summary', null, 'Sporenregen einstellen', C.rgSum),
-    row('Art', C.rgArt), C.rgTxt, row('Anschlag', C.rgS), row('Raster', C.rgQ), C.rgQTxt,
+    row('Art', C.rgArt), C.rgTxt, C.rgS, row('Raster', C.rgQ), C.rgQTxt,
     C.rgNRow, sl('rgZ', 'Zähigkeit', 0, 1, 0.05, pct, 'Zähigkeit: wie träge die Sporen rollen'), sl('rgO', 'Ordnung', 0, 1, 0.05, pct, 'Ordnung: wie streng Rinnen die Sporen an deinen Keimen entlangführen'),
     h('p', { class: 'note' }, 'Zähigkeit: von Eis (schnell, rollt lange nach) bis Honig (langsam, gleichmäßig). Ordnung: Rinnen führen die Sporen an deinen Keimen entlang – wenig Ordnung lässt sie streuen.'),
     row('Keime bleiben', C.rgK), h('div', { class: 'kc-opts' }, C.rgPs),
@@ -18779,7 +20071,19 @@ function buildUI() {
   $('#btnFreeze').innerHTML = ICON.freeze;
   $('#btnClose').addEventListener('click', closePanel);
   $('#btnPanic').addEventListener('click', panic);
-  $('#engChip').addEventListener('click', () => { if (UI.panel !== 'klang') openPanel('klang'); sheetBody.scrollTop = 0; });
+  const chip = $('#engChip'), chipLib = () => { if (UI.panel !== 'klang') openPanel('klang'); kqOpen(kqTarget('v.eng'), { opener: chip, where: 'Spielfläche', focusTile: true }); };
+  chip.addEventListener('click', () => { if (kqSwallow(chip)) return; if (KQ.T) kqClose(false); if (UI.panel !== 'klang') openPanel('klang'); sheetBody.scrollTop = 0; });
+  kqPress(chip, () => { chipLib(); return null; });
+  chip.addEventListener('contextmenu', (e) => { e.preventDefault(); if (!KQ.T) chipLib(); });
+  $('#app').append(h('p', { id: 'kqSay', class: 'mx-sr', 'aria-live': 'polite' }));
+  // Escape closes the library first (before the mixer's details and the panel)
+  window.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || !KQ.T) return;
+    e.stopImmediatePropagation(); e.preventDefault();
+    if (document.activeElement === KQ.search && KQ.search.value) { KQ.search.value = ''; KQ.q = ''; kqRender(); return; }
+    kqClose();
+  }, true);
+  $('#startFingerLine').textContent = 'Mehrere gleichzeitig; Wischen schlägt ' + listDe(famPlay().strike) + ' an';
   $('#btnPuls').addEventListener('click', () => { if (!A.started) return; SEQ.on ? seqStop() : seqStart(); });
   $('#btnFreeze').addEventListener('click', () => { if (A.started) setFreeze(!A.frozen); });
   $('#btnGk').addEventListener('click', gkIcoTap);
@@ -18790,6 +20094,7 @@ function buildUI() {
 }
 const panelOf = (key) => PANELS.find((p) => p.key === key);
 function openPanel(key) {
+  if (KQ.T) kqClose(false);
   if (UI.panel === key) { closePanel(); return; }
   const prev = UI.panel && panelOf(UI.panel);
   if (prev && prev.close) prev.close();
@@ -18805,6 +20110,7 @@ function openPanel(key) {
   if (LEARN.on) learnShow();   // the banner makes room for the mixer
 }
 function closePanel() {
+  if (KQ.T) kqClose(false);
   const hadFocus = sheet.contains(document.activeElement);
   const prev = UI.panel && panelOf(UI.panel);
   if (prev && prev.close) prev.close();
@@ -18969,6 +20275,7 @@ function boot() {
   buildUI();
   learnBar();
   startKeysLine();
+  { const miss = engMissSay(); if (miss) toast(miss, 8000); }   // the stored patch named a source this version lacks
   resize();
   if (window.ResizeObserver) new ResizeObserver(resize).observe(stage); else window.addEventListener('resize', resize);
   cvFx.addEventListener('pointerdown', onDown);

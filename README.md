@@ -7,7 +7,8 @@ Ein Touch-Instrument für ambiente, perkussive, experimentelle und psychedelisch
 
 ## Klänge
 
-- **Klangquellen (14):** gehaltene Klänge Nebel, Körner, Hauch, Obertöne (Obertongesang), Stimme (Vokalchor), Schwarm (Insektenschwarm) und Tiefe (Subbass). Angeschlagen werden Glocke, Membran, Saite, Schale, Kalimba, Gong und Tropfen.
+- **Klangquellen (16)** in fünf Familien – Luft: Hauch, Obertöne, Stimme, Halm · Dunst: Nebel, Körner, Schwarm · Holz: Ranke, Saite · Erz: Glocke, Schale, Gong, Kalimba · Erde: Tiefe, Membran, Tropfen. Neu: **Halm** (selbstschwingendes Rohrblatt – die Fingerhöhe ist der Atem) und **Ranke** (ein Ring aus Massen und Federn, angestoßen und abgetastet). Beide rechnen in einem AudioWorklet, das erst geladen wird, wenn man sie wählt; ohne Worklet spielen sie vereinfacht als Hauch bzw. Nebel.
+- **Klangquellen wählen:** eine Zeile ‹ Name › an jeder Stelle (Spielfläche, Ebene 2, Puls-Spuren, Mixer, Sporenregen); die Pfeile blättern mit kurzer Probe, ein Tipp öffnet die Bibliothek mit Suche, Familien, Favoriten, „Zuletzt“ und „Überrasch mich“.
 - **Körner-Quellen:**
   - Erzeugt: Glasharfe, Chor, Metall, Staub, Wasser, Vögel, Zikaden, Flüstern, Harmonium und Kurzwelle.
   - Echo (die letzten 8 Sekunden des eigenen Spiels).
