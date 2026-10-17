@@ -24,11 +24,11 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Claude-Session: <this session's URL>
 ```
 
-**App:** `myzel/index.html`, a single file of about 1.4 MB (German UI, vanilla JS + Web Audio). Each push deploys GitHub Pages (https://beidlat.github.io/4claude/) – only from the branches listed in `.github/workflows/pages.yml`: add the session's branch there in the first commit.
+**App:** `myzel/index.html`, a single file of about 1.4 MB (German UI, vanilla JS + Web Audio). Each push deploys GitHub Pages (https://beidlat.github.io/4claude/) – only from the branches listed in `.github/workflows/pages.yml`, and only if the repository's `github-pages` environment allows that branch (Settings → Environments → github-pages → deployment branches). Stage 2's branch was refused there (run 18 failed before a runner started): the owner has to allow it (or a pattern `ccr-*`), then re-run the workflow.
 
-**claude.ai version:** the artifact https://claude.ai/artifact/HNZYLEaUvtCfkyYWi3SuDr, private, capability `downloads` (republished after every stage).
+**claude.ai version:** the artifact https://claude.ai/artifact/HNZYLEaUvtCfkyYWi3SuDr, private, capability `downloads` – still stage 1.
 - Republish it with the Artifact tool: `url` + `file_path` = `myzel/index.html`.
-- A new conversation must first `read` the artifact, then publish.
+- A new conversation must first `read` the artifact, then publish. The tool asks for every line of the live version (and of a file Claude did not write in the session) to be read first – at 1.4 MB that is ≈ 870 k tokens, more than a session holds; stage 2 therefore did not republish. Ask the owner how to go on (a session only for that, or the Pages app alone).
 
 **Workflow etiquette:**
 - Build stage by stage, as the owner chose. Each stage is built, tested, committed, pushed and published before the next one starts.
