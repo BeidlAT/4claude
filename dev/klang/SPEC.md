@@ -317,7 +317,7 @@ out = hpKasten(lpKasten(x)) * 0.3
 - **Params (6):** `elm.spannung` 0–1 (0.5) · `elm.netz` 0–1 (0.4) · `elm.knistern` 0–1 (0.5) · `elm.bogen` 0–1 (0.6) · `elm.reichweite` 1–2 oct (2, step 1) · `elm.flackern` 0–1 (0.5). MACRO spannung/knistern.
 - **Höhe**: voltage ladder (register ladder with wide crossfades); tilt forward = voltage up; Bebung = mains flutter. **Puls**: the Zap. regen 0 (held engine; Sporenregen strikes it as a 0.22 s zap via `hit()` – acceptable but not listed).
 - **Acceptance**: y 0: hum ≥ −30 dB, crackle < 5 events/s; y 0.5: 50–300 events/s (threshold-crossing count on the corona bus); y 0.9: arc at f·2^reichweite dominant and present only while corona energy > −40 dB; jumps ≤ 3/s; zap: peak within 10 ms, −30 dB within 0.4 s; two hits differ (step offsets); DC < 0.005; peak ≤ −1 dBFS; cost ≤ 0.8.
-- **As built (stage 2, measured):** hum and note in one PeriodicWave with the tanh baked in (no shaper, no high-pass); corona from one pre-filtered noise buffer, density by gain alone; arc = square → k-rate gate (crackle smoothed by Flackern) → tanh, no band-pass, no gate/step buffers (jumps from `tick()`); cost ≈ 0.8–1.0 with the arc, ≈ 0.6 without – see `dev/HANDOFF.md` „Notes from stage 2“.
+- **As built (stage 2):** the full chain above; calibrations and the few changes of letter (each measured) – see `dev/HANDOFF.md` „Notes from stage 2“.
 
 ### 3.10 mdr Moder – `myzel-rot` (modes with downward digestion + tuned crackle)
 
@@ -370,7 +370,7 @@ crackleBudget_k = (1-η)*d_k*P_k
 - **Params (6):** `jrg.jahr` 0–12 min (4, step 0.5; 0 = Stillstand) · `jrg.jahreszeit` SEL lauf/fruehling/sommer/herbst/winter (lauf, chips) · `jrg.schnitt` 0–1 (0.5) · `jrg.holz` 0–1 (0.5) · `jrg.schlaegel` 0–1 (0.5) · `jrg.laub` 0–1 (0.4). MACRO schnitt/holz. Section shows „Jetzt: Herbst (3:12 im Jahr) · Ringe: 412“ (live text, 1 Hz).
 - **Höhe**: mallet position centre → end (the nodal line at y ≈ 0.55 is the edge); tilt moves the mallet. **Puls**: the safest hit; lanes rustle in autumn, crack in winter. regen 1; Rassel candidate.
 - **Acceptance**: mode-1 level at y 0.55 ≤ −20 dB vs y 0 while mode 2 ≥ its centre level + 6 dB; centroid rises y 0 → 1 (node dip allowed); winter f0 unchanged; age after 600 hits ≤ −6 ct; season frozen while suspended; loudness ±2 dB vs glo; peak ≤ −1 dBFS; cost ≤ 0.75.
-- **As built (stage 2, measured):** the band-passes ring from one click; mallet low-pass, Kasten and tube are gains per mode (a mode is one sine); the click loops a −140 dB trickle so Chromium does not cut the filters early; level 3 = two bars ±3 ct with 4 + 2 modes – see `dev/HANDOFF.md`.
+- **As built (stage 2):** the full chain above (contact + noise burst → mallet low-pass → modes → Kasten and tube; level 3 six modes on two bars), with a −140 dB trickle so Chromium does not cut the filters early – see `dev/HANDOFF.md`.
 
 ### 3.13 Reserves (build only after the twelve pass)
 

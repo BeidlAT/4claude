@@ -22,6 +22,6 @@ for t in $SUITES; do
   echo "== $t"
   node "$t.js" > "out/$t.log" 2>&1 || rc=1
   grep -c '^PASS' "out/$t.log" | sed 's/^/   PASS: /'
-  grep -E '^FAIL|Error' "out/$t.log"
+  grep -E '^FAIL|^INFO|Error' "out/$t.log"
 done
 exit $rc

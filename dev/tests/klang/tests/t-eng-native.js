@@ -1,6 +1,6 @@
 // Stage 2's native engines in a live (real-time) session (klang SPEC §7.2 t-eng-live, §6.6–6.7): Elmsfeuer and
 // Jahresring chosen by their tile, a finger held and moved (Elmsfeuer: setF/setY; Jahresring: a hit), let go, a MIDI
-// keyboard with the wheel, Puls lanes at level 3; Elmsfeuer's jumps and a knob that follows live; Jahresring's year
+// keyboard with the wheel, Puls lanes at level 3; Elmsfeuer's arc and a knob that follows live; Jahresring's year
 // (runs with the sound, stands while it is suspended or the page hidden), its section text, Verjüngen, Schlafen,
 // the Rassel; and both without AudioWorklet (they need none).   node t-eng-native.js   (slot kn-inst, run-all.sh)
 const { chromium } = require('/opt/node22/lib/node_modules/playwright');
@@ -52,24 +52,25 @@ const settle = (page, ms) => page.evaluate((ms) => window.__sleep(ms), ms);
     L.ok(midi && midi.as === key && midi.bend > 100, `${key}: a MIDI key plays it, the wheel bends it (${midi && midi.bend} ct on the bus)`);
     const busy = await page.evaluate(async (key) => {
       const M = window.__M; M.setParam('v.eng', 'neb'); M.setParam('v.layer', key); M.setParam('l0.eng', key); M.setParam('l0.on', true); M.setParam('l1.eng', key); M.setParam('l1.on', true);
-      M.setParam('dev.q', '3'); M.seqStart(); let maxV = 0, maxL = 0, n = 0;
-      for (let i = 0; i < 40; i++) { await window.__sleep(50); maxV = Math.max(maxV, M.A.voices.size); maxL = Math.max(maxL, M.voiceLoad()); n = Math.max(n, [...M.A.voices].filter((v) => v.eng === key && v.alive).length); }
+      M.setParam('dev.q', '3'); M.seqStart(); let maxV = 0, maxL = 0, over = 0, n = 0;
+      // (load against the budget of the moment: under underruns the app lowers its budget while voices sound)
+      for (let i = 0; i < 40; i++) { await window.__sleep(50); const l = M.voiceLoad(); maxV = Math.max(maxV, M.A.voices.size); maxL = Math.max(maxL, l); over = Math.max(over, l - M.getBudget()[0]); n = Math.max(n, [...M.A.voices].filter((v) => v.eng === key && v.alive).length); }
       M.seqStop(); M.setParam('dev.q', '1'); M.setParam('l0.on', false); M.setParam('l1.on', false); M.setParam('v.layer', 'off'); M.setParam('v.eng', key);
       await window.__sleep(key === 'jrg' ? 3500 : 900);
-      return { maxV, maxL: +maxL.toFixed(2), vb: M.getBudget()[0], n, left: M.A.voices.size, mx: M.mxSrcText('l0') };
+      return { maxV, maxL: +maxL.toFixed(2), over: +over.toFixed(2), vb: M.getBudget()[0], n, left: M.A.voices.size, mx: M.mxSrcText('l0') };
     }, key);
-    L.ok(busy.n > 0 && busy.maxL <= busy.vb + 1e-9 && busy.left === 0, `${key}: Puls lanes at level 3 play it (up to ${busy.n} voices, max load ${busy.maxL} ≤ ${busy.vb}), all end`);
+    L.ok(busy.n > 0 && busy.over <= 1e-9 && busy.left === 0, `${key}: Puls lanes at level 3 play it (up to ${busy.n} voices, max load ${busy.maxL}, never above the budget of the moment – now ${busy.vb}), all end`);
   }
-  // Elmsfeuer: a held arc jumps now and then (elmTick), a knob turned while it sounds reaches it (v.upd)
+  // Elmsfeuer: a held voice high up builds its arc (saw, steps, gates, band-pass), a knob turned while it sounds reaches it (v.upd)
   { const r = await page.evaluate(async () => {
       const M = window.__M, A = M.A; M.setParam('v.eng', 'elm');
-      const v = M.playNote('elm', A.ctx.currentTime + 0.01, 220, 0.9, 0.7, {}); let n = 0; const j = v.jump; v.jump = (at) => { n++; j(at); };
-      await window.__sleep(4000); const jumps = n;
-      const c0 = v.parts.sides[0].cg.gain.value; M.setParam('elm.knistern', 0); await window.__sleep(300); const c1 = v.parts.sides[0].cg.gain.value; M.setParam('elm.knistern', 0.5);
+      const v = M.playNote('elm', A.ctx.currentTime + 0.01, 220, 0.9, 0.7, {});
+      await window.__sleep(1500); const S = v.parts.sides[0], arc = !!S.arc && S.arc.osc.type === 'sawtooth' && S.arc.bp.type === 'bandpass';
+      const c0 = S.cg.gain.value; M.setParam('elm.knistern', 0); await window.__sleep(300); const c1 = S.cg.gain.value; M.setParam('elm.knistern', 0.5);
       v.release(); await window.__sleep(900);
-      return { jumps, c0, c1, held: M.ELM.held.size, left: A.voices.size, macro: [M.macroId(0), M.macroId(1)], mx: M.mxSrcText('fin'), group: M.GROUP.elm + '/' + M.GROUP.jrg };
+      return { arc, c0, c1, left: A.voices.size, macro: [M.macroId(0), M.macroId(1)], mx: M.mxSrcText('fin'), group: M.GROUP.elm + '/' + M.GROUP.jrg };
     });
-    L.ok(r.jumps >= 4 && r.jumps <= 12 && r.held === 0, `elm: a held arc jumps ${r.jumps}× in 4 s (≤ 3/s), forgotten after the release`);
+    L.ok(r.arc, 'elm: high on the field the held voice has its arc (saw → band-pass, as planned)');
     L.ok(r.c0 > 0.01 && r.c1 < 0.002 && r.left === 0, `elm: Knistern turned to 0 while it sounds silences the corona (${r.c0.toFixed(3)} → ${r.c1.toFixed(4)})`);
     L.ok(r.macro.join() === 'elm.spannung,elm.knistern' && r.mx === 'Elmsfeuer' && r.group === 'Elmsfeuer/Jahresring', `MACRO A/B ${r.macro}, mixer source „${r.mx}“, MIDI groups ${r.group}`); }
   // Jahresring: the year runs with the sound (Jahr 0.5 min: 1/30 of the year per second), stands while suspended or hidden

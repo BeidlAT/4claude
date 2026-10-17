@@ -33,7 +33,8 @@ Claude-Session: <this session's URL>
 **Workflow etiquette:**
 - Build stage by stage, as the owner chose. Each stage is built, tested, committed, pushed and published before the next one starts.
 - Report to the owner in German, briefly.
-- The owner's Claude usage limits have been hit repeatedly. Prefer a few sequential background `Agent` calls per stage (build → build UI/texts → review/fix) over big multi-agent workflows.
+- **Best sound quality first (owner, 17.10.2026, for the whole project):** cost targets in SPEC and in the bench are measured and reported, never a reason to simplify a sound. Build every engine with its full planned sound (and better where possible); enter the measured VCOST honestly. If two goals of the plan conflict, ask the owner before deciding.
+- The earlier usage-limit trouble came from the model in use then; there is no need to economise on tokens or subagents.
 
 ### Documents (binding)
 - `dev/klang/SPEC.md` – the build spec:
@@ -88,12 +89,14 @@ Then use these:
   - Worklet load time and thread move on a mid-range Android are not measured.
 
 ### Notes from stage 2 (Elmsfeuer, Jahresring)
-- **Chromium cuts a BiquadFilter's output** after its own tail estimate once its input is silent – for a high-Q band-pass excited by a click that is long before the mode has rung out (Q 150 at 440 Hz: cut at 0.29 s, T60 0.75 s). Jahresring keeps its click source looping a −140 dB trickle until the voice ends. Any future native resonator needs the same.
-- **Native cost is per node, ~6–10 ns each** (≈ 0.05–0.07 units), more than SPEC's 0.03/AudioParam. What saved most: baking the hum's saturation into a PeriodicWave (FFT, `fftInPlace`), a pre-filtered noise buffer instead of a low-pass per voice, mode weights (box, tube, mallet) as gains instead of filters, k-rate gains, a-rate params on fixed filters, arc jumps scheduled from `tick()` (`elmTick`) instead of a buffer source.
-- **Elmsfeuer** costs ≈ 0.8–1.0 with its arc built (SPEC asked ≤ 0.8), ≈ 0.6 without (the arc is built only when the voltage reaches it or for a Puls zap); VCOST1 1.0, the bench target is 1.0. Changes vs SPEC §3.9 (all measured): the hum's asymmetry dropped (a sine series stays offset-free through tanh, no 30-Hz high-pass needed), the arc is a square (odd harmonics: no offset from its tanh) without band-pass, the stutter comes from the crackle itself (no gate buffers), the corona noise is one 6-s buffer low-passed at 1.2 kHz with density set by the gain alone (z 4.1 → 1.7: 0.5 → ~90 → ~250 ticks/s).
-- **Jahresring**: four band-pass modes from a click, mallet/box/tube as per-mode gains; level 3 = two bars ±3 ct (4 + 2 modes) instead of SPEC's six modes (cost: L3 ≤ 2.3× L1). The year starts where the calendar stands (5 May = spring), runs in `tick()` (`jrgClock`) only while the context runs and the page is visible, hits add ≤ 2/s. Age resets with Verjüngen, Schlafen and panic.
-- **Library texts:** `famPlay()` now names a family by the way most of its sources play (Elmsfeuer, „beides“, would otherwise have moved Luft into „Tippen und Wischen“).
-- **By ear, still open:** the arc's character (square + tanh), the crackle density at the default Spannung, the Jahresring box/tube balance, leaves and ice levels.
+- **Built to SPEC §3.9/§3.12 with their full sound** (a first version had simplified both to reach SPEC's cost targets; the owner rejected that – best sound first). Cost as measured: Elmsfeuer ≈ 1.0–1.6 units at level 1 with its arc (≈ 2–4 at level 3), Jahresring ≈ 0.8–1.1 while its modes ring (≈ 2–2.7 at level 3); VCOST 1.8/4.2 and 1.2/2.9. The bench reports cost as INFO, it no longer fails on it.
+- **Chromium cuts a BiquadFilter's output** after its own tail estimate once its input is silent – for a high-Q band-pass excited by a click that is long before the mode has rung out (Q 150 at 440 Hz: cut at 0.29 s, T60 0.75 s). Jahresring's contact source loops a −140 dB trickle until the voice ends (`jrgImp`). Any future native resonator needs the same.
+- **Where the build differs from SPEC's letter, and why** (each measured): the hum is one PeriodicWave with SPEC's lopsided tanh baked in (same sound as two oscillators and a shaper, without aliasing or offset); the corona's pre-gain is set so the threshold lies z = 4.1 → 1.4 standard deviations out (SPEC's 0.6 + 1.2·y gave almost no ticks; the acceptance asks 50–300/s) and its level `knistern·(0.2 + y)` is evened out with the density (else the ticks low are inaudible and the fizz high buries the arc); the arc's follower has a soft ceiling (bursts of ticks would pop) and its tanh is oversampled (2×, level 3 4×); a high-pass after the arc's tanh takes its offset; the shared loops (steps, two gates) are 16 s, not 2 s (the check's „repeats audibly“), the steps capped at 2.7 jumps/s; zap steps stay in key (KONZEPT „in der Tonart“ over SPEC's „depth ∝ vel“); a zap halves the hum so the arc leads. Jahresring: the mallet is its contact (a click, the same every hit) plus SPEC's 2–6 ms noise burst, so no hit comes out weak; a soft mallet weakens the upper modes and the box opens toward the bar's end (both for SPEC's „centre round, end bright“); the knock passes the box (SPEC's „knock noise“); the ice crack adds a 2-ms tick past the box so it is heard.
+- **Native cost is per node, ~6–10 ns each** (≈ 0.05–0.07 units), more than SPEC's 0.03/AudioParam.
+- The year starts where the calendar stands (5 May = spring), runs in `tick()` (`jrgClock`) only while the context runs and the page is visible, hits add ≤ 2/s. Age resets with Verjüngen, Schlafen and panic.
+- **Library texts:** `famPlay()` names a family by the way most of its sources play (Elmsfeuer, „beides“, would otherwise have moved Luft into „Tippen und Wischen“).
+- **By ear, still open:** the arc's character, the crackle density at default height, the Jahresring box/tube/knock balance, leaves and ice levels.
+- **Halm** (stage 1) still lacks SPEC's Flöte and Flamme – by the owner's rule they belong in, at the next chance.
 
 ### Next stages (SPEC §8; step 1–3 + library = done)
 1. **Stage 3:** `hrz` Harz – glas/schale/stab, then zunge/teich by ear (§3.1).
