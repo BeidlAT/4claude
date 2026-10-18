@@ -16,8 +16,8 @@ function peakHz(sig, f, at, N) {
   return (b + 0.5 * (a - d) / (a - 2 * c + d)) * hz;
 }
 // -- the contract
-L.ok(['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel-aeol', 'myzel-gendy', 'myzel-web', 'myzel-null'].every((k) => D.procs[k]), 'module registers myzel-blow, myzel-scan, myzel-bow, myzel-rot, myzel-aeol, myzel-gendy, myzel-web, myzel-null: ' + Object.keys(D.procs).join(', '));
-for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel-aeol', 'myzel-gendy']) {
+L.ok(['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel-aeol', 'myzel-gendy', 'myzel-web', 'myzel-string', 'myzel-null'].every((k) => D.procs[k]), 'module registers myzel-blow, myzel-scan, myzel-bow, myzel-rot, myzel-aeol, myzel-gendy, myzel-web, myzel-string, myzel-null: ' + Object.keys(D.procs).join(', '));
+for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel-aeol', 'myzel-gendy', 'myzel-string']) {
   const r = note(name, 220, 0.6, { at: 0.3, dur: 0.6 });
   const pre = L.rms(r.L, 0, Math.floor(0.3 * SR) - 1), post = L.rms(r.L, Math.floor(0.33 * SR), Math.floor(0.6 * SR));
   L.ok(pre === 0 && post > 1e-3, `${name}: a note posted ahead waits for its time (silent before 0.3 s, ${L.db(post).toFixed(1)} dB after)`);
@@ -35,9 +35,9 @@ for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel
 // -- every knob at its extremes, pitches 16 Hz … 8 kHz, bursts and held, both levels: bounded, finite, ends
 {
   let x = 99; const rnd = () => { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; return (x >>> 0) / 4294967296; };
-  for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel-aeol', 'myzel-gendy']) {
+  for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel-aeol', 'myzel-gendy', 'myzel-string']) {
     let worst = 0, bad = 0, notDone = 0;
-    const keys = name === 'myzel-blow' ? ['atem', 'mund', 'blatt', 'luft', 'zunge'] : name === 'myzel-bow' ? ['druck', 'bogen', 'daempfung', 'schwebung', 'harz'] : name === 'myzel-rot' ? ['pilz', 'knistern', 'schwellen', 'schlaegel'] : name === 'myzel-aeol' ? ['wind', 'boeen', 'nachklang', 'rauschen', 'fang', 'dunkel'] : name === 'myzel-gendy' ? ['zeit', 'rueck'] : ['masse', 'feder', 'mitte', 'daempfung', 'hammer', 'holz'];
+    const keys = name === 'myzel-blow' ? ['atem', 'mund', 'blatt', 'luft', 'zunge'] : name === 'myzel-bow' ? ['druck', 'bogen', 'daempfung', 'schwebung', 'harz'] : name === 'myzel-string' ? ['daempfung', 'steifheit', 'zupfort', 'hand', 'ebow'] : name === 'myzel-rot' ? ['pilz', 'knistern', 'schwellen', 'schlaegel'] : name === 'myzel-aeol' ? ['wind', 'boeen', 'nachklang', 'rauschen', 'fang', 'dunkel'] : name === 'myzel-gendy' ? ['zeit', 'rueck'] : ['masse', 'feder', 'mitte', 'daempfung', 'hammer', 'holz'];
     for (let i = 0; i < 40; i++) {
       const prm = {}; for (const k of keys) prm[k] = i < 4 ? [0, 1, 0, 1][i] * (k.length % 2 ? 1 : 1) : rnd() < 0.3 ? Math.round(rnd()) : rnd();
       if (name === 'myzel-bow') prm.koerper = ['glas', 'schale', 'stab', 'zunge', 'teich'][i % 5];
@@ -45,6 +45,7 @@ for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel
       if (name === 'myzel-aeol') prm.nachklang = 0.5 * Math.pow(12, prm.nachklang);   // (0.5–6 s, exp)
       if (name === 'myzel-gendy') { prm.verteilung = ['linear', 'cauchy', 'logist', 'sinus'][i % 4]; prm.punkte = 3 + Math.floor(rnd() * 22); prm.att = 0.005 * Math.pow(400, rnd()); prm.rel = 0.05 * Math.pow(120, i < 4 ? [0, 1, 0, 1][i] : rnd()); }
       if (name === 'myzel-rot') { prm.koerper = ['glocke', 'holz', 'knochen'][i % 3]; prm.nachklang = i < 4 ? [1, 12, 1, 12][i] : 1 + 11 * rnd(); }
+      if (name === 'myzel-string') { prm.steg = (i >> 1) % 2 ? 'jawari' : 'flach'; prm.daempfung = 0.3 * Math.pow(8 / 0.3, prm.daempfung); prm.zupfort = 0.05 + 0.45 * prm.zupfort; }   // (the knobs' own ranges)
       const f = [16, 30, 55, 220, 1000, 3000, 8000][i % 7] * (0.9 + 0.2 * rnd()), y = i % 5 === 0 ? 1 : i % 5 === 1 ? 0 : rnd(), rich = i % 2 === 1, burst = i % 3 === 0;
       // (a bow's modes ring as Dämpfung and the body say – up to 16 s: it must end within two of its rings)
       const ring = name === 'myzel-bow' ? (0.4 + 6 * (1 - prm.daempfung) * (1 - prm.daempfung)) * { glas: 0.6, schale: 2.5, stab: 1.6, zunge: 0.35, teich: 2 }[prm.koerper] : name === 'myzel-aeol' ? prm.nachklang : name === 'myzel-gendy' ? 4.5 * prm.rel : 0;   // (Amöbe: its own fade τ = 0.8·rel down to −100 dB ≈ 8·rel – in the app the voice's release ends it at 1.6·rel)
@@ -332,5 +333,57 @@ for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel
   const { aliasAt } = require('./alias-amo');
   const al = [1013, 2011].map((f) => aliasAt(f, 0.5, { prm: { zeit: 0.15 } }));
   L.ok(al.every((a) => a.worst <= -30 && a.total <= -30), 'amo: aliasing above 1 kHz ≤ −30 dB against a 4× reference (worst line / between the harmonics): ' + al.map((a) => a.worst.toFixed(1) + '/' + a.total.toFixed(1)).join(', '));
+}
+// -- Sehne (myzel-string): tuning at the knobs' extremes; the glide's per-sample length (a per-block variant as the
+// control); the flageolet's node exact under stiffness; the jawari keeps its energy and piles up no DC; the E-Bow's
+// ceiling; the bridge changed under a sounding note; level 3 and after underruns
+{
+  const SN = 'myzel-string', fine = (sig, f, at, N = 32768) => peakHz(sig, f, at, N);
+  let worst = 0, at = '';
+  for (const prm of [{ steifheit: 0 }, { steifheit: 1 }, { daempfung: 0.3 }, { daempfung: 8, steifheit: 1 }, { steg: 'jawari' }]) for (const f of [55, 220, 880, 2000]) {
+    const r = note(SN, f, 0.5, { prm, dur: 1.2 }), c = Math.abs(L.cents(fine(r.L, f, prm.daempfung === 0.3 ? 0.02 : 0.4, prm.daempfung === 0.3 ? 16384 : 32768), f));   // (a 0.3-s note: the whole of it in one long window – a 4096-point read is off 4–6 ct even on a long note)
+    if (c > worst) { worst = c; at = `${f} Hz ${JSON.stringify(prm)}`; }
+  }
+  L.ok(worst <= 3, `string: in tune at the knobs' extremes (Steifheit 0/1, Nachklang 0.3/8 s, Jawari), 55–2000 Hz: worst ${worst.toFixed(2)} ct (${at})`);
+  // the stiffness stretches the partials sharp, and more with Steifheit (h10 at 220 Hz)
+  const st = [0, 0.25, 1].map((v) => { const r = note(SN, 220, 0.5, { prm: { steifheit: v }, dur: 1.2 }); const f1 = fine(r.L, 220, 0.4); return L.cents(fine(r.L, 2200 * 1.01, 0.4, 32768), 10 * f1); });
+  L.ok(Math.abs(st[0]) <= 2 && st[1] >= 4 && st[2] >= 4 * st[1], `string: Steifheit stretches the 10th partial at 220 Hz ${st.map((c) => c.toFixed(1)).join(' / ')} ct (Steifheit 0 / 0.25 / 1)`);
+  // glide: per sample vs once per block (the zipper above 12 kHz, see glide-shn.js)
+  const G = require('./glide-shn'), gz = G.glide(G.base), gs = G.glide(G.stairs);
+  L.ok(gz <= 10 && gs >= gz + 15, `string: a glide 220 → 330 Hz in 0.2 s – above 12 kHz while gliding vs held: per sample ${gz.toFixed(1)} dB, a per-block length (control) ${gs.toFixed(1)} dB`);
+  // the node at ½ is exact even when the stiffness stretches the modes: 2f rings on (its decay within 25 % of the open
+  // string's 2f), the fundamental is gone
+  const gz2 = (x, a, b, fq) => { a = Math.round(a); b = Math.round(b); let re = 0, im = 0; for (let i = a; i < b; i++) { const w = 2 * Math.PI * fq * i / SR; re += x[i] * Math.cos(w); im += x[i] * Math.sin(w); } return 2 * Math.hypot(re, im) / Math.max(1, b - a); };
+  const node = [];
+  for (const sf of [0, 1]) {
+    const o = note(SN, 220, 0.5, { prm: { steifheit: sf, daempfung: 4 }, dur: 2.2 }), g = note(SN, 220, 0.75, { prm: { steifheit: sf, daempfung: 4 }, dur: 2.2 });
+    const f2 = fine(o.L, 440 * 1.002, 0.5), dk = (x) => L.db(gz2(x, 0.5 * SR, 0.7 * SR, f2)) - L.db(gz2(x, 1.6 * SR, 1.8 * SR, f2));
+    node.push([sf, +(dk(g.L) / dk(o.L)).toFixed(2), +(L.db(gz2(g.L, 0.5 * SR, 0.7 * SR, 220)) - L.db(gz2(g.L, 0.5 * SR, 0.7 * SR, f2))).toFixed(1)]);
+  }
+  L.ok(node.every((x) => Math.abs(x[1] - 1) <= 0.25 && x[2] <= -30), 'string: the ½ node exact – 2f decays as on the open string (ratio ' + node.map((x) => x[1]).join(' / ') + '), the fundamental ' + node.map((x) => x[2] + ' dB').join(' / ') + ' under it (Steifheit 0 / 1)');
+  // jawari: as long as the flat bridge (the lattice is lossless); no DC piled up in the waves
+  const jl = [], dc = [];
+  for (const f of [110, 220, 440]) {
+    const j = note(SN, f, 0.5, { prm: { steg: 'jawari' }, dur: 1.2 }), fl = note(SN, f, 0.5, { prm: { steg: 'flach' }, dur: 1.2 });
+    jl.push(+(L.db(L.rms(j.L, 0.9 * SR, 1.1 * SR)) - L.db(L.rms(fl.L, 0.9 * SR, 1.1 * SR))).toFixed(1));
+    const sp = L.spectrum(j.L, SR, 0.25, 8192); let a = 0, b = 0; for (let k = 0; k * sp.hz < 20; k++) a += sp.p[k]; for (let k = Math.round(f * 0.9 / sp.hz); k < f * 1.1 / sp.hz; k++) b += sp.p[k];
+    dc.push(+(10 * Math.log10((a + 1e-30) / (b + 1e-30))).toFixed(0));
+  }
+  L.ok(jl.every((d) => d >= -8) && dc.every((d) => d <= -30), `string: jawari keeps its energy (level at 1 s vs flat ${jl.join(' / ')} dB, ≥ −8) and piles up no DC (below 20 Hz vs f at 0.25 s ${dc.join(' / ')} dB, ≤ −30)`);
+  // E-Bow at full strength: under the −6 dBFS ceiling (RMS), bounded, held
+  const eb = note(SN, 220, 1, { prm: { ebow: 1 }, dur: 4, vel: 1 }), er = L.rms(eb.L, 2.5 * SR, 3.9 * SR);
+  L.ok(er <= 0.52 && er > 0.03 && L.peak(eb.L) < 1, `string: E-Bow 1 at the top – RMS ${L.db(er).toFixed(1)} dBFS (≤ −6), peak ${L.db(L.peak(eb.L)).toFixed(1)} dBFS`);
+  // the bridge and the hand changed under a sounding note: bounded, sounding
+  const sw = R({ name: SN, po: { seed: 1, prm: { steg: 'flach' } }, dur: 3, params: (t) => ({ freq: 196, hoehe: t < 1 ? 0.5 : t < 2 ? 0.92 : 0.75 }), msgs: [[0, { on: 0, f: 196, y: 0.5, vel: 0.8 }], [0.5, { set: { steg: 'jawari' } }], [1.5, { set: { steg: 'flach' } }], [2.2, { set: { hand: 1, steifheit: 1 } }]] });
+  L.ok(!L.nanCount(sw.L) && L.peak(sw.L) < 1 && [0.8, 1.8, 2.6].every((t) => L.rms(sw.L, Math.round(t * SR), Math.round((t + 0.15) * SR)) > 1e-3), `string: Steg and hand changed under a sounding note – bounded (peak ${L.peak(sw.L).toFixed(2)}), sounding`);
+  // level 3: two strings, decorrelated, as loud as level 1 per channel (mono halves through the panner); after
+  // underruns (lite) one string on both sides
+  const l1 = note(SN, 220, 0.5, { dur: 1.5 }), l3 = note(SN, 220, 0.5, { rich: true, dur: 1.5 });
+  let x = 0, a = 0, b = 0; for (let i = 0.1 * SR; i < 1.5 * SR; i++) { x += l3.L[i] * l3.R[i]; a += l3.L[i] ** 2; b += l3.R[i] ** 2; }
+  const d13 = 10 * Math.log10((0.5 * (a + b) / (1.4 * SR)) / (0.5 * Math.pow(L.rms(l1.L, 0.1 * SR, 1.5 * SR), 2)));
+  L.ok(x / Math.sqrt(a * b) < 0.6 && Math.abs(d13) <= 1.5, `string: level 3 – L/R correlation ${(x / Math.sqrt(a * b)).toFixed(2)} (two strings ±3 ct), per channel ${d13.toFixed(2)} dB vs level 1 through the panner`);
+  const lt = R({ name: SN, po: { rich: true, lite: 1, seed: 1 }, ch: 2, dur: 1, params: { freq: 220, hoehe: 0.5 }, msgs: [[0, { on: 0, f: 220, y: 0.5, vel: 0.8 }]] });
+  let same = true; for (let i = 0; i < lt.L.length; i++) if (lt.L[i] !== lt.R[i]) { same = false; break; }
+  L.ok(same && L.rms(lt.L, 0.1 * SR, 0.5 * SR) > 1e-3 && Math.abs(L.cents(fine(lt.L, 220, 0.3, 16384), 220)) <= 3, 'string after underruns (lite): one string, the same on both channels, in tune');
 }
 process.exit(L.summary() ? 1 : 0);

@@ -60,7 +60,7 @@ const L = require('./dsplib'), K = require('./klh');
   f1 = await foc();
   await key('ArrowRight'); f2 = await foc();
   r = await M(() => [...document.querySelectorAll('.kq-tile')].map((t) => t.dataset.k).join());
-  L.ok(f1 === 'fam:dunst' && f2 === 'fam:holz' && r === 'hrz,rnk,sai,jrg', 'Shift+Tab to the checked family (Dunst); → Holz filters to ' + r);
+  L.ok(f1 === 'fam:dunst' && f2 === 'fam:holz' && r === 'hrz,shn,rnk,sai,jrg', 'Shift+Tab to the checked family (Dunst); → Holz filters to ' + r);
   // the trap: Tab cycles inside
   const seen = new Set();
   for (let i = 0; i < 9; i++) { await key('Tab'); seen.add(await M(() => document.querySelector('#kqLib').contains(document.activeElement))); }

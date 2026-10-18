@@ -31,7 +31,7 @@ const TMP = path.join(__dirname, 'out');
     v1: { app: 'Myzel', version: 1, name: 'Alt eins', values: { 'v.eng': 'glo', 'v.layer': 'sch', 'l0.eng': 'trp', 'l1.eng': 'hau', 'dly.mix': 0.4 } },
     v2: { app: 'Myzel', version: 2, name: 'Alt zwei', values: { 'v.eng': 'klb', 'v.layer': 'off', 'l2.eng': 'swm' }, faehrte: null, gestik: { rgS: 'sai' } },
     bare: { 'v.eng': 'stm', 'l3.eng': 'mem' },
-    newer: { app: 'Myzel', version: 2, name: 'Aus der Zukunft', values: { 'v.eng': 'rhz', 'v.layer': 'unk', 'l1.eng': 'unk', 'l2.eng': 'gng' } },
+    newer: { app: 'Myzel', version: 2, name: 'Aus der Zukunft', values: { 'v.eng': 'fle', 'v.layer': 'unk', 'l1.eng': 'unk', 'l2.eng': 'gng' } },
   };
   const out = {};
   for (const k in files) {
@@ -42,7 +42,7 @@ const TMP = path.join(__dirname, 'out');
   L.ok(out.v1.e === 'glo' && out.v1.ly === 'sch' && out.v1.l[0] === 'trp' && out.v1.l[1] === 'hau' && out.v1.dly === 0.4 && /„Alt eins“ geladen\.$/.test(out.v1.t), 'version 1 export: Glocke + Schale, lanes Tropfen/Hauch („' + out.v1.t + '“)');
   L.ok(out.v2.e === 'klb' && out.v2.ly === 'off' && out.v2.l[2] === 'swm' && !/nicht –/.test(out.v2.t), 'version 2 export: Kalimba, no layer, lane 3 Schwarm');
   L.ok(out.bare.e === 'stm' && out.bare.l[3] === 'mem', 'a bare values object: Stimme, lane 4 Membran');
-  L.ok(out.newer.e === 'neb' && out.newer.ly === 'off' && out.newer.l[1] === 'hau' && out.newer.l[2] === 'gng' && out.newer.t === '„Aus der Zukunft“ geladen. Klangquellen „Rhizom“ und „Unke“ gibt es in dieser Version nicht – Nebel gewählt, zweite Ebene aus und Spur 2 spielt Hauch.',
+  L.ok(out.newer.e === 'neb' && out.newer.ly === 'off' && out.newer.l[1] === 'hau' && out.newer.l[2] === 'gng' && out.newer.t === '„Aus der Zukunft“ geladen. Klangquellen „Flechte“ und „Unke“ gibt es in dieser Version nicht – Nebel gewählt, zweite Ebene aus und Spur 2 spielt Hauch.',
     'a newer export: one toast „' + out.newer.t + '“');
   r = await M(() => { const a = document.querySelector('#toastAct'); return !a.hidden && a.textContent; });
   L.ok(r === 'Rückgängig', '… and it keeps its Rückgängig');

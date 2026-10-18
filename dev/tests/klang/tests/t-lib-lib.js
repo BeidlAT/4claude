@@ -7,7 +7,7 @@ const { chromium } = require('/opt/node22/lib/node_modules/playwright');
 const L = require('./dsplib'), K = require('./klh');
 (async () => {
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
-  const { page, errors, ctx } = await K.open(browser, { w: 360, h: 740, store: { 'myzel.klang.v1': JSON.stringify({ fav: ['glo', 'rhz'], recent: [] }) } });
+  const { page, errors, ctx } = await K.open(browser, { w: 360, h: 740, store: { 'myzel.klang.v1': JSON.stringify({ fav: ['glo', 'blz'], recent: [] }) } });
   const M = (fn, a) => page.evaluate(fn, a);
   const st = () => M(() => {
     const lib = document.querySelector('#kqLib');
@@ -48,7 +48,7 @@ const L = require('./dsplib'), K = require('./klh');
   await page.click('.kq-fams .chip[data-fam="alle"]'); await page.waitForTimeout(80);
   s = await st();
   r = await M(() => [...document.querySelectorAll('.kq-fh')].map((h) => h.firstChild.textContent));
-  L.ok(s.tiles.length === 23 && r.join() === 'Luft,Dunst,Holz,Erz,Erde', 'Alle: 23 tiles under five sticky heads');
+  L.ok(s.tiles.length === 25 && r.join() === 'Luft,Dunst,Holz,Erz,Erde', 'Alle: 25 tiles under five sticky heads');
   const search = async (q) => { await page.fill('#kqSearch', q); await page.waitForTimeout(60); return (await st()).tiles; };
   r = { oe: await search('koerner'), uml: await search('Körner'), bow: await search('flute'), fam: await search('erz'), art: await search('schlägt'), bass: await search('808'), none: await search('qqq') };
   s = await st();
@@ -60,14 +60,14 @@ const L = require('./dsplib'), K = require('./klh');
   // favourites: ★ persisted, a key this version lacks stays stored but is not shown
   await page.click('.kq-fams .chip[data-fam="fav"]'); await page.waitForTimeout(60);
   s = await st();
-  L.ok(s.tiles.join() === 'glo', '★ Favoriten from myzel.klang.v1: ' + s.tiles + ' (the unknown „rhz“ not shown)');
+  L.ok(s.tiles.join() === 'glo', '★ Favoriten from myzel.klang.v1: ' + s.tiles + ' (the unknown „blz“ not shown)');
   await page.click('.kq-fams .chip[data-fam="dunst"]'); await page.waitForTimeout(60);
   await page.click('.kq-tile[data-k="swm"] .kq-fav'); await page.waitForTimeout(60);
   r = await M(() => ({ st: JSON.parse(localStorage.getItem('myzel.klang.v1')), pr: document.querySelector('.kq-tile[data-k="swm"] .kq-fav').getAttribute('aria-pressed') }));
-  L.ok(r.pr === 'true' && r.st.fav.join() === 'glo,rhz,swm', '★ on Schwarm: pressed, stored ' + r.st.fav);
+  L.ok(r.pr === 'true' && r.st.fav.join() === 'glo,blz,swm', '★ on Schwarm: pressed, stored ' + r.st.fav);
   await page.click('.kq-tile[data-k="swm"] .kq-fav'); await page.waitForTimeout(60);
   r = await M(() => JSON.parse(localStorage.getItem('myzel.klang.v1')).fav.join());
-  L.ok(r === 'glo,rhz', 'again: no longer a favourite (' + r + ')');
+  L.ok(r === 'glo,blz', 'again: no longer a favourite (' + r + ')');
   // recent: chosen across places, ≤ 6, without the current one; hearing adds nothing
   r = await M(async () => {
     const M = window.__M;
@@ -115,7 +115,7 @@ const L = require('./dsplib'), K = require('./klh');
     o.fieldOff = !!document.querySelector('.kq-tile[data-k="off"]'); M.kqClose(); M.setParam('v.eng', 'neb');
     return o;
   });
-  L.ok(r.tiles.join() === 'off,tie,mem,trp,mdr' && r.on === 'off' && r.layer === 'mem' && r.off === 'off' && !r.fieldOff, 'layer: opens on Erde (the field plays Tiefe) with „Aus“ first and checked; Membran, then Aus again; the field has no „Aus“');
+  L.ok(r.tiles.join() === 'off,tie,mem,trp,mdr,rhz' && r.on === 'off' && r.layer === 'mem' && r.off === 'off' && !r.fieldOff, 'layer: opens on Erde (the field plays Tiefe) with „Aus“ first and checked; Membran, then Aus again; the field has no „Aus“');
   // the rain: held sources grey with the reason, not chosen by a tap
   r = await M(async () => {
     const M = window.__M; M.gkSet('rgS', 'trp'); const T = M.kqTarget('rgS'); M.kqOpen(T, { where: 'Sporenregen' }); await window.__sleep(80);
@@ -129,7 +129,7 @@ const L = require('./dsplib'), K = require('./klh');
     M.kqClose(); M.gkSet('rgS', 'trp');
     return o;
   });
-  L.ok(r.tiles.join() === 'tie-,mem,trp,mdr' && /gehaltene Quellen sind hier grau/.test(r.why) && r.rgS === 'trp' && /Tiefe: hält/.test(r.live), 'rain: Tiefe grey (' + r.tiles + '), the reason in the head, a tap does not choose it („' + r.live + '“)');
+  L.ok(r.tiles.join() === 'tie-,mem,trp,mdr,rhz' && /gehaltene Quellen sind hier grau/.test(r.why) && r.rgS === 'trp' && /Tiefe: hält/.test(r.live), 'rain: Tiefe grey (' + r.tiles + '), the reason in the head, a tap does not choose it („' + r.live + '“)');
   L.ok(/blüht zu lange/i.test(r.gng) && /Nicht für den Sporenregen/.test(r.lab) && r.klb === 'klb', 'Gong grey with its own reason („' + r.gng + '“, ' + r.lab + '); Kalimba chosen (' + r.klb + ')');
   L.ok(!errors.length, 'no console errors (' + errors.slice(0, 2).join(' | ') + ')');
   await ctx.close(); await browser.close();

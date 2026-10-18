@@ -2,7 +2,7 @@
 // offline render time minus an empty render), made sturdier against a noisy machine: all candidates are measured in
 // interleaved rounds and each keeps its fastest round. Native engines are measured alongside: their VCOST entries
 // (from an earlier calibration on another machine) give the scale between this machine's raw ratio and the table.
-//   node cost.js [rounds]      env: ENGS=hlm1,hlm3,… NV=24 DUR=4 PARAMS='{"jrg.holz":1}'     prints one JSON line
+//   node cost.js [rounds]      env: ENGS=hlm1,hlm3,… NV=24 DUR=4 PARAMS='{"jrg.holz":1}' Y=0.6 (the voices' height)     prints one JSON line
 // (a struck engine needs DUR within its voices' life – Jahresring: PARAMS holz 1 and a summer, DUR 2)
 process.env.SEED_BLOBS = '';
 const { chromium, openInst } = require('../../v2/lib');
@@ -12,7 +12,7 @@ const XP = JSON.parse(process.env.PARAMS || '{}');
 (async () => {
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
   const { page } = await openInst(browser, process.env.KD_URL || 'http://127.0.0.1:8790/kd-inst/index.html', false);
-  const r = await page.evaluate(async ([ROUNDS, DUR, NV, ENGS, XP]) => {
+  const r = await page.evaluate(async ([ROUNDS, DUR, NV, ENGS, XP, YH]) => {
     const M = window.__M;
     async function run(eng, q, n) {
       M.P['dev.q'] = q;
@@ -27,7 +27,7 @@ const XP = JSON.parse(process.env.PARAMS || '{}');
             continue;
           }
           if (eng === 'null') { const nd = new AudioWorkletNode(ctx, 'myzel-null', { numberOfInputs: 0, outputChannelCount: [1], processorOptions: { on: { on: 0 } } }); nd.connect(ctx.destination); }
-          else M.playNote(eng, ctx.currentTime, M.noteAt((k * 0.37) % 1).f, 0.6, 0.5, {});
+          else M.playNote(eng, ctx.currentTime, M.noteAt((k * 0.37) % 1).f, YH, 0.5, {});
         }
         ctx.resume();
       });
@@ -48,7 +48,7 @@ const XP = JSON.parse(process.env.PARAMS || '{}');
     out.scale = +(med.length % 2 ? med[mid] : (med[mid - 1] + med[mid]) / 2).toFixed(3); out.scaleEach = Object.fromEntries(refs.map((eq, i) => [eq, +sc[i].toFixed(2)]));
     M.P['dev.q'] = '1';
     return out;
-  }, [ROUNDS, DUR, NV, ENGS, XP]);
+  }, [ROUNDS, DUR, NV, ENGS, XP, +(process.env.Y || 0.6)]);
   console.log(JSON.stringify(r));
   await browser.close();
 })();
