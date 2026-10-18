@@ -16,7 +16,7 @@ const L = require('./dsplib'), K = require('./klh');
   });
   L.ok(r.role === 'group' && r.n === 3 && r.h >= 44 && !r.small && r.pid === 'v.eng' && !r.chips, 'field: #p-v-eng is a group of ‹ name › (' + r.h + ' px, all targets ≥ 44 px), data-pid kept, no chips');
   L.ok(/Nebel · Dunst/.test(r.name) && /Klangquelle für die Spielfläche: Nebel, Dunst, hält\. Bibliothek öffnen/.test(r.label), 'name line „' + r.name + '“, label „' + r.label + '“');
-  L.ok(r.order === 'hau obt stm hlm elm neb kor swm hrz rnk sai jrg glo sch gng klb tie mem trp', 'ENG_OPTS by family (' + r.order + ')');
+  L.ok(r.order === 'hau obt stm hlm boe elm khl neb kor swm amo hrz shn zpf rnk sai jrg glo sch gng klb gsp tie glt mem trp mdr rhz', 'ENG_OPTS by family (' + r.order + ')');
   // ‹ › step and probe
   await page.click('#p-v-eng .kq-step:last-child'); await page.waitForTimeout(120);
   r = await M(() => ({ eng: window.__M.P['v.eng'], pr: [...window.__M.A.voices].filter((v) => v.alive && v.probe && !v.probeEnd).map((v) => v.eng), say: document.querySelector('#kqSay').textContent }));
@@ -25,8 +25,8 @@ const L = require('./dsplib'), K = require('./klh');
   r = await M(() => ({ eng: window.__M.P['v.eng'], pr: [...window.__M.A.voices].filter((v) => v.alive && v.probe && !v.probeEnd).length }));
   L.ok(r.eng === 'neb' && r.pr === 1, '‹ steps back, one probe at a time (' + r.pr + ')');
   // ends: disabled, no wrap
-  r = await M(() => { const M = window.__M; M.setParam('v.eng', 'hau'); const a = document.querySelector('#p-v-eng .kq-step:first-child').disabled; M.setParam('v.eng', 'trp'); const b = document.querySelector('#p-v-eng .kq-step:last-child').disabled; M.kqStep(M.kqTarget('v.eng'), 1); return { a, b, eng: M.P['v.eng'] }; });
-  L.ok(r.a && r.b && r.eng === 'trp', 'the ends: ‹ disabled at Hauch, › at Tropfen, no wrap');
+  r = await M(() => { const M = window.__M; M.setParam('v.eng', 'hau'); const a = document.querySelector('#p-v-eng .kq-step:first-child').disabled; M.setParam('v.eng', 'rhz'); const b = document.querySelector('#p-v-eng .kq-step:last-child').disabled; M.kqStep(M.kqTarget('v.eng'), 1); return { a, b, eng: M.P['v.eng'] }; });
+  L.ok(r.a && r.b && r.eng === 'rhz', 'the ends: ‹ disabled at Hauch, › at Rhizom, no wrap');
   // no probe while a finger holds
   r = await M(async () => {
     const M = window.__M; M.setParam('v.eng', 'neb'); M.kqProbeEnd();
@@ -109,7 +109,7 @@ const L = require('./dsplib'), K = require('./klh');
     const el = document.querySelector('#mxd-kq-rgS');
     o.has = !!el; if (!el) return o;
     o.name = el.querySelector('.kq-n').textContent;
-    el.querySelector('.kq-step').click(); o.prev = M.GK.p.rgS;   // mem ← tie (held) is passed: klb
+    el.querySelector('.kq-step').click(); o.prev = M.GK.p.rgS;   // mem ← glt, tie (held) are passed: klb
     el.querySelector('.kq-step:last-child').click(); o.next = M.GK.p.rgS;
     M.gkSet('rgS', 'sai'); el.closest('.kq').sync(); o.first = el.querySelector('.kq-step').disabled;   // before Saite only held sources
     o.rgs = M.RG_S.map((x) => x[0]).join(' ');
@@ -118,8 +118,8 @@ const L = require('./dsplib'), K = require('./klh');
     M.gkSet('rgS', 'trp');
     return o;
   });
-  L.ok(r.has && /Membran · Erde/.test(r.name) && r.prev === 'klb' && r.next === 'mem', 'mixer „Regen“: row „' + r.name + '“; ‹ passes Tiefe (held) to Kalimba, › back to Membran');
-  L.ok(r.first && r.rgs === 'sai jrg glo sch klb mem trp', 'nothing before Saite can rain (‹ disabled); RG_S derived: ' + r.rgs);
+  L.ok(r.has && /Membran · Erde/.test(r.name) && r.prev === 'gsp' && r.next === 'mem', 'mixer „Regen“: row „' + r.name + '“; ‹ passes Tiefe (held) to Gespinst, › back to Membran');
+  L.ok(r.first && r.rgs === 'sai jrg glo sch klb gsp mem trp mdr rhz', 'nothing before Saite can rain (‹ disabled); RG_S derived: ' + r.rgs);
   L.ok(r.card === true, 'the Gestik card has the rain row too (' + r.card + ')');
   // the bar's chip: glyphs, and a long press opens the library on the field
   await M(() => { const M = window.__M; M.closePanel(); M.setParam('v.eng', 'hlm'); M.setParam('v.layer', 'glo'); });

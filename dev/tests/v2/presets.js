@@ -16,12 +16,13 @@ const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) process
     return out;
   });
   ok(!bad.length, 'all preset values valid ' + bad.join(' | '));
-  const keys = ['obertonhoehle', 'geisterchor', 'regenwald', 'kalimbatraum', 'kurzwelle', 'zikadennacht', 'gongbad', 'tiefsee', 'pilzregen'];
+  const keys = ['obertonhoehle', 'geisterchor', 'regenwald', 'kalimbatraum', 'kurzwelle', 'zikadennacht', 'gongbad', 'tiefsee', 'pilzregen', 'glaswiese', 'gespinstgarten', 'kompostgarten', 'atemrohr', 'hochspannung', 'wurzelnetz', 'vogelhain'];
   for (const key of keys) {
     const r = await X.page.evaluate(async (key) => {
       const M = window.__M, sr = 48000, dur = 14, pr = M.PRESETS.find((p) => p.key === key);
       const params = Object.assign({ 'dev.q': '2', 'dev.lat': 'std' }, pr.v);
       const ctx = await window.__off(sr, dur, params);
+      if (M.ensureDSP) await M.ensureDSP(ctx);   // (the new sources' module, when the preset plays one)
       M.preloadTextures(); for (let i = 0; i < 300 && !(M.A.tex.glas && (!M.A.tex.hasOwnProperty || M.A.tex[M.P['kor.src']] || ['echo','datei','mikro'].includes(M.P['kor.src']))); i++) await new Promise((r) => setTimeout(r, 20));
       if (M.warmKS) { M.warmKS(); await new Promise((r) => setTimeout(r, 600)); }
       if (M.P['bor.on']) M.updBordun();

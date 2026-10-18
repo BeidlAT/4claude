@@ -21,7 +21,7 @@ function loadDsp(sr = 48000, src = dspSource()) {
   return { procs, scope, sr };
 }
 // render one processor offline. opts: {name, po (processorOptions), dur, ch (1|2), params: {freq, detune, hoehe} or a
-// function (t) → params, msgs: [[t, msg], …] (msg.on/off get t filled in)}
+// function (t) → params, msgs: [[t, msg], …] (msg.on/off get t filled in), each(node, t) after every block}
 function render(D, o) {
   const { procs, scope, sr } = D, C = procs[o.name];
   const node = new C({ processorOptions: o.po || {} });
@@ -41,6 +41,7 @@ function render(D, o) {
     const m = Math.min(bs, n - f0);
     outL.set(L.subarray(0, m), f0); if (outR) outR.set(R.subarray(0, m), f0);
     while (node.port.out.length) posted.push([f0 / sr, node.port.out.shift()]);
+    if (o.each) o.each(node, f0 / sr);   // (a look inside after every block)
   }
   const ns = Number(process.hrtime.bigint() - t0) / n;
   return { L: outL, R: outR, sr, posted, alive, done, nsPerSample: ns, node };

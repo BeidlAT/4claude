@@ -36,9 +36,9 @@ const L = require('./dsplib'), K = require('./klh');
   await key('ArrowDown'); let f1 = await foc();
   await key('ArrowDown'); let f2 = await foc(); await key('End'); const f3 = await foc(); await key('Home'); const f4 = await foc();
   await key('s'); const f5 = await foc();
-  L.ok(f1 === 'tile:neb' && f2 === 'tile:kor' && f3 === 'tile:swm' && f4 === 'tile:neb' && f5 === 'tile:swm', 'search ↓ Nebel, ↓ Körner, End Schwarm, Home Nebel, „s“ Schwarm');
+  L.ok(f1 === 'tile:neb' && f2 === 'tile:kor' && f3 === 'tile:amo' && f4 === 'tile:neb' && f5 === 'tile:swm', 'search ↓ Nebel, ↓ Körner, End Amöbe, Home Nebel, „s“ Schwarm');
   r = await M(() => [...document.querySelectorAll('.kq-pick')].map((p) => p.tabIndex).join());
-  L.ok(r === '-1,-1,0', 'roving tabindex follows the focus (' + r + ')');
+  L.ok(r === '-1,-1,0,-1', 'roving tabindex follows the focus (' + r + ')');
   // Space chooses and probes; stays open, focus stays
   await key('Space');
   r = await M(() => ({ eng: window.__M.P['v.eng'], pr: [...window.__M.A.voices].filter((v) => v.alive && v.probe && !v.probeEnd).map((v) => v.eng), live: document.querySelector('.kq-live').textContent }));
@@ -60,7 +60,7 @@ const L = require('./dsplib'), K = require('./klh');
   f1 = await foc();
   await key('ArrowRight'); f2 = await foc();
   r = await M(() => [...document.querySelectorAll('.kq-tile')].map((t) => t.dataset.k).join());
-  L.ok(f1 === 'fam:dunst' && f2 === 'fam:holz' && r === 'hrz,rnk,sai,jrg', 'Shift+Tab to the checked family (Dunst); → Holz filters to ' + r);
+  L.ok(f1 === 'fam:dunst' && f2 === 'fam:holz' && r === 'hrz,shn,zpf,rnk,sai,jrg', 'Shift+Tab to the checked family (Dunst); → Holz filters to ' + r);
   // the trap: Tab cycles inside
   const seen = new Set();
   for (let i = 0; i < 9; i++) { await key('Tab'); seen.add(await M(() => document.querySelector('#kqLib').contains(document.activeElement))); }
@@ -72,7 +72,7 @@ const L = require('./dsplib'), K = require('./klh');
   const r3 = await M(() => ({ v: document.querySelector('#kqSearch').value, open: !document.querySelector('#kqLib').hidden }));
   await key('Escape');
   const r4 = await M(() => ({ open: !document.querySelector('#kqLib').hidden, panel: window.__M.UI.panel, f: document.activeElement === document.querySelector('#p-v-eng .kq-name') }));
-  L.ok(r === 'glo' && r3.v === '' && r3.open && !r4.open && r4.panel === 'klang' && r4.f, 'typing „glocke“ finds Glocke; Esc clears the search, Esc again closes (the panel stays), focus on the name');
+  L.ok(r === 'glo,mdr' && r3.v === '' && r3.open && !r4.open && r4.panel === 'klang' && r4.f, 'typing „glocke“ finds Glocke (and the Kompostglocke, Moder); Esc clears the search, Esc again closes (the panel stays), focus on the name');
   // the row's live word when closed; the field's row label for a layer „Aus“
   await key('ArrowRight');
   r = await M(() => ({ say: document.querySelector('#kqSay').textContent, live: document.querySelector('#kqSay').getAttribute('aria-live'), lab: document.querySelector('#p-v-layer .kq-name').getAttribute('aria-label'), grp: document.querySelector('#' + document.querySelector('#p-v-layer').getAttribute('aria-labelledby')).textContent }));

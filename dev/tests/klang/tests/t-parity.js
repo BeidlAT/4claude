@@ -5,7 +5,7 @@
 process.env.NO_RAF = '1'; process.env.SEED_BLOBS = '1';
 const { chromium, openInst } = require('../../v2/lib');
 const L = require('./dsplib');
-const OLD = 'http://127.0.0.1:8790/kbase-inst/index.html', NEW = 'http://127.0.0.1:8790/kn-inst/index.html';
+const OLD = 'http://127.0.0.1:8790/kbase-inst/index.html', NEW = process.env.KN_URL || 'http://127.0.0.1:8790/kn-inst/index.html';
 const OLD_ENGS = ['neb', 'kor', 'hau', 'obt', 'stm', 'swm', 'tie', 'glo', 'mem', 'sai', 'sch', 'klb', 'gng', 'trp'];
 (async () => {
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });

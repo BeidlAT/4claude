@@ -7,7 +7,7 @@ const { chromium } = require('/opt/node22/lib/node_modules/playwright');
 const L = require('./dsplib'), K = require('./klh');
 (async () => {
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
-  const { page, errors, ctx } = await K.open(browser, { w: 360, h: 740, store: { 'myzel.klang.v1': JSON.stringify({ fav: ['glo', 'rhz'], recent: [] }) } });
+  const { page, errors, ctx } = await K.open(browser, { w: 360, h: 740, store: { 'myzel.klang.v1': JSON.stringify({ fav: ['glo', 'blz'], recent: [] }) } });
   const M = (fn, a) => page.evaluate(fn, a);
   const st = () => M(() => {
     const lib = document.querySelector('#kqLib');
@@ -20,7 +20,7 @@ const L = require('./dsplib'), K = require('./klh');
   await page.click('#p-v-eng .kq-name'); await page.waitForTimeout(300);
   let s = await st();
   let r = await M(() => ({ stage: Math.round(document.querySelector('#stage').getBoundingClientRect().height), sheet: Math.round(document.querySelector('#sheet').getBoundingClientRect().height), quick: getComputedStyle(document.querySelector('#quick')).display, exp: document.querySelector('#p-v-eng .kq-name').getAttribute('aria-expanded'), dl: document.querySelector('#sheet').dataset.lib, title: document.querySelector('#kqTitle').textContent }));
-  L.ok(s.open && s.fam === 'erz' && s.tiles.join() === 'glo,sch,gng,klb' && s.on === 'sch' && s.focus === 'tile:sch', 'opens on Erz (the family of Schale): ' + s.tiles + ', Schale checked and focused');
+  L.ok(s.open && s.fam === 'erz' && s.tiles.join() === 'glo,sch,gng,klb,gsp' && s.on === 'sch' && s.focus === 'tile:sch', 'opens on Erz (the family of Schale): ' + s.tiles + ', Schale checked and focused');
   L.ok(r.sheet > before.sheet && r.stage >= 118 && r.quick === 'none' && r.exp === 'true' && r.dl === 'v.eng', 'the sheet grows ' + before.sheet + ' → ' + r.sheet + ' px, ' + r.stage + ' px of field stay, quick strip hidden, aria-expanded');
   L.ok(/Klangquelle für\s*spielfläche/i.test(r.title), 'title „' + r.title + '“');
   // the field stays playable under the open library
@@ -44,30 +44,30 @@ const L = require('./dsplib'), K = require('./klh');
   // families and search
   await page.click('.kq-fams .chip[data-fam="luft"]'); await page.waitForTimeout(80);
   s = await st();
-  L.ok(s.fam === 'luft' && s.tiles.join() === 'hau,obt,stm,hlm,elm', 'Luft: ' + s.tiles);
+  L.ok(s.fam === 'luft' && s.tiles.join() === 'hau,obt,stm,hlm,boe,elm,khl', 'Luft: ' + s.tiles);
   await page.click('.kq-fams .chip[data-fam="alle"]'); await page.waitForTimeout(80);
   s = await st();
   r = await M(() => [...document.querySelectorAll('.kq-fh')].map((h) => h.firstChild.textContent));
-  L.ok(s.tiles.length === 19 && r.join() === 'Luft,Dunst,Holz,Erz,Erde', 'Alle: 19 tiles under five sticky heads');
+  L.ok(s.tiles.length === 28 && r.join() === 'Luft,Dunst,Holz,Erz,Erde', 'Alle: 28 tiles under five sticky heads');
   const search = async (q) => { await page.fill('#kqSearch', q); await page.waitForTimeout(60); return (await st()).tiles; };
   r = { oe: await search('koerner'), uml: await search('Körner'), bow: await search('flute'), fam: await search('erz'), art: await search('schlägt'), bass: await search('808'), none: await search('qqq') };
   s = await st();
   L.ok(r.oe.join() === 'kor' && r.uml.join() === 'kor', 'search: „koerner“ = „Körner“ → ' + r.oe);
-  L.ok(r.bow.includes('hlm') && r.fam.join() === 'glo,sch,gng,klb' && r.bass.includes('tie') && r.art.length === 8, 'tags in English („flute“ → Halm), family („erz“), „808“ → Tiefe, „schlägt“ → ' + r.art.length);
+  L.ok(r.bow.includes('hlm') && r.fam.join() === 'glo,sch,gng,klb,gsp' && r.bass.includes('tie') && r.art.length === 11, 'tags in English („flute“ → Halm), family („erz“), „808“ → Tiefe, „schlägt“ → ' + r.art.length);
   r.empty = await M(() => document.querySelector('.kq-empty') && document.querySelector('.kq-empty').textContent);
   L.ok(!r.none.length && /Nichts gefunden/.test(r.empty) && s.fam === '' && /Keine Treffer/.test(s.live), 'nothing found: „' + r.empty.slice(0, 40) + '…“, no family checked');
   await page.fill('#kqSearch', '');
   // favourites: ★ persisted, a key this version lacks stays stored but is not shown
   await page.click('.kq-fams .chip[data-fam="fav"]'); await page.waitForTimeout(60);
   s = await st();
-  L.ok(s.tiles.join() === 'glo', '★ Favoriten from myzel.klang.v1: ' + s.tiles + ' (the unknown „rhz“ not shown)');
+  L.ok(s.tiles.join() === 'glo', '★ Favoriten from myzel.klang.v1: ' + s.tiles + ' (the unknown „blz“ not shown)');
   await page.click('.kq-fams .chip[data-fam="dunst"]'); await page.waitForTimeout(60);
   await page.click('.kq-tile[data-k="swm"] .kq-fav'); await page.waitForTimeout(60);
   r = await M(() => ({ st: JSON.parse(localStorage.getItem('myzel.klang.v1')), pr: document.querySelector('.kq-tile[data-k="swm"] .kq-fav').getAttribute('aria-pressed') }));
-  L.ok(r.pr === 'true' && r.st.fav.join() === 'glo,rhz,swm', '★ on Schwarm: pressed, stored ' + r.st.fav);
+  L.ok(r.pr === 'true' && r.st.fav.join() === 'glo,blz,swm', '★ on Schwarm: pressed, stored ' + r.st.fav);
   await page.click('.kq-tile[data-k="swm"] .kq-fav'); await page.waitForTimeout(60);
   r = await M(() => JSON.parse(localStorage.getItem('myzel.klang.v1')).fav.join());
-  L.ok(r === 'glo,rhz', 'again: no longer a favourite (' + r + ')');
+  L.ok(r === 'glo,blz', 'again: no longer a favourite (' + r + ')');
   // recent: chosen across places, ≤ 6, without the current one; hearing adds nothing
   r = await M(async () => {
     const M = window.__M;
@@ -82,7 +82,7 @@ const L = require('./dsplib'), K = require('./klh');
   await page.click('.kq-fams .chip[data-fam="erz"]'); await page.waitForTimeout(60);
   await page.click('.kq-sur'); await page.waitForTimeout(80);
   s = await st(); r = await M(() => window.__M.P['v.eng']);
-  L.ok(['glo', 'sch', 'gng', 'klb'].includes(r) && s.on === r && /^Zufall: /.test(s.live), '⚄ picks from the tiles in view: ' + r + ' („' + s.live + '“)');
+  L.ok(['glo', 'sch', 'gng', 'klb', 'gsp'].includes(r) && s.on === r && /^Zufall: /.test(s.live), '⚄ picks from the tiles in view: ' + r + ' („' + s.live + '“)');
   // close: Fertig, ‹, Esc, swipe – the probe ends, focus returns to the opener
   for (const how of ['Fertig', 'Zurück', 'Escape', 'swipe']) {
     await page.focus('#p-v-eng .kq-name'); await page.keyboard.press('Enter'); await page.waitForTimeout(200);
@@ -115,7 +115,7 @@ const L = require('./dsplib'), K = require('./klh');
     o.fieldOff = !!document.querySelector('.kq-tile[data-k="off"]'); M.kqClose(); M.setParam('v.eng', 'neb');
     return o;
   });
-  L.ok(r.tiles.join() === 'off,tie,mem,trp' && r.on === 'off' && r.layer === 'mem' && r.off === 'off' && !r.fieldOff, 'layer: opens on Erde (the field plays Tiefe) with „Aus“ first and checked; Membran, then Aus again; the field has no „Aus“');
+  L.ok(r.tiles.join() === 'off,tie,glt,mem,trp,mdr,rhz' && r.on === 'off' && r.layer === 'mem' && r.off === 'off' && !r.fieldOff, 'layer: opens on Erde (the field plays Tiefe) with „Aus“ first and checked; Membran, then Aus again; the field has no „Aus“');
   // the rain: held sources grey with the reason, not chosen by a tap
   r = await M(async () => {
     const M = window.__M; M.gkSet('rgS', 'trp'); const T = M.kqTarget('rgS'); M.kqOpen(T, { where: 'Sporenregen' }); await window.__sleep(80);
@@ -129,7 +129,7 @@ const L = require('./dsplib'), K = require('./klh');
     M.kqClose(); M.gkSet('rgS', 'trp');
     return o;
   });
-  L.ok(r.tiles.join() === 'tie-,mem,trp' && /gehaltene Quellen sind hier grau/.test(r.why) && r.rgS === 'trp' && /Tiefe: hält/.test(r.live), 'rain: Tiefe grey (' + r.tiles + '), the reason in the head, a tap does not choose it („' + r.live + '“)');
+  L.ok(r.tiles.join() === 'tie-,glt-,mem,trp,mdr,rhz' && /gehaltene Quellen sind hier grau/.test(r.why) && r.rgS === 'trp' && /Tiefe: hält/.test(r.live), 'rain: Tiefe grey (' + r.tiles + '), the reason in the head, a tap does not choose it („' + r.live + '“)');
   L.ok(/blüht zu lange/i.test(r.gng) && /Nicht für den Sporenregen/.test(r.lab) && r.klb === 'klb', 'Gong grey with its own reason („' + r.gng + '“, ' + r.lab + '); Kalimba chosen (' + r.klb + ')');
   L.ok(!errors.length, 'no console errors (' + errors.slice(0, 2).join(' | ') + ')');
   await ctx.close(); await browser.close();

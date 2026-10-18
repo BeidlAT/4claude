@@ -7,10 +7,10 @@ const L = require('./dsplib'), K = require('./klh');
 const TMP = path.join(__dirname, 'out');
 (async () => {
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
-  // 1. the stored patch names Glut (a later version's source): one hint at boot, Nebel plays
-  let { page, errors, ctx } = await K.open(browser, { w: 390, h: 844, start: false, store: { 'myzel.patch.v1': JSON.stringify({ values: { 'v.eng': 'glt', 'v.layer': 'glo', 'l0.eng': 'kor', 'rev.mix': 0.31 } }) } });
+  // 1. the stored patch names Unke (a later version's source): one hint at boot, Nebel plays
+  let { page, errors, ctx } = await K.open(browser, { w: 390, h: 844, start: false, store: { 'myzel.patch.v1': JSON.stringify({ values: { 'v.eng': 'unk', 'v.layer': 'glo', 'l0.eng': 'kor', 'rev.mix': 0.31 } }) } });
   let r = await page.evaluate(() => ({ eng: window.__M.P['v.eng'], layer: window.__M.P['v.layer'], l0: window.__M.P['l0.eng'], rev: window.__M.P['rev.mix'], t: document.querySelector('#toastMsg').textContent, show: document.querySelector('#toast').classList.contains('show') }));
-  L.ok(r.eng === 'neb' && r.layer === 'glo' && r.l0 === 'kor' && r.rev === 0.31 && r.show && r.t === 'Klangquelle „Glut“ gibt es in dieser Version nicht – Nebel gewählt.', 'stored patch with Glut: „' + r.t + '“ – the rest of it kept');
+  L.ok(r.eng === 'neb' && r.layer === 'glo' && r.l0 === 'kor' && r.rev === 0.31 && r.show && r.t === 'Klangquelle „Unke“ gibt es in dieser Version nicht – Nebel gewählt.', 'stored patch with Unke: „' + r.t + '“ – the rest of it kept');
   await ctx.close();
   ({ page, errors, ctx } = await K.open(browser, { w: 390, h: 844 }));
   const M = (fn, a) => page.evaluate(fn, a);
@@ -31,7 +31,7 @@ const TMP = path.join(__dirname, 'out');
     v1: { app: 'Myzel', version: 1, name: 'Alt eins', values: { 'v.eng': 'glo', 'v.layer': 'sch', 'l0.eng': 'trp', 'l1.eng': 'hau', 'dly.mix': 0.4 } },
     v2: { app: 'Myzel', version: 2, name: 'Alt zwei', values: { 'v.eng': 'klb', 'v.layer': 'off', 'l2.eng': 'swm' }, faehrte: null, gestik: { rgS: 'sai' } },
     bare: { 'v.eng': 'stm', 'l3.eng': 'mem' },
-    newer: { app: 'Myzel', version: 2, name: 'Aus der Zukunft', values: { 'v.eng': 'rhz', 'v.layer': 'unk', 'l1.eng': 'mdr', 'l2.eng': 'gng' } },
+    newer: { app: 'Myzel', version: 2, name: 'Aus der Zukunft', values: { 'v.eng': 'fle', 'v.layer': 'unk', 'l1.eng': 'unk', 'l2.eng': 'gng' } },
   };
   const out = {};
   for (const k in files) {
@@ -42,7 +42,7 @@ const TMP = path.join(__dirname, 'out');
   L.ok(out.v1.e === 'glo' && out.v1.ly === 'sch' && out.v1.l[0] === 'trp' && out.v1.l[1] === 'hau' && out.v1.dly === 0.4 && /„Alt eins“ geladen\.$/.test(out.v1.t), 'version 1 export: Glocke + Schale, lanes Tropfen/Hauch („' + out.v1.t + '“)');
   L.ok(out.v2.e === 'klb' && out.v2.ly === 'off' && out.v2.l[2] === 'swm' && !/nicht –/.test(out.v2.t), 'version 2 export: Kalimba, no layer, lane 3 Schwarm');
   L.ok(out.bare.e === 'stm' && out.bare.l[3] === 'mem', 'a bare values object: Stimme, lane 4 Membran');
-  L.ok(out.newer.e === 'neb' && out.newer.ly === 'off' && out.newer.l[1] === 'hau' && out.newer.l[2] === 'gng' && out.newer.t === '„Aus der Zukunft“ geladen. Klangquellen „Rhizom“, „Unke“ und „Moder“ gibt es in dieser Version nicht – Nebel gewählt, zweite Ebene aus und Spur 2 spielt Hauch.',
+  L.ok(out.newer.e === 'neb' && out.newer.ly === 'off' && out.newer.l[1] === 'hau' && out.newer.l[2] === 'gng' && out.newer.t === '„Aus der Zukunft“ geladen. Klangquellen „Flechte“ und „Unke“ gibt es in dieser Version nicht – Nebel gewählt, zweite Ebene aus und Spur 2 spielt Hauch.',
     'a newer export: one toast „' + out.newer.t + '“');
   r = await M(() => { const a = document.querySelector('#toastAct'); return !a.hidden && a.textContent; });
   L.ok(r === 'Rückgängig', '… and it keeps its Rückgängig');

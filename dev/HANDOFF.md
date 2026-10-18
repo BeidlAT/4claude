@@ -1,19 +1,21 @@
-# Übergabe: Myzel – neue Klangquellen (Stand 17.10.2026, Etappe 3 fertig)
+# Übergabe: Myzel – neue Klangquellen (Stand 18.10.2026, alle Klangquellen gebaut)
 
 ## Für den Besitzer
 
-Fertig und veröffentlicht sind:
-- das gemeinsame DSP-Modul, das nur geladen wird, wenn eine neue Quelle gewählt wird;
-- **Halm** und **Ranke**;
-- die **Bibliothek**: die Zeile ‹ Name › an jeder Auswahlstelle, dazu Suche, Familien, Favoriten und „Überrasch mich“;
-- **Elmsfeuer** und **Jahresring** (Etappe 2, ohne Worklet gebaut);
-- **Harz** (Etappe 3): ein Bogen auf fünf Körpern – Glas, Schale, Stab, Zunge (Daxophon), Teich (Waterphone).
+Alle Klangquellen der Planung sind gebaut, getestet und auf dem Branch gepusht – 28 Quellen in fünf Familien:
+- **Etappen 1–3** (schon veröffentlicht): das DSP-Modul, Halm, Ranke, die Bibliothek, Elmsfeuer, Jahresring, Harz.
+- **Halm** hat dazu Flöte (mit Überblasen) und Flamme (ein singendes Rijke-Rohr) bekommen.
+- **Etappe 4:** Moder (Kompostglocke), Böe (Äolsharfe), Amöbe (Bass aus Zufall).
+- **Etappe 5:** Sehne (lebende Saite mit Handballen, Flageolett, E-Bow, Jawari), Zapfen (Kratzen, das zum Ton wird, fünf Körper), Glut (gestimmte Rückkopplung, die nachglüht).
+- **Etappe 6:** Gespinst (ein Netz aus Saiten mit eigenem Mixer-Kanal).
+- **Reserven:** Kehlchen (Vogelkehle mit Chip, Triller, Ruf) und Rhizom (Lawinen durch die Tonleiter).
+- **Presets:** Glaswiese, Kompostgarten, Atemrohr, Hochspannung, Gespinstgarten, Wurzelnetz, Vogelhain – jedes mit Gestik-Rezept.
 
-Offen sind sieben Quellen in vier Etappen (siehe unten).
+Offen sind nur noch Dinge fürs Ohr und ein paar Entscheidungen (unten bei „Owner's calls“), dazu die Veröffentlichung: Die App unter beidlat.github.io aktualisiert sich, sobald dieser Branch in den Standard-Branch übernommen ist (ein Pull Request, den du öffnest oder bei mir bestellst).
 
-So geht es in einer neuen Sitzung nahtlos weiter: Öffne eine neue Claude-Code-Sitzung auf diesem Repository und diesem Branch und schicke diesen Satz:
+So geht es in einer neuen Sitzung weiter: Öffne eine neue Claude-Code-Sitzung auf diesem Repository und diesem Branch und schicke diesen Satz:
 
-> Lies dev/HANDOFF.md und mach mit der nächsten Etappe der Klangquellen weiter.
+> Lies dev/HANDOFF.md und mach mit den offenen Punkten der Klangquellen weiter.
 
 ## For the next session (English working notes)
 
@@ -122,21 +124,26 @@ Then use these:
 - **Cost** (measured with three builders running – to re-measure quietly): reed 0.47/1.5 (?), flute 0.43/0.78, flame 1.41/1.70; `HLM_COST` flute = reed, flame 1.7/3.2.
 - **By ear, still open:** the flame's fire/crack balance and the surge's speed; the flute's air below y 0.12.
 
-### Next stages (SPEC §8; step 1–3 + library + Harz = done)
-1. **Stage 4:** `mdr` Moder, `boe` Böe, `amo` Amöbe (§3.10, §3.4, §3.5).
-2. **Stage 5:** `zpf` Zapfen (+ native fallback), `shn` Sehne (+ Jawari), `glt` Glut (+ native fallback) (§3.8, §3.7, §3.3).
-3. **Stage 6:** `gsp` Gespinst – singleton web, governor, mixer strip, budget (§3.11).
-4. **Stage 7:**
-   - presets and Gestik recipes (§5);
-   - texts and README;
-   - parity, soak and device checks;
-   - reserves `khl` Kehlchen and `rhz` Rhizom, only if everything else passes.
+### Notes from stages 4–7 and the reserves (built on 17./18.10.2026; builders' reports condensed in SPEC's „As built“ lines)
+- **Built by parallel builder agents** in git worktrees (Moder, Böe, Amöbe; Zapfen, Sehne, Glut), merged by hand: every engine touches the same tables (`ENG_META`, `ENG_LATER`, params, `GROUP`, `VCOST1/3`, `MACRO`, `ENG_NOTE`, the `onParamChanged` case, the processor list), so a git merge interleaves classes and loses closing braces. What worked: take the builder's diff against its base, set each hunk onto the current file by its anchor (the table lines by hand), then check that every line the builder added is in the result (`collections.Counter` over lines) – and for the tests a three-way `git merge-file` per file (`<scratch>/tmerge.sh <key> <base>`), resolving „both added here“ as ours + theirs and restoring the closing brace that the two blocks share.
+- **Gespinst:** the coupling limit is computed from the strings' responses (partials, between them, below them) with a high-pass on the bridge's feed back – a sub-audio mode (14 Hz) oscillated at Nachklang 0.5 before. `voiceLoad()` counts the web while it rings; its own mixer strip „Gespinst“ (Halo = its level); `{clear}` at Stille/Schlafen posts `{idle}`.
+- **Rhizom:** the net runs in `tick()` (`rhzRun`, exact event times, scheduled ahead like the Puls); offline (and with a stopped clock) a strike's cascade is laid out at once – tests that need causality set `RHZ.step` and run the clock by hand (`M.rhzRun(t)`). A voice's cost grows with its ringing pings (`RHZ_COST`).
+- **Kehlchen:** the labia in the note's phase with a frequency-locked loop (≤ 0.2 ct over 110 Hz–6 kHz at every pressure); the sound is the flow through the opening (a smooth max), so partials rise with pressure; the throat follows the note.
+- **Sehne / Zapfen / Glut:** see their builders' notes in SPEC §3.7/§3.8/§3.3. Zapfen and Glut are their own stand-ins without AudioWorklet (`fallback: 'native'`, `wkReady()`); their native voices are priced separately (getters on `VCOST1/3`).
+- **Tests:** `bench.js` covers every engine (`node bench.js <key>`; table `T` gained `line`/`lineAt` (pitch on the fundamental's line), `cYs`/`partials`/`cWin` (centroid variants), `burstDur`, `rel`); `t-dsp.js` every processor (147 rows); `t-eng-live.js` every worklet engine live (`KN_URL`); `listen-new.js OUTDIR` renders listening demos; `recal.js` the final cost calibration. The Gestik suites know the new Ladung targets (Gespinst-Kopplung, Rhizom-Reiz) and the Gespinst strip.
+- **Lessons** (also in `dev/tests/klang/BRIEF-engines.md`, the builders’ brief): offline port messages arrive only at a suspend (kick one after each); a float sample index gives NaN (round it); measure a self-oscillator's pitch on its fundamental's line, not with a comb; a level-3 voice that outputs stereo skips the voice's centre panner (−3 dB at level 1) – scale it.
 
-Every stage must clear the same gate:
-- the engine passes `bench.js` (loudness ±2 dB, peak ≤ −1 dBFS, no NaN or DC, centroid rising with y, cost on target, level 3 within ±1.5 dB, held/burst/release, pitch tolerance, spectrogram looked at);
-- the stage's own Playwright checks pass;
-- all regression suites are green;
-- then commit, push, republish the artifact, and give the owner a short German report.
+### Owner's calls (open)
+- Moder: default Nachklang 5 s (KONZEPT says „4–6 s Brummen“) – kept.
+- Böe: default Nachklang 3 s (KONZEPT „vier bis sechs Sekunden“); library sentence 53 characters (SPEC's limit 52).
+- Sehne: the knob is „Nachklang“ (a time) where KONZEPT says „Dämpfung“; Saite's library sentence is now „Gezupfte Saiten – leicht, viele Stimmen zugleich“; the E-Bow costs ~1.1/1.9 units and is priced only while the hand is in its zone.
+- Zapfen and Glut: their native stand-ins cost more than SPEC's estimate (≈ 1.3 and 2.2 units) because they keep the full sound (the owner's rule); a lean version would sound clearly worse.
+- Zapfen: the Rast-step row reads „within the tick train's own crest + 1 dB“ (a 14/s train alone has 6–7 dB crest).
+
+### Still open
+- **By ear:** every new source's „for the ear“ list in SPEC's As-built lines and the builders' reports – Gespinst's halo level, Rhizom's knock and Glimmen, Kehlchen's chips and roughness, Sehne's jawari bloom and E-Bow swell, Zapfen's saw/mode balance and Fels, Glut's swell speed and breathing, Moder's crackle, Böe's wind, Amöbe's unrest.
+- Device checks on a real phone (level 1 budget with the new sources, worklet load time), the parity/soak suites after the owner's listening round.
+- The claude.ai artifact is still stage 1 (see above).
 
 ### Other open items
 - Backup: the owner wanted a private GitHub repo `4claude-backup`; still waiting for them to create it. Downloadable bundle/ZIP backups have been provided before (`git bundle create … --all` plus `git archive`).
