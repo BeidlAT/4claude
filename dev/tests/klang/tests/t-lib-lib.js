@@ -20,7 +20,7 @@ const L = require('./dsplib'), K = require('./klh');
   await page.click('#p-v-eng .kq-name'); await page.waitForTimeout(300);
   let s = await st();
   let r = await M(() => ({ stage: Math.round(document.querySelector('#stage').getBoundingClientRect().height), sheet: Math.round(document.querySelector('#sheet').getBoundingClientRect().height), quick: getComputedStyle(document.querySelector('#quick')).display, exp: document.querySelector('#p-v-eng .kq-name').getAttribute('aria-expanded'), dl: document.querySelector('#sheet').dataset.lib, title: document.querySelector('#kqTitle').textContent }));
-  L.ok(s.open && s.fam === 'erz' && s.tiles.join() === 'glo,sch,gng,klb' && s.on === 'sch' && s.focus === 'tile:sch', 'opens on Erz (the family of Schale): ' + s.tiles + ', Schale checked and focused');
+  L.ok(s.open && s.fam === 'erz' && s.tiles.join() === 'glo,sch,gng,klb,gsp' && s.on === 'sch' && s.focus === 'tile:sch', 'opens on Erz (the family of Schale): ' + s.tiles + ', Schale checked and focused');
   L.ok(r.sheet > before.sheet && r.stage >= 118 && r.quick === 'none' && r.exp === 'true' && r.dl === 'v.eng', 'the sheet grows ' + before.sheet + ' → ' + r.sheet + ' px, ' + r.stage + ' px of field stay, quick strip hidden, aria-expanded');
   L.ok(/Klangquelle für\s*spielfläche/i.test(r.title), 'title „' + r.title + '“');
   // the field stays playable under the open library
@@ -48,12 +48,12 @@ const L = require('./dsplib'), K = require('./klh');
   await page.click('.kq-fams .chip[data-fam="alle"]'); await page.waitForTimeout(80);
   s = await st();
   r = await M(() => [...document.querySelectorAll('.kq-fh')].map((h) => h.firstChild.textContent));
-  L.ok(s.tiles.length === 22 && r.join() === 'Luft,Dunst,Holz,Erz,Erde', 'Alle: 22 tiles under five sticky heads');
+  L.ok(s.tiles.length === 23 && r.join() === 'Luft,Dunst,Holz,Erz,Erde', 'Alle: 23 tiles under five sticky heads');
   const search = async (q) => { await page.fill('#kqSearch', q); await page.waitForTimeout(60); return (await st()).tiles; };
   r = { oe: await search('koerner'), uml: await search('Körner'), bow: await search('flute'), fam: await search('erz'), art: await search('schlägt'), bass: await search('808'), none: await search('qqq') };
   s = await st();
   L.ok(r.oe.join() === 'kor' && r.uml.join() === 'kor', 'search: „koerner“ = „Körner“ → ' + r.oe);
-  L.ok(r.bow.includes('hlm') && r.fam.join() === 'glo,sch,gng,klb' && r.bass.includes('tie') && r.art.length === 9, 'tags in English („flute“ → Halm), family („erz“), „808“ → Tiefe, „schlägt“ → ' + r.art.length);
+  L.ok(r.bow.includes('hlm') && r.fam.join() === 'glo,sch,gng,klb,gsp' && r.bass.includes('tie') && r.art.length === 10, 'tags in English („flute“ → Halm), family („erz“), „808“ → Tiefe, „schlägt“ → ' + r.art.length);
   r.empty = await M(() => document.querySelector('.kq-empty') && document.querySelector('.kq-empty').textContent);
   L.ok(!r.none.length && /Nichts gefunden/.test(r.empty) && s.fam === '' && /Keine Treffer/.test(s.live), 'nothing found: „' + r.empty.slice(0, 40) + '…“, no family checked');
   await page.fill('#kqSearch', '');
@@ -82,7 +82,7 @@ const L = require('./dsplib'), K = require('./klh');
   await page.click('.kq-fams .chip[data-fam="erz"]'); await page.waitForTimeout(60);
   await page.click('.kq-sur'); await page.waitForTimeout(80);
   s = await st(); r = await M(() => window.__M.P['v.eng']);
-  L.ok(['glo', 'sch', 'gng', 'klb'].includes(r) && s.on === r && /^Zufall: /.test(s.live), '⚄ picks from the tiles in view: ' + r + ' („' + s.live + '“)');
+  L.ok(['glo', 'sch', 'gng', 'klb', 'gsp'].includes(r) && s.on === r && /^Zufall: /.test(s.live), '⚄ picks from the tiles in view: ' + r + ' („' + s.live + '“)');
   // close: Fertig, ‹, Esc, swipe – the probe ends, focus returns to the opener
   for (const how of ['Fertig', 'Zurück', 'Escape', 'swipe']) {
     await page.focus('#p-v-eng .kq-name'); await page.keyboard.press('Enter'); await page.waitForTimeout(200);

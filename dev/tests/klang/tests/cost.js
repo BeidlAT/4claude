@@ -36,10 +36,11 @@ const XP = JSON.parse(process.env.PARAMS || '{}');
     const best = {}; const keep = (k, v) => { best[k] = Math.min(best[k] || Infinity, v); };
     for (let i = 0; i < ROUNDS; i++) {
       keep('base', await run('neb', '1', 0)); keep('neb1', await run('neb', '1', NV));
+      if (ENGS.includes('web3')) keep('base3', await run('neb', '3', 0));   // (the web is one node: level 3's own graph must not be counted ×NV)
       for (const eq of ENGS) keep(eq, await run(eq.slice(0, -1), eq.slice(-1), NV));
     }
     const unit = best.neb1 - best.base, out = { nebMs: +unit.toFixed(1), rounds: ROUNDS, nv: NV };
-    for (const eq of ENGS) out[eq] = +((best[eq] - best.base) / unit * (eq.startsWith('web') ? NV : 1)).toFixed(3);
+    for (const eq of ENGS) out[eq] = +((best[eq] - (eq === 'web3' ? best.base3 : best.base)) / unit * (eq.startsWith('web') ? NV : 1)).toFixed(3);
     const tab = (k, q) => (q === '3' ? M.VCOST3 : M.VCOST1)[k];
     // the scale: table / measured, over the held native engines measured here
     const refs = ENGS.filter((eq) => !/^(hlm|rnk|null|web|elm|jrg|hrz|glt|boe|amo|shn|zpf|mdr|gsp|khl|rhz)/.test(eq)), sc = refs.map((eq) => tab(eq.slice(0, -1), eq.slice(-1)) / out[eq]);

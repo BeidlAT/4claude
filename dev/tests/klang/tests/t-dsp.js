@@ -16,7 +16,7 @@ function peakHz(sig, f, at, N) {
   return (b + 0.5 * (a - d) / (a - 2 * c + d)) * hz;
 }
 // -- the contract
-L.ok(['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel-aeol', 'myzel-gendy', 'myzel-null'].every((k) => D.procs[k]), 'module registers myzel-blow, myzel-scan, myzel-bow, myzel-rot, myzel-aeol, myzel-gendy, myzel-null: ' + Object.keys(D.procs).join(', '));
+L.ok(['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel-aeol', 'myzel-gendy', 'myzel-web', 'myzel-null'].every((k) => D.procs[k]), 'module registers myzel-blow, myzel-scan, myzel-bow, myzel-rot, myzel-aeol, myzel-gendy, myzel-web, myzel-null: ' + Object.keys(D.procs).join(', '));
 for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel-aeol', 'myzel-gendy']) {
   const r = note(name, 220, 0.6, { at: 0.3, dur: 0.6 });
   const pre = L.rms(r.L, 0, Math.floor(0.3 * SR) - 1), post = L.rms(r.L, Math.floor(0.33 * SR), Math.floor(0.6 * SR));
@@ -96,6 +96,74 @@ for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel
     const cc = sx / Math.sqrt(sl * sr);
     L.ok(cc > -0.2 && cc < 0.98, `${rohr} level 3: two pipes, ±4 ct apart – L/R correlation ${cc.toFixed(2)} (neither one pipe nor mirrored)`);
   }
+}
+// -- Gespinst's web (myzel-web): idle without input, bounded at every knob, never singing by itself, the halo and the
+// exchange on the strings themselves, glides, clears, level 3 / lite
+{
+  const C = D.procs['myzel-web'];
+  // drive the web: input(t) per sample, messages [[t, msg]], string levels (rms of each ring) every 50 ms
+  const web = (o) => {
+    const node = new C({ processorOptions: Object.assign({ seed: 3 }, o.po) }), n = Math.round(o.dur * SR), Lo = new Float32Array(n), Ro = new Float32Array(n), posted = [], msgs = (o.msgs || []).slice(), str = [];
+    let cpu = 0;
+    for (let f0 = 0; f0 < n; f0 += 128) {
+      while (msgs.length && msgs[0][0] * SR <= f0) node.port.onmessage({ data: msgs.shift()[1] });
+      const x = new Float32Array(128); for (let i = 0; i < 128; i++) x[i] = o.input ? o.input((f0 + i) / SR) : 0;
+      const Lb = new Float32Array(128), Rb = new Float32Array(128), t0 = process.hrtime.bigint();
+      node.process([[x]], [[Lb, Rb]], {}); cpu += Number(process.hrtime.bigint() - t0);
+      Lo.set(Lb.subarray(0, Math.min(128, n - f0)), f0); Ro.set(Rb.subarray(0, Math.min(128, n - f0)), f0);
+      while (node.port.out && node.port.out.length) posted.push([f0 / SR, node.port.out.shift()]);
+      if (o.strings && f0 % 2400 < 128) str.push([f0 / SR, node.bufs.map((b) => { let e = 0; for (let k = 0; k < b.length; k++) e += b[k] * b[k]; return 10 * Math.log10(e / b.length + 1e-30); })]);
+    }
+    return { L: Lo, R: Ro, posted, node, cpu: cpu / n, str };
+  };
+  let x = 7; const rnd = () => { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; return (x >>> 0) / 4294967296; };
+  const noise = (a, t0, t1) => (t) => (t >= t0 && t < t1 ? a * (2 * rnd() - 1) : 0);
+  // a plucked string (Karplus-Strong, T60 2 s) as a voice's send
+  const pluck = (f, t0, a = 0.3) => { const P = Math.round(SR / f), b = new Float32Array(P); let s = 1234567; for (let i = 0; i < P; i++) { s ^= s << 13; s ^= s >>> 17; s ^= s << 5; b[i] = a * s / 2147483648; } const g = Math.pow(10, -3 / (2 * f)); const out = new Float32Array(3 * SR); let p = 0, prev = 0; for (let i = 0; i < out.length; i++) { const v = b[p]; out[i] = v; b[p] = g * 0.5 * (v + prev); prev = v; p = (p + 1) % P; } return (t) => { const i = Math.round((t - t0) * SR); return i >= 0 && i < out.length ? out[i] : 0; }; };
+  const sum = (...fs) => (t) => fs.reduce((a, g) => a + g(t), 0);
+  const sc = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24, 26].map((k) => 220 * Math.pow(2, k / 12));
+  const idle = web({ po: { freqs: sc }, dur: 0.5 }), busy = web({ po: { freqs: sc }, dur: 0.5, input: (t) => 0.1 * Math.sin(1000 * t) });
+  L.ok(L.peak(idle.L) === 0 && !idle.posted.length && idle.cpu < 0.4 * busy.cpu, `web: idle without input – silent, no message, ${idle.cpu.toFixed(1)} ns per sample (ringing: ${busy.cpu.toFixed(1)}; the harness's own share included)`);
+  let worst = 0, bad = 0, stuck = 0;
+  for (let i = 0; i < 40; i++) {
+    const prm = { kopplung: i < 4 ? [0, 1, 1, 0][i] : rnd(), nachklang: i < 4 ? [0.5, 8, 8, 0.5][i] : 0.5 + 7.5 * rnd(), metall: rnd() < 0.3 ? Math.round(rnd()) : rnd(), steg: rnd() < 0.3 ? Math.round(rnd()) : rnd() };
+    const base = [20, 55, 110, 440, 1500, 4000][i % 6] * (0.9 + 0.2 * rnd()), fr = sc.map((f) => f / 220 * base);
+    const r = web({ po: { freqs: fr, prm, rich: i % 2 === 1, lite: i % 7 === 3 ? 1 : 0 }, dur: 16, input: noise(i % 3 === 0 ? 1 : 0.2, 0.05, 0.05 + 0.5 * rnd()) });
+    if (L.nanCount(r.L) || L.nanCount(r.R)) bad++;
+    worst = Math.max(worst, L.peak(r.L), L.peak(r.R));
+    if (!r.posted.some((p) => p[1].idle)) stuck++;
+  }
+  L.ok(!bad && worst <= 1, `web: 40 random knob sets (Kopplung/Steg at their extremes, strings 20 Hz–8 kHz, loud bursts, both levels, lite): no NaN, peak ${worst.toFixed(2)} (≤ 1)`);
+  L.ok(stuck === 0, `web: every one of them falls still and idles within 16 s (Ruhe) – ${stuck} still ringing`);
+  // Kopplung 1, Nachklang 8, Steg 1: after the input the web dies away, its common mode ≤ 4 × Nachklang
+  const k1 = web({ po: { freqs: sc.slice(0, 8), prm: { kopplung: 1, nachklang: 8, steg: 1 } }, dur: 9, input: noise(0.5, 0.05, 0.6) });
+  const lv = (a, b) => L.db(L.rms(k1.L, Math.round(a * SR), Math.round(b * SR)));
+  L.ok(lv(8, 9) < lv(2, 3) - 11.25, `web: Kopplung 1, Nachklang 8, Steg 1 – no self-oscillation, the common mode rings ≤ 4 × Nachklang (${lv(2, 3).toFixed(1)} dB at 2 s, ${lv(8, 9).toFixed(1)} at 8 s: T60 ${(360 / Math.max(1e-3, lv(2, 3) - lv(8, 9))).toFixed(1)} s)`);
+  // short Nachklang, close strings (chromatic), Kopplung 1, also lite: below the strings every one answers in phase – a
+  // sub-audio mode (14 Hz) rang 19 × Nachklang before the bridge's high-pass; now ≤ 4 × and nothing under 40 Hz
+  for (const lite of [0, 1]) {
+    const ch = [0, 1, 2, 3, 4, 5, 6, 7].map((k) => 220 * Math.pow(2, k / 12)), r = web({ po: { freqs: ch, lite, prm: { kopplung: 1, nachklang: 0.5 } }, dur: 3, input: noise(0.3, 0.05, 0.5) });
+    const l = (a, b) => L.db(L.rms(r.L, Math.round(a * SR), Math.round(b * SR))), t60 = 60 / Math.max(1e-3, l(0.7, 0.9) - l(1.7, 1.9));
+    let lf = 0, all = 0; const a0 = Math.round(0.7 * SR), nn = SR / 2; for (let f = 4; f < 40; f += 2) { let re = 0, im = 0; for (let i = 0; i < nn; i++) { const w = 2 * Math.PI * f * i / SR; re += r.L[a0 + i] * Math.cos(w); im += r.L[a0 + i] * Math.sin(w); } lf = Math.max(lf, Math.hypot(re, im) / nn); }
+    all = L.rms(r.L, a0, a0 + nn);
+    L.ok(t60 <= 4 * 0.5 && L.db(lf) - L.db(all) < -30, `web: Kopplung 1, Nachklang 0.5, chromatic strings${lite ? ', lite' : ''} – T60 ${t60.toFixed(2)} s (≤ 2), the strongest line under 40 Hz ${(L.db(lf) - L.db(all)).toFixed(1)} dB rel. the whole (< −30)`);
+  }
+  // the halo: a pluck on the root – the fifth's and the octave's strings within 0.5 s, rel. the root's (≥ −25 dB)
+  const at = (r, t) => r.str.find((e) => e[0] >= t)[1];
+  const hl = web({ po: { freqs: sc.slice(0, 8), prm: { kopplung: 0.4, nachklang: 2 } }, dur: 0.8, input: pluck(220, 0.05), strings: true }), e5 = at(hl, 0.5);
+  L.ok(e5[3] - e5[0] >= -25 && e5[5] - e5[0] >= -25, `web: the halo – a pluck on the root, after 0.5 s the fifth's string ${(e5[3] - e5[0]).toFixed(1)} dB, the octave's ${(e5[5] - e5[0]).toFixed(1)} dB rel. the root's (≥ −25)`);
+  // the exchange: the fifth plucked alone vs with the root plucked beside it 0.9 s later – its string ≥ 6 dB over its own decay
+  const ex = (both) => web({ po: { freqs: sc.slice(0, 8), prm: { kopplung: 0.4, nachklang: 2 } }, dur: 1.8, input: both ? sum(pluck(330, 0.1), pluck(220, 1.0)) : pluck(330, 0.1), strings: true });
+  const ea = at(ex(false), 1.5)[3], eb = at(ex(true), 1.5)[3];
+  L.ok(eb - ea >= 6, `web: energy exchange – the fifth's string 0.5 s after a pluck on the root ${ea.toFixed(1)} → ${eb.toFixed(1)} dB (≥ +6)`);
+  // a new tuning under a ringing web glides: no jump between samples above the ringing's own
+  const g = web({ po: { freqs: sc.slice(0, 8), prm: { kopplung: 0.5, nachklang: 4 } }, dur: 2, input: noise(0.3, 0.05, 0.3), msgs: [[1.0, { tune: sc.slice(0, 8).map((f) => f * 1.12), glide: true }]] });
+  const jump = (a, b) => { let m = 0; for (let i = Math.round(a * SR) + 1; i < Math.round(b * SR); i++) m = Math.max(m, Math.abs(g.L[i] - g.L[i - 1])); return m; };
+  L.ok(jump(0.98, 1.2) <= 1.5 * jump(0.7, 0.92), `web: a retune glides – largest step ${jump(0.98, 1.2).toFixed(4)} vs ${jump(0.7, 0.92).toFixed(4)} before`);
+  const cl = web({ po: { freqs: sc.slice(0, 8), prm: { kopplung: 0.8, nachklang: 8 } }, dur: 1.2, input: noise(0.5, 0.05, 0.3), msgs: [[1.0, { clear: 1 }]] });
+  L.ok(L.rms(cl.L, Math.round(1.02 * SR), Math.round(1.2 * SR)) === 0 && L.rms(cl.L, Math.round(0.9 * SR), SR) > 1e-4, 'web: {clear} – silent 20 ms later (a 10-ms fade)');
+  const lt = web({ po: { freqs: sc, rich: true, lite: 1 }, dur: 0.3, input: noise(0.3, 0, 0.2) });
+  L.ok(lt.node.N === 12 && L.rms(lt.L) > 1e-4, 'web: level 3 hangs 12 strings; after underruns (lite) it rings 6 of them');
 }
 // -- ring: no update artefacts, exact pitch, also with Holz and Masse at their extremes
 {

@@ -8,7 +8,7 @@ const { chromium, openInst } = require('../../v2/lib');
 const L = require('./dsplib');
 const fs = require('fs'), path = require('path');
 const URL_ = process.env.KD_URL || 'http://127.0.0.1:8790/kd-inst/index.html';
-const KEYS = process.argv.slice(2).length ? process.argv.slice(2) : ['hlm', 'rnk', 'hrz', 'mdr', 'boe', 'amo', 'elm', 'jrg'];
+const KEYS = process.argv.slice(2).length ? process.argv.slice(2) : ['hlm', 'rnk', 'hrz', 'mdr', 'boe', 'amo', 'gsp', 'elm', 'jrg'];
 const OUT = path.join(__dirname, 'out');
 const SR = 48000;
 const DRY = { 'rev.mix': 0, 'dly.mix': 0, 'mst.comp': 0, 'cho.mix': 0, 'pha.mix': 0, 'mov.vib': 0, 'mov.drift': 0, 'mov.pan': 0 };
@@ -100,6 +100,7 @@ async function one(page, o) {
     hlm: { f0: [110, 220, 440, 880, 1760, 2500], ys: [0.45, 0.6, 0.8], tol: 5, costMax: 0.55 },
     rnk: { f0: [55, 110, 220, 440, 880, 1760], ys: [0.2, 0.5, 0.8], tol: 1, costMax: 0.5 },
     hrz: { f0: [110, 220, 440, 880, 1568], ys: [0.45], tol: 5, costMax: 1.2 },   // (the default body, Glas; every body below)
+    gsp: { struck: true, web: true, ring: 4.5, f0: [110, 220, 440, 880, 1760], ys: [0.5], tol: 3, costMax: 0.45, cost: { DUR: '2' } },   // (a native pluck; the web is measured on its own below)
     // Moder: struck – pitch on the fundamental's line at the strike (wet: the swell's moisture), the voice lives its Nachklang
     mdr: { struck: true, f0: [110, 220, 440, 880, 1760], ys: [0.7], tol: 2, costMax: 0.65, ring: 5 * 1.3 + 0.15, cost: { DUR: '4' } },
     boe: { f0: [110, 220, 440, 880, 1760], ys: [0.2, 0.5, 0.8], tol: 5, costMax: 0.8, pp: { 'boe.rauschen': 0 } },   // (pitch: the strings, without the wind's band among them)
@@ -117,8 +118,9 @@ async function one(page, o) {
     console.log('\n=== ' + key + ' ===');
     const ok = (c, m) => { const r = L.ok(c, key + ': ' + m); if (!r) fails++; return r; };
     // -- health: the module loads in an offline context, a voice plays its own processor
-    const health = await page.evaluate(async (key) => { const M = window.__M; const ctx = await window.__ctx(1, { 'v.eng': key }); const v = M.playNote(key, 0.05, 220, 0.6, 0.7, {}); await ctx.startRendering(); return { ok: window.__dspOk, as: v && v.as, wk: !!(v && v.wk), want: M.dspWanted() }; }, key);
+    const health = await page.evaluate(async (key) => { const M = window.__M; const ctx = await window.__ctx(1, { 'v.eng': key }); const v = M.playNote(key, 0.05, 220, 0.6, 0.7, {}); await ctx.startRendering(); return { ok: window.__dspOk, as: v && v.as, wk: !!(v && v.wk), want: M.dspWanted(), web: !!(M.A.gsp && M.A.gsp.node) }; }, key);
     if (tc.native) ok(health.as === key && !health.wk && !health.want, 'native: plays with standard nodes, needs no module ' + JSON.stringify(health));
+    else if (tc.web) ok(health.ok && health.as === key && !health.wk && health.web, 'module loads in the offline context, the voice plucks natively and feeds the web ' + JSON.stringify(health));
     else ok(health.ok && health.as === key && health.wk, 'module loads in the offline context, the voice runs its own processor ' + JSON.stringify(health));
     // -- loudness: the standard phrase, L1 and L3, Puls bursts
     const loud = {};
@@ -200,7 +202,7 @@ async function one(page, o) {
     { const held = await one(page, { eng: key, f: 440, y: 0.6, dur: 1.2, params: DRY }); const hRms = L.rms(mono(held), 0.6 * SR, 1.1 * SR);
       const bl = [];
       for (const g of [0.06, 0.112, 0.22, 0.5]) {
-        const d = tc.struck ? (key === 'mdr' ? 3.2 : 4) : key === 'boe' ? 4 : 1.6, x = await one(page, { eng: key, f: 440, y: 0.6, dur: d, params: DRY, burst: true, gate: g }); const m = mono(x);   // (a struck voice rings out its own time; Böe's gust-pluck rings past the gate, ≤ 1.5 s)
+        const d = tc.struck ? (key === 'mdr' ? 3.2 : key === 'gsp' ? 5 : 4) : key === 'boe' ? 4 : 1.6, x = await one(page, { eng: key, f: 440, y: 0.6, dur: d, params: DRY, burst: true, gate: g }); const m = mono(x);   // (a struck voice rings out its own time – Gespinst's web its Nachklang after it; Böe's gust-pluck rings past the gate, ≤ 1.5 s)
         const e = L.env(m.subarray(0.05 * SR, (0.05 + g) * SR), SR, 0.02); const mx = Math.max(...e);
         bl.push([g, +(L.db(mx) - L.db(hRms)).toFixed(1), +L.db(L.rms(m, Math.floor((d - 0.3) * SR), Math.floor(d * SR))).toFixed(1)]);
       }
@@ -219,8 +221,8 @@ async function one(page, o) {
       ok(r.maxL <= r.vb && r.st.nan === 0 && r.st.rms > -60, `Puls lane 8 hits/s: at most ${r.maxV} sounding voices, load ${r.maxL.toFixed(2)} ≤ budget ${r.vb}, RMS ${r.st.rms} dB`); }
     // -- cost: cost.js (24 voices vs 24 Nebel, interleaved rounds), scaled to the VCOST table by the native engines
     { const { execFileSync } = require('child_process');
-      const c = JSON.parse(execFileSync('node', [path.join(__dirname, 'cost.js'), process.env.COST_ROUNDS || '6'], { env: Object.assign({}, process.env, { ENGS: key + '1,' + key + '3,hau1,hau3,obt1,obt3,tie1,stm1,swm1,neb3' }, tc.cost || {}), encoding: 'utf8', timeout: 1800000 }).trim().split('\n').pop());   // (more references: this machine's runs scatter)
-      const c1 = c[key + '1'] * c.scale, c3 = c[key + '3'] * c.scale;
+      const c = JSON.parse(execFileSync('node', [path.join(__dirname, 'cost.js'), process.env.COST_ROUNDS || '6'], { env: Object.assign({}, process.env, { ENGS: key + '1,' + key + '3,' + (tc.web ? 'web1,web3,' : '') + 'hau1,hau3,obt1,obt3,tie1,stm1,swm1,neb3' }, tc.cost || {}), encoding: 'utf8', timeout: 1800000 }).trim().split('\n').pop());   // (more references: this machine's runs scatter)
+      const nv = 24, c1 = (c[key + '1'] - (tc.web ? c.web1 / nv : 0)) * c.scale, c3 = (c[key + '3'] - (tc.web ? c.web3 / nv : 0)) * c.scale;   // (Gespinst: its voices share one web – its 1/NV taken off, the web measured on its own)
       rep.cost = { raw: [c[key + '1'], c[key + '3']], scale: c.scale, L1: +c1.toFixed(3), L3: +c3.toFixed(3), table: await page.evaluate((k) => [window.__M.VCOST1[k], window.__M.VCOST3[k]], key) };
       // (the owner's rule: best sound first – cost is measured and entered honestly, never a limit; SPEC's target for
       // reference only. Repeated runs on this machine scatter by ±10–20 %)
@@ -418,6 +420,52 @@ async function one(page, o) {
         rep.teich = { scream: +sc.toFixed(1), waterCents: +wob.toFixed(1) };
         ok(sc >= 0, `Teich: at the top the rod screams on its second mode (${sc.toFixed(1)} dB vs the fundamental)`);
         ok(wob >= 3 && wob <= 40, `Teich: the water bends the sounding rod by ${wob.toFixed(1)} ct over 4.5 s (3–40)`); }
+    }
+    if (key === 'gsp') {
+      // one render: notes [[t, degree, y, vel]], optional moves [[t, what]]; the field: major pentatonic on A 220
+      // (degrees 0 220, 1 247, 2 277, 3 330, 4 370, 5 440 …)
+      const G = async (dur, notes, params, moves) => pull(await page.evaluate(async ([dur, notes, params, moves]) => {
+        const M = window.__M, ctx = await window.__ctx(dur, Object.assign({ 'v.eng': 'gsp', 'rev.mix': 0, 'dly.mix': 0, 'mst.comp': 0, 'cho.mix': 0, 'pha.mix': 0, 't.scale': 'dpent', 't.root': 9, 't.oct': 3 }, params));
+        const q = (t) => Math.round(t * 375) / 375, used = new Set();
+        const at = (t, fn) => { let k = q(t); while (used.has(k)) k += 1 / 375; used.add(k); ctx.suspend(k).then(() => { fn(); ctx.resume(); }); };
+        const kick = (t) => { let k = q(t) + 1 / 375; while (used.has(k)) k += 1 / 375; used.add(k); ctx.suspend(k).then(() => ctx.resume()); };   // (offline, port messages arrive at the next suspend)
+        for (const [t, d, y, vel] of notes) at(t, () => M.playNote('gsp', ctx.currentTime, M.N.notes[d].f, y, vel, {}));
+        for (const [t, what, arg] of moves || []) { kick(t); at(t, () => { if (what === 'root') M.setParam('t.root', arg); else if (what === 'panic') M.panic(); else if (what === 'load') window.__load = M.voiceLoad(); }); }
+        for (let t = 0.2; t < dur - 0.1; t += 0.25) { const k = q(t); if (!used.has(k)) { used.add(k); ctx.suspend(k).then(() => ctx.resume()); } }
+        const b = await ctx.startRendering();
+        return window.__ret(b);
+      }, [dur, notes, params || {}, moves || []]));
+      const gz = (x, a, b, fq) => { a = Math.round(a * SR); b = Math.round(b * SR); let re = 0, im = 0; for (let i = a; i < b; i++) { const w = 2 * Math.PI * fq * i / SR; re += x[i] * Math.cos(w); im += x[i] * Math.sin(w); } return Math.hypot(re, im) / Math.max(1, b - a); };
+      const lv = (x, a, b) => L.db(L.rms(x, Math.round(a * SR), Math.round(b * SR)));
+      // the halo: a pluck on the root; the web's own share (with it − without it, by power) on the octave and on the
+      // fifth's string (its 2nd partial: 3f) within 0.5 s, against the direct fundamental (SPEC ≥ −25 dB)
+      { const w = mono(await G(2, [[0.1, 0, 0.6, 0.8]])), d = mono(await G(2, [[0.1, 0, 0.6, 0.8]], { 'xgsp.mute': true })), f = 220;
+        const web = w.map((v, i) => v - d[i]);   // (the direct pluck is the same in both renders: the difference is the web alone)
+        const share = (k) => L.db(gz(web, 0.15, 0.6, k * f)), f1 = L.db(gz(d, 0.15, 0.6, f));
+        const h = { oct: share(2) - f1, fifth: share(3) - f1 }; rep.halo = { oct: +h.oct.toFixed(1), fifth: +h.fifth.toFixed(1) };
+        ok(h.oct >= -25 && h.fifth >= -25, `halo: a pluck on the root – the web adds the octave ${h.oct.toFixed(1)} dB and the fifth's string (3f) ${h.fifth.toFixed(1)} dB rel. the direct fundamental within 0.5 s (≥ −25)`); }
+      // Kopplung 1: no self-oscillation without input (dies away), the common mode rings ≤ 4 × Nachklang
+      { const x = mono(await G(10, [[0.1, 0, 0.6, 0.9], [0.12, 2, 0.6, 0.9], [0.14, 3, 0.6, 0.9]], { 'gsp.kopplung': 1, 'gsp.halo': 0 }));
+        const a = lv(x, 3, 3.5), b = lv(x, 5, 5.5), c = lv(x, 6.5, 7), t60 = 60 * 2 / Math.max(1e-3, a - b); rep.edge = [+a.toFixed(1), +b.toFixed(1), +c.toFixed(1), +t60.toFixed(2)];
+        ok(c < b - 3, `Kopplung 1 without input: the web dies away – ${a.toFixed(1)} dB at 3 s, ${b.toFixed(1)} at 5 s, ${c.toFixed(1)} at 6.5 s`);
+        ok(t60 <= 4 * 2, `Kopplung 1: the web's T60 3–5 s ${t60.toFixed(2)} s (≤ 4 × Nachklang 2 s)`); }
+      // a scale change glides (90 ms) – no click: the crest over the change as without it (≤ +6 dB)
+      { const notes = [[0.1, 0, 0.6, 0.8], [0.12, 3, 0.6, 0.8], [0.14, 5, 0.6, 0.8]], cr = (x) => { const a = Math.round(0.95 * SR), b = Math.round(1.4 * SR); let pk = 0; for (let i = a; i < b; i++) pk = Math.max(pk, Math.abs(x[i])); return L.db(pk) - L.db(L.rms(x, a, b)); };
+        const c0 = cr(mono(await G(2, notes, { 'gsp.halo': 0 }))), c1 = cr(mono(await G(2, notes, { 'gsp.halo': 0 }, [[1.0, 'root', 11]])));
+        rep.retune = [+c0.toFixed(1), +c1.toFixed(1)]; ok(c1 - c0 <= 6, `scale change under a ringing web: crest ${c1.toFixed(1)} dB vs ${c0.toFixed(1)} without (≤ +6)`); }
+      // Stille (panic) clears within 100 ms; the budget counts the web while it rings; the mixer has its channel
+      { const x = mono(await G(2, [[0.1, 0, 0.6, 0.9], [0.12, 3, 0.6, 0.9]], { 'gsp.halo': 0, 'gsp.kopplung': 1 }, [[0.6, 'load'], [1.0, 'panic']])); const l = lv(x, 1.1, 1.3), load = await page.evaluate(() => window.__load);
+        const st = await page.evaluate(() => ({ strip: !!window.__M.MIX.s.gsp, k: window.__M.MIX.list.map((s) => s.k).join(' '), cost: window.__M.GSP_COST }));
+        rep.clear = [+l.toFixed(1), load, st];
+        ok(l < -80, `Stille clears the web: ${l.toFixed(1)} dB 0.1–0.3 s after`);
+        ok(load >= 2 * 0.4 + st.cost[0] - 1e-6 && st.strip, `the budget counts the web while it rings (load ${load} with two voices), the mixer has its channel (${st.k})`); }
+      // the web on its own: its cost with a steady input (cost.js 'web'), against its budget entry
+      { const { execFileSync } = require('child_process');
+        const c = JSON.parse(execFileSync('node', [path.join(__dirname, 'cost.js'), process.env.COST_ROUNDS || '6'], { env: Object.assign({}, process.env, { ENGS: 'web1,web3,hau1,hau3,obt1,obt3,tie1,stm1,swm1,neb3' }), encoding: 'utf8', timeout: 1800000 }).trim().split('\n').pop());
+        const w1 = c.web1 * c.scale, w3 = c.web3 * c.scale; rep.webCost = [+w1.toFixed(3), +w3.toFixed(3)];
+        console.log(`INFO gsp: the web costs ${w1.toFixed(3)} (8 strings) / ${w3.toFixed(3)} (12) Nebel units`);
+        const tab = await page.evaluate(() => window.__M.GSP_COST);
+        ok(tab[0] >= w1 && tab[1] >= w3, `the web's budget entry covers the measurement: ${tab} ≥ ${w1.toFixed(2)}, ${w3.toFixed(2)}`); }
     }
     if (key === 'mdr') {
       // SPEC §3.10's rows and the check's fixes (biologist-mdr): the swell, the upper modes eaten, the crackle (events,
@@ -767,11 +815,11 @@ async function one(page, o) {
   // -- fallback: no module in this context → the stand-in plays, the key stays
   { const r = await page.evaluate(async () => {
       const M = window.__M; const ctx = await window.__off(48000, 1, { 'v.eng': 'neb', 'rev.mix': 0 });   // nothing loaded
-      const W = [['hlm', 'hau', 220], ['rnk', 'neb', 330], ['hrz', 'sch', 440], ['mdr', 'glo', 550], ['boe', 'obt', 294], ['amo', 'tie', 110]], vs = W.map(([k, , f]) => M.playNote(k, 0.05, f, 0.6, 0.7, {}));
+      const W = [['hlm', 'hau', 220], ['rnk', 'neb', 330], ['hrz', 'sch', 440], ['mdr', 'glo', 550], ['boe', 'obt', 294], ['amo', 'tie', 110], ['gsp', 'sai', 247]], vs = W.map(([k, , f]) => M.playNote(k, 0.05, f, 0.6, 0.7, {}));
       const st = window.__stats(await ctx.startRendering(), 0.1);
       return { got: vs.map((v) => v && [v.eng, v.as]), st, plays: W.map(([k]) => M.wkPlays(k)), dsp: !!ctx.__dsp, want: W.map(([k, s]) => [k, s]) };
     });
-    const pass = L.ok(r.want.every(([k, s], i) => r.got[i] && r.got[i][0] === k && r.got[i][1] === s) && r.st.rms > -50 && !r.dsp, 'fallback without the module: Halm plays as Hauch, Ranke as Nebel, Harz as Schale, Moder as Glocke, Böe as Obertöne, Amöbe as Tiefe, the key stays (' + JSON.stringify(r.got) + ')');
+    const pass = L.ok(r.want.every(([k, s], i) => r.got[i] && r.got[i][0] === k && r.got[i][1] === s) && r.st.rms > -50 && !r.dsp, 'fallback without the module: Halm plays as Hauch, Ranke as Nebel, Harz as Schale, Moder as Glocke, Böe as Obertöne, Amöbe as Tiefe, Gespinst as Saite, the key stays (' + JSON.stringify(r.got) + ')');
     if (!pass) fails++; }
   const errs = errors.filter((e) => !/Failed to load resource|fonts\.g|myzel-dsp\.js/.test(e));
   if (!L.ok(!errs.length, 'no console errors ' + errs.join(' | '))) fails++;

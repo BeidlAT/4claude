@@ -97,6 +97,29 @@ const settle = (page, ms) => page.evaluate((ms) => window.__sleep(ms), ms);
   });
   L.ok(k.got && k.got.mund === 0.9, 'a knob turned while a voice sounds reaches its processor ({set})');
   L.ok(k.macro.join() === 'hlm.atem,hlm.blatt' && k.mx === 'Halm' && k.group === 'Halm/Ranke', `MACRO A/B ${k.macro}, mixer source „${k.mx}“, MIDI groups ${k.group}`);
+  // Gespinst: its tile, a tap plucks and wakes the web (counted in the budget, its own mixer channel sounds), a knob
+  // reaches the web, Halo moves the channel, Stille clears it, the web idles again
+  {
+    await page.evaluate(() => window.__M.openPanel('klang'));
+    await page.click('#p-v-eng .kq-name'); await page.click('.kq-fams .chip[data-fam="erz"]'); await page.click('.kq-tile[data-k="gsp"] .kq-pick'); await page.click('.kq-done');
+    const g = await page.evaluate(async () => {
+      const M = window.__M, A = M.A; for (let i = 0; i < 100 && M.DSP.state !== 'ok'; i++) await window.__sleep(20);
+      const sec = !M.engSecs.gsp.hidden; M.closePanel && M.closePanel();
+      const tap = (f) => M.playNote('gsp', A.ctx.currentTime + 0.01, f, 0.6, 0.8, {});
+      const rms = () => { const b = new Float32Array(A.analyser.fftSize); A.analyser.getFloatTimeDomainData(b); let s = 0; for (const x of b) s += x * x; return 10 * Math.log10(s / b.length + 1e-20); };
+      const v = tap(M.N.notes[0].f); await window.__sleep(150); tap(M.N.notes[3].f); await window.__sleep(250);
+      const web = !!(A.gsp && A.gsp.node), active = !!(A.gsp && A.gsp.active), load = M.voiceLoad(), lv = rms();
+      let got = null; const pm = A.gsp.node.port.postMessage.bind(A.gsp.node.port); A.gsp.node.port.postMessage = (m) => { if (m && m.set && !got) got = m.set; pm(m); };
+      M.setParam('gsp.kopplung', 0.7); M.setParam('gsp.halo', -3); await window.__sleep(400); const halo = A.gsp.out.gain.value;
+      M.panic(); await window.__sleep(150); const after = rms();
+      M.setParam('gsp.kopplung', 0.4); M.setParam('gsp.halo', -9);
+      await window.__sleep(1500);
+      return { sec, web, active, load: +load.toFixed(2), lv: +lv.toFixed(1), got, halo: +halo.toFixed(3), after: +after.toFixed(1), idle: !A.gsp.active, chan: M.mxSrcText('gsp'), voice: v && v.as };
+    });
+    L.ok(g.sec && g.voice === 'gsp' && g.web && g.active && g.load >= 0.8 + 1.6 && g.lv > -60, `gsp: its tile plucks, the web wakes and counts in the budget (load ${g.load}), ${g.lv} dBFS`);
+    L.ok(g.got && g.got.kopplung === 0.7 && Math.abs(g.halo - Math.pow(10, -3 / 20)) < 0.05 && g.chan === 'eine Oktave', `gsp: Kopplung reaches the web (${JSON.stringify(g.got)}), Halo moves its channel (${g.halo}), the channel says „${g.chan}“`);
+    L.ok(g.after < -70 && g.idle, `gsp: Stille clears the web (${g.after} dBFS), and it idles again`);
+  }
   // Halm's pipes: the chip renames the knobs and the note, a sounding voice hears the pipe, the flame rings out and ends
   const kp = await page.evaluate(async () => {
     const M = window.__M, A = M.A; M.setParam('v.eng', 'hlm'); M.openPanel('klang'); await window.__sleep(100);
@@ -210,7 +233,7 @@ const settle = (page, ms) => page.evaluate((ms) => window.__sleep(ms), ms);
     await page.evaluate(() => window.__M.openPanel('klang'));
     await page.click('#p-v-eng .kq-name'); await page.click('.kq-fams .chip[data-fam="luft"]'); await page.click('.kq-tile[data-k="hlm"] .kq-pick'); await page.click('.kq-done'); await settle(page, 300);
     const r = await page.evaluate(async () => {
-      const M = window.__M, A = M.A, W = [['hlm', 'hau', 220], ['rnk', 'neb', 330], ['hrz', 'sch', 440], ['mdr', 'glo', 550], ['boe', 'obt', 294], ['amo', 'tie', 110]], vs = W.map(([k, , f]) => M.playNote(k, A.ctx.currentTime + 0.01, f, 0.6, 0.7, {}));
+      const M = window.__M, A = M.A, W = [['hlm', 'hau', 220], ['rnk', 'neb', 330], ['hrz', 'sch', 440], ['mdr', 'glo', 550], ['boe', 'obt', 294], ['amo', 'tie', 110], ['gsp', 'sai', 247]], vs = W.map(([k, , f]) => M.playNote(k, A.ctx.currentTime + 0.01, f, 0.6, 0.7, {}));
       await window.__sleep(200); for (const v of vs) if (v && v.release && !v.released) v.release();
       return { state: M.DSP.state, as: vs.map((v) => v.as), eng: vs.map((v) => v.eng), want: W.map((w) => w[1]), keys: W.map((w) => w[0]), note: !M.engSecs.hlm.wkNote.hidden && M.engSecs.hlm.wkNote.textContent, toast: document.querySelector('#toastMsg').textContent, mx: M.mxSrcText('fin'), patch: M.P['v.eng'] };
     });
