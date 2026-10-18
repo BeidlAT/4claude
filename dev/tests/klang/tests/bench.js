@@ -482,9 +482,10 @@ async function one(page, o) {
         rep.clear = [+l.toFixed(1), load, st];
         ok(l < -80, `Stille clears the web: ${l.toFixed(1)} dB 0.1–0.3 s after`);
         ok(load >= 2 * 0.4 + st.cost[0] - 1e-6 && st.strip, `the budget counts the web while it rings (load ${load} with two voices), the mixer has its channel (${st.k})`); }
-      // the web on its own: its cost with a steady input (cost.js 'web'), against its budget entry
+      // the web on its own: its cost with a steady input (cost.js 'web', 24 webs against 24 Nebel voices – one web alone
+      // carries the module's fixed share ×24), against its budget entry
       { const { execFileSync } = require('child_process');
-        const c = JSON.parse(execFileSync('node', [path.join(__dirname, 'cost.js'), process.env.COST_ROUNDS || '6'], { env: Object.assign({}, process.env, { ENGS: 'web1,web3,hau1,hau3,obt1,obt3,tie1,stm1,swm1,neb3' }), encoding: 'utf8', timeout: 1800000 }).trim().split('\n').pop());
+        const c = JSON.parse(execFileSync('node', [path.join(__dirname, 'cost.js'), process.env.COST_ROUNDS || '6'], { env: Object.assign({}, process.env, { ENGS: 'web1,web3,hau1,hau3,obt1,obt3,tie1,stm1,swm1,neb3', NW: '24' }), encoding: 'utf8', timeout: 1800000 }).trim().split('\n').pop());
         const w1 = c.web1 * c.scale, w3 = c.web3 * c.scale; rep.webCost = [+w1.toFixed(3), +w3.toFixed(3)];
         console.log(`INFO gsp: the web costs ${w1.toFixed(3)} (8 strings) / ${w3.toFixed(3)} (12) Nebel units`);
         const tab = await page.evaluate(() => window.__M.GSP_COST);

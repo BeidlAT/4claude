@@ -3,7 +3,8 @@
 // interleaved rounds and each keeps its fastest round. Native engines are measured alongside: their VCOST entries
 // (from an earlier calibration on another machine) give the scale between this machine's raw ratio and the table.
 //   node cost.js [rounds]      env: ENGS=hlm1,hlm3,… NV=24 DUR=4 PARAMS='{"jrg.holz":1}' Y=0.6 (the voices' height)     prints one JSON line
-// (NW=6: 'web' renders six of Gespinst's webs at once – one web alone is a small difference, its noise multiplied by NV)
+// (NW=24: 'web' renders 24 of Gespinst's webs at once, the voices' method – one web alone carries the worklet's fixed
+// share of the render and its noise, both multiplied by NV)
 // (a struck engine needs DUR within its voices' life – Jahresring: PARAMS holz 1 and a summer, DUR 2)
 // A candidate written 'gltN1' is Glut's own native loop: its context gets no module.
 process.env.SEED_BLOBS = '';
@@ -14,7 +15,7 @@ const XP = JSON.parse(process.env.PARAMS || '{}');
 (async () => {
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
   const { page } = await openInst(browser, process.env.KD_URL || 'http://127.0.0.1:8790/kd-inst/index.html', false);
-  const r = await page.evaluate(async ([ROUNDS, DUR, NV, ENGS, XP, YH]) => {
+  const r = await page.evaluate(async ([ROUNDS, DUR, NV, ENGS, XP, YH, NW]) => {
     const M = window.__M;
     async function run(eng, q, n) {
       M.P['dev.q'] = q;
@@ -52,7 +53,7 @@ const XP = JSON.parse(process.env.PARAMS || '{}');
     out.scale = +(med.length % 2 ? med[mid] : (med[mid - 1] + med[mid]) / 2).toFixed(3); out.scaleEach = Object.fromEntries(refs.map((eq, i) => [eq, +sc[i].toFixed(2)]));
     M.P['dev.q'] = '1';
     return out;
-  }, [ROUNDS, DUR, NV, ENGS, XP, +(process.env.Y || 0.6)]);
+  }, [ROUNDS, DUR, NV, ENGS, XP, +(process.env.Y || 0.6), NW]);
   console.log(JSON.stringify(r));
   await browser.close();
 })();
