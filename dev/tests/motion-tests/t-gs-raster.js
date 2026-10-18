@@ -89,20 +89,21 @@ const EPS = 1e-9;
     M.A.budgetScale = 0.01; M.applyQuality();
     const [vb] = M.getVB();
     await window.__sleep(1500);
-    const held = [];
-    for (let i = 0; i < 6; i++) { window.__key(0.1 + i * 0.12, 0.9, 'n' + i); held.push(M.touches.get('n' + i)); }
+    // (Hexenring: its processor counts in the budget too – the held notes fill what is left)
+    const held = [], nH = Math.floor(vb - (M.hxLoad ? M.hxLoad() : 0) + 1e-9);
+    for (let i = 0; i < nH; i++) { window.__key(0.1 + i * 0.12, 0.9, 'n' + i); held.push(M.touches.get('n' + i)); }
     await window.__sleep(100);
     const load0 = M.voiceLoad();
     window.__tilt(1, -0.3);
     const n0 = M.RG.n;
     await window.__sleep(3000);
     const o = { vb, load0, struck: M.RG.n - n0, alive: held.every((tt) => tt.voices.every((x) => x.v.alive && M.A.voices.has(x.v))), n: held.length };
-    for (let i = 0; i < 6; i++) window.__up('n' + i);
+    for (let i = 0; i < nH; i++) window.__up('n' + i);
     M.A.budgetScale = 1; M.applyQuality();
     window.__tilt(0, 0);
     return o;
   });
-  ok(r.vb === 6 && r.load0 >= r.vb && r.struck === 0 && r.alive, 'held notes fill the voice budget (' + r.load0 + '/' + r.vb + '): the rain stays silent (' + r.struck + ' strikes), every held note sounds on');
+  ok(r.vb === 6 && r.load0 + 1 > r.vb && r.struck === 0 && r.alive, 'held notes fill the voice budget (' + r.load0.toFixed(2) + '/' + r.vb + ', ' + r.n + ' notes): the rain stays silent (' + r.struck + ' strikes), every held note sounds on');
   ok(errors.length === 0, 'no errors in the page' + (errors.length ? ': ' + errors.slice(0, 3).join(' | ') : ''));
   await close();
 })().catch(async (e) => { console.log('FAIL ' + e.stack); process.exitCode = 1; await close(); });

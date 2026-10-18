@@ -20,11 +20,13 @@ So geht es in einer neuen Sitzung weiter: Öffne eine neue Claude-Code-Sitzung a
 
 ## Hexenring – der Looper (in Arbeit, Stand 18.10.2026)
 
-**Für den Besitzer:** Das Konzept steht in `dev/looper/KONZEPT.md`, deine Entscheidungen in dessen §12. Gebaut wird alles in Etappen auf dem Branch dieser Sitzung; veröffentlicht wird erst am Ende. So geht es in einer neuen Sitzung weiter:
+**Für den Besitzer:** Das Konzept steht in `dev/looper/KONZEPT.md`, deine Entscheidungen in dessen §12. Gebaut wird alles in Etappen auf dem Branch dieser Sitzung; veröffentlicht wird erst am Ende. Fertig ist der Kern (Etappe 1a): der Taktgeber, der Looper im Audio-Thread, der Humus und der Kanal „Hexenring“ – noch ohne Bedienung. So geht es in einer neuen Sitzung weiter:
 
 > Lies dev/HANDOFF.md und baue den Hexenring weiter.
 
 **Working notes:** binding spec `dev/looper/SPEC.md` (§23 build order; "As built" notes per step), builder rules `dev/looper/BRIEF-build.md`, research/proposals/reviews/listening examples under `dev/looper/`. Owner decisions (18.10.2026): no measuring day – the build machine is the reference, target a current iPad Pro and desktop PCs; new-loop start and loop quality are settings (defaults: Abdruck, Stufe 3); audio loops on tempo change: Schnitt for rhythmic, frei for pads, never stretched; Taumeln per loop; everything else per the concept's recommendations; build everything, publish at the end (PR into `ccr-c7c5d0a6-cus3ip`, merge when the owner says so). Progress per step is in the session's commits and SPEC's "As built" notes.
+
+**Step 1a (engine core, built):** Taktgeber (`TG`, one beat map; the Puls, MIDI clock in/out, Sporenregen, the Fährte and the bar recorder read it), processor `myzel-ring` (Humus rings, Schleifen/Schichten, seam law, Ausklang hook, resampler), the taps and the strip „Hexenring“ (`hxr` → `A.masterIn`), the notes and Bewegung Humus, the internal calls `hxGrab/hxLoopNew/hxSchichtAdd/hxState/hxGain/hxUndo/hxClear/hxRate/hxTempo` (no UI yet). The DSP module now loads at sound start. Suite `dev/tests/hexenring/run-all.sh` (copy to `<scratch>/hexenring/`). Costs entered: `HX_COST = { capture: 0.68, schicht: 0.31, rs: 0.95 }` (cost.js candidates `hxq…hxr`). Two open conflicts for the owner, in SPEC §2/§4 As built: MIDI-clock slews vs. `midi-tests/t-clock.js`'s 6-ms window after an audio stall; the loops' echo/hall sends feed returns that „Alles“ taps.
 
 ## For the next session (English working notes)
 

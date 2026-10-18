@@ -106,6 +106,26 @@ applied to the audio relation itself (internal capture is aligned by constructio
   `round(frameAt(b0 + k·L))` (port `ideas/engineer-experiments/e4-drift.js`).
 - Puls start while loops play: the Puls's first step lands on a TG bar line (≤ 1 frame).
 
+**As built (step 1a).** The beat map keeps a *continuous* beat that never jumps at all; the musical beat (bar lines at
+its multiples of 4) is the continuous one minus an origin `TG.o`. The origin moves only at a fresh Puls start without a
+Schleife (as the letter allows), at a device's Start/Continue/late downbeat, and – with a Schleife – by whole bars when
+the Puls joins the grid at its next bar line (it counts from 0 there, so MIDI clock out still sends Start). So "TG may be
+re-anchored at start" became an origin move: the Humus's Bewegung, the Fährte's lanes and every loop phase keep their
+beats. Main-thread tempo changes take effect `TG_LEAD` = 30 ms ahead. `SEQ.anchorT/anchorB/bpm` are accessors (the last
+re-anchoring; the nominal tempo – a device's while it leads, not a slew's slope); a direct write re-anchors the map
+there as before (old tests write them). `faeB/faeT` are the continuous beat, `FA.t0/b0/bpm` mirror the segment sounding.
+MIDI clock out lies on the Taktgeber's musical grid running or standing. Fractional tempo: `hxTempo(bpm)` (TG.src 'hx');
+`seqBpm()` returns it, `P['seq.bpm']` keeps the patch's whole number, the slider, the Puls ring and the mixer show one
+decimal, a slider move takes the tempo back (src 'seq'), a preset leaves it, the last Schleife cleared releases it
+(`TG.keep` = „Tempo behalten“). MIDI clock follow: the PLL's phase reaches TG as two segments from now + 30 ms (a slope,
+then the tempo) over `max(1 beat, 10·|error|)`; errors under 1 ms only update the tempo (≥ 0.01 BPM). Measured
+(t-hx-clock, 118.7 BPM ±1.5 ms jitter): TG on the device's beat mean 0.5 ms / max ≈ 1 ms, Puls sixteenths mean 0.5 ms,
+a loop's pass starts within 0.9 ms of the device's bar lines, slopes within 0.3–2 %, the past never rewritten.
+**Conflict (reported):** when the audio clock stalls (the headless test device: 3–70 ms), the device's beat moves by the
+stall in audio time and TG slews back over ≥ 1 beat instead of jumping; `midi-tests/t-clock.js` asks the Puls's hits
+within 6 ms of the device's sixteenths and failed 2 of 5 runs where a stall fell into its window (the old code
+re-anchored at once). The spec's slews were kept; the owner decides. `HX.lat` (Spielverzögerung) comes with the grammar.
+
 ---
 
 ## 3. `myzel-ring` – the looper processor
@@ -160,6 +180,28 @@ Its cost is measured and entered (§21).
 - No allocation in `process()` (instrumented check: pool counts constant during a 10-min run).
 - Main thread blocked 2 s: playback continues without a gap.
 
+**As built (step 1a).** `class Ring` in `myzelDsp()` (`'myzel-ring'`), node made in `start()` (`hxStart` → quiet
+`ensureDSP` → `hxNode`). Chunks of 8192 frames; the page makes the two Humus rings (`hx.humus`, rec param, 64 s) and
+moves them over; a grab brings its own empty chunks (`{grab:{…, dst}}`), filled two chunks per block, oldest first, and
+returned filled – the processor needs no spare pool. Messages as listed (`{stream}` stored, unused until step 2;
+`{late}` not sent yet); replies `{frame,t}`, `{passStart}`, `{grabbed}`, `{freed}` (every chunk handed back by transfer),
+`{meter}` (15 Hz), `{report}`. A Schicht: `join` 'xf' (warm: the pass that ended continues under the new start), 'ola'
+(cold: its Ausklang `{off,len}` – in its own chunks or a window of the Schicht's – overlap-added from its second seam on;
+never at its first), 'cut' (tests); an entry fade-in (`fin`, default X) from silence. **Seam law:** the smooth equal-power
+pair normalised by the two sides' correlation ρ, `k = 1/√(1 + 2ρ·sin·cos)` (ρ 0 equal power, 1 equal gain, negative a
+lift ≤ ×2) – the letter's "toward equal gain with correlation" extended to negative ρ (measured on Gong: ρ −0.22); the
+page measures ρ from the Schicht's own seam (`hxRho`, default for 'xf'). Stop at a seam (`angehalten`): the Ausklang rings
+once outside the loop's state gain; without one, the pass's own continuation fades over X. A swap at a seam is joined by
+the seam's own crossfade (old version as the continuation), mid-pass the versions cross at the same place. Resampler:
+cut-off at the source's Nyquist, every phase normalised to unit DC gain, linear between phases; `{rate}` ±20 ct, glides
+over 50 ms; r = 1 reads frame for frame (bit-exact). Measured (t-hx-proc): one hour, 2402 segments: 631 passes within
+±0.499 frames of `round(frameAt(k·beats))`, 0 wrong frames, passStart reports exact (20 s render); 10 min of grabs,
+Schichten and undos (145 cycles): the Humus's 750 chunks constant, every chunk accounted for, 0 typed arrays made in
+`process()` (an instrumented build counts them); E10 set (sine, DC, chord): seams 1.01–1.21× mid-pass, entries ≤ 1.02×;
+mute, undo, stop, swap ≤ 1.0× with the gain only falling; Gong/Harz/Bordun rendered by the app: seams 0.88–0.99× the
+material's own third difference there, RMS within −0.18…+0.18 dB of the two sides; resampler ±17 ct flat within
+0.001 dB to 20 kHz, residual −94.5 dB (1 kHz) … −82.5 dB (20 kHz); the page blocked 2 s: no wrong frame.
+
 ---
 
 ## 4. Capture taps and the Hexenring strip
@@ -182,6 +224,21 @@ Its cost is measured and entered (§21).
 **Acceptance:** with loops playing and overdubbing, the in0/in1 taps contain no loop signal (correlation test with a
 marker tone in a loop: ≤ −100 dB in the taps).
 
+**As built (step 1a).** Taps after `st.dry` as specified; a masked-out strip has no tap node at all (`hxMask`, 3-ms
+ramps). The strip `hxr` stands after „Regen“ in the Spiel group, hidden until the first Schleife (`mxRgnSync`); its
+params are `rec` (out of patches – a preset never changes running loops); route `dir` → `A.masterIn`; set to the chain it
+goes through its own chain copy that also ends at `A.masterIn`; its sends take its own signal. **Out 1** plays through its
+own chain copy (the live chain's settings and modulators) into the strip – not `A.voiceBus` as drawn in §1, because
+`A.voiceBus` ends in `A.masterSum`, where „Alles“ listens; the difference: the drive acts on the loops alone, not on their
+sum with the live playing. **Conflict (reported):** the strip's echo and hall sends feed the shared returns, which are
+part of `A.masterSum` – so „Alles“ hears the loops' echo/hall; the rule "no tap hears a Schleife" holds for the dry loops
+only (separate returns for the loops would be needed; the echo is not linear). Measured (t-hx-taps, sends at 0, live
+Bordun and notes going on): a marker in two loops (out 0, out 1) −130 dB under the loops in „Gespielt“, −127 dB in
+„Alles“; a muted strip is silent in both rings. The module now loads at sound start; tests that encoded the lazy rule were
+updated: `klang/tests/t-parity.js` (old engines: the module loads once, at sound start; their voices stay native),
+`klang/tests/t-lib-fb.js` (the module stands before the first probe), `motion-tests/t-gl-parity.js` (one strip more,
+unity), `motion-tests/t-gs-raster.js` (the budget holds the capture: one held note fewer fits).
+
 ---
 
 ## 5. Notes Humus and Bewegung
@@ -200,6 +257,15 @@ f, deg, oct, alt, x, y0, vel, pan, layer, gate, burst, curves: {y: [[t, v]…], 
 
 **Acceptance:** after playing a 2-bar phrase with finger, MIDI and Puls, `HX.ev` holds every note with correct
 `t0/t1/deg`, the Puls notes with src `l0…`, no probes; a loop's own Live/Nähren voices are absent.
+
+**As built (step 1a).** `HX.ev`: 4096 reused objects, 120 s, no reference to the voice kept (the Gestik soak's heap grew
+3.4 MB in 2.5 min while events held their voices; now 1.1 MB); a voice's `setF/setY/release` are wrapped (a curve point at
+most every 5 ms, a long hold thinned to every other point at 256); `src` from `o.bus` (`o.hxSrc` 'ras' from the Rassel); struck notes keep `t1` null and their `gate` (the Puls
+step's); the Bordun is one event (`startBordun/stopBordun`); probes, `hxr`-bus voices and offline renders are left out;
+`hxEvents(t0, t1, held)` returns plain records. Bewegung: `FA_RING` 400 beats (2 min at 200 BPM), `hxMv(t0, t1)` gives
+every lane's steps with knobs in their own unit (Hz, share) – a sweep 8000 → 150 → 8000 Hz is kept whole (G); the Fährte's
+own playback still clamps to Formen (it is retired in step 3). `loadValues` writes the changed `FAE_PAR` knobs into
+their lanes at once (D): after a preset the lane holds the preset's value, a 3 % nudge stays 3 % (t-hx-humus).
 
 ---
 
@@ -598,6 +664,10 @@ Vergessen; export/import JSON.
   equivalents (Bewegung layer, clock, latency shift, save format) and delete the obsolete ones with a list of what each
   covered.
 
+**As built (step 1a).** `voiceLoad()` adds `hxLoad()`: `HX_COST.capture` while the node exists, `schicht` per Schicht of
+a playing loop, `rs` per Schicht of a resampled one. Keep-alive: a playing Schleife keeps the context awake (`hxBusy`).
+`panic` sets every Schleife `angehalten` (buffers kept; the toast and „Weiter“ come with the Ringleiste).
+
 ---
 
 ## 19. Persistence
@@ -632,6 +702,12 @@ Measure with the `klang/tests/cost.js` method (extend it: `ENGS=hxr…` candidat
 - own webs: `GSP_COST` each.
 Count in `voiceLoad()`. The Werk-Rahmen's CPU is not voice budget; it is governed by §10.5. Report all numbers in the
 HANDOFF.
+
+**As built (step 1a).** Measured with `klang/tests/cost.js` (candidates `hxq/hxn/hxc/hx0/hxs/hxr`, nodes built before
+the render), two runs on this machine: capture (the node with both rings recording and its Gespielt taps) 0.59 / 0.55,
+of it the taps ≈ 0.1; a playing Schicht 0.19 / 0.27; resampling a Schicht +0.75 / +0.83. Entered (higher + 15 %):
+`HX_COST = { capture: 0.68, schicht: 0.31, rs: 0.95 }` – the capture runs from the first note, so a phone's level-1 budget
+(14) has ≈ 5 % less room for voices.
 
 ---
 
@@ -679,3 +755,8 @@ Also: every existing suite (`reg.sh`, `klang/tests/run-all.sh`, smoke-all) stays
 **Risks:** the Werk-Rahmen (iframe boot cost, memory, determinism of all 28 sources, Safari); TG refactor breaking Puls/
 MIDI tests; the UI fitting 360 px; the effort of Etappe 3. Each builder reports conflicts with the owner's rules instead
 of deciding them.
+
+### As built (step 1a): suite `dev/tests/hexenring/` (`run-all.sh`)
+`t-hx-proc` (32 checks: the hour, Frei, pool, E10 seams, mute/undo/stop/swap, Gong/Harz/Bordun, Ausklang, resampler,
+2-s stall), `t-hx-taps` (11), `t-hx-clock` (19), `t-hx-humus` (11: §5). Helpers in `hx-h.js` (offline ring contexts, an
+index checker and a recorder processor); the MIDI parts use `midi-tests/h.js` on the hx slot.

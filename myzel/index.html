@@ -2162,7 +2162,7 @@ NUM('mst.comp', 'Verdichtung', 0, 1, 0.35, '%');
 NUM('mst.vol', 'Pegel', -24, 6, 2, 'dB');
 NUM('mst.wid', 'Breite', 0, 2, 1, '%', { step: 0.01, fmt: (v) => (v < 0.005 ? 'Mono' : Math.round(v * 100) + ' %') });
 // Puls
-NUM('seq.bpm', 'Tempo', 30, 200, 84, 'bpm', { step: 1 });
+NUM('seq.bpm', 'Tempo', 30, 200, 84, 'bpm', { step: 1, fmt: (v) => (TG.hxOn ? dec(TG.hx.toFixed(1)) : Math.round(v)) + ' BPM' });   // Hexenring: a Schleife's exact tempo
 NUM('seq.swing', 'Swing', 0, 0.6, 0.1, '%');
 const DIV_OPTS = [['1', '1/4'], ['0.5', '1/8'], ['0.3333', '1/8 T'], ['0.25', '1/16'], ['0.1667', '1/16 T'], ['0.125', '1/32']];
 const LANE_DEF = [
@@ -2192,6 +2192,7 @@ const STRIPS = [
   { k: 'fin', name: 'Klang', info: 'Spielfläche und Keyboard' },
   { k: 'eb2', name: 'Ebene 2', info: 'Zweiter Klang auf jedem Finger' },
   { k: 'rgn', name: 'Regen', info: 'Sporenregen (Gestik)' },
+  { k: 'hxr', name: 'Hexenring', info: 'Schleifen' },   // Hexenring: its loops (no tap hears it)
   ...LANE_DEF.map((_, i) => ({ k: 'l' + i, name: 'Spur ' + (i + 1), info: 'Puls', lane: i })),
   { k: 'bor', name: 'Bordun', info: 'Liegender Grundton' },
   { k: 'gsp', name: 'Gespinst', info: 'Netz der Saiten' },
@@ -2224,6 +2225,10 @@ for (const st of STRIPS) {
   NUM(p + 'wid', 'Breite', 0, 2, 1, '%', { step: 0.01, fmt: fmtWidth });
   NUM(p + 'duck', 'Pumpen', 0, 1, 0, '%', { step: 0.01 });
 }
+for (const id in PD) if (id.startsWith('xhxr.') && !PD[id].live) PD[id].rec = 1;   // Hexenring: the loops' strip is not the patch's
+PD['xhxr.route'].d = 'dir';
+// Hexenring (SPEC §20): device-side settings, kept out of patches
+NUM('hx.humus', 'Humus-Länge', 16, 300, 64, 's', { step: 1, rec: 1 });
 NUM('mix.pulsVol', 'Puls gesamt', -60, 6, 0, 'dB', { step: 0.1, fmt: fmtFader });
 BOOL('mix.pulsMute', 'Puls stumm', false);
 SEL('mix.duckSrc', 'Pumpen im Takt von', [['0', 'Spur 1'], ['1', 'Spur 2'], ['2', 'Spur 3'], ['3', 'Spur 4']], '0', { chips: 1, small: 1 });
@@ -2264,7 +2269,7 @@ BOOL('midi.std', 'Standard-Zuordnungen', true, { dev: 1 });
 const GROUP = {
   v: 'Spielweise', t: 'Stimmung', neb: 'Nebel', kor: 'Körner', hau: 'Hauch', glo: 'Glocke', mem: 'Membran', sai: 'Saite', sch: 'Schale', gng: "Gong", klb: "Kalimba", obt: "Obertöne", stm: "Stimme", swm: "Schwarm", tie: "Tiefe", trp: "Tropfen", hlm: 'Halm', rnk: 'Ranke', elm: 'Elmsfeuer', jrg: 'Jahresring', hrz: 'Harz', shn: 'Sehne', zpf: 'Zapfen', glt: 'Glut', mdr: 'Moder', boe: 'Böe', amo: 'Amöbe', gsp: 'Gespinst', rhz: 'Rhizom', khl: 'Kehlchen',
   drv: 'Verzerrung', rng: 'Ringmodulator', flt: 'Filter', pha: 'Phaser', cho: 'Schweben', dly: 'Echo', rev: 'Hall', mov: 'Bewegung', mst: 'Summe',
-  seq: 'Puls', bor: 'Bordun', rec: 'Aufnahme', dev: 'Gerät', midi: 'MIDI', l0: 'Spur 1', l1: 'Spur 2', l2: 'Spur 3', l3: 'Spur 4',
+  seq: 'Puls', bor: 'Bordun', rec: 'Aufnahme', hx: 'Hexenring', dev: 'Gerät', midi: 'MIDI', l0: 'Spur 1', l1: 'Spur 2', l2: 'Spur 3', l3: 'Spur 4',
 };
 // the mixer's parts as the panel names them ("Kanal" is the MIDI channel's word here)
 for (const st of STRIPS) GROUP['x' + st.k] = 'Mixer · ' + st.name;
@@ -3136,6 +3141,7 @@ function initAudio() {
   let ctx;
   try { ctx = new AC({ latencyHint: L }); } catch (e) { ctx = new AC({ latencyHint: 'interactive' }); }
   A.ctx = ctx; SR = ctx.sampleRate; A.latMode = P['dev.lat'];
+  tgReset();   // Hexenring: the Taktgeber starts with this context's clock
 
   // shared buffers & waves
   A.noise = ctx.createBuffer(1, Math.floor(SR * 2), SR);
@@ -3195,6 +3201,7 @@ function initAudio() {
   A.dlySend.connect(A.dlyIn);
   // channel strips (Mischpult): every sound layer has its own before it joins the insert chain
   buildStrips();
+  hxGraph();   // Hexenring: the Gespielt taps
   const split = ctx.createChannelSplitter(2), merge = ctx.createChannelMerger(2);
   A.dlyIn.connect(split);
   A.dSumL = G(1); A.dSumR = G(1);
@@ -3267,7 +3274,8 @@ function initAudio() {
   A.out = G(1);
   // stereo width of the sum: switched in only while it is not 100 %
   A.mwBy = G(1); A.mwWet = G(0);
-  A.masterSum.connect(A.lowSh).connect(A.highSh).connect(A.mwBy).connect(A.masterVol).connect(A.cmpVca).connect(A.clipPre).connect(A.clip).connect(A.out);
+  A.masterIn = G(1); A.masterSum.connect(A.masterIn);   // Hexenring: the master's input – the strip „Hexenring“ joins here, behind the „Alles“ tap
+  A.masterIn.connect(A.lowSh).connect(A.highSh).connect(A.mwBy).connect(A.masterVol).connect(A.cmpVca).connect(A.clipPre).connect(A.clip).connect(A.out);
   A.mwWet.connect(A.masterVol);
   A.masterVol.connect(A.cmpDet);
   // monitoring only (what you hear, not what is recorded): dim and mono check
@@ -3526,7 +3534,7 @@ function gates(st, set) {
 }
 // dry path: through the insert chain or straight into the sum; a move fades the channel out and back in
 function wireStrip(st) {
-  const want = () => (!st.ret && P['x' + st.k + '.route'] !== 'dir' ? A.voiceBus : A.masterSum);
+  const want = () => (st.k === 'hxr' ? hxRoute() : !st.ret && P['x' + st.k + '.route'] !== 'dir' ? A.voiceBus : A.masterSum);   // Hexenring: never into A.masterSum
   if (st.dTo === want()) return;
   if (!st.dTo) { st.dTo = want(); st.dry.connect(st.dTo); return; }
   if (st.switching) return;
@@ -3550,7 +3558,7 @@ function updSends(inst) {
   if (!A.send || !MIX.src.length) return;
   for (const fx of ['dly', 'rev']) {
     const S = A.send[fx], node = (st) => (fx === 'dly' ? st.eS : st.hS);
-    const viaFx = (st) => P['x' + st.k + '.route'] !== 'dir';
+    const viaFx = (st) => st.k !== 'hxr' && P['x' + st.k + '.route'] !== 'dir';   // (Hexenring: its sends take its own signal)
     const copy = MIX.src.some((st) => viaFx(st) && (mp('x' + st.k + '.' + fx) !== 1 || st.dryOff));
     if (copy && !S.copy) {
       S.copy = makeChain();
@@ -6193,7 +6201,7 @@ function steal(fadingOnly, soft) {
   if (best) { if (soft) vFade(best); else best.kill(); A.voices.delete(best); }
   return !!best;
 }
-function voiceLoad() { let c = A.gsp && A.gsp.active ? A.gsp.cost : 0; for (const v of A.voices) c += v.cost; return c; }   // (Gespinst's web counts while it rings)
+function voiceLoad() { let c = (A.gsp && A.gsp.active ? A.gsp.cost : 0) + hxLoad(); for (const v of A.voices) c += v.cost; return c; }   // (Gespinst's web counts while it rings; Hexenring: its processor and Schichten)
 function playNote(eng, t, f, y, vel, o = {}) {
   if (!A.ctx || !ENGINES[eng]) return null;
   const as = ENGINES[eng].needs ? wkPlays(eng) : eng;   // a worklet engine without its module: its stand-in
@@ -6206,6 +6214,7 @@ function playNote(eng, t, f, y, vel, o = {}) {
   A.voices.add(v);
   try { ENGINES[as].start(v, t, f, clamp(y, 0, 1), vel, o); }
   catch (e) { console.error(e); v.cleanup(); return null; }
+  hxNote(v, eng, t, f, y, vel, o);   // Hexenring: the notes Humus
   return v;
 }
 
@@ -6306,6 +6315,7 @@ function startBordun() {
   A.bor = { g, filt, lfo, lg, oscs, wave: P['bor.wave'], rich: Q.rich };
   if (MOD.t.bor.cs && MOD.ctx === A.ctx) MOD.t.bor.cs.connect(filt.detune);   // Formen · Bordun öffnen
   noteEvent();
+  hxBor(true, f1);   // Hexenring: the Bordun as an event of the notes Humus
 }
 function retuneBordun() {
   const b = A.bor; if (!b) return;
@@ -6321,6 +6331,7 @@ function retuneBordun() {
 }
 function stopBordun(fast) {
   const b = A.bor; if (!b) return;
+  hxBor(false);   // Hexenring
   A.bor = null;
   const t = A.ctx.currentTime;
   holdParam(b.g.gain, t);
@@ -9203,19 +9214,463 @@ function myzelDsp() {
     }
   }
 
+  // ---- Hexenring: myzel-ring – the looper on the audio thread (dev/looper/SPEC.md §3) ----
+  // Two Humus rings (input 0 „Gespielt“, input 1 „Alles“) in chunks of 8192 frames that the page made and moved over;
+  // Schleifen whose pass k starts at F(k) = round(frameAt(b0 + k·beats)) on the Taktgeber's segments (derived afresh
+  // every pass, never counted: nothing drifts, a tempo change moves the next start and no other); Schichten read from
+  // chunk lists and joined at every seam, mute, undo and swap by the smooth equal-power law g_in = sin(π/2·s),
+  // g_out = cos(π/2·s), s = (1 − cos πx)/2; an Ausklang (the stored continuation behind the window) overlap-added from
+  // a Schicht's second seam on; one polyphase windowed-sinc resampler (32 taps × 256 phases, Kaiser β 8) for {rate}.
+  // It counts its own frames (currentFrame can stall), reports {frame, t} every 0.25 s, plays on while the page hangs
+  // and never allocates a buffer in process(): every buffer comes from the page, the scratch is made here once.
+  const RS_T = 32, RS_N = 256, RS_C = RS_T / 2 - 1, HP = Math.PI / 2;
+  let RS = null;   // (RS_N + 1) × RS_T: phase p / RS_N of a frame, tap t at offset t − 15 − p / RS_N
+  function rsTable() {
+    const I0 = (x) => { let s = 1, t = 1; for (let k = 1; k < 60; k++) { t *= (x / (2 * k)) * (x / (2 * k)); s += t; if (t < 1e-13 * s) break; } return s; };
+    const B = 8, ib = 1 / I0(B), T = new Float32Array((RS_N + 1) * RS_T);
+    for (let p = 0; p <= RS_N; p++) {
+      let sum = 0;
+      const row = new Float64Array(RS_T);
+      for (let t = 0; t < RS_T; t++) {
+        const d = t - RS_C - p / RS_N, u = d / (RS_T / 2);   // the cut-off at the source's Nyquist: ±1 % keeps the audio band
+        const w = Math.abs(u) >= 1 ? 0 : I0(B * Math.sqrt(1 - u * u)) * ib, s = d === 0 ? 1 : Math.sin(Math.PI * d) / (Math.PI * d);
+        row[t] = s * w; sum += s * w;
+      }
+      for (let t = 0; t < RS_T; t++) T[p * RS_T + t] = row[t] / sum;   // unit gain at DC in every phase: no ripple at the phase rate
+    }
+    return T;
+  }
+  // an envelope: v now; a → b over N frames (i done) by the smooth law – to or from 0 equal-power (sin/cos), else s(x)
+  const envNew = (v) => ({ v, a: v, b: v, i: 0, N: 0 });
+  const envGo = (E, to, N) => { E.a = E.v; E.b = to; E.i = 0; E.N = Math.max(1, N | 0); };
+  class Ring extends AudioWorkletProcessor {
+    constructor(o) {
+      super();
+      const po = (o && o.processorOptions) || {};
+      if (!RS) RS = rsTable();
+      let sh = 0; while ((1 << sh) < (po.chunk || 8192)) sh++;
+      this.CH = 1 << sh; this.SH = sh; this.M = this.CH - 1;
+      this.hN = Math.max(2, Math.ceil((po.humusS || 64) * SR / this.CH));   // chunks per Humus ring
+      this.hum = [[], []]; this.hOK = false; this.h0 = -1; this.capF = -1; this.free = [];
+      this.done = 0; this.base = -Infinity; this.fOff = po.fOff || 0; this.F = 0;
+      this.NS = 8192; this.sF = new Float64Array(this.NS); this.sB = new Float64Array(this.NS); this.sP = new Float64Array(this.NS); this.nS = 1;
+      this.sP[0] = SR * 60 / 84;
+      this.loops = []; this.q = []; this.jobs = []; this.streams = {};
+      const S = 2048;   // scratch (a render quantum is 128 frames; never assumed)
+      this.S = S; this.bL = new Float32Array(S); this.bR = new Float32Array(S); this.tL = new Float32Array(S); this.tR = new Float32Array(S);
+      this.gA = new Float32Array(S); this.gB = new Float32Array(S); this.gC = new Float32Array(S); this.gD = new Float32Array(S); this.lA = new Float32Array(S); this.sA = new Float32Array(S);
+      this.rep = 0; this.met = 0; this.nA = 0; this.late = 0;
+      this.port.onmessage = (e) => this.msg(e.data);
+      for (const m of po.msgs || []) this.msg(m);   // (offline renders: port messages arrive only at a suspend)
+    }
+    // ---- messages: what has a frame f is queued and acts at that frame; the rest at once ----
+    msg(m) {
+      if (!m) return;
+      if (m.pool) for (const c of m.pool) { const h = this.hum[0].length < this.hN ? this.hum[0] : this.hum[1].length < this.hN ? this.hum[1] : null; (h || this.free).push(c); }
+      if (this.hum[1].length === this.hN) this.hOK = true;
+      if (m.seg) this.seg(m.seg, m.reset);
+      if (m.grab) { const g = m.grab; this.jobs.push({ id: g.id, inp: g.in ? 1 : 0, f0: Math.round(g.f0), f1: Math.round(g.f1), x: Math.round(g.f0), dst: g.dst || this.take(Math.ceil((g.f1 - g.f0) / this.CH)), lost: 0 }); }
+      if (m.loop) this.loops.push(this.newLoop(m.loop));
+      if (m.rate) { const L = this.lp(m.rate.loop); if (L) L.rt = Math.pow(2, Math.max(-20, Math.min(20, +m.rate.cents || 0)) / 1200); }   // (±20 ct ≈ ±1.2 %)
+      if (m.stream) this.streams[m.stream.loop] = m.stream.port || null;   // (Wuchs streams: step 2)
+      if (m.report) this.port.postMessage({ report: this.stat() });
+      for (const k of ['schicht', 'replace', 'state', 'gain', 'undo', 'clear']) if (m[k]) this.at(k, m[k]);
+    }
+    take(n) { const a = []; for (let i = 0; i < n && this.free.length; i++) a.push(this.free.pop()); return a.length === n ? a : (this.free.push(...a), null); }
+    at(kind, d) {
+      const f = d.f == null ? -Infinity : Math.round(d.f), e = { f, kind, d, S: null };
+      if (kind === 'schicht' || kind === 'replace') {   // (objects are made here, in the message – process() only links them)
+        const B = e.S = this.newBuf(d);
+        if (kind === 'schicht') Object.assign(B, { id: d.id, f0: 0, e: envNew(0), g: d.gain != null ? +d.gain : 1, fd: d.fin === 0 ? 0 : this.xf(d.fin != null ? d.fin : d.X),
+          join: d.join || 'xf', X: this.xf(d.X), rho: Math.max(-1, Math.min(1, +d.rho || 0)), pp: false, dead: false, dying: false, stop: false, old: null, xin: envNew(1), tq: new Float64Array(8), tb: new Float64Array(8), tc: [null, null, null, null, null, null, null, null], tl: new Float64Array(8), tfr: new Uint8Array(8), tfN: new Int32Array(8), tfI: new Int32Array(8), tn: 0 });
+        else B.xo = envNew(1);
+      }
+      const q = this.q; let i = q.length;
+      while (i > 0 && q[i - 1].f > f) i--;
+      q.splice(i, 0, e);
+    }
+    newBuf(d) {
+      const ch = d.chunks || [], tot = d.n != null ? d.n : ch.length * this.CH, au = d.ausklang;
+      const ac = au && au.chunks ? au.chunks : ch, aoff = au ? (au.off != null ? au.off : (d.pre || 0) + d.len) : 0;
+      return { ch, tot, pre: d.pre || 0, len: d.len || 0, ac, aoff, aend: au ? aoff + (au.len || 0) : 0 };
+    }
+    // the Taktgeber's segments [f, b, fpb] (frame, continuous beat, frames per beat): a new one replaces those from its frame
+    seg(list, reset) {
+      if (!list.length) return;
+      if (typeof list[0] === 'number') list = [list];
+      let n = reset ? 0 : this.nS;
+      const f0 = list[0][0];
+      while (n > 0 && this.sF[n - 1] >= f0) n--;
+      if (n + list.length > this.NS) {   // full: what lies wholly behind the frame now goes
+        let k = 0; while (k < n - 1 && this.sF[k + 1] <= this.F) k++;
+        this.sF.copyWithin(0, k, n); this.sB.copyWithin(0, k, n); this.sP.copyWithin(0, k, n); n -= k;
+        if (n + list.length > this.NS) list = list.slice(n + list.length - this.NS);
+      }
+      for (const s of list) { this.sF[n] = s[0]; this.sB[n] = s[1]; this.sP[n] = s[2]; n++; }
+      this.nS = n;
+      for (const L of this.loops) L.re = true;   // the next pass starts are derived again
+    }
+    frameAt(b) {   // continuous beat → frame (double)
+      const B = this.sB; let lo = 0, hi = this.nS - 1;
+      if (b >= B[hi]) lo = hi; else while (lo < hi) { const m = (lo + hi + 1) >> 1; if (B[m] <= b) lo = m; else hi = m - 1; }
+      return this.sF[lo] + (b - B[lo]) * this.sP[lo];
+    }
+    beatAtF(f) {
+      const A = this.sF; let lo = 0, hi = this.nS - 1;
+      if (f >= A[hi]) lo = hi; else while (lo < hi) { const m = (lo + hi + 1) >> 1; if (A[m] <= f) lo = m; else hi = m - 1; }
+      return this.sB[lo] + (f - A[lo]) / this.sP[lo];
+    }
+    // ---- Schleifen ----
+    newLoop(d) {
+      const L = { id: d.id, takt: d.lock !== 'frei', b0: +d.b0 || 0, beats: +d.beats || 4, Lf: Math.max(1, Math.round(d.L || SR)), ph0: Math.round(d.ph0 || 0),
+        k: -1, s0: 0, s1: 0, pe: 0, q: 0, r: 1, rt: 1, re: true, sch: [], st: envNew(d.state === 'stumm' || d.state === 'angehalten' ? 0 : 1),
+        lv: envNew(d.gain != null ? +d.gain : 1), pan: +d.pan || 0, out: d.out ? 1 : 0, state: d.state || 'spielt', dying: false, ms: 0, mp: 0, mn: 0 };
+      return L;
+    }
+    lp(id) { for (const L of this.loops) if (L.id === id) return L; return null; }
+    passAt(L, k) { return L.takt ? Math.round(this.frameAt(L.b0 + k * L.beats)) : L.ph0 + k * L.Lf; }
+    // place a loop at frame x: the pass that holds x (a loop told late comes in phase-correct, mid-pass)
+    place(L, x) {
+      let k = 0;
+      if (this.passAt(L, 0) <= x) {
+        k = L.takt ? Math.floor((this.beatAtF(x) - L.b0) / L.beats) : Math.floor((x - L.ph0) / L.Lf);
+        while (k > 0 && this.passAt(L, k) > x) k--;
+        while (this.passAt(L, k + 1) <= x) k++;
+      }
+      L.k = k; L.s0 = this.passAt(L, k); L.s1 = this.passAt(L, k + 1); L.q = Math.max(0, x - L.s0); L.pe = 0; L.re = false;
+      for (const S of L.sch) S.pp = false;
+      this.port.postMessage({ passStart: { loop: L.id, k, f: L.s0 } });
+    }
+    // the seam: pass k + 1 begins at s1 – the pass just ended is what the Ausklang and the crossfade continue
+    advance(L, x) {
+      for (let i = 0; i < L.sch.length; i++) { const S = L.sch[i]; S.pp = S.f0 <= L.s0 && !S.dead; }   // it played the whole pass that ends here
+      L.pe = L.q; L.k++; L.s0 = L.s1; L.s1 = this.passAt(L, L.k + 1); L.q = Math.max(0, x - L.s0);   // (a late seam: in phase)
+      if (L.s1 <= L.s0) L.s1 = L.s0 + 1;
+      if (L.stopAt != null && Math.abs(L.s0 - L.stopAt) <= 1) {   // the stop: its Ausklang, once, outside the state's gain
+        for (let i = 0; i < L.sch.length; i++) {   // (without an Ausklang: the pass's own continuation, faded over its X)
+          const S = L.sch[i]; if (!S.stop) continue;
+          S.stop = false;
+          if (S.aend > S.aoff) this.tail(S, true, 0, S.aoff, 0); else this.tail(S, true, 1, S.pre + L.pe, S.X);
+        }
+        L.stopAt = null;
+      } else if (L.st.v > 0 || L.st.i < L.st.N) for (let i = 0; i < L.sch.length; i++) { const S = L.sch[i]; if (S.pp && S.join === 'ola' && S.aend > S.aoff) this.tail(S, false, 0, S.aoff, 0); }
+      this.port.postMessage({ passStart: { loop: L.id, k: L.k, f: L.s0 } });
+    }
+    // a tail stream from the seam on: the Ausklang (src 0) or the Schicht's own audio from base (src 1); free: not under
+    // the loop's state (a stop's); fade: frames of a fade-out (0: none)
+    uses(S, O) { for (let t = 0; t < S.tn; t++) if (S.tc[t] === O.ch || S.tc[t] === O.ac) return true; return false; }
+    tail(S, free, src, base, fade) {
+      const t = S.tn, V = S.old && S.old.seam ? S.old : S;   // (swapped at this seam: the old version's tail)
+      if (t >= 8) return;
+      S.tq[t] = 0; S.tb[t] = src ? V.pre + base - S.pre : base - S.aoff + V.aoff; S.tc[t] = src ? V.ch : V.ac; S.tl[t] = src ? V.tot : V.aend;
+      S.tfr[t] = free ? 1 : 0; S.tfN[t] = fade; S.tfI[t] = 0; S.tn++;
+    }
+    // ---- timed actions (the frame x they act at) ----
+    xf(v) { return Math.max(1, Math.round(v != null ? v : 0.01 * SR)); }   // a fade's frames (10 ms unless told)
+    act(e, x) {
+      const d = e.d;
+      if (e.kind === 'schicht') {
+        const L = this.lp(d.loop), S = e.S;
+        if (!L) { this.give({ schicht: d.id }, [S]); return; }
+        S.f0 = Math.max(x, Math.round(d.f != null ? d.f : x));
+        if (!S.fd) S.e.v = S.e.a = S.e.b = S.g;   // (else its fade-in starts at its entry frame, in span)
+        L.sch.push(S);
+      } else if (e.kind === 'replace') {
+        const S = this.sch(d.schicht), B = e.S, L = S && this.loopOf(S);
+        if (!S) { this.give({ schicht: d.schicht }, [B]); return; }
+        if (S.old) this.give({ schicht: S.id, old: 1 }, [S.old]);
+        const O = B.xo, seam = !!(L && L.k >= 0 && Math.abs(x - L.s1) <= 1);   // at its seam: the seam's own crossfade joins the versions
+        B.xo = null;
+        S.old = { ch: S.ch, tot: S.tot, pre: S.pre, len: S.len, ac: S.ac, aoff: S.aoff, aend: S.aend, xo: O, seam, end: seam ? L.s1 + S.X : 0 };
+        if (seam) { O.v = O.a = O.b = 0; O.i = O.N = 0; } else { O.v = 1; envGo(O, 0, this.xf(d.X)); S.xin.v = 0; envGo(S.xin, 1, this.xf(d.X)); }
+        S.ch = B.ch; S.tot = B.tot; S.pre = B.pre; S.len = B.len; S.ac = B.ac; S.aoff = B.aoff; S.aend = B.aend;
+      } else if (e.kind === 'state') {
+        const L = this.lp(d.loop); if (!L) return;
+        const to = d.to, N = this.xf(d.X);
+        if (to === 'spielt') {
+          if (d.b0 != null && L.takt) { L.b0 = +d.b0; L.k = -1; L.st.v = L.st.a = L.st.b = 0; L.st.i = L.st.N = 0; L.wantIn = N; }   // re-enter from its start
+          else envGo(L.st, 1, N);
+        } else if (to === 'angehalten' && L.k >= 0 && Math.abs(x - L.s1) <= 1) {   // at its seam: it stops there, its Ausklang rings once
+          for (let i = 0; i < L.sch.length; i++) { const S = L.sch[i]; if (!S.dead && S.f0 <= L.s0) S.stop = true; }
+          L.stopAt = L.s1; envGo(L.st, 0, Math.max(1, L.s1 - x));
+        } else envGo(L.st, 0, N);
+        L.state = to;
+      } else if (e.kind === 'gain') {
+        if (d.schicht == null) { const L = this.lp(d.loop); if (L) { if (d.g != null) envGo(L.lv, +d.g, this.xf(d.ramp)); if (d.pan != null) L.pan = Math.max(-1, Math.min(1, +d.pan)); } }
+        else { const S = this.sch(d.schicht); if (S && !S.dying) { S.g = +d.g; S.fd = 0; envGo(S.e, S.g, this.xf(d.ramp)); } }
+      } else if (e.kind === 'undo') {
+        const S = this.sch(d.schicht); if (S && !S.dead) { S.fd = 0; envGo(S.e, 0, this.xf(d.X)); S.dying = true; }
+      } else if (e.kind === 'clear') {
+        for (let i = 0; i < this.loops.length; i++) {
+          const L = this.loops[i]; if (!(d.all || L.id === d.loop)) continue;
+          envGo(L.st, 0, this.xf(d.X)); L.dying = true; L.stopAt = null;
+          for (let j = 0; j < L.sch.length; j++) { const S = L.sch[j]; for (let t = 0; t < S.tn; t++) S.tfr[t] = 0; }   // (its ringing tails fade with it)
+        }
+      }
+    }
+    sch(id) { for (const L of this.loops) for (const S of L.sch) if (S.id === id) return S; return null; }
+    loopOf(S) { for (const L of this.loops) if (L.sch.includes(S)) return L; return null; }
+    // hand buffers back to the page (undo, clear, a swapped version): transferred, so this thread keeps nothing
+    give(what, bufs) {
+      const ch = [], tr = [], seen = new Set();
+      for (const B of bufs) for (const list of [B.ch, B.ac]) for (const c of list || []) if (!seen.has(c[0])) { seen.add(c[0]); ch.push(c); tr.push(c[0].buffer, c[1].buffer); }
+      this.port.postMessage({ freed: Object.assign(what, { chunks: ch }) }, tr);
+    }
+    // ---- reading: n frames of a chunk list (tot frames) from position p, step r per frame, × gain (g, or ga per frame) into (oL, oR) at o
+    rd(ch, tot, p, r, n, o, g, ga, oL, oR) {
+      const SH = this.SH, M = this.M;
+      if (r === 1 && p === Math.floor(p)) {   // frame for frame: bit-exact
+        let i = p, k = o; const e = o + n;
+        while (k < e) {
+          if (i < 0) { const s = Math.min(e - k, -i); k += s; i += s; continue; }
+          if (i >= tot) break;
+          const c = ch[i >> SH]; if (!c) break;
+          const L = c[0], R = c[1], m = Math.min(e - k, M + 1 - (i & M), tot - i);
+          let j = i & M;
+          if (ga) for (let z = 0; z < m; z++, j++, k++) { const w = ga[k]; oL[k] += w * L[j]; oR[k] += w * R[j]; }
+          else for (let z = 0; z < m; z++, j++, k++) { oL[k] += g * L[j]; oR[k] += g * R[j]; }
+          i += m;
+        }
+        return;
+      }
+      const T = RS;
+      for (let k = o; k < o + n; k++, p += r) {
+        const i = Math.floor(p), ph = (p - i) * RS_N, p0 = ph | 0, a = ph - p0, c0 = p0 * RS_T;
+        let i0 = i - RS_C;
+        if (i0 + RS_T <= 0 || i0 >= tot) continue;
+        let sl = 0, sr = 0;
+        if (i0 >= 0 && i0 + RS_T <= tot && (i0 & M) + RS_T <= M + 1) {   // all 32 taps in one chunk
+          const c = ch[i0 >> SH], L = c[0], R = c[1], j0 = i0 & M;
+          for (let t = 0; t < RS_T; t++) { const w = T[c0 + t] + a * (T[c0 + RS_T + t] - T[c0 + t]); sl += w * L[j0 + t]; sr += w * R[j0 + t]; }
+        } else {
+          for (let t = 0; t < RS_T; t++, i0++) {
+            if (i0 < 0 || i0 >= tot) continue;
+            const c = ch[i0 >> SH]; if (!c) continue;
+            const j = i0 & M, w = T[c0 + t] + a * (T[c0 + RS_T + t] - T[c0 + t]);
+            sl += w * c[0][j]; sr += w * c[1][j];
+          }
+        }
+        const w = ga ? ga[k] : g; oL[k] += w * sl; oR[k] += w * sr;
+      }
+    }
+    // an envelope's gains for n frames into arr[o…]; false while it holds still (then E.v is the gain)
+    env(E, arr, o, n) {
+      if (E.i >= E.N) return false;
+      for (let k = o; k < o + n; k++) {
+        if (E.i < E.N) {
+          const x = (E.i + 0.5) / E.N, s = 0.5 - 0.5 * Math.cos(Math.PI * x);
+          E.v = E.a === 0 ? E.b * Math.sin(HP * s) : E.b === 0 ? E.a * Math.cos(HP * s) : E.a + (E.b - E.a) * s;
+          if (++E.i === E.N) E.v = E.b;
+        }
+        arr[k] = E.v;
+      }
+      return true;
+    }
+    // ---- capture: both inputs into their rings at the frame they sound (a gap in the clock becomes silence) ----
+    cap(inputs, F, n) {
+      const CH = this.CH;
+      if (this.h0 < 0) this.h0 = F;
+      if (this.capF >= 0 && F > this.capF) for (let r = 0; r < 2; r++) this.zero(r, this.capF, Math.min(F, this.capF + this.hN * CH));
+      for (let r = 0; r < 2; r++) {
+        const inp = inputs[r], a = inp && inp[0], b = inp && (inp[1] || inp[0]), H = this.hum[r];
+        let x = F, k = 0;
+        while (k < n) {
+          const c = Math.floor(x / CH), ch = H[c % this.hN], j = x - c * CH, m = Math.min(n - k, CH - j), L = ch[0], R = ch[1];
+          if (a) for (let z = 0; z < m; z++) { L[j + z] = a[k + z]; R[j + z] = b[k + z]; }
+          else for (let z = 0; z < m; z++) { L[j + z] = 0; R[j + z] = 0; }
+          k += m; x += m;
+        }
+      }
+      this.capF = F + n;
+    }
+    zero(r, x, e) {
+      const CH = this.CH, H = this.hum[r];
+      while (x < e) { const c = Math.floor(x / CH), ch = H[c % this.hN], j = x - c * CH, m = Math.min(e - x, CH - j); ch[0].fill(0, j, j + m); ch[1].fill(0, j, j + m); x += m; }
+    }
+    // a grab: the window copied from its ring into the page's chunks, two chunks' worth per block, oldest first; sent
+    // when complete (frames the ring no longer or not yet held count as lost and stay silent)
+    grabs(Fe) {
+      let budget = 2 * this.CH;
+      const CH = this.CH, old = this.hOK && this.h0 >= 0 ? Math.max(this.h0, Fe - this.hN * CH) : Infinity;
+      while (budget > 0 && this.jobs.length) {
+        const J = this.jobs[0];
+        if (!J.dst || J.dst.length * CH < J.f1 - J.f0) { this.jobs.shift(); this.port.postMessage({ grabbed: { id: J.id, err: 'pool' } }); continue; }
+        const H = this.hum[J.inp], e = Math.min(J.f1, Fe, J.x + budget);
+        while (J.x < e) {
+          const x = J.x, d = x - J.f0, dc = J.dst[Math.floor(d / CH)], dj = d % CH;
+          let m = Math.min(e - x, CH - dj);
+          if (x < old) {
+            m = Math.min(m, old - x);
+            dc[0].fill(0, dj, dj + m); dc[1].fill(0, dj, dj + m); J.lost += m;
+          } else {
+            const c = Math.floor(x / CH), sc = H[c % this.hN], sj = x - c * CH;
+            m = Math.min(m, CH - sj);
+            const sL = sc[0], sR = sc[1], DL = dc[0], DR = dc[1];
+            for (let z = 0; z < m; z++) { DL[dj + z] = sL[sj + z]; DR[dj + z] = sR[sj + z]; }
+          }
+          J.x += m; budget -= m;
+        }
+        if (J.x < J.f1) break;   // (the rest of the window has not sounded yet)
+        this.jobs.shift();
+        const tr = []; for (const c of J.dst) tr.push(c[0].buffer, c[1].buffer);
+        this.port.postMessage({ grabbed: { id: J.id, chunks: J.dst, f0: J.f0, n: J.f1 - J.f0, lost: J.lost } }, tr);
+      }
+    }
+    process(inputs, outputs) {
+      const o0 = outputs[0], o1 = outputs[1], n = o0 && o0[0] ? o0[0].length : 128;
+      const est = currentFrame - this.done;
+      if (est > this.base) this.base = est;
+      const F = this.base + this.done + this.fOff;
+      this.F = F;
+      if (this.hOK) this.cap(inputs, F, n);
+      if (this.jobs.length) this.grabs(F + n);
+      const outs = [o0, o1];
+      for (let i = 0; i < 2; i++) { const o = outs[i]; if (o) for (let c = 0; c < o.length; c++) o[c].fill(0); }
+      // the timed actions split the block at their frames
+      let pos = 0;
+      while (this.q.length && this.q[0].f < F + n) {
+        const e = this.q[0], at = Math.max(pos, e.f - F);
+        if (at > pos) { this.play(outs, F, pos, at); pos = at; }
+        this.q.shift();
+        this.act(e, F + pos);
+      }
+      if (pos < n) this.play(outs, F, pos, n);
+      this.done += n;
+      // reports: the clock pair, the meters
+      if ((this.rep -= n) <= 0) { this.rep += Math.round(0.25 * SR); this.port.postMessage({ frame: F, t: currentTime }); }
+      if (this.loops.length && (this.met -= n) <= 0) {
+        this.met += Math.round(SR / 15);
+        const lo = []; for (const L of this.loops) { lo.push([L.id, L.mn ? Math.sqrt(L.ms / L.mn) : 0, L.mp]); L.ms = L.mp = L.mn = 0; }
+        this.port.postMessage({ meter: { loops: lo } });
+      }
+      return true;
+    }
+    // every loop, frames [F + a, F + b) of the block
+    play(outs, F, a, b) {
+      for (let s = a; s < b; s += this.S) {
+        const e = Math.min(b, s + this.S);
+        for (let i = 0; i < this.loops.length; i++) {
+          const L = this.loops[i];
+          this.loopSpan(L, F + s, F + e, s, outs[L.out] || outs[0]);
+          if (L.dying && L.st.i >= L.st.N && L.st.v === 0) { this.give({ loop: L.id }, L.sch.filter((S) => !S.dead).concat(L.sch.filter((S) => S.old).map((S) => S.old))); this.loops.splice(i--, 1); }
+        }
+      }
+    }
+    loopSpan(L, X, Y, off, out) {
+      let x = X;
+      if (L.re && L.k >= 0) {   // new segments: the next start derived again (one already passed acts at once)
+        L.re = false;
+        L.s1 = this.passAt(L, L.k + 1);
+        if (L.s1 <= L.s0) L.s1 = L.s0 + 1;
+      }
+      while (x < Y) {
+        if (L.k < 0) {
+          const s0 = this.passAt(L, 0);
+          if (s0 >= Y) return;
+          if (s0 > x) x = s0;
+          this.place(L, x);
+          if (L.wantIn) { envGo(L.st, 1, L.wantIn); L.wantIn = 0; }
+        }
+        if (x >= L.s1) { this.advance(L, x); continue; }
+        const e = Math.min(Y, L.s1);
+        this.span(L, x, e, off + (x - X), out);
+        x = e;
+      }
+    }
+    // frames [X, Y) inside one pass of L, into the outputs at o
+    span(L, X, Y, o, out) {
+      const n = Y - X, bL = this.bL, bR = this.bR, tL = this.tL, tR = this.tR;
+      for (let k = o; k < o + n; k++) { bL[k] = 0; bR[k] = 0; tL[k] = 0; tR[k] = 0; }
+      // the read rate glides to its target over ≈ 50 ms (Taumeln, MIDI clock): one step per span
+      if (L.r !== L.rt) { const st = n / (0.05 * SR) * 0.02; L.r = Math.abs(L.rt - L.r) <= st ? L.rt : L.r + Math.sign(L.rt - L.r) * st; }
+      const r = L.r, j0 = X - L.s0, q0 = L.q;
+      let any = false;
+      for (let si = 0; si < L.sch.length; si++) {
+        const S = L.sch[si];
+        if (S.dead) continue;
+        any = true;
+        const so = S.f0 > X ? S.f0 - X : 0;
+        if (so >= n) continue;
+        const m = n - so, ko = o + so, qs = q0 + so * r;
+        if (S.fd) { envGo(S.e, S.g, S.fd); S.fd = 0; }   // its fade-in, from the first frame it sounds
+        const gA = this.gA, gc = !this.env(S.e, gA, ko, m), g = S.e.v;   // (a holding gain: g; else per frame in gA)
+        // the seam: the pass that just ended goes on under this one's start – the smooth equal-power law, normalised by
+        // the two sides' correlation rho (measured by the page): rho 0 equal power, 1 equal gain, negative a lift, so the
+        // level holds through the fade whatever the phases (the gain at most ×2)
+        const zx = S.join === 'xf' && S.pp && L.k > 0 && j0 + so < S.X ? Math.min(m, S.X - (j0 + so)) : 0;
+        const xr = !this.env(S.xin, this.gC, ko, m) ? null : this.gC;
+        if (zx || xr) {
+          const gB = this.gB, gI = this.gD;
+          for (let k = ko; k < ko + m; k++) gB[k] = (gc ? g : gA[k]) * (xr ? xr[k] : 1);
+          if (zx) {
+            const rho = S.rho;
+            for (let z = 0; z < zx; z++) {
+              const x = (j0 + so + z + 0.5) / S.X, s = 0.5 - 0.5 * Math.cos(Math.PI * x), k = ko + z;
+              const a = Math.sin(HP * s), b = Math.cos(HP * s), nk = Math.min(2, 1 / Math.sqrt(Math.max(0.25, 1 + 2 * rho * a * b))), gi = a * nk, go = b * nk;
+              gI[k] = (gc ? g : gA[k]) * go; gB[k] *= gi;
+            }
+            const C = S.old && S.old.seam ? S.old : S;   // (the pass that ended: the version swapped out at this seam)
+            this.rd(C.ch, C.tot, C.pre + L.pe + qs, r, zx, ko, 0, gI, bL, bR);
+          }
+          this.rd(S.ch, S.tot, S.pre + qs, r, m, ko, 0, gB, bL, bR);
+        } else this.rd(S.ch, S.tot, S.pre + qs, r, m, ko, g, gc ? null : gA, bL, bR);
+        if (S.old && !S.old.seam) {   // the version being swapped out mid-pass: at the same place, fading
+          const O = S.old, gO = this.gB, oc = !this.env(O.xo, gO, ko, m);
+          if (oc) for (let k = ko; k < ko + m; k++) gO[k] = O.xo.v;
+          for (let k = ko; k < ko + m; k++) gO[k] *= gc ? g : gA[k];
+          this.rd(O.ch, O.tot, O.pre + qs, r, m, ko, 0, gO, bL, bR);
+        }
+        // the Ausklang streams of earlier passes (free ones – a stop's – are not under the loop's state)
+        for (let t = 0; t < S.tn; t++) {
+          const fr = S.tfr[t], N = S.tfN[t], ch = S.tc[t], lim = S.tl[t];
+          let ga = gc ? null : gA;
+          if (N) {   // a fade-out of its own (the smooth law)
+            const gE = this.gB;
+            for (let k = ko, i = S.tfI[t]; k < ko + m; k++, i++) gE[k] = (gc ? g : gA[k]) * (i >= N ? 0 : Math.cos(HP * (0.5 - 0.5 * Math.cos(Math.PI * (i + 0.5) / N))));
+            ga = gE; S.tfI[t] += m;
+          }
+          this.rd(ch, lim, S.tb[t] + S.tq[t], r, m, ko, g, ga, fr ? tL : bL, fr ? tR : bR);
+          S.tq[t] += m * r;
+          if (S.tb[t] + S.tq[t] >= lim + RS_T || (N && S.tfI[t] >= N)) { const e = S.tn - 1; S.tq[t] = S.tq[e]; S.tb[t] = S.tb[e]; S.tc[t] = S.tc[e]; S.tl[t] = S.tl[e]; S.tfr[t] = S.tfr[e]; S.tfN[t] = S.tfN[e]; S.tfI[t] = S.tfI[e]; S.tc[e] = null; S.tn--; t--; }
+        }
+        if (S.old && (S.old.seam ? Y >= S.old.end : S.old.xo.i >= S.old.xo.N) && !this.uses(S, S.old)) { const O = S.old; S.old = null; this.give({ schicht: S.id, old: 1 }, [O]); }   // (the old version done: back to the page)
+        if (S.dying && S.e.i >= S.e.N && S.e.v === 0) { S.dead = true; S.tn = 0; this.give({ schicht: S.id }, S.old ? [S, S.old] : [S]); S.old = null; L.sch.splice(si--, 1); }
+      }
+      L.q = q0 + n * r;
+      if (!any && L.st.i >= L.st.N && L.lv.i >= L.lv.N) return;
+      // the loop's level and state, its balance; then the meter
+      const lc = !this.env(L.lv, this.lA, o, n), sc = !this.env(L.st, this.sA, o, n), lv = L.lv.v, sv = L.st.v;
+      const p = L.pan, gl = p > 0 ? 1 - p : 1, gr = p < 0 ? 1 + p : 1, OL = out[0], OR = out[1] || out[0];
+      let ms = 0, mp = 0;
+      for (let k = o; k < o + n; k++) {
+        const l = lc ? lv : this.lA[k], g = l * (sc ? sv : this.sA[k]);
+        const yl = gl * (g * bL[k] + l * tL[k]), yr = gr * (g * bR[k] + l * tR[k]);
+        OL[k] += yl; if (OR !== OL) OR[k] += yr;
+        ms += yl * yl + yr * yr; const a = yl < 0 ? -yl : yl, b2 = yr < 0 ? -yr : yr; if (a > mp) mp = a; if (b2 > mp) mp = b2;
+      }
+      L.ms += ms / 2; L.mn += n; if (mp > L.mp) L.mp = mp;
+    }
+    stat() {
+      let sc = 0, sn = 0; const seen = new Set();
+      for (const L of this.loops) for (const S of L.sch) { sn++; for (const c of S.ch) if (!seen.has(c[0])) { seen.add(c[0]); sc++; } }
+      return { F: this.F, hN: this.hN, hum: this.hum[0].length + this.hum[1].length, free: this.free.length, schChunks: sc, schichten: sn, loops: this.loops.length,
+        jobs: this.jobs.length, q: this.q.length, segs: this.nS, h0: this.h0, alloc: this.nA };
+    }
+  }
+
   // an empty voice: the per-node price of the contract (SPEC §8 step 1 gate, ≈ 0.06 + 0.03 per param)
   class Null extends MyzelProc { render(L, R, a, b) { for (let i = a; i < b; i++) L[i] = 0; } }
-  for (const [k, C] of [['myzel-blow', Blow], ['myzel-scan', Scan], ['myzel-bow', Bow], ['myzel-rot', Rot], ['myzel-aeol', Aeol], ['myzel-gendy', Gendy], ['myzel-web', Web], ['myzel-string', Strg], ['myzel-syrinx', Syrinx], ['myzel-scrape', Scrape], ['myzel-ember', Ember], ['myzel-null', Null]]) registerProcessor(k, C);
+  for (const [k, C] of [['myzel-blow', Blow], ['myzel-scan', Scan], ['myzel-bow', Bow], ['myzel-rot', Rot], ['myzel-aeol', Aeol], ['myzel-gendy', Gendy], ['myzel-web', Web], ['myzel-string', Strg], ['myzel-syrinx', Syrinx], ['myzel-scrape', Scrape], ['myzel-ember', Ember], ['myzel-null', Null], ['myzel-ring', Ring]]) registerProcessor(k, C);
   return { SIN, NOISE, Reso, Biquad, Allpass1, OnePole, DcBlock, FracDelay, PRNG };   // (for later processors; unused here)
 }
 // end myzelDsp
 // The module: the processors above plus the recording tap (registered only if tap-worklet.js did not already – a name
 // registered twice throws, and an exception in a module fails the whole addModule).
 const MYZEL_DSP_SRC = '(' + myzelDsp + ')();\ntry {\n' + TAP_SRC + '\n} catch (e) {}\n';
-// Loading (klang SPEC §2.1): the module is added to a context only when a worklet engine is selected somewhere (Klang,
-// Ebene 2, a lane, Gestik's strike), restored from a patch or heard in the library – never inside the first touch.
-// As soon as an AudioWorklet exists, Chrome in a frame and Safari render the whole graph on the worklet thread, so a
-// session that only plays the old engines keeps the real-time thread. Offline contexts (tests, calibrate) load their
+// Loading (klang SPEC §2.1; Hexenring SPEC §3): the module is added to the live context at sound start, because the
+// Hexenring's Humus records from the first note (owner, 18.10.2026) – before, only once a worklet engine was chosen.
+// As soon as an AudioWorklet exists, Chrome in a frame and Safari render the whole graph on the worklet thread: every
+// session now does (the target devices carry it). Offline contexts (tests, calibrate) load their
 // own copy: await ensureDSP(ctx) before rendering. Without AudioWorklet (old WebViews, blocked blob: URLs) a worklet
 // engine plays its stand-in (ENGINES[k].fallback) and keeps its key in the patch.
 // DSP.state for the UI: '' not asked yet · 'laden' loading · 'ok' · 'kein' this browser cannot (stand-ins play).
@@ -9226,13 +9681,14 @@ function dspWanted() {
   const g = GK.p ? [GK.p.rgS, GK.p.rasS] : [];
   return [P['v.eng'], P['v.layer'], P['l0.eng'], P['l1.eng'], P['l2.eng'], P['l3.eng'], ...g].some((k) => WORKLET_ENGINES.has(k));
 }
-function ensureDSP(ctx = A.ctx) {   // idempotent per context; resolves true when the processors are registered
+function ensureDSP(ctx = A.ctx, quiet) {   // idempotent per context; resolves true when the processors are registered
   if (!ctx) return Promise.resolve(false);
-  if (ctx.__dsp) return ctx.__dsp;
+  // (quiet: the Hexenring's load at sound start – a browser without AudioWorklet says so when a source needs it)
+  if (ctx.__dsp) { if (!quiet && DSP.owe && ctx === A.ctx) { DSP.owe = false; ctx.__dsp.then((ok) => { if (!ok) toast('Dieser Browser spielt die neuen Quellen vereinfacht (kein AudioWorklet).', 6000); }); } return ctx.__dsp; }
   const live = ctx === A.ctx && !(typeof OfflineAudioContext !== 'undefined' && ctx instanceof OfflineAudioContext);
   if (!ctx.audioWorklet || !window.AudioWorkletNode) {
     ctx.__dsp = Promise.resolve(false);
-    if (live) { A.workletOK = false; dspState('kein'); toast('Dieser Browser spielt die neuen Quellen vereinfacht (kein AudioWorklet).', 6000); }
+    if (live) { A.workletOK = false; dspState('kein'); if (quiet) DSP.owe = true; else toast('Dieser Browser spielt die neuen Quellen vereinfacht (kein AudioWorklet).', 6000); }
     return ctx.__dsp;
   }
   if (live) dspState('laden');
@@ -9249,7 +9705,7 @@ function ensureDSP(ctx = A.ctx) {   // idempotent per context; resolves true whe
       if (ctx === A.ctx) { A.workletOK = true; if (live) dspState('ok'); }
       return true;
     }
-    if (ctx === A.ctx) { A.workletOK = false; if (live) { dspState('kein'); toast('Dieser Browser spielt die neuen Quellen vereinfacht (kein AudioWorklet).', 6000); } }
+    if (ctx === A.ctx) { A.workletOK = false; if (live) { dspState('kein'); if (quiet) DSP.owe = true; else toast('Dieser Browser spielt die neuen Quellen vereinfacht (kein AudioWorklet).', 6000); } }
     return false;
   })();
   // Chrome in a frame renders a worklet graph on a thread of lower priority: say once where it plays best
@@ -10282,14 +10738,14 @@ function previewTick(horizon) {
    ===================================================================== */
 // All lanes share one beat clock, so polymeters stay locked when tempo or Raster changes.
 // ext: { bpm, name } while a device's MIDI clock leads the tempo
+// (Hexenring: anchorT/anchorB/bpm are the Taktgeber's – accessors, set up in its section)
 const SEQ = { on: false, ext: null, anchorT: 0, anchorB: 0, bpm: 84, lanes: [0, 1, 2, 3].map(() => ({ n: 0, div: 0, walk: 0, cur: -1 })) };
-const beatAt = (t) => SEQ.anchorB + (t - SEQ.anchorT) * SEQ.bpm / 60;
-const timeAt = (b) => SEQ.anchorT + (b - SEQ.anchorB) * 60 / SEQ.bpm;
-const seqBpm = () => (SEQ.ext ? SEQ.ext.bpm : P['seq.bpm']);
+const beatAt = (t) => tgBeat(t);   // Hexenring: the Taktgeber's musical beat – one map that never jumps
+const timeAt = (b) => tgTime(b);
+const seqBpm = () => (SEQ.ext ? SEQ.ext.bpm : TG.hxOn ? TG.hx : P['seq.bpm']);   // (Hexenring: a Schleife's exact tempo)
 function seqRetempo() {
   // (while it stands its clock runs on – Sporenregen's Keime and the Rassel count in it: the beat never jumps)
-  if (!A.ctx) SEQ.bpm = seqBpm();
-  else { const now = A.ctx.currentTime; SEQ.anchorB = beatAt(now); SEQ.anchorT = now; SEQ.bpm = seqBpm(); }
+  tgRetempo(seqBpm());   // Hexenring: a new slope just ahead
   barRecue();
   if (CAP.bar && CAP.state === 'rec' && Math.abs(P['seq.bpm'] - CAP.bar.bpm) > 0.01 && !CAP.bar.tempoHinted) {
     CAP.bar.tempoHinted = true;
@@ -10318,7 +10774,7 @@ function visPush(ev) { if (!document.hidden && VIS.events.length < 400) VIS.even
 function seqTick(horizon) {
   if (!SEQ.on) return;
   const now = A.ctx.currentTime;
-  if (!SEQ.ext && P['seq.bpm'] !== SEQ.bpm) seqRetempo();
+  if (!SEQ.ext && seqBpm() !== TG.want) seqRetempo();   // (Hexenring: a patch written directly)
   // Schlafen: the Puls ends with its bar – nothing from the next downbeat on
   if (SEQ.stopB != null) { const te = timeAt(SEQ.stopB); if (now >= te) { seqStop(); return; } if (horizon > te) horizon = te; }
   for (let i = 0; i < 4; i++) {
@@ -10353,12 +10809,16 @@ function seqTick(horizon) {
   }
 }
 // b0: the beat to start from (MIDI Continue / Song Position); t0: when that beat sounds (a device's clock pulse)
+// Hexenring: a device's Start says where its beat b0 is (the Taktgeber's origin moves there); with a Schleife the Puls
+// joins the Taktgeber's grid at its next bar line (it counts from 0 there – the origin moves by whole bars); without one
+// it starts at once, as before (nothing depends on the grid)
 function seqStart(b0 = 0, t0) {
   if (!A.started) return;
   ensureRunning();
-  const was = { t: SEQ.anchorT, b: SEQ.anchorB, bpm: SEQ.bpm };
-  SEQ.anchorT = t0 != null ? t0 : A.ctx.currentTime + 0.06; SEQ.anchorB = b0; SEQ.bpm = seqBpm();
-  rgRebase(was);   // Sporenregen counts in this clock
+  const now = A.ctx.currentTime, join = t0 == null && HX.loops.size > 0;
+  if (t0 == null) { t0 = join ? tgBar(now + 0.06) : now + 0.06; if (join) b0 = 0; }
+  if (Math.abs(seqBpm() - TG.want) > 1e-9) tgRetempo(seqBpm(), t0 > now ? t0 : undefined);
+  rgRebase(tgRebase(b0, t0));   // Sporenregen counts in this clock
   SEQ.lanes.forEach((L, i) => { L.div = divBeats(P['l' + i + '.div']); L.n = b0 ? Math.ceil(b0 / L.div - 1e-9) : 0; L.walk = 0; L.cur = -1; L.last = 0; });
   SEQ.on = true; SEQ.stopB = null;
   barRecue();
@@ -12510,19 +12970,17 @@ function clkPulse(src, t) {
   } else if (C.late) {   // a master that waits a pulse after Start (slow tempos): it is the downbeat after all – lock to it
     const L = C.late;
     C.late = null;
-    if (t - L.at < 150 && SEQ.on && !C.run) { C.pos = L.pos; C.run = true; SEQ.anchorT = ctxAt(t); SEQ.anchorB = C.pos / 24; }
+    if (t - L.at < 150 && SEQ.on && !C.run) { C.pos = L.pos; C.run = true; rgRebase(tgRebase(C.pos / 24, ctxAt(t))); }   // (Hexenring: the device owns its downbeat)
   } else if (C.run) C.pos++;
   if (C.n > 2) clkFollow();
 }
 function clkFollow() {
   const C = CLK, bpm = 60000 / (24 * C.e2);
   if (!SEQ.ext) { SEQ.ext = { bpm, name: C.src.name }; extUI(); } else SEQ.ext.bpm = bpm;
-  if (A.ctx && SEQ.on) {
-    ctxSync();
-    if (C.run) { SEQ.anchorT = ctxAt(C.t0); SEQ.anchorB = C.pos / 24; SEQ.bpm = bpm; }   // phase-locked to the pulses
-    else if (Math.abs(bpm - SEQ.bpm) > 0.01) { const now = A.ctx.currentTime; SEQ.anchorB = beatAt(now); SEQ.anchorT = now; SEQ.bpm = bpm; }
-  }
-  if (!SEQ.on) SEQ.bpm = bpm;
+  // Hexenring: the Taktgeber follows – phase-locked by slews into the future over at least a beat (never re-anchored
+  // at a past pulse), or the tempo alone while the transport stands
+  if (A.ctx) { ctxSync(); if (SEQ.on && C.run) tgFollow(ctxAt(C.t0), C.pos / 24, bpm); else if (Math.abs(bpm - TG.want) > 0.01) tgRetempo(bpm); }
+  else tgRetempo(bpm);
   // what reads the tempo seldom (echo time, bar recording, the ring) follows when it changed noticeably
   if (Math.abs(bpm - C.shown) >= 0.1 && !C.ut) C.ut = setTimeout(() => { C.ut = 0; C.shown = SEQ.ext ? SEQ.ext.bpm : 0; updDelay(); barRecue(); }, 250);
 }
@@ -12585,20 +13043,16 @@ function clkOutTick(horizon) {
   // while a device leads (its Start comes any moment)
   const now = A.ctx.currentTime, pnow = performance.now(), until = SEQ.on ? Math.max(horizon || 0, now + 0.12) : now + (SEQ.ext ? 0 : 0.05);
   for (let guard = 0; guard < 64; guard++) {
-    let t;
-    if (SEQ.on) {
-      t = timeAt(CLKO.k / 24);
-      // a receiver counts pulses: late ones still go (at once) – only after a gap of a second or a jump, go on from now
-      if (t < now - 1) { CLKO.k = Math.ceil(beatAt(now) * 24 - 1e-6); continue; }
-    } else {
-      if (CLKO.t < now - 0.03) CLKO.t = now;
-      t = CLKO.t;
-    }
+    // (Hexenring: on the Taktgeber's beat, running or standing – a receiver keeps the loops' grid)
+    let t = timeAt(CLKO.k / 24);
+    // a receiver counts pulses: late ones still go (at once) – only after a gap (a second running, 30 ms standing) or a
+    // jump, go on from now
+    if (t < now - (SEQ.on ? 1 : 0.03) || (CLKO.last && t <= CLKO.last - 1e-6 && !SEQ.on)) { CLKO.k = Math.ceil(beatAt(Math.max(now, CLKO.last + 1e-4)) * 24 - 1e-6); continue; }
     if (t >= until) break;
     const ts = Math.max(pnow, perfAt(t));
     for (const o of outs) midiSend(o, [0xf8], ts);
     CLKO.last = t;
-    if (SEQ.on) CLKO.k++; else CLKO.t = t + 60 / (24 * seqBpm());
+    CLKO.k++;
   }
 }
 // the Puls starts: Start (or Song Position + Continue) right before its first pulse
@@ -12620,7 +13074,6 @@ function clkOutStop() {
   if (!outs.length) return;
   for (const o of outs) midiSend(o, [0xfc]);
   CLKO.sent[0xfc] = performance.now();
-  if (A.ctx) CLKO.t = Math.max(A.ctx.currentTime, CLKO.last + 60 / (24 * seqBpm()));
 }
 // Which note a key plays. "Skala": every key snaps to the nearest note of the scale, so pitches stay where the keys are
 // and nothing sounds out of key. "Weiße Tasten": from the C of the base octave each white key is the next column of the
@@ -12674,6 +13127,7 @@ function panic() {
   seqStop();
   if (A.ctx) stopBordun(true);
   if (P['bor.on']) setParam('bor.on', false);
+  hxPanic();   // Hexenring: every Schleife halts, its buffers stay
   if (A.ctx) {
     for (const v of Array.from(A.voices)) v.kill();
     gspClear(); rhzClear();
@@ -14629,7 +15083,7 @@ function ladRassel(e) {
     f = N.free ? N.base * ratioForSemi(i) : N.notes[i].f; x = noteX(i);
   }
   const k = clamp(e.v, 0, 1), y = 0.35 + 0.5 * k, vel = 0.3 + 0.5 * k;
-  const vo = hit(eng, t, f, y, vel, { pan: (Math.random() - 0.5) * 0.8, bus: stripIn('fin') });
+  const vo = hit(eng, t, f, y, vel, { pan: (Math.random() - 0.5) * 0.8, bus: stripIn('fin'), hxSrc: 'ras' });   // (Hexenring: the Rassel's notes are its own source)
   if (vo) LAD.vs.push(vo);
   noteEvent(t);
   visPush({ t, kind: 'hit', x, y, s: vel });
@@ -15251,12 +15705,11 @@ function rgQueue(now, horizon) {
   }
   RG.pq = keep;
 }
-// The Puls started (its clock begins at beat 0 again): what counts in its beats – the Keime's bars, the booked grid
-// points – carried over to the new count, so nothing jumps
-function rgRebase(o) {
-  if (!RG.on) return;
-  const tOld = (b) => o.t + (b - o.b) * 60 / o.bpm;
-  for (const k of RG.k) if (k.end != null) k.end = beatAt(tOld(k.end));
+// The Puls started (its count begins at beat 0 again: the Taktgeber's origin moved by d beats): what counts in its
+// beats – the Keime's bars, the booked grid points – carried over to the new count, so nothing jumps
+function rgRebase(d) {
+  if (!RG.on || !d) return;
+  for (const k of RG.k) if (k.end != null) k.end -= d;
   for (const b of RG.pq) if (b.d) { b.n = rgNext(b.tg - 1e-6, b.d); b.tg = rgAt(b.n, b.d); }
 }
 // the strike, on the "Regen" channel: room only from the rain's own (at most 8 ring at once), never a held note's
@@ -15376,7 +15829,7 @@ function rgQuelle() {
 // The beat: the Puls's while it runs (an external clock included); while it stands, its own, counted on at the Puls's
 // tempo – never jumping: when the Puls starts, a running loop moves onto its bar lines once (by at most half a bar).
 // The Puls itself knows nothing of it.
-const FA_R = 48, FA_RING = 32 * FA_R, FA_AHEAD = 0.5, FA_END = 0.04, FA_KEY = 'myzel.faehrte.v1';
+const FA_R = 48, FA_RING = 400 * FA_R, FA_AHEAD = 0.5, FA_END = 0.04, FA_KEY = 'myzel.faehrte.v1';   // (Hexenring: the ring is the Humus's Bewegung – two minutes at 200 BPM)
 (() => { try { const o = JSON.parse(store.get(FA_KEY) || 'null'); if (o && typeof o === 'object') for (const k in FA.p) if (k in o) FA.p[k] = o[k]; } catch (e) {} })();
 if (![1, 2, 4].includes(FA.p.len)) FA.p.len = 2;
 FA.p.fade = clamp(Number(FA.p.fade) || 0.85, 0.3, 1);
@@ -15384,9 +15837,9 @@ FA.p.trim = clamp(Math.round(Number(FA.p.trim) || 0), -20, 20);
 FA.p.hin = FA.p.hin === true; FA.p.seen = FA.p.seen === true;
 const faeSave = () => store.set(FA_KEY, JSON.stringify(FA.p));
 const faeMod = (s, n) => ((s % n) + n) % n;
-// the Fährte's beat at audio time t, and the time of a beat
-const faeB = (t) => FA.b0 + ((t - FA.t0) * FA.bpm) / 60;
-const faeT = (b) => FA.t0 + ((b - FA.b0) * 60) / FA.bpm;
+// the Fährte's beat at audio time t, and the time of a beat (Hexenring: the Taktgeber's continuous beat)
+const faeB = (t) => tgCb(t);
+const faeT = (b) => tgCt(b);
 const faeNow = () => ctxAt(performance.now());
 // what is written down: Gestik's functions and every binding to Formen (Schlafen is a state, not a movement; the
 // Fährte's own sources never)
@@ -15395,25 +15848,20 @@ function faeM(n, k, v, o) {
   if (!A.started) return;
   faeIn('m|' + k + '|' + n, o && o.fae && v ? o.fae.v() : v, 'm', k, n, n.startsWith('gk:') || n.startsWith('map:gestik:'), 0);
 }
-// the clock, at every scheduler tick: the Puls's beat while it runs (at a fixed distance d: a start or a jump of its
-// clock moves the bars, not the Fährte's count), its own while it stands
+// the clock, at every scheduler tick: the Taktgeber's continuous beat (Hexenring), the bar lines the Puls's while it
+// runs (FA.d = its count − the continuous one: a fresh start moves the bars, not the Fährte's count); FA.t0/b0/bpm
+// name the segment sounding now
 function faeClock(now) {
-  if (FA.t0 == null) { FA.t0 = now; FA.b0 = SEQ.on ? beatAt(now) : 0; FA.bpm = SEQ.on ? SEQ.bpm : seqBpm(); FA.pon = SEQ.on; return; }
+  const sg = TG.seg[tgIdx(now)];
+  if (FA.t0 == null) { FA.t0 = sg.t; FA.b0 = sg.b; FA.bpm = sg.bpm; FA.pon = SEQ.on; FA.ver = TG.ver; FA.d = -TG.o; FA.ph = faeMod(TG.o, 4); return; }
   let moved = false;
-  if (SEQ.on) {
-    const cur = faeB(now);
-    if (!FA.pon || Math.abs(beatAt(now) - FA.d - cur) > 0.125) {   // the Puls started, or its clock jumped (Start, a song position)
-      FA.d = beatAt(now) - cur;
-      const ph = faeMod(-FA.d, 4);
-      faeAlign(ph - FA.ph);
-      FA.ph = ph;
-    }
-    const b0 = SEQ.anchorB - FA.d;
-    if (FA.t0 !== SEQ.anchorT || FA.b0 !== b0 || FA.bpm !== SEQ.bpm) { FA.t0 = SEQ.anchorT; FA.b0 = b0; FA.bpm = SEQ.bpm; moved = true; }
-  } else {
-    const bpm = seqBpm();
-    if (bpm !== FA.bpm) { FA.b0 = faeB(now); FA.t0 = now; FA.bpm = bpm; moved = true; }
+  if (SEQ.on && (!FA.pon || Math.abs(-TG.o - FA.d) > 0.125)) {   // the Puls started, or its clock jumped (Start, a song position)
+    FA.d = -TG.o;
+    const ph = faeMod(-FA.d, 4);
+    faeAlign(ph - FA.ph);
+    FA.ph = ph;
   }
+  if (FA.t0 !== sg.t || FA.b0 !== sg.b || FA.bpm !== sg.bpm || FA.ver !== TG.ver) { FA.t0 = sg.t; FA.b0 = sg.b; FA.bpm = sg.bpm; FA.ver = TG.ver; moved = true; }
   FA.pon = SEQ.on;
   // the points ahead are laid again on the new clock – when it moved them from where they were laid (a device's clock
   // nudges its tempo with every pulse: while that stays under half a millisecond, they stay)
@@ -16527,6 +16975,8 @@ function onParamChanged(id) {
   if (pre === 'rec') return;
   if (PD[id].dev) { onDeviceChanged(id); return; }
   if (PD[id].live) { if (A.ctx && pre[0] === 'x' && MIX.s[pre.slice(1)]) mixParam(MIX.s[pre.slice(1)], 'solo'); return; }
+  if (pre === 'xhxr') { if (A.ctx) mixParam(MIX.s.hxr, id.slice(5)); return; }   // Hexenring: its strip is not the patch's
+  if (pre === 'hx') return;
   markPresetDirty();
   if (!A.ctx) return;
   if (pre[0] === 'x' && MIX.s[pre.slice(1)]) { mixParam(MIX.s[pre.slice(1)], id.slice(pre.length + 1)); return; }
@@ -16542,7 +16992,7 @@ function onParamChanged(id) {
     case 'mst': updMaster(); break;
     case 'bor': updBordun(); break;
     case 'mix': if (id === 'mix.pulsVol' || id === 'mix.pulsMute') for (const st of MIX.list) if (st.lane != null) updStrip(st); break;
-    case 'seq': if (id === 'seq.bpm') { seqRetempo(); updDelay(); } break;
+    case 'seq': if (id === 'seq.bpm') { TG.hxOn = false; seqRetempo(); updDelay(); } break;   // (Hexenring: the slider takes the tempo back from a Schleife)
     case 'neb':
       if (id === 'neb.cut' || id === 'neb.ymod' || id === 'neb.res') for (const t of touches.values()) for (const { v } of t.voices) if (v.alive && v.eng === 'neb') { v.setY(modY(t)); setP(v.filt.Q, P['neb.res']); }
       break;
@@ -16593,12 +17043,14 @@ function restartAudio() {
 function patchValues() { const o = {}; for (const id of PATCH_IDS) o[id] = P[id]; return o; }
 function loadValues(vals, keepUnset) {
   KQ.miss = []; vals = engKeysIn(vals);
+  const was = {}; for (const id in FAE_PAR) was[id] = P[id];   // (Hexenring: the Bewegung lanes take the new values)
   for (const id of PATCH_IDS) {
     const d = PD[id];
     const v = vals && Object.prototype.hasOwnProperty.call(vals, id) ? sanitize(d, vals[id]) : keepUnset ? P[id] : d.d;
     P[id] = v;
   }
   for (const id of PATCH_IDS) for (const fn of CTL[id] || []) fn(P[id], null);
+  hxMvSync(was);
   buildNotes(); drawBg(); refreshEngineUI(); updLaneTabs(); updInactive(); renderBarInfo();
   if (A.ctx) { applyAll(); seqRetempo(); warmKS(); dspMaybe(); if (P['kor.src'] === 'echo') ensureCapture(); if (!LIVE_SRC.has(P['kor.src'])) texture(P['kor.src']); }
   syncMic();
@@ -16664,7 +17116,7 @@ const MXC = [], MXK = {};
 const MX_GROUPS = [['spiel', 'spiel'], ['puls', 'puls'], ['grund', 'grund'], ['rueck', 'rückwege'], ['sum', 'summe']];
 const MX_DORM = [118, 106, 97];
 function mxChannels() {
-  const own = { fin: ['spiel', '#f0e6d8'], eb2: ['spiel', '#c9dc82'], rgn: ['spiel', RG_COL], bor: ['grund', '#5a7cff'], gsp: ['grund', '#b9a46e'], dly: ['rueck', '#6cc9ef'], rev: ['rueck', '#d6cbff'] };
+  const own = { fin: ['spiel', '#f0e6d8'], eb2: ['spiel', '#c9dc82'], rgn: ['spiel', RG_COL], hxr: ['spiel', '#e9a35e'], bor: ['grund', '#5a7cff'], gsp: ['grund', '#b9a46e'], dly: ['rueck', '#6cc9ef'], rev: ['rueck', '#d6cbff'] };
   for (const st of STRIPS) {
     if (st.k === 'bor') MXC.push({ k: 'puls', name: 'Puls', g: 'puls', kind: 'puls', col: '#f2cf86' });
     const lane = st.lane != null;
@@ -17218,13 +17670,14 @@ function mxSrcText(k) {
   if (k === 'fin') return ex || engLabel(P['v.eng']) || '';
   if (k === 'eb2') return P['v.layer'] === 'off' ? 'aus' : ex || engLabel(P['v.layer']);
   if (k === 'rgn') return rgOn() ? (GK.p.rgArt === 'harfe' ? 'Harfe · ' : '') + rgName() : 'aus';   // Sporenregen: its strike, or silent
+  if (k === 'hxr') return hxSrcText();   // Hexenring: its Schleifen
   if (c.kind === 'lane') return P['l' + c.lane + '.on'] ? engLabel(P['l' + c.lane + '.eng']) : 'aus';
   if (k === 'bor') return P['bor.on'] ? fmt(PD['bor.wave'], P['bor.wave']) + ' ' + (MX_BOR[P['bor.int']] || '') : 'aus';
   if (k === 'gsp') return !gspInUse() ? 'aus' : DSP.state === 'kein' || A.workletBroken.has('gsp') ? 'kein Netz' : (P['gsp.saiten'] === 'zwei' ? 'zwei Oktaven' : 'eine Oktave');   // (the web's own channel)
   // the app writes a dotted value as "1/8 ·", which reads like a dangling separator here: "1/8." as in a score
   if (k === 'dly') return P['dly.sync'] ? fmt(PD['dly.div'], P['dly.div']).replace(' ·', '.') : fmt(PD['dly.ms'], P['dly.ms']);
   if (k === 'rev') return fmt(PD['rev.size'], P['rev.size']);
-  if (k === 'puls') return mxPulsOff() ? 'alle aus' : SEQ.on ? (SEQ.ext ? 'EXT ' + dec(SEQ.ext.bpm.toFixed(1)) : Math.round(P['seq.bpm'])) + ' BPM' : 'steht';
+  if (k === 'puls') return mxPulsOff() ? 'alle aus' : SEQ.on ? (SEQ.ext ? 'EXT ' + dec(SEQ.ext.bpm.toFixed(1)) : TG.hxOn ? dec(TG.hx.toFixed(1)) : Math.round(P['seq.bpm'])) + ' BPM' : 'steht';
   return (A.monoChk ? 'mono' : 'stereo') + (A.dim ? ' · ' + MX_MINUS + '20 dB' : '');
 }
 const mxPulsOff = () => !P['l0.on'] && !P['l1.on'] && !P['l2.on'] && !P['l3.on'];
@@ -17986,14 +18439,17 @@ const mxVis = () => MX.vis || MXC;
 // "Regen" stands in the Pult only while it can sound (Gestik on, Neigen formt Sporenregen) or when the player set
 // anything of it: a console that never rains keeps its eleven strips – they fit 1280 px and an iPad as before
 const mxTouched = (k) => Object.keys(PD).some((id) => id.startsWith('x' + k + '.') && P[id] !== PD[id].d);
+// (Hexenring: its strip likewise, from the first Schleife on)
 function mxRgnSync() {
-  const S = MX.ch.rgn;
-  if (!S || !S.el) return;
-  const gone = !(GK.on && GK.p.neigen === 'regen') && !mxTouched('rgn');
-  if (!!S.gone === gone) return;
-  S.gone = gone; S.el.classList.toggle('gone', gone);
+  let ch = false;
+  for (const [k, gone] of [['rgn', !(GK.on && GK.p.neigen === 'regen') && !mxTouched('rgn')], ['hxr', !HX.loops.size && !mxTouched('hxr')]]) {
+    const S = MX.ch[k];
+    if (!S || !S.el || !!S.gone === gone) continue;
+    S.gone = gone; S.el.classList.toggle('gone', gone); ch = true;
+    if (gone && MX.sel === k) selectChannel('fin');
+  }
+  if (!ch) return;
   MX.vis = MXC.filter((c) => !MX.ch[c.k].gone);
-  if (gone && MX.sel === 'rgn') selectChannel('fin');
   MX.dirtyStatic = true;
   if (MX.open) mxLayout();
 }
@@ -20605,6 +21061,7 @@ function mxdQuelle(k) {
   } else if (k === 'bor') kids = [C('bor.on'), grid(C('bor.lvl'), C('bor.oct'), C('bor.cut'), C('bor.breath')), C('bor.wave'), C('bor.int')];
   else if (k === 'gsp') kids = [grid(C('gsp.halo'), C('gsp.kopplung'), C('gsp.nachklang'), C('gsp.steg')), C('gsp.saiten'), h('p', { class: 'note' }, 'Das Netz der Saiten, in das alles spielt, was Gespinst klingt – Finger, Ebene 2, Spuren, Regen.')];
   else if (k === 'rgn') { const q = rgQuelle(); MXD.qu[k] = q; return q; }
+  else if (k === 'hxr') kids = [h('p', { class: 'note' }, 'Die Schleifen des Hexenrings – ihre Effektkette ist eingebrannt, Echo und Hall kommen hier dazu.')];   // Hexenring
   else if (k === 'dly') kids = [grid(C('dly.mix', 'Anteil (Send-Meister)'), C('dly.fb'), C('dly.pp'), C('dly.tone'), C('dly.wow')), C('dly.sync'), C('dly.div'), C('dly.ms')];
   else kids = [grid(C('rev.mix', 'Anteil (Send-Meister)'), C('rev.size'), C('rev.damp'), C('rev.pre'))];
   const el = h('div', { class: 'mxd-qbody', 'data-k': k }, ...kids);
@@ -21633,7 +22090,7 @@ function kqHear(T, k, held) {
   if (held) v = playNote(k, now, o.f, o.y, o.vel, opt);
   else if (o.strike || !E.sustain) v = hit(k, now, o.f, o.y, o.vel, Object.assign({ gate: o.gate || 0.4 }, opt));
   else v = playNote(k, now, o.f, o.y, o.vel, Object.assign({ burst: true, gate: (M.hear && M.hear.gate) || 1.2 }, opt));
-  if (v) { v.probe = true; KQ.probe = v; }
+  if (v) { v.probe = true; KQ.probe = v; hxEvProbe(v); }   // (Hexenring: a probe is no note of the Humus)
   return v;
 }
 function kqHold(T, k) { const v = kqHear(T, k, true); KQ.hold = v; return v; }
@@ -22061,7 +22518,7 @@ function drawRings() {
   }
   c.fillStyle = COL.hypha; c.textAlign = 'center'; c.textBaseline = 'middle';
   c.font = '500 13px ' + COL.fontNum;
-  c.fillText(SEQ.ext ? dec(SEQ.ext.bpm.toFixed(1)) : Math.round(P['seq.bpm']), cx, cy - 4);
+  c.fillText(SEQ.ext ? dec(SEQ.ext.bpm.toFixed(1)) : TG.hxOn ? dec(TG.hx.toFixed(1)) : Math.round(P['seq.bpm']), cx, cy - 4);   // (Hexenring: a Schleife's exact tempo)
   c.fillStyle = COL.dim; c.font = '500 8px ' + COL.fontNum;
   c.fillText(SEQ.ext ? 'EXT BPM' : 'BPM', cx, cy + 9);
 }
@@ -23892,6 +24349,373 @@ function startKeysLine() {
     else if (GK.want) g.textContent = 'Gestik ist an: Neigen, Schütteln und Umdrehen formen den Klang mit – sie startet mit dem Klang';
   }
 }
+/* ---------- Hexenring ---------- */
+// The looper (dev/looper/SPEC.md, binding; KONZEPT.md for the owner). Step 1a, the engine core: the Taktgeber, the
+// processor myzel-ring (its code inside myzelDsp), the taps and the strip „Hexenring“, the Humus of notes and of
+// Bewegung, and the calls the next steps build on (hxGrab, hxLoopNew, hxSchichtAdd, hxState, hxGain, hxUndo, hxClear,
+// hxRate, hxTempo). No UI yet.
+
+// ---- Taktgeber (SPEC §2): one beat map that never jumps ----
+// Segments {t, b, bpm}: audio time, continuous beat, exact tempo. A change appends a segment at a time not before now
+// (TG_LEAD ahead: what is scheduled stays where it is, and the processor hears of it before its frame) – only the
+// slope changes, the beat runs on. The musical beat (bar lines at its multiples of 4) is the continuous one minus the
+// origin o: a fresh Puls start with no Schleife, or a device's Start, moves o – bar lines may move, no counted beat jumps.
+const TG_LEAD = 0.03;
+const TG = { seg: [{ t: 0, b: 0, bpm: 84 }], o: 0, ver: 0, want: 84, hx: 0, hxOn: false, keep: false, anc: { t: 0, b: 0 } };
+Object.defineProperty(TG, 'src', { get: () => (SEQ.ext ? 'ext' : TG.hxOn ? 'hx' : 'seq') });   // who leads: a device, a Schleife, the slider
+const tgNow = () => (A.ctx ? A.ctx.currentTime : 0);
+function tgIdx(t) {
+  const s = TG.seg; let hi = s.length - 1;
+  if (t >= s[hi].t) return hi;
+  let lo = 0; while (lo < hi) { const m = (lo + hi + 1) >> 1; if (s[m].t <= t) lo = m; else hi = m - 1; }
+  return lo;
+}
+const tgCb = (t) => { const s = TG.seg[tgIdx(t)]; return s.b + ((t - s.t) * s.bpm) / 60; };
+function tgCt(b) {
+  const s = TG.seg; let lo = 0, hi = s.length - 1;
+  if (b >= s[hi].b) lo = hi; else while (lo < hi) { const m = (lo + hi + 1) >> 1; if (s[m].b <= b) lo = m; else hi = m - 1; }
+  return s[lo].t + ((b - s[lo].b) * 60) / s[lo].bpm;
+}
+const tgBeat = (t) => tgCb(t) - TG.o, tgTime = (b) => tgCt(b + TG.o);
+const tgBpm = (t) => TG.seg[tgIdx(t)].bpm;
+const tgBar = (t) => tgTime(Math.ceil(tgBeat(t) / 4 - 1e-9) * 4);   // the first bar line at or after t
+function tgReset() { const v = seqBpm(); TG.seg = [{ t: 0, b: 0, bpm: v }]; TG.o = 0; TG.want = v; TG.anc = { t: 0, b: 0 }; TG.ver++; }
+// a new slope from time t (the segments after t give way); the past stays as it was played
+function tgAdd(t, bpm) {
+  const s = TG.seg, b = tgCb(t);
+  while (s.length > 1 && s[s.length - 1].t >= t) s.pop();
+  if (s[s.length - 1].t >= t) s[s.length - 1] = { t, b, bpm }; else s.push({ t, b, bpm });
+  const old = tgNow() - 300; let k = 0;   // five minutes of history (the Humus reads two)
+  while (k < s.length - 2 && s[k + 1].t < old) k++;
+  if (k) s.splice(0, k);
+  TG.ver++; TG.anc = { t, b: b - TG.o };
+  hxSeg(s.length - 1);
+}
+function tgRetempo(bpm, at) {
+  TG.want = bpm;
+  if (!A.ctx) { TG.seg = [{ t: 0, b: 0, bpm }]; TG.ver++; return; }
+  const now = A.ctx.currentTime;
+  tgAdd(Math.max(now, at != null ? at : now + TG_LEAD), bpm);
+}
+// a new origin: musical beat b0 sounds at t0 (a Puls start, a device's Start or Continue); returns the shift of the count
+function tgRebase(b0, t0) { const o = TG.o; TG.o = tgCb(t0) - b0; TG.ver++; TG.anc = { t: t0, b: b0 }; return TG.o - o; }
+// MIDI clock: the device says its beat bA sounded at tA at its tempo – the Taktgeber slews toward it over at least a
+// beat, from a moment ahead (never re-anchored at a past pulse: the beat never jumps, a loop's next start moves smoothly)
+function tgFollow(tA, bA, bpm) {
+  const t1 = A.ctx.currentTime + TG_LEAD, e = bA + ((t1 - tA) * bpm) / 60 - tgBeat(t1), es = (e * 60) / bpm;   // the error at t1 (beats, s)
+  if (Math.abs(es) < 0.001) { if (Math.abs(bpm - TG.want) >= 0.01) tgRetempo(bpm); return; }   // within a millisecond (the loop's own noise): the tempo only
+  const T = Math.max(60 / bpm, 10 * Math.abs(es));   // ≥ 1 beat, longer for a large error (an audio stall): the slope at most ±10 %
+  TG.want = bpm;
+  tgAdd(t1, bpm + (60 * e) / T);
+  tgAdd(t1 + T, bpm);
+}
+// the Puls's clock is the Taktgeber's: SEQ.anchorT/anchorB name its last re-anchoring (a start, a tempo change),
+// SEQ.bpm its tempo (a device's while it leads; a slew's slope is not the tempo); a direct write (older code, tests)
+// re-anchors the whole map there, as it used to
+function tgLegacy(o) {
+  const a = Object.assign({ t: TG.anc.t, b: TG.anc.b, bpm: TG.want }, o);
+  TG.seg = [{ t: a.t, b: a.b, bpm: a.bpm }]; TG.o = 0; TG.anc = { t: a.t, b: a.b }; TG.want = a.bpm; TG.ver++;
+  hxSeg(0, true);
+}
+Object.defineProperties(SEQ, {
+  anchorT: { get: () => TG.anc.t, set: (v) => tgLegacy({ t: v }), configurable: true },
+  anchorB: { get: () => TG.anc.b, set: (v) => tgLegacy({ b: v }), configurable: true },
+  bpm: { get: () => (SEQ.ext ? SEQ.ext.bpm : TG.want), set: (v) => tgLegacy({ bpm: v }), configurable: true },
+});
+// a Schleife gives the tempo (fractional; the slider shows it with one decimal, the patch keeps its own); released
+// when the last Schleife goes, unless „Tempo behalten“
+function hxTempo(bpm) {
+  TG.hxOn = true; TG.hx = clamp(+bpm, 20, 300);
+  if (!SEQ.ext) tgRetempo(TG.hx);
+  for (const fn of CTL['seq.bpm'] || []) fn(P['seq.bpm'], null);
+  updDelay();
+}
+function hxTempoFree() {
+  if (!TG.hxOn || TG.keep) return;
+  TG.hxOn = false; seqRetempo(); updDelay();
+  for (const fn of CTL['seq.bpm'] || []) fn(P['seq.bpm'], null);
+}
+
+// ---- the processor (myzel-ring, inside myzelDsp): made at sound start – the Humus records from the first note ----
+const HX_CH = 8192;
+// measured (klang/tests/cost.js, candidates hxq/hxn/hxc/hx0/hxs/hxr, two runs on this machine, the higher + 15 %,
+// SPEC §21): the processor with both rings recording and its Gespielt taps 0.55–0.59 (the taps ≈ 0.1 of it); per playing
+// Schicht, its seams included, 0.19–0.27; extra per Schicht while its loop is resampled 0.75–0.83
+const HX_COST = { capture: 0.68, schicht: 0.31, rs: 0.95 };
+const HX = { node: null, ctx: null, state: '', fR: 0, tR: 0, loops: new Map(), sch: new Map(), lid: 0, sid: 0, gid: 0, wait: new Map(), meter: [], back: [],
+  mask: new Set(['fin', 'eb2', 'rgn', 'gsp']), fx: null, fx1: null, play: 0, rs: 0, ev: [], evI: 0, evId: 0 };
+const hxF = (t) => HX.fR + (t - HX.tR) * SR;   // audio time → the processor's frame (its own count, mapped by its reports)
+const hxT = (f) => HX.tR + (f - HX.fR) / SR;
+const hxLive = () => !!(A.ctx && !(typeof OfflineAudioContext !== 'undefined' && A.ctx instanceof OfflineAudioContext));
+function hxPost(m, tr) {
+  if (!HX.node || HX.ctx !== A.ctx) return false;
+  try { HX.node.port.postMessage(m, tr || []); return true; } catch (e) { console.warn(e); return false; }
+}
+// the Taktgeber's segments from index i on, in the processor's frames (it replaces its own from the first one's frame)
+function hxSeg(i, reset) {
+  if (!HX.node || HX.ctx !== A.ctx) return;
+  const s = TG.seg, out = [];
+  for (let k = Math.max(0, i); k < s.length; k++) out.push([hxF(s[k].t), s[k].b, (SR * 60) / s[k].bpm]);
+  hxPost(reset ? { seg: out, reset: 1 } : { seg: out });
+}
+function hxStart() {
+  HX.state = 'laden';
+  ensureDSP(A.ctx, true).then((ok) => { if (ok && A.ctx && A.started) hxNode(); else HX.state = 'kein'; });
+}
+function hxNode() {
+  const ctx = A.ctx, hum = P['hx.humus'];
+  let node;
+  try {
+    node = new AudioWorkletNode(ctx, 'myzel-ring', { numberOfInputs: 2, numberOfOutputs: 2, outputChannelCount: [2, 2], channelCount: 2, channelCountMode: 'explicit',
+      channelInterpretation: 'speakers', processorOptions: { humusS: hum, chunk: HX_CH } });
+  } catch (e) { console.warn(e); HX.state = 'kein'; return; }
+  A.hxIn0.connect(node, 0, 0); A.masterSum.connect(node, 0, 1);
+  node.connect(stripIn('hxr'), 0);   // out 0: what is burnt in → the strip „Hexenring“ → A.masterIn
+  node.port.onmessage = (e) => hxMsg(e.data);
+  node.onprocessorerror = () => { console.warn('Hexenring: Prozessorfehler'); HX.state = 'kein'; HX.node = null; };
+  HX.node = node; HX.ctx = ctx; HX.state = 'ok'; HX.fR = Math.round(ctx.currentTime * SR); HX.tR = ctx.currentTime;
+  // the Humus's chunks, made here and moved over (the audio thread never allocates): two rings of hx.humus seconds
+  const n = 2 * Math.ceil((hum * SR) / HX_CH), pool = [], tr = [];
+  for (let i = 0; i < n; i++) { const L = new Float32Array(HX_CH), R = new Float32Array(HX_CH); pool.push([L, R]); tr.push(L.buffer, R.buffer); }
+  node.port.postMessage({ pool }, tr);
+  hxSeg(tgIdx(ctx.currentTime), true);
+}
+function hxMsg(m) {
+  if (!m) return;
+  if (m.frame != null) { HX.fR = m.frame; HX.tR = m.t; }
+  if (m.passStart) { const L = HX.loops.get(m.passStart.loop); if (L) { L.k = m.passStart.k; L.f = m.passStart.f; L.t = hxT(L.f); if (L.on) L.on(L); } }
+  if (m.grabbed) { const w = HX.wait.get('g' + m.grabbed.id); if (w) { HX.wait.delete('g' + m.grabbed.id); w(m.grabbed); } }
+  if (m.freed) {
+    const d = m.freed, key = d.schicht != null && !d.old ? 's' + d.schicht : d.loop != null ? 'l' + d.loop : null, w = key && HX.wait.get(key);
+    if (d.schicht != null && !d.old) HX.sch.delete(d.schicht);
+    if (d.loop != null) { const L = HX.loops.get(d.loop); if (L) for (const id of L.sch) HX.sch.delete(id); HX.loops.delete(d.loop); hxCount(); hxStripSync(); }
+    if (w) { HX.wait.delete(key); w(d.chunks); } else HX.back.push(d.chunks);   // (kept for a redo; dropped once the next step's history knows better)
+    if (HX.back.length > 64) HX.back.shift();
+  }
+  if (m.meter) HX.meter = m.meter.loops;
+  if (m.report) { const w = HX.wait.get('r'); if (w) { HX.wait.delete('r'); w(m.report); } }
+}
+const hxReport = () => new Promise((res) => { HX.wait.set('r', res); if (!hxPost({ report: 1 })) { HX.wait.delete('r'); res(null); } });
+
+// ---- the taps (SPEC §4): „Gespielt“ = each source strip after its mute/solo gate (fin, eb2, rgn, gsp; l0–l3 and bor
+// by the mask), „Alles“ = A.masterSum. The strip „Hexenring“ plays into A.masterIn behind both: no tap hears a Schleife.
+// (A masked-out strip has no tap at all – a tap is a node the browser runs.)
+function hxGraph() {
+  HX.node = null; HX.ctx = null; HX.fx = HX.fx1 = null; HX.out1 = false;
+  A.hxIn0 = G(1); A.hxIn0.channelCount = 2; A.hxIn0.channelCountMode = 'explicit'; A.hxIn0.channelInterpretation = 'speakers';
+  for (const st of MIX.src) { st.hxT = null; if (st.k !== 'hxr' && HX.mask.has(st.k)) hxTap(st, true, true); }
+}
+function hxTap(st, on, now) {
+  if (on) {
+    if (!st.hxT) { st.hxT = G(now ? 1 : 0); st.dry.connect(st.hxT).connect(A.hxIn0); }
+    if (!now) setP(st.hxT.gain, 1, 0.003);
+  } else if (st.hxT) {
+    const g = st.hxT; st.hxT = null;
+    setP(g.gain, 0, 0.003);
+    setTimeout(() => { try { st.dry.disconnect(g); g.disconnect(); } catch (e) {} }, 60);
+  }
+}
+// which strips the Gespielt ring hears: „Puls mit“ (l0–l3), „Bordun mit“ (bor) – a smooth step, never a click in the Humus
+function hxMask(keys) {
+  HX.mask = new Set(keys);
+  if (A.ctx) for (const st of MIX.src) if (st.k !== 'hxr') hxTap(st, HX.mask.has(st.k), false);
+}
+// the strip „Hexenring“: straight to the master (its chain is burnt in) – or, set to the chain, through a copy of it
+// (the same settings and modulators) that ends at the master as well, never in A.masterSum where „Alles“ listens
+function hxRoute() { return P['xhxr.route'] !== 'dir' ? hxChain('fx').in : A.masterIn; }
+function hxChain(k) {
+  if (HX[k] && HX[k].ctx === A.ctx) return HX[k];
+  const c = makeChain(); c.ctx = A.ctx;
+  updDrive(c); updRing(c); updFilter(c); updPhaser(c); updChorus(c);
+  c.out.connect(k === 'fx' ? A.masterIn : stripIn('hxr'));
+  return (HX[k] = c);
+}
+// out 1: the loops that follow the live chain go through their own copy of it, then the strip (nothing taps either)
+function hxOut1() { if (HX.node && !HX.out1) { HX.node.connect(hxChain('fx1').in, 1); HX.out1 = true; } }
+const hxSrcText = () => { const n = HX.loops.size; return n ? n + (n === 1 ? ' Schleife' : ' Schleifen') : 'aus'; };
+// the mixer shows the strip from the first Schleife on (or once something of it was set)
+function hxStripSync() { if (MX.root) { mxRgnSync(); mxSrcAll(); } }
+
+// ---- the calls (times are audio seconds of A.ctx; the processor gets frames). Musical beats: bar lines at 0, 4, 8 … ----
+// hxGrab({in: 0 Gespielt | 1 Alles, t0, t1 | f0, f1, pre, post, tail}) → Promise<{id, chunks: [[L, R]…], f0, n, pre,
+// len, post, tail, lost, in}>: the window [t0 − pre, t1 + post + tail) copied out of a Humus ring (waits until it has
+// sounded); the chunks are made here and come back filled
+function hxGrab(w = {}) {
+  if (!HX.node) return Promise.resolve(null);
+  const inp = w.in ? 1 : 0, pre = Math.round((w.pre || 0) * SR), post = Math.round((w.post || 0) * SR), tail = Math.round((w.tail || 0) * SR);
+  const fa = w.f0 != null ? Math.round(w.f0) : Math.round(hxF(w.t0)), fb = w.f1 != null ? Math.round(w.f1) : Math.round(hxF(w.t1));
+  const f0 = fa - pre, f1 = fb + post + tail, nc = Math.ceil(Math.max(1, f1 - f0) / HX_CH), dst = [], tr = [], id = ++HX.gid;
+  for (let i = 0; i < nc; i++) { const L = new Float32Array(HX_CH), R = new Float32Array(HX_CH); dst.push([L, R]); tr.push(L.buffer, R.buffer); }
+  return new Promise((res) => {
+    HX.wait.set('g' + id, (g) => res(g.err ? null : { id, chunks: g.chunks, f0: g.f0, n: g.n, pre, len: fb - fa, post, tail, lost: g.lost, in: inp }));
+    if (!hxPost({ grab: { id, in: inp, f0, f1, dst } }, tr)) { HX.wait.delete('g' + id); res(null); }
+  });
+}
+// hxLoopNew({lock: 'takt' | 'frei', b0 (musical beat of pass 0, default the next bar line), beats | bars, len (frames,
+// frei), t0 (frei: its pass 0), gain, pan, out: 0 burnt in | 1 follows the chain, state}) → id
+function hxLoopNew(o = {}) {
+  const id = ++HX.lid, takt = o.lock !== 'frei', now = tgNow(), beats = o.beats || 4 * (o.bars || 1);
+  const b0 = o.b0 != null ? o.b0 : Math.ceil(tgBeat(now + 0.1) / 4 - 1e-9) * 4;
+  const d = { id, lock: takt ? 'takt' : 'frei', b0: b0 + TG.o, beats, L: o.len != null ? Math.round(o.len) : Math.round(((beats * 60) / tgBpm(now)) * SR),
+    ph0: o.f0 != null ? Math.round(o.f0) : Math.round(hxF(o.t0 != null ? o.t0 : now + 0.1)), gain: o.gain != null ? o.gain : 1, pan: o.pan || 0, out: o.out ? 1 : 0, state: o.state || 'spielt' };
+  HX.loops.set(id, { id, d, sch: [], state: d.state, rate: 0, k: -1, f: null, t: null });
+  if (d.out) hxOut1();
+  hxPost({ loop: d });
+  hxCount(); hxStripSync();
+  return id;
+}
+// hxSchichtAdd(loop, {chunks, n, pre, len, ausklang: {off, len} | {chunks, off, len}, gain, at | f (its entry; default
+// now), join: 'xf' (warm: crossfade X) | 'ola' (cold: Ausklang overlap-added from its second seam) | 'cut', X (s, 0.01),
+// rho ('auto': measured; 0 equal power … 1 equal gain), fin (s, its fade-in; default X, 0 none)}) → id; the chunks move to the processor
+function hxSchichtAdd(loop, o = {}) {
+  const L = HX.loops.get(loop);
+  if (!L || !o.chunks || !HX.node) return 0;
+  const id = ++HX.sid, tr = [], seen = new Set(), fr = (s) => (s != null ? Math.round(s * SR) : undefined);
+  for (const list of [o.chunks, o.ausklang && o.ausklang.chunks]) for (const c of list || []) if (!seen.has(c[0])) { seen.add(c[0]); tr.push(c[0].buffer, c[1].buffer); }
+  const join = o.join || 'xf', X = fr(o.X) || Math.round(0.01 * SR), rho = o.rho == null || o.rho === 'auto' ? (join === 'xf' ? hxRho(o.chunks, o.n, o.pre || 0, o.len, X) : 0) : +o.rho;
+  const d = { loop, id, chunks: o.chunks, n: o.n, pre: o.pre || 0, len: o.len, ausklang: o.ausklang || null, gain: o.gain != null ? o.gain : 1,
+    f: o.f != null ? Math.round(o.f) : o.at != null ? Math.round(hxF(o.at)) : undefined, join, X, rho, fin: fr(o.fin) };
+  hxPost({ schicht: d }, tr);
+  L.sch.push(id); HX.sch.set(id, { id, loop, len: o.len, pre: o.pre || 0, n: o.n });
+  hxCount();
+  return id;
+}
+// the correlation of a Schicht's seam: what follows its end (the pass going on) against its start, over the fade
+function hxRho(ch, n, pre, len, X) {
+  const at = (i) => { const c = ch[Math.floor(i / HX_CH)]; return c ? [c[0][i % HX_CH], c[1][i % HX_CH]] : [0, 0]; };
+  let ab = 0, aa = 0, bb = 0;
+  for (let j = 0; j < X; j++) {
+    if (pre + len + j >= (n != null ? n : ch.length * HX_CH)) break;
+    const a = at(pre + len + j), b = at(pre + j);
+    ab += a[0] * b[0] + a[1] * b[1]; aa += a[0] * a[0] + a[1] * a[1]; bb += b[0] * b[0] + b[1] * b[1];
+  }
+  return aa > 1e-20 && bb > 1e-20 ? clamp(ab / Math.sqrt(aa * bb), -1, 1) : 0;
+}
+const hxAt = (at) => (at != null ? Math.round(hxF(at)) : undefined);
+// a Schleife's state at a moment: 'spielt' · 'stumm' (its phase runs on) · 'angehalten' (at its seam: its Ausklang rings
+// once; b0 with 'spielt': it comes back from its start at that musical beat); X: the fade (s)
+function hxState(loop, to, at, o = {}) {
+  const L = HX.loops.get(loop); if (!L) return false;
+  L.state = to; hxCount();
+  return hxPost({ state: { loop, to, f: hxAt(at), X: o.X != null ? Math.round(o.X * SR) : undefined, b0: o.b0 != null ? o.b0 + TG.o : undefined } });
+}
+// a level (a loop's, or a Schicht's: {schicht: id}), with a smooth ramp (s); pan for a loop
+function hxGain(target, g, at, ramp, pan) {
+  const t = typeof target === 'object' ? target : { loop: target };
+  return hxPost({ gain: Object.assign({}, t, { g, f: hxAt(at), ramp: ramp != null ? Math.round(ramp * SR) : undefined, pan }) });
+}
+// a Schicht out (its seam fade), a loop or all out; → Promise of the chunks the processor hands back
+function hxUndo(schicht, at, X) {
+  const S = HX.sch.get(schicht); if (!S) return Promise.resolve(null);
+  const L = HX.loops.get(S.loop); if (L) L.sch = L.sch.filter((id) => id !== schicht);
+  hxCount();
+  return new Promise((res) => { HX.wait.set('s' + schicht, res); if (!hxPost({ undo: { schicht, f: hxAt(at), X: X != null ? Math.round(X * SR) : undefined } })) { HX.wait.delete('s' + schicht); res(null); } });
+}
+function hxClear(loop, at, X) {
+  const all = loop === 'all', ids = all ? [...HX.loops.keys()] : [loop];
+  const ps = ids.map((id) => new Promise((res) => HX.wait.set('l' + id, res)));
+  for (const id of ids) { const L = HX.loops.get(id); if (L) L.state = 'weg'; }
+  hxCount();
+  if (!hxPost({ clear: { loop: all ? null : loop, all, f: hxAt(at), X: X != null ? Math.round(X * SR) : undefined } })) { for (const id of ids) { HX.wait.delete('l' + id); HX.loops.delete(id); } return Promise.resolve([]); }
+  if (all || [...HX.loops.values()].every((L) => L.state === 'weg')) hxTempoFree();   // the last Schleife gone: the tempo goes back to the slider
+  return Promise.all(ps);
+}
+// Taumeln compensation, MIDI clock nachführen (SPEC §9): the loop read faster or slower by `cents` (±20), resampled
+function hxRate(loop, cents) { const L = HX.loops.get(loop); if (!L) return false; L.rate = +cents || 0; hxCount(); return hxPost({ rate: { loop, cents: L.rate } }); }
+// what plays, for the budget
+function hxCount() {
+  let p = 0, r = 0;
+  for (const L of HX.loops.values()) if (L.state === 'spielt') { p += L.sch.length; if (L.rate) r += L.sch.length; }
+  HX.play = p; HX.rs = r;
+}
+const hxLoad = () => (HX.node ? HX_COST.capture + HX.play * HX_COST.schicht + HX.rs * HX_COST.rs : 0);
+const hxBusy = () => [...HX.loops.values()].some((L) => L.state === 'spielt');
+// Stille: every Schleife halts (its buffers stay); the grammar's toast and „Weiter“ come with the Ringleiste
+function hxPanic() { for (const L of HX.loops.values()) if (L.state === 'spielt' || L.state === 'stumm') hxState(L.id, 'angehalten'); }
+
+// ---- the notes Humus (SPEC §5): every voice the player, the Puls, the rain or the Rassel starts, two minutes, the
+// objects reused; glides, heights and the release come from the voice's own calls. Probes (the library) and a loop's
+// own voices (o.bus = the strip „Hexenring“) are left out, and so is every offline render.
+const HX_EV = 4096, HX_EV_S = 120, HX_CV = 256;
+// a pitch against the field's scale now: degree, octave above the field's base, alt (semitones off the scale)
+function hxDeg(f) {
+  const semi = 12 * Math.log2(Math.max(1e-6, f) / N.base);
+  if (N.free) { const s = Math.round(semi), o = Math.floor(s / 12); return { deg: s - 12 * o, oct: o, alt: Math.round((semi - s) * 100) / 100, x: clamp(semi / (12 * P['t.range']), 0, 1) }; }
+  const per = Math.max(1, Math.round((N.notes.length - 1) / Math.max(1, P['t.range']))), o = Math.floor(semi / 12), r = semi - 12 * o;
+  let best = 0, bd = Infinity;
+  for (let k = 0; k <= per; k++) { const s = k < per ? N.notes[k].semi : 12, dd = Math.abs(r - s); if (dd < bd) { bd = dd; best = k; } }
+  const oc = best === per ? o + 1 : o, dg = best === per ? 0 : best, idx = oc * per + dg;
+  return { deg: dg, oct: oc, alt: Math.round((r - (best < per ? N.notes[best].semi : 12)) * 100) / 100, x: idx >= 0 && idx < N.notes.length ? noteX(idx) : null };
+}
+function hxEvSlot() {
+  let e = HX.ev[HX.evI];
+  if (!e) e = HX.ev[HX.evI] = { curves: { y: [], f: [], pp: null, mb: null } };
+  HX.evI = (HX.evI + 1) % HX_EV;
+  e.curves.y.length = 0; e.curves.f.length = 0; e.curves.pp = e.curves.mb = null;
+  return e;
+}
+function hxNote(v, eng, t, f, y, vel, o) {
+  if (!v || !A.started || !hxLive()) return;
+  const st = o.bus ? MIX.list.find((s) => s.in === o.bus) : MIX.s.fin, src = o.hxSrc || (st ? st.k : 'fin');
+  if (src === 'hxr') return;
+  const e = hxEvSlot(), id = (e.id = ++HX.evId), n = hxDeg(f);
+  e.t0 = t; e.t1 = o.burst ? t + (o.gate != null ? o.gate : 0.22) : null; e.src = src; e.eng = eng; e.f = f; e.deg = n.deg; e.oct = n.oct; e.alt = n.alt; e.x = n.x;
+  e.y0 = y; e.vel = vel; e.pan = o.pan || 0; e.layer = src === 'eb2' ? 2 : 1; e.gate = o.gate != null ? o.gate : null; e.burst = !!o.burst; e.probe = false; v.hxE = e;
+  // a curve as flat [t, x, t, x …], a point at most every 5 ms; a long hold thins to every other point (no voice is kept)
+  const pt = (arr, x) => {
+    if (e.id !== id) return;
+    const t = A.ctx.currentTime, n = arr.length;
+    if (n && t - arr[n - 2] < 0.005) { arr[n - 1] = x; return; }
+    if (n >= 2 * HX_CV) { let w = 2; for (let r = 4; r < n; r += 4) { arr[w] = arr[r]; arr[w + 1] = arr[r + 1]; w += 2; } arr.length = w; }
+    arr.push(t, x);
+  };
+  if (v.setF) { const sf = v.setF; v.setF = (nf, gl) => { pt(e.curves.f, nf); return sf(nf, gl); }; }
+  if (v.setY) { const sy = v.setY; v.setY = (ny) => { pt(e.curves.y, ny); return sy(ny); }; }
+  if (v.release) { const rl = v.release; v.release = (k) => { if (e.id === id && e.t1 == null) e.t1 = A.ctx.currentTime; return rl(k); }; }
+}
+function hxEvProbe(v) { if (v && v.hxE) v.hxE.probe = true; }
+// the Bordun is no voice: its start and end are one event of its own
+function hxBor(on, f) {
+  if (!A.started || !hxLive()) return;
+  if (on) {
+    const e = hxEvSlot(), n = hxDeg(f);
+    Object.assign(e, { id: ++HX.evId, t0: A.ctx.currentTime, t1: null, src: 'bor', eng: 'bor', f, deg: n.deg, oct: n.oct, alt: n.alt, x: n.x, y0: 0, vel: P['bor.lvl'], pan: 0, layer: 0, gate: null, burst: false, probe: false });
+    HX.borE = e;
+  } else if (HX.borE) { if (HX.borE.t1 == null) HX.borE.t1 = A.ctx.currentTime; HX.borE = null; }
+}
+const hxPairs = (a) => { const o = []; for (let i = 0; i < a.length; i += 2) o.push([a[i], a[i + 1]]); return o; };
+// the notes that sounded in [t0, t1) (started there, or held into it with `held`), oldest first, as plain records
+function hxEvents(t0, t1, held) {
+  const out = [], old = tgNow() - HX_EV_S;
+  for (let i = 0; i < HX_EV; i++) {
+    const e = HX.ev[(HX.evI + i) % HX_EV];
+    if (!e || e.t0 == null || e.t0 < old || e.probe) continue;
+    if (!(e.t0 >= t0 && e.t0 < t1) && !(held && e.t0 < t0 && (e.t1 == null || e.t1 > t0))) continue;
+    out.push({ id: e.id, t0: e.t0, t1: e.t1, src: e.src, eng: e.eng, f: e.f, deg: e.deg, oct: e.oct, alt: e.alt, x: e.x, y0: e.y0, vel: e.vel, pan: e.pan, layer: e.layer,
+      gate: e.gate, burst: e.burst, curves: { y: hxPairs(e.curves.y), f: hxPairs(e.curves.f), pp: e.curves.pp, mb: e.curves.mb } });
+  }
+  return out.sort((a, b) => a.t0 - b.t0);
+}
+
+// ---- Bewegung (SPEC §5): the Fährte's lanes, always written, are the Humus's movement ring – on the Taktgeber's
+// continuous beat (faeB), two minutes at any tempo (FA_RING), a knob in its absolute value (never clamped to Formen's
+// ±1). A patch written at once (loadValues: presets, undo, Mutieren, Würfeln) reaches the knob lanes at that moment:
+// before, a lane kept the old value until the next touch and a 3 % nudge looped as a jump (Fährte defect D).
+function hxMvSync(was) { if (A.started && A.ctx) for (const id in FAE_PAR) if (was[id] !== P[id]) faeP(id, was[id], P[id]); }
+// the movement in [t0, t1) as the Bewegung layer of a Schleife will hold it: per lane its steps (FA_R per beat) in
+// absolute values – a knob in its own unit (Hz, a share), a Formen source as its deflection
+function hxMv(t0, t1) {
+  const a = Math.floor(faeB(t0) * FA_R), b = Math.ceil(faeB(t1) * FA_R), lanes = [];
+  if (b - a > FA_RING || b <= a) return { a, b, lanes };
+  for (const L of FA.lanes.values()) {
+    if (L.s == null || L.kind === 'd') continue;
+    const d = L.kind === 'p' ? FAE_PAR[L.src] : null, log = d && d[1] === 'log', v = new Float32Array(b - a);
+    for (let i = 0; i < b - a; i++) { const x = faeAt(L, a + i); v[i] = log ? Math.pow(2, x) : x; }
+    lanes.push({ key: L.key, kind: L.kind, k: L.k, src: L.src, abs: L.kind === 'p', v });
+  }
+  return { a, b, lanes };
+}
+
 function showResume(show) { $('#resume').hidden = !show; if (show) $('#btnResume').focus({ preventScroll: true }); }
 function start() {
   if (A.started) return;
@@ -23900,6 +24724,7 @@ function start() {
   try { initAudio(); }
   catch (e) { console.error(e); toast('Dieser Browser kann leider keinen Klang erzeugen (Web Audio fehlt).', 6000); return; }
   ensureRunning();
+  hxStart();   // Hexenring: the module and its processor now – the Humus records from the first note
   // iOS: unlock with a silent buffer inside the gesture
   try { const b = A.ctx.createBuffer(1, 1, SR), s = A.ctx.createBufferSource(); s.buffer = b; s.connect(A.ctx.destination); s.start(); } catch (e) {}
   A.ctx.onstatechange = () => {
@@ -23986,7 +24811,7 @@ function boot() {
       if (A.unmute && A.unmute.paused) { const p = A.unmute.play(); if (p && p.catch) p.catch(() => {}); }
     } else {
       releaseAllTouches();
-      if (CAP.state === 'idle' && !SEQ.on && !A.bor && !A.frozen) { A.userSuspended = true; try { A.ctx.suspend(); } catch (e) {} }
+      if (CAP.state === 'idle' && !SEQ.on && !A.bor && !A.frozen && !hxBusy()) { A.userSuspended = true; try { A.ctx.suspend(); } catch (e) {} }   // (Hexenring: a Schleife plays on)
     }
   });
   window.addEventListener('blur', () => { if (document.visibilityState !== 'visible') releaseAllTouches(); });
