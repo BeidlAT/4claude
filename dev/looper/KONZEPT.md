@@ -1,6 +1,6 @@
 # Hexenring – der Looper für Myzel: das Konzept
 
-Stand 2026-10-18, zweite Fassung. Für den Besitzer.
+Stand 2026-10-18, zweite Fassung, mit den Entscheidungen des Besitzers (§12). Für den Besitzer.
 
 **Grundlage:**
 - vier Recherchen (`research/`): die Fährte mit neun Nachstellungen, die Bausteine im Code, rund 40 Looper und Spielpraktiken, intelligente Mitspieler und was davon offline auf einem Handy läuft;
@@ -53,7 +53,7 @@ Den Klang machen immer Myzels eigene Klangquellen, in bester Qualität. KI, die 
 - mit Abschnitten für ein ganzes Stück und mit Pedalen;
 - und mit einer Schleife, die das Saitennetz von Gespinst zum Klingen bringt.
 
-Das Lebendige kommt mit Etappe 2, wenn dein Handy schnell genug ist. Das klärt ein Messtag vorher (§10).
+Das Lebendige kommt mit Etappe 2. Der Hexenring richtet sich an leistungsstarke Geräte (ein aktuelles iPad Pro, Desktop-PCs).
 
 **Hörproben** (`hoerproben/`, je etwa 30–40 s; was du wann hörst, steht in `LIESMICH.md`):
 - `1-boe-treu-dann-lebendig.m4a` und `2-rhizom-treu-dann-lebendig.m4a`: zweimal derselbe Wurf (identisch), dann vier neue Würfe. Bei der Böe ist der Unterschied fein, beim Rhizom deutlich.
@@ -260,10 +260,10 @@ Wer will, stellt eine Schleife auf **„folgt der Effektkette“**. Sie läuft d
 
 Soll eine Schleife folgen oder lebendig werden, spielen Myzels Klangquellen ihre Noten neu. Das geschieht im Hintergrund, etwa eine Sekunde vor dem Hören.
 
-**Wie (A, Prüfung in Etappe 0):**
+**Wie (A):**
 - Die Klangquellen sind heute für einen einzigen Live-Kontext gebaut. Ein Versuch, sie daneben in einem zweiten Kontext zu bauen, hat Live-Stimmen gestohlen, das Gespinst-Netz zerstört und Rhizoms Lawinen verbraucht (G).
 - Der Wuchs bekommt deshalb einen **Werk-Rahmen**: eine unsichtbare zweite Kopie der Klangmaschine in derselben Seite, mit eigenem Speicher. Sie rendert offline und schickt die Blöcke an den Looper.
-- Ob das auf deinen Geräten trägt, klärt Etappe 0.
+- Maßstab ist der Rechner, auf dem gebaut und getestet wird; die Zielgeräte sind ein aktuelles iPad Pro und Desktop-PCs.
 
 **Was es kostet:**
 - Der Wuchs kostet keine Stimmen deines Live-Budgets, wohl aber Rechenzeit des Geräts.
@@ -286,7 +286,7 @@ Soll eine Schleife folgen oder lebendig werden, spielen Myzels Klangquellen ihre
   - Live standen Vibrato, Taumeln und die Schwebungen der Stufe 3 an anderer Stelle.
   - Gespinst-Hof und Rhizom-Netz antworteten mit anderem Zustand.
   - Hörbar ist das wie ein Musiker, der seine Stimme noch einmal spielt.
-  - Wie nah das für dein Ohr ist, zeigt ein Hörvergleich auf deinem Gerät in Etappe 0: ein live gespielter Durchgang gegen seinen Wuchs. Die Hörproben können das nicht zeigen, sie sind alle offline gerendert.
+  - Deshalb ist es eine Einstellung, ob eine neue Schleife exakt oder als Wuchs beginnt (§12). Die Hörproben zeigen den Unterschied zwischen zwei Wuchs-Durchgängen, nicht zwischen live und Wuchs; sie sind alle offline gerendert.
 - **Wuchs ist mehr Arbeit, als er klingt:**
   - Töne, die länger gehalten werden als die Schleife selbst, etwa eine Fläche unter zwei Takten, werden im Wuchs jeden Durchgang neu angeschlagen (A; eine durchlaufende Lösung ist möglich, aber aufwendig).
   - Ein Gong-Ausklang, der viel länger ist als die Schleife, vervielfacht die Rechenzeit.
@@ -574,14 +574,13 @@ Wie bei den Klangquellen: Etappe für Etappe gebaut, getestet, gepusht und verö
 
 | Etappe | Inhalt | Danach kannst du … | Aufwand (A) |
 |---|---|---|---|
-| **0 · Messtag** | Eine kleine Messseite, die du einmal auf jedem Gerät öffnest. Sie misst: Rendern im Hintergrund, 20 Minuten Dauerlast (Wärme, Akku, Aussetzer), Safari mit Worklet offline, Bildschirmsperre, Speicher. Dazu der **Hörvergleich**: ein live gespielter Durchgang gegen seinen Wuchs, auf deinem Gerät. Und ein erster Versuch mit dem Werk-Rahmen. | entscheiden, ob und wie der Wuchs kommt | klein |
 | **1 · Fundament** | Taktgeber (der Puls folgt ihm); Looper auf dem Audio-Thread; Humus (beide Klang-Ringe, Noten an den Fingern, Bewegung); Korb, Hauptknopf mit beiden Modi, Ziel und Fokus; „→ N“-Schichten; Überspielen; Rückgängig; Stumm, Anhalten, Löschen; Nähte; Abdruck mit eingebrannter Kette; Ringleiste mit Taktlinie und Noten-Ringen; Lichtungen, Form-Knopf, Kern, Lücke, Schluss, Verblassen; Takt finden, Wiederholung, Korrekturen, Auslese als bester echter Durchgang; Einzählen und Klick; Spielverzögerung; Nähren ins Gespinst und in die Körner; Mixer-Kanal; Stille, Schlafen, Speichern; Pedale, MIDI, Tastatur; Umzug der Fährte | **„Laubhütte“** und jedes Stück mit festen Schleifen spielen | groß |
 | **2a · Wuchs** | Werk-Rahmen; Zufall mit Startwerten in allen 28 Klangquellen; Wuchs mit Treu einmal gespielt; Folgen von Tonart und Tempo als angekündigte Aktion; Lebendig, Wurf und ✓; Klangstufe nach deiner Entscheidung | Schleifen in eine neue Tonart mitnehmen; lebendige Schleifen züchten | sehr groß |
 | **2b · Werkzeug** | Auslese aus allen Versuchen; Groove; Band-Gesten; Verdoppeln; Abrieb; „Alles“; Puls ernten; Klang aufs Feld; Export als MIDI und WAV; Bühnenansicht mit Setliste | ein ganzes Set mit Verwandlungen | mittel |
-| **3 · Mitspieler** | Variieren, Wandern; Knospen; Rollen; Gärtner „pflegt“ und „antwortet“; Begleiten mit Klangverwandtschaft; Puls lernt; Wiederkehr; Handschrift. **Jedes Verhalten erst nach einem Spieltest:** Du probierst eine einfache Fassung aus und bewertest sie. Gebaut wird nur, was du wiederhaben willst. | **„Abendset“** | groß, stückweise |
+| **3 · Mitspieler** | Variieren, Wandern; Knospen; Rollen; Gärtner „pflegt“ und „antwortet“; Begleiten mit Klangverwandtschaft; Puls lernt; Wiederkehr; Handschrift. Jedes Verhalten ist einzeln abschaltbar; der Gärtner steht standardmäßig auf „schaut zu“. | **„Abendset“** | groß, stückweise |
 | **4 · Ökologie** | Nähren in Rhizom und Regen, dann Glut und Sehne; Treffen und Treffen setzen; Einwurzeln; Abrieb nach Moder; Mikro-Schleifen und Gesang als Noten; Live-Wiedergabe mit echten Stimmen | **„Flughafen im Moos“** | mittel bis groß |
 
-**Später, nach Spieltest:**
+**Später:**
 - ein Gärtner, der verwildert und ab und zu widerspricht;
 - ein Jahreslauf, der seine Haltung nach Jahreszeiten stellt;
 - „Träumen“ unter dem Schlafen;
@@ -592,11 +591,11 @@ Wie bei den Klangquellen: Etappe für Etappe gebaut, getestet, gepusht und verö
 
 ## 11. Grenzen, ehrlich
 
-- **Der Wuchs hängt am Werk-Rahmen.** Er ist noch nicht gebaut und auf keinem Handy gemessen. Fällt der Messtag schlecht aus, ist der Plan B:
+- **Der Wuchs hängt am Werk-Rahmen.** Er ist neu und auf keinem Handy gemessen; Maßstab ist der Rechner, auf dem gebaut wird. Auf schwächeren Geräten gilt:
   - weniger lebendige Schleifen gleichzeitig;
   - Treu nur einmal spielen;
   - die Live-Wiedergabe mit echten Stimmen vorziehen.
-- **Der Wechsel vom Abdruck zum Wuchs ist hörbar** (§3.4). Wie stark, zeigt der Hörvergleich.
+- **Der Wechsel vom Abdruck zum Wuchs ist hörbar** (§3.4); deshalb ist der Beginn einer Schleife einstellbar.
 - **Zufall mit Startwerten** müssen alle 28 Klangquellen lernen; sechs brauchen Arbeit an ihrem inneren Zustand (G).
 - **Lange gehaltene Töne** werden im Wuchs jeden Durchgang neu angeschlagen, wenn sie länger sind als die Schleife (A).
 - **Den Ausklang** kann der Humus nicht von deinem neuen Spiel trennen, wenn du gleich weiterspielst. Dann wird er aus den Noten ergänzt oder ausgeblendet.
@@ -612,70 +611,32 @@ Wie bei den Klangquellen: Etappe für Etappe gebaut, getestet, gepusht und verö
 
 ---
 
-## 12. Deine Entscheidungen
+## 12. Entschieden (18.10.2026)
 
-Zu jeder Frage steht mein Vorschlag. „Vorschläge passen“ genügt als Antwort; dann frage ich nur nach, wo der Messtag etwas Neues zeigt.
+**Vom Besitzer:**
+- **Kein Messtag.** Maßstab ist der Rechner, auf dem gebaut und getestet wird. Der Hexenring richtet sich an leistungsstarke Geräte: Er soll ein aktuelles iPad Pro voll ausreizen und ist auf Desktop-PCs optimiert. Gebaut wird alles; der Besitzer prüft das Endergebnis.
+- **Wie eine neue Schleife beginnt,** ist eine Einstellung: exakt (Abdruck, Standard) oder gleich als Wuchs.
+- **Die Klangstufe der Schleifen** ist manuell einstellbar: wie gespielt, Stufe 1, 2 oder 3. Standard ist die beste Stufe.
+- **Reine Klang-Schleifen bei einem Tempowechsel:** „das, was am meisten Sinn macht“. Umgesetzt so: Ihr Klang wird nie gedehnt. Rhythmische Schleifen werden an ihren Anschlägen neu ins Raster gesetzt (Schnitt), jeder Anschlag klingt wie aufgenommen. Flächen ohne klare Anschläge laufen frei in ihrem Tempo weiter.
+- **Taumeln** ist pro Schleife ein Schalter. An (Standard): Die Schleife taumelt mit dem Live-Spiel mit, der Abdruck wird um die bekannte Differenz nachgestimmt. Aus: Sie bleibt in ihrer Stimmung.
 
-### Die wichtigen
-
-1. **Reihenfolge:** zuerst Etappe 0 (Messtag, Hörvergleich, Werk-Rahmen), dann 1, 2a, 2b, 3, 4; die Mitspieler nur nach Spieltests? *Vorschlag: ja.*
-2. **Wie spielt eine neue Schleife?**
-   - (a) Als Abdruck, also genau dein Durchgang. Erst wenn sie folgen oder sich verändern soll, wechselt sie zum Wuchs, und dieser Wechsel ist leicht hörbar.
-   - (b) Ab dem zweiten Durchgang als Wuchs mit demselben Wurf. Später gibt es keinen hörbaren Wechsel mehr, aber schon der zweite Durchgang ist nicht mehr genau dein Spiel.
-
-   *Vorschlag: (a); endgültig nach dem Hörvergleich.*
-3. **Klangstufe der Schleifen.** Dein Handy spielt live meist in Stufe 1 (Hörproben 3 und 4 zeigen, was Stufe 3 bringt). Eine Schleife kann:
-   - (a) so bleiben, wie du sie gehört hast;
-   - (b) beim ersten Wuchs in Stufe 3 aufblühen;
-   - (c) gleich nach dem Ernten einmal im Hintergrund in Stufe 3 nachgespielt werden und so bleiben. Das kostet live nichts, ist aber eine neue Darbietung (§3.4); ein Tipp auf „wie gespielt“ holt das Original zurück.
-
-   *Vorschlag nach deiner Klangregel: (c), wenn dir der Hörvergleich gefällt, sonst (a).*
-4. **Reine Klang-Schleifen bei einem Tempowechsel** („Alles“, „Mikro“; Schleifen mit Noten werden ohnehin neu gespielt):
-   - (a) Sie spielen im alten Tempo weiter und laufen dann frei, nicht mehr im Takt.
-   - (b) Solange es sie gibt, bleibt das Tempo stehen.
-   - (c) Band: Die Tonhöhe geht mit.
-   - (d) Schnitt: Die Anschläge werden neu gesetzt.
-   - (e) Dehnen, mit hörbaren Spuren an langen Ausklängen.
-
-   *Vorschlag: (b).*
-5. **Taumeln:**
-   - (a) Schleifen ziehen mit: Der Abdruck wird laufend um die bekannte Differenz nachgestimmt, wenige Cent, durch den besten Resampler.
-   - (b) Taumeln ruht, solange Schleifen spielen.
-   - (c) So lassen; dann schweben Schleife und Live-Spiel leicht gegeneinander.
-
-   *Vorschlag: (a).*
-
-### Die weiteren
-
-6. **Ein Gerät schafft eine Schleife nicht rechtzeitig**, etwa nach einem Tonartwechsel in Stufe 3. Soll sie:
-   - (a) in der Stufe neu gespielt werden, in der du sie gespielt hast;
-   - (b) bis zum Taktstrich verstummen, an dem sie fertig ist;
-   - (c) mit echten Stimmen spielen (das kostet Live-Stimmen);
-   - (d) im alten Ton bleiben?
-
-   *Vorschlag: (a), sonst (b); nie (d).*
-7. **Klang-Humus ab dem ersten Ton?** Ernten kann nur, was schon mitgeschrieben wurde.
-   - Auf Android und PC: *ab dem ersten Ton.*
-   - Auf iPhone und iPad zöge das jede Sitzung auf einen Thread mit niedrigerer Priorität, auch nur mit Nebel oder Gong, und das kann Aussetzer bringen. *Dort zuerst nur der Noten-Humus (die erste Ernte wächst dann aus den Noten); der Messtag entscheidet.*
-   - **Länge:** 64 s pro Ring (25 MB) oder länger für lange Flächen? *Vorschlag: 64 s, einstellbar.*
-8. **Effektkette:** eingebrannt, so wie gehört, oder trocken durch die Live-Kette, sodass Schleifen sich mit deinem Filter bewegen? *Vorschlag: eingebrannt als Standard, „folgt der Effektkette“ pro Schleife wählbar.*
-9. **Speicher:** 32-Bit-Gleitkomma oder ein 16-Bit-Format mit Blockexponent? Das zweite braucht halb so viel Speicher und bleibt gemessen in jedem Block mindestens 79 dB unter dem Signal; einfaches 16 Bit verliert leise Ausklänge (G). *Vorschlag: 32 Bit, mit gemeinsamer Speichergrenze.*
-10. **Live-Wiedergabe** (Etappe 4): Reicht das Stimmenbudget nicht, wessen Stimmen weichen zuerst? *Vorschlag: die der Schleifen, nie deine Live-Töne.*
-11. **Gespinst und Rhizom im Wuchs** klingen mit eigenem Netz, ihr Hof ist anders als live. *Vorschlag: so akzeptieren; wer den Live-Hof will, nimmt den Abdruck.*
-12. **Reichs Phasenwandern:** *Vorschlag: gleitend über den Wuchs für Schleifen mit Noten, stufenweise nur für reine Klang-Schleifen.*
-13. **Schwankende externe MIDI-Clock:** Der Abdruck folgt durch Nachführen der Geschwindigkeit (höchstens 8,6 Cent bei 0,5 % Schwanken, meist viel weniger) oder springt an jeder Naht zurück? *Vorschlag: Nachführen.*
-14. **Fährte:** Der Knopf geht, ihre Aufzeichnung wird die Bewegung jeder Schleife, und alte Presets werden umgewandelt. *Vorschlag: ja.*
-15. **Ringleiste:** immer sichtbar (10 % des Felds) oder eingeklappt bis zur ersten Schleife? *Vorschlag: sichtbar, denn sie ist zugleich das Metrum, das Myzel bisher fehlt.*
-16. **Wenden, solange Schleifen laufen:** Sie halten an und kommen auf die Eins zurück; ein langer Schlaf hält sie nur an. *Vorschlag: ja.*
-17. **Pedale:** die Sustain-Buchse nur über Zuweisen, nicht automatisch; die nanoKONTROL2-Seite auf SET. *Vorschlag: ja.*
-18. **KI für später:**
-    - die kleine lernende Notenhilfe, wenn sie im Blindvergleich besser antwortet (*Vorschlag: ja, als Versuch in Etappe 3*);
-    - Gesang und Pfeifen als Noten (*Vorschlag: ja, Etappe 4*);
-    - eine Online-KI (*Vorschlag: nein*).
-19. **Handschrift:** standardmäßig aus, mit einer Frage am Ende jeder Sitzung. *Vorschlag: ja.*
-20. **Namen:** Hexenring, Ernten, Abdruck und Wuchs, Eigensinn und Gärtner (alle Namen in Anhang A). *Vorschlag: so.*
-
----
+**Nach den Vorschlägen** (die Fragen der ersten Fassung):
+- **Reihenfolge:** Etappen 1, 2a, 2b, 3, 4 nacheinander, jede getestet. Die Spieltests der Mitspieler entfallen; ihre Verhaltensweisen sind abschaltbar und stehen standardmäßig auf „schaut zu“.
+- **Schafft ein Gerät eine Schleife nicht rechtzeitig,** wird sie in der Stufe neu gespielt, in der sie gespielt wurde, sonst verstummt sie bis zum Taktstrich, an dem sie fertig ist. Nie spielt sie im alten Ton.
+- **Der Klang-Humus läuft ab dem ersten Ton**, auf allen Geräten (die Zielgeräte tragen das), 64 s pro Ring, einstellbar.
+- **Die Effektkette** ist eingebrannt; „folgt der Effektkette“ ist pro Schleife wählbar.
+- **Speicher:** 32-Bit-Gleitkomma, mit gemeinsamer Speichergrenze.
+- **Live-Wiedergabe:** Reicht das Stimmenbudget nicht, weichen die Stimmen der Schleifen, nie die Live-Töne.
+- **Gespinst und Rhizom im Wuchs** klingen mit eigenem Netz; wer den Live-Hof will, nimmt den Abdruck.
+- **Reichs Phasenwandern:** gleitend über den Wuchs für Schleifen mit Noten, stufenweise für reine Klang-Schleifen.
+- **Schwankende MIDI-Clock:** Der Abdruck führt die Geschwindigkeit nach.
+- **Die Fährte** geht als Knopf; ihre Aufzeichnung wird die Bewegung jeder Schleife, alte Presets werden umgewandelt.
+- **Die Ringleiste** ist immer sichtbar.
+- **Wenden, solange Schleifen laufen:** Sie halten an und kommen auf die Eins zurück; ein langer Schlaf hält sie nur an.
+- **Pedale:** die Sustain-Buchse nur über Zuweisen; die nanoKONTROL2-Seite auf SET.
+- **KI:** Gesang und Pfeifen als Noten (einstimmig) gehören zu Etappe 4. Keine Online-KI. Die kleine lernende Notenhilfe bleibt ein späterer Versuch.
+- **Handschrift:** standardmäßig aus, mit einer Frage am Ende jeder Sitzung.
+- **Namen:** wie in Anhang A.
 
 ## Anhang A · Namen
 
@@ -724,7 +685,7 @@ Die Namen, die du kennen musst:
 **Wer was macht:**
 - **Audio-Thread:** ein Looper-Prozessor im gemeinsamen DSP-Modul. Er nimmt auf, hält den Humus, spielt Schichten, setzt Nähte, kennt die Taktabschnitte und puffert den Wuchs. Er spielt weiter, wenn die Seite hängt, reserviert beim Spielen keinen Speicher, wartet nie auf die Seite und entscheidet nichts Musikalisches.
 - **Seite (Haupt-Thread):** Noten und Bewegung aufzeichnen, Taktgeber, Oberfläche, Nähte wählen, Speichern, Intelligenz.
-- **Werk-Rahmen:** eine unsichtbare zweite Kopie der Klangmaschine. Sie rendert Wuchs-Durchgänge offline, etwa eine Sekunde voraus, und schickt die Blöcke direkt an den Looper (A, Etappe 0).
+- **Werk-Rahmen:** eine unsichtbare zweite Kopie der Klangmaschine. Sie rendert Wuchs-Durchgänge offline, etwa eine Sekunde voraus, und schickt die Blöcke direkt an den Looper (A).
 
 **Gemessen** (G, auf dem Test-Server, Chromium):
 - **Nähte:** eine Stunde ohne Abdriften (≤ ½ Sample bei 631 Durchgängen). Der Klick an der Naht ist mit weicher 10-ms-Blende so laut wie die Mitte (1,2-fach); ein harter Schnitt liegt 18 000-fach darüber.
