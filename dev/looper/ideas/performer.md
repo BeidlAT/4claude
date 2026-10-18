@@ -90,7 +90,7 @@ The classic ways stay: hold for a count-in, or arm a recording that starts on yo
 
 ### 3.4 Seams worthy of a Gong and a Glut
 
-- **Ausklang:** what rings past the loop's end (a Moder swell, a Böe ghost chord, the hall) is taken from the Humus and folded onto the start from the second pass on. The notes say where to stop folding: at the first new note you play after closing. Only the old ring-out is folded, never your next phrase.
+- **Ausklang:** what rings past the loop's end (a Moder swell, a Böe ghost chord, the hall) is taken from the Humus and folded onto the start from the second pass on. The fold stops at the first new note you play, so your next phrase is never folded in.
 - **Auftakt:** a pickup played before the 1 is folded onto the loop's end, so „und-EINS“ melodies come round correctly (the Deluge's margins, made musical).
 - **The crossfade fits the material:** about 5 ms for Zapfen clicks, 30–120 ms for wind and drones. On the grid the length never changes.
 - **Lebendig:** a note held across the seam is tied, never re-struck, so a Glut keeps glowing.
@@ -114,17 +114,17 @@ Takt Stränge are multiples of the first loop (×1, ×2, ×3, ×4, ×6, ½), so 
   - Following Schlafen's cadence, the loops end with their bar and breathe into the frozen echo and hall.
   - Turn it back up: the field counts „3 · 2 · 1“, and the Schub re-enters on the next downbeat of a clock that never stopped, with Schlafen's spore bloom.
   - Motion never sets the downbeat (Gestik rule 2); the grid does.
-- **Builds:** a shake (Ladung) makes the Stränge that allow it boil for a few bars (§6.2), together with the Puls and filter that Ladung already drives.
+- **Builds:** a shake (Ladung) makes the Stränge that allow it boil for a few bars (§6.2).
 - **Endings**, one action each:
   - **Schluss:** each Strang stops at its end and its tail rings;
   - **Welken:** level, brightness and pieces fall away over 4–16 passes (Basinski);
   - **Abbau:** one Strang drops per cycle, the last recorded first;
   - **Bandstopp:** a tape stop, as a Zuweisen target.
-- **Bauplan** (set in Werkstatt), for hands-free building: „2 T Jahresring → 4 T Amöbe → 4 T Gespinst“. One tap starts a count-in. Then it records and switches Strang and sound at each bar line (Loopy's record chaining), with both hands on the field.
+- **Bauplan** (set in Werkstatt), for hands-free building: „2 T Jahresring → 4 T Amöbe → 4 T Gespinst“. One tap counts in, then it records and switches Strang and sound at each bar line (Loopy's record chaining).
 
 ### 3.7 Control without looking
 
-**Retroactive grace.** The Fährte delayed every tap by 400 ms to detect double taps (forensic report §3.7). Hexenring does not wait: what a harvest takes is fixed at the press, and the Humus holds it. A double tap can re-interpret the first press without audible loss; at most a new Schicht fades in 0.3 s later, at its right phase.
+**Retroactive grace.** The Fährte delayed every tap by 400 ms to detect double taps (forensic report §3.7). Hexenring does not wait: a harvest's window is fixed at the press and the Humus holds it, so a second press can re-interpret the first without audible loss.
 
 | Device | Grammar |
 |---|---|
@@ -148,7 +148,7 @@ The page-turner matters most on the iPad and iPhone: Safari has no Web MIDI (V),
 | A loop was cleared by mistake | Bring it back from the Humus |
 | Something is out of control | Stille stops the loops too (unlike the Fährte, forensic report E). The buffers stay; one tap restarts them. |
 | A reload, a crash, a phone call | Schleifen are stored in IndexedDB as they are made and restored with their Schübe. Playing loops keep the context awake at screen lock (added to the visibility rule, V). |
-| Bluetooth headphones | A warning above ≈ 80 ms output latency: playing in time over Bluetooth is unrealistic. |
+| Bluetooth headphones | A warning above ≈ 80 ms output latency. |
 
 ### 3.9 Loops against live playing
 
@@ -325,10 +325,9 @@ Measured against `loopers.md` and `intelligence.md`:
 - **„Gespieltes“ cannot keep the insert chain's movement per source.** The chain sits on the sum (V), so a looped filter sweep is either baked in („Alles“) or re-applied to everything (Bewegung).
 - **Lebendig shares knobs with live playing until printed** (A).
 - **Phone memory and IndexedDB quotas** need measuring; the Humus length is a setting.
-- **Inference will sometimes miss** sparse rubato or a high ostinato. The chips are part of the feature.
-- **Motion is slow** (60 Hz, 40–100 ms): it arms and shapes, and the grid lands the hit.
-- **Face down muffles the phone's speaker.** With a speaker, put the Atempause on a pedal.
-- **Seeded voices and the Lebendig bus are real refactors.**
+- **Inference will sometimes miss** sparse rubato or a high ostinato; the chips are part of the feature.
+- **Motion is slow** (60 Hz, 40–100 ms): it arms and shapes, and the grid lands the hit. Face down also muffles the phone's speaker, so with a speaker the Atempause belongs on a pedal.
+- **Bluetooth audio** makes playing in time over loops unrealistic.
 
 **Questions:**
 1. **Abdruck by default, Lebendig by choice**, to keep live voices safe on a 14-unit phone? And when the budget is full, which yields first, loop voices or live voices? I would protect live playing.
