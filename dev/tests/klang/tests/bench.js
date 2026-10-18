@@ -8,7 +8,7 @@ const { chromium, openInst } = require('../../v2/lib');
 const L = require('./dsplib');
 const fs = require('fs'), path = require('path');
 const URL_ = process.env.KD_URL || 'http://127.0.0.1:8790/kd-inst/index.html';
-const KEYS = process.argv.slice(2).length ? process.argv.slice(2) : ['hlm', 'rnk', 'hrz', 'mdr', 'boe', 'amo', 'gsp', 'elm', 'jrg'];
+const KEYS = process.argv.slice(2).length ? process.argv.slice(2) : ['hlm', 'rnk', 'hrz', 'mdr', 'boe', 'amo', 'gsp', 'elm', 'jrg', 'rhz'];
 const OUT = path.join(__dirname, 'out');
 const SR = 48000;
 const DRY = { 'rev.mix': 0, 'dly.mix': 0, 'mst.comp': 0, 'cho.mix': 0, 'pha.mix': 0, 'mov.vib': 0, 'mov.drift': 0, 'mov.pan': 0 };
@@ -111,6 +111,8 @@ async function one(page, o) {
     elm: { native: true, f0: [55, 110, 220, 440, 880, 1760], ys: [0.1], tol: 5, costMax: 0.8, pp: { 'elm.netz': 0 } },
     jrg: { native: true, struck: true, f0: [110, 220, 440, 880, 1760], ys: [0, 0.3], tol: 2, costMax: 0.75, pp: { 'jrg.jahreszeit': 'sommer' },
       cost: { DUR: '2', PARAMS: '{"jrg.holz":1,"jrg.jahreszeit":"sommer"}' } },   // (the cost run inside the voices' life)
+    // Rhizom: native; pitch on the struck ping with Reiz 0 (no cascade); the voice lives its cascade and the last ping
+    rhz: { native: true, struck: true, f0: [110, 220, 440, 880, 1760], ys: [0, 0.5], tol: 3, costMax: 0.65, ring: 4, pp: { 'rhz.reiz': 0 }, cAvg: 6, cost: { DUR: '3' } },
   };
   for (const key of KEYS) {
     const tc = T[key], dir = path.join(OUT, key), rep = { key };
@@ -795,6 +797,90 @@ async function one(page, o) {
         const la = band(au, 0.06, 0.3) - band(au0, 0.06, 0.3), ic = band(wi, 0.073, 0.115, 128, true) - band(wi0, 0.073, 0.115, 128, true);   // (the hit at 0.05 s: its own knock stays outside) rep.seasons = { leaves: +la.toFixed(1), ice: +ic.toFixed(1) };
         ok(la >= 6, `autumn: leaves rustle after the knock (3–7 kHz, 60–300 ms: +${la.toFixed(1)} dB with Laub 1 vs 0)`);
         ok(ic >= 3, `winter: an ice crack 25–60 ms after the knock (3–7 kHz, strongest 2.7-ms moment 23–65 ms after the hit: +${ic.toFixed(1)} dB with Laub 1 vs 0)`); }
+    }
+    if (key === 'rhz') {
+      // the net without sound: strikes in one offline context (a cascade is laid out at once there), the net cleared
+      // before each; mpent over three octaves (16 nodes), the struck node 7 (the middle octave's third degree)
+      const nets = (o) => page.evaluate(async (o) => {
+        const M = window.__M, ctx = await window.__off(48000, 0.1, Object.assign({ 'v.eng': 'rhz', 't.scale': 'mpent', 't.range': 3, 't.root': 9, 't.oct': 2 }, o.params || {})); M.getQ().budget = 1e4;
+        const out = [];
+        M.RHZ.step = o.second != null;   // (two strikes: the clock run by hand, so the second meets the net as it is then)
+        for (let r = 0; r < (o.n || 150); r++) {
+          M.rhzClear(); M.RHZ.h = 0;
+          const a = M.playNote('rhz', 0, M.N.notes[o.i || 7].f, o.y, o.vel || 0.75, o.lane ? { bus: M.stripIn('l0') } : {});
+          let b = null;
+          if (o.second != null) { M.rhzRun(o.second); b = M.playNote('rhz', o.second, M.N.notes[o.i2 != null ? o.i2 : o.i || 7].f, o.y2 != null ? o.y2 : o.y, 0.75, {}); }
+          M.rhzRun(Infinity);
+          const row = { n: a.rz.fired, life: a.endAt, log: Array.from(a.rz.log), i0: a.rz.i0 };
+          if (b) { row.n2 = b.rz.fired; row.first2 = b.rz.log[1]; row.i02 = b.rz.i0; }
+          out.push(row);
+        }
+        M.RHZ.step = false;
+        return out;
+      }, o);
+      const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length, pc = (a, f) => Math.round(100 * a.filter(f).length / a.length);
+      const sz = {}; for (const y of [0, 0.5, 1]) sz[y] = (await nets({ y })).map((r) => r.n);
+      rep.sizes = Object.fromEntries(Object.entries(sz).map(([y, a]) => [y, { mean: +mean(a).toFixed(1), single: pc(a, (x) => x === 1), mid: pc(a, (x) => x >= 4 && x <= 8), big: pc(a, (x) => x >= 9), whole: pc(a, (x) => x >= 16) }]));
+      const S = rep.sizes;
+      ok(S[0].mean <= 2.6 && S[0].single >= 40, `y 0: a tired net – mean size ${S[0].mean} (≤ 2.6), ${S[0].single} % single strikes (≥ 40)`);
+      ok(S[0.5].mean >= 4 && S[0.5].mean <= 8 && S[0.5].single >= 5 && S[0.5].mid >= 25 && S[0.5].big >= 10, `y 0.5: every size – mean ${S[0.5].mean} (4–8), single ${S[0.5].single} % (≥ 5), 4–8 nodes ${S[0.5].mid} % (≥ 25), 9 or more ${S[0.5].big} % (≥ 10)`);
+      ok(S[1].mean >= 9 && S[1].whole >= 8, `y 1: a rolling wave – mean ${S[1].mean} (≥ 9), the whole field (16 or more) ${S[1].whole} % (≥ 8)`);
+      { const z = (await nets({ y: 1, n: 60, params: { 'rhz.reiz': 0 } })).map((r) => r.n), hi = await nets({ y: 1, n: 60, params: { 'rhz.reiz': 1, 'rhz.erholung': 0.1 } });
+        const mx = Math.max(...hi.map((r) => r.n)), span = Math.max(...hi.map((r) => r.log[r.log.length - 2] - r.log[0]));
+        rep.caps = { reiz0: Math.max(...z), max: mx, span: +span.toFixed(2) };
+        ok(Math.max(...z) === 1, 'Reiz 0: the strike pings alone, every time');
+        ok(mx <= 40 && span <= 2.5, `Reiz 1, Erholung 0.1, y 1 (the net fires again and again): capped – at most ${mx} firings (≤ 40) within ${span.toFixed(2)} s (≤ 2.5)`); }
+      { const r = await nets({ y: 0.5, n: 300 }), steps = r.filter((x) => x.log.length >= 4).map((x) => Math.abs(x.log[3] - x.i0));
+        rep.steps = { near: pc(steps, (d) => d <= 2), n: steps.length };
+        ok(pc(steps, (d) => d <= 2) >= 85, `the first answer is a neighbour on the scale (±1 or ±2) in ${pc(steps, (d) => d <= 2)} % (≥ 85; else an octave or a fifth)`); }
+      // exhaustion: the same node struck twice, 0.3 s apart – the second strike pings, its cascade finds the net tired
+      { const ex = await nets({ y: 0.75, n: 120, second: 0.3 }), rc = await nets({ y: 0.75, n: 120, second: 0.3, params: { 'rhz.erholung': 0.1 } });
+        const a = mean(ex.map((r) => r.n)), b = mean(ex.map((r) => r.n2)), c = mean(rc.map((r) => r.n)), d = mean(rc.map((r) => r.n2));
+        rep.tired = { first: +a.toFixed(1), second: +b.toFixed(1), rested: [+c.toFixed(1), +d.toFixed(1)] };
+        ok(ex.every((r) => r.n2 >= 1 && r.first2 === r.i02), 'a strike on a resting node still pings (always)');
+        ok(b <= 0.6 * a && d >= 0.7 * c, `exhaustion: 0.3 s after a cascade the same strike spreads to ${b.toFixed(1)} nodes vs ${a.toFixed(1)} (≤ 60 %); with Erholung 0.1 s to ${d.toFixed(1)} vs ${c.toFixed(1)} (≥ 70 %)`); }
+      // one net for all: a lane's strike (its own channel) tires the finger's neighbour
+      { const lane = await nets({ y: 1, n: 120, lane: true, second: 0.15, i2: 8 }), solo = await nets({ y: 1, n: 120, i: 8 });
+        const a = mean(lane.map((r) => r.n2)), b = mean(solo.map((r) => r.n));
+        rep.shared = [+a.toFixed(1), +b.toFixed(1)];
+        ok(a <= 0.6 * b, `one net: 0.15 s after a lane's strike a finger's cascade next to it spreads to ${a.toFixed(1)} nodes vs ${b.toFixed(1)} alone (≤ 60 %)`); }
+      // a free field: each strike its own small net
+      { const fr = await nets({ y: 1, n: 60, params: { 't.scale': 'free' } }); rep.free = +mean(fr.map((r) => r.n)).toFixed(1);
+        ok(mean(fr.map((r) => r.n)) >= 4, `Stufenlos: each strike runs a net of its own (mean ${rep.free} nodes at y 1)`); }
+      // the voice ends with its cascade: the last ping's ring (−60 dB) after the last firing, nothing more
+      { const r = await nets({ y: 0.75, n: 80 }), tau = 0.12 * 1.6 * 6.91, over = r.map((x) => x.life - x.log[x.log.length - 2]);
+        rep.tail = +Math.max(...over).toFixed(2);
+        ok(Math.max(...over) <= tau + 0.1 && Math.min(...over) > 0.1, `the voice ends ${Math.min(...over).toFixed(2)}–${Math.max(...over).toFixed(2)} s after its last firing (the ping's ring, ≤ ${(tau + 0.1).toFixed(2)})`); }
+      // Stille: everything underway dropped, the net rested, the voices out
+      { const r = await page.evaluate(async () => {
+          const M = window.__M, ctx = await window.__off(48000, 3, { 'v.eng': 'rhz', 'rev.mix': 0, 'dly.mix': 0, 'mst.comp': 0, 'cho.mix': 0, 'pha.mix': 0, 'rhz.reiz': 1, 'rhz.weg': 120 }); M.getQ().budget = 1e4;
+          let q = -1, rest = -1, alive = -1;
+          ctx.suspend(0.1).then(() => { for (const x of [0.2, 0.5, 0.8]) M.playNote('rhz', ctx.currentTime, M.noteAt(x).f, 1, 0.8, {}); ctx.resume(); });
+          // (offline the cascades are laid out at once: Stille at 0.6 s cuts what is scheduled after it)
+          ctx.suspend(0.6).then(() => { M.panic(); q = M.RHZ.q.length; rest = M.RHZ.sp ? Math.max(...M.RHZ.sp.refr) : 0; ctx.resume(); });
+          ctx.suspend(0.8).then(() => { alive = Array.from(M.A.voices).filter((v) => v.eng === 'rhz' && v.endAt > ctx.currentTime).length; ctx.resume(); });
+          const b = await ctx.startRendering(); return { x: window.__b64(b.getChannelData(0)), q, rest, alive };
+        });
+        const x = new Float32Array(Buffer.from(r.x, 'base64').buffer.slice(0)), after = L.db(L.rms(x, Math.round(0.75 * SR), Math.round(2.9 * SR)));
+        rep.panic = { q: r.q, rest: r.rest, alive: r.alive, after: +after.toFixed(1) };
+        ok(r.q === 0 && r.rest === 0 && r.alive === 0 && after < -80, `Stille: no charge underway, the net rested, no voice left (${r.alive}), ${after.toFixed(1)} dB after 0.15 s`); }
+      // level 3: the cascade runs across the stereo field with the pitch
+      { const pan = await page.evaluate(async () => {
+          const M = window.__M, res = [];
+          for (const x of [0.03, 0.97]) {
+            const ctx = await window.__ctx(1.2, { 'v.eng': 'rhz', 'rev.mix': 0, 'dly.mix': 0, 'cho.mix': 0, 'pha.mix': 0, 'mst.comp': 0, 'rhz.reiz': 0 }, '3');
+            M.playNote('rhz', 0.05, M.noteAt(x).f, 0.5, 0.75, {});   // (Reiz 0: the struck ping alone, placed by its pitch)
+            const b = await ctx.startRendering(); const l = b.getChannelData(0), r = b.getChannelData(1); let a = 0, c = 0; for (let i = 0; i < l.length; i++) { a += l[i] * l[i]; c += r[i] * r[i]; } res.push(10 * Math.log10(c / a));
+          }
+          return res;
+        });
+        rep.pan = pan.map((v) => +v.toFixed(1));
+        ok(pan[0] <= -3 && pan[1] >= 3, `level 3: low pings sound left (R − L ${pan[0].toFixed(1)} dB), high ones right (${pan[1].toFixed(1)} dB; ≥ 3 each)`); }
+      // the three bodies at the same loudness (the standard phrase, level 1)
+      { const lv = {}; for (const kn of ['holz', 'metall', 'glas']) lv[kn] = stats(pull(await page.evaluate(async (kn) => window.__ret(await window.__phr(await window.__ctx(10, { 'v.eng': 'rhz', 'rhz.knoten': kn, 'rev.mix': 0, 'dly.mix': 0, 'mst.comp': 0, 'cho.mix': 0, 'pha.mix': 0 }), 10, 'rhz')), kn)));
+        rep.bodies = lv; const r = Object.values(lv).map((x) => x.rms);
+        ok(Math.max(...r) - Math.min(...r) <= 2.5 && Object.values(lv).every((x) => x.peak <= -1), `Holz, Metall, Glas: phrase RMS ${Object.entries(lv).map(([k, x]) => k + ' ' + x.rms).join(', ')} (within 2.5 dB), peaks ${Object.values(lv).map((x) => x.peak).join(', ')} (≤ −1)`); }
+      { const r = await page.evaluate(() => ({ rg: window.__M.RG_S.some((x) => x[0] === 'rhz') })); ok(r.rg, 'Sporenregen strikes it (RG_S derived: struck, regen ≠ 0)'); }
     }
     // -- demos for listening and the spectrogram: level 3, default effects (12-s phrase), and a held gesture
     { const x = pull(await page.evaluate(async (key) => window.__ret(await window.__phr(await window.__ctx(12, { 'v.eng': key }, '3'), 12, key, { step: 0.7, hold: 0.6 })), key));
