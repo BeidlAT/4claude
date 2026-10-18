@@ -18,6 +18,14 @@ So geht es in einer neuen Sitzung weiter: Öffne eine neue Claude-Code-Sitzung a
 
 > Lies dev/HANDOFF.md und mach mit den offenen Punkten der Klangquellen weiter.
 
+## Hexenring – der Looper (in Arbeit, Stand 18.10.2026)
+
+**Für den Besitzer:** Das Konzept steht in `dev/looper/KONZEPT.md`, deine Entscheidungen in dessen §12. Gebaut wird alles in Etappen auf dem Branch dieser Sitzung; veröffentlicht wird erst am Ende. So geht es in einer neuen Sitzung weiter:
+
+> Lies dev/HANDOFF.md und baue den Hexenring weiter.
+
+**Working notes:** binding spec `dev/looper/SPEC.md` (§23 build order; "As built" notes per step), builder rules `dev/looper/BRIEF-build.md`, research/proposals/reviews/listening examples under `dev/looper/`. Owner decisions (18.10.2026): no measuring day – the build machine is the reference, target a current iPad Pro and desktop PCs; new-loop start and loop quality are settings (defaults: Abdruck, Stufe 3); audio loops on tempo change: Schnitt for rhythmic, frei for pads, never stretched; Taumeln per loop; everything else per the concept's recommendations; build everything, publish at the end (PR into `ccr-c7c5d0a6-cus3ip`, merge when the owner says so). Progress per step is in the session's commits and SPEC's "As built" notes.
+
 ## For the next session (English working notes)
 
 **Branch:** the one named in the session (stage 1 was on `ccr-c7c5d0a6-cus3ip`, stages 2 and 3 on `ccr-d21a93b2-oncy3v` – after the owner merged stage 2 (PR #1) into the default branch `ccr-c7c5d0a6-cus3ip`, the branch was restarted from it for stage 3) – develop, commit and push only there; no PR unless asked. The Pages app updates when the owner merges a stage into the default branch (a PR they open or ask for).
