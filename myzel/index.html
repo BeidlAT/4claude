@@ -1841,6 +1841,7 @@ const ENG_META = {
   kor: { n: 'Körner', fam: 'dunst', art: 'haelt', i: 'Granulare Wolken aus winzigen Klangkörnern', tags: 'granular grain körner textur wolke cloud' },
   swm: { n: 'Schwarm', fam: 'dunst', art: 'haelt', i: 'Fremdartiger Insektenschwarm – die Fingerhöhe weckt das Chaos', tags: 'insekten schwarm chaos fm swarm insect' },
   hrz: { n: 'Harz', fam: 'holz', art: 'haelt', i: 'Gestrichenes Glas, Schale, Stab – Druck ist Höhe', tags: 'gestrichen bogen reiben glas weinglas glasharfe klangschale singing bowl stab daxophon zunge waterphone teich wasser friction bow bowed', hoehe: 'Bogendruck', hear: { gate: 1.2 }, rich: 'Stufe 3: mehr Moden, bei Glas und Schale jede als schwebendes Paar, echtes Stereo, beim Teich ein dritter Stab' },
+  zpf: { n: 'Zapfen', fam: 'holz', art: 'beides', i: 'Kratzen, das zum Ton wird – Rhythmus unterm Finger', tags: 'kratzen schaben güiro guiro ratsche schnarre zapfen kiefernzapfen schuppen holz panzer chitin kürbis fels stein knarren stick-slip rhythmus scrape rasp ratchet creak', hoehe: 'Kratzrate', hear: { gate: 1.0 }, rich: 'Stufe 3: sechs Moden statt vier, echtes Stereo' },
   rnk: { n: 'Ranke', fam: 'holz', art: 'beides', i: 'Ein Ring aus Massen, den der Finger anstößt', tags: 'scanned synthesis masse feder hammer ring', hoehe: 'Hammerbreite', hear: { gate: 1.2 }, rich: 'Stufe 3: mehr Massen, zweiter Abtastkopf' },
   sai: { n: 'Saite', fam: 'holz', art: 'schlaegt', i: 'Gezupfte Saiten nach Karplus-Strong', tags: 'saite string karplus zupfen pluck gitarre guitar harfe harp' },
   jrg: { n: 'Jahresring', fam: 'holz', art: 'schlaegt', i: 'Holzstab – wo du triffst, bestimmt den Klang', tags: 'holz stab marimba xylophon schlitztrommel schlägel jahreszeit jahr wood bar mallet season', hoehe: 'Treffpunkt', rich: 'Stufe 3: sechs Moden, zwei Stäbe links und rechts' },
@@ -1853,7 +1854,7 @@ const ENG_META = {
   trp: { n: 'Tropfen', fam: 'erde', art: 'schlaegt', i: 'Wassertropfen – Luftblasen mit aufsteigendem Ton', tags: 'tropfen wasser drop water blase bubble regen' },
 };
 // sources of later versions (and the reserves): a preset that names one says so once and plays Nebel instead
-const ENG_LATER = { glt: 'Glut', boe: 'Böe', amo: 'Amöbe', shn: 'Sehne', zpf: 'Zapfen', mdr: 'Moder', gsp: 'Gespinst', khl: 'Kehlchen', rhz: 'Rhizom', unk: 'Unke', fle: 'Flechte', blz: 'Balz' };
+const ENG_LATER = { glt: 'Glut', boe: 'Böe', amo: 'Amöbe', shn: 'Sehne', mdr: 'Moder', gsp: 'Gespinst', khl: 'Kehlchen', rhz: 'Rhizom', unk: 'Unke', fle: 'Flechte', blz: 'Balz' };
 // a key that was renamed (old: new), applied before a patch is checked; keys are never reused
 const ENG_ALIAS = {};
 // the one flat order (‹ ›, MIDI stepping, dice, the mixer's source text): by family, in ENG_META's order within it
@@ -2036,6 +2037,17 @@ NUM('hrz.bogen', 'Bogen (Tempo)', 0, 1, 0.5, '%');
 NUM('hrz.daempfung', 'Dämpfung', 0, 1, 0.6, '', { fmt: (v) => 'Nachklang ' + dec(hrzT60(v).toFixed(1)) + ' s' });
 NUM('hrz.schwebung', 'Schwebung', 0, 1, 0.3, '%');
 NUM('hrz.harz', 'Harz (Reibung)', 0, 1, 0.3, '%');
+// Zapfen (worklet myzel-scrape – without AudioWorklet its own native stand-in, zpfNative): a stick over the scales of
+// a cone; Höhe is the scrape rate (ticks → rasp → Rast → the note)
+const ZPF_PEAK = 1.13;   // v.out peak per velocity: the standard phrase as loud as Nebel/Glocke/Membran (klang/tests/bench.js; SPEC's 0.6 left it 5.5 dB under, the processor's tanh only a guard)
+const ZPF_RING = { zapfen: 1, holz: 1.3, panzer: 0.5, kuerbis: 1.6, fels: 1.4 };   // each body's ring × Klang's (as in the processor)
+const zpfT60 = (v) => (0.05 + 0.35 * v) * (ZPF_RING[P['zpf.koerper']] || 1);   // Klang → a knock's ring on the note (s)
+SEL('zpf.koerper', 'Körper', [['zapfen', 'Zapfen'], ['holz', 'Holz'], ['panzer', 'Panzer'], ['kuerbis', 'Kürbis'], ['fels', 'Fels']], 'zapfen', { chips: 1 });
+NUM('zpf.schuppen', 'Schuppen (unregelmäßig)', 0, 1, 0.3, '%');
+NUM('zpf.rast', 'Rast', 0, 1, 0.7, '', { fmt: (v) => 'rastet ab ' + Math.round(60 * (1.3 - v)) + ' % Höhe' });
+NUM('zpf.klang', 'Klang', 0, 1, 0.4, '', { fmt: (v) => 'Nachklang ' + Math.round(1000 * zpfT60(v)) + ' ms' });
+NUM('zpf.strich', 'Strich (Puls)', 0, 1, 0.5, '%');
+NUM('zpf.kratzen', 'Kratzen', 0, 1, 0.3, '%');
 // Effekte
 SEL('drv.type', 'Art', [['tube', 'Röhre'], ['fold', 'Falter'], ['crush', 'Bitbrecher']], 'tube', { chips: 1 });
 NUM('drv.amt', 'Stärke', 0, 1, 0.12, '%');
@@ -2177,7 +2189,7 @@ BOOL('midi.pads', 'Pads als Auslöser', false, { dev: 1 });
 BOOL('midi.std', 'Standard-Zuordnungen', true, { dev: 1 });
 
 const GROUP = {
-  v: 'Spielweise', t: 'Stimmung', neb: 'Nebel', kor: 'Körner', hau: 'Hauch', glo: 'Glocke', mem: 'Membran', sai: 'Saite', sch: 'Schale', gng: "Gong", klb: "Kalimba", obt: "Obertöne", stm: "Stimme", swm: "Schwarm", tie: "Tiefe", trp: "Tropfen", hlm: 'Halm', rnk: 'Ranke', elm: 'Elmsfeuer', jrg: 'Jahresring', hrz: 'Harz',
+  v: 'Spielweise', t: 'Stimmung', neb: 'Nebel', kor: 'Körner', hau: 'Hauch', glo: 'Glocke', mem: 'Membran', sai: 'Saite', sch: 'Schale', gng: "Gong", klb: "Kalimba", obt: "Obertöne", stm: "Stimme", swm: "Schwarm", tie: "Tiefe", trp: "Tropfen", hlm: 'Halm', rnk: 'Ranke', elm: 'Elmsfeuer', jrg: 'Jahresring', hrz: 'Harz', zpf: 'Zapfen',
   drv: 'Verzerrung', rng: 'Ringmodulator', flt: 'Filter', pha: 'Phaser', cho: 'Schweben', dly: 'Echo', rev: 'Hall', mov: 'Bewegung', mst: 'Summe',
   seq: 'Puls', bor: 'Bordun', rec: 'Aufnahme', dev: 'Gerät', midi: 'MIDI', l0: 'Spur 1', l1: 'Spur 2', l2: 'Spur 3', l3: 'Spur 4',
 };
@@ -2313,6 +2325,11 @@ const VCOST3 = { neb: 1.9, kor: 1.1, hau: 0.75, glo: 1.4, mem: 0.75, sai: 1.2, s
 // three reeds – a voice is priced by the pipe chosen when it starts
 const HLM_COST = { rohrblatt: [0.65, 1.25], floete: [0.65, 1.25], flamme: [1.7, 3.2] };
 for (const [i, T] of [[0, VCOST1], [1, VCOST3]]) Object.defineProperty(T, 'hlm', { get: () => (HLM_COST[P['hlm.rohr']] || HLM_COST.rohrblatt)[i], enumerable: true });
+// Zapfen costs what it plays: the processor, or – without AudioWorklet – its native stand-in (≈ 24 nodes; the same voice
+// at both levels, its level-3 figure is what the method measures there). klang bench cost.js, seven runs each with other
+// builders' renders on the machine: processor 0.60–0.77 / 0.92–1.31, native 0.55–1.12 / 0.84–2.11 – the highest + 15 %
+const ZPF_COST = { wk: [0.89, 1.51], nat: [1.3, 2.45] };
+for (const [i, T] of [[0, VCOST1], [1, VCOST3]]) Object.defineProperty(T, 'zpf', { get: () => (wkReady('zpf') ? ZPF_COST.wk : ZPF_COST.nat)[i], enumerable: true });
 const QP = {
   1: { budget: MOBILE ? 14 : 22, maxv: 32, grainMax: MOBILE ? 80 : 128, overlap: MOBILE ? 16 : 24, os: MOBILE ? '2x' : '4x', rich: false, korDens: 1, cost: VCOST1 },
   2: { base: MOBILE ? 24 : 40, budget: MOBILE ? 24 : 40, maxv: 64, grainMax: MOBILE ? 128 : 224, overlap: 24, os: '4x', rich: false, korDens: 1, cost: VCOST1 },
@@ -3930,6 +3947,146 @@ function jrgImp() {
   return (JRG_IMP = b);
 }
 
+// ---- Zapfen without AudioWorklet: its own native stand-in (SPEC §0.4, §3.8) ----
+// The rate as the processor maps it (zpfRate). Low on the field a looped buffer of 64 baked teeth plays at R/ZPF_NR
+// (one buffer cannot span nine octaves: slowed down, a tooth turns into a thump; sped up, it is skipped) – each tooth a
+// 10-sample Hann bump ±6 % off its place and ±30 % in height, its 2–6-ms burst of noise in channel 2 (Kratzen); the
+// stone's buffer holds rasps of slips instead. From ≈ 40 per second up a band-limited saw at R (a PeriodicWave: the
+// stick's ride – the processor's integrated teeth –, exact at every pitch, its teeth early and late by low-passed noise
+// on a short delay, the scrape's hiss beside it); the two crossfade between 30 and 80 per second. Both knock three
+// band-pass modes on the note (gains as in the processor: one knock's ring, the fundamental's build-up at the rate
+// taken off) and pass the contact – its click (a band-pass high up) and the wood's box on the saw. Not here: the
+// processor's sub-sample teeth drawn fresh each time (the buffer repeats after 64), the stone's rasps tied to the note.
+const ZPF_LOW = 3, ZPF_HYS = Math.log2(1.08), ZPF_NR = 13;
+const ZPF_NB = {   // the processor's bodies (three modes here): ratios, weights, the click and the box (Hz), the level (the processor's, as loud as it in the standard phrase)
+  zapfen: { r: [1, 0.5, 2.572], a: [1, 0.7, 0.55], ck: 2600, bx: 900, lv: 0.79 },
+  holz: { r: [1, 2.572, 4.644], a: [1, 0.6, 0.42], ck: 1800, bx: 650, lv: 1.19 },
+  panzer: { r: [1, 1.47, 2.09], a: [1, 0.8, 0.6], ck: 3800, bx: 1600, lv: 1.2 },
+  kuerbis: { r: [1, 0.7, 2], a: [1, 0.9, 0.5], ck: 1100, bx: 480, lv: 1.11 },
+  fels: { r: [1, 2.756, 5.404], a: [1, 0.5, 0.35], ck: 2400, bx: 1300, cy: 1.4, cv: 1, cl: 2, lv: 1.39 },
+};
+const ZPF_N = { out: 0.2, dir: 0.35, clk: 0.5, saw: 1.85, box: 1.2 };   // the processor's ZPF_OUT, ZPF_DIR, ZPF_CLK, ZPF_SAW, ZPF_BOX
+// the rate for a note and a height: on a log scale from ZPF_LOW per second to the note, above the Rast threshold
+// 0.6·(1.3 − Rast) the nearest f/2ⁿ (n = 0 … 4) with ±8 % hysteresis (st.lock) – as the processor
+const zpfFree = (f, y) => f * Math.pow(2, -(1 - y) * Math.log2(Math.max(f, 1.01 * ZPF_LOW) / ZPF_LOW));
+function zpfRate(f, y, st) {
+  const oc = Math.log2(Math.max(f, 1.01 * ZPF_LOW) / ZPF_LOW), Lf = (1 - y) * oc, yR = 0.6 * (1.3 - P['zpf.rast']);
+  if (st.lock < 0) { if (y >= yR + 0.01 && Lf < 4.5 + ZPF_HYS) st.lock = clamp(Math.round(Lf), 0, 4); }
+  else if (y < yR - 0.01 || Lf > 4.5 + ZPF_HYS) st.lock = -1;
+  else if (Math.abs(Lf - st.lock) > 0.5 + ZPF_HYS) st.lock = clamp(Math.round(Lf), 0, 4);
+  return f * Math.pow(2, st.lock >= 0 ? -st.lock : -Lf);
+}
+// the baked teeth and the stone's rasps (per sample rate, shared), with a −140 dB trickle under both: Chromium stops a
+// band-pass whose input fell silent long before its mode has rung out (see jrgImp)
+let ZPF_BUF = null;
+function zpfBufs() {
+  const sr = A.ctx.sampleRate;
+  if (ZPF_BUF && ZPF_BUF.sr === sr) return ZPF_BUF;
+  const per = Math.round(sr / ZPF_NR), len = 64 * per;
+  const mk = (fill) => {
+    const b = A.ctx.createBuffer(2, len, sr), t = b.getChannelData(0), z = b.getChannelData(1);
+    for (let i = 0; i < len; i++) { t[i] = (Math.random() * 2 - 1) * 1e-7; z[i] = (Math.random() * 2 - 1) * 1e-7; }
+    b._at0 = fill(t, z) / sr; return b;
+  };
+  const bump = (t, at, area, W) => { const i0 = Math.floor(at - W / 2); for (let j = 0; j <= W + 1; j++) { const u = (i0 + j - (at - W / 2)) / W; if (u > 0 && u < 1) t[(i0 + j + len) % len] += area * (1 - Math.cos(2 * Math.PI * u)) / W; } };
+  const burst = (z, at, amp, ms) => { const n = ms * sr / 1000, i0 = Math.round(at); for (let j = 0; j < 4 * n; j++) z[(i0 + j) % len] += amp * (Math.random() * 2 - 1) * Math.exp(-j / n); };
+  // (each tooth late of its place rather than early: never before the buffer's start – a voice starts on the first)
+  const teeth = mk((t, z) => { let first = 0; for (let i = 0; i < 64; i++) { const at = (i + 0.06 + 0.06 * (2 * Math.random() - 1)) * per + 8, a = 1 + 0.3 * (2 * Math.random() - 1); if (!i) first = at; bump(t, at, a, 10); burst(z, at, a, 0.5 + Math.random()); } return first; });
+  // the stone: each event a rasp – the load (1 ± 0.3) given up in slips of 14–32 %, the next sooner the more is left
+  // (400/s at the start at this buffer's own rate), until it is below a third
+  const creak = mk((t, z) => { let first = 0; for (let i = 0; i < 64; i++) { let at = (i + 0.2 + 0.2 * (2 * Math.random() - 1)) * per + 8, T = 1 + 0.3 * (2 * Math.random() - 1); if (!i) first = at; while (T > 0.32) { const rel = (0.23 + 0.09 * (2 * Math.random() - 1)) * T; T -= rel; const W = Math.round((0.001 + 0.002 * Math.random()) * sr * 0.4); bump(t, at, 4.5 * rel, W); burst(z, at, 3 * rel, W / sr * 500); at += sr / (400 * Math.pow(T, 0.8)); } } return first; });
+  return (ZPF_BUF = { sr, teeth, creak });
+}
+// the stick's ride as a band-limited wave: a saw (harmonic k at 2/(πk), unnormalised: the processor's integrated teeth
+// per unit tooth); the stone's with its slip's rounded drop (a half-sine of 12 % of the period)
+function zpfWave(kind) {
+  const key = 'zpf' + kind;
+  if (A.waves[key]) return A.waves[key];
+  const n = 64, re = new Float32Array(n), im = new Float32Array(n), w = 0.12;
+  for (let k = 1; k < n; k++) { const x = 2 * k * w, h = kind === 'fels' ? (Math.abs(1 - x * x) < 1e-6 ? Math.PI / 4 : Math.cos(Math.PI * k * w) / (1 - x * x)) : 1; im[k] = 2 / (Math.PI * k) * h; }
+  return (A.waves[key] = A.ctx.createPeriodicWave(re, im, { disableNormalization: true }));
+}
+function zpfNative(v, t, f, y, vel, o) {
+  const p = (id) => P['zpf.' + id], body = p('koerper'), B = ZPF_NB[body] || ZPF_NB.zapfen, fels = body === 'fels', bufs = zpfBufs(), sr = A.ctx.sampleRate;
+  const st = { lock: -1, f, y, at: t, sp: 0, R: 0 };
+  // low: the baked teeth (channel 1 the teeth, channel 2 their noise)
+  const src = v.s(A.ctx.createBufferSource()), buf = fels ? bufs.creak : bufs.teeth;
+  src.buffer = buf; src.loop = true; KR(src.playbackRate); v.mod(src.detune);
+  const spl = v.n(A.ctx.createChannelSplitter(2)), gT = v.n(G(0)), gN = v.n(G(0));
+  src.connect(spl); spl.connect(gT, 0); spl.connect(gN, 1);
+  // high: the saw at R, its teeth early and late (low-passed noise on a short delay: the time jitters, never the
+  // pitch – noise on the frequency pulled the tone 9–21 ct flat, measured), and the hiss of the scrape
+  const osc = v.s(OSC('sine', 100)); osc.setPeriodicWave(zpfWave(fels ? 'fels' : 'saw')); v.mod(osc.detune);
+  const jd = v.n(A.ctx.createDelay(0.02)), gOM = v.n(G(0)), gOD = v.n(G(0)), ns = v.s(noiseSrc()), nLP = v.n(BQ('lowpass', 300, 0)), nJ = v.n(G(0)), nHP = v.n(BQ('highpass', 2500, 0)), nH = v.n(G(0));
+  jd.delayTime.value = 0.004;
+  osc.connect(jd); jd.connect(gOM); jd.connect(gOD); ns.connect(nLP).connect(nJ).connect(jd.delayTime); ns.connect(nHP).connect(nH);
+  // the body: three band-pass modes on the note
+  const md = B.r.map((r, k) => { const bq = v.n(BQ('bandpass', f * r, 10)), g = v.n(G(0)); v.mod(bq.detune); gT.connect(bq); gOM.connect(bq); bq.connect(g).connect(v.out); return { bq, g, k }; });
+  // the contact: the tick and its noise high-passed, its click high up; the saw and the wood's box on it
+  const hp = v.n(BQ('highpass', 700, 0.7)), gD = v.n(G(0)), clk = v.n(BQ('bandpass', B.ck, 7)), gC = v.n(G(0)), box = v.n(BQ('bandpass', B.bx, 1.2)), gB = v.n(G(ZPF_N.box));
+  for (const s of [gT, gN, nH]) { s.connect(hp); s.connect(clk); }
+  hp.connect(gD).connect(v.out); clk.connect(gC).connect(v.out);
+  const sh = v.n(BQ('highpass', clamp(0.35 * f, 30, 400), 0));   // (the saw above the body's lowest modes, as in the processor)
+  gOD.connect(sh); sh.connect(v.out); sh.connect(box).connect(gB).connect(v.out);
+  v.zn = { src, osc, jd, md, gT, gN, gOD, gOM, nJ, nH, st };
+  // every gain for a rate R (and its slew)
+  const set = (R, tc, at) => {
+    const kl = p('klang'), t60 = zpfT60(kl), kz = p('kratzen') * (0.5 + vel), sch = p('schuppen');
+    const r3 = Math.max(1, R / ZPF_LOW), At = Math.pow(r3, -0.15), gd = Math.pow(r3, -0.2), fs = clamp(Math.log2(80 / R) / Math.log2(80 / 30), 0, 1), gs = Math.sqrt(fs), gf = Math.sqrt(1 - fs);
+    const gm = 1 - Math.exp(-6.91 / (t60 * R)), O = ZPF_N.out * B.lv, sw = ZPF_N.saw * R * R / (R * R + 2500);   // (the saw from ≈ 50 per second, as in the processor)
+    const S = (prm, val) => { if (at) prm.setValueAtTime(val, at); else setP(prm, val, tc); };
+    S(src.playbackRate, R / ZPF_NR); S(osc.frequency, R);
+    S(gT.gain, At * (R / ZPF_NR) * gs); S(gN.gain, kz * At * gs);   // (a slowed buffer stretches its teeth: area × rate)
+    S(gOM.gain, At * gf * Math.PI * f / sr); S(gOD.gain, At * gf * sw / 2 * O);
+    S(nJ.gain, Math.min(0.0035, (0.008 + 0.025 * sch) * 7 / R)); S(nH.gain, 0.26 * At * kz * gf);   // (the processor's ±J at the top: the low-passed noise's σ ≈ 0.08)
+    S(gD.gain, ZPF_N.dir * (0.4 + 0.6 * vel) * gd * O);
+    const ck = Math.min(0.4 * sr, B.ck * Math.pow(2, (B.cy || 0.8) * (st.y - 0.5) + (B.cv || 0.6) * (vel - 0.5))), al = Math.sin(2 * Math.PI * ck / sr) / 14;
+    S(clk.frequency, ck); S(gC.gain, ZPF_N.clk * gd * O * (B.cl || 1) * (1 + al) / (2 * al));
+    for (const m of md) {   // a mode's ring and its level: one knock of area 1 rings at its weight (a band-pass's impulse is 2α high)
+      const r = B.r[m.k], tk = Math.min(2.5, t60 * Math.min(1.6, Math.pow(r, -0.4))), fk = f * r, q = Math.PI * fk * tk / 6.91, a2 = Math.sin(2 * Math.PI * Math.min(fk, 0.45 * sr) / sr) / q;
+      S(m.bq.Q, q); S(m.g.gain, B.a[m.k] * gm * O * (1 + a2 / 2) / a2);
+    }
+    st.R = R;
+  };
+  v.upd = () => { if (v.alive && !v.released) set(st.R ? zpfRate(st.f, st.y, st) : st.R, 0.03); };
+  const go = (tc) => { const R = zpfRate(st.f, st.y, st); set(st.lock < 0 ? R * (1 + Math.min(0.5, st.sp)) : R, tc); };
+  src.start(t, Math.max(0, buf._at0 - 0.001)); osc.start(t); ns.start(t, rand(0, 1.9));
+  const peak = vel * ZPF_PEAK;
+  if (o.burst) {
+    // the stroke: the rate swells and falls as sin(πt/gate)^(1 + 2·Strich), passing at least 5 + 25·gate teeth
+    const g = Math.max(0.01, o.gate), e = 1 + 2 * p('strich'), N = 48, Rs = new Float32Array(N); let mm = 0;
+    for (let i = 0; i < N; i++) { Rs[i] = Math.pow(Math.sin(Math.PI * (i + 0.5) / N), e); mm += Rs[i] / N; }
+    const Rmax = Math.min(2500, Math.max(zpfFree(f, y), (5 + 25 * g) / (g * mm)));
+    const curves = { rate: [], freq: [], gT: [], gN: [], gOM: [], gOD: [] };
+    set(Rmax * mm, 0, t);   // (the modes' level for the stroke's mean rate; the curves below move the rest)
+    for (let i = 0; i < N; i++) {
+      const R = Math.max(1, Rmax * Rs[i]), r3 = Math.max(1, R / ZPF_LOW), At = Math.pow(r3, -0.15), fs = clamp(Math.log2(80 / R) / Math.log2(80 / 30), 0, 1), gs = Math.sqrt(fs), gf = Math.sqrt(1 - fs), sw = ZPF_N.saw * R * R / (R * R + 2500);
+      curves.rate.push(R / ZPF_NR); curves.freq.push(R); curves.gT.push(At * (R / ZPF_NR) * gs); curves.gN.push(p('kratzen') * (0.5 + vel) * At * gs); curves.gOM.push(At * gf * Math.PI * f / sr); curves.gOD.push(At * gf * sw / 2 * ZPF_N.out * B.lv);
+    }
+    for (const [prm, c] of [[src.playbackRate, curves.rate], [osc.frequency, curves.freq], [gT.gain, curves.gT], [gN.gain, curves.gN], [gOM.gain, curves.gOM], [gOD.gain, curves.gOD]]) { prm.cancelScheduledValues(t); prm.setValueCurveAtTime(Float32Array.from(c), t, g); }
+    // the stick leaves: one last, harder knock just before the end
+    const tk = v.s(A.ctx.createBufferSource()), tg = v.n(G(1.3 / 0.5)); tk.buffer = jrgImp(); tk.connect(tg);
+    for (const m of md) tg.connect(m.bq); tg.connect(hp); tg.connect(clk);
+    tk.start(t + 0.92 * g); tk._end = t + 0.92 * g + 0.25;
+    burstEnv(v, t, peak, 0.002, g, 0.25 * (o.decayMul || 1));
+    return;
+  }
+  set(zpfRate(f, y, st), 0, t);
+  v.setY = (ny) => {   // the finger's speed adds rate below the Rast (dead zone 0.02/s, ≈ 50-ms leak)
+    const now = A.ctx.currentTime, dt = Math.max(1e-3, now - st.at), k = 1 - Math.exp(-dt / 0.05);
+    st.sp += (Math.max(0, Math.abs(ny - st.y) / dt - 0.02) - st.sp) * k; st.at = now; st.y = clamp(ny, 0, 1); go(0.015);
+  };
+  v.setF = (nf, glide) => { st.f = nf; for (const m of md) glideTo(m.bq.frequency, nf * B.r[m.k], glide); glideTo(sh.frequency, clamp(0.35 * nf, 30, 400), glide); const R = zpfRate(nf, st.y, st); set(R, Math.max(0.004, glide / 3)); };
+  // let go: the stick coasts (R → 0, τ 0.2 s) while the voice fades
+  const rel = sustainRelease(v, fels ? 0.5 : 0.3);
+  v.release = (k) => {
+    if (!v.alive || v.released) return;
+    setP(src.playbackRate, 0, 0.2); setP(osc.frequency, 0, 0.2);
+    rel(k);
+  };
+  adsrStart(v, t, peak, 0.002);
+}
+
 const ENGINES = {
   neb: {
     sustain: true,
@@ -5251,6 +5408,21 @@ const ENGINES = {
       const peak = vel * HRZ_PEAK, t60 = hrzT60(P['hrz.daempfung']);
       if (o.burst) burstEnv(v, t, peak * (o.gate < 0.3 ? 2 : 1), 0.005, o.gate, Math.min(t60, 3) * (o.decayMul || 1));
       else wkHold(v, t, peak, 0.005, clamp(6 * t60, 0.5, 40));
+    },
+  },
+  // Zapfen: a stick over the scales of a cone (myzel-scrape). Höhe is the scrape rate: single ticks low on the field,
+  // each a knock ringing on the note, then a rasp; above the Rast the rate locks onto f/16 … f/2 and at the top it is
+  // the note – a raw, sawing tone with a wooden formant; Fels: a stone that creaks and turns into a tone. Puls: a stroke
+  // (the rate swells and coasts, a last knock). Without AudioWorklet its own native stand-in (zpfNative), not another
+  // source.
+  zpf: {
+    sustain: true, needs: 'worklet', fallback: 'native',
+    start(v, t, f, y, vel, o) {
+      if (!wkReady('zpf')) return zpfNative(v, t, f, y, vel, o);
+      wkVoice(v, 'myzel-scrape', f, y, { prm: wkPrm('zpf'), seed: wkSeed(), on: { on: t, f, y, vel, burst: !!o.burst, gate: o.burst ? o.gate : 0, seed: wkSeed() } });
+      const peak = vel * ZPF_PEAK;
+      if (o.burst) burstEnv(v, t, peak, 0.002, o.gate, 0.25 * (o.decayMul || 1));
+      else wkHold(v, t, peak, 0.002, P['zpf.koerper'] === 'fels' ? 0.5 : 0.3);   // (let go: the stick coasts, the stone creaks once or twice more)
     },
   },
 };
@@ -6777,9 +6949,230 @@ function myzelDsp() {
     }
   }
 
+  // ---- Zapfen: myzel-scrape – a stick over the scales of a cone: scrape → tone (SPEC §3.8) ----
+  // The teeth: a phase accumulator at the scrape rate R places a tooth where it crosses a whole number plus that
+  // tooth's own offset – drawn fresh for every tooth and never cumulative, so the mean rate is exactly R (at the top the
+  // tone is exactly the note) and no pattern repeats (a 64-tooth table loops: a flutter at R/64, the check). A tooth is a
+  // 4-sample Hann bump band-limited by an 8-tap windowed sinc, written at its sub-sample time from a table of 64 phases
+  // (whole samples jitter the period by ±18–35 ct at 1–2 kHz, the check), ±30 % in height, with a 2–6-ms burst of noise
+  // (Kratzen). The teeth knock the body – modes tuned to the note (complex rotations: every knock rings on the note) –
+  // and ring a short click resonator (the contact); the contact is heard itself too: each tooth high-passed, and the
+  // stick's ride over the scales – the integrated teeth, the saw in the top tone, with the wood's formant.
+  // Höhe is the rate, on a log scale from ZPF_R0 per second (at every pitch: single ticks at the bottom) up to the note;
+  // above the Rast threshold 0.6·(1.3 − Rast) it snaps to f/2ⁿ (n = 0 … 4, the nearest) with ±8 % hysteresis and a short
+  // slew. The finger's speed adds up to half the rate below the Rast (dead zone 0.02/s, 50-ms leaky integrator).
+  // Fels (from Kluft): each tooth is a stone contact that has loaded up and gives – a rasp of slips (see render: the stone).
+  const ZPF_R0 = 3, ZPF_G = 0.15, ZPF_GD = 0.2, ZPF_OUT = 0.2, ZPF_H = Math.log2(1.08), ZPF_KT = 12, ZPF_KP = 64, ZPF_DIR = 0.35, ZPF_CLK = 0.5, ZPF_NZ = 0.25, ZPF_SLEW = 0.015, ZPF_FC = 1.6, ZPF_SAW = 1.85, ZPF_BOX = 1.2;
+  const ZPF_K = new Float32Array((ZPF_KP + 1) * ZPF_KT);   // the tooth at sub-sample phase u = j/64: sample n after it fires = k(n + u − 6); area 1
+  {
+    const bump = (t) => (t > -2 && t < 2 ? 0.5 + 0.5 * Math.cos(Math.PI * t / 2) : 0), fc = 0.42;
+    const sinc = (t) => { if (t <= -4 || t >= 4) return 0; const x = 2 * fc * t, s = x === 0 ? 1 : Math.sin(Math.PI * x) / (Math.PI * x); return 2 * fc * s * (0.42 + 0.5 * Math.cos(Math.PI * t / 4) + 0.08 * Math.cos(Math.PI * t / 2)); };
+    for (let j = 0; j <= ZPF_KP; j++) {
+      let sum = 0;
+      for (let n = 0; n < ZPF_KT; n++) { const t = n + j / ZPF_KP - 6; let v = 0; for (let m = -32; m < 32; m++) { const tau = (m + 0.5) / 16; v += bump(tau) * sinc(t - tau) / 16; } ZPF_K[j * ZPF_KT + n] = v; sum += v; }
+      for (let n = 0; n < ZPF_KT; n++) ZPF_K[j * ZPF_KT + n] /= sum;
+    }
+  }
+  const ZPF_B = {   // r: mode ratios (level 1 the first four, level 3 all six), a: their weights, ring: × Klang's T60, ck: the click (Hz) – cy, cv: its octaves over Höhe and velocity, cl: its level –, bx: the wood's formant (Hz), lv: the body's level (every body as loud in the standard phrase, klang/tests/loud-zpf.js)
+    zapfen: { r: [1, 0.5, 2.572, 4.644, 6.984, 9.723], a: [1, 0.7, 0.55, 0.35, 0.25, 0.18], ring: 1, ck: 2600, bx: 900, lv: 1 },   // a wooden bar (Csound) and the cone's hollow
+    holz: { r: [1, 2.572, 4.644, 6.984, 9.723, 12], a: [1, 0.6, 0.42, 0.3, 0.22, 0.16], ring: 1.3, ck: 1800, bx: 650, lv: 1.23 },     // the uniform wooden bar (Csound)
+    panzer: { r: [1, 1.47, 2.09, 2.56, 2.94, 3.62], a: [1, 0.8, 0.6, 0.5, 0.35, 0.3], ring: 0.5, ck: 3800, bx: 1600, lv: 1.15 },        // a wooden plate (Csound) – chitin: dry, crowded
+    kuerbis: { r: [1, 0.7, 2, 3.01, 4.01, 4.69], a: [1, 0.9, 0.5, 0.35, 0.25, 0.2], ring: 1.6, ck: 1100, bx: 480, lv: 1.11 },         // a gourd: a near-harmonic shell and its Helmholtz boom
+    fels: { r: [1, 2.756, 5.404, 8.933, 0.5, 13.345], a: [1, 0.5, 0.35, 0.25, 0.45, 0.15], ring: 1.4, ck: 2400, bx: 1300, cy: 1.4, cv: 1, cl: 2, lv: 1.05 },   // a stone slab (Kluft's Stein) and its hollow; its click is the scream: 1.5–4 kHz with the load and the force (Kluft)
+  };
+  class Scrape extends MyzelProc {
+    constructor(o) {
+      super(o);
+      const po = this.po, J = 6;
+      this.rich = !!po.rich;
+      this.rr = new Float64Array(J); this.wa = new Float64Array(J); this.cs = new Float64Array(J); this.sn = new Float64Array(J); this.mre = new Float64Array(J); this.mim = new Float64Array(J);
+      this.oL = new Float64Array(J); this.oR = new Float64Array(J); this.qL = new Float64Array(J); this.qR = new Float64Array(J);
+      this.acc = new Float64Array(16); this.ap = new Float64Array(6);
+      this.p = { koerper: 'zapfen', schuppen: 0.3, rast: 0.7, klang: 0.4, strich: 0.5, kratzen: 0.3 };
+      this.rng = new PRNG(po.seed || 13); this.vel = 0.75; this.K = 0; this.body = ''; this.bf = 0; this.bk = 0; this.two = false;
+      if (po.prm) this.set(po.prm);
+      this.reset();
+    }
+    reset() {
+      this.mre.fill(0); this.mim.fill(0); this.acc.fill(0); this.ap.fill(0);
+      this.aw = 0; this.ph = 0; this.nx = 1; this.lt = -8; this.lock = -1; this.sp = 0; this.yp = this.y;
+      this.ni = 0; this.nb = 0; this.nd = 0; this.hx = 0; this.dl = 0; this.cre = this.cim = 0; this.sI = this.sx = this.sy = this.bre = this.bim = this.em = 0;
+      this.fT = 0; this.fN = Infinity; this.fS = 1; this.fSi = 0; this.fSa = 0; this.fw = 0; this.ra = 0; this.bt = 0; this.toff = 0; this.going = false; this.first = 1; this.tok = 0; this.nT = this.nS = 0;
+    }
+    set(p) { for (const k in p) if (k in this.p) this.p[k] = k === 'koerper' ? String(p[k]) : +p[k] || 0; this.bk = 0; }
+    // the body: its modes at the note (per block when the pitch, the body or Klang moved), their sides at level 3
+    build(two) {
+      const p = this.p, B = ZPF_B[p.koerper] || ZPF_B.zapfen, K = this.lite ? 3 : this.rich ? 6 : 4, f = this.f;
+      if (this.bk && K === this.K && two === this.two && Math.abs(f - this.bf) < 1e-4 * f) return;   // (bk: cleared when a knob or the note changes)
+      this.bk = 1; this.bf = f; this.K = K; this.two = two; this.B = B; this.body = p.koerper;
+      const t60 = (0.05 + 0.35 * p.klang) * B.ring;
+      for (let k = 0; k < K; k++) {
+        const fk = f * B.r[k], a = B.a[k];
+        if (fk > 0.45 * SR) { this.cs[k] = this.sn[k] = 0; this.oL[k] = this.oR[k] = this.qL[k] = this.qR[k] = 0; continue; }
+        const t = Math.min(2.5, t60 * Math.min(1.6, Math.pow(B.r[k], -0.4))), r = Math.pow(0.001, 1 / (t * SR)), w = 2 * Math.PI * fk / SR;
+        this.cs[k] = r * Math.cos(w); this.sn[k] = r * Math.sin(w); this.rr[k] = B.r[k];
+        if (k === 0) this.t60 = t;
+        // heard as its velocity (the step from the last sample, ÷ 2·sin(ω/2)): its ring starts at full height with the
+        // knock and has no low tail (the rotation's displacement kept one: a tick train 12 dB louder below 80 Hz, measured)
+        // level 3: the modes alternate sides at equal power (1.31 / 0.53), the softer side hears the mode in quadrature – its
+        // displacement (a velocity's quadrature; the other component's step carries the knock itself through ÷ sin, +10 dB
+        // peaks, measured): two coherent channels would sum up to 2 dB louder off centre in the voice's panner
+        const aw = a / (2 * Math.sin(w / 2));
+        if (two) { const s = k % 2; this.oL[k] = s ? 0 : 1.31 * aw; this.qL[k] = s ? 0.53 * a : 0; this.oR[k] = s ? 1.31 * aw : 0; this.qR[k] = s ? 0 : 0.53 * a; }
+        else { this.oL[k] = aw; this.qL[k] = this.oR[k] = this.qR[k] = 0; }
+      }
+    }
+    start(m) {
+      this.vel = m.vel != null ? m.vel : 0.75; this.burst = !!m.burst;
+      if (m.seed) this.rng = new PRNG(m.seed);
+      if (m.y != null) this.y = m.y;
+      this.yp = this.y; this.sp = 0; this.lock = -1; this.bk = 0; this.toff = 0; this.going = true; this.em = -1;
+      // the first tooth at once (the stick sets on), a little harder
+      this.ph = 1; this.nx = 1; this.first = 1 + 0.25 * this.vel;
+      this.lt = this.target(0, true);
+      if (this.burst) {
+        // a stroke: the rate swells and falls as sin(πt/gate)^(1 + 2·Strich) and passes at least 5 + 25·gate teeth
+        const g = Math.max(0.01, m.gate || 0.22), e = 1 + 2 * this.p.strich; let mm = 0;
+        for (let i = 0; i < 64; i++) mm += Math.pow(Math.sin(Math.PI * (i + 0.5) / 64), e) / 64;
+        this.gate = Math.round(g * SR); this.bt = 0; this.bx = e;
+        this.rmax = Math.min(2500, Math.max(this.rateFree(), (5 + 25 * g) / (g * mm)));
+        this.tok = Math.round(0.92 * g * SR);   // and a last, harder tooth just before the end (the stick leaves: tok)
+      }
+    }
+    stop() { this.toff = 0; }
+    rateFree() { const oc = Math.log2(Math.max(this.f, 1.01 * ZPF_R0) / ZPF_R0); return this.f * Math.pow(2, -(1 - this.y) * oc); }
+    // the target log₂(R/f) from Höhe, Rast and the finger's speed (per block)
+    target(n, now) {
+      const p = this.p, y = this.y, oc = Math.log2(Math.max(this.f, 1.01 * ZPF_R0) / ZPF_R0), Lf = (1 - y) * oc;   // octaves below the note
+      if (n) { const dy = Math.abs(y - this.yp) * SR / n; this.sp += (Math.max(0, dy - 0.02) - this.sp) * (1 - Math.exp(-n / (0.05 * SR))); }
+      this.yp = y;
+      const yR = 0.6 * (1.3 - p.rast);
+      if (this.lock < 0) { if (y >= yR + 0.01 && Lf < 4.5 + ZPF_H) this.lock = Math.min(4, Math.max(0, Math.round(Lf))); }
+      else if (y < yR - 0.01 || Lf > 4.5 + ZPF_H) this.lock = -1;
+      else if (Math.abs(Lf - this.lock) > 0.5 + ZPF_H) this.lock = Math.min(4, Math.max(0, Math.round(Lf)));
+      if (this.lock >= 0) return -this.lock;
+      let t = -Lf + Math.log2(1 + Math.min(0.5, this.sp));
+      if (p.koerper === 'fels') t += this.fw;   // the stone's creaks wander (free only)
+      return t;
+    }
+    render(L, R, a, b) {
+      const p = this.p, n = b - a, two = !!(R && this.rich && !this.lite), fels = p.koerper === 'fels';
+      this.build(two);
+      const K = this.K, f = this.f, rng = this.rng;
+      // the rate
+      let Rt;
+      if (this.burst) {
+        const t = this.bt / Math.max(1, this.gate);
+        Rt = t < 1 ? this.rmax * Math.pow(Math.sin(Math.PI * Math.min(1, t + 0.5 * n / this.gate)), this.bx) : 0;
+        if (this.bt >= this.gate && !this.off) { this.off = true; this.going = false; }
+        this.bt += n;
+      } else {
+        if (fels) { const w = this.fw + 0.08 * (rng.next() * 2 - 1) * (0.2 + p.schuppen) - 0.01 * this.fw; this.fw = w > 0.6 ? 0.6 : w < -0.6 ? -0.6 : w; }
+        let tg = this.target(n, false);
+        if (this.off) { this.toff += n; tg = this.lt - n / (SR * 0.2 * Math.LN2); if (this.toff > 0.6 * SR) this.going = false; }   // let go: the stick coasts (R → 0, τ 0.2 s)
+        this.lt += (tg - this.lt) * (this.off ? 1 : 1 - Math.exp(-n / (ZPF_SLEW * SR)));
+        Rt = this.going ? f * Math.pow(2, this.lt) : 0;
+        if (this.off && Rt < 1.5) this.going = false;
+      }
+      const inc = Rt / SR, ry = Rt > ZPF_R0 ? Math.min(1, Math.log2(Rt / ZPF_R0) / Math.max(1, Math.log2(f / ZPF_R0))) : 0;
+      // irregular scales: each tooth ±J of a period off its place – more at the bottom (the hand), ±0.5 % in the stone's tone
+      const J = fels ? (0.006 + 0.01 * p.schuppen) * (1 + 20 * (1 - ry)) : (0.008 + 0.025 * p.schuppen) * (1 + 3 * (1 - ry));
+      const hA = 0.2 + 0.3 * p.schuppen;
+      // a tooth's force: a little harder the slower the stick (single ticks carry), the contact's own sound softer per
+      // tooth as they crowd; into the body the fundamental's build-up at this rate is taken off – locked on f/2ⁿ every
+      // tooth adds in phase (the knock's ring × 1/(1 − ρ)): the note's mode stands at the level of one knock at every
+      // rate (it follows the rate's own slew: a lag of its own let the first knocks of a step overshoot, +1.8 dB)
+      const At = Rt > 0 ? Math.pow(Math.max(1, Rt / ZPF_R0), -ZPF_G) : 0, gd = Rt > 0 ? Math.pow(Math.max(1, Rt / ZPF_R0), -ZPF_GD) : 0;
+      const rho = Rt > 0 ? Math.exp(-6.91 / (this.t60 * Rt)) : 0;
+      const gm = 1 - rho;
+      const kz = p.kratzen * (0.5 + this.vel), hc = 1 - Math.exp(-2 * Math.PI * Math.min(0.4 * SR, 1500 * Math.pow(2, 3 * this.vel)) / SR);
+      const dg = ZPF_DIR * (0.4 + 0.6 * this.vel) * gd, cg = ZPF_CLK * gd * (this.B.cl || 1), dc = 1 - Math.exp(-2 * Math.PI * 700 / SR);
+      // the click: higher with Höhe and velocity
+      const fk = Math.min(0.4 * SR, this.B.ck * Math.pow(2, (this.B.cy || 0.8) * (this.y - 0.5) + (this.B.cv || 0.6) * (this.vel - 0.5))), rk = Math.pow(0.001, 1 / (0.006 * SR)), wk = 2 * Math.PI * fk / SR, kc = rk * Math.cos(wk), ks = rk * Math.sin(wk), kn = 1 / (2 * Math.sin(wk / 2));   // (as a mode: its velocity)
+      const fc = Math.min(4000, ZPF_FC * f * (1 - 0.5 * ry * ry * ry * ry)), fq = 1 - 0.6 * ry;   // (the stone's slips: a rasp at 1.6·f low – at the top slower than the period: one slip a period, the tone; as uneven as a creak low, a flutter in its tone)
+      // the stick's ride: up each scale, down at its edge – a sawtooth whose drops are the teeth, heard once they crowd
+      // into a buzz (from ≈ 50 per second: slower, its ramps are a rumble) – the tone's saw – and the wood's formant on
+      // it (a broad band-pass). A small body hardly radiates below its own modes: the saw is high-passed at 0.35·f (2nd
+      // order, ≥ 30 Hz) – on the Rast's lower steps the buzz keeps its pitch by its harmonics, without the rumble of its
+      // 14–55-Hz fundamental (the standard phrase: 20–80 Hz carried most of its energy)
+      const fh = Math.min(400, Math.max(30, 0.35 * f)), wh = 2 * Math.PI * fh / SR, ah = Math.sin(wh) * Math.SQRT1_2, ha0 = 1 + ah, hb0 = (1 + Math.cos(wh)) / 2 / ha0, ha1 = -2 * Math.cos(wh) / ha0, ha2 = (1 - ah) / ha0;
+      const sw = ZPF_SAW * Rt * Rt / (Rt * Rt + 2500), li = 1 - 2 * Math.PI * 25 / SR, wb = 2 * Math.PI * Math.min(0.4 * SR, this.B.bx) / SR, al = Math.sin(wb) / 2.4, b0 = al / (1 + al), a1 = -2 * Math.cos(wb) / (1 + al), a2 = (1 - al) / (1 + al);   // (RBJ band-pass, Q 1.2, 0 dB at its centre)
+      const acc = this.acc, cs = this.cs, sn = this.sn, mre = this.mre, mim = this.mim, oL = this.oL, oR = this.oR, qL = this.qL, qR = this.qR, ap = this.ap;
+      let ph = this.ph, nx = this.nx, aw = this.aw, ni = this.ni, nb = this.nb, nd = this.nd, hx = this.hx, dl = this.dl, cre = this.cre, cim = this.cim, sI = this.sI, sx = this.sx, sy = this.sy, bre = this.bre, bim = this.bim, em = this.em < 0 ? At * Rt / SR : this.em;
+      let fT = this.fT, fN = this.fN, fS = this.fS, fSi = this.fSi, fSa = this.fSa;
+      for (let i = a; i < b; i++) {
+        // -- the scheduler: a tooth (or, on the stone, a rasp) where the phase crosses its place
+        let tk = 0;
+        if (this.tok && this.bt - n + (i - a) >= this.tok) { this.tok = 0; tk = 1; }   // the stroke's last tooth, now
+        if (inc > 0 || tk) {
+          ph += inc;
+          if (ph >= nx || tk) {
+            const u = tk ? 0 : Math.min(1, (ph - nx) / inc); this.nT++;   // (counted: the tests)
+            const amp = (tk ? 1.3 : At * (1 + hA * (rng.next() * 2 - 1))) * this.first; this.first = 1;
+            if (fels) { fT = 1 + 0.3 * p.schuppen * (rng.next() * 2 - 1); fN = -u; this.ra = amp; }   // the load gives: a rasp starts (at its sub-sample time)
+            else {
+              const q = u * ZPF_KP, j = q | 0, fr = q - j, o0 = j * ZPF_KT, o1 = j < ZPF_KP ? o0 + ZPF_KT : o0;
+              for (let k = 0; k < ZPF_KT; k++) acc[(aw + k) & 15] += amp * (ZPF_K[o0 + k] + fr * (ZPF_K[o1 + k] - ZPF_K[o0 + k]));
+              nb = Math.max(nb, amp); nd = Math.exp(-1 / ((0.0005 + 0.001 * rng.next()) * SR));   // its noise, 2–6 ms
+            }
+            if (tk) { ph = 0; nx = 1; } else { ph -= 1; nx = 1 + J * (rng.next() * 2 - 1); }
+          }
+        }
+        let e, ec = 0;
+        if (fels) {
+          // -- the stone: slips while the load is above the kinetic level; each lets a part go, the next comes sooner the more is left
+          if (fN <= 0) {
+            const qq = 0.23 + 0.09 * fq * (rng.next() * 2 - 1), rel = qq * fT; this.nS++;
+            fT -= rel;
+            const gap = SR / (fc * Math.pow(Math.max(0.05, fT), 0.8)), d = Math.max(2, Math.min((0.001 + 0.002 * rng.next()) * SR, 0.12 * SR / f, 0.6 * gap));
+            fSi = 1 / d; fS = -fN * fSi; fSa = this.ra * rel * 4.35 * (0.55 + 0.45 * ry) * Math.PI / (2 * d);   // (its area: a tooth's at the top, where one slip is a period; a rasp's slips together about one tooth's energy low)
+            nb = Math.max(nb, this.ra * rel * 3); nd = Math.exp(-1 / (d * 0.5));
+            // the slip's start cracks (stick lets go at once): a tooth into the contact – it screams with the load (Höhe) and the force
+            // (a hard stroke cracks the stone much more: velocity 0.3 → 1 ×3.3)
+            const cr = this.ra * rel * 3 * (0.2 + 0.8 * this.y) * (0.2 + 1.2 * this.vel * this.vel), q = Math.min(1, -fN) * ZPF_KP, j = q | 0, fr = q - j, o0 = j * ZPF_KT, o1 = j < ZPF_KP ? o0 + ZPF_KT : o0;
+            for (let k = 0; k < ZPF_KT; k++) acc[(aw + k) & 15] += cr * (ZPF_K[o0 + k] + fr * (ZPF_K[o1 + k] - ZPF_K[o0 + k]));
+            fN = fT > 0.32 ? fN + gap : Infinity;
+          }
+          fN -= 1;
+          ec = acc[aw]; acc[aw] = 0; e = 0; if (fS < 1) { e = fSa * SIN[(fS * 2048) | 0]; fS += fSi; }   // a half-sine velocity pulse (its crack: the contact only)
+        } else { e = acc[aw]; acc[aw] = 0; }
+        aw = (aw + 1) & 15;
+        ni = (ni + 1) & 65535; const nz = NOISE[ni] * nb * kz; nb *= nd;
+        hx += hc * (e - hx);
+        const x = (hx + ZPF_NZ * nz) * gm;
+        // -- the body
+        let yl = 0, yr = 0;
+        for (let k = 0; k < K; k++) {
+          const r0 = mre[k], m0 = mim[k], c = cs[k], s = sn[k], rq = r0 * c - m0 * s, m1 = r0 * s + m0 * c;
+          mre[k] = rq + x; mim[k] = m1;
+          const dm = m1 - m0;
+          yl += oL[k] * dm + qL[k] * m1; yr += oR[k] * dm + qR[k] * m1;
+        }
+        // -- the contact: its click (a short resonance) and itself, high-passed
+        const xd = e + ec + nz, cq = cre * kc - cim * ks, c1 = cre * ks + cim * kc, cd = (c1 - cim) * kn; cim = c1; cre = cq + xd;
+        dl += dc * (xd - dl); const dd = xd - dl;
+        em += 0.004 * (e - em); sI = sI * li + (e - em) * sw;
+        const sd = hb0 * sI + sx; sx = -2 * hb0 * sI - ha1 * sd + sy; sy = hb0 * sI - ha2 * sd;   // (RBJ high-pass, transposed: sx, sy its state)   // (the ramp: the teeth's mean taken off – integrated, it would rise to A·R/(2π·25), a thump at the onset: 2.7 at 8 kHz, measured)
+        const bo = b0 * sd + bre; bre = bim - a1 * bo; bim = -b0 * sd - a2 * bo;
+        const ct = cg * cd + dg * dd + sd + ZPF_BOX * bo;
+        L[i] = yl + ct;
+        if (two) {   // the right side's contact through three all-passes: decorrelated
+          let u2 = ct, z;
+          z = u2 - 0.7 * ap[1]; u2 = 0.7 * z + ap[1]; ap[1] = z; z = u2 + 0.6 * ap[2]; u2 = -0.6 * z + ap[2]; ap[2] = z; z = u2 - 0.5 * ap[3]; u2 = 0.5 * z + ap[3]; ap[3] = z;
+          R[i] = yr + u2;
+        }
+      }
+      this.ph = ph; this.nx = nx; this.aw = aw; this.ni = ni; this.nb = flush(nb); this.nd = nd; this.hx = flush(hx); this.dl = flush(dl); this.cre = flush(cre); this.cim = flush(cim); this.sI = flush(sI); this.sx = sx; this.sy = flush(sy); this.bre = flush(bre); this.bim = flush(bim); this.em = em;
+      this.fT = fT; this.fN = fN; this.fS = fS; this.fSi = fSi; this.fSa = fSa;
+      for (let k = 0; k < K; k++) { mre[k] = flush(mre[k]); mim[k] = flush(mim[k]); }
+      const og = (two ? ZPF_OUT * Math.SQRT1_2 : ZPF_OUT) * this.B.lv;
+      for (let i = a; i < b; i++) { L[i] = tanh(og * L[i]); if (two) R[i] = tanh(og * R[i]); else if (R) R[i] = L[i]; }
+    }
+  }
+
   // an empty voice: the per-node price of the contract (SPEC §8 step 1 gate, ≈ 0.06 + 0.03 per param)
   class Null extends MyzelProc { render(L, R, a, b) { for (let i = a; i < b; i++) L[i] = 0; } }
-  for (const [k, C] of [['myzel-blow', Blow], ['myzel-scan', Scan], ['myzel-bow', Bow], ['myzel-null', Null]]) registerProcessor(k, C);
+  for (const [k, C] of [['myzel-blow', Blow], ['myzel-scan', Scan], ['myzel-bow', Bow], ['myzel-scrape', Scrape], ['myzel-null', Null]]) registerProcessor(k, C);
   return { SIN, NOISE, Reso, Biquad, Allpass1, OnePole, DcBlock, FracDelay, PRNG };   // (for later processors; unused here)
 }
 // end myzelDsp
@@ -6837,18 +7230,21 @@ function wkUiSync() {
     const s = engSecs[k]; if (!s || !s.wkNote) continue;
     const fb = DSP.state === 'kein' || A.workletBroken.has(k);
     s.wkNote.hidden = !fb;
-    if (fb) s.wkNote.textContent = '⌁ Dieser Browser spielt ' + ENG_NAME[k] + ' vereinfacht als ' + ENG_NAME[ENGINES[k].fallback] + ' (kein AudioWorklet).';
+    if (fb) s.wkNote.textContent = '⌁ Dieser Browser spielt ' + ENG_NAME[k] + ' vereinfacht' + (ENGINES[k].fallback === 'native' ? '' : ' als ' + ENG_NAME[ENGINES[k].fallback]) + ' (kein AudioWorklet).';
   }
 }
 const dspMaybe = () => { if (A.ctx && dspWanted()) ensureDSP(); };
-// the engine a key really plays now: itself, or its stand-in while the module is missing (or still loading)
+// the engine a key really plays now: itself, or its stand-in while the module is missing (or still loading). A source
+// with a native stand-in of its own (fallback 'native': Zapfen, SPEC §0.4) plays itself either way – its start() asks
+// wkReady() which of its two it builds
+function wkReady(k) { return !!(A.ctx && A.ctx.__dspOK && !A.workletBroken.has(k)); }
 function wkPlays(k) {
   const E = ENGINES[k];
   if (!E || E.needs !== 'worklet') return k;
-  return A.ctx && A.ctx.__dspOK && !A.workletBroken.has(k) ? k : E.fallback;
+  return wkReady(k) || E.fallback === 'native' ? k : E.fallback;
 }
 // for texts: "Halm", or "Halm (als Hauch)" when this browser cannot play it
-const engLabel = (k) => (ENGINES[k] && ENGINES[k].needs === 'worklet' && (DSP.state === 'kein' || A.workletBroken.has(k)) ? ENG_NAME[k] + ' (als ' + ENG_NAME[ENGINES[k].fallback] + ')' : ENG_NAME[k]);
+const engLabel = (k) => (ENGINES[k] && ENGINES[k].needs === 'worklet' && ENGINES[k].fallback !== 'native' && (DSP.state === 'kein' || A.workletBroken.has(k)) ? ENG_NAME[k] + ' (als ' + ENG_NAME[ENGINES[k].fallback] + ')' : ENG_NAME[k]);
 // a worklet voice: one AudioWorkletNode, k-rate freq/detune/hoehe (detune on the voice's pitch bus: vibrato, drift,
 // Bebung, wheel, a finger's bend); the processor posts {done} when it fell silent after its end – the voice is then
 // freed at once. A processor that throws marks the engine broken for the session (it plays its stand-in from then on).
@@ -8779,7 +9175,7 @@ midiTarget('morph', 'Morph A↔B', null, { group: 'Mixer', cont: true, get: () =
 const MACRO = { neb: ['neb.cut', 'neb.res'], kor: ['kor.dens', 'kor.size'], hau: ['hau.color', 'hau.q'], glo: ['glo.index', 'glo.ratio'], mem: ['mem.drop', 'mem.decay'],
   sai: ['sai.bright', 'sai.decay'], sch: ['sch.bright', 'sch.beat'], gng: ['gng.bloom', 'gng.bright'], klb: ['klb.over', 'klb.buzz'], obt: ['obt.focus', 'obt.wander'],
   stm: ['stm.vib', 'stm.choir'], swm: ['swm.chaos', 'swm.unrest'], tie: ['tie.drive', 'tie.drop'], trp: ['trp.chirp', 'trp.rain'],
-  hlm: ['hlm.atem', 'hlm.blatt'], rnk: ['rnk.feder', 'rnk.daempfung'], elm: ['elm.spannung', 'elm.knistern'], jrg: ['jrg.schnitt', 'jrg.holz'], hrz: ['hrz.druck', 'hrz.harz'] };
+  hlm: ['hlm.atem', 'hlm.blatt'], rnk: ['rnk.feder', 'rnk.daempfung'], elm: ['elm.spannung', 'elm.knistern'], jrg: ['jrg.schnitt', 'jrg.holz'], hrz: ['hrz.druck', 'hrz.harz'], zpf: ['zpf.rast', 'zpf.klang'] };
 const macroId = (k) => (MACRO[P['v.eng']] || MACRO.neb)[k];
 midiTarget('macro.a', 'Klang-Makro A', null, { group: 'Klang', cont: true, pidf: () => macroId(0) });
 midiTarget('macro.b', 'Klang-Makro B', null, { group: 'Klang', cont: true, pidf: () => macroId(1) });
@@ -13897,8 +14293,9 @@ function onParamChanged(id) {
     case 'neb':
       if (id === 'neb.cut' || id === 'neb.ymod' || id === 'neb.res') for (const t of touches.values()) for (const { v } of t.voices) if (v.alive && v.eng === 'neb') { v.setY(modY(t)); setP(v.filt.Q, P['neb.res']); }
       break;
-    case 'hlm': case 'rnk': case 'hrz':   // the sounding voices follow at once (the processor reads its knobs per block)
-      for (const v of A.voices) if (v.alive && v.wk && v.as === pre) v.wk.port.postMessage({ set: wkPrm(pre) });
+    case 'hlm': case 'rnk': case 'hrz': case 'zpf':   // the sounding voices follow at once (the processor reads its knobs per block; Zapfen's native stand-in: upd)
+      for (const v of A.voices) if (v.alive && v.as === pre) { if (v.wk) v.wk.port.postMessage({ set: wkPrm(pre) }); else if (v.upd) v.upd(); }
+      if (id === 'zpf.koerper') for (const fn of CTL['zpf.klang'] || []) fn(P['zpf.klang'], null);   // (its Nachklang is the body's)
       if (id === 'hrz.koerper') for (const fn of CTL['hrz.daempfung'] || []) fn(P['hrz.daempfung'], null);   // (its Nachklang is the body's)
       if (id === 'hlm.rohr') {   // each pipe names the knobs its own way, and says how it plays
         for (const k of ['atem', 'mund', 'blatt', 'luft', 'zunge']) for (const fn of CTL['hlm.' + k] || []) fn(P['hlm.' + k], null);
@@ -18769,6 +19166,7 @@ const ENG_NOTE = {
     floete: 'Die Höhe ist der Atem: unten hauchig und leise, dann voller und heller, über dem Überblaspunkt (Strahl) springt die Flöte in die Oktave, ganz oben in die Duodezime. Aufsetzen ist ein weicher Zungenstoß, im Puls ein kurzer Ton.',
     flamme: 'Die Höhe ist die Hitze: unten nur Feuer, das rauscht und knackt; an der Schwelle (um ein Drittel) erwacht der Ton im Rohr und kommt in Stößen, darüber singt er, heller mit der Hitze; ganz oben kippt er in die Oktave. Loslassen: der Ton erlischt im Zischen. Im Puls ein Gasstoß mit kurzem Ton.',
   })[P['hlm.rohr']] || '',
+  zpf: 'Die Höhe ist die Kratzrate: unten einzelne Ticks, drei bis zehn in der Sekunde, jeder ein Klopfen mit gestimmtem Nachklang; höher wird das Ticken zum Schnarren, dann rastet die Rate auf Teiler der Note ein (Rast) – ganz oben ist sie der Ton selbst, rau und sägend. Schnelles Auf und Ab kratzt schneller. Fels knarrt wie Gestein und wird oben zum Ton. Im Puls ein Strich: anlaufen, auslaufen, am Ende ein Klopfen.',
   rnk: 'Aufsetzen schlägt den Ring an – unten breit und weich, oben schmal und hell; gehalten hält ein leiser Druck die Form in Bewegung. Im Puls ein Hammerschlag, Schütteln (Gestik) schlägt nach.',
   elm: 'Die Höhe ist die Spannung: unten brummt das Netz (in die Bassoktave gefaltet), darüber knistert die Korona, erst einzeln, dann dicht, oben zündet der Lichtbogen über dem Ton – er lebt vom Knistern und springt selten in Quinten und Oktaven. Aufsetzen ist ein Zündstoß, im Puls ein Zap mit Knisterschweif.',
   jrg: 'Die Höhe ist der Treffpunkt auf dem Stab: unten die Mitte (voll und rund), etwas über der Mitte die Knotenlinie (der Grundton verschwindet, ein hohles Klopfen), oben das Ende (hell). Der Stab lebt in einem Jahr: Frühling dünn und hell, Sommer warm und lang, Herbst mit Laubrascheln, Winter gläsern mit Eisriss. Spielen lässt ihn altern (höchstens 6 Cent tiefer); Verjüngen und Schlafen machen ihn wieder jung.',
@@ -18889,7 +19287,7 @@ function kqGlyph(k, cls) {
 const listDe = (a, w = 'und') => (a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' ' + w + ' ' + a[a.length - 1]);
 const kqKeysOf = (f) => ENG_OPTS.map((o) => o[0]).filter((k) => ENG_META[k].fam === f);
 // a worklet source this browser plays as its stand-in (the key stays in the patch), and one whose module still loads
-const kqFb = (k) => (ENGINES[k] && ENGINES[k].needs === 'worklet' && (DSP.state === 'kein' || A.workletBroken.has(k)) ? ENGINES[k].fallback : '');
+const kqFb = (k) => (ENGINES[k] && ENGINES[k].needs === 'worklet' && ENGINES[k].fallback !== 'native' && (DSP.state === 'kein' || A.workletBroken.has(k)) ? ENGINES[k].fallback : '');   // (a native stand-in of its own plays as itself)
 const kqLoading = (k) => !!(ENGINES[k] && ENGINES[k].needs === 'worklet' && DSP.state === 'laden');
 // cost in units of a level-1 Nebel voice → dots, a word, the voices this device has for it
 function kqCost(k) {
