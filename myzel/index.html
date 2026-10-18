@@ -1851,9 +1851,10 @@ const ENG_META = {
   tie: { n: 'Tiefe', fam: 'erde', art: 'haelt', i: 'Subbass, der in seinen Ton stürzt – vom Dröhnen bis zum 808-Kick', tags: 'bass sub 808 kick drone tief low' },
   mem: { n: 'Membran', fam: 'erde', art: 'schlaegt', i: 'Trommelfelle mit Tonhöhensprung', tags: 'trommel drum fell membran perkussion percussion tom pauke' },
   trp: { n: 'Tropfen', fam: 'erde', art: 'schlaegt', i: 'Wassertropfen – Luftblasen mit aufsteigendem Ton', tags: 'tropfen wasser drop water blase bubble regen' },
+  mdr: { n: 'Moder', fam: 'erde', art: 'schlaegt', i: 'Kompostglocke – Glanz zerfällt zu Knistern, Brummen', tags: 'kompost fäulnis pilz verdauung knistern brummen glocke holz knochen umgekehrt anschwellen perkussion compost rot decay crackle swell reverse bell', hoehe: 'Feuchte', rich: 'Stufe 3: zwölf Teiltöne links und rechts, das Knistern im Raum verteilt' },
 };
 // sources of later versions (and the reserves): a preset that names one says so once and plays Nebel instead
-const ENG_LATER = { glt: 'Glut', boe: 'Böe', amo: 'Amöbe', shn: 'Sehne', zpf: 'Zapfen', mdr: 'Moder', gsp: 'Gespinst', khl: 'Kehlchen', rhz: 'Rhizom', unk: 'Unke', fle: 'Flechte', blz: 'Balz' };
+const ENG_LATER = { glt: 'Glut', boe: 'Böe', amo: 'Amöbe', shn: 'Sehne', zpf: 'Zapfen', gsp: 'Gespinst', khl: 'Kehlchen', rhz: 'Rhizom', unk: 'Unke', fle: 'Flechte', blz: 'Balz' };
 // a key that was renamed (old: new), applied before a patch is checked; keys are never reused
 const ENG_ALIAS = {};
 // the one flat order (‹ ›, MIDI stepping, dice, the mixer's source text): by family, in ENG_META's order within it
@@ -2030,6 +2031,15 @@ NUM('hrz.bogen', 'Bogen (Tempo)', 0, 1, 0.5, '%');
 NUM('hrz.daempfung', 'Dämpfung', 0, 1, 0.6, '', { fmt: (v) => 'Nachklang ' + dec(hrzT60(v).toFixed(1)) + ' s' });
 NUM('hrz.schwebung', 'Schwebung', 0, 1, 0.3, '%');
 NUM('hrz.harz', 'Harz (Reibung)', 0, 1, 0.3, '%');
+// Moder (worklet myzel-rot: a struck body whose glitter is digested into crackle while its fundamental swells; Höhe at
+// the hit is the moisture)
+const MDR_PEAK = 0.45;   // v.out gain (the processor's level carries the velocity; the standard phrase as loud as Nebel/Glocke/Membran, klang/tests/bench.js)
+SEL('mdr.koerper', 'Körper', [['glocke', 'Glocke'], ['holz', 'Holz'], ['knochen', 'Knochen']], 'glocke', { chips: 1 });
+NUM('mdr.pilz', 'Pilz (Verdauung)', 0, 1, 0.5, '%');
+NUM('mdr.knistern', 'Knistern', 0, 1, 0.4, '%');
+NUM('mdr.schwellen', 'Schwellen', 0, 1, 0.6, '%');
+NUM('mdr.nachklang', 'Nachklang', 1, 12, 5, 's', { curve: 'exp' });
+NUM('mdr.schlaegel', 'Schlägel (hart)', 0, 1, 0.6, '%');
 // Effekte
 SEL('drv.type', 'Art', [['tube', 'Röhre'], ['fold', 'Falter'], ['crush', 'Bitbrecher']], 'tube', { chips: 1 });
 NUM('drv.amt', 'Stärke', 0, 1, 0.12, '%');
@@ -2171,7 +2181,7 @@ BOOL('midi.pads', 'Pads als Auslöser', false, { dev: 1 });
 BOOL('midi.std', 'Standard-Zuordnungen', true, { dev: 1 });
 
 const GROUP = {
-  v: 'Spielweise', t: 'Stimmung', neb: 'Nebel', kor: 'Körner', hau: 'Hauch', glo: 'Glocke', mem: 'Membran', sai: 'Saite', sch: 'Schale', gng: "Gong", klb: "Kalimba", obt: "Obertöne", stm: "Stimme", swm: "Schwarm", tie: "Tiefe", trp: "Tropfen", hlm: 'Halm', rnk: 'Ranke', elm: 'Elmsfeuer', jrg: 'Jahresring', hrz: 'Harz',
+  v: 'Spielweise', t: 'Stimmung', neb: 'Nebel', kor: 'Körner', hau: 'Hauch', glo: 'Glocke', mem: 'Membran', sai: 'Saite', sch: 'Schale', gng: "Gong", klb: "Kalimba", obt: "Obertöne", stm: "Stimme", swm: "Schwarm", tie: "Tiefe", trp: "Tropfen", hlm: 'Halm', rnk: 'Ranke', elm: 'Elmsfeuer', jrg: 'Jahresring', hrz: 'Harz', mdr: 'Moder',
   drv: 'Verzerrung', rng: 'Ringmodulator', flt: 'Filter', pha: 'Phaser', cho: 'Schweben', dly: 'Echo', rev: 'Hall', mov: 'Bewegung', mst: 'Summe',
   seq: 'Puls', bor: 'Bordun', rec: 'Aufnahme', dev: 'Gerät', midi: 'MIDI', l0: 'Spur 1', l1: 'Spur 2', l2: 'Spur 3', l3: 'Spur 4',
 };
@@ -2297,12 +2307,12 @@ let SR = 48000;
 // Polyphony is limited by cost, not by count: one unit ≈ one Nebel voice at level 1. Cheap engines get more voices.
 // Level 1 keeps phones safe, level 2 plays more at once, level 3 gives every voice more oscillators, partials and
 // modes and fills a desktop core up to a budget measured on this device (see calibrate()).
-// hlm, rnk, elm, jrg, hrz (the new engines): klang bench cost.js – 24 voices against 24 Nebel voices offline, scaled to
-// this table by the native engines measured alongside (Hauch, Obertöne, Nebel L3, …), with a margin (elm with its arc
-// built, jrg while its modes ring, hrz the Glas – the highest of several runs + 15 %: all with their full planned
-// sound, the owner's rule is best sound first)
-const VCOST1 = { neb: 1, kor: 0.6, hau: 0.3, glo: 0.7, mem: 0.4, sai: 0.35, sch: 0.9, gng: 1.55, klb: 1.25, obt: 0.75, stm: 1.05, swm: 1.2, tie: 0.75, trp: 0.7, hlm: 0.65, rnk: 0.6, elm: 1.8, jrg: 1.2, hrz: 1.6 };
-const VCOST3 = { neb: 1.9, kor: 1.1, hau: 0.75, glo: 1.4, mem: 0.75, sai: 1.2, sch: 2, gng: 2.8, klb: 2.2, obt: 1.85, stm: 2.4, swm: 2.7, tie: 1.5, trp: 1.5, hlm: 1.25, rnk: 1.25, elm: 4.2, jrg: 2.9, hrz: 3.3 };   // measured: level-1 cost × (level 3 / level 1)
+// hlm, rnk, elm, jrg, hrz, mdr (the new engines): klang bench cost.js – 24 voices against 24 Nebel voices offline, scaled
+// to this table by the native engines measured alongside (Hauch, Obertöne, Nebel L3, …), with a margin (elm with its arc
+// built, jrg while its modes ring, hrz the Glas, mdr its first 4 s with the crackle – the highest of several runs + 15 %:
+// all with their full planned sound, the owner's rule is best sound first)
+const VCOST1 = { neb: 1, kor: 0.6, hau: 0.3, glo: 0.7, mem: 0.4, sai: 0.35, sch: 0.9, gng: 1.55, klb: 1.25, obt: 0.75, stm: 1.05, swm: 1.2, tie: 0.75, trp: 0.7, hlm: 0.65, rnk: 0.6, elm: 1.8, jrg: 1.2, hrz: 1.6, mdr: 0.8 };
+const VCOST3 = { neb: 1.9, kor: 1.1, hau: 0.75, glo: 1.4, mem: 0.75, sai: 1.2, sch: 2, gng: 2.8, klb: 2.2, obt: 1.85, stm: 2.4, swm: 2.7, tie: 1.5, trp: 1.5, hlm: 1.25, rnk: 1.25, elm: 4.2, jrg: 2.9, hrz: 3.3, mdr: 1.85 };   // measured: level-1 cost × (level 3 / level 1)
 const QP = {
   1: { budget: MOBILE ? 14 : 22, maxv: 32, grainMax: MOBILE ? 80 : 128, overlap: MOBILE ? 16 : 24, os: MOBILE ? '2x' : '4x', rich: false, korDens: 1, cost: VCOST1 },
   2: { base: MOBILE ? 24 : 40, budget: MOBILE ? 24 : 40, maxv: 64, grainMax: MOBILE ? 128 : 224, overlap: 24, os: '4x', rich: false, korDens: 1, cost: VCOST1 },
@@ -5242,6 +5252,24 @@ const ENGINES = {
       else wkHold(v, t, peak, 0.005, clamp(6 * t60, 0.5, 40));
     },
   },
+  // Moder: a Kompostglocke (myzel-rot). A clear strike – bell, wood or bone –, then the fungus eats the upper partials:
+  // each crumbles into a crackle on its own pitch while the fundamental swells (an inverted envelope), holds as a round
+  // hum and dries out with a last crackle within the Nachklang. Höhe at the hit is the moisture (dry: nearly an
+  // ordinary bell darkening slowly; wet: fast compost, strong crackle, a thick hum). Puls: SPEC §3.10's gate scaling – a
+  // step's gate shortens the life (×0.25–1) and speeds the digestion (×1–6), so a fast lane keeps ≤ 10 voices. The
+  // processor ends the voice at −60 dB ({done}); the finish here is only the safety. Stand-in: Glocke.
+  mdr: {
+    sustain: false, needs: 'worklet', fallback: 'glo',
+    start(v, t, f, y, vel, o) {
+      const dm = o.decayMul || 1, life = P['mdr.nachklang'] * (o.gate ? clamp(o.gate, 0.25, 1) : 1) * dm;
+      const sc = Math.max(o.gate ? clamp(1 / o.gate, 1, 6) : 1, clamp(5 / life, 1, 6)) / dm;   // (a short Nachklang runs the compost faster too)
+      wkVoice(v, 'myzel-rot', f, y, { prm: wkPrm('mdr'), seed: wkSeed(), on: { on: t, f, y, vel, life, sc, seed: wkSeed() } });
+      v.out.gain.setValueAtTime(MDR_PEAK, t);
+      v.out.gain.setTargetAtTime(0, t + 1.3 * life, 0.02);   // (the safety's own fade – the processor is silent long before)
+      v.released = true; v.relAt = t;
+      v.finish(t + 1.3 * life + 0.1);
+    },
+  },
 };
 
 /* ---------- Karplus-Strong string: rendered once per pitch, pre-rendered in the background ---------- */
@@ -6504,9 +6532,239 @@ function myzelDsp() {
     }
   }
 
+  // ---- Moder: myzel-rot – a struck body whose glitter is digested downward (SPEC §3.10) ----
+  // Eight modes (level 3: twelve) as phasors, each at an amplitude √P_k; the power P_k moves per block by an ODE: every
+  // mode rings out by itself (μ_k = k/T, T = the hit's Nachklang) and, from mode 2 up, is digested at
+  // d_k = D·m·max(0.5, 3(k/8)^1.5) (D = Pilz, m = the moisture from Höhe; higher modes faster). A share η (Schwellen) of
+  // what is digested flows straight into the fundamental – the stem –, the rest crackles away. Measured (klang/tests,
+  // the check's simulation): the stem only swells when the energy flows to it directly, when the strike leaves it 10 dB
+  // down and when the upper modes are digested faster than they ring out (D = 3.5 × Pilz: SPEC's 1 × Pilz gave mode 5
+  // −14 dB by 1.5 s, the row asks −20, and a swell of +3.5 dB); the fungus grows into the strike (∝ t² at first, half
+  // grown at ROT_TG: else a third of the swell is over by 0.1 s, where it is measured from, and the strike's glitter is
+  // eaten before it is heard). Fed, the stem holds; it dries out towards the end of its Nachklang: a drying loss growing
+  // as (t/T)^7 takes every mode, and what it takes crackles too – the hum sighs out dry, and the voice ends at ≈ 0.9 T
+  // (SPEC's τ_1 = T alone would let the swollen stem ring for 13.8·T, past the row's 1.3·T; 0.9 T keeps a Puls lane at
+  // 8 hits/s to 10 voices). Short steps (Puls) and a short Nachklang run the whole compost faster (sc: digestion ×,
+  // growth ÷), as SPEC's gate scaling.
+  // Crackle (SPEC: AM of the mode): per mode a Poisson stream of events (λ_k = Knistern·40·its crackling share of the
+  // loss, ≤ 20/s); an event is a 2–8-ms grain of noise into a leaky complex integrator G that decays in ≈ ROT_B.cyc
+  // periods of the mode, and the mode sounds as Im(z·(1 + G)): a tick on the partial's own pitch – its energy lies
+  // within ±5 % of f_k (a Lorentzian ten periods wide: 80 %), its depth grows with √(the digested power), the sizes
+  // mostly small, a few large (as crackling noise is). The stem: the fundamental through a biased tanh (soft even and odd
+  // harmonics that thicken as it swells, its offset blocked) plus a fifth of it on mode 2 (no bare sine 'wub').
+  const ROT_OUT = 0.15, ROT_STEM = 0.316, ROT_DSC = 3.5, ROT_TG = 0.3, ROT_DRY = 360, ROT_DP = 7, ROT_EPS = 0.4, ROT_C = 2.2, ROT_CMAX = 3.5, ROT_CAP = 3, ROT_S2 = 0.2, ROT_END = 1e-6;
+  const ROT_SG = 1.2, ROT_SB = 0.3, ROT_SN = Math.tanh(ROT_SB), ROT_SK = 1 / (ROT_SG * (1 - ROT_SN * ROT_SN)), ROT_DC = 1 - 2 * Math.PI * 10 / SR, ROT_NZ = 0.25;   // (the stem's offset blocked below 10 Hz)
+  // r: ratios (glocke: handbell, the first five measured (Csound), the rest and level 3's four assumed; holz: a wooden
+  // bar (Csound) and on; knochen: a free bar (STK) bending into a bone's wider series); tilt: the body's own darkening
+  // of the upper modes; mu: their own ring × k/T; cyc: a crackle grain's length in periods (bone dry and short); the
+  // mallet's knock: low-pass from-to (by Schlägel), level
+  const ROT_B = {
+    glocke: { r: [1, 1.794, 2.52, 2.991, 3.786, 4.5, 5.4, 6.8, 8.1, 9.6, 11.2, 13], tilt: 0, mu: 1, cyc: 12, nlp: [2500, 9000], nl: 0.6 },
+    holz: { r: [1, 2.572, 4.644, 6.984, 9.723, 12, 14.5, 17, 20, 23.5, 27, 31], tilt: 0.1, mu: 1.1, cyc: 8, nlp: [1000, 4000], nl: 1.2 },
+    knochen: { r: [1, 2.756, 5.404, 8.933, 12.9, 17.6, 22.5, 28, 34, 40.5, 47.5, 55], tilt: 0, mu: 1.2, cyc: 6, nlp: [3500, 12000], nl: 0.9 },
+  };
+  class Rot extends MyzelProc {
+    constructor(o) {
+      super(o);
+      const po = this.po, J = 12;
+      this.rich = !!po.rich;
+      // per mode: ratio, power, amplitude (as the last block ended), digestion shape, own loss; the phasor and its
+      // rotation; at level 3 its weights left/right, which side hears it late and how many samples it is still silent
+      // there (the late side starts at a zero crossing); crackle: rate, depth, the grain (wait, length, kick per side),
+      // the integrator per side (G = r + i·i), its decay per sample, a noise position, whether a grain is alive
+      this.fr = new Float64Array(J); this.Pw = new Float64Array(J); this.am = new Float64Array(J); this.dsh = new Float64Array(J); this.mu = new Float64Array(J);
+      this.zr = new Float64Array(J); this.zi = new Float64Array(J); this.rc = new Float64Array(J); this.rs = new Float64Array(J);
+      this.oL = new Float64Array(J); this.oR = new Float64Array(J); this.sd = new Int8Array(J); this.ls = new Int32Array(J);
+      this.lam = new Float64Array(J); this.cd = new Float64Array(J); this.gw = new Int32Array(J); this.gn = new Int32Array(J); this.kL = new Float64Array(J); this.kR = new Float64Array(J);
+      this.gLr = new Float64Array(J); this.gLi = new Float64Array(J); this.gRr = new Float64Array(J); this.gRi = new Float64Array(J); this.rho = new Float64Array(J); this.nx = new Int32Array(J); this.cOn = new Uint8Array(J);
+      this.p = { koerper: 'glocke', pilz: 0.5, knistern: 0.4, schwellen: 0.6, nachklang: 5, schlaegel: 0.6 };
+      this.rng = new PRNG(po.seed || 13); this.rk = new PRNG(((po.seed || 13) ^ 0x5bd1e995) | 0);   // (the crackle draws from its own: Knistern changes nothing else)
+      if (po.prm) this.set(po.prm);
+      this.B = ROT_B.glocke; this.K = 0; this.fq = 0; this.vel = 0.75; this.mo = 1; this.wet = 1; this.life = 5; this.sc = 1;
+      this.reset();
+    }
+    reset() {
+      this.Pw.fill(0); this.am.fill(0); this.zr.fill(1); this.zi.fill(0); this.gw.fill(0); this.gn.fill(0); this.ls.fill(0);
+      this.gLr.fill(0); this.gLi.fill(0); this.gRr.fill(0); this.gRi.fill(0); this.cOn.fill(0);
+      this.tt = 0; this.sumP = 0; this.fin = false; this.nev = 0;
+      this.mi = 0; this.mz = 0; this.ml = 0; this.mr = 0; this.dxL = this.dyL = this.dxR = this.dyR = 0;
+    }
+    set(p) { for (const k in p) if (k in this.p) this.p[k] = k === 'koerper' ? String(p[k]) : +p[k] || 0; }   // (body, mallet and Nachklang are taken at the strike)
+    start(m) {
+      const p = this.p, B = this.B = ROT_B[p.koerper] || ROT_B.glocke, vel = this.vel = m.vel != null ? Math.max(0, Math.min(1, m.vel)) : 0.75;
+      if (m.seed) { this.rng = new PRNG(m.seed); this.rk = new PRNG((m.seed ^ 0x5bd1e995) | 0); }
+      const y = Math.max(0, Math.min(1, m.y != null ? m.y : this.y));
+      this.reset();
+      this.mo = 0.1 + 2 * y; this.wet = Math.min(1, this.mo / 1.5);   // Höhe at the hit: the moisture (no live Höhe after it)
+      this.life = Math.max(0.25, m.life || p.nachklang || 5);
+      this.sc = m.sc || Math.max(1, Math.min(6, 5 / this.life));
+      this.gN = 0; this.g = 1;   // a strike starts at once: the modes start at zero (sine phase), the mallet is the attack
+      const K = this.K = this.rich ? 12 : 8, fmax = Math.min(16000, 0.45 * SR), f = this.f;
+      // the strike: the fundamental 10 dB down, the upper modes tilted by the mallet – a soft one or a gentle hit leaves
+      // them weaker (soft hits have little to compost)
+      const beta = (1 - p.schlaegel) * 0.75 * (1.3 - 0.5 * vel) + B.tilt;
+      let s8 = 0, sK = 0;
+      for (let k = 0; k < K; k++) {
+        const r = this.fr[k] = B.r[k], a = f * r > fmax ? 0 : k ? Math.pow(r, -beta) : ROT_STEM;
+        this.am[k] = a; if (k < 8) s8 += a * a; sK += a * a;
+        this.dsh[k] = k ? Math.max(0.5, 3 * Math.pow((k + 1) / 8, 1.5)) : 0;
+        this.mu[k] = k ? (k + 1) * B.mu / this.life : 1 / this.life;
+        // level 3: the modes alternate between the sides at equal power (1.31/0.53), the softer side a quarter period
+        // late; the stem and mode 2 (it carries the stem's share) on both, in quadrature (two coherent channels sum
+        // louder off centre in the voice's panner)
+        if (this.rich) { const mid = k < 2, left = k % 2 === 0; this.oL[k] = mid ? 1 : left ? 1.31 : 0.53; this.oR[k] = mid ? 1 : left ? 0.53 : 1.31; this.sd[k] = mid || left ? 0 : 1; }
+        else { this.oL[k] = 1; this.oR[k] = 0; this.sd[k] = 0; }
+        this.ls[k] = Math.round(SR / (4 * f * r));
+      }
+      const nrm = sK > 0 ? vel * Math.sqrt(s8 / sK) : 0;   // (level 3's four more modes take their share of the same strike)
+      for (let k = 0; k < K; k++) { this.am[k] *= nrm; this.Pw[k] = this.am[k] * this.am[k]; }
+      this.am[1] += ROT_S2 * this.am[0];
+      this.coef();
+      // the mallet: 3 ms of noise through a low-pass that opens with Schlägel and the hit
+      this.mz = Math.round(0.003 * SR); this.mi = 0; this.mx = (this.rng.next() * 65536) | 0;
+      this.mc = 1 - Math.exp(-2 * Math.PI * Math.min(0.45 * SR, B.nlp[0] * Math.pow(B.nlp[1] / B.nlp[0], p.schlaegel * (0.4 + 0.6 * vel))) / SR);
+      this.mg = ROT_NZ * B.nl * vel * (0.4 + 0.6 * p.schlaegel);
+    }
+    // the rotations (per block when the pitch moved: Bebung, vibrato) and the crackle's decay (cyc periods, 1.5–25 ms;
+    // the stem's – it only crackles as it dries – a third of that: dry, short)
+    coef() {
+      const f = this.fq = this.f, B = this.B, K = this.K;
+      for (let k = 0; k < K; k++) {
+        const fk = f * this.fr[k], w = 2 * Math.PI * Math.min(fk, 0.49 * SR) / SR;
+        this.rc[k] = Math.cos(w); this.rs[k] = Math.sin(w);
+        this.rho[k] = Math.exp(-1 / (Math.max(0.0015, Math.min(0.025, (k ? B.cyc : B.cyc / 3) / fk)) * SR));
+      }
+    }
+    // one step of the ODE over n samples (exact per block: each mode's losses as one exponential, the shares by rate),
+    // the crackle's rates and depths, and this block's events
+    tick(n, K) {
+      const p = this.p, dt = n / SR, t = (this.tt += dt), u = Math.min(1.5, t / this.life), sc = this.sc;
+      const gx = t * sc / ROT_TG, gro = gx * gx / (1 + gx * gx);   // the fungus grows into the strike (slowly at first: the strike rings clear)
+      const D = p.pilz * ROT_DSC * sc * this.mo * gro, eta = 0.4 + 0.45 * p.schwellen;
+      const dry = ROT_DRY * Math.pow(u, ROT_DP) / this.life, kn = 40 * p.knistern, ed = ROT_EPS * (0.3 + 0.7 * this.wet) * dry;   // the drying (1/s) and its crackling share
+      const isc = 1 / sc;   // (a compost run faster crackles denser, not in bigger pieces: the depth as at its own pace)
+      const Pw = this.Pw, lam = this.lam, cd = this.cd;
+      let inflow = 0, sum = 0;
+      for (let k = 1; k < K; k++) {
+        const P = Pw[k];
+        if (P <= 0) { lam[k] = 0; continue; }
+        const dk = D * this.dsh[k], tot = this.mu[k] + dk + dry, f = Math.exp(-tot * dt), lost = P * (1 - f), cr = (1 - eta) * dk + ed;
+        inflow += eta * lost * dk / tot;
+        lam[k] = Math.min(20, kn * cr); cd[k] = Math.min(ROT_CMAX, ROT_C * Math.sqrt(cr * isc));
+        const q = P * f; Pw[k] = q < 1e-11 ? 0 : q; sum += Pw[k];   // (below −110 dB a mode is gone)
+      }
+      // the stem: its own ring and the drying; fed from above until it nears its cap (a loud swell stays under the strike)
+      const P1 = Pw[0], q1 = P1 * Math.exp(-(this.mu[0] + dry) * dt) + inflow * Math.max(0, 1 - (P1 / ROT_CAP) * (P1 / ROT_CAP));
+      Pw[0] = q1 < 1e-11 ? 0 : q1; sum += Pw[0];
+      lam[0] = Math.min(20, kn * ed); cd[0] = Math.min(ROT_CMAX, ROT_C * Math.sqrt(ed * isc));
+      for (let k = K; k < this.K; k++) { Pw[k] = 0; this.am[k] = 0; }   // (after underruns the modes above six are gone for good)
+      this.sumP = sum;
+      // crackle: Poisson (≤ 20/s: one chance per block), at a random sample of it; one grain at a time per mode; the
+      // kick normalised so the grain leaves |G| ≈ depth × size (uniform noise: variance ⅓ per sample)
+      const rk = this.rk;
+      for (let k = 0; k < K; k++) {
+        if (!(lam[k] > 0) || rk.next() >= lam[k] * dt || this.gn[k] > 0 || sum < ROT_END) continue;   // (none once all is below −60 dB)
+        const len = Math.round((0.002 + 0.006 * rk.next()) * SR), sz = 0.25 + 0.75 * Math.pow(rk.next(), 2), kick = cd[k] * sz / Math.sqrt(len / 3);
+        this.gw[k] = (rk.next() * n) | 0; this.gn[k] = len; this.nx[k] = (rk.next() * 65536) | 0; this.cOn[k] = 1; this.nev++;
+        if (this.rich) { const ph = rk.next() * 0.5 * Math.PI; this.kL[k] = kick * Math.SQRT2 * Math.cos(ph); this.kR[k] = kick * Math.SQRT2 * Math.sin(ph); }   // (each grain somewhere between the sides)
+        else this.kL[k] = kick;
+      }
+    }
+    render(L, R, a, b) {
+      const n = b - a, two = !!(this.rich && R), K = this.lite && this.K > 6 ? 6 : this.K;   // (after underruns: six modes)
+      if (this.f !== this.fq) this.coef();
+      this.tick(n, K);
+      for (let i = a; i < b; i++) L[i] = 0;
+      if (two) for (let i = a; i < b; i++) R[i] = 0;
+      const Pw = this.Pw, am = this.am, zr = this.zr, zi = this.zi, inv = 1 / n, sA = Math.sqrt(Pw[0]);
+      let alive = 0;
+      for (let k = 0; k < K; k++) {
+        const tgt = Math.sqrt(Pw[k]) + (k === 1 ? ROT_S2 * sA : 0), a0 = am[k], crk = this.cOn[k];
+        am[k] = tgt;
+        if (a0 === 0 && tgt === 0 && !crk) continue;
+        const c = this.rc[k], s = this.rs[k], dA = (tgt - a0) * inv, stem = k === 0;
+        let xr = zr[k], xi = zi[k], A = a0;
+        let gr = this.gLr[k], gi = this.gLi[k], hr = this.gRr[k], hi = this.gRi[k], gw = this.gw[k], gn = this.gn[k], nx = this.nx[k];
+        const kl = this.kL[k], kr = this.kR[k], rho = crk ? this.rho[k] : 1;
+        if (!two) {
+          if (stem) {   // the fundamental through the stem's shaper (and its crackle with it), offset blocked
+            let dx = this.dxL, dy = this.dyL;
+            for (let i = a; i < b; i++) {
+              const r = xr * c - xi * s; xi = xr * s + xi * c; xr = r; A += dA;
+              if (crk) { if (gw > 0) gw--; else if (gn > 0) { gr += kl * NOISE[nx]; gi += kl * NOISE[(nx + 21841) & 65535]; nx = (nx + 1) & 65535; gn--; } gr *= rho; gi *= rho; }
+              const yv = tanh(ROT_SG * A * (xi * (1 + gr) + xr * gi) + ROT_SB) - ROT_SN, d = yv - dx + ROT_DC * dy; dx = yv; dy = d;
+              L[i] += ROT_SK * d;
+            }
+            this.dxL = dx; this.dyL = flush(dy);
+          } else if (!crk) {
+            for (let i = a; i < b; i++) { const r = xr * c - xi * s; xi = xr * s + xi * c; xr = r; A += dA; L[i] += A * xi; }
+          } else {
+            for (let i = a; i < b; i++) {
+              const r = xr * c - xi * s; xi = xr * s + xi * c; xr = r; A += dA;
+              if (gw > 0) gw--; else if (gn > 0) { gr += kl * NOISE[nx]; gi += kl * NOISE[(nx + 21841) & 65535]; nx = (nx + 1) & 65535; gn--; }
+              gr *= rho; gi *= rho;
+              L[i] += A * (xi * (1 + gr) + xr * gi);
+            }
+          }
+        } else {
+          // level 3: 'now' = Im z, 'late' = −Re z (a quarter period later; silent until its first zero crossing)
+          const sd = this.sd[k], wLn = sd ? 0 : this.oL[k], wLl = sd ? this.oL[k] : 0, wRn = sd ? this.oR[k] : 0, wRl = sd ? 0 : this.oR[k];
+          let ls = this.ls[k], dx = this.dxL, dy = this.dyL, ex = this.dxR, ey = this.dyR;
+          for (let i = a; i < b; i++) {
+            const r = xr * c - xi * s; xi = xr * s + xi * c; xr = r; A += dA;
+            if (crk) {
+              if (gw > 0) gw--;
+              else if (gn > 0) { gr += kl * NOISE[nx]; gi += kl * NOISE[(nx + 21841) & 65535]; hr += kr * NOISE[(nx + 43691) & 65535]; hi += kr * NOISE[(nx + 9973) & 65535]; nx = (nx + 1) & 65535; gn--; }
+              gr *= rho; gi *= rho; hr *= rho; hi *= rho;
+            }
+            const late = ls > 0 ? (ls--, 0) : -xr;
+            if (stem) {
+              const yl = tanh(ROT_SG * A * (xi + xi * gr + xr * gi) + ROT_SB) - ROT_SN, yr = ls > 0 ? 0 : tanh(ROT_SG * A * (late + xi * hr + xr * hi) + ROT_SB) - ROT_SN;
+              const d = yl - dx + ROT_DC * dy; dx = yl; dy = d; const e = yr - ex + ROT_DC * ey; ex = yr; ey = e;
+              L[i] += ROT_SK * d; R[i] += ROT_SK * e;
+            } else {
+              L[i] += A * (wLn * xi + wLl * late + xi * gr + xr * gi);
+              R[i] += A * (wRn * xi + wRl * late + xi * hr + xr * hi);
+            }
+          }
+          this.ls[k] = ls;
+          if (stem) { this.dxL = dx; this.dyL = flush(dy); this.dxR = ex; this.dyR = flush(ey); }
+        }
+        const m2 = 1.5 - 0.5 * (xr * xr + xi * xi); zr[k] = xr * m2; zi[k] = xi * m2;   // (the phasor kept on the unit circle)
+        if (crk) {
+          const g2 = gr * gr + gi * gi + hr * hr + hi * hi;
+          if (gn === 0 && (g2 < 1e-6 || A * A * g2 < 1e-13)) { this.cOn[k] = 0; gr = gi = hr = hi = 0; } else alive++;   // (a grain is over below −60 dB of its own or −130 dB absolute)
+          this.gLr[k] = gr; this.gLi[k] = gi; this.gRr[k] = hr; this.gRi[k] = hi; this.gw[k] = gw; this.gn[k] = gn; this.nx[k] = nx;
+        }
+      }
+      // the mallet (and 1 ms for its low-pass to settle)
+      if (this.mi < this.mz + 48) {
+        const mz = this.mz, mc = this.mc, mg = this.mg;
+        let mi = this.mi, ml = this.ml, mr = this.mr, mx = this.mx;
+        for (let i = a; i < b && mi < mz + 48; i++, mi++) {
+          const w = mi < mz ? Math.sin(Math.PI * mi / mz) : 0, e = mg * w * w;
+          ml += mc * (e * NOISE[mx] - ml); L[i] += ml;
+          if (two) { mr += mc * (e * NOISE[(mx + 30011) & 65535] - mr); R[i] += mr; }
+          mx = (mx + 1) & 65535;
+        }
+        this.mi = mi; this.ml = ml; this.mr = mr; this.mx = mx;
+      }
+      // out: a stereo voice passes its panner at full gain, a mono one at −3 dB; a soft ceiling above ±0.8 (only stacked
+      // grains on a loud hit reach it)
+      const og = two ? ROT_OUT * Math.SQRT1_2 : ROT_OUT;
+      for (let i = a; i < b; i++) { const o = L[i] * og; L[i] = o > 0.8 || o < -0.8 ? (o > 0 ? 0.8 + 0.2 * tanh(5 * o - 4) : -0.8 + 0.2 * tanh(5 * o + 4)) : o; }
+      if (two) for (let i = a; i < b; i++) { const o = R[i] * og; R[i] = o > 0.8 || o < -0.8 ? (o > 0 ? 0.8 + 0.2 * tanh(5 * o - 4) : -0.8 + 0.2 * tanh(5 * o + 4)) : o; }
+      else if (R) R.set(L.subarray(a, b), a);
+      // the end: all modes below −60 dB and no grain ringing (or, at the latest, 1.6 × the Nachklang) – {done} at once
+      // (the voice is freed 30 ms later: the 5-ms fade is over by then; a Puls lane's voices do not overlap a step
+      // longer than they sound), the contract's own {done} follows once silent
+      if (!this.fin && this.tt > 0.05 && ((this.sumP < ROT_END && !alive) || this.tt > 1.6 * this.life)) { this.fin = true; this.off = true; this.ramp(0); this.port.postMessage({ done: 1 }); }
+    }
+  }
+
   // an empty voice: the per-node price of the contract (SPEC §8 step 1 gate, ≈ 0.06 + 0.03 per param)
   class Null extends MyzelProc { render(L, R, a, b) { for (let i = a; i < b; i++) L[i] = 0; } }
-  for (const [k, C] of [['myzel-blow', Blow], ['myzel-scan', Scan], ['myzel-bow', Bow], ['myzel-null', Null]]) registerProcessor(k, C);
+  for (const [k, C] of [['myzel-blow', Blow], ['myzel-scan', Scan], ['myzel-bow', Bow], ['myzel-rot', Rot], ['myzel-null', Null]]) registerProcessor(k, C);
   return { SIN, NOISE, Reso, Biquad, Allpass1, OnePole, DcBlock, FracDelay, PRNG };   // (for later processors; unused here)
 }
 // end myzelDsp
@@ -8506,7 +8764,7 @@ midiTarget('morph', 'Morph A↔B', null, { group: 'Mixer', cont: true, get: () =
 const MACRO = { neb: ['neb.cut', 'neb.res'], kor: ['kor.dens', 'kor.size'], hau: ['hau.color', 'hau.q'], glo: ['glo.index', 'glo.ratio'], mem: ['mem.drop', 'mem.decay'],
   sai: ['sai.bright', 'sai.decay'], sch: ['sch.bright', 'sch.beat'], gng: ['gng.bloom', 'gng.bright'], klb: ['klb.over', 'klb.buzz'], obt: ['obt.focus', 'obt.wander'],
   stm: ['stm.vib', 'stm.choir'], swm: ['swm.chaos', 'swm.unrest'], tie: ['tie.drive', 'tie.drop'], trp: ['trp.chirp', 'trp.rain'],
-  hlm: ['hlm.atem', 'hlm.blatt'], rnk: ['rnk.feder', 'rnk.daempfung'], elm: ['elm.spannung', 'elm.knistern'], jrg: ['jrg.schnitt', 'jrg.holz'], hrz: ['hrz.druck', 'hrz.harz'] };
+  hlm: ['hlm.atem', 'hlm.blatt'], rnk: ['rnk.feder', 'rnk.daempfung'], elm: ['elm.spannung', 'elm.knistern'], jrg: ['jrg.schnitt', 'jrg.holz'], hrz: ['hrz.druck', 'hrz.harz'], mdr: ['mdr.pilz', 'mdr.knistern'] };
 const macroId = (k) => (MACRO[P['v.eng']] || MACRO.neb)[k];
 midiTarget('macro.a', 'Klang-Makro A', null, { group: 'Klang', cont: true, pidf: () => macroId(0) });
 midiTarget('macro.b', 'Klang-Makro B', null, { group: 'Klang', cont: true, pidf: () => macroId(1) });
@@ -10273,7 +10531,7 @@ function gkCheck() {
   GK.p.tragen = GK.p.tragen === true;
   for (const k of ['lad', 'sw', 'schlaf']) GK.p[k] = GK.p[k] !== false;
   for (const k of ['ras', 'tank', 'ped']) GK.p[k] = GK.p[k] === true;
-  if (!['trp', 'mem', 'sch', 'jrg'].includes(GK.p.rasS)) GK.p.rasS = 'trp';
+  if (!['trp', 'mem', 'sch', 'jrg', 'mdr'].includes(GK.p.rasS)) GK.p.rasS = 'trp';
   if (!['16', '32', 'frei'].includes(GK.p.rasQ)) GK.p.rasQ = '16';
   if (!['kadenz', 'stille', 'szene'].includes(GK.p.slArt)) GK.p.slArt = 'kadenz';
   if (!['aus', 'halt'].includes(GK.p.slTail)) GK.p.slTail = 'aus';
@@ -10622,6 +10880,7 @@ function gkSet(k, v) {
   if (k === 'neigen') gkNeigen(was);
   if (GK.on) gkUpdate(performance.now(), []);
   if ((k === 'neigen' || k === 'rgS') && MX.root) { mxSrcAll(); mxRgnSync(); }   // the mixer's "Regen" says what rains (and stands there only while it can)
+  if ((k === 'rasS' || k === 'rgS') && WORKLET_ENGINES.has(v)) dspMaybe();   // a worklet source to rattle or rain with (Moder): its module now, before the first strike
 }
 // what tilt shapes changed: it comes in (or goes) gently; Sporenregen takes the pose now as level
 function gkNeigen(was) {
@@ -11630,7 +11889,7 @@ gkSub(gaSub);
 // Schwenken (circling the phone like a wine glass; needs a gyroscope) fills a second, calm store: held notes swell and
 // their overtones rise, like a rubbed glass rim or a singing bowl; the speed of the circles sets the shimmer
 // (Schweben), their direction detunes a little – clockwise up, the other way down.
-// Rassel-Schläge (optional): each swing of a shake strikes a Tropfen, Membran, Schale or Jahresring – timed at the top of the
+// Rassel-Schläge (optional): each swing of a shake strikes a Tropfen, Membran, Schale, Jahresring or Moder – timed at the top of the
 // swing's acceleration, not at its reversal – laid onto the next 1/16 (or 1/32, or free at slow tempi) of the Puls's
 // clock, at most one per step. They play on the Klang strip like the field's own notes: mixer, sends and recordings
 // take them as any note.
@@ -11986,7 +12245,7 @@ function ladCardUI(C, it) {
   C.ras = kcSwitch('Rassel-Schläge', GK.p.ras, set('ras'), { aria: 'Rassel-Schläge: jeder Schüttel-Höhepunkt spielt einen Schlag im Raster', key: it.key + ':ras' });
   C.tank = kcSwitch('Tank', GK.p.tank, set('tank'), { aria: 'Tank: die Ladung schaltet Puls-Spuren nacheinander dazu', key: it.key + ':tank' });
   C.sw = kcSwitch('Schwenken', GK.p.sw, set('sw'), { aria: 'Schwenken: kreisen wie ein Weinglas lässt gehaltene Töne singen', key: it.key + ':sw' });
-  C.rasS = gkChips('Klang der Rassel', [['trp', 'Tropfen'], ['mem', 'Membran'], ['sch', 'Schale'], ['jrg', 'Jahresring']], () => GK.p.rasS, set('rasS'));
+  C.rasS = gkChips('Klang der Rassel', [['trp', 'Tropfen'], ['mem', 'Membran'], ['sch', 'Schale'], ['jrg', 'Jahresring'], ['mdr', 'Moder']], () => GK.p.rasS, set('rasS'));
   C.rasQ = gkChips('Raster der Rassel', [['16', '1/16'], ['32', '1/32'], ['frei', 'frei']], () => GK.p.rasQ, set('rasQ'));
   C.rasBox = h('div', { class: 'gk-sub' }, row('Klang', C.rasS), row('Raster', C.rasQ));
   C.rTxt = h('p', { class: 'note' }); C.tTxt = h('p', { class: 'note' }); C.sTxt = h('p', { class: 'note' }); C.ladSum = h('span', { class: 'gk-sum' });
@@ -12015,7 +12274,7 @@ function ladCardSync(C, noGyro) {
   // what the charge does in the sound that plays now
   const has = [SEQ.on && 'der Puls voller und heller', (P['v.eng'] === 'kor' || P['v.layer'] === 'kor') && 'Körner dichter', (P['v.eng'] === 'trp' || P['v.layer'] === 'trp') && 'Tropfen-Regen'].filter(Boolean);
   tx(C.lTxt, has.length ? 'In diesem Klang: ' + has.join(', ') + ', das Echo leiert.' : 'In diesem Klang: gehaltene Töne heller, mehr Echo und Schweben – mit Puls, Körnern oder Tropfen wirkt mehr.');
-  tx(C.rTxt, p.ras ? 'Jeder Schüttel-Höhepunkt spielt einen Schlag, ' + (p.rasQ === 'frei' ? 'ohne Raster (für langsame Tempi).' : 'auf die nächste ' + (p.rasQ === '32' ? '1/32' : '1/16') + ' des Pulses gelegt.') + ' Er läuft über den Kanal „Klang“.' : 'Rassel-Schläge: jeder Schüttel-Höhepunkt spielt zusätzlich einen Tropfen, eine Membran, eine Schale oder den Holzstab (Jahresring) im Raster.');
+  tx(C.rTxt, p.ras ? 'Jeder Schüttel-Höhepunkt spielt einen Schlag, ' + (p.rasQ === 'frei' ? 'ohne Raster (für langsame Tempi).' : 'auf die nächste ' + (p.rasQ === '32' ? '1/32' : '1/16') + ' des Pulses gelegt.') + ' Er läuft über den Kanal „Klang“.' : 'Rassel-Schläge: jeder Schüttel-Höhepunkt spielt zusätzlich einen Tropfen, eine Membran, eine Schale, den Holzstab (Jahresring) oder eine Kompostglocke (Moder) im Raster.');
   const st = GK.R && GK.R.st;
   C.sw.disabled = !!noGyro;
   tx(C.sTxt, noGyro ? 'Schwenken braucht ein Gyroskop – dieses Gerät hat keins.' : 'Schwenken: lass das Gerät kreisen wie ein Weinglas – gehaltene Töne schwellen an und ihre Obertöne steigen. Schnellere Kreise schweben mehr, die Richtung verstimmt leicht nach oben oder unten.' + (LAD.glas > 0.02 ? ' Jetzt: ' + Math.round(LAD.glas * 100) + ' %.' : ''));
@@ -13623,7 +13882,7 @@ function onParamChanged(id) {
     case 'neb':
       if (id === 'neb.cut' || id === 'neb.ymod' || id === 'neb.res') for (const t of touches.values()) for (const { v } of t.voices) if (v.alive && v.eng === 'neb') { v.setY(modY(t)); setP(v.filt.Q, P['neb.res']); }
       break;
-    case 'hlm': case 'rnk': case 'hrz':   // the sounding voices follow at once (the processor reads its knobs per block)
+    case 'hlm': case 'rnk': case 'hrz': case 'mdr':   // the sounding voices follow at once (the processor reads its knobs per block; Moder's body, mallet and Nachklang at the next strike)
       for (const v of A.voices) if (v.alive && v.wk && v.as === pre) v.wk.port.postMessage({ set: wkPrm(pre) });
       if (id === 'hrz.koerper') for (const fn of CTL['hrz.daempfung'] || []) fn(P['hrz.daempfung'], null);   // (its Nachklang is the body's)
       break;
@@ -18485,6 +18744,7 @@ let userFileIn = null;
 const engSecs = {};
 // how the new sources play (the older ones share the two general notes)
 const ENG_NOTE = {
+  mdr: 'Ein Tipp ist ein Schlag, die Höhe dabei die Feuchte: unten fast eine gewöhnliche Glocke, die langsam dunkler wird; weiter oben frisst der Pilz die hohen Teiltöne – jeder zerbröselt in ein feines Knistern auf seiner eigenen Tonhöhe, während der Grundton anschwillt. Dann bleibt ein rundes Brummen, das zum Ende des Nachklangs knisternd austrocknet. Leise Schläge haben wenig zu verdauen. Im Puls verdaut jeder Schlag umso schneller, je kürzer der Schritt.',
   hrz: 'Die Höhe ist der Bogendruck: unten ein Hauch von Reibung, in der Mitte schwillt der Ton in einer halben Sekunde an und steht, weiter oben wird er körniger und lauter, ganz oben reißt der Bogen (beim Teich schreit der Stab). Glas und Schale singen mit dem kreisenden Finger (das Wah) und schweben; Zunge ist das Daxophon – ein Holz, das spricht und knurrt; Teich das Waterphone mit schwappendem Wasser. Loslassen hebt den Bogen ab, die Moden klingen nach (Dämpfung).',
   hlm: 'Die Höhe ist der Atem: unten nur Luft, ab etwa einem Viertel spricht das Rohr an, weiter oben lauter und heller, ganz oben würgt das Blatt. Aufsetzen ist ein Zungenstoß, im Puls ein kurzer Stoß.',
   rnk: 'Aufsetzen schlägt den Ring an – unten breit und weich, oben schmal und hell; gehalten hält ein leiser Druck die Form in Bewegung. Im Puls ein Hammerschlag, Schütteln (Gestik) schlägt nach.',
@@ -19523,6 +19783,7 @@ function safeify(vals) {
   else if (vals['flt.type'] === 'highpass') lim('flt.freq', 40, 1500);
   else { lim('flt.freq', 300, 5000); lim('flt.q', 0.3, 6); }
   lim('neb.cut', 250, 12000); lim('hau.q', 0.3, 40); lim('kor.size', 0.03, 0.6); lim('bor.cut', 150, 4000);
+  lim('mdr.nachklang', 1, 8);   // (klang SPEC §5: a dice patch's Kompostglocke rings at most 8 s)
   for (let i = 0; i < 4; i++) { lim('l' + i + '.vol', 0.2, 1); lim('l' + i + '.prob', 0.35, 1); }
   return vals;
 }
