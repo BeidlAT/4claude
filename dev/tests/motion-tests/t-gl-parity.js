@@ -81,9 +81,10 @@ async function bar(browser, url, width) {
   ok(Math.abs(p0.st.rms - p1.st.rms) <= 0.15 && Math.abs(p0.st.peak - p1.st.peak) <= 1 && !p1.st.nan, 'and the same loudness (rms ' + p0.st.rms + ' / ' + p1.st.rms + ' dB)');
   const m0 = await mixer(O.page), m1 = await mixer(N.page);
   // (part 6 adds the rain's own strip "Regen": silent while it does not rain, and at its defaults a plain unity gain)
-  const g1 = m1.g.filter((x) => x[0] !== 'rgn'), rg = m1.g.find((x) => x[0] === 'rgn');
+  // (and Gespinst's web its own strip „Gespinst“: silent while no Gespinst plays, at its defaults a plain unity gain)
+  const g1 = m1.g.filter((x) => x[0] !== 'rgn' && x[0] !== 'gsp'), rg = m1.g.find((x) => x[0] === 'rgn'), gs = m1.g.find((x) => x[0] === 'gsp');
   ok(m0.n === 9 && JSON.stringify(m0.g) === JSON.stringify(g1), 'the strips’ gains, bit for bit (' + m0.g.map((x) => x[0] + ' ' + x[1].toFixed(4)).join(', ') + ')');
-  ok(m1.n === m0.n + (rg ? 1 : 0) && (!rg || (rg[1] === 1 && rg[2] === 1)), '   … the new strip „Regen“ (if there) at unity: in ' + (rg ? rg[1] : '–') + ', dry ' + (rg ? rg[2] : '–'));
+  ok(m1.n === m0.n + (rg ? 1 : 0) + (gs ? 1 : 0) && (!rg || (rg[1] === 1 && rg[2] === 1)) && (!gs || (gs[1] === 1 && gs[2] === 1)), '   … the new strips „Regen“ and „Gespinst“ (if there) at unity: in ' + (rg ? rg[1] : '–') + '/' + (gs ? gs[1] : '–') + ', dry ' + (rg ? rg[2] : '–') + '/' + (gs ? gs[2] : '–'));
   const f0 = await frames(O.page), f1 = await frames(N.page);
   ok(f0.sp === f1.sp && f0.hy === f1.hy && f0.rip === f1.rip && f0.hy0 === f1.hy0, 'the field drawn for 150 frames: the same spores, hyphae and ripples (' + f0.hy + ' hyphae)');
   ok(!O.errors.length && !N.errors.length, 'no errors ' + O.errors.concat(N.errors).join(' | '));

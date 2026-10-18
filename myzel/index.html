@@ -1857,13 +1857,14 @@ const ENG_META = {
   klb: { n: 'Kalimba', fam: 'erz', art: 'schlaegt', i: 'Daumenklavier – Metallzungen über einem Holzkasten', tags: 'kalimba mbira daumenklavier thumb piano zunge' },
   gsp: { n: 'Gespinst', fam: 'erz', art: 'schlaegt', i: 'Ein Netz aus Saiten, das Finger und Puls teilen', tags: 'sympathetisch resonanz netz saiten steg sitar ökologie sympathetic strings web halo', hoehe: 'Zupfhelligkeit', regen: 1, rich: 'Stufe 3: zwölf Saiten im Netz, ein Doppelchor am Finger' },
   tie: { n: 'Tiefe', fam: 'erde', art: 'haelt', i: 'Subbass, der in seinen Ton stürzt – vom Dröhnen bis zum 808-Kick', tags: 'bass sub 808 kick drone tief low' },
+  glt: { n: 'Glut', fam: 'erde', art: 'haelt', i: 'Gestimmte Rückkopplung, die nachglüht', tags: 'feedback rückkopplung larsen glühen glut schleife loop drone heulen howl verstärker amp', hoehe: 'Gewinn', hear: { gate: 2.0 }, rich: 'Stufe 3: zwei Schleifen links und rechts, leicht verstimmt und gekoppelt' },
   mem: { n: 'Membran', fam: 'erde', art: 'schlaegt', i: 'Trommelfelle mit Tonhöhensprung', tags: 'trommel drum fell membran perkussion percussion tom pauke' },
   trp: { n: 'Tropfen', fam: 'erde', art: 'schlaegt', i: 'Wassertropfen – Luftblasen mit aufsteigendem Ton', tags: 'tropfen wasser drop water blase bubble regen' },
   mdr: { n: 'Moder', fam: 'erde', art: 'schlaegt', i: 'Kompostglocke – Glanz zerfällt zu Knistern, Brummen', tags: 'kompost fäulnis pilz verdauung knistern brummen glocke holz knochen umgekehrt anschwellen perkussion compost rot decay crackle swell reverse bell', hoehe: 'Feuchte', rich: 'Stufe 3: zwölf Teiltöne links und rechts, das Knistern im Raum verteilt' },
   rhz: { n: 'Rhizom', fam: 'erde', art: 'schlaegt', i: 'Ein Schlag läuft durch die Skala – Lawinen im Netz', tags: 'rhizom wurzel netz lawine kaskade ausbreitung erschöpfung neuron welle holz metall glas perkussion marimba avalanche cascade network spread ripple', hoehe: 'Ausbreitung', regen: 1, rich: 'Stufe 3: drei Teiltöne je Ping, die Lawine läuft im Stereo die Tonlage entlang' },
 };
 // sources of later versions (and the reserves): a preset that names one says so once and plays Nebel instead
-const ENG_LATER = { glt: 'Glut', unk: 'Unke', fle: 'Flechte', blz: 'Balz' };
+const ENG_LATER = { unk: 'Unke', fle: 'Flechte', blz: 'Balz' };
 // a key that was renamed (old: new), applied before a patch is checked; keys are never reused
 const ENG_ALIAS = {};
 // the one flat order (‹ ›, MIDI stepping, dice, the mixer's source text): by family, in ENG_META's order within it
@@ -2112,6 +2113,13 @@ NUM('khl.spannung', 'Spannung', 0, 1, 0.5, '%');
 NUM('khl.rauheit', 'Rauheit', 0, 1, 0.3, '%');
 NUM('khl.schnabel', 'Schnabel', 0, 1, 0.5, '%');
 NUM('khl.anstieg', 'Anstieg', 0, 1, 0.3, '%');
+// Glut (worklet myzel-ember, natively without one: a tuned feedback loop; Höhe is its gain – the growth per second)
+SEL('glt.sprung', 'Sprung', [['2', 'Oktave'], ['3', 'Duodezime']], '3', { chips: 1 });
+NUM('glt.gluehen', 'Glühen (Wachstum)', 0, 1, 0.5, '%');
+NUM('glt.nachgluehen', 'Nachglühen', 0.2, 6, 1.5, 's', { curve: 'exp' });
+NUM('glt.zunder', 'Zunder (Klopfen)', 0, 1, 0.4, '%');
+NUM('glt.hitze', 'Hitze (Sättigung)', 0, 1, 0.5, '%');
+NUM('glt.kasten', 'Kasten (offen)', 0, 1, 0.5, '%');
 // Effekte
 SEL('drv.type', 'Art', [['tube', 'Röhre'], ['fold', 'Falter'], ['crush', 'Bitbrecher']], 'tube', { chips: 1 });
 NUM('drv.amt', 'Stärke', 0, 1, 0.12, '%');
@@ -2254,7 +2262,7 @@ BOOL('midi.pads', 'Pads als Auslöser', false, { dev: 1 });
 BOOL('midi.std', 'Standard-Zuordnungen', true, { dev: 1 });
 
 const GROUP = {
-  v: 'Spielweise', t: 'Stimmung', neb: 'Nebel', kor: 'Körner', hau: 'Hauch', glo: 'Glocke', mem: 'Membran', sai: 'Saite', sch: 'Schale', gng: "Gong", klb: "Kalimba", obt: "Obertöne", stm: "Stimme", swm: "Schwarm", tie: "Tiefe", trp: "Tropfen", hlm: 'Halm', rnk: 'Ranke', elm: 'Elmsfeuer', jrg: 'Jahresring', hrz: 'Harz', shn: 'Sehne', zpf: 'Zapfen', mdr: 'Moder', boe: 'Böe', amo: 'Amöbe', gsp: 'Gespinst', rhz: 'Rhizom', khl: 'Kehlchen',
+  v: 'Spielweise', t: 'Stimmung', neb: 'Nebel', kor: 'Körner', hau: 'Hauch', glo: 'Glocke', mem: 'Membran', sai: 'Saite', sch: 'Schale', gng: "Gong", klb: "Kalimba", obt: "Obertöne", stm: "Stimme", swm: "Schwarm", tie: "Tiefe", trp: "Tropfen", hlm: 'Halm', rnk: 'Ranke', elm: 'Elmsfeuer', jrg: 'Jahresring', hrz: 'Harz', shn: 'Sehne', zpf: 'Zapfen', glt: 'Glut', mdr: 'Moder', boe: 'Böe', amo: 'Amöbe', gsp: 'Gespinst', rhz: 'Rhizom', khl: 'Kehlchen',
   drv: 'Verzerrung', rng: 'Ringmodulator', flt: 'Filter', pha: 'Phaser', cho: 'Schweben', dly: 'Echo', rev: 'Hall', mov: 'Bewegung', mst: 'Summe',
   seq: 'Puls', bor: 'Bordun', rec: 'Aufnahme', dev: 'Gerät', midi: 'MIDI', l0: 'Spur 1', l1: 'Spur 2', l2: 'Spur 3', l3: 'Spur 4',
 };
@@ -2398,6 +2406,11 @@ for (const [i, T] of [[0, VCOST1], [1, VCOST3]]) Object.defineProperty(T, 'hlm',
 // builders' renders on the machine: processor 0.60–0.77 / 0.92–1.31, native 0.55–1.12 / 0.84–2.11 – the highest + 15 %
 const ZPF_COST = { wk: [0.89, 1.51], nat: [1.3, 2.45] };
 for (const [i, T] of [[0, VCOST1], [1, VCOST3]]) Object.defineProperty(T, 'zpf', { get: () => (wkReady('zpf') ? ZPF_COST.wk : ZPF_COST.nat)[i], enumerable: true });
+// Glut: the worklet loop, or – without AudioWorklet (and while the module loads) – its own native loop, priced as such
+// (klang bench cost.js, the highest of four runs + 15 % – this machine scatters: the loop 0.50–0.71 / 1.02–1.45, level 3
+// two loops; the native loop's 26 nodes 0.67–1.87 / 1.22–2.12)
+const GLT_COST = { wk: [0.82, 1.67], nat: [2.15, 2.45] };
+for (const [i, T] of [[0, VCOST1], [1, VCOST3]]) Object.defineProperty(T, 'glt', { get: () => (A.ctx && gltNat() ? GLT_COST.nat : GLT_COST.wk)[i], enumerable: true });
 const QP = {
   1: { budget: MOBILE ? 14 : 22, maxv: 32, grainMax: MOBILE ? 80 : 128, overlap: MOBILE ? 16 : 24, os: MOBILE ? '2x' : '4x', rich: false, korDens: 1, cost: VCOST1 },
   2: { base: MOBILE ? 24 : 40, budget: MOBILE ? 24 : 40, maxv: 64, grainMax: MOBILE ? 128 : 224, overlap: 24, os: '4x', rich: false, korDens: 1, cost: VCOST1 },
@@ -4156,6 +4169,158 @@ function zpfNative(v, t, f, y, vel, o) {
   adsrStart(v, t, peak, 0.002);
 }
 
+// ---- Glut (klang SPEC §3.3): the envelope both loops share, and the loop in native nodes ----
+const GLT_PEAK = 0.42, GLT_NOUT = 0.6;   // v.out peak per velocity; the native loop's output (as myzel-ember's EMB_OUT)
+// the worklet loop, or its own native loop: without AudioWorklet, after a processor error, and while the module loads
+const gltNat = () => !(A.ctx && A.ctx.__dspOK && !A.workletBroken.has('glt'));
+const gltR = (y) => (y < 0.3 ? -6 + 20 * y : y < 0.6 ? (y - 0.3) * 80 / 3 : 8 + (y - 0.6) * 10);   // Höhe → growth (nepers/s) before Glühen (as in myzel-ember)
+// held: let go stops nothing – the loop glows on for Nachglühen (its T60) and the native envelope only closes it then;
+// Puls: the gate and the afterglow at the peak, the loop decays inside it (SPEC §3.3)
+function gltEnv(v, t, vel, o) {
+  const peak = vel * GLT_PEAK, ng = P['glt.nachgluehen'];
+  if (o.burst) { burstEnv(v, t, peak, 0.003, o.gate + ng * (o.decayMul || 1), 0.3); return; }
+  adsrStart(v, t, peak, 0.003);
+  v.release = (k) => {
+    if (!v.alive || v.released) return;
+    const now = A.ctx.currentTime, tg = ng * (k || 1);
+    if (v.wk) v.wk.port.postMessage({ off: now, k: k || 1 }); else if (v.glow) v.glow(now, tg);
+    v.released = true; v.relAt = now;
+    holdParam(v.out.gain, now); v.out.gain.setTargetAtTime(0, now + tg, 0.15);
+    v.finish(now + tg + 0.8);
+  };
+}
+// Without AudioWorklet (SPEC §3.3, from the check's Kreislauf): the loop in native nodes – a DelayNode of n periods (a
+// cycle's delay is at least one render quantum, and Chromium adds one more on top of delayTime – measured: delayTime
+// 200 frames → a period of 328; gltCyc probes it once per sample rate: n = ceil(1.25·(128 + cyc)·f/SR)), the band-pass
+// on the mode (Q ≥ 12 and ≥ 2·n·m: the comb's neighbours lie f/n apart), a tanh WaveShaper (never oversampled in a
+// cycle: its kernel's latency would detune the loop – the check), a gain per pass for the growth per second σ:
+// G = (1 + σ/α)·e^(σT), α = π·F/Q the band's own rate (the group delay a pass takes, lesson 2). The loop's amplitude²:
+// the band's output² plus 2 × its Butterworth low-pass at the mode² (−90° and −3 dB there: the quadrature, no delay in
+// the gain's path), smoothed at 40 Hz; it drives a second gain that divides out the shaper's describing function (a
+// power low-passed at 6 Hz compensated late: the afterglow +50 % long at 880–1760 Hz, measured) and, at 6 Hz, the knee
+// σ = r − c·A² as an AGC on the loop's gain (its slope puts the settled level where the worklet has it) – the level the
+// same at every pitch (a tanh alone saturates high notes ≈ 10 dB lower). Glimmen from a shared slow walk (gain and
+// period); the knock (noise) and an in-band seed (a sine at the mode, charging the loop for one pass and the band's
+// time – a noise knock alone hardly rings the band, lesson 1); a −140 dB floor keeps the loop's filters alive (Chromium
+// cuts a filter whose input fell silent, lesson 4). Bebung: the pitch bus into the band's and the seed's detune and,
+// scaled by −T·ln2/1200, into the delay time. A jump rings the old mode out beside the loop, as the worklet's. Not here:
+// the worklet's exact injection of a Puls hit (the seed charges the loop within a pass) and its level-3 pair (one loop
+// at every level).
+const GLT_N = { walk: null, sq: null, sq2: null, sh: {}, df: {} };
+// the delay a cycle adds to delayTime: a click around a delay of 300 frames, in a tiny offline render (Chromium: 128)
+const GLT_CYC = { sr: 0, v: 128, busy: false };
+function gltCyc() {
+  const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  if (GLT_CYC.sr !== SR && !GLT_CYC.busy && OAC) {
+    GLT_CYC.busy = true;
+    const done = (r) => { GLT_CYC.busy = false; GLT_CYC.sr = SR; if (!r) return; const x = r.getChannelData(0), ix = []; for (let i = 0; i < x.length && ix.length < 2; i++) if (Math.abs(x[i]) > 0.1) ix.push(i); if (ix.length === 2) GLT_CYC.v = clamp(ix[1] - ix[0] - 300, 0, 512); };
+    try {
+      const c = new OAC(1, 1024, SR), d = c.createDelay(0.1), g = c.createGain(), b = c.createBuffer(1, 1, SR), s = c.createBufferSource();
+      b.getChannelData(0)[0] = 1; s.buffer = b; g.gain.value = 0.5; d.delayTime.value = 300 / SR;
+      d.connect(g); g.connect(d); d.connect(c.destination); s.connect(d); s.start(0);
+      const pr = c.startRendering();
+      if (pr && pr.then) pr.then(done, () => done(null)); else c.oncomplete = (e) => done(e.renderedBuffer);
+    } catch (e) { done(null); }
+  }
+  return GLT_CYC.v;
+}
+function gltWalk() {   // two slow walks (0.2–1 Hz, ≈ ±1 at 2σ) that loop seamlessly: 26 sines of a 32-s period, at 3 kHz
+  if (GLT_N.walk && GLT_N.walk.ctx === A.ctx) return GLT_N.walk.buf;
+  const sr = 3000, len = 32 * sr, b = A.ctx.createBuffer(2, len, sr);
+  for (let c = 0; c < 2; c++) {
+    const d = b.getChannelData(c);
+    for (let k = 7; k <= 32; k++) { const w = 2 * Math.PI * k / len, ph = 2 * Math.PI * Math.random(), a = 1 / Math.sqrt(k); for (let i = 0; i < len; i++) d[i] += a * Math.sin(w * i + ph); }
+    let s = 0; for (let i = 0; i < len; i++) s += d[i] * d[i];
+    const g = 0.5 / Math.sqrt(s / len); for (let i = 0; i < len; i++) d[i] *= g;
+  }
+  GLT_N.walk = { ctx: A.ctx, buf: b };
+  return b;
+}
+const gltTdf = (a) => { if (a < 1e-4) return 1; let s = 0; for (let k = 0; k < 64; k++) { const sn = Math.sin(Math.PI * (k + 0.5) / 64); s += Math.tanh(a * sn) * sn; } return 2 * s / (64 * a); };   // tanh's describing function
+function gltCurves(hk) {
+  const key = hk.toFixed(3);
+  if (!GLT_N.sq) { GLT_N.sq = makeShaperCurve((x) => x * x, 2049); GLT_N.sq2 = makeShaperCurve((x) => 2 * x * x, 2049); }   // the amplitude²: x² + (√2 · its quadrature)²
+  if (!GLT_N.sh[key]) GLT_N.sh[key] = makeShaperCurve((x) => Math.tanh(hk * x) / hk, 4096);
+  if (!GLT_N.df[key]) GLT_N.df[key] = makeShaperCurve((u) => 1 / gltTdf(hk * Math.sqrt(Math.max(0, u))) - 1, 1025);   // power → 1/N − 1 (onto a gain of 1)
+  return { sq: GLT_N.sq, sq2: GLT_N.sq2, sh: GLT_N.sh[key], df: GLT_N.df[key] };
+}
+// the per-pass gain for σ, and the σ a clamped gain really gives (bisection on (1 + σ/α)·e^(σT))
+const gltG = (sg, T, al) => Math.max(0, 1 + sg / al) * Math.exp(sg * T);
+function gltSig(G, T, al) { let lo = -al, hi = 50; for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (gltG(m, T, al) < G) lo = m; else hi = m; } return (lo + hi) / 2; }
+function gltNative(v, t, f, y, vel, o) {
+  const ctx = A.ctx, q = (id) => P['glt.' + id], hit = !!o.burst, cyc = gltCyc() / SR, nOf = (x) => Math.max(1, Math.ceil((128 / SR + cyc) * 1.25 * x));
+  const st = { f, y, m: 1, n: nOf(f), rel: false, rl: 0, hk: 0 };
+  const dl = v.n(ctx.createDelay(Math.min(2.9, 8 * st.n / f + 0.01))), bq = v.n(BQ('bandpass', f, 12)), sh = v.n(ctx.createWaveShaper());
+  const gDF = v.n(G(1)), lg = v.n(G(0)), tap = v.n(G(GLT_NOUT)), sq = v.n(ctx.createWaveShaper()), lq = v.n(BQ('lowpass', f, -3.01)), sq2 = v.n(ctx.createWaveShaper());
+  const lpF = v.n(BQ('lowpass', 40, -3.01)), lpP = v.n(BQ('lowpass', 6, -3.01)), kG = v.n(G(0)), dfS = v.n(ctx.createWaveShaper());
+  const ns = v.s(noiseSrc()), gN = v.n(G(0)), os = v.s(OSC('sine', f)), gS = v.n(G(0));
+  const wk = v.s(ctx.createBufferSource()), sp = v.n(ctx.createChannelSplitter(2)), gWr = v.n(G(0)), gWt = v.n(G(0)), pg = v.n(G(0));
+  const kLP = v.n(BQ('lowpass', 4000, -3.01)), kHP = v.n(BQ('highpass', 30, -3.01)), gh = v.n(BQ('bandpass', f, 12)), gG = v.n(G(0));   // (gh: the old mode after a jump)
+  sh.oversample = 'none'; KR(lg.gain); KR(gDF.gain);
+  wk.buffer = gltWalk(); wk.loop = true;
+  v.mod(bq.detune); v.mod(lq.detune); v.mod(os.detune); v.mod(gh.detune); v.lnk(v.bend ? v.bend.node || A.notePitch : A.pitchMod, pg);
+  dl.connect(bq); bq.connect(sh); sh.connect(gDF); gDF.connect(lg); lg.connect(dl);
+  bq.connect(sq); bq.connect(lq); lq.connect(sq2); sq.connect(lpF); sq2.connect(lpF); lpF.connect(dfS); dfS.connect(gDF.gain); lpF.connect(lpP); lpP.connect(kG); kG.connect(lg.gain);
+  ns.connect(gN); gN.connect(dl); gN.connect(tap); os.connect(gS); gS.connect(dl); gS.connect(tap);
+  wk.connect(sp); sp.connect(gWr, 0); sp.connect(gWt, 1); gWr.connect(lg.gain); gWt.connect(dl.delayTime); pg.connect(dl.delayTime);
+  lg.connect(tap); tap.connect(kLP); kLP.connect(kHP); kHP.connect(v.out); lg.connect(gh); gh.connect(gG); gG.connect(kLP);
+  const mode = (x) => { const yy = st.y, s = q('sprung') === '2' ? 2 : 3, m0 = st.m; let m = yy >= 0.92 || (m0 === 3 && yy >= 0.88) ? 3 : yy >= 0.77 || (m0 > 1 && yy >= 0.73) ? s : 1; while (m > 1 && m * x > 0.42 * SR) m--; return m; };
+  // a seed at the mode: in band, for one pass and the band's time (the loop adds it up – sounding at its amplitude then)
+  const seed = (at, amp, F, T, al) => { os.frequency.setValueAtTime(F, at); const g = gS.gain; g.cancelScheduledValues(at); g.setValueAtTime(0, at); g.linearRampToValueAtTime(amp, at + 0.002); g.setTargetAtTime(0, at + 0.002, T + 1 / al); };
+  // everything a height, a note, the knobs set: the gain for σ, the AGC's slope, Glimmen's depth, the band, the box
+  const upd = (now, tc = 0.04, burstEnd) => {
+    const x = st.f, m = mode(x), F = m * x, n = st.n, T = n / x, Qv = Math.max(12, 8 + 12 * q('hitze'), 2 * n * m), al = Math.PI * F / Qv;
+    const gl = 0.5 + q('gluehen'), c = 12 * gl, hk = (1 + 4 * q('hitze')) * 0.5;
+    // (the DelayNode interpolates linearly – measured: a quarter frame is 0.75/0.25 – its loss at the mode made up)
+    const fr = ((T - cyc) * SR) % 1, w = 2 * Math.PI * F / SR, G0 = 1 / Math.sqrt((1 - fr) * (1 - fr) + fr * fr + 2 * fr * (1 - fr) * Math.cos(w));
+    const r = st.rel ? st.rl : hit && !burstEnd ? 10 : gltR(st.y) * gl, Gr = G0 * gltG(Math.max(r, -0.98 * al), T, al);
+    // the AGC: through the settled amplitude A² = r/c exactly (σ = 0 there), below the threshold the slope at rest
+    const K = st.rel ? 0 : r > 0.05 ? (Gr - G0) * c / r : Gr * c * (T + 1 / (al + Math.max(r, -0.9 * al)));
+    const wr = Gr * 1.5 * (T + 1 / (al + Math.max(r, -0.9 * al))) * (st.rel ? 0.053 * Math.abs(r) : 1);   // (let go: ±8 % of the decay, as the worklet's)
+    const at = burstEnd || now;
+    for (const [pp, val] of [[lg.gain, Gr], [kG.gain, -K], [gWr.gain, wr], [bq.Q, Qv], [pg.gain, -T * Math.LN2 / 1200], [gWt.gain, -T * 2 * Math.LN2 / 1200]]) { if (burstEnd) pp.setTargetAtTime(val, at, 0.01); else setP(pp, val, tc); }
+    // a jump (Sprung): the band moves within ≈ 30 ms and a seed charges the new mode as the band arrives (seeded at once,
+    // it was gone before the band came: a hole of 21–45 dB, measured); the old mode rings out beside the loop as in the
+    // worklet – a band-pass on it, fed by the loop all along (in tune and in phase with it), heard only from the jump on
+    let bt = 0.008;
+    if (m !== st.m) {
+      st.m = m;
+      if (st.started) { bt = 0.01; seed(at + 2 * bt, 0.8 * Math.sqrt(Math.max(0, gltR(st.y) * gl) / c), F, T, al); gG.gain.cancelScheduledValues(at); gG.gain.setValueAtTime(1, at); gG.gain.setTargetAtTime(0, at, 0.035); st.ghost = at + 0.2; }
+    }
+    if (!(st.ghost > at)) { setP(gh.frequency, F, 0.008); setP(gh.Q, Math.max(4, Math.PI * F * 0.035), 0.008); }   // (its ring: τ 35 ms)
+    if (burstEnd) { bq.frequency.setTargetAtTime(F, at, bt); lq.frequency.setTargetAtTime(F, at, bt); } else { setP(bq.frequency, F, bt); setP(lq.frequency, F, bt); }
+    if (hk !== st.hk) { st.hk = hk; const cv = gltCurves(hk); try { sh.curve = cv.sh; dfS.curve = cv.df; } catch (e) {} }
+    const lpf = Math.min(0.45 * SR, Math.max(1500 * Math.pow(16 / 3, q('kasten')), 1.25 * F)); setP(kLP.frequency, lpf, tc); setP(kHP.frequency, Math.min(60, 0.5 * x), tc);
+    st.T = T; st.al = al; st.F = F; st.Gr = Gr; st.G0 = G0; st.r = r;
+  };
+  { const cv = gltCurves(0.5); sq.curve = cv.sq; sq2.curve = cv.sq2; }
+  dl.delayTime.setValueAtTime(st.n / f - cyc, t);
+  st.m = mode(f); upd(t, 0.001); st.started = true;
+  // the onset: the knock (5–20 ms of noise, Zunder) and the seed of the note's own tone; a Puls hit seeds louder
+  const z = q('zunder'), kd = 0.005 + 0.015 * Math.random(), fl = 3e-4 * (0.25 + z);
+  gN.gain.setValueAtTime(0.35 * (0.2 + 0.8 * z) * vel * (hit ? 0.5 : 1), t); gN.gain.setTargetAtTime(fl, t + 0.0005, kd / 3);
+  seed(t, (hit ? 0.5 : 0.25 * (0.5 + 0.5 * z)) * vel, st.F, st.T, st.al);
+  ns.start(t, Math.random() * 1.9); os.start(t); wk.start(t, Math.random() * 30);
+  // the afterglow: σ = −6.9/T60 (as far as the band lets the loop decay – the rest on the output), the floor at −140 dB
+  v.glow = (now, tg, sched) => {
+    st.rel = true; st.rl = -6.908 / Math.max(0.05, tg);
+    upd(now, 0.01, sched);
+    const sa = gltSig(st.Gr / st.G0, st.T, st.al), res = st.rl - sa;   // (what the band would not let the loop lose)
+    if (res < -0.05) tap.gain.setTargetAtTime(0, sched || now, -1 / res);
+    gN.gain.cancelScheduledValues(sched || now); gN.gain.setTargetAtTime(1e-7, sched || now, 0.02);
+  };
+  v.setY = (ny) => { st.y = clamp(ny, 0, 1); if (!st.rel && !hit) upd(A.ctx.currentTime); };
+  v.setF = (nf, glide) => {
+    nf = clamp(nf, 16, 8000); st.f = nf;
+    if (nOf(nf) > st.n) st.n = nOf(nf);   // (a bend far up: more periods – a cycle's delay stays above one render quantum)
+    glideTo(dl.delayTime, Math.min(dl.delayTime.maxValue || 2.9, st.n / nf - cyc), glide); upd(A.ctx.currentTime);
+    glideTo(bq.frequency, st.F, glide); glideTo(lq.frequency, st.F, glide); glideTo(os.frequency, st.F, glide);
+  };
+  v.upd = () => upd(A.ctx.currentTime);
+  if (hit) v.glow(t, P['glt.nachgluehen'], t + o.gate);
+  v.gltN = { dl, bq, lg, st, gWr, gWt, kG, gDF, tap, sh };   // (for the tests)
+}
+
 const ENGINES = {
   neb: {
     sustain: true,
@@ -5612,6 +5777,18 @@ const ENGINES = {
       const peak = vel * ZPF_PEAK;
       if (o.burst) burstEnv(v, t, peak, 0.002, o.gate, 0.25 * (o.decayMul || 1));
       else wkHold(v, t, peak, 0.002, P['zpf.koerper'] === 'fels' ? 0.5 : 0.3);   // (let go: the stick coasts, the stone creaks once or twice more)
+    },
+  },
+  // Glut: a tuned feedback loop (myzel-ember). Höhe is the loop's gain as growth per second: under a third of the field
+  // a knock and a muffled ping, above it the tone grows by itself, swings in and breathes; at the top it jumps to the
+  // octave or the twelfth. Let go: it glows on (Nachglühen) – the loop decays, the envelope only closes it. Puls: the
+  // loop's state is set at once and grows for the gate, then glows. Without AudioWorklet: its own native loop.
+  glt: {
+    sustain: true, needs: 'worklet', fallback: 'native',
+    start(v, t, f, y, vel, o) {
+      if (gltNat()) gltNative(v, t, f, y, vel, o);
+      else wkVoice(v, 'myzel-ember', f, y, { prm: wkPrm('glt'), seed: wkSeed(), on: { on: t, f, y, vel, burst: !!o.burst, gate: o.burst ? o.gate : 0, seed: wkSeed() } });
+      gltEnv(v, t, vel, o);
     },
   },
 };
@@ -8772,9 +8949,260 @@ function myzelDsp() {
     }
   }
 
+  // ---- Glut: myzel-ember – a tuned feedback loop (SPEC §3.3) ----
+  // A delay of one period of the note, a band-pass (RBJ: 0 dB and zero phase at its centre) on the mode m·f, a tanh,
+  // a gain, back into the delay. Höhe is the growth per second r (y 0 → −6, 0.3 → 0: the threshold, 0.6 → +8,
+  // 1 → +12 nepers/s, × (0.5 + Glühen)), the same at every pitch: the loop's every part is exponentially weighted –
+  // z⁻¹ → e^(σ/SR)·z⁻¹ in the delay and in the band's poles and zeros – so whatever the neutral loop sustains grows or
+  // dies at exactly σ per second (a gain per pass would make it 16× pitch-dependent, and with the band's group delay
+  // a narrow band at 55 Hz could never die faster than its own ring – the check, lesson 2; measured: 69.5–71.8 dB/s at
+  // 55–1760 Hz for r = 8, i.e. 69.5). The neutral loop: the interpolator's loss and phase compensated at the mode, the
+  // tanh's gain on the fundamental divided out by its describing function at the loop's amplitude (read in quadrature
+  // from the band's output) – the tanh only colours (Hitze: drive and band). The amplitude settles where σ = r − c·A²
+  // (the Hopf normal form a real loop follows near its threshold, per second instead of per pass; A² smoothed over 50 ms,
+  // so it swings in ≈ 1 dB over): a soft knee in loudness above the threshold, the same at every pitch (a tanh alone
+  // limits by its compression per pass: ≈ 10 dB lower at 1.76 kHz than at 220 Hz) – and lets go at once: let go,
+  // σ = −6.9/Nachglühen (T60 = Nachglühen). Glimmen, always on: r and the loop's period wander (±1.5/s, ±2 ct, 0.2–1 Hz;
+  // let go ±8 % of the decay) – the settled tone breathes. Sprung: above y 0.77 (0.92) the band jumps to the 2nd or
+  // 3rd mode (Oktave, Duodezime), seeded there at 0.4 × the loop's amplitude, while the old mode rings out beside the
+  // loop (35 ms) – SPEC's 60-ms glide of the band let the old mode die before the new one had grown: a hole of 28–83 dB,
+  // measured; the odd tanh never seeds even modes – the check. Onset: a knock of noise (Zunder) and one period of the
+  // note's own tone in the loop with the band's state (a noise burst falls mostly outside the band – lesson 1); a Puls
+  // hit sets the loop's state at once and grows at +10/s for the gate. Level 3: two loops ±5 ct, left and right,
+  // coupled by a rotation (lossless) and seeded a quarter period apart.
+  const EMB_OUT = 0.6, EMB_KD = 0.5, EMB_SEED = 0.25, EMB_INJ = 0.5, EMB_KNOCK = 0.35, EMB_FLOOR = 3e-4, EMB_KAP = 0.1, EMB_DET = 5, EMB_RTOP = 12, EMB_GMAX = 10, EMB_JUMP = 0.4, EMB_GHOST = 0.035, EMB_WALK = 1.2;
+  const embR = (y) => (y < 0.3 ? -6 + 20 * y : y < 0.6 ? (y - 0.3) * 80 / 3 : 8 + (y - 0.6) * 10);   // Höhe → growth (nepers/s) before Glühen
+  const TDF = new Float32Array(1026);   // the describing function of tanh: the gain a sine of amplitude a sees, a in [0, 16]
+  for (let i = 0; i < 1026; i++) { const a = i / 64; if (!i) { TDF[0] = 1; continue; } let s = 0; for (let k = 0; k < 128; k++) { const sn = Math.sin(Math.PI * (k + 0.5) / 128); s += Math.tanh(a * sn) * sn; } TDF[i] = 2 * s / (128 * a); }
+  const tdf = (a) => { if (a >= 16) return 4 / (Math.PI * a); const p = a * 64, i = p | 0; return TDF[i] + (p - i) * (TDF[i + 1] - TDF[i]); };
+  class Ember extends MyzelProc {
+    constructor(o) {
+      super(o);
+      const po = this.po;
+      this.rich = !!po.rich;
+      const K = this.Kx = this.rich ? 2 : 1;
+      let n = 8; while (n < Math.ceil(SR / 16 * 1.2) + 8) n <<= 1;   // one period of the lowest note (with a bend's and the walk's room)
+      this.N = n; this.buf = new Float32Array(K * n); this.w = 0;
+      this.xr = new Float32Array(K * 1024); this.xw = 0;   // each loop's band output, a quarter period back: its amplitude, a jump's ghost
+      // per loop: delay (now, target), Lagrange weights, the band (coefficients, state, centre), the neutral gain, the
+      // growth σ and its weighting, the amplitude² (now, smoothed), Glimmen's two walks (r, period), the ghost of a jump
+      this.D = new Float64Array(K); this.Dt = new Float64Array(K); this.h = new Float64Array(4 * K); this.di = new Int32Array(K);
+      this.b0 = new Float64Array(K); this.a1 = new Float64Array(K); this.a2 = new Float64Array(K); this.b2 = new Float64Array(K); this.z1 = new Float64Array(K); this.z2 = new Float64Array(K);
+      this.Fc = new Float64Array(K); this.G0 = new Float64Array(K); this.qD = new Float64Array(K); this.sg = new Float64Array(K); this.A2 = new Float64Array(K); this.As = new Float64Array(K);
+      this.gw = new Float64Array(K); this.gv = new Float64Array(K); this.tw = new Float64Array(K); this.tv = new Float64Array(K);
+      this.hRe = new Float64Array(K); this.hIm = new Float64Array(K); this.hA = new Float64Array(K); this.hC = new Float64Array(K); this.hS = new Float64Array(K);   // the old mode ringing out after a jump
+      this.lp = new Float64Array(6); this.hp = new Float64Array(4);
+      this.p = { gluehen: 0.5, nachgluehen: 1.5, zunder: 0.4, hitze: 0.5, sprung: '3', kasten: 0.5 };
+      this.rng = new PRNG(po.seed || 7);
+      if (po.prm) this.set(po.prm);
+      this.vel = 0.75; this.m = 1; this.kl = 1;
+      this.reset();
+    }
+    reset() {
+      this.buf.fill(0); this.xr.fill(0); this.z1.fill(0); this.z2.fill(0); this.A2.fill(0); this.As.fill(0); this.D.fill(0); this.hA.fill(0);
+      this.lp.fill(0); this.hp.fill(0); this.kn = 0; this.ni = 0; this.gate = 0; this.held = false;
+    }
+    set(p) { for (const k in p) if (k in this.p) this.p[k] = k === 'sprung' ? String(p[k]) : +p[k] || 0; }
+    // the mode for a height: Sprung above 0.75, the twelfth above 0.9 (hysteresis ±0.02); never above 0.42·SR
+    mode(f) {
+      const y = this.y, s = this.p.sprung === '2' ? 2 : 3, m0 = this.m;
+      let m = y >= 0.92 || (m0 === 3 && y >= 0.88) ? 3 : y >= 0.77 || (m0 > 1 && y >= 0.73) ? s : 1;
+      while (m > 1 && m * f > 0.42 * SR) m--;
+      return m;
+    }
+    start(m) {
+      this.vel = m.vel != null ? m.vel : 0.75; this.burst = !!m.burst;
+      if (m.seed) this.rng = new PRNG(m.seed);
+      if (m.y != null) this.y = m.y;
+      this.held = true; this.kl = 1;
+      this.gate = this.burst ? Math.max(1, Math.round((m.gate || 0.22) * SR)) : 0;
+      const K = this.Kx, z = this.p.zunder, f = Math.min(this.f, 0.42 * SR);
+      this.m = this.mode(f);
+      for (let k = 0; k < K; k++) {
+        this.gw[k] = 2 * this.rng.next() - 1; this.gv[k] = 0; this.tw[k] = 2 * this.rng.next() - 1; this.tv[k] = 0;
+        this.D[k] = 0; this.sg[k] = 0; this.hA[k] = 0;
+        this.coef(k, 0);
+        // the onset: one period of its own tone in the loop (a Puls hit: the loop state itself, louder)
+        this.seed(k, (this.burst ? EMB_INJ : EMB_SEED * (0.5 + 0.5 * z)) * this.vel);
+      }
+      // the knock: 5–20 ms of noise into the loop (heard, and ringing the band), harder with Zunder and velocity
+      const dur = (0.005 + 0.015 * this.rng.next()) * SR;
+      this.kn = EMB_KNOCK * (0.2 + 0.8 * z) * this.vel * (this.burst ? 0.5 : 1); this.kd = Math.exp(-3 / dur);
+      this.ni = (this.rng.next() * 65536) | 0;
+    }
+    stop(m) { this.held = false; this.kl = m && m.k > 0 ? m.k : 1; }
+    // one period of the mode's tone, written into the loop (fresh: the band's state with it, so it sounds at once). The
+    // second loop of level 3 a quarter period late: the pair starts as its coupling's own mode (seeded in phase, the
+    // rotation sloshed the energy from side to side and the knees settled the pair 1.6 dB under level 1 – measured)
+    seed(k, amp) {
+      const N = this.N, M = N - 1, o = k * N, buf = this.buf, w0 = 2 * Math.PI * this.Fc[k] / SR, n = Math.min(N - 8, Math.ceil(this.D[k]) + 4), ph = k ? -Math.PI / 2 : 0;
+      for (let i = 1; i <= n; i++) buf[o + ((this.w - i) & M)] = amp * Math.sin(ph - w0 * i);
+      const b = 1 - this.b0[k];   // (the band's steady state for a sine at its centre: y = x)
+      this.z1[k] = amp * b * Math.sin(ph); this.z2[k] = amp * (b * Math.sin(w0 + ph) + this.a1[k] * Math.sin(ph));
+      this.A2[k] = amp * amp;
+    }
+    // per block: the loop's note (Glimmen's walk on its period, level 3's ±5 ct), its mode, the band, the delay with the
+    // interpolator's phase and loss compensated at the mode, the growth σ and its weighting
+    coef(k, n) {
+      const p = this.p, K = this.Kx, rich = K > 1 && !this.lite, dt = n / SR;
+      // Glimmen: two slow walks per loop (white noise through 1 Hz and 0.2 Hz one-poles; ≈ ±1 at 2σ)
+      if (n) {
+        const c1 = 1 - Math.exp(-2 * Math.PI * dt), c2 = 1 - Math.exp(-2 * Math.PI * 0.2 * dt), s = EMB_WALK / Math.sqrt(dt);   // (the noise per step scaled with the step: the same walk at any block size)
+        this.gv[k] += c1 * (s * (2 * this.rng.next() - 1) - this.gv[k]); this.gw[k] += c2 * (this.gv[k] - this.gw[k]);
+        this.tv[k] += c1 * (s * (2 * this.rng.next() - 1) - this.tv[k]); this.tw[k] += c2 * (this.tv[k] - this.tw[k]);
+      }
+      const fk = Math.min(this.f, 0.42 * SR) * cents((rich ? (k ? EMB_DET : -EMB_DET) : 0) + 2 * this.tw[k]);
+      // the band on the mode m (the delay stays one period of the note: the mode is its m-th harmonic)
+      const F = Math.min(this.m * fk, 0.45 * SR), Q = 8 + 12 * p.hitze, w0 = 2 * Math.PI * F / SR, al = Math.sin(w0) / (2 * Q), a0 = 1 + al;
+      this.Fc[k] = F;
+      // the delay: one period of the note, the 4-tap interpolator's phase error at F taken out (one correction step)
+      let D = SR / fk;
+      this.lagH(D, w0); D += D - this.lpd; this.lagH(D, w0);
+      this.Dt[k] = Math.max(2, Math.min(this.N - 8, D));
+      if (!this.D[k]) this.D[k] = this.Dt[k];
+      this.G0[k] = 1 / Math.max(0.5, this.lmag);
+      // the growth per second: held – Höhe (with Glühen) and Glimmen, less c·A² (the knee); a Puls gate +10/s; let go – the
+      // afterglow (T60 = Nachglühen), still glimmering a little
+      // (c·A² on the amplitude² smoothed over 50 ms: the knee swings in – ≈ 1 dB over, settled in ≈ 0.4 s)
+      if (n) this.As[k] += (this.A2[k] - this.As[k]) * (1 - Math.exp(-dt / 0.05)); else this.As[k] = this.A2[k];
+      const gl = 0.5 + p.gluehen, c = EMB_RTOP * gl, A2 = this.As[k], rl = -6.908 / Math.max(0.05, p.nachgluehen * this.kl);
+      let sg;
+      if (this.held && this.gate > 0) sg = 10 + 1.5 * this.gw[k] - c * A2;
+      else if (this.held && !this.burst) sg = embR(this.y) * gl + 1.5 * this.gw[k] - c * A2;
+      else sg = rl * (1 + 0.08 * this.gw[k]);   // (±8 % of the decay: the glow flickers, its T60 stays Nachglühen)
+      sg = sg > 30 ? 30 : sg < -80 ? -80 : sg;
+      this.sg[k] = sg;
+      const q = Math.exp(sg / SR);
+      this.b0[k] = al / a0; this.a1[k] = -2 * Math.cos(w0) / a0 * q; this.a2[k] = (1 - al) / a0 * q * q; this.b2[k] = -al / a0 * q * q;
+      this.qD[k] = Math.exp(sg * this.D[k] / SR);
+    }
+    // the 4-tap Lagrange interpolator at delay d, at w0: its phase delay (lpd, samples) and gain (lmag)
+    lagH(d, w0) {
+      const i = d | 0, q = d - i + 1, h0 = -(q - 1) * (q - 2) * (q - 3) / 6, h1 = q * (q - 2) * (q - 3) / 2, h2 = -q * (q - 1) * (q - 3) / 2, h3 = q * (q - 1) * (q - 2) / 6;
+      const c0 = w0 * (i - 1), re = h0 * Math.cos(c0) + h1 * Math.cos(c0 + w0) + h2 * Math.cos(c0 + 2 * w0) + h3 * Math.cos(c0 + 3 * w0), im = -(h0 * Math.sin(c0) + h1 * Math.sin(c0 + w0) + h2 * Math.sin(c0 + 2 * w0) + h3 * Math.sin(c0 + 3 * w0));
+      let pd = -Math.atan2(im, re) / w0; const c = 2 * Math.PI / w0; pd += Math.round((d - pd) / c) * c;
+      this.lpd = pd; this.lmag = Math.hypot(re, im);
+    }
+    lag(k) { const d = this.D[k], i = d | 0, q = d - i + 1, h = this.h, j = 4 * k; this.di[k] = i; h[j] = -(q - 1) * (q - 2) * (q - 3) / 6; h[j + 1] = q * (q - 2) * (q - 3) / 2; h[j + 2] = -q * (q - 1) * (q - 3) / 2; h[j + 3] = q * (q - 1) * (q - 2) / 6; }
+    render(L, R, a, b) {
+      const n = b - a, p = this.p, two = !!(this.rich && R), K = two && !this.lite ? 2 : 1;
+      if (this.gate > 0) { this.gate -= n; if (this.gate <= 0) { this.gate = 0; this.held = false; this.off = true; } }   // a Puls gate ends: the afterglow
+      // Sprung: the band jumps to the new mode, seeded there from the loop's amplitude; the old mode rings out beside
+      // the loop (a gliding band let the old mode die before the new one had grown: a hole of 28–83 dB, measured)
+      { const m = this.mode(Math.min(this.f, 0.42 * SR));
+        if (m !== this.m) {
+          this.m = m;
+          for (let k = 0; k < this.Kx; k++) {
+            const A = Math.sqrt(this.A2[k]), F = this.Fc[k], xo = k * 1024, P = SR / (4 * F), xw = (this.xw - 1) & 1023, yb = this.xr[xo + xw], i0 = Math.round(P);
+            this.hIm[k] = yb; this.hRe[k] = -this.xr[xo + ((xw - i0) & 1023)]; this.hA[k] = 1;
+            const w = 2 * Math.PI * F / SR, r = Math.exp(-1 / (EMB_GHOST * SR)); this.hC[k] = r * Math.cos(w); this.hS[k] = r * Math.sin(w);
+            this.coef(k, 0); this.seed(k, EMB_JUMP * A);
+          }
+        } }
+      const hk = (1 + 4 * p.hitze) * EMB_KD, ihk = 1 / hk, bias = p.sprung === '2' ? 0.05 : 0, fl = this.held ? EMB_FLOOR * (0.25 + p.zunder) : 0;
+      const N = this.N, M = N - 1, buf = this.buf, xr = this.xr, ca = 1 - Math.exp(-1 / (0.002 * SR));
+      const w0 = this.w, xw0 = this.xw, kd = this.kd;
+      for (let k = 0; k < K; k++) this.coef(k, n);
+      if (K === 1) {   // one loop (level 1, or level 3 after underruns): everything in locals
+        const b0 = this.b0[0], a1 = this.a1[0], a2 = this.a2[0], b2 = this.b2[0], G0 = this.G0[0], qD = this.qD[0], hh = this.h;
+        const Pq = SR / (4 * this.Fc[0]), Pi = Pq | 0, Pf = Pq - Pi;
+        let D = this.D[0]; const dD = (this.Dt[0] - D) / n, glide = dD > 1e-4 || dD < -1e-4;
+        if (!glide) D = this.D[0] = this.Dt[0];
+        this.lag(0);
+        let z1 = this.z1[0], z2 = this.z2[0], A2 = this.A2[0], w = w0, xw = xw0, kn = this.kn, ni = this.ni, nf = (ni + 32768) & 65535;
+        let di = this.di[0], h0 = hh[0], h1 = hh[1], h2 = hh[2], h3 = hh[3];
+        const gA = this.hA[0], gc = this.hC[0], gs = this.hS[0]; let gr = this.hRe[0], gi = this.hIm[0];
+        for (let i = a; i < b; i++) {
+          if (glide) { D += dD; this.D[0] = D; this.lag(0); di = this.di[0]; h0 = hh[0]; h1 = hh[1]; h2 = hh[2]; h3 = hh[3]; }
+          const j = w + 1 - di;
+          const x = qD * (h0 * buf[j & M] + h1 * buf[(j - 1) & M] + h2 * buf[(j - 2) & M] + h3 * buf[(j - 3) & M]);
+          const yb = b0 * x + z1; z1 = z2 - a1 * yb; z2 = b2 * x - a2 * yb;
+          xr[xw] = yb;
+          // the amplitude: the band's output now and a quarter period ago
+          const q0 = xr[(xw - Pi) & 1023], yq = q0 + Pf * (xr[(xw - Pi - 1) & 1023] - q0);
+          A2 += ca * (yb * yb + yq * yq - A2);
+          let g = G0 / tdf(hk * Math.sqrt(A2)); if (g > EMB_GMAX) g = EMB_GMAX;
+          ni = (ni + 1) & 65535; nf = (nf + 1) & 65535;
+          let s = g * tanh(hk * (yb + bias)) * ihk + kn * NOISE[ni] + fl * NOISE[nf];
+          kn *= kd;
+          if (s > 4) s = 4; else if (s < -4) s = -4;
+          buf[w] = s; L[i] = s;
+          if (gA) { const re = gr * gc - gi * gs; gi = gr * gs + gi * gc; gr = re; L[i] += gi; }
+          w = (w + 1) & M; xw = (xw + 1) & 1023;
+        }
+        this.z1[0] = flush(z1); this.z2[0] = flush(z2); this.A2[0] = A2;
+        if (gA) { this.hRe[0] = gr; this.hIm[0] = gi; if (gr * gr + gi * gi < 1e-12) this.hA[0] = 0; }
+        this.w = w; this.xw = xw; this.kn = kn < 1e-6 ? 0 : kn; this.ni = ni;
+      } else {
+        // two loops, coupled by a rotation (κ = 0.1: each keeps √(1 − κ²) of itself and takes ±κ of the other, sample by
+        // sample) – lossless whatever their phases: the pair neither grows nor dies by the coupling, as a feedback delay
+        // network's orthogonal matrix (a lagged coupling, even in quadrature, added gain whenever the detuned loops passed
+        // in phase: the afterglow grew back – measured)
+        const cr = Math.sqrt(1 - EMB_KAP * EMB_KAP), sr = EMB_KAP, hh = this.h, b0 = this.b0, a1 = this.a1, a2 = this.a2, b2 = this.b2, z1 = this.z1, z2 = this.z2, A2 = this.A2, D = this.D, di = this.di;
+        const G00 = this.G0[0], G01 = this.G0[1], qD0 = this.qD[0], qD1 = this.qD[1];
+        const Pq0 = SR / (4 * this.Fc[0]), Pi0 = Pq0 | 0, Pf0 = Pq0 - Pi0, Pq1 = SR / (4 * this.Fc[1]), Pi1 = Pq1 | 0, Pf1 = Pq1 - Pi1;
+        const dD0 = (this.Dt[0] - D[0]) / n, dD1 = (this.Dt[1] - D[1]) / n, glide = Math.abs(dD0) > 1e-4 || Math.abs(dD1) > 1e-4;
+        if (!glide) { D[0] = this.Dt[0]; D[1] = this.Dt[1]; }
+        this.lag(0); this.lag(1);
+        let w = w0, xw = xw0, kn = this.kn, ni = this.ni, n1 = (ni + 7919) & 65535, nf = (ni + 32768) & 65535, nf1 = (ni + 40687) & 65535;
+        const gA0 = this.hA[0], gA1 = this.hA[1];
+        for (let i = a; i < b; i++) {
+          if (glide) { D[0] += dD0; D[1] += dD1; this.lag(0); this.lag(1); }
+          let j = w + 1 - di[0];
+          const x0 = qD0 * (hh[0] * buf[j & M] + hh[1] * buf[(j - 1) & M] + hh[2] * buf[(j - 2) & M] + hh[3] * buf[(j - 3) & M]);
+          j = w + 1 - di[1];
+          const x1 = qD1 * (hh[4] * buf[N + (j & M)] + hh[5] * buf[N + ((j - 1) & M)] + hh[6] * buf[N + ((j - 2) & M)] + hh[7] * buf[N + ((j - 3) & M)]);
+          const y0 = b0[0] * x0 + z1[0]; z1[0] = z2[0] - a1[0] * y0; z2[0] = b2[0] * x0 - a2[0] * y0;
+          const y1 = b0[1] * x1 + z1[1]; z1[1] = z2[1] - a1[1] * y1; z2[1] = b2[1] * x1 - a2[1] * y1;
+          xr[xw] = y0; xr[1024 + xw] = y1;
+          let q = xr[(xw - Pi0) & 1023], yq = q + Pf0 * (xr[(xw - Pi0 - 1) & 1023] - q); A2[0] += ca * (y0 * y0 + yq * yq - A2[0]);
+          q = xr[1024 + ((xw - Pi1) & 1023)]; yq = q + Pf1 * (xr[1024 + ((xw - Pi1 - 1) & 1023)] - q); A2[1] += ca * (y1 * y1 + yq * yq - A2[1]);
+          let g0 = G00 / tdf(hk * Math.sqrt(A2[0])); if (g0 > EMB_GMAX) g0 = EMB_GMAX;
+          let g1 = G01 / tdf(hk * Math.sqrt(A2[1])); if (g1 > EMB_GMAX) g1 = EMB_GMAX;
+          const v0 = g0 * tanh(hk * (y0 + bias)) * ihk, v1 = g1 * tanh(hk * (y1 + bias)) * ihk;
+          ni = (ni + 1) & 65535; n1 = (n1 + 1) & 65535; nf = (nf + 1) & 65535; nf1 = (nf1 + 1) & 65535;
+          let sL = cr * v0 - sr * v1 + kn * NOISE[ni] + fl * NOISE[nf], sR = sr * v0 + cr * v1 + kn * NOISE[n1] + fl * NOISE[nf1];
+          kn *= kd;
+          if (sL > 4) sL = 4; else if (sL < -4) sL = -4;
+          if (sR > 4) sR = 4; else if (sR < -4) sR = -4;
+          buf[w] = sL; buf[N + w] = sR; L[i] = sL; R[i] = sR;
+          w = (w + 1) & M; xw = (xw + 1) & 1023;
+        }
+        for (let k = 0; k < 2; k++) { z1[k] = flush(z1[k]); z2[k] = flush(z2[k]); }
+        // the old mode after a jump, ringing out beside the loops
+        for (let k = 0; k < 2; k++) if (k ? gA1 : gA0) {
+          const X = k ? R : L, gc = this.hC[k], gs = this.hS[k]; let gr = this.hRe[k], gi = this.hIm[k];
+          for (let i = a; i < b; i++) { const re = gr * gc - gi * gs; gi = gr * gs + gi * gc; gr = re; X[i] += gi; }
+          this.hRe[k] = gr; this.hIm[k] = gi; if (gr * gr + gi * gi < 1e-12) this.hA[k] = 0;
+        }
+        this.w = w; this.xw = xw; this.kn = kn < 1e-6 ? 0 : kn; this.ni = ni;
+      }
+      if (K === 1 && this.Kx > 1) {   // (after underruns: one loop; the second's line keeps its place)
+        const o = this.N, M2 = this.N - 1; for (let i = 0; i < n; i++) buf[o + ((w0 + i) & M2)] = 0;
+      }
+      // the box: a low-pass (Kasten 1.5–8 kHz, never below the mode) and a gentle high-pass under the note
+      const F = this.Fc[0], fc = Math.max(1500 * Math.pow(16 / 3, p.kasten), 1.25 * F), fh = Math.min(60, 0.5 * Math.min(this.f, F));
+      const wl = 2 * Math.PI * Math.min(fc, 0.45 * SR) / SR, all = Math.sin(wl) / Math.SQRT2, la0 = 1 + all, lb0 = (1 - Math.cos(wl)) / 2 / la0, lb1 = 2 * lb0, la1 = -2 * Math.cos(wl) / la0, la2 = (1 - all) / la0;
+      const hc = Math.exp(-2 * Math.PI * fh / SR), og = EMB_OUT * (two ? Math.SQRT1_2 : 1), lp = this.lp, hp = this.hp;
+      for (let c = 0; c < (two ? 2 : 1); c++) {
+        const X = c ? R : L, s = 3 * c, t = 2 * c;
+        if (c && K === 1) { R.set(L.subarray(a, b), a); break; }
+        let s1 = lp[s], s2 = lp[s + 1], hx = hp[t], hy = hp[t + 1];
+        for (let i = a; i < b; i++) {
+          const x = X[i], yv = lb0 * x + s1; s1 = lb1 * x - la1 * yv + s2; s2 = lb0 * x - la2 * yv;
+          const hv = hc * (hy + yv - hx); hx = yv; hy = hv;
+          X[i] = og * hv;
+        }
+        lp[s] = flush(s1); lp[s + 1] = flush(s2); hp[t] = hx; hp[t + 1] = flush(hy);
+      }
+      if (!two && R) R.set(L.subarray(a, b), a);
+      else if (two) { let e = 0; for (let i = a; i < b; i++) e += R[i] * R[i]; if (!(e < 1e6)) { this.reset(); L.fill(0, a, b); R.fill(0, a, b); } }   // (the contract's guard reads the left side only)
+    }
+  }
+
   // an empty voice: the per-node price of the contract (SPEC §8 step 1 gate, ≈ 0.06 + 0.03 per param)
   class Null extends MyzelProc { render(L, R, a, b) { for (let i = a; i < b; i++) L[i] = 0; } }
-  for (const [k, C] of [['myzel-blow', Blow], ['myzel-scan', Scan], ['myzel-bow', Bow], ['myzel-rot', Rot], ['myzel-aeol', Aeol], ['myzel-gendy', Gendy], ['myzel-web', Web], ['myzel-string', Strg], ['myzel-syrinx', Syrinx], ['myzel-scrape', Scrape], ['myzel-null', Null]]) registerProcessor(k, C);
+  for (const [k, C] of [['myzel-blow', Blow], ['myzel-scan', Scan], ['myzel-bow', Bow], ['myzel-rot', Rot], ['myzel-aeol', Aeol], ['myzel-gendy', Gendy], ['myzel-web', Web], ['myzel-string', Strg], ['myzel-syrinx', Syrinx], ['myzel-scrape', Scrape], ['myzel-ember', Ember], ['myzel-null', Null]]) registerProcessor(k, C);
   return { SIN, NOISE, Reso, Biquad, Allpass1, OnePole, DcBlock, FracDelay, PRNG };   // (for later processors; unused here)
 }
 // end myzelDsp
@@ -10980,7 +11408,7 @@ midiTarget('morph', 'Morph A↔B', null, { group: 'Mixer', cont: true, get: () =
 const MACRO = { neb: ['neb.cut', 'neb.res'], kor: ['kor.dens', 'kor.size'], hau: ['hau.color', 'hau.q'], glo: ['glo.index', 'glo.ratio'], mem: ['mem.drop', 'mem.decay'],
   sai: ['sai.bright', 'sai.decay'], sch: ['sch.bright', 'sch.beat'], gng: ['gng.bloom', 'gng.bright'], klb: ['klb.over', 'klb.buzz'], obt: ['obt.focus', 'obt.wander'],
   stm: ['stm.vib', 'stm.choir'], swm: ['swm.chaos', 'swm.unrest'], tie: ['tie.drive', 'tie.drop'], trp: ['trp.chirp', 'trp.rain'],
-  hlm: ['hlm.atem', 'hlm.blatt'], rnk: ['rnk.feder', 'rnk.daempfung'], elm: ['elm.spannung', 'elm.knistern'], jrg: ['jrg.schnitt', 'jrg.holz'], hrz: ['hrz.druck', 'hrz.harz'], shn: ['shn.ebow', 'shn.daempfung'], zpf: ['zpf.rast', 'zpf.klang'], mdr: ['mdr.pilz', 'mdr.knistern'], boe: ['boe.wind', 'boe.fang'], amo: ['amo.zeit', 'amo.punkte'], gsp: ['gsp.kopplung', 'gsp.nachklang'], rhz: ['rhz.reiz', 'rhz.weg'], khl: ['khl.druck', 'khl.rauheit'] };
+  hlm: ['hlm.atem', 'hlm.blatt'], rnk: ['rnk.feder', 'rnk.daempfung'], elm: ['elm.spannung', 'elm.knistern'], jrg: ['jrg.schnitt', 'jrg.holz'], hrz: ['hrz.druck', 'hrz.harz'], shn: ['shn.ebow', 'shn.daempfung'], zpf: ['zpf.rast', 'zpf.klang'], glt: ['glt.gluehen', 'glt.hitze'], mdr: ['mdr.pilz', 'mdr.knistern'], boe: ['boe.wind', 'boe.fang'], amo: ['amo.zeit', 'amo.punkte'], gsp: ['gsp.kopplung', 'gsp.nachklang'], rhz: ['rhz.reiz', 'rhz.weg'], khl: ['khl.druck', 'khl.rauheit'] };
 const macroId = (k) => (MACRO[P['v.eng']] || MACRO.neb)[k];
 midiTarget('macro.a', 'Klang-Makro A', null, { group: 'Klang', cont: true, pidf: () => macroId(0) });
 midiTarget('macro.b', 'Klang-Makro B', null, { group: 'Klang', cont: true, pidf: () => macroId(1) });
@@ -16110,7 +16538,7 @@ function onParamChanged(id) {
     case 'neb':
       if (id === 'neb.cut' || id === 'neb.ymod' || id === 'neb.res') for (const t of touches.values()) for (const { v } of t.voices) if (v.alive && v.eng === 'neb') { v.setY(modY(t)); setP(v.filt.Q, P['neb.res']); }
       break;
-    case 'hlm': case 'rnk': case 'hrz': case 'shn': case 'zpf': case 'khl': case 'mdr': case 'boe': case 'amo':   // the sounding voices follow at once (the processor reads its knobs per block; Moder's body, mallet and Nachklang at the next strike)
+    case 'hlm': case 'rnk': case 'hrz': case 'shn': case 'zpf': case 'glt': case 'khl': case 'mdr': case 'boe': case 'amo':   // the sounding voices follow at once (the processor reads its knobs per block; Moder's body, mallet and Nachklang at the next strike)
       for (const v of A.voices) if (v.alive && v.as === pre) { if (v.wk) v.wk.port.postMessage({ set: wkPrm(pre) }); else if (v.upd) v.upd(); }
       if (id === 'zpf.koerper') for (const fn of CTL['zpf.klang'] || []) fn(P['zpf.klang'], null);   // (its Nachklang is the body's)
       if (id === 'hrz.koerper') for (const fn of CTL['hrz.daempfung'] || []) fn(P['hrz.daempfung'], null);   // (its Nachklang is the body's)
@@ -20984,6 +21412,7 @@ const ENG_NOTE = {
   mdr: 'Ein Tipp ist ein Schlag, die Höhe dabei die Feuchte: unten fast eine gewöhnliche Glocke, die langsam dunkler wird; weiter oben frisst der Pilz die hohen Teiltöne – jeder zerbröselt in ein feines Knistern auf seiner eigenen Tonhöhe, während der Grundton anschwillt. Dann bleibt ein rundes Brummen, das zum Ende des Nachklangs knisternd austrocknet. Leise Schläge haben wenig zu verdauen. Im Puls verdaut jeder Schlag umso schneller, je kürzer der Schritt.',
   gsp: 'Ein Tipp zupft eine Saite – und das Netz aus Saiten, gestimmt auf deine Tonleiter, schwingt mit: Oktave und Quinte als Halo. Die Höhe beim Tipp ist die Helligkeit und wie viel ins Netz geht. Alles, was Gespinst spielt – Finger, Ebene 2, die Puls-Spuren, der Sporenregen –, klingt im selben Netz, und gehaltene Töne tauschen über den Steg Energie. Kopplung führt es an die Kante, an der es von selbst singen will; ein Wächter hält es davor. Das Netz hat einen eigenen Kanal im Mixer (Halo).',
   rhz: 'Ein Tipp ist ein Schlag auf einen Knoten im Wurzelnetz: er klopft auf seiner Note – und reicht die Ladung vielleicht weiter, an die Nachbarstufen der Tonleiter, und die wieder an ihre. So antwortet derselbe Tipp mal mit einem Nachbarn, mal läuft eine Lawine über das ganze Feld. Die Höhe beim Tipp ist die Ausbreitung (unten müde, oben reizbar) und die Helligkeit der Knoten; Reiz stellt das Netz insgesamt ein, Weg das Tempo, Erholung, wie lange ein Knoten nach dem Feuern schweigt – ein Netz, das gerade gelaufen ist, ist erschöpft. Finger, Ebene 2, die Puls-Spuren und der Sporenregen spielen im selben Netz.',
+  glt: 'Die Höhe ist die Verstärkung der Schleife: unten ein leises Klopfen mit gedämpftem Ping, ab etwa einem Drittel wächst der Ton von selbst – erst ein Pfeifen, dann satt und leicht gesättigt, er pendelt sich ein und atmet (Glimmen). Weiter oben springt er in die Oktave oder Duodezime (Sprung). Loslassen stoppt nichts: der Ton verglüht (Nachglühen). Im Puls zündet jeder Stoß sofort.',
   hrz: 'Die Höhe ist der Bogendruck: unten ein Hauch von Reibung, in der Mitte schwillt der Ton in einer halben Sekunde an und steht, weiter oben wird er körniger und lauter, ganz oben reißt der Bogen (beim Teich schreit der Stab). Glas und Schale singen mit dem kreisenden Finger (das Wah) und schweben; Zunge ist das Daxophon – ein Holz, das spricht und knurrt; Teich das Waterphone mit schwappendem Wasser. Loslassen hebt den Bogen ab, die Moden klingen nach (Dämpfung).',
   hlm: () => ({
     rohrblatt: 'Die Höhe ist der Atem: unten nur Luft, ab etwa einem Viertel spricht das Rohr an, weiter oben lauter und heller, ganz oben würgt das Blatt. Aufsetzen ist ein Zungenstoß, im Puls ein kurzer Stoß.',

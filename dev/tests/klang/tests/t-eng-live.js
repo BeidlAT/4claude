@@ -1,8 +1,8 @@
 // The new engines in a live (real-time) session, the way a player meets them (klang SPEC §7.2 t-eng-live): chosen by
 // their chip, a finger held and moved on the field (setF/setY), let go, a MIDI keyboard, a Puls lane, the second
 // layer, level 3, a shake under Gestik, the mixer's source text – and without AudioWorklet: the stand-ins, the note in
-// the engine section, the toast; Zapfen there plays its own native stand-in (finger, MIDI, lanes, knobs). Also: the
-// iframe hint.   node t-eng-live.js   (slot kn-inst, built by run-all.sh)
+// the engine section, the toast; Zapfen there plays its own native stand-in (finger, MIDI, lanes, knobs), Glut its own
+// native loop. Also: the iframe hint.   node t-eng-live.js   (slot kn-inst, built by run-all.sh)
 const { chromium } = require('/opt/node22/lib/node_modules/playwright');
 const L = require('./dsplib');
 const URL_ = process.env.KN_URL || 'http://127.0.0.1:8790/kn-inst/index.html';
@@ -27,8 +27,8 @@ const settle = (page, ms) => page.evaluate((ms) => window.__sleep(ms), ms);
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
   const { page, errors, ctx } = await open(browser, { mobile: false });   // desktop: the keyboard is asked for at start
   await page.click('#btnStart'); await settle(page, 700);
-  const ring = (key) => (key === 'hlm' ? 500 : key === 'rnk' ? 1500 : key === 'shn' ? 700 : key === 'zpf' ? 1200 : key === 'khl' ? 500 : key === 'boe' ? 6500 : key === 'amo' ? 900 : 2600);   // (Harz's glass rings on after the bow lifts; Böe's strings with their Nachklang, 3 s; Sehne: the hand mutes it)
-  for (const key of ['hlm', 'khl', 'rnk', 'hrz', 'shn', 'zpf', 'boe', 'amo']) {
+  const ring = (key) => (key === 'hlm' ? 500 : key === 'rnk' ? 1500 : key === 'shn' ? 700 : key === 'zpf' ? 1200 : key === 'glt' ? 3000 : key === 'khl' ? 500 : key === 'boe' ? 6500 : key === 'amo' ? 900 : 2600);   // (Harz's glass rings on after the bow lifts; Böe's strings with their Nachklang, 3 s; Sehne: the hand mutes it)
+  for (const key of ['hlm', 'khl', 'rnk', 'hrz', 'shn', 'zpf', 'glt', 'boe', 'amo']) {
     // the chip in the Klang panel (the library UI comes later)
     await page.evaluate(() => window.__M.openPanel('klang'));
     // (stage 1b: the chips became the row + library – chosen by its tile)
@@ -59,7 +59,7 @@ const settle = (page, ms) => page.evaluate((ms) => window.__sleep(ms), ms);
       for (let i = 0; i < 30; i++) { await window.__sleep(50); const b = M.getBudget()[0], l = M.voiceLoad(); vb3 = b; maxV = Math.max(maxV, M.A.voices.size); maxL = Math.max(maxL, l); if (l > b + 1e-9) over++; }   // (level 3's budget, as it stands at each moment)
       const lanes = [...M.A.voices].filter((v) => v.eng === key).map((v) => v.as + (v.wk ? '*' : ''));
       M.seqStop(); M.setParam('dev.q', '1'); M.setParam('l0.on', false); M.setParam('l1.on', false); M.setParam('v.layer', 'off'); M.setParam('v.eng', key);
-      await window.__sleep(key === 'hlm' ? 600 : key === 'rnk' ? 1500 : key === 'shn' ? 900 : key === 'zpf' ? 1500 : key === 'khl' ? 600 : key === 'boe' ? 4500 : key === 'amo' ? 1200 : 3500);
+      await window.__sleep(key === 'hlm' ? 600 : key === 'rnk' ? 1500 : key === 'shn' ? 900 : key === 'zpf' ? 1500 : key === 'glt' ? 4000 : key === 'khl' ? 600 : key === 'boe' ? 4500 : key === 'amo' ? 1200 : 3500);
       return { maxV, maxL: +maxL.toFixed(2), vb: vb3, over, lanes, left: M.A.voices.size, broken: [...M.A.workletBroken], mx: M.mxSrcText('l0') };
     }, key);
     L.ok(busy.lanes.length && busy.lanes.every((s) => s === key + '*') && !busy.over && busy.left === 0 && !busy.broken.length, `${key}: Puls lanes at level 3 play it (${busy.lanes.length} voices sounding, max load ${busy.maxL} ≤ ${busy.vb}), all end, nothing broken (${JSON.stringify({ over: busy.over, left: busy.left, broken: busy.broken, lanes: busy.lanes.join() })})`);
@@ -263,6 +263,21 @@ const settle = (page, ms) => page.evaluate((ms) => window.__sleep(ms), ms);
   });
   L.ok(kz.got && kz.got.koerper === 'kuerbis' && /Nachklang \d+ ms/.test(kz.t1) && kz.t0 !== kz.t1 && /rastet ab 36 %/.test(kz.r0) && /rastet ab 18 %/.test(kz.r1), `Zapfen: Körper reaches the sounding processor, Nachklang follows the body („${(kz.t0.match(/Nachklang \d+ ms/) || [''])[0]}“ → „${(kz.t1.match(/Nachklang \d+ ms/) || [''])[0]}“), Rast says where it locks („${(kz.r0.match(/rastet[^%]*%/) || [''])[0]}“ → „${(kz.r1.match(/rastet[^%]*%/) || [''])[0]}“)`);
   L.ok(kz.macro.join() === 'zpf.rast,zpf.klang' && kz.mx === 'Zapfen' && kz.group === 'Zapfen' && kz.left === 0, `Zapfen: MACRO A/B ${kz.macro}, mixer source „${kz.mx}“, MIDI group ${kz.group}`);
+  // Glut: a knob turned while a note glows reaches its processor; let go, it glows on (Nachglühen) and then ends
+  const kg = await page.evaluate(async () => {
+    const M = window.__M, A = M.A; M.setParam('v.eng', 'glt'); M.openPanel('klang'); await window.__sleep(100);
+    const v = M.playNote('glt', A.ctx.currentTime + 0.01, 220, 0.7, 0.7, {}); await window.__sleep(600);
+    let got = null; const pm = v.wk.port.postMessage.bind(v.wk.port); v.wk.port.postMessage = (m) => { if (m && m.set) got = m.set; pm(m); };   // (the last: both knobs)
+    M.setParam('glt.hitze', 0.9); M.setParam('glt.nachgluehen', 1.0);
+    const rms = () => { const b = new Float32Array(A.analyser.fftSize); A.analyser.getFloatTimeDomainData(b); let s = 0; for (const x of b) s += x * x; return 10 * Math.log10(s / b.length + 1e-20); };
+    const lv = rms(); v.release(); await window.__sleep(500); const glow = v.alive && rms(); await window.__sleep(1800);
+    const o = { got, lv, glow, alive: v.alive, macro: [M.macroId(0), M.macroId(1)], mx: M.mxSrcText('fin'), group: M.GROUP.glt, sprung: [...document.querySelectorAll('[data-pid="glt.sprung"] .chip')].map((c) => c.textContent).join('/'), note: (document.getElementById('eng-note-glt') || {}).textContent || '' };
+    M.setParam('glt.hitze', 0.5); M.setParam('glt.nachgluehen', 1.5); M.closePanel();
+    return o;
+  });
+  L.ok(kg.got && kg.got.hitze === 0.9 && kg.got.nachgluehen === 1, 'Glut: Hitze and Nachglühen turned while a note glows reach its processor ({set})');
+  L.ok(kg.lv > -60 && kg.glow > kg.lv - 25 && !kg.alive, `Glut: let go it glows on (${kg.lv.toFixed(1)} → ${kg.glow && kg.glow.toFixed(1)} dBFS 0.5 s later), then the voice is freed`);
+  L.ok(kg.macro.join() === 'glt.gluehen,glt.hitze' && kg.mx === 'Glut' && kg.group === 'Glut' && kg.sprung === 'Oktave/Duodezime' && /Nachglühen/.test(kg.note), `Glut: MACRO A/B ${kg.macro}, mixer „${kg.mx}“, group „${kg.group}“, Sprung chips ${kg.sprung}, its note`);
   const errs = errors.filter((e) => !/myzel-dsp\.js|Failed to load resource/.test(e));
   L.ok(!errs.length, 'no console errors ' + errs.join(' | '));
   await ctx.close();
@@ -307,6 +322,23 @@ const settle = (page, ms) => page.evaluate((ms) => window.__sleep(ms), ms);
     L.ok(nz.held.as === 'zpf' && nz.held.zn && nz.knob[1] > nz.knob[0] * 2, `no AudioWorklet: Kratzen turned up reaches a sounding native voice (its noise ${nz.knob.map((x) => x.toFixed(3)).join(' → ')})`);
     L.ok(nz.lanes > 0 && nz.over <= 1e-9 && !nz.left, `no AudioWorklet: Puls lanes at level 3 play Zapfen natively (up to ${nz.lanes} voices, load − budget ≤ ${nz.over.toFixed(2)}), all end${nz.left ? ' – still alive: ' + nz.left : ''}`);
     L.ok(/Zapfen vereinfacht \(kein AudioWorklet\)/.test(nz.note || '') && nz.mx === 'Zapfen' && nz.label === 'Zapfen' && !nz.fb, `no AudioWorklet: Zapfen's section says „${nz.note}“, the mixer „${nz.mx}“, no „als …“`);
+    // Glut: its own native loop – a finger and a MIDI key play it (setF/setY follow), a knob reaches it, let go it glows and ends
+    {
+    await page.evaluate(() => { const M = window.__M; M.closePanel && M.closePanel(); M.setParam('v.eng', 'glt'); M.openPanel('klang'); }); await settle(page, 200);
+    const box = await page.locator('#cvFx').boundingBox();
+    await page.evaluate(() => window.__M.closePanel()); await settle(page, 100);
+    await page.mouse.move(box.x + box.width * 0.4, box.y + box.height * 0.3); await page.mouse.down(); await settle(page, 700);
+    const g = await page.evaluate(() => { const M = window.__M, v = [...M.A.voices].find((x) => x.alive && x.eng === 'glt' && !x.released); const b = new Float32Array(M.A.analyser.fftSize); M.A.analyser.getFloatTimeDomainData(b); let s = 0; for (const x of b) s += x * x; return v ? { as: v.as, wk: !!v.wk, nat: !!v.gltN, cost: v.cost, lv: 10 * Math.log10(s / b.length + 1e-20), m: v.gltN.st.m, f: v.gltN.st.f } : null; });
+    for (let i = 1; i <= 6; i++) { await page.mouse.move(box.x + box.width * (0.4 + i * 0.04), box.y + box.height * (0.3 - i * 0.04)); await settle(page, 80); }
+    const g2 = await page.evaluate(() => { const v = [...window.__M.A.voices].find((x) => x.alive && x.eng === 'glt' && !x.released); return v ? { f: v.gltN.st.f, y: v.gltN.st.y, m: v.gltN.st.m } : null; });
+    const kq = await page.evaluate(() => { const M = window.__M, v = [...M.A.voices].find((x) => x.alive && x.eng === 'glt' && !x.released); const q0 = v.gltN.bq.Q.value; M.setParam('glt.hitze', 1); return new Promise((res) => setTimeout(() => { res([q0, v.gltN.bq.Q.value]); M.setParam('glt.hitze', 0.5); }, 200)); });
+    await page.mouse.up(); await settle(page, 600);
+    const glow = await page.evaluate(() => [...window.__M.A.voices].filter((x) => x.alive && x.eng === 'glt').length);
+    await settle(page, 2400);
+    const after = await page.evaluate(() => ({ left: [...window.__M.A.voices].filter((x) => x.alive && x.eng === 'glt').length, note: !window.__M.engSecs.glt.wkNote.hidden && window.__M.engSecs.glt.wkNote.textContent, mx: window.__M.mxSrcText('fin'), fb: window.__M.kqFb('glt') }));
+    L.ok(g && g.as === 'glt' && !g.wk && g.nat && g.lv > -60 && g2 && g2.f > g.f && g2.y > 0.6 && kq[1] > kq[0] && glow === 1 && after.left === 0, `no AudioWorklet: Glut plays its own native loop (cost ${g && g.cost}, ${g && g.lv.toFixed(1)} dBFS), the finger slides it (${g && g.f.toFixed(0)} → ${g2 && g2.f.toFixed(0)} Hz, y ${g2 && g2.y.toFixed(2)}, mode ${g2 && g2.m}), Hitze reaches it (Q ${kq.map((q) => q.toFixed(1)).join(' → ')}), let go it glows, then ends`);
+    L.ok(after.note === '⌁ Dieser Browser spielt Glut vereinfacht (kein AudioWorklet).' && after.mx === 'Glut' && after.fb === '', `…its section says „${after.note}“, no stand-in named (mixer „${after.mx}“)`);
+    }
     L.ok(!errors.length, 'no console errors without AudioWorklet ' + errors.join(' | '));
     await ctx.close();
   }

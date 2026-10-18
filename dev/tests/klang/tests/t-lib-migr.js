@@ -7,10 +7,10 @@ const L = require('./dsplib'), K = require('./klh');
 const TMP = path.join(__dirname, 'out');
 (async () => {
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
-  // 1. the stored patch names Glut (a later version's source): one hint at boot, Nebel plays
-  let { page, errors, ctx } = await K.open(browser, { w: 390, h: 844, start: false, store: { 'myzel.patch.v1': JSON.stringify({ values: { 'v.eng': 'glt', 'v.layer': 'glo', 'l0.eng': 'kor', 'rev.mix': 0.31 } }) } });
+  // 1. the stored patch names Unke (a later version's source): one hint at boot, Nebel plays
+  let { page, errors, ctx } = await K.open(browser, { w: 390, h: 844, start: false, store: { 'myzel.patch.v1': JSON.stringify({ values: { 'v.eng': 'unk', 'v.layer': 'glo', 'l0.eng': 'kor', 'rev.mix': 0.31 } }) } });
   let r = await page.evaluate(() => ({ eng: window.__M.P['v.eng'], layer: window.__M.P['v.layer'], l0: window.__M.P['l0.eng'], rev: window.__M.P['rev.mix'], t: document.querySelector('#toastMsg').textContent, show: document.querySelector('#toast').classList.contains('show') }));
-  L.ok(r.eng === 'neb' && r.layer === 'glo' && r.l0 === 'kor' && r.rev === 0.31 && r.show && r.t === 'Klangquelle „Glut“ gibt es in dieser Version nicht – Nebel gewählt.', 'stored patch with Glut: „' + r.t + '“ – the rest of it kept');
+  L.ok(r.eng === 'neb' && r.layer === 'glo' && r.l0 === 'kor' && r.rev === 0.31 && r.show && r.t === 'Klangquelle „Unke“ gibt es in dieser Version nicht – Nebel gewählt.', 'stored patch with Unke: „' + r.t + '“ – the rest of it kept');
   await ctx.close();
   ({ page, errors, ctx } = await K.open(browser, { w: 390, h: 844 }));
   const M = (fn, a) => page.evaluate(fn, a);

@@ -1,5 +1,5 @@
 // Offline render bench for the new engines (klang SPEC §7.1 + the acceptance rows of §3 and the check files): the
-// worklet engines Halm, Ranke, Harz, Sehne, Zapfen (and Zapfen's own native stand-in), Kehlchen, Moder, Böe, Amöbe, Gespinst and the native ones Elmsfeuer, Jahresring, Rhizom.
+// worklet engines Halm, Ranke, Harz, Sehne, Zapfen (and Zapfen's own native stand-in), Glut (and its own native loop), Kehlchen, Moder, Böe, Amöbe, Gespinst and the native ones Elmsfeuer, Jahresring, Rhizom.
 // Renders the real app (slot kd-inst, built by run-all.sh) in OfflineAudioContexts with the engine module loaded, pulls
 // the samples into Node and measures there.   node bench.js [hlm|rnk|hrz|mdr|boe|elm|jrg ...]   → PASS/FAIL lines, out/<key>/report.json,
 // demo WAVs and spectrogram PNGs in out/<key>/. Exit code = number of failures.
@@ -17,11 +17,11 @@ async function setup(page) {
   await page.evaluate(() => {
     const M = window.__M;
     // a fresh offline context with the defaults + params, the engine module loaded when one is selected
-    window.__ctx = async (dur, params, q = '1') => {
+    window.__ctx = async (dur, params, q = '1', nodsp = false) => {
       M.P['dev.q'] = q;
-      const ctx = await window.__off(48000, dur, Object.assign({ 'dev.lat': 'std' }, params));
+      const ctx = await window.__off(48000, dur, Object.assign({ 'dev.lat': 'std' }, params, nodsp ? { 'v.eng': 'neb', 'v.layer': 'off' } : {}));   // (nodsp: nothing selected that would load the module)
       M.getQ().budget = 1e4; M.A.jrgAge = 0;   // (Jahresring: a fresh bar for every render)
-      window.__dspOk = await M.ensureDSP(ctx);
+      window.__dspOk = nodsp ? false : await M.ensureDSP(ctx);   // (nodsp: no module in this context – Glut plays its own native loop)
       return ctx;
     };
     window.__b64 = (f32) => { const u = new Uint8Array(f32.buffer.slice(f32.byteOffset, f32.byteOffset + f32.byteLength)); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); };
@@ -66,10 +66,11 @@ const mono = (x) => { const m = new Float32Array(x.L.length); for (let i = 0; i 
 // a single voice: play at 0.05 s, optional moves [[t, fn-name, arg]], release at `rel` (null = held)
 async function one(page, o) {
   return pull(await page.evaluate(async (o) => {
-    const M = window.__M, ctx = await window.__ctx(o.dur, Object.assign({ 'v.eng': o.eng }, o.params || {}), o.q || '1');
+    const M = window.__M, ctx = await window.__ctx(o.dur, Object.assign({ 'v.eng': o.eng }, o.params || {}), o.q || '1', !!o.nodsp);
     if (o.age != null) M.A.jrgAge = o.age;
     if (o.cents) { const c = ctx.createConstantSource(); c.offset.value = o.cents; c.connect(M.A.pitchMod); c.start(); }
     if (o.rseed) { let x = o.rseed; Math.random = () => { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; return ((x >>> 0) % 1e9) / 1e9; }; }   // (the same voice seeds for two renders: level 1 against level 3)
+    if (o.vib) { const lf = ctx.createOscillator(), lg = ctx.createGain(); lf.frequency.value = o.vib[0]; lg.gain.value = o.vib[1]; lf.connect(lg).connect(M.A.pitchMod); lf.start(); }   // (a vibrato on the pitch bus: [Hz, ±cents])
     let v = null;
     const vel = o.vel != null ? o.vel : 0.75;
     ctx.suspend(19 / 375).then(() => { v = o.burst ? M.hit(o.eng, ctx.currentTime, o.f, o.y, vel, { gate: o.gate, pan: o.pan || 0 }) : M.playNote(o.eng, ctx.currentTime, o.f, o.y, vel, { pan: o.pan || 0 }); window.__v = v; ctx.resume(); });
@@ -123,6 +124,9 @@ async function one(page, o) {
     // Zapfen: the pitch at the top (SPEC §3.8: y 1, Rast) on the fundamental's line (a harmonic comb would read the
     // body's inharmonic modes beside the harmonics)
     zpf: { f0: [55, 110, 220, 440, 880, 1760], ys: [1], tol: 5, costMax: 0.55, line: true, lineAt: 1.0, cWin: true },
+    // Glut: a self-oscillating loop – its pitch is its fundamental's line (lesson 12); held below the jump (y < 0.75);
+    // let go it glows Nachglühen (1.5 s) long, so the release and the bursts render longer
+    glt: { f0: [55, 110, 220, 440, 880, 1760], ys: [0.45, 0.6, 0.7], tol: 8, costMax: 0.55, line: true, rel: { dur: 4.6, t60max: 2600, quiet: [4.0, 4.6] }, burstDur: (g) => g + 2.3 },
   };
   for (const key of KEYS) {
     const tc = T[key], dir = path.join(OUT, key), rep = { key };
@@ -154,11 +158,15 @@ async function one(page, o) {
       if (tc.cWin) { const m = mono(await one(page, { eng: key, f: 220, y, dur: 2.2, params: DRY })); let c = 0, n = 0; for (let t = 0.3; t < 2.05; t += 0.05) { c += L.centroid(m, SR, t, 4096); n++; } yc[y] = Math.round(c / n); continue; }   // (Zapfen: over many windows – at y 0 a 85-ms window holds a knock or none)
       let c = 0; const cn = tc.cN || tc.cAvg || 1; for (let i = 0; i < cn; i++) { const x = await one(page, { eng: key, f: 220, y, dur: 1, params: DRY }); c += L.centroid(mono(x), SR, tc.cAt || (tc.struck ? 0.055 : 0.3), 4096) / cn; } yc[y] = Math.round(c); }   // (a struck bar: its strike; a seeded engine: the mean of cAvg notes)
     rep.yCentroidHz = yc;
-    if (key === 'mdr') console.log(`INFO mdr: centroid at the strike y 0/0.5/1: ${yc[0]}/${yc[0.5]}/${yc[1]} Hz – Höhe is the moisture, not the strike's colour (its rows: mdrWet below)`);
+    if (key === 'glt') {   // (a loop: at 0.3 s every height is still a near-sine on its note – lesson 5. Höhe saturates the settled tone – h3/h1 rises – and at the top jumps to the twelfth)
+      const hc = []; for (const y of [0.35, 0.5, 0.74]) { const sp = L.spectrum(mono(await one(page, { eng: key, f: 220, y, dur: 2, params: DRY })), SR, 1.5, 16384); hc.push(+(L.harm(sp, 220, 3) - L.harm(sp, 220, 1)).toFixed(1)); }
+      rep.yColour = hc;
+      ok(yc[1] > 2 * yc[0.5] && hc[0] < hc[1] && hc[1] < hc[2], `Höhe colours the tone: h3/h1 at 1.5 s for y 0.35/0.5/0.74 ${hc.join(' / ')} dB, at the top the twelfth (centroid y 0 ${yc[0]} Hz, 0.5 ${yc[0.5]} Hz, 1 ${yc[1]} Hz)`); }
+    else if (key === 'mdr') console.log(`INFO mdr: centroid at the strike y 0/0.5/1: ${yc[0]}/${yc[0.5]}/${yc[1]} Hz – Höhe is the moisture, not the strike's colour (its rows: mdrWet below)`);
     else if (tc.struck) ok(yc[0] < yc[1], `centroid: the bar's end brighter than its centre (the nodal line between may stand out): y 0 ${yc[0]} Hz, 0.5 ${yc[0.5]} Hz, 1 ${yc[1]} Hz`);
     else if (tc.partials) console.log(`INFO ${key}: centroid at y ${(tc.cYs || []).join('/')}: ${(tc.cYs || []).map((y) => yc[y]).join('/')} Hz (a whistle: the rows on its partials below)`);
     else { const ys = tc.cYs || [0, 0.5, 1], c = ys.map((y) => yc[y]); ok(c[0] < c[1] && c[1] < c[2], `centroid rises with Höhe: ${ys.map((y, i) => 'y ' + y + ' ' + c[i] + ' Hz').join(', ')}`); }
-    const PP = Object.assign({}, DRY, tc.pp || {}), pitchAt = (m, f, at) => (tc.struck ? peakHz(m, SR, f, 0.15, 16384) : tc.line ? peakHz(m, SR, f, at || tc.lineAt || 0.6, 32768) : L.combPitch(m, SR, f, at || 0.6, key === 'rnk' ? 32768 : 16384));
+    const PP = Object.assign({}, DRY, tc.pp || {}), pitchAt = (m, f, at) => (tc.struck ? peakHz(m, SR, f, 0.15, 16384) : tc.line ? peakHz(m, SR, f, at || tc.lineAt || (key === 'glt' ? 1.2 : 0.6), 32768) : L.combPitch(m, SR, f, at || 0.6, key === 'rnk' ? 32768 : 16384));
     // -- pitch: the grid at 0.6 s (reed: YIN + phase refinement; ring: comb of harmonics with their sidebands)
     const pit = [];
     for (const f of tc.f0) for (const y of tc.ys) {
@@ -171,14 +179,14 @@ async function one(page, o) {
     ok(Math.abs(worst[2]) <= tc.tol, `f0 within ${tc.tol} ct on ${pit.length} notes ${tc.f0[0]}–${tc.f0[tc.f0.length - 1]} Hz (worst ${worst[2]} ct at ${worst[0]} Hz, y ${worst[1]})`);
     // -- Bebung: the pitch bus +50 ct moves the note by 50 ct
     { const f = 220, x = await one(page, { eng: key, f, y: tc.ys[0] != null && (tc.native || tc.lineAt) ? tc.ys[0] : 0.6, dur: 2.2, params: PP, cents: 50 }); const m = mono(x);
-      const fm = tc.struck ? peakHz(m, SR, f * Math.pow(2, 50 / 1200), 0.15, 16384) : tc.line ? peakHz(m, SR, f * Math.pow(2, 50 / 1200), tc.lineAt || 0.6, tc.lineAt ? 32768 : 16384) : L.combPitch(m, SR, f * Math.pow(2, 50 / 1200), 0.6, 16384);
+      const fm = tc.struck ? peakHz(m, SR, f * Math.pow(2, 50 / 1200), 0.15, 16384) : tc.line ? peakHz(m, SR, f * Math.pow(2, 50 / 1200), tc.lineAt || (key === 'glt' ? 1.2 : 0.6), tc.lineAt || key === 'glt' ? 32768 : 16384) : L.combPitch(m, SR, f * Math.pow(2, 50 / 1200), 0.6, 16384);
       const c = L.cents(fm, f); rep.bebung = +c.toFixed(2); ok(Math.abs(c - 50) <= 5, `Bebung: pitch bus +50 ct → ${c.toFixed(2)} ct`); }
     // -- glide: setF moves the pitch (k-rate freq through glideTo)
     if (!tc.struck) { const x = await one(page, { eng: key, f: 220, y: tc.native ? 0.1 : tc.lineAt ? 1 : 0.6, dur: 2.5, params: PP, moves: [[1.0, 'setF', 330]] }); const m = mono(x);
-      const fm = tc.line ? peakHz(m, SR, 330, 1.6, tc.lineAt ? 32768 : 16384) : L.combPitch(m, SR, 330, 1.6, 16384);
+      const fm = tc.line ? peakHz(m, SR, 330, 1.6, tc.lineAt || key === 'glt' ? 32768 : 16384) : L.combPitch(m, SR, 330, 1.6, 16384);
       ok(Math.abs(L.cents(fm, 330)) <= tc.tol + 1, `setF 220 → 330 Hz lands at ${fm.toFixed(2)} Hz`); }
     // -- held: Höhe moves the timbre on a sounding voice (Gestik's Höhe arrives through setY)
-    if (key === 'hlm' || key === 'elm' || key === 'hrz') { const y0 = key === 'elm' ? 0.2 : 0.4, x = await one(page, { eng: key, f: 220, y: y0, dur: 3, params: DRY, moves: [[1.0, 'setY', 0.85]] }); const m = mono(x);
+    if (key === 'hlm' || key === 'elm' || key === 'hrz' || key === 'glt') { const y0 = key === 'elm' ? 0.2 : 0.4, x = await one(page, { eng: key, f: 220, y: y0, dur: 3, params: DRY, moves: [[1.0, 'setY', 0.85]] }); const m = mono(x);
       const mc = (t0, t1) => { let s = 0, n = 0; for (let t = t0; t < t1; t += 0.05) { s += L.centroid(m, SR, t, 4096); n++; } return s / n; };
       const a = mc(0.5, 0.9), b = mc(1.5, 2.8); rep.setY = [Math.round(a), Math.round(b)];
       ok(b > a * 1.1, `setY ${y0} → 0.85 on a held voice: centroid ${Math.round(a)} → ${Math.round(b)} Hz`); }
@@ -203,23 +211,23 @@ async function one(page, o) {
       ok(worstUp <= 1.5, `release tail monotone once the wind is gone (largest rise between 100-ms windows ${worstUp.toFixed(2)} dB ≤ 1.5: the ringing strings beat a little)`);
       const fin = await page.evaluate(async () => { const v = window.__lastV; await new Promise((r) => setTimeout(r, 300)); return { alive: v.alive }; });
       ok(L.rms(m, 7.5 * SR, 8 * SR) < 1e-5 && !fin.alive, 'silent after the ring, the voice freed (the processor ends it)'); }
-    else { const x = await one(page, { eng: key, f: 440, y: 0.6, dur: 3, params: DRY, rel: 1.0 }); const m = mono(x);
+    else { const rl = tc.rel || { dur: 3, t60max: 2500, quiet: [2.6, 3] }, x = await one(page, { eng: key, f: 440, y: 0.6, dur: rl.dur, params: DRY, rel: 1.0 }); const m = mono(x);
       const held = L.rms(m, 0.6 * SR, 0.95 * SR), e = L.env(m, SR, 0.005); let t60 = Infinity; for (let i = 200; i < e.length; i++) if (e[i] < held * 0.001) { t60 = (i - 200) * 5; break; }
       rep.release60ms = t60;
       if (key === 'hlm') ok(t60 <= 60, `decay after release to −60 dB in ${t60} ms (≤ 60)`);
-      else ok(t60 < 2500, `release reaches −60 dB in ${t60} ms`);
+      else ok(t60 < rl.t60max, `release reaches −60 dB in ${t60} ms`);
       const tail = L.env(m, SR, 0.1).slice(10); let worstUp = 0; for (let i = 1; i < tail.length; i++) if (tail[i] > 1e-5) worstUp = Math.max(worstUp, L.db(tail[i]) - L.db(tail[i - 1]));
       rep.tailRise = +worstUp.toFixed(2);
       const upMax = key === 'elm' ? 4 : key === 'hrz' ? 3 : 1;   // (Elmsfeuer's last crackles are sparse: 100-ms windows hold a few or none; Harz's glass rings on with its doublets beating)
       ok(worstUp <= upMax, `release tail monotone (largest rise between 100-ms windows ${worstUp.toFixed(2)} dB ≤ ${upMax}, no pumping)`);
-      ok(L.rms(m, 2.6 * SR, 3 * SR) < 1e-5, 'silent after the release'); }
+      ok(L.rms(m, rl.quiet[0] * SR, rl.quiet[1] * SR) < 1e-5, 'silent after the release'); }
     // -- Puls: hit() with short gates – audible inside the gate, the voice finishes
     { const held = await one(page, { eng: key, f: 440, y: 0.6, dur: 1.2, params: DRY }); const hRms = L.rms(mono(held), 0.6 * SR, 1.1 * SR);
       const bl = [];
       for (const g of [0.06, 0.112, 0.22, 0.5]) {
-        const d = tc.struck ? (key === 'mdr' ? 3.2 : key === 'gsp' ? 5 : 4) : key === 'boe' ? 4 : 1.6, x = await one(page, { eng: key, f: 440, y: 0.6, dur: d, params: DRY, burst: true, gate: g }); const m = mono(x);   // (a struck voice rings out its own time – Gespinst's web its Nachklang after it; Böe's gust-pluck rings past the gate, ≤ 1.5 s)
+        const d = tc.burstDur ? tc.burstDur(g) : tc.struck ? (key === 'mdr' ? 3.2 : key === 'gsp' ? 5 : 4) : key === 'boe' ? 4 : 1.6, x = await one(page, { eng: key, f: 440, y: 0.6, dur: d, params: DRY, burst: true, gate: g }); const m = mono(x);   // (a struck voice rings out its own time – Gespinst's web its Nachklang after it; Böe's gust-pluck rings past the gate, ≤ 1.5 s)
         const e = L.env(m.subarray(0.05 * SR, (0.05 + g) * SR), SR, 0.02); const mx = Math.max(...e);
-        bl.push([g, +(L.db(mx) - L.db(hRms)).toFixed(1), +L.db(L.rms(m, Math.floor((d - 0.3) * SR), Math.floor(d * SR))).toFixed(1)]);
+        bl.push([g, +(L.db(mx) - L.db(hRms)).toFixed(1), +L.db(L.rms(m, Math.round((d - 0.3) * SR), Math.round(d * SR))).toFixed(1)]);   // (indices rounded: lesson 11)
       }
       const fin = await page.evaluate(async () => { const v = window.__lastV; await new Promise((r) => setTimeout(r, Math.max(900, v ? (v.endAt - v.t0) * 1000 + 400 : 0))); return !v || !v.alive; });
       rep.burst = bl;
@@ -824,6 +832,116 @@ async function one(page, o) {
         rep.demos.push(await demo('demo-puls-palm', ["M.P['seq.bpm'] = 120;", ...Array.from({ length: 32 }, (_, i) => at(0.1 + i * 0.125, `M.hit('shn', ctx.currentTime, ${[82, 82, 98, 82, 110, 82, 98, 123][i % 8]}, ${i % 4 === 3 ? 0.5 : 0.08}, 0.8, { gate: 0.1 })`)), 'return ctx.startRendering();'].join('\n'), 5));
         console.log('demos: ' + rep.demos.filter(Boolean).join(' ')); }
     }
+    if (key === 'glt') {
+      // ---- Glut: every acceptance row of SPEC §3.3 and the fixes of inventor-glt / composer-kre, for the worklet loop and
+      // for its own native loop (a context without the module) ----
+      const PG = (x) => Object.assign({}, DRY, x || {}), FS = [55, 110, 220, 440, 880, 1760];
+      const envDb = (m, win) => L.env(m, SR, win).map((v) => L.db(v));
+      // the swell's slope (dB/s) from 25 to 8 dB under the settled level (the linear part, before the knee)
+      const slope = (e, win) => { const fin = Math.max(...e.slice(-40)); let a = -1, b = -1; for (let i = 0; i < e.length; i++) { if (a < 0 && e[i] > fin - 25) a = i; if (a >= 0 && e[i] > fin - 8) { b = i; break; } } return a < 0 || b <= a ? NaN : (e[b] - e[a]) / ((b - a) * win); };
+      // T60 after the release at `at`: the decay's slope, fitted over 50-ms windows (≥ 2 periods at 55 Hz) from 0.1 s after it
+      // down to 35 dB under its start
+      const t60 = (m, at) => { const e = envDb(m, 0.05), a = Math.round((at + 0.1) / 0.05); let sx = 0, sy = 0, sxx = 0, sxy = 0, k = 0;
+        for (let i = a; i < e.length && e[i] > e[a] - 35; i++, k++) { const t = (i - a) * 0.05; sx += t; sy += e[i]; sxx += t * t; sxy += t * e[i]; }
+        const sl = (k * sxy - sx * sy) / (k * sxx - sx * sx); return k > 2 && sl < 0 ? -60 / sl : Infinity; };
+      for (const nat of [false, true]) {
+        const tag = nat ? 'native loop' : 'worklet', okg = (c, msg) => ok(c, tag + ': ' + msg), R_ = {};
+        const play = (o) => one(page, Object.assign({ eng: key, nodsp: nat, params: PG(o.pp) }, o));
+        if (nat) { const r = await page.evaluate(async () => { const M = window.__M, ctx = await window.__ctx(0.5, { 'v.eng': 'glt' }, '1', true); const v = M.playNote('glt', 0.05, 220, 0.6, 0.7, {}); await ctx.startRendering(); return { as: v && v.as, wk: !!(v && v.wk), nat: !!(v && v.gltN), dsp: window.__dspOk, cost: v && v.cost }; });
+          okg(r.as === 'glt' && !r.wk && r.nat && !r.dsp, 'no module in the context: Glut plays its own native loop (as glt, no worklet node) ' + JSON.stringify(r)); }
+        // 1. growth per second at y 0.6, 55–1760 Hz (±25 %): from a dying ping (y 0.2) the finger flares to 0.6 at 1 s –
+        // the slope from 25 to 8 dB under the settled level (the onset's own seed and ramp stay out of it)
+        const gr = []; for (const f of FS) { const m = mono(await play({ f, y: 0.2, dur: 3.5, moves: [[1.0, 'setY', 0.6]] })); gr.push(+slope(envDb(m, 0.01).slice(105), 0.01).toFixed(1)); }
+        const gm = L.mean(gr); R_.growth = gr;
+        okg(gr.every((g) => Math.abs(g / gm - 1) <= 0.25), `growth at y 0.6 the same at every pitch (±25 %): ${FS.map((f, i) => f + ' Hz ' + gr[i]).join(', ')} dB/s (mean ${gm.toFixed(1)})`);
+        // 2. afterglow T60 = Nachglühen ±20 % across octaves
+        const ag = [];
+        for (const ng of [0.5, 1.5, 4]) for (const f of [55, 220, 880, 1760]) { const m = mono(await play({ f, y: 0.7, dur: 1.5 + 0.8 * ng, pp: { 'glt.nachgluehen': ng }, rel: 1.2 })); ag.push([ng, f, +t60(m, 1.2).toFixed(2)]); }
+        R_.afterglow = ag;
+        okg(ag.every((a) => Math.abs(a[2] / a[0] - 1) <= 0.2), 'afterglow T60 = Nachglühen ±20 %: ' + ag.map((a) => a[0] + 's@' + a[1] + ' ' + a[2]).join(', '));
+        // the settled level: the same at every pitch (the knee per second; a tanh alone saturates high notes lower)
+        const lv = []; for (const f of FS) { const m = mono(await play({ f, y: 0.6, dur: 3.5 })); lv.push(+L.db(L.rms(m, 2.5 * SR, 3.5 * SR)).toFixed(1)); }
+        R_.settled = lv;
+        okg(Math.max(...lv) - Math.min(...lv) <= 3, `settled level at y 0.6 within ±1.5 dB across 55–1760 Hz: ${lv.join(' / ')} dBFS`);
+        // 3. y 0 ≥ −40 dB: the knock and its ping (0.05–0.55 s) against the held tone at y 0.6
+        const ping = []; for (const f of [110, 440]) { const h = mono(await play({ f, y: 0.6, dur: 3 })), p0 = mono(await play({ f, y: 0, dur: 1 })); ping.push(+(L.db(L.rms(p0, 0.05 * SR, 0.55 * SR)) - L.db(L.rms(h, 2 * SR, 3 * SR))).toFixed(1)); }
+        R_.ping = ping; okg(ping.every((d) => d >= -40 && d <= -10), `y 0 is a soft ping: ${ping.join(' / ')} dB vs held at y 0.6 (≥ −40, a ping not a tone)`);
+        // the threshold: under y 0.3 a note dies, above it grows
+        { const lo = mono(await play({ f: 220, y: 0.15, dur: 2.5 })), hi = mono(await play({ f: 220, y: 0.4, dur: 2.5 }));   // (y 0.15: r −3 ± Glimmen's 1.5 – just under 0.3 Glimmen may hold a note for seconds)
+          const d0 = L.db(L.rms(lo, 2 * SR, 2.5 * SR)) - L.db(L.rms(lo, 0.05 * SR, 0.3 * SR)), d1 = L.db(L.rms(hi, 2 * SR, 2.5 * SR)) - L.db(L.rms(hi, 0.05 * SR, 0.3 * SR)); R_.threshold = [+d0.toFixed(1), +d1.toFixed(1)];
+          okg(d0 <= -20 && d1 >= 4, `threshold near y 0.3: y 0.15 dies ${d0.toFixed(1)} dB, y 0.4 grows +${d1.toFixed(1)} dB in 2 s`); }
+        // the knee: the settled level rises with the height (A² ∝ r: y 0.4 ≈ −6.5, 0.6 ≈ −1.8 dB under y 1 – Glimmen wanders it)
+        { const kn = []; for (const y of [0.4, 0.6, 1]) { const m = mono(await play({ f: 220, y: y > 0.75 ? 0.74 : y, dur: 4.5, pp: y > 0.75 ? { 'glt.gluehen': 1 } : {} })); kn.push(+L.db(L.rms(m, 2.5 * SR, 4.5 * SR)).toFixed(1)); } R_.knee = kn;
+          okg(kn[0] < kn[1] - 2 && kn[1] <= kn[2] + 1, `a soft knee: the settled level rises with Höhe (y 0.4 / 0.6 / top: ${kn.join(' / ')} dBFS)`); }
+        // 4. Puls: 112 ms at 55 Hz ≥ −20 dB inside the gate; the state is set – a hit sounds within its first 30 ms
+        const bu = [];
+        for (const f of [55, 220, 880]) { const h = L.rms(mono(await play({ f, y: 0.6, dur: 2.5 })), 1.5 * SR, 2.5 * SR); const m = mono(await play({ f, y: 0.6, dur: 2.6, burst: true, gate: 0.112 }));
+          const e = L.env(m.subarray(Math.round(0.052 * SR), Math.round(0.164 * SR)), SR, 0.02); bu.push([f, +(L.db(Math.max(...e)) - L.db(h)).toFixed(1), +(L.db(L.rms(m, Math.round(0.055 * SR), Math.round(0.085 * SR))) - L.db(h)).toFixed(1)]); }
+        R_.burst = bu;
+        okg(bu[0][1] >= -20, `Puls 112 ms at 55 Hz inside the gate: ${bu[0][1]} dB vs held (≥ −20)`);
+        okg(bu.every((b) => b[2] >= (nat ? -20 : -12)), `a hit lands at once: its first 30 ms ${bu.map((b) => b[0] + ' Hz ' + b[2]).join(', ')} dB vs held (≥ ${nat ? -20 : -12}${nat ? ' – natively the seed charges the loop within a pass' : ''})`);
+        // 5. f0 ≤ 8 ct, also under Bebung: static ±50 ct, and a vibrato ±50 ct at 5 Hz followed (the band and the delay move together)
+        const fb = [];
+        for (const f of [110, 440, 1760]) for (const c of [-50, 50]) { const m = mono(await play({ f, y: 0.6, dur: 2.4, cents: c })); const ft = f * Math.pow(2, c / 1200); fb.push([f, c, +L.cents(peakHz(m, SR, ft, 1.2, 32768), ft).toFixed(2)]); }
+        R_.bebung = fb;
+        okg(fb.every((b) => Math.abs(b[2]) <= 8), 'f0 under Bebung ±50 ct within 8 ct: ' + fb.map((b) => b[0] + (b[1] > 0 ? '+' : '') + b[1] + ' ' + b[2]).join(', '));
+        { const vt = [];
+          for (const f of [110, 440, 1760]) {
+            const m = mono(await play({ f, y: 0.6, dur: 3, vib: [5, 50] })); let err = 0, n = 0;
+            for (let t = 1.2; t < 2.7; t += 0.02) {
+              const a = Math.round(t * SR), N = f < 200 ? 2048 : 1024, fm = L.yin(m.subarray(a, a + N + Math.ceil(SR / (f * 0.8))), SR, f * 0.8, f * 1.25);
+              let ce = 0; for (let k = 0; k < N; k += 32) ce += 50 * Math.sin(2 * Math.PI * 5 * ((a + k) / SR - 19 / 375)); ce /= Math.ceil(N / 32);   // (the vibrato averaged over the window; started with the note)
+              err += Math.abs(L.cents(fm, f) - ce); n++;
+            }
+            vt.push([f, +(err / n).toFixed(2)]);
+          }
+          R_.vibrato = vt;
+          okg(vt.every((v) => v[1] <= 8), 'a vibrato ±50 ct at 5 Hz followed: mean |pitch − vibrato| ' + vt.map((v) => v[0] + ' Hz ' + v[1] + ' ct').join(', ') + ' (≤ 8)'); }
+        // native: the in-cycle delay of n periods is exact (n = 1, 2, 6 at 110, 440, 1760 Hz) – SPEC: native fallback f0 exact
+        if (nat) { const fn = []; for (const f of FS) for (const y of [0.45, 0.7]) { const m = mono(await play({ f, y, dur: 2.4 })); fn.push([f, y, +L.cents(peakHz(m, SR, f, 1.2, 32768), f).toFixed(2)]); }
+          R_.f0 = fn; okg(fn.every((r) => Math.abs(r[2]) <= 3), 'f0 of the native loop (n periods in the cycle, n = 1…6) within 3 ct at 55–1760 Hz: ' + fn.map((r) => r[0] + '/' + r[1] + ' ' + r[2]).join(', ')); }
+        // 6. peak after v.out ≤ −1 dBFS at any y / Hitze (one voice at velocity 1, held, and a Puls hit)
+        { let pk = -200, at = '';
+          for (const y of [0, 0.35, 0.6, 0.85, 1]) for (const h of [0, 0.5, 1]) for (const burst of [false, true]) {
+            const x = await play({ f: y > 0.8 ? 110 : 220, y, vel: 1, dur: 2.5, pp: { 'glt.hitze': h, 'glt.zunder': 1, 'glt.kasten': 1 }, burst, gate: 0.5 }); const p = L.db(Math.max(L.peak(x.L), L.peak(x.R)));
+            if (p > pk) { pk = p; at = `y ${y}, Hitze ${h}${burst ? ', Puls' : ''}`; }
+          }
+          R_.peak = [+pk.toFixed(2), at]; okg(pk <= -1, `peak after v.out ${pk.toFixed(2)} dBFS (≤ −1) at its loudest (${at}; velocity 1, Zunder and Kasten full)`); }
+        // Glimmen: the settled tone breathes (level and pitch wander) – never a static sine (the check)
+        { const m = mono(await play({ f: 220, y: 0.6, dur: 9 })); const e = envDb(m, 0.2).slice(15, 44); const pc = []; for (let t = 3; t < 8.4; t += 0.3) pc.push(L.cents(peakHz(m, SR, 220, t, 16384), 220));
+          const lr = Math.max(...e) - Math.min(...e), pr = Math.max(...pc) - Math.min(...pc); R_.glimmen = [+lr.toFixed(2), +pr.toFixed(2)];
+          okg(lr >= 0.4 && lr <= 6 && pr >= 0.5 && pr <= 8, `Glimmen: over 6 s the settled tone's level wanders ${lr.toFixed(2)} dB (0.4–6) and its pitch ${pr.toFixed(2)} ct (0.5–8)`); }
+        // Sprung: held at y 0.6 → 0.85 jumps to the twelfth (Sprung 3) / octave (Sprung 2) – quickly, without a hole
+        { const sj = [];
+          for (const [sp, yy, mm] of [['3', 0.85, 3], ['2', 0.82, 2]]) for (const f of [110, 440]) {
+            const m = mono(await play({ f, y: 0.6, dur: 3, pp: { 'glt.sprung': sp }, moves: [[1.2, 'setY', yy]] })); const e = envDb(m, 0.01), a = Math.round(1.1 / 0.01), lo = Math.min(...e.slice(a, a + 60));
+            let td = null; for (let t = 1.2; t < 2.5; t += 0.01) { const s2 = L.spectrum(m, SR, t, 2048); if (L.harm(s2, f, mm) > L.harm(s2, f, 1) + 10) { td = t - 1.2; break; } }
+            const s3 = L.spectrum(m, SR, 2.3, 16384); sj.push([sp, f, td == null ? null : Math.round(td * 1000), +(lo - e[a]).toFixed(1), +(L.harm(s3, f, mm) - L.harm(s3, f, 1)).toFixed(1)]);
+          }
+          R_.sprung = sj;
+          okg(sj.every((j) => j[2] != null && j[2] <= 150 && j[3] >= (nat ? -12 : -6) && j[4] >= 20), 'Sprung: the mode leads (+10 dB, a 43-ms window) within 150 ms of the move (Höhe arrives smoothed), the dip ≥ ' + (nat ? -12 : -6) + ' dB, 20 dB over the old mode at 2.3 s: ' + sj.map((j) => j[0] + '@' + j[1] + ' ' + j[2] + ' ms ' + j[3] + ' dB ' + j[4] + ' dB').join(', ')); }
+        // Hitze colours the settled tone (h3 rises); Sprung 2's bias seeds even harmonics (the check)
+        { const h3 = []; for (const h of [0, 0.5, 1]) { const sp = L.spectrum(mono(await play({ f: 220, y: 0.6, dur: 2.5, pp: { 'glt.hitze': h, 'glt.kasten': 1 } })), SR, 1.8, 16384); h3.push(+(L.harm(sp, 220, 3) - L.harm(sp, 220, 1)).toFixed(1)); }
+          R_.hitze = h3; okg(h3[0] < h3[1] - 6 && h3[1] < h3[2] - 3 && h3[1] >= -35, `Hitze saturates: h3 at y 0.6 for Hitze 0/0.5/1 ${h3.join(' / ')} dB`);
+          if (!nat) { const sp2 = L.spectrum(mono(await play({ f: 220, y: 0.6, dur: 2.5, pp: { 'glt.sprung': '2' } })), SR, 1.8, 16384), sp3 = L.spectrum(mono(await play({ f: 220, y: 0.6, dur: 2.5 })), SR, 1.8, 16384);
+            const e2 = L.harm(sp2, 220, 2) - L.harm(sp2, 220, 1), e3 = L.harm(sp3, 220, 2) - L.harm(sp3, 220, 1); R_.even = [+e2.toFixed(1), +e3.toFixed(1)];
+            okg(e2 >= -45 && e3 < -70, `Sprung 2 seeds even harmonics: h2 ${e2.toFixed(1)} dB (Sprung 3: ${e3.toFixed(1)})`); } }
+        // level 3: two loops, uncorrelated sides, as loud as level 1 per side at pan 0 and ±0.4 (lesson 3) – the worklet
+        if (!nat) { const r3 = []; let cc = 0;
+          for (const pan of [0, -0.4, 0.4]) { let p1 = 0, p3 = 0; for (const f of [110, 330, 880]) { const a = await play({ f, y: 0.6, dur: 3, pan }), b = await play({ f, y: 0.6, dur: 3, pan, q: '3' }); for (const ch of ['L', 'R']) { p1 += L.rms(a[ch], 1.5 * SR, 3 * SR) ** 2; p3 += L.rms(b[ch], 1.5 * SR, 3 * SR) ** 2; } if (!pan) { let sx = 0, sl = 0, sr = 0; for (let i = 1.5 * SR; i < 3 * SR; i++) { sx += b.L[i] * b.R[i]; sl += b.L[i] ** 2; sr += b.R[i] ** 2; } cc = Math.max(cc, Math.abs(sx / Math.sqrt(sl * sr))); } } r3.push([pan, +(10 * Math.log10(p3 / p1)).toFixed(2)]); }
+          R_.l3 = { perPan: r3, corr: +cc.toFixed(2) };
+          okg(r3.every((r) => Math.abs(r[1]) <= 1.5) && cc < 0.5, 'level 3 vs 1 (both sides, 110/330/880 Hz): ' + r3.map((r) => 'pan ' + r[0] + ' ' + r[1] + ' dB').join(', ') + `; L/R correlation ≤ ${cc.toFixed(2)} (< 0.5)`); }
+        // the native loop's price (cost.js, its context without the module) against its VCOST (the getter reads the context)
+        if (nat) { const { execFileSync } = require('child_process');
+          const c = JSON.parse(execFileSync('node', [path.join(__dirname, 'cost.js'), process.env.COST_ROUNDS || '6'], { env: Object.assign({}, process.env, { ENGS: 'gltN1,gltN3,hau1,hau3,obt1,obt3,tie1,stm1,swm1,neb3' }), encoding: 'utf8', timeout: 1800000 }).trim().split('\n').pop());
+          const c1 = c.gltN1 * c.scale, c3 = c.gltN3 * c.scale, tab = await page.evaluate(async () => { const M = window.__M; await window.__ctx(0.2, {}, '1', true); return [M.VCOST1.glt, M.VCOST3.glt]; });
+          R_.cost = { L1: +c1.toFixed(3), L3: +c3.toFixed(3), table: tab };
+          console.log(`INFO glt native loop: cost level 1 ${c1.toFixed(3)}, level 3 ${c3.toFixed(3)} Nebel units (SPEC's estimate 0.35)`);
+          okg(tab[0] >= c1 && tab[1] >= c3, `VCOST entries (read without the module) cover the measurement: ${tab} ≥ ${c1.toFixed(2)}, ${c3.toFixed(2)}`); }
+        rep[nat ? 'native' : 'worklet'] = R_;
+      }
+      // native: the release ends the voice; a knob turned reaches a sounding native voice (v.upd)
+    }
     if (key === 'elm') {
       // stages on their own (the voice's parts muted after it is built): hum, corona, arc
       const part = async (y, keep, extra = {}) => pull(await page.evaluate(async (o) => {
@@ -1184,11 +1302,11 @@ async function one(page, o) {
   // -- fallback: no module in this context → the stand-in plays, the key stays
   { const r = await page.evaluate(async () => {
       const M = window.__M; const ctx = await window.__off(48000, 1, { 'v.eng': 'neb', 'rev.mix': 0 });   // nothing loaded
-      const W = [['hlm', 'hau', 220], ['rnk', 'neb', 330], ['hrz', 'sch', 440], ['mdr', 'glo', 550], ['boe', 'obt', 294], ['amo', 'tie', 110], ['gsp', 'sai', 247], ['shn', 'sai', 262], ['khl', 'swm', 523], ['zpf', 'zpf', 587]], vs = W.map(([k, , f]) => M.playNote(k, 0.05, f, 0.6, 0.7, {}));
+      const W = [['hlm', 'hau', 220], ['rnk', 'neb', 330], ['hrz', 'sch', 440], ['mdr', 'glo', 550], ['boe', 'obt', 294], ['amo', 'tie', 110], ['gsp', 'sai', 247], ['shn', 'sai', 262], ['khl', 'swm', 523], ['zpf', 'zpf', 587], ['glt', 'glt', 659]], vs = W.map(([k, , f]) => M.playNote(k, 0.05, f, 0.6, 0.7, {}));
       const st = window.__stats(await ctx.startRendering(), 0.1);
-      return { got: vs.map((v) => v && [v.eng, v.as]), st, plays: W.map(([k]) => M.wkPlays(k)), dsp: !!ctx.__dsp, want: W.map(([k, s]) => [k, s]), zn: vs.map((v) => !!(v && v.zn && !v.wk)) };
+      return { got: vs.map((v) => v && [v.eng, v.as]), st, plays: W.map(([k]) => M.wkPlays(k)), dsp: !!ctx.__dsp, want: W.map(([k, s]) => [k, s]), zn: vs.map((v) => !!(v && v.zn && !v.wk)), gn: vs.map((v) => !!(v && v.gltN && !v.wk)) };
     });
-    const pass = L.ok(r.want.every(([k, s], i) => r.got[i] && r.got[i][0] === k && r.got[i][1] === s) && r.zn[r.want.findIndex((w) => w[0] === 'zpf')] && r.st.rms > -50 && !r.dsp, 'fallback without the module: Halm plays as Hauch, Ranke as Nebel, Harz as Schale, Moder as Glocke, Böe as Obertöne, Amöbe as Tiefe, Gespinst as Saite, Sehne as Saite, Kehlchen as Schwarm, Zapfen as its own native stand-in, the key stays (' + JSON.stringify(r.got) + ')');
+    const pass = L.ok(r.want.every(([k, s], i) => r.got[i] && r.got[i][0] === k && r.got[i][1] === s) && r.zn[r.want.findIndex((w) => w[0] === 'zpf')] && r.gn[r.want.findIndex((w) => w[0] === 'glt')] && r.st.rms > -50 && !r.dsp, 'fallback without the module: Halm plays as Hauch, Ranke as Nebel, Harz as Schale, Moder as Glocke, Böe as Obertöne, Amöbe as Tiefe, Gespinst as Saite, Sehne as Saite, Kehlchen as Schwarm, Zapfen as its own native stand-in, Glut its own native loop, the key stays (' + JSON.stringify(r.got) + ')');
     if (!pass) fails++; }
   const errs = errors.filter((e) => !/Failed to load resource|fonts\.g|myzel-dsp\.js/.test(e));
   if (!L.ok(!errs.length, 'no console errors ' + errs.join(' | '))) fails++;

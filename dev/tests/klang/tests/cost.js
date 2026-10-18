@@ -4,6 +4,7 @@
 // (from an earlier calibration on another machine) give the scale between this machine's raw ratio and the table.
 //   node cost.js [rounds]      env: ENGS=hlm1,hlm3,… NV=24 DUR=4 PARAMS='{"jrg.holz":1}' Y=0.6 (the voices' height)     prints one JSON line
 // (a struck engine needs DUR within its voices' life – Jahresring: PARAMS holz 1 and a summer, DUR 2)
+// A candidate written 'gltN1' is Glut's own native loop: its context gets no module.
 process.env.SEED_BLOBS = '';
 const { chromium, openInst } = require('../../v2/lib');
 const ROUNDS = +process.argv[2] || 6, DUR = +process.env.DUR || 4, NV = +process.env.NV || 24;
@@ -16,9 +17,9 @@ const XP = JSON.parse(process.env.PARAMS || '{}');
     const M = window.__M;
     async function run(eng, q, n) {
       M.P['dev.q'] = q;
-      const nat = /N$/.test(eng); if (nat) eng = eng.slice(0, -1);   // (zpfN: Zapfen's native stand-in – the engine marked broken for the run)
-      const ctx = await window.__off(48000, DUR, Object.assign({ 'v.eng': eng === 'null' ? 'hlm' : eng === 'web' ? 'gsp' : eng, 'rev.mix': 0, 'dly.mix': 0 }, XP));
-      await M.ensureDSP(ctx);
+      const nat = /N$/.test(eng); if (nat) eng = eng.slice(0, -1);   // (zpfN, gltN: the native stand-in of an engine with fallback 'native' – the engine marked broken for the run)
+      const ctx = await window.__off(48000, DUR, Object.assign({ 'v.eng': eng === 'null' ? 'hlm' : eng === 'web' ? 'gsp' : eng, 'rev.mix': 0, 'dly.mix': 0 }, XP, nat ? { 'v.eng': 'neb' } : {}));
+      if (!nat) await M.ensureDSP(ctx);
       ctx.suspend(19 / 375).then(() => {
         for (let k = 0; k < n; k++) {
           if (eng === 'web') {   // Gespinst's web alone, kept ringing by a steady noise (one node: its cost × NV below)

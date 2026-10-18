@@ -1,6 +1,6 @@
 // The worklet processors on their own, in Node (no browser): myzelDsp() taken from the app and run block by block.
 // Contract (timing, done, kill, NaN guard), robustness under every knob at its extremes, tuning of the reed across
-// Mund/Blatt, the ring's update artefacts and pitch, Moder's digestion and crackle; the aeolian harp's capture, floor, stereo and Puls; Zapfen's teeth, Rast and stone.   node t-dsp.js
+// Mund/Blatt, the ring's update artefacts and pitch, Moder's digestion and crackle; the aeolian harp's capture, floor, stereo and Puls; Zapfen's teeth, Rast and stone; Glut's loop (growth and afterglow per second, the knee, the jump, the two loops of level 3).   node t-dsp.js
 const L = require('./dsplib');
 const SR = 48000;
 const D = L.loadDsp(SR);
@@ -16,8 +16,8 @@ function peakHz(sig, f, at, N) {
   return (b + 0.5 * (a - d) / (a - 2 * c + d)) * hz;
 }
 // -- the contract
-L.ok(['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel-aeol', 'myzel-gendy', 'myzel-web', 'myzel-string', 'myzel-syrinx', 'myzel-scrape', 'myzel-null'].every((k) => D.procs[k]), 'module registers myzel-blow, myzel-scan, myzel-bow, myzel-rot, myzel-aeol, myzel-gendy, myzel-web, myzel-string, myzel-syrinx, myzel-scrape, myzel-null: ' + Object.keys(D.procs).join(', '));
-for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel-aeol', 'myzel-gendy', 'myzel-string', 'myzel-syrinx', 'myzel-scrape']) {
+L.ok(['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel-aeol', 'myzel-gendy', 'myzel-web', 'myzel-string', 'myzel-syrinx', 'myzel-scrape', 'myzel-ember', 'myzel-null'].every((k) => D.procs[k]), 'module registers myzel-blow, myzel-scan, myzel-bow, myzel-rot, myzel-aeol, myzel-gendy, myzel-web, myzel-string, myzel-syrinx, myzel-scrape, myzel-ember, myzel-null: ' + Object.keys(D.procs).join(', '));
+for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel-aeol', 'myzel-gendy', 'myzel-string', 'myzel-syrinx', 'myzel-scrape', 'myzel-ember']) {
   const r = note(name, 220, 0.6, { at: 0.3, dur: 0.6 });
   const pre = L.rms(r.L, 0, Math.floor(0.3 * SR) - 1), post = L.rms(r.L, Math.floor(0.33 * SR), Math.floor(0.6 * SR));
   L.ok(pre === 0 && post > 1e-3, `${name}: a note posted ahead waits for its time (silent before 0.3 s, ${L.db(post).toFixed(1)} dB after)`);
@@ -25,7 +25,7 @@ for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel
   L.ok(!k.alive && k.done > 0.25 && k.done < 0.52, `${name}: {kill} stops the processor at once (process() false at ${k.done.toFixed(3)} s, the message arrives ahead of 0.5 s)`);
   // (Moder is struck: no {off} – it reports {done} by itself once its modes are below −60 dB, here a Nachklang of 2 s;
   // the aeolian harp's strings ring on after the wind: Nachklang 3 s → −100 dB ≈ 5 s later)
-  const struck = name === 'myzel-rot', aeol = name === 'myzel-aeol', d = struck ? note(name, 220, 0.6, { prm: { nachklang: 2 }, dur: 4 }) : note(name, 220, 0.6, { off: 0.5, dur: aeol ? 8 : 4 });
+  const struck = name === 'myzel-rot', aeol = name === 'myzel-aeol', d = struck ? note(name, 220, 0.6, { prm: { nachklang: 2 }, dur: 4 }) : note(name, 220, 0.6, { off: 0.5, dur: aeol ? 8 : 4, prm: name === 'myzel-ember' ? { nachgluehen: 0.8 } : undefined });   // (Glut glows Nachglühen long after {off})
   const dn = d.posted.find((p) => p[1].done);
   L.ok(dn && !d.alive && dn[0] < (aeol ? 7 : 3.5) && (!struck || dn[0] <= 2.6), `${name}: ${struck ? 'struck, at its end' : 'after {off}'} it reports {done} once silent (${dn ? dn[0].toFixed(2) : '–'} s) and becomes collectable`);
   // a NaN anywhere: the guard clears the state and the voice plays on
@@ -35,9 +35,9 @@ for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel
 // -- every knob at its extremes, pitches 16 Hz … 8 kHz, bursts and held, both levels: bounded, finite, ends
 {
   let x = 99; const rnd = () => { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; return (x >>> 0) / 4294967296; };
-  for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel-aeol', 'myzel-gendy', 'myzel-string', 'myzel-syrinx', 'myzel-scrape']) {
+  for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel-aeol', 'myzel-gendy', 'myzel-string', 'myzel-syrinx', 'myzel-scrape', 'myzel-ember']) {
     let worst = 0, bad = 0, notDone = 0;
-    const keys = name === 'myzel-blow' ? ['atem', 'mund', 'blatt', 'luft', 'zunge'] : name === 'myzel-bow' ? ['druck', 'bogen', 'daempfung', 'schwebung', 'harz'] : name === 'myzel-string' ? ['daempfung', 'steifheit', 'zupfort', 'hand', 'ebow'] : name === 'myzel-scrape' ? ['schuppen', 'rast', 'klang', 'strich', 'kratzen'] : name === 'myzel-syrinx' ? ['spannung', 'druck', 'schnabel', 'rauheit', 'anstieg'] : name === 'myzel-rot' ? ['pilz', 'knistern', 'schwellen', 'schlaegel'] : name === 'myzel-aeol' ? ['wind', 'boeen', 'nachklang', 'rauschen', 'fang', 'dunkel'] : name === 'myzel-gendy' ? ['zeit', 'rueck'] : ['masse', 'feder', 'mitte', 'daempfung', 'hammer', 'holz'];
+    const keys = name === 'myzel-blow' ? ['atem', 'mund', 'blatt', 'luft', 'zunge'] : name === 'myzel-bow' ? ['druck', 'bogen', 'daempfung', 'schwebung', 'harz'] : name === 'myzel-string' ? ['daempfung', 'steifheit', 'zupfort', 'hand', 'ebow'] : name === 'myzel-scrape' ? ['schuppen', 'rast', 'klang', 'strich', 'kratzen'] : name === 'myzel-ember' ? ['gluehen', 'nachgluehen', 'zunder', 'hitze', 'kasten'] : name === 'myzel-syrinx' ? ['spannung', 'druck', 'schnabel', 'rauheit', 'anstieg'] : name === 'myzel-rot' ? ['pilz', 'knistern', 'schwellen', 'schlaegel'] : name === 'myzel-aeol' ? ['wind', 'boeen', 'nachklang', 'rauschen', 'fang', 'dunkel'] : name === 'myzel-gendy' ? ['zeit', 'rueck'] : ['masse', 'feder', 'mitte', 'daempfung', 'hammer', 'holz'];
     for (let i = 0; i < 40; i++) {
       const prm = {}; for (const k of keys) prm[k] = i < 4 ? [0, 1, 0, 1][i] * (k.length % 2 ? 1 : 1) : rnd() < 0.3 ? Math.round(rnd()) : rnd();
       if (name === 'myzel-bow') prm.koerper = ['glas', 'schale', 'stab', 'zunge', 'teich'][i % 5];
@@ -48,9 +48,10 @@ for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel
       if (name === 'myzel-syrinx') prm.silbe = ['aus', 'chip', 'triller', 'ruf'][i % 4];
       if (name === 'myzel-string') { prm.steg = (i >> 1) % 2 ? 'jawari' : 'flach'; prm.daempfung = 0.3 * Math.pow(8 / 0.3, prm.daempfung); prm.zupfort = 0.05 + 0.45 * prm.zupfort; }   // (the knobs' own ranges)
       if (name === 'myzel-scrape') prm.koerper = ['zapfen', 'holz', 'panzer', 'kuerbis', 'fels'][i % 5];
+      if (name === 'myzel-ember') { prm.sprung = ['2', '3'][i % 2]; prm.nachgluehen = 0.2 + 5.8 * prm.nachgluehen; }
       const f = [16, 30, 55, 220, 1000, 3000, 8000][i % 7] * (0.9 + 0.2 * rnd()), y = i % 5 === 0 ? 1 : i % 5 === 1 ? 0 : rnd(), rich = i % 2 === 1, burst = i % 3 === 0;
       // (a bow's modes ring as Dämpfung and the body say – up to 16 s: it must end within two of its rings)
-      const ring = name === 'myzel-bow' ? (0.4 + 6 * (1 - prm.daempfung) * (1 - prm.daempfung)) * { glas: 0.6, schale: 2.5, stab: 1.6, zunge: 0.35, teich: 2 }[prm.koerper] : name === 'myzel-aeol' ? prm.nachklang : name === 'myzel-gendy' ? 4.5 * prm.rel : 0;   // (Amöbe: its own fade τ = 0.8·rel down to −100 dB ≈ 8·rel – in the app the voice's release ends it at 1.6·rel)
+      const ring = name === 'myzel-bow' ? (0.4 + 6 * (1 - prm.daempfung) * (1 - prm.daempfung)) * { glas: 0.6, schale: 2.5, stab: 1.6, zunge: 0.35, teich: 2 }[prm.koerper] : name === 'myzel-aeol' ? prm.nachklang : name === 'myzel-gendy' ? 4.5 * prm.rel : name === 'myzel-ember' ? 0.9 * prm.nachgluehen : 0;   // (Amöbe: its own fade τ = 0.8·rel down to −100 dB ≈ 8·rel – in the app the voice's release ends it at 1.6·rel)
       // (Moder: struck – its life from the Nachklang, a Puls step's gate as the app passes it: life × 0.25–1, the compost × 1–6)
       const rot = name === 'myzel-rot', gt = burst ? 0.02 + rnd() : 0, life = rot ? prm.nachklang * (gt ? Math.max(0.25, Math.min(1, gt)) : 1) : 0;
       const r = note(name, f, y, { prm, rich, burst: rot ? false : burst, gate: rot ? 0 : gt, off: burst || rot ? null : 1.0, dur: rot ? 1.3 * life + 1 : Math.max(4, 2 + 2 * ring), vel: rnd(), msgs: name === 'myzel-scan' ? [[0.5, { hammer: 1 }], [0.55, { hammer: 1 }], [0.6, { hammer: 1 }]] : name === 'myzel-gendy' ? [[0.5, { zuck: 1, t: 0.5 }], [0.6, { zuck: 1, t: 0.6 }], [0.7, { set: { punkte: 3 + (i % 22) } }]] : [], life: rot ? life : undefined, sc: rot && gt ? Math.max(Math.min(6, Math.max(1, 1 / gt)), Math.min(6, Math.max(1, 5 / life))) : undefined });
@@ -59,7 +60,7 @@ for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel
       worst = Math.max(worst, pk); if (r.alive) notDone++;
     }
     L.ok(!bad && worst <= 1.2, `${name}: 40 random knob sets (extremes included, 16 Hz–8 kHz, L1/L3, held/burst, shakes${name === 'myzel-blow' ? ', all three pipes' : name === 'myzel-scrape' ? ', all five bodies' : ''}): no NaN, peak ${worst.toFixed(3)} (≤ 1.2)`);
-    L.ok(notDone === 0, `${name}: every one of them ends within ${name === 'myzel-bow' || name === 'myzel-aeol' ? 'two rings' : name === 'myzel-rot' ? '1.3 × its life + 1 s' : name === 'myzel-gendy' ? 'its own fade (9 × Ausklingen)' : '3 s'} after its end (${notDone} still running)`);
+    L.ok(notDone === 0, `${name}: every one of them ends within ${name === 'myzel-bow' || name === 'myzel-aeol' ? 'two rings' : name === 'myzel-rot' ? '1.3 × its life + 1 s' : name === 'myzel-gendy' ? 'its own fade (9 × Ausklingen)' : name === 'myzel-ember' ? '1.8 × Nachglühen' : '3 s'} after its end (${notDone} still running)`);
   }
 }
 // -- reed: tuning holds across Mund (loss) and Blatt (reed opening), 110–1760 Hz
@@ -459,5 +460,43 @@ for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel
     let n1 = 0; const co = scr({ f: 220, y: 0.6, dur: 3, off: 1, each: (nd, t) => { if (t < 1.0) n1 = nd.nT; } });
     const after = co.node.nT - n1;
     L.ok(after >= 2 && after <= 40 && !co.alive, `Zapfen: let go, the stick coasts – ${after} more teeth, slowing, then it ends`); }
+}
+// -- Glut: the loop's laws per second, at every pitch; the knee; the jump; level 3's two loops; after underruns one
+{
+  const E = (f, y, o = {}) => note('myzel-ember', f, y, Object.assign({ dur: 3 }, o));
+  const envDb = (x, w) => L.env(x, SR, w).map((v) => L.db(v));
+  const slope = (e, w) => { const fin = Math.max(...e.slice(-40)); let a = -1, b = -1; for (let i = 0; i < e.length; i++) { if (a < 0 && e[i] > fin - 25) a = i; if (a >= 0 && e[i] > fin - 8) { b = i; break; } } return (e[b] - e[a]) / ((b - a) * w); };
+  // (from a dying ping at y 0.2 the height flares to 0.6 at 1 s: the slope from 25 to 8 dB under the settled level)
+  const gr = [55, 220, 880, 1760].map((f) => slope(envDb(E(f, 0.2, { dur: 3.5, params: (t) => ({ freq: f, hoehe: t < 1 ? 0.2 : 0.6 }) }).L, 0.01).slice(102), 0.01)), gm = L.mean(gr);
+  L.ok(gr.every((g) => Math.abs(g / gm - 1) <= 0.1), `ember: growth at y 0.6 per second, the same at 55–1760 Hz (±10 %): ${gr.map((g) => g.toFixed(1)).join(' / ')} dB/s`);
+  // (the decay's slope over 50-ms windows – two periods at 55 Hz – from 0.1 s after the release down 35 dB)
+  const t60 = (x, at) => { const e = envDb(x, 0.05), a = Math.round((at + 0.1) / 0.05); let sx = 0, sy = 0, sxx = 0, sxy = 0, k = 0; for (let i = a; i < e.length && e[i] > e[a] - 35; i++, k++) { const t = (i - a) * 0.05; sx += t; sy += e[i]; sxx += t * t; sxy += t * e[i]; } return -60 / ((k * sxy - sx * sy) / (k * sxx - sx * sx)); };
+  const t6 = []; for (const ng of [0.5, 1.5, 5]) for (const f of [55, 1760]) { const r = E(f, 0.7, { prm: { nachgluehen: ng }, off: 1.2, dur: 1.5 + 0.8 * ng }); t6.push([ng, f, t60(r.L, 1.2)]); }
+  L.ok(t6.every((x) => Math.abs(x[2] / x[0] - 1) <= 0.15), 'ember: afterglow T60 = Nachglühen (±15 %): ' + t6.map((x) => x[0] + 's@' + x[1] + ' ' + x[2].toFixed(2)).join(', '));
+  const lv = [55, 220, 880, 1760].map((f) => L.db(L.rms(E(f, 0.6, { dur: 3.5 }).L, 2.5 * SR, 3.5 * SR)));
+  L.ok(Math.max(...lv) - Math.min(...lv) <= 2, `ember: settled level at y 0.6 within 2 dB at 55–1760 Hz (${lv.map((v) => v.toFixed(1)).join(' / ')} dB)`);
+  const pc = []; for (const f of [55, 440, 1760]) for (const [y, m] of [[0.6, 1], [0.95, 3]]) pc.push(L.cents(peakHz(E(f, y, { dur: 2.4 }).L, f * m, 1.2, 32768), f * m));
+  L.ok(pc.every((c) => Math.abs(c) <= 3), `ember: in tune (the line, mode 1 and 3, Glimmen's walk included): worst ${Math.max(...pc.map(Math.abs)).toFixed(2)} ct`);
+  // the knee: y 0.25 dies, y 0.4 grows, the settled level rises with y; y 0 a ping
+  const kn = [0.25, 0.4, 0.6, 1].map((y) => { const r = E(220, y, { dur: 3 }); return [L.db(L.rms(r.L, 0.05 * SR, 0.3 * SR)), L.db(L.rms(r.L, 2.5 * SR, 3 * SR))]; });
+  L.ok(kn[0][1] < kn[0][0] - 20 && kn[1][1] > kn[1][0] + 6 && kn[1][1] < kn[2][1] && kn[2][1] < kn[3][1], 'ember: the threshold near y 0.3, the settled level rising with y: ' + kn.map((k) => k.map((v) => v.toFixed(1)).join('→')).join(', '));
+  // a Puls hit: the loop state set – at its level within the first 30 ms, at 55 Hz too
+  const ph = [55, 440].map((f) => { const h = L.rms(E(f, 0.6, { dur: 2.5 }).L, 1.5 * SR, 2.5 * SR), r = E(f, 0.6, { burst: true, gate: 0.112, dur: 0.4 }); return L.db(L.rms(r.L, 0.005 * SR, 0.035 * SR)) - L.db(h); });
+  L.ok(ph.every((d) => d >= -10), `ember: a Puls hit sounds at once (5–35 ms: ${ph.map((d) => d.toFixed(1)).join(' / ')} dB vs held)`);
+  // Sprung: held y 0.6 → 0.85: no hole, the twelfth (Sprung 3) / the octave (Sprung 2) leads
+  for (const [sp, m] of [['3', 3], ['2', 2]]) {
+    const r = E(220, 0.6, { prm: { sprung: sp }, params: (t) => ({ freq: 220, hoehe: t < 1 ? 0.6 : 0.85 }) }), e = envDb(r.L, 0.01), lo = Math.min(...e.slice(95, 160)) - e[95], s2 = L.spectrum(r.L, SR, 1.1, 4096);
+    L.ok(lo >= -6 && L.harm(s2, 220, m) > L.harm(s2, 220, 1) + 10, `ember: Sprung ${sp} – the band jumps, the old mode rings out beside the loop: dip ${lo.toFixed(1)} dB, mode ${m} leads 100 ms after`);
+  }
+  // level 3: two loops ±5 ct, coupled in quadrature – uncorrelated sides; after underruns one loop on both sides
+  const st = E(330, 0.6, { rich: true, dur: 3 }); let sx = 0, sl = 0, sr = 0; for (let i = SR; i < 3 * SR; i++) { sx += st.L[i] * st.R[i]; sl += st.L[i] ** 2; sr += st.R[i] ** 2; }
+  const cc = sx / Math.sqrt(sl * sr), lt = E(330, 0.6, { rich: true, po: { lite: 1 }, dur: 1 }); let same = true; for (let i = 0; i < lt.L.length; i++) if (lt.L[i] !== lt.R[i]) { same = false; break; }
+  L.ok(Math.abs(cc) < 0.5 && Math.abs(10 * Math.log10(sl / sr)) < 2 && same && L.rms(lt.L, 0.5 * SR, SR) > 1e-3, `ember: level 3 two loops (L/R correlation ${cc.toFixed(2)}, balance ${(10 * Math.log10(sl / sr)).toFixed(1)} dB); after underruns one loop on both sides`);
+  // a glide of an octave in 50 ms (and Bebung's steps) stays bounded and lands in tune
+  const gl = E(220, 0.6, { dur: 2.4, params: (t) => ({ freq: t < 1 ? 220 : 220 * Math.pow(2, Math.min(1, (t - 1) / 0.05)), hoehe: 0.6 }) });
+  const gc = L.cents(peakHz(gl.L, 440, 1.6, 32768), 440);
+  L.ok(!L.nanCount(gl.L) && L.peak(gl.L) < 1 && Math.abs(gc) <= 3, `ember: an octave's glide in 50 ms stays bounded (peak ${L.peak(gl.L).toFixed(2)}) and lands at ${gc.toFixed(2)} ct`);
+  const kc = E(220, 0.6, { dur: 2, msgs: [[1, { set: { hitze: 1, kasten: 0, sprung: '2' } }]] });
+  L.ok(!L.nanCount(kc.L) && L.peak(kc.L) < 1 && L.rms(kc.L, 1.5 * SR, 2 * SR) > 1e-3, 'ember: knobs changed under a sounding loop – bounded, sounding on');
 }
 process.exit(L.summary() ? 1 : 0);

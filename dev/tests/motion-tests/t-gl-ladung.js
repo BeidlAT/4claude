@@ -33,8 +33,8 @@ const samples = (page) => page.evaluate(() => { clearInterval(window.__si); retu
     const pk = s.reduce((m, x) => (x.lad > m.lad ? x : m), s[0]);
     ok(pk.lad > 0.6, 'shaking for 2 s charges the Ladung (' + pk.lad.toFixed(2) + ')');
     const q = (x) => Math.round(x * 512) / 512, e = (x) => (x < 0.01 ? 0 : x);
-    const amtOk = s.every((x) => Object.keys(x).filter((k) => !['t', 'el', 'lad', 'lvl', 'ro'].includes(k)).every((k) => near(x[k], q(x.ro * { korD: 0.8, korS: 0.7, trp: 0.8, pulsD: 0.7, pulsH: 0.5, wow: 0.6, expr: 0.35 }[k]), 1e-9)));
-    ok(amtOk && s.every((x) => Math.abs(x.ro - e(x.lvl)) <= 0.05 + 1e-9), 'Körner-Dichte ×0.8, -Streuung ×0.7, Tropfen-Regen ×0.8, Puls-Dichte ×0.7, -Helligkeit ×0.5, Leiern ×0.6, Ausdruck ×0.35 of the charge (20 times a second, in steps of 1/512, empty below 1 %), every sample (' + s.length + ')');
+    const amtOk = s.every((x) => Object.keys(x).filter((k) => !['t', 'el', 'lad', 'lvl', 'ro'].includes(k)).every((k) => near(x[k], q(x.ro * { korD: 0.8, korS: 0.7, trp: 0.8, pulsD: 0.7, pulsH: 0.5, wow: 0.6, expr: 0.35, gspK: 0.6, rhzR: 0.6 }[k]), 1e-9)));
+    ok(amtOk && s.every((x) => Math.abs(x.ro - e(x.lvl)) <= 0.05 + 1e-9), 'Körner-Dichte ×0.8, -Streuung ×0.7, Tropfen-Regen ×0.8, Puls-Dichte ×0.7, -Helligkeit ×0.5, Leiern ×0.6, Ausdruck ×0.35, Gespinst-Kopplung ×0.6, Rhizom-Reiz ×0.6 of the charge (20 times a second, in steps of 1/512, empty below 1 %), every sample (' + s.length + ')');
     ok(pk.korD > 0.45 && pk.wow > 0.35 && pk.expr > 0.2, 'at the top: Körner-Dichte ' + pk.korD.toFixed(2) + ', Leiern ' + pk.wow.toFixed(2) + ', Ausdruck ' + pk.expr.toFixed(2));
     // the discharge with the default Entladung (8 s): e^-1 after 8/3 s
     const i0 = s.findIndex((x) => x.t > pk.t + 600), x0 = s[i0], x1 = s.find((x) => x.t >= x0.t + 1500);

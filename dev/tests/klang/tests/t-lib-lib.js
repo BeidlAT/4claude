@@ -48,7 +48,7 @@ const L = require('./dsplib'), K = require('./klh');
   await page.click('.kq-fams .chip[data-fam="alle"]'); await page.waitForTimeout(80);
   s = await st();
   r = await M(() => [...document.querySelectorAll('.kq-fh')].map((h) => h.firstChild.textContent));
-  L.ok(s.tiles.length === 27 && r.join() === 'Luft,Dunst,Holz,Erz,Erde', 'Alle: 27 tiles under five sticky heads');
+  L.ok(s.tiles.length === 28 && r.join() === 'Luft,Dunst,Holz,Erz,Erde', 'Alle: 28 tiles under five sticky heads');
   const search = async (q) => { await page.fill('#kqSearch', q); await page.waitForTimeout(60); return (await st()).tiles; };
   r = { oe: await search('koerner'), uml: await search('Körner'), bow: await search('flute'), fam: await search('erz'), art: await search('schlägt'), bass: await search('808'), none: await search('qqq') };
   s = await st();
@@ -115,7 +115,7 @@ const L = require('./dsplib'), K = require('./klh');
     o.fieldOff = !!document.querySelector('.kq-tile[data-k="off"]'); M.kqClose(); M.setParam('v.eng', 'neb');
     return o;
   });
-  L.ok(r.tiles.join() === 'off,tie,mem,trp,mdr,rhz' && r.on === 'off' && r.layer === 'mem' && r.off === 'off' && !r.fieldOff, 'layer: opens on Erde (the field plays Tiefe) with „Aus“ first and checked; Membran, then Aus again; the field has no „Aus“');
+  L.ok(r.tiles.join() === 'off,tie,glt,mem,trp,mdr,rhz' && r.on === 'off' && r.layer === 'mem' && r.off === 'off' && !r.fieldOff, 'layer: opens on Erde (the field plays Tiefe) with „Aus“ first and checked; Membran, then Aus again; the field has no „Aus“');
   // the rain: held sources grey with the reason, not chosen by a tap
   r = await M(async () => {
     const M = window.__M; M.gkSet('rgS', 'trp'); const T = M.kqTarget('rgS'); M.kqOpen(T, { where: 'Sporenregen' }); await window.__sleep(80);
@@ -129,7 +129,7 @@ const L = require('./dsplib'), K = require('./klh');
     M.kqClose(); M.gkSet('rgS', 'trp');
     return o;
   });
-  L.ok(r.tiles.join() === 'tie-,mem,trp,mdr,rhz' && /gehaltene Quellen sind hier grau/.test(r.why) && r.rgS === 'trp' && /Tiefe: hält/.test(r.live), 'rain: Tiefe grey (' + r.tiles + '), the reason in the head, a tap does not choose it („' + r.live + '“)');
+  L.ok(r.tiles.join() === 'tie-,glt-,mem,trp,mdr,rhz' && /gehaltene Quellen sind hier grau/.test(r.why) && r.rgS === 'trp' && /Tiefe: hält/.test(r.live), 'rain: Tiefe grey (' + r.tiles + '), the reason in the head, a tap does not choose it („' + r.live + '“)');
   L.ok(/blüht zu lange/i.test(r.gng) && /Nicht für den Sporenregen/.test(r.lab) && r.klb === 'klb', 'Gong grey with its own reason („' + r.gng + '“, ' + r.lab + '); Kalimba chosen (' + r.klb + ')');
   L.ok(!errors.length, 'no console errors (' + errors.slice(0, 2).join(' | ') + ')');
   await ctx.close(); await browser.close();
