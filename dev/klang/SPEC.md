@@ -173,6 +173,7 @@ out = TANH(yo*gain + harz*F*fr)
 - **Höhe (Gestik)**: forward tilt = more pressure (towards roughness); Bebung = vibrato on glass. **Puls**: strokes with seed, good at ≥ 1/8 at 120 bpm; faster lanes become plucked modes (intended). regen 0.
 - **Presets**: Glaswiese (§5).
 - **Acceptance**: f0 |err| ≤ 5 ct at 110/220/440/880/1568 Hz for all bodies after correction; t90 ≤ 0.8 s held (p 0.45); mode 1 dominant (mode 2 ≤ −20 dB) at p 0.2–0.7; h2/h3 of the output rise monotonically with y (F path); burst 112 ms ≥ −20 dB rel. held RMS; after release ring T60 within ±30 % of the Dämpfung mapping; no NaN; peak ≤ −1 dBFS; cost ≤ 1.2 / 2.0; L3 within ±1.5 dB; dice(): no silent corner (y 0 → flautando audible ≥ −35 dB).
+- **As built (stage 3):** the banded waveguides and the bow table above, with every acceptance row met and the check's fixes; the measured changes of letter (in-band onset seed, the band's group delay in the loss, the bow's contact fixed with the pattern turning past the listeners, measured bowl ratios, the friction path's level and colour, a rough contact, the Teich's scream and water, no second tongue) – see `dev/HANDOFF.md` „Notes from stage 3“.
 
 ### 3.2 hlm Halm – `myzel-blow` (reed, flute, flame)
 
@@ -198,6 +199,7 @@ out  = bore*0.9 + air                      // air = bpAir(noise)*luft*max(0, 0.2
 - **Params (6):** `hlm.rohr` SEL rohrblatt/floete/flamme (rohrblatt) · `hlm.atem` 0–1 (0.5) · `hlm.mund` 0–1 (0.4) · `hlm.blatt` 0–1 (0.5) · `hlm.luft` 0–1 (0.4) · `hlm.zunge` 0–1 (0.5). MACRO atem/blatt.
 - **Höhe**: breath (air → tone → choke); tilt forward = more breath with Ocarina vibrato (existing Gestik). **Puls**: tongue strokes; bass notes speak slowly (M: 235 ms at 110 Hz) → lanes below 110 Hz are soft, documented. regen 0.
 - **Acceptance**: threshold between y 0.2 and 0.35 (RMS jump ≥ 20 dB); f0 ≤ 5 ct (reed) 110–2500 Hz; t90 ≤ 250 ms at 110 Hz, ≤ 100 ms at 440 Hz; decay ≤ 60 ms; air at y 0 ≥ −40 dB; burst 60 ms ≥ −20 dB; odd harmonics dominate (h2 ≤ h3 − 20 dB); flute: f0 ≤ 10 ct in registers 1 and 2 at 220–880 Hz, else the option is hidden; cost ≤ 0.55.
+- **As built (stage 4a, Flöte and Flamme):** both pipes ship – the flute within 0.4 ct in three registers (an FLL keeps it in tune; the 1.1-kHz ceiling and the crossfade to the reed were not needed: register 1 reaches 2.6 kHz), the flame as a Rijke tube by King's law heard from both ends, threshold at y ≈ 0.33, the surge at the threshold, overblowing by a flare, the fire and its cracks beside the tube; release 0.8 s for the flame. Measured changes of letter – see `dev/HANDOFF.md` „Notes from stage 4a“.
 
 ### 3.3 glt Glut – `myzel-ember` (tuned feedback loop) + native fallback
 

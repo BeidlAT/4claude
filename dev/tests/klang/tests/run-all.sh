@@ -1,5 +1,5 @@
 #!/bin/sh
-# klang stage 1 (worklet module, Halm, Ranke), 1b (the Klangquellen library) and 2 (Elmsfeuer, Jahresring): all suites. Builds the test slots kd/kn (current app) and kbase
+# klang stage 1 (worklet module, Halm, Ranke), 1b (the Klangquellen library), 2 (Elmsfeuer, Jahresring) and 3 (Harz): all suites. Builds the test slots kd/kn (current app) and kbase
 # (klang/index.base.html, the app before stage 1, for the parity check); needs the static server on :8790
 # (cd ../../v2 && python3 -m http.server 8790 &). Exit code ≠ 0 if any suite fails. Logs and renders in out/.
 #   env: SKIP_BENCH=1 skips the offline bench (≈ 4 min), COST_ROUNDS=n for its cost rounds (default 4)
