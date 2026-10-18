@@ -84,6 +84,27 @@ const settle = (page, ms) => page.evaluate((ms) => window.__sleep(ms), ms);
   });
   L.ok(k.got && k.got.mund === 0.9, 'a knob turned while a voice sounds reaches its processor ({set})');
   L.ok(k.macro.join() === 'hlm.atem,hlm.blatt' && k.mx === 'Halm' && k.group === 'Halm/Ranke', `MACRO A/B ${k.macro}, mixer source „${k.mx}“, MIDI groups ${k.group}`);
+  // Halm's pipes: the chip renames the knobs and the note, a sounding voice hears the pipe, the flame rings out and ends
+  const kp = await page.evaluate(async () => {
+    const M = window.__M, A = M.A; M.setParam('v.eng', 'hlm'); M.openPanel('klang'); await window.__sleep(100);
+    const lab = (id) => { const el = document.querySelector(`[data-pid="${id}"] label`); return el ? el.firstChild.nodeValue + (el.querySelector('.kq-ab') ? '+' + el.querySelector('.kq-ab').textContent : '') : ''; };
+    const note = () => { const el = document.getElementById('eng-note-hlm'); return el ? el.textContent : ''; };
+    const before = [lab('hlm.atem'), lab('hlm.blatt'), lab('hlm.luft')], n0 = note();
+    const v = M.playNote('hlm', A.ctx.currentTime + 0.01, 220, 0.6, 0.7, {}); await window.__sleep(300);
+    let got = null; const pm = v.wk.port.postMessage.bind(v.wk.port); v.wk.port.postMessage = (m) => { if (m && m.set && !got) got = m.set; pm(m); };
+    const chip = document.querySelector('[data-pid="hlm.rohr"] .chip[data-val="flamme"]'); if (chip) chip.click(); await window.__sleep(100);
+    const after = [lab('hlm.atem'), lab('hlm.blatt'), lab('hlm.luft')], n1 = note();
+    v.release(); await window.__sleep(150);
+    const w = M.playNote('hlm', A.ctx.currentTime + 0.01, 330, 0.6, 0.7, {}); await window.__sleep(600);
+    const rms = () => { const b = new Float32Array(A.analyser.fftSize); A.analyser.getFloatTimeDomainData(b); let s = 0; for (const x of b) s += x * x; return 10 * Math.log10(s / b.length + 1e-20); };
+    const lv = rms(); w.release(); await window.__sleep(300); const ring = w.alive; await window.__sleep(1500);
+    const left = [...A.voices].filter((x) => x.alive && x.eng === 'hlm').length;
+    M.setParam('hlm.rohr', 'rohrblatt'); await window.__sleep(50); const back = [lab('hlm.atem'), note()]; M.closePanel();
+    return { before, after, n0, n1, got, lv, ring, left, back, wk: !!w.wk };
+  });
+  L.ok(kp.got && kp.got.rohr === 'flamme', 'Halm: the pipe chosen while a note sounds reaches its processor ({set: rohr})');
+  L.ok(kp.before.join() === 'Atem (Druck)+A,Blatt (weich)+B,Luft (Rauschen)' && kp.after.join() === 'Hitze+A,Flackern+B,Feuer (Knistern)' && kp.back[0] === 'Atem (Druck)+A' && /Hitze/.test(kp.n1) && kp.n0 !== kp.n1 && kp.back[1] === kp.n0, `Halm: the knobs and the note follow the pipe (${kp.before.join(' / ')} → ${kp.after.join(' / ')})`);
+  L.ok(kp.wk && kp.lv > -60 && kp.ring && kp.left === 0, `Halm's flame plays (${kp.lv.toFixed(1)} dBFS), rings on after the finger lifts, then the voice is freed`);
   // Harz: the body changed while a note sounds reaches its processor, the Dämpfung's Nachklang follows the body
   const kh = await page.evaluate(async () => {
     const M = window.__M, A = M.A; M.setParam('v.eng', 'hrz'); M.openPanel('klang'); await window.__sleep(100);

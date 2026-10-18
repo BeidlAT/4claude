@@ -1,0 +1,13 @@
+// Halm's flame, the bench's own rows in Node (fast): surge at the threshold, cracks per second, the tone's threshold, overblowing.   node rows-hlm.js
+const L=require('./dsplib'); const SR=48000; const D=L.loadDsp(SR,L.dspSource());
+const tone = (m, f, w = 30) => { const o = new Float32Array(m.length), wq = 2 * Math.PI * f / SR, r = 1 - wq / w, c = 2 * r * Math.cos(wq); let y1 = 0, y2 = 0; for (let i = 0; i < m.length; i++) { const v = m[i] + c * y1 - r * r * y2; y2 = y1; y1 = v; o[i] = v * (1 - r); } return o; };
+const one=(f,y,dur,prm)=>L.render(D,{name:'myzel-blow',po:{prm:Object.assign({rohr:'flamme'},prm||{}),seed:3},dur,params:{freq:f,hoehe:y},msgs:[[0.05,{on:0.05,f,y,vel:0.75,seed:1234}]]}).L;
+const wb=[]; for (const y of [0.33,0.7]) { let r=0; for (const f of [220,440]) { const t=tone(one(f,y,6),f); const e=L.env(t,SR,0.1).slice(30,59).map(v=>L.db(v)).sort((a,b)=>a-b); r+=(e[e.length-2]-e[1])/2; } wb.push(r.toFixed(1)); }
+console.log('surge y0.33/0.7', wb.join(' / '));
+const cr=[]; for (const y of [0.1,0.9]) { const m=one(220,y,6,{luft:0.6}); const hp=new Float32Array(m.length); { const w=2*Math.PI*5000/SR, al=Math.sin(w)/1.4, c=Math.cos(w), a0=1+al, b0=(1+c)/2/a0, b1=-(1+c)/a0, a1=-2*c/a0, a2=(1-al)/a0; let x1=0,x2=0,y1=0,y2=0,z1=0,z2=0,v1=0,v2=0; for(let i=0;i<m.length;i++){ const y=b0*m[i]+b1*x1+b0*x2-a1*y1-a2*y2; x2=x1;x1=m[i];y2=y1;y1=y; const v=b0*y+b1*z1+b0*z2-a1*v1-a2*v2; z2=z1;z1=y;v2=v1;v1=v; hp[i]=v; } } const e=L.env(hp,SR,0.002).slice(500); const med=e.slice().sort((a,b)=>a-b)[e.length>>1]; let n=0,last=-99; for(let i=0;i<e.length;i++) if(e[i]>4*med&&i-last>10){n++;last=i;} cr.push((n/5).toFixed(1)); }
+console.log('cracks/s y0.1/0.9', cr.join(' / '));
+const gz = (x, a, b, fq) => { a = Math.round(a); b = Math.round(b); let re = 0, im = 0; for (let i = a; i < b; i++) { const w = 2 * Math.PI * fq * i / SR; re += x[i] * Math.cos(w); im += x[i] * Math.sin(w); } return Math.hypot(re, im) / Math.max(1, b - a); };
+for (const f of [110,440]) { const lv={}; for (const y of [0.1,0.5,0.7]) { const m=one(f,y,3); lv[y]=[L.db(L.rms(m,Math.round(1.8*SR),Math.round(2.9*SR))), L.db(gz(m,1.8*SR,2.9*SR,f))]; }
+  console.log('threshold',f,'tone line y0.1',lv[0.1][1].toFixed(1),'y0.5',lv[0.5][1].toFixed(1),'jump',(lv[0.5][1]-lv[0.1][1]).toFixed(1),' fire vs song',(lv[0.1][0]-lv[0.7][0]).toFixed(1)); }
+const ob=[]; for (const f of [110,220,440,880]) for (const flip of [false,true]) { const m=L.render(D,{name:'myzel-blow',po:{prm:{rohr:'flamme'},seed:3},dur:3,params:(t)=>({freq:f,hoehe:flip?(t<1.2?0.85:1):1}),msgs:[[0.05,{on:0.05,f,y:flip?0.85:1,vel:0.75,seed:1234}]]}).L; ob.push(f+'/'+(flip?'flip':'top')+' '+(L.db(gz(m,2.2*SR,2.9*SR,2*f))-L.db(gz(m,2.2*SR,2.9*SR,f))).toFixed(1)); }
+console.log('overblow', ob.join(', '));

@@ -8,6 +8,13 @@ const R = (o) => L.render(D, o);
 const note = (name, f, y, o = {}) => R({ name, po: Object.assign({ rich: !!o.rich, prm: o.prm, seed: 5 }, o.po), ch: o.rich ? 2 : 1, dur: o.dur || 1.2, params: o.params || { freq: f, hoehe: y },
   msgs: (o.on === false ? [] : [[o.at || 0, { on: o.at || 0, f, y, vel: o.vel == null ? 0.75 : o.vel, burst: o.burst, gate: o.gate, seed: o.seed || 1234 }]]).concat(o.off != null ? [[o.off, { off: o.off }]] : []).concat(o.msgs || []) });
 
+// the strongest line within ±4 % of f (Hann, parabolic on dB)
+function peakHz(sig, f, at, N) {
+  const { p, hz } = L.spectrum(sig, SR, at, N); let b = Math.round(f / hz);
+  for (let k = Math.floor(f * 0.96 / hz); k <= Math.ceil(f * 1.04 / hz); k++) if (p[k] > p[b]) b = k;
+  const a = 10 * Math.log10(p[b - 1] + 1e-30), c = 10 * Math.log10(p[b] + 1e-30), d = 10 * Math.log10(p[b + 1] + 1e-30);
+  return (b + 0.5 * (a - d) / (a - 2 * c + d)) * hz;
+}
 // -- the contract
 L.ok(['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-null'].every((k) => D.procs[k]), 'module registers myzel-blow, myzel-scan, myzel-bow, myzel-null: ' + Object.keys(D.procs).join(', '));
 for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow']) {
@@ -32,6 +39,7 @@ for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow']) {
     for (let i = 0; i < 40; i++) {
       const prm = {}; for (const k of keys) prm[k] = i < 4 ? [0, 1, 0, 1][i] * (k.length % 2 ? 1 : 1) : rnd() < 0.3 ? Math.round(rnd()) : rnd();
       if (name === 'myzel-bow') prm.koerper = ['glas', 'schale', 'stab', 'zunge', 'teich'][i % 5];
+      if (name === 'myzel-blow') prm.rohr = ['rohrblatt', 'floete', 'flamme'][i % 3];
       const f = [16, 30, 55, 220, 1000, 3000, 8000][i % 7] * (0.9 + 0.2 * rnd()), y = i % 5 === 0 ? 1 : i % 5 === 1 ? 0 : rnd(), rich = i % 2 === 1, burst = i % 3 === 0;
       // (a bow's modes ring as Dämpfung and the body say – up to 16 s: it must end within two of its rings)
       const ring = name === 'myzel-bow' ? (0.4 + 6 * (1 - prm.daempfung) * (1 - prm.daempfung)) * { glas: 0.6, schale: 2.5, stab: 1.6, zunge: 0.35, teich: 2 }[prm.koerper] : 0;
@@ -40,7 +48,7 @@ for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow']) {
       if (L.nanCount(r.L) || (r.R && L.nanCount(r.R))) bad++;
       worst = Math.max(worst, pk); if (r.alive) notDone++;
     }
-    L.ok(!bad && worst <= 1.2, `${name}: 40 random knob sets (extremes included, 16 Hz–8 kHz, L1/L3, held/burst, shakes): no NaN, peak ${worst.toFixed(3)} (≤ 1.2)`);
+    L.ok(!bad && worst <= 1.2, `${name}: 40 random knob sets (extremes included, 16 Hz–8 kHz, L1/L3, held/burst, shakes${name === 'myzel-blow' ? ', all three pipes' : ''}): no NaN, peak ${worst.toFixed(3)} (≤ 1.2)`);
     L.ok(notDone === 0, `${name}: every one of them ends within ${name === 'myzel-bow' ? 'two rings' : '3 s'} after its end (${notDone} still running)`);
   }
 }
@@ -53,6 +61,34 @@ for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow']) {
     if (c > worst) { worst = c; at = `${f} Hz, Mund ${mund}, Blatt ${blatt}`; }
   }
   L.ok(worst <= 5, `reed in tune at the knobs' extremes: worst ${worst.toFixed(2)} ct (${at})`);
+}
+// -- flute and flame: in tune at their knobs' extremes; the pipe changed under a sounding note; after underruns (lite)
+{
+  let worst = 0, at = '';
+  for (const mund of [0, 1]) for (const blatt of [0, 1]) for (const [f, y, reg] of [[220, 0.4, 1], [880, 0.4, 1], [220, 0.92, 2]]) {
+    const r = note('myzel-blow', f, y, { prm: { rohr: 'floete', mund, blatt }, dur: 1.6 });
+    const want = blatt === 1 && y === 0.4 ? 1 : reg, c = Math.abs(L.cents(L.combPitch(r.L, SR, f * want, 0.9, 16384), f * want));
+    if (c > worst) { worst = c; at = `${f} Hz × ${want}, Lippe ${mund}, Strahl ${blatt}`; }
+  }
+  L.ok(worst <= 10, `flute in tune at Lippe/Strahl's extremes, registers 1 and 2: worst ${worst.toFixed(2)} ct (${at})`);
+  worst = 0; at = '';
+  for (const mund of [0, 1]) for (const atem of [0, 1]) for (const f of [110, 440, 1320]) {
+    const r = note('myzel-blow', f, 0.65, { prm: { rohr: 'flamme', mund, atem, luft: 0.2 }, dur: 3.4 });
+    const c = Math.abs(L.cents(peakHz(r.L, f, 1.4, 65536), f));   // (the fundamental's line: the fire's noise rings the tube's own, slightly stretched modes – a harmonic comb reads them)
+    if (c > worst) { worst = c; at = `${f} Hz, Rohr ${mund}, Hitze ${atem}`; }
+  }
+  L.ok(worst <= 3, `flame in tune at Rohr/Hitze's extremes (y 0.65, the fundamental's line): worst ${worst.toFixed(2)} ct (${at})`);
+  const sw = R({ name: 'myzel-blow', po: { seed: 1, prm: { rohr: 'rohrblatt' } }, dur: 2.4, params: { freq: 330, hoehe: 0.7 }, msgs: [[0, { on: 0, f: 330, y: 0.7, vel: 0.8 }], [0.6, { set: { rohr: 'floete' } }], [1.2, { set: { rohr: 'flamme' } }], [1.8, { set: { rohr: 'rohrblatt' } }]] });
+  L.ok(!L.nanCount(sw.L) && L.peak(sw.L) < 1 && [0.9, 1.5, 2.2].every((t) => L.rms(sw.L, Math.round(t * SR), Math.round((t + 0.15) * SR)) > 1e-3), `blow: the pipe changed three times under a sounding note – bounded (peak ${L.peak(sw.L).toFixed(2)}), each pipe sounds`);
+  for (const rohr of ['floete', 'flamme']) {
+    const lt = R({ name: 'myzel-blow', po: { rich: true, lite: 1, seed: 1, prm: { rohr } }, ch: 2, dur: 1, params: { freq: 220, hoehe: 0.6 }, msgs: [[0, { on: 0, f: 220, y: 0.6, vel: 0.8 }]] });
+    let same = true; for (let i = 0; i < lt.L.length; i++) if (lt.L[i] !== lt.R[i]) { same = false; break; }
+    L.ok(same && L.rms(lt.L, 0.5 * SR, SR) > 1e-3, `${rohr} after underruns (lite): one pipe, the same on both channels, sounding`);
+    const st = R({ name: 'myzel-blow', po: { rich: true, seed: 1, prm: { rohr } }, ch: 2, dur: 2, params: { freq: 220, hoehe: 0.6 }, msgs: [[0, { on: 0, f: 220, y: 0.6, vel: 0.8 }]] });
+    let sl = 0, sr = 0, sx = 0; for (let i = SR; i < 2 * SR; i++) { sl += st.L[i] ** 2; sr += st.R[i] ** 2; sx += st.L[i] * st.R[i]; }
+    const cc = sx / Math.sqrt(sl * sr);
+    L.ok(cc > -0.2 && cc < 0.98, `${rohr} level 3: two pipes, ±4 ct apart – L/R correlation ${cc.toFixed(2)} (neither one pipe nor mirrored)`);
+  }
 }
 // -- ring: no update artefacts, exact pitch, also with Holz and Masse at their extremes
 {

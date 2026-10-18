@@ -199,6 +199,7 @@ out  = bore*0.9 + air                      // air = bpAir(noise)*luft*max(0, 0.2
 - **Params (6):** `hlm.rohr` SEL rohrblatt/floete/flamme (rohrblatt) · `hlm.atem` 0–1 (0.5) · `hlm.mund` 0–1 (0.4) · `hlm.blatt` 0–1 (0.5) · `hlm.luft` 0–1 (0.4) · `hlm.zunge` 0–1 (0.5). MACRO atem/blatt.
 - **Höhe**: breath (air → tone → choke); tilt forward = more breath with Ocarina vibrato (existing Gestik). **Puls**: tongue strokes; bass notes speak slowly (M: 235 ms at 110 Hz) → lanes below 110 Hz are soft, documented. regen 0.
 - **Acceptance**: threshold between y 0.2 and 0.35 (RMS jump ≥ 20 dB); f0 ≤ 5 ct (reed) 110–2500 Hz; t90 ≤ 250 ms at 110 Hz, ≤ 100 ms at 440 Hz; decay ≤ 60 ms; air at y 0 ≥ −40 dB; burst 60 ms ≥ −20 dB; odd harmonics dominate (h2 ≤ h3 − 20 dB); flute: f0 ≤ 10 ct in registers 1 and 2 at 220–880 Hz, else the option is hidden; cost ≤ 0.55.
+- **As built (stage 4a, Flöte and Flamme):** both pipes ship – the flute within 0.4 ct in three registers (an FLL keeps it in tune; the 1.1-kHz ceiling and the crossfade to the reed were not needed: register 1 reaches 2.6 kHz), the flame as a Rijke tube by King's law heard from both ends, threshold at y ≈ 0.33, the surge at the threshold, overblowing by a flare, the fire and its cracks beside the tube; release 0.8 s for the flame. Measured changes of letter – see `dev/HANDOFF.md` „Notes from stage 4a“.
 
 ### 3.3 glt Glut – `myzel-ember` (tuned feedback loop) + native fallback
 

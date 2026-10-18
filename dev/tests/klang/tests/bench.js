@@ -224,6 +224,92 @@ async function one(page, o) {
       ok(hh.every((h) => h[2] <= -20), 'odd harmonics dominate (h2 ≤ h3 − 20 dB): ' + hh.map((h) => h[0] + '/' + h[1] + ' ' + h[2]).join(', '));
       // the top: squeezed but sounding most of the time
       { const x = await one(page, { eng: key, f: 220, y: 1, dur: 3, params: DRY }); const e = L.env(mono(x), SR, 0.05).slice(10); const on2 = e.filter((v) => L.db(v) > -30).length / e.length; rep.top = +on2.toFixed(2); ok(on2 > 0.6, `y 1 (Quietschen): sounding ${(on2 * 100).toFixed(0)} % of the time (chokes, comes back)`); }
+      // ---- the flute and the flame (SPEC §3.2: they ship only if their rows pass) ----
+      const gz = (x, a, b, fq) => { a = Math.round(a); b = Math.round(b); let re = 0, im = 0; for (let i = a; i < b; i++) { const w = 2 * Math.PI * fq * i / SR; re += x[i] * Math.cos(w); im += x[i] * Math.sin(w); } return Math.hypot(re, im) / Math.max(1, b - a); };
+      const tone = (m, f, w = 30) => { const o = new Float32Array(m.length), wq = 2 * Math.PI * f / SR, r = 1 - wq / w, c = 2 * r * Math.cos(wq); let y1 = 0, y2 = 0; for (let i = 0; i < m.length; i++) { const v = m[i] + c * y1 - r * r * y2; y2 = y1; y1 = v; o[i] = v * (1 - r); } return o; };   // (a resonator at f: the tone out of the air or the fire)
+      for (const rohr of ['floete', 'flamme']) {
+        const PR = (x) => Object.assign({}, DRY, { 'hlm.rohr': rohr }, x || {}), tag = rohr === 'floete' ? 'flute' : 'flame';
+        const okr = (c, m) => ok(c, tag + ': ' + m);
+        const ld = {};
+        for (const [name, q, burst] of [['L1', '1', false], ['L3', '3', false], ['burst', '1', true]]) {
+          const x = pull(await page.evaluate(async ([key, q, burst, rohr]) => window.__ret(await window.__phr(await window.__ctx(10, { 'v.eng': key, 'hlm.rohr': rohr, 'rev.mix': 0, 'dly.mix': 0, 'mst.comp': 0, 'cho.mix': 0, 'pha.mix': 0 }, q), 10, key, { burst })), [key, q, burst, rohr]));
+          ld[name] = stats(x); if (name === 'L1') L.wav(path.join(dir, 'phrase-' + rohr + '-L1.wav'), x.L, x.R, SR);
+        }
+        rep[rohr] = { loud: ld };
+        okr(Math.abs(ld.L1.rms - refMean) <= 2, `loudness L1 ${ld.L1.rms} dB vs references' mean ${refMean.toFixed(2)} (±2 dB)`);
+        okr(Math.abs(ld.L3.rms - ld.L1.rms) <= 1.5, `level 3 ${ld.L3.rms} within ±1.5 dB of level 1 ${ld.L1.rms}`);
+        okr(Math.max(ld.L1.peak, ld.L3.peak, ld.burst.peak) <= -1, `peak ≤ −1 dBFS (L1 ${ld.L1.peak}, L3 ${ld.L3.peak}, burst ${ld.burst.peak})`);
+        okr(!ld.L1.nan && !ld.L3.nan && !ld.burst.nan && Math.max(Math.abs(ld.L1.dc), Math.abs(ld.L3.dc), Math.abs(ld.burst.dc)) < 0.01, 'no NaN, no DC');
+        okr(ld.burst.rms >= ld.L1.rms - 12, `Puls bursts audible: ${ld.burst.rms} dB vs held phrase ${ld.L1.rms}`);
+        if (rohr === 'floete') {
+          // registers: 1 low, the octave above the overblowing point (Strahl 0.5: y 0.72), the twelfth at the very top
+          const fr = [];
+          for (const f of [110, 220, 440, 880, 1320]) for (const [y, reg] of [[0.4, 1], [0.85, 2], [0.97, 3]]) {
+            if (reg * f >= 2600) continue;
+            const m = mono(await one(page, { eng: key, f, y, dur: 2.2, params: PR() }));
+            fr.push([f, reg, +L.cents(L.combPitch(m, SR, f * reg, 1.2, 32768), f * reg).toFixed(1)]);
+          }
+          rep.floete.f0 = fr;
+          const core = fr.filter((r) => r[0] >= 220 && r[0] <= 880 && r[1] <= 2), wr = fr.reduce((a, b) => (Math.abs(b[2]) > Math.abs(a[2]) ? b : a));
+          okr(core.every((r) => Math.abs(r[2]) <= 10), 'f0 ≤ 10 ct in registers 1 and 2 at 220–880 Hz (SPEC): ' + core.map((r) => r[0] + '×' + r[1] + ' ' + r[2]).join(', '));
+          okr(Math.abs(wr[2]) <= 10, `every register at 110–1320 Hz within 10 ct (worst ${wr[2]} ct at ${wr[0]} Hz × ${wr[1]}; ${fr.length} notes)`);
+          // a held note blown over: y 0.4 → 0.85 jumps to the octave
+          { const m = mono(await one(page, { eng: key, f: 220, y: 0.4, dur: 2.6, params: PR(), moves: [[1.0, 'setY', 0.85]] }));
+            const a = gz(m, 1.8 * SR, 2.5 * SR, 440), b = gz(m, 1.8 * SR, 2.5 * SR, 220), c = L.cents(L.combPitch(m, SR, 440, 1.8, 16384), 440); rep.floete.overblow = [+(L.db(a) - L.db(b)).toFixed(1), +c.toFixed(1)];
+            okr(L.db(a) - L.db(b) >= 20 && Math.abs(c) <= 10, `held y 0.4 → 0.85 overblows: the octave ${(L.db(a) - L.db(b)).toFixed(1)} dB over the fundamental, ${c.toFixed(1)} ct`); }
+          // air: at y 0 only breath, the tone grows out of it
+          { const lv = {}; for (const y of [0, 0.3]) for (const f of [110, 440]) { const m = mono(await one(page, { eng: key, f, y, dur: 1.2, params: PR() })); lv[f + '@' + y] = [L.db(L.rms(m, 0.7 * SR, 1.15 * SR)), L.db(L.rms(tone(m, f), 0.7 * SR, 1.15 * SR))]; }
+            rep.floete.air = lv;
+            for (const f of [110, 440]) { const d = lv[f + '@0'][0] - lv[f + '@0.3'][0], t = lv[f + '@0'][1] - lv[f + '@0.3'][1];
+              okr(d >= -30 && d <= -8 && t <= -20, `air at y 0, ${f} Hz: ${d.toFixed(1)} dB vs y 0.3 (−30…−8), its tone ${t.toFixed(1)} dB (≤ −20)`); } }
+          { const m = mono(await one(page, { eng: key, f: 440, y: 0.6, dur: 1.4, params: PR() })); const t = L.t90(m, SR, 0.05, L.rms(m, 0.9 * SR, 1.3 * SR)); rep.floete.t90 = Math.round(t * 1000); okr(t <= 0.1, `onset t90 at 440 Hz, y 0.6: ${Math.round(t * 1000)} ms (≤ 100)`); }
+        } else {
+          // the fire, the threshold, the song: the tone (a resonator at f) and the whole, per height
+          const lv = {};
+          for (const f of [110, 440]) for (const y of [0.1, 0.25, 0.5, 0.7]) { const m = mono(await one(page, { eng: key, f, y, dur: 3, params: PR() })); lv[f + '@' + y] = [L.db(L.rms(m, Math.round(1.8 * SR), Math.round(2.9 * SR))), L.db(gz(m, 1.8 * SR, 2.9 * SR, f))]; }   // (the tone: its line over 1.1 s – the fire's rumble lies in a resonator's band)
+          rep.flamme.levels = lv;
+          for (const f of [110, 440]) {
+            okr(lv[f + '@0.5'][1] - lv[f + '@0.1'][1] >= 20, `threshold: the tone at ${f} Hz from y 0.1 to 0.5 ${lv[f + '@0.1'][1].toFixed(1)} → ${lv[f + '@0.5'][1].toFixed(1)} dB (≥ 20 dB)`);
+            const d = lv[f + '@0.1'][0] - lv[f + '@0.7'][0]; okr(d >= -25 && d <= -8, `the fire under the threshold carries at ${f} Hz: y 0.1 ${d.toFixed(1)} dB vs the song at y 0.7 (−25…−8)`);
+          }
+          const fr = [];
+          for (const f of [110, 220, 440, 880, 1320]) { const m = mono(await one(page, { eng: key, f, y: 0.6, dur: 3, params: PR() })); fr.push([f, +L.cents(peakHz(m, SR, f, 1.5, 65536), f).toFixed(1)]); }   // (the fundamental's line: the fire rings the tube's own modes)
+          rep.flamme.f0 = fr;
+          okr(fr.every((r) => Math.abs(r[1]) <= 5), 'f0 ≤ 5 ct at y 0.6 (the FLL; the fundamental\'s line): ' + fr.map((r) => r[0] + ' ' + r[1]).join(', '));
+          // brighter with heat (King's law: the flow reverses, even harmonics grow)
+          { const h = []; for (const y of [0.45, 0.85]) { const sp = L.spectrum(mono(await one(page, { eng: key, f: 220, y, dur: 2, params: PR({ 'hlm.luft': 0 }) })), SR, 1.2, 16384); h.push(L.harm(sp, 220, 2) - L.harm(sp, 220, 1)); }
+            rep.flamme.h2 = h.map((v) => +v.toFixed(1)); okr(h[1] - h[0] >= 6, `brighter with heat: h2 − h1 at y 0.45 ${h[0].toFixed(1)} dB → y 0.85 ${h[1].toFixed(1)} dB (≥ +6)`); }
+          // overblowing: from rest at the top and from a sounding fundamental (y 0.85 → 1), 110–880 Hz
+          { const ob = [];
+            for (const f of [110, 220, 440, 880]) for (const flip of [false, true]) {
+              const m = mono(await one(page, { eng: key, f, y: flip ? 0.85 : 1, dur: 3, params: PR(), moves: flip ? [[1.2, 'setY', 1]] : [] }));
+              ob.push([f, flip ? 'flip' : 'top', +(L.db(gz(m, 2.2 * SR, 2.9 * SR, 2 * f)) - L.db(gz(m, 2.2 * SR, 2.9 * SR, f))).toFixed(1)]);
+            }
+            rep.flamme.overblow = ob; okr(ob.every((o) => o[2] >= 10), 'overblows into the octave at the top (h2 − h1 ≥ 10 dB): ' + ob.map((o) => o[0] + '/' + o[1] + ' ' + o[2]).join(', ')); }
+          // the surge at the threshold (wumm … wumm) and a steady song above it: the tone's 100-ms envelope, 3–6 s
+          { const wb = []; for (const y of [0.33, 0.7]) { let r = 0; for (const f of [220, 440]) { const t = tone(mono(await one(page, { eng: key, f, y, dur: 6, params: PR() })), f); const e = L.env(t, SR, 0.1).slice(30, 59).map((v) => L.db(v)).sort((a, b) => a - b); r += (e[e.length - 2] - e[1]) / 2; } wb.push(+r.toFixed(1)); }
+            rep.flamme.surge = wb; okr(wb[0] >= 6 && wb[1] <= 4, `surges at the threshold: tone envelope range at y 0.33 ${wb[0]} dB (≥ 6), at y 0.7 ${wb[1]} dB (≤ 4)`); }
+          // cracks: sparse low, dense high (transients ≥ 12 dB over the 20-ms median)
+          { const cr = []; for (const y of [0.1, 0.9]) { const m = mono(await one(page, { eng: key, f: 220, y, dur: 6, params: PR({ 'hlm.luft': 0.6 }) })), hp = new Float32Array(m.length);
+              { const w = 2 * Math.PI * 5000 / SR, al = Math.sin(w) / 1.4, c = Math.cos(w), a0 = 1 + al, b0 = (1 + c) / 2 / a0, b1 = -(1 + c) / a0, a1 = -2 * c / a0, a2 = (1 - al) / a0; let x1 = 0, x2 = 0, y1 = 0, y2 = 0, z1 = 0, z2 = 0, v1 = 0, v2 = 0;   // (above 5 kHz, 4th order: the song's harmonics do not hide them)
+                for (let i = 0; i < m.length; i++) { const u = b0 * m[i] + b1 * x1 + b0 * x2 - a1 * y1 - a2 * y2; x2 = x1; x1 = m[i]; y2 = y1; y1 = u; const v = b0 * u + b1 * z1 + b0 * z2 - a1 * v1 - a2 * v2; z2 = z1; z1 = u; v2 = v1; v1 = v; hp[i] = v; } } const e = L.env(hp, SR, 0.002).slice(500); const med = e.slice().sort((a, b) => a - b)[e.length >> 1]; let n = 0, last = -99; for (let i = 0; i < e.length; i++) if (e[i] > 4 * med && i - last > 10) { n++; last = i; } cr.push(+(n / 5).toFixed(1)); }
+            rep.flamme.cracks = cr; okr(cr[0] >= 0.5 && cr[1] > cr[0] * 2, `cracks per second: y 0.1 ${cr[0]}, y 0.9 ${cr[1]} (sparse low, denser with heat)`); }
+          // let go: the tube rings out in its hiss within the release; nothing after
+          { const m = mono(await one(page, { eng: key, f: 220, y: 0.6, dur: 3.5, params: PR(), rel: 1.2 })); const e = L.env(m, SR, 0.01); const held = L.rms(m, 0.9 * SR, 1.15 * SR); let t40 = Infinity; for (let i = 120; i < e.length; i++) if (e[i] < held * 0.01) { t40 = (i - 120) * 10; break; }
+            rep.flamme.release40ms = t40; okr(t40 >= 100 && t40 <= 1500 && L.rms(m, 3.0 * SR, 3.5 * SR) < 1e-5, `let go: the tone dies within ${t40} ms to −40 dB (100–1500, a tail of hiss), silent after`); }
+        }
+        // Puls: inside the gate, then the voice ends
+        { const held = L.rms(mono(await one(page, { eng: key, f: 440, y: 0.6, dur: 1.4, params: PR() })), 0.8 * SR, 1.3 * SR); const bl = [];
+          for (const g of [0.06, 0.22]) { const d = 2.2, m = mono(await one(page, { eng: key, f: 440, y: 0.6, dur: d, params: PR(), burst: true, gate: g })); const e = L.env(m.subarray(0.05 * SR, (0.05 + g) * SR), SR, 0.02); bl.push([g, +(L.db(Math.max(...e)) - L.db(held)).toFixed(1), +L.db(L.rms(m, (d - 0.3) * SR, d * SR)).toFixed(1)]); }
+          rep[rohr].burst = bl; okr(bl.every((b) => b[1] >= -20 && b[2] < -100), 'Puls: inside the gate ≥ −20 dB vs held, silent after: ' + bl.map((b) => b[0] * 1000 + ' ms ' + b[1] + '/' + b[2] + ' dB').join(', ')); }
+        // cost (the whole pipe with its knobs at their defaults)
+        { const { execFileSync } = require('child_process');
+          const c = JSON.parse(execFileSync('node', [path.join(__dirname, 'cost.js'), process.env.COST_ROUNDS || '6'], { env: Object.assign({}, process.env, { ENGS: 'hlm1,hlm3,hau1,hau3,obt1,obt3,tie1,stm1,swm1,neb3', PARAMS: JSON.stringify({ 'hlm.rohr': rohr }) }), encoding: 'utf8', timeout: 1800000 }).trim().split('\n').pop());
+          const c1 = c.hlm1 * c.scale, c3 = c.hlm3 * c.scale; rep[rohr].cost = { L1: +c1.toFixed(3), L3: +c3.toFixed(3) };
+          console.log(`INFO ${key} ${tag}: cost level 1 ${c1.toFixed(3)}, level 3 ${c3.toFixed(3)} Nebel units`);
+          const tab = await page.evaluate((rohr) => { const M = window.__M, was = M.P['hlm.rohr']; M.P['hlm.rohr'] = rohr; const t = [M.VCOST1.hlm, M.VCOST3.hlm]; M.P['hlm.rohr'] = was; return t; }, rohr);   // (a voice is priced by its pipe)
+          okr(tab[0] >= c1 && tab[1] >= c3, `VCOST entries cover the measurement: ${tab} ≥ ${c1.toFixed(2)}, ${c3.toFixed(2)}`); }
+      }
     }
     if (key === 'rnk') {
       const sh = [];

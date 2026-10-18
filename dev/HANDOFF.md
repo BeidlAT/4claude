@@ -84,7 +84,6 @@ Then use these:
   - the params (≤ 6), `VCOST1/3` (measured against 24 Nebel voices, interleaved), `MACRO`, `ENG_NOTE`.
   - All 26 glyphs are already in the sprite. `ENG_LATER` names the unbuilt keys; remove a key from it when it ships.
 - **Open from stage 1:**
-  - Halm's Flöte/Flamme are not built, so there is no `hlm.rohr` selector yet.
   - Ranke's held flutter has to be judged by ear.
   - Halm level 1 costs about 0.58 against the 0.55 target.
   - Long-press drag scrolling on real phones is untested.
@@ -98,7 +97,6 @@ Then use these:
 - The year starts where the calendar stands (5 May = spring), runs in `tick()` (`jrgClock`) only while the context runs and the page is visible, hits add ≤ 2/s. Age resets with Verjüngen, Schlafen and panic.
 - **Library texts:** `famPlay()` names a family by the way most of its sources play (Elmsfeuer, „beides“, would otherwise have moved Luft into „Tippen und Wischen“).
 - **By ear, still open:** the arc's character, the crackle density at default height, the Jahresring box/tube/knock balance, leaves and ice levels.
-- **Halm** (stage 1) still lacks SPEC's Flöte and Flamme – by the owner's rule they belong in, at the next chance.
 
 ### Notes from stage 3 (Harz)
 - **Built to SPEC §3.1 with every acceptance row and the check's fixes** (inventor-hrz, inventor-dax, performer-tum), all five bodies. Measured (bench, out/hrz): in tune within 1.9 ct without Schwebung at 110–1568 Hz; t90 0.2–0.6 s; mode 2 ≥ 34 dB under mode 1 at y 0.1/0.85; h2/h3 rise with Höhe; the ring after release within 0–15 % of the Dämpfung mapping; level 3 within ±0.4 dB of level 1 at any pan; cost ≈ 0.9–1.4 units at level 1, 1.7–2.9 at level 3 (VCOST 1.6/3.3, the highest run + 15 %).
@@ -113,6 +111,16 @@ Then use these:
   - Teich: a neighbour rod (1.031 ± 3 %, level 3 its second mode and a third rod), the bowl's resonance inside the processor, water as a damped 0.8-Hz slosh stirred by every stroke and a little noise – it bends the rods apart (±25 ct × (0.15 + 0.85·Schwebung)) and moves the bowl (± that share of an octave); from y 0.85 the bow is drawn to the rod's second mode, from ≈ 0.95 it screams there (bistable, as bowed rods);
   - L3 stereo: see above; level 3 Glas/Schale every mode a pair (10 bands), Stab 6, Zunge 4, Teich 6.
 - **By ear, still open:** the wah's depth and speed, the friction's colour per body, the Zunge's vowels and growl, the Teich's water and scream threshold, the Puls stroke (pluck ×3 under 0.3 s and ×2 native).
+
+### Notes from stage 4a (Halm's Flöte and Flamme)
+- **`hlm.rohr`** (chips Rohrblatt/Flöte/Flamme); each pipe names the five knobs its own way (`HLM_LAB`, the `lab` option of `NUM` – the label's first text node changes, the macro mark A/B stays) and has its own note text (`ENG_NOTE.hlm()` is a function). A pipe chosen under a sounding note starts from its own tone (`pipeOn`). Voices are priced by their pipe (`HLM_COST`, a getter on `VCOST1/3.hlm`).
+- **Flöte** (`FluteLoop`, STK's jet x(x² − 1) on a non-inverting open bore – every harmonic): the jet delay picks the register (½, ¼, ⅙ of the period: fundamental, octave, twelfth); Strahl moves the overblowing point (y 0.57–0.87), the twelfth above y 0.95 (below 2.6 kHz). The bore's low-pass and the breath pull the pitch +4…+65 ct: a frequency-locked loop on interpolated zero crossings stretches the bore by (measured/target)^0.15 per period, only when two successive periods agree within 3 % (a mode jump or a burst does not pull it); within 0.4 ct in all registers 110–1320 Hz. A noise tongue kicked low notes into the twelfth (measured), so a note starts from one period of its tone in the bore plus a breath push. Below y 0.12 only air (the loop runs on in tune, its output fades in – a loop started from noise catches the twelfth). Without breath the jet is gone (`jg`), else the bore rang for seconds after release. Output DC-blocked (the jet's breath offset sits in the bore).
+- **Flamme** (`FlameTube`, a Rijke tube): two travelling-wave pairs split at the heater, both ends open and inverting with a low-pass at 6–20 f (Rohr: the same loss at every pitch, its delay taken off the bore). The heat release follows the velocity at the heater a quarter period late by **King's law**, q = heat·tanh(K(√|U0 + u| − √U0)) – flow reversal rectifies it: even harmonics growing with heat (a plain tanh(2u) gave a hollow sine). The sound is **a2o + 0.5·b1o**: both ends breathe out together on the fundamental; the first build read a2o − b1o, which cancelled the fundamental by 40 dB and made the octave look 35 dB too loud. Threshold y ≈ 0.33 at every pitch (heat 0.04); the ignition's puff (Zunge) knocks the tube, so low notes start in 0.2–0.3 s. At the threshold the flame's slow pulse (a random walk 1.25–2.5 Hz, Flackern, weaker above the threshold) lifts the tube over it and drops it: the tone surges ±15 dB; above it ±1 dB.
+  - **Overblowing**: a sounding fundamental never let go, whatever the heater did (grid over pos 0.1–0.15 × τ 0.05–0.4, and the "drive ∝ sin(2πn·pos)·sin(2πn·τ)" settings that should damp it – the saturated tube does not follow the linear rule). What works: heater at ⅛, lag ⅛ period, heat held at 0.07, and a **flare** – the ends let the old mode out for 30 ms, the new one starts from a period of itself (both ways; hysteresis 0.9/0.875; notes below 1 kHz). Measured h2 − h1 +25…+37 dB at 110–880 Hz, level within 1 dB of the fundamental after a lift (`1 + 2.7 + f/330`).
+  - The fire: a rumble (LP 120–720 Hz) and a turbulent hiss beside the tube, the hiss also inside it (it whispers on the note); ≈ 14 dB under the song at y 0.1. Cracks: Poisson, 1.5–36/s with heat × Feuer, a 1.5-ms burst high-passed at 1.5 kHz, harder with heat (heard over the song: counted above 5 kHz, 3/s low, 21/s high). Let go: the flame dies, the tube rings out within ≈ 0.5 s at any pitch (`rr`), one last crack 40–160 ms later; native release 0.8 s.
+  - Pitch: the fundamental's line is within 0.3 ct (the FLL); a harmonic comb reads −3…−13 ct there because the fire rings the tube's own, slightly stretched modes – measure the line.
+- **Cost** (measured with three builders running – to re-measure quietly): reed 0.47/1.5 (?), flute 0.43/0.78, flame 1.41/1.70; `HLM_COST` flute = reed, flame 1.7/3.2.
+- **By ear, still open:** the flame's fire/crack balance and the surge's speed; the flute's air below y 0.12.
 
 ### Next stages (SPEC §8; step 1–3 + library + Harz = done)
 1. **Stage 4:** `mdr` Moder, `boe` Böe, `amo` Amöbe (§3.10, §3.4, §3.5).
