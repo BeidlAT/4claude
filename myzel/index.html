@@ -2363,7 +2363,7 @@ let SR = 48000;
 // built, jrg while its modes ring, hrz the Glas, mdr its first 4 s with the crackle, boe held at y 0.6, amo across the field at y 0.6 – the highest of several runs + 15 %:
 // all with their full planned sound, the owner's rule is best sound first)
 const VCOST1 = { neb: 1, kor: 0.6, hau: 0.3, glo: 0.7, mem: 0.4, sai: 0.35, sch: 0.9, gng: 1.55, klb: 1.25, obt: 0.75, stm: 1.05, swm: 1.2, tie: 0.75, trp: 0.7, hlm: 0.65, rnk: 0.6, elm: 1.8, jrg: 1.2, hrz: 1.6, mdr: 0.8, boe: 0.75, amo: 0.7, gsp: 0.55, rhz: 0.3, shn: 0.8 };
-const VCOST3 = { neb: 1.9, kor: 1.1, hau: 0.75, glo: 1.4, mem: 0.75, sai: 1.2, sch: 2, gng: 2.8, klb: 2.2, obt: 1.85, stm: 2.4, swm: 2.7, tie: 1.5, trp: 1.5, hlm: 1.25, rnk: 1.25, elm: 4.2, jrg: 2.9, hrz: 3.3, mdr: 1.85, boe: 1.35, amo: 1.6, gsp: 0.85, rhz: 0.65, shn: 1.4 };   // measured: level-1 cost × (level 3 / level 1)
+const VCOST3 = { neb: 1.9, kor: 1.1, hau: 0.75, glo: 1.4, mem: 0.75, sai: 1.2, sch: 2, gng: 2.8, klb: 2.2, obt: 1.85, stm: 2.4, swm: 2.7, tie: 1.5, trp: 1.5, hlm: 1.25, rnk: 1.25, elm: 4.2, jrg: 2.9, hrz: 3.3, mdr: 1.85, boe: 1.35, amo: 1.6, gsp: 0.85, rhz: 0.9, shn: 1.4 };   // measured: level-1 cost × (level 3 / level 1)
 // Sehne: the table holds the plucked string (flat or jawari: 0.68 / 1.20 measured at the most); under the E-Bow (its
 // pickup, limiter, band and push) a voice costs 1.13 / 1.93 – it is priced so while its hand is in the E-Bow's zone
 const SHN_EBOW_COST = [1.3, 2.2];
@@ -8427,12 +8427,12 @@ function rhzPing(v, at, j, g, strike) {
   R.pings = R.pings.filter((x) => x.end > at);
   if (R.pings.length >= R.cap) {
     const x = R.pings.shift();
-    x.kill.gain.setValueAtTime(1, at); x.kill.gain.linearRampToValueAtTime(0, at + 0.008);
+    x.kill.gain.setValueAtTime(x.kill.gain.value, at); x.kill.gain.linearRampToValueAtTime(0, at + 0.008);
     for (const o of x.srcs) { o._end = at + 0.01; try { o.stop(o._end); } catch (e) {} }   // (_end: the voice's finish must not lengthen it again)
   }
   let dst = R.mid;
   if (R.rich && sp.vis) { dst = v.n(PAN(clamp((2 * noteX(j) - 1) * 0.7 * P['v.width'], -1, 1))); dst.connect(v.out); }
-  const kill = v.n(G(1)); kill.connect(dst);
+  const kill = v.n(G(dst === R.mid ? 1 : 0.8)); kill.connect(dst);   // (placed by pitch, level 3: past the voice's centre panner – as loud as level 1)
   const x = { end: at, kill, srcs: [] }, bright = (0.45 + 1.1 * R.y) * (0.6 + 0.8 * R.vel);
   for (let k = 0; k < (R.rich ? 3 : 2); k++) {
     const fk = fr * kn.r[k]; if (fk > 0.45 * sr) break;
@@ -21642,7 +21642,7 @@ function updDevUI() {
   if (!devEls || !devEls.qInfo) return;
   const lv = P['dev.q'], nNeb = Math.floor(VBUDGET / Q.cost.neb);
   devEls.qInfo.textContent = lv === '1'
-    ? 'Leicht: sparsam, damit Handys nicht aussetzen. Bis zu ' + nNeb + ' Nebel-Stimmen gleichzeitig; leichtere Klänge wie ' + listDe(ENG_OPTS.map((o) => o[0]).filter((k) => k !== 'neb' && k !== 'gsp').sort((x, y) => VCOST1[x] - VCOST1[y]).slice(0, 3).map((k) => ENG_NAME[k]), 'oder') + ' entsprechend mehr.'
+    ? 'Leicht: sparsam, damit Handys nicht aussetzen. Bis zu ' + nNeb + ' Nebel-Stimmen gleichzeitig; leichtere Klänge wie ' + listDe(ENG_OPTS.map((o) => o[0]).filter((k) => k !== 'neb' && k !== 'gsp' && k !== 'rhz').sort((x, y) => VCOST1[x] - VCOST1[y]).slice(0, 3).map((k) => ENG_NAME[k]), 'oder') + ' entsprechend mehr.'
     : lv === '2'
       ? 'Voll: der Klang wie in der ersten Fassung, mit deutlich mehr Stimmen gleichzeitig – bis zu ' + nNeb + ' Nebel-Stimmen. Für neuere Handys und Computer.'
       : 'Gewaltig: jede Stimme wird reicher – sieben statt drei Oszillatoren im Nebel, Doppelsaiten, zwei Glocken pro Anschlag, mehr Teiltöne und Trommelmoden, doppelt so dichte Körnerwolken und Hall in echtem Stereo. ' +

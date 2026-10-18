@@ -53,7 +53,7 @@ const L = require('./dsplib'), K = require('./klh');
   r = { oe: await search('koerner'), uml: await search('Körner'), bow: await search('flute'), fam: await search('erz'), art: await search('schlägt'), bass: await search('808'), none: await search('qqq') };
   s = await st();
   L.ok(r.oe.join() === 'kor' && r.uml.join() === 'kor', 'search: „koerner“ = „Körner“ → ' + r.oe);
-  L.ok(r.bow.includes('hlm') && r.fam.join() === 'glo,sch,gng,klb,gsp' && r.bass.includes('tie') && r.art.length === 10, 'tags in English („flute“ → Halm), family („erz“), „808“ → Tiefe, „schlägt“ → ' + r.art.length);
+  L.ok(r.bow.includes('hlm') && r.fam.join() === 'glo,sch,gng,klb,gsp' && r.bass.includes('tie') && r.art.length === 11, 'tags in English („flute“ → Halm), family („erz“), „808“ → Tiefe, „schlägt“ → ' + r.art.length);
   r.empty = await M(() => document.querySelector('.kq-empty') && document.querySelector('.kq-empty').textContent);
   L.ok(!r.none.length && /Nichts gefunden/.test(r.empty) && s.fam === '' && /Keine Treffer/.test(s.live), 'nothing found: „' + r.empty.slice(0, 40) + '…“, no family checked');
   await page.fill('#kqSearch', '');
