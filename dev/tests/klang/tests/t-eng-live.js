@@ -1,7 +1,8 @@
 // The new engines in a live (real-time) session, the way a player meets them (klang SPEC §7.2 t-eng-live): chosen by
 // their chip, a finger held and moved on the field (setF/setY), let go, a MIDI keyboard, a Puls lane, the second
-// layer, level 3, a shake under Gestik, the mixer's source text (Halm, Ranke, Harz, Böe) – and without AudioWorklet: the stand-ins, the note in
-// the engine section, the toast. Also: the iframe hint.   node t-eng-live.js   (slot kn-inst, built by run-all.sh)
+// layer, level 3, a shake under Gestik, the mixer's source text – and without AudioWorklet: the stand-ins, the note in
+// the engine section, the toast; Zapfen there plays its own native stand-in (finger, MIDI, lanes, knobs). Also: the
+// iframe hint.   node t-eng-live.js   (slot kn-inst, built by run-all.sh)
 const { chromium } = require('/opt/node22/lib/node_modules/playwright');
 const L = require('./dsplib');
 const URL_ = process.env.KN_URL || 'http://127.0.0.1:8790/kn-inst/index.html';
@@ -26,8 +27,8 @@ const settle = (page, ms) => page.evaluate((ms) => window.__sleep(ms), ms);
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
   const { page, errors, ctx } = await open(browser, { mobile: false });   // desktop: the keyboard is asked for at start
   await page.click('#btnStart'); await settle(page, 700);
-  const ring = (key) => (key === 'hlm' ? 500 : key === 'rnk' ? 1500 : key === 'shn' ? 700 : key === 'khl' ? 500 : key === 'boe' ? 6500 : key === 'amo' ? 900 : 2600);   // (Harz's glass rings on after the bow lifts; Böe's strings with their Nachklang, 3 s; Sehne: the hand mutes it)
-  for (const key of ['hlm', 'khl', 'rnk', 'hrz', 'shn', 'boe', 'amo']) {
+  const ring = (key) => (key === 'hlm' ? 500 : key === 'rnk' ? 1500 : key === 'shn' ? 700 : key === 'zpf' ? 1200 : key === 'khl' ? 500 : key === 'boe' ? 6500 : key === 'amo' ? 900 : 2600);   // (Harz's glass rings on after the bow lifts; Böe's strings with their Nachklang, 3 s; Sehne: the hand mutes it)
+  for (const key of ['hlm', 'khl', 'rnk', 'hrz', 'shn', 'zpf', 'boe', 'amo']) {
     // the chip in the Klang panel (the library UI comes later)
     await page.evaluate(() => window.__M.openPanel('klang'));
     // (stage 1b: the chips became the row + library – chosen by its tile)
@@ -58,7 +59,7 @@ const settle = (page, ms) => page.evaluate((ms) => window.__sleep(ms), ms);
       for (let i = 0; i < 30; i++) { await window.__sleep(50); const b = M.getBudget()[0], l = M.voiceLoad(); vb3 = b; maxV = Math.max(maxV, M.A.voices.size); maxL = Math.max(maxL, l); if (l > b + 1e-9) over++; }   // (level 3's budget, as it stands at each moment)
       const lanes = [...M.A.voices].filter((v) => v.eng === key).map((v) => v.as + (v.wk ? '*' : ''));
       M.seqStop(); M.setParam('dev.q', '1'); M.setParam('l0.on', false); M.setParam('l1.on', false); M.setParam('v.layer', 'off'); M.setParam('v.eng', key);
-      await window.__sleep(key === 'hlm' ? 600 : key === 'rnk' ? 1500 : key === 'shn' ? 900 : key === 'khl' ? 600 : key === 'boe' ? 4500 : key === 'amo' ? 1200 : 3500);
+      await window.__sleep(key === 'hlm' ? 600 : key === 'rnk' ? 1500 : key === 'shn' ? 900 : key === 'zpf' ? 1500 : key === 'khl' ? 600 : key === 'boe' ? 4500 : key === 'amo' ? 1200 : 3500);
       return { maxV, maxL: +maxL.toFixed(2), vb: vb3, over, lanes, left: M.A.voices.size, broken: [...M.A.workletBroken], mx: M.mxSrcText('l0') };
     }, key);
     L.ok(busy.lanes.length && busy.lanes.every((s) => s === key + '*') && !busy.over && busy.left === 0 && !busy.broken.length, `${key}: Puls lanes at level 3 play it (${busy.lanes.length} voices sounding, max load ${busy.maxL} ≤ ${busy.vb}), all end, nothing broken (${JSON.stringify({ over: busy.over, left: busy.left, broken: busy.broken, lanes: busy.lanes.join() })})`);
@@ -250,6 +251,18 @@ const settle = (page, ms) => page.evaluate((ms) => window.__sleep(ms), ms);
   L.ok(ks.cost[0] === ks.tab && ks.cost[1] > ks.cost[0] && ks.cost[2] === ks.cost[0], `Sehne: a voice's price follows its hand – ${ks.cost.join(' → ')} units (open, E-Bow, open; the table ${ks.tab})`);
   L.ok(Math.abs(ks.fq - 330) < 2 && ks.held > -50 && ks.left === 0, `Sehne: a held string glides (freq ${ks.fq.toFixed(1)} Hz) and is held by the E-Bow (${ks.held.toFixed(1)} dBFS after 2 s), the hand mutes it on release (voices left ${ks.left})`);
   L.ok(ks.macro.join() === 'shn.ebow,shn.daempfung' && ks.mx === 'Sehne' && ks.group === 'Sehne' && ks.hoehe === 'Hand' && /^Lebende Saite/.test(ks.info[0]) && /viele Stimmen/.test(ks.info[1]), `Sehne: MACRO A/B ${ks.macro}, mixer „${ks.mx}“, MIDI group ${ks.group}, Höhe „${ks.hoehe}“; library: Sehne „${ks.info[0]}“, Saite „${ks.info[1]}“`);
+  // Zapfen: a knob turned while a voice sounds reaches its processor, the body's Nachklang follows the body, MACRO, mixer
+  const kz = await page.evaluate(async () => {
+    const M = window.__M, A = M.A; M.setParam('v.eng', 'zpf'); M.openPanel('klang'); await window.__sleep(100);
+    const txt = () => { const el = document.querySelector('[data-pid="zpf.klang"]'); return el ? el.textContent : ''; }, rt = () => { const el = document.querySelector('[data-pid="zpf.rast"]'); return el ? el.textContent : ''; };
+    const v = M.playNote('zpf', A.ctx.currentTime + 0.01, 220, 0.8, 0.7, {}); await window.__sleep(300);
+    let got = null; const pm = v.wk.port.postMessage.bind(v.wk.port); v.wk.port.postMessage = (m) => { if (m && m.set && !got) got = m.set; pm(m); };
+    const t0 = txt(), r0 = rt(); M.setParam('zpf.koerper', 'kuerbis'); await window.__sleep(50); const t1 = txt(); M.setParam('zpf.rast', 1); await window.__sleep(50); const r1 = rt();
+    v.release(); M.setParam('zpf.koerper', 'zapfen'); M.setParam('zpf.rast', 0.7); M.closePanel(); await window.__sleep(900);
+    return { got, t0, t1, r0, r1, macro: [M.macroId(0), M.macroId(1)], mx: M.mxSrcText('fin'), group: M.GROUP.zpf, left: [...A.voices].filter((x) => x.alive && x.eng === 'zpf').length };
+  });
+  L.ok(kz.got && kz.got.koerper === 'kuerbis' && /Nachklang \d+ ms/.test(kz.t1) && kz.t0 !== kz.t1 && /rastet ab 36 %/.test(kz.r0) && /rastet ab 18 %/.test(kz.r1), `Zapfen: Körper reaches the sounding processor, Nachklang follows the body („${(kz.t0.match(/Nachklang \d+ ms/) || [''])[0]}“ → „${(kz.t1.match(/Nachklang \d+ ms/) || [''])[0]}“), Rast says where it locks („${(kz.r0.match(/rastet[^%]*%/) || [''])[0]}“ → „${(kz.r1.match(/rastet[^%]*%/) || [''])[0]}“)`);
+  L.ok(kz.macro.join() === 'zpf.rast,zpf.klang' && kz.mx === 'Zapfen' && kz.group === 'Zapfen' && kz.left === 0, `Zapfen: MACRO A/B ${kz.macro}, mixer source „${kz.mx}“, MIDI group ${kz.group}`);
   const errs = errors.filter((e) => !/myzel-dsp\.js|Failed to load resource/.test(e));
   L.ok(!errs.length, 'no console errors ' + errs.join(' | '));
   await ctx.close();
@@ -267,6 +280,33 @@ const settle = (page, ms) => page.evaluate((ms) => window.__sleep(ms), ms);
     L.ok(r.state === 'kein' && r.as.join() === r.want.join() && r.eng.join() === r.keys.join() && r.patch === 'hlm', `no AudioWorklet: the stand-ins play – ${r.keys.map((k, i) => k + ' → ' + r.as[i]).join(', ')} – the patch keeps „hlm“`);
     L.ok(/Sehne vereinfacht als Saite/.test(r.shnNote || ''), `…Sehne's section: „${r.shnNote}“`);
     L.ok(/Halm vereinfacht als Hauch/.test(r.note || '') && /kein AudioWorklet/.test(r.toast) && r.mx === 'Halm (als Hauch)', `…and says so: section „${r.note}“, toast „${r.toast}“, mixer „${r.mx}“`);
+    // Zapfen: its own native stand-in – chosen by its tile (no „spielt als“), a finger (setY/setF), MIDI with the wheel,
+    // Puls lanes at level 3, a knob live, the section's note, the mixer's text
+    await page.click('#p-v-eng .kq-name'); await page.click('.kq-fams .chip[data-fam="holz"]');
+    const tile = await page.evaluate(() => document.querySelector('.kq-tile[data-k="zpf"] .kq-i').textContent);
+    await page.click('.kq-tile[data-k="zpf"] .kq-pick'); await page.click('.kq-done'); await page.evaluate(() => window.__M.closePanel && window.__M.closePanel()); await settle(page, 300);
+    const box = await page.locator('#cvFx').boundingBox();
+    const t0 = await page.evaluate(() => window.__M.A.ctx.currentTime);
+    await page.mouse.move(box.x + box.width * 0.3, box.y + box.height * 0.7); await page.mouse.down(); await settle(page, 250);
+    const held = await page.evaluate((t0) => { const v = [...window.__M.A.voices].find((v) => v.alive && v.eng === 'zpf' && !v.released && v.t0 >= t0 && !v.probe); return v ? { as: v.as, wk: !!v.wk, zn: !!v.zn, cost: v.cost } : null; }, t0);
+    let lv = -200; for (let i = 1; i <= 8; i++) { await page.mouse.move(box.x + box.width * (0.3 + i * 0.05), box.y + box.height * (0.7 - i * 0.07)); await settle(page, 60); lv = Math.max(lv, await page.evaluate(() => { const A = window.__M.A, b = new Float32Array(A.analyser.fftSize); A.analyser.getFloatTimeDomainData(b); let s = 0; for (const x of b) s += x * x; return 10 * Math.log10(s / b.length + 1e-20); })); }
+    const rate = await page.evaluate(() => { const v = [...window.__M.A.voices].find((v) => v.alive && v.eng === 'zpf' && !v.released && v.zn); return v ? v.zn.st.R : 0; });
+    await page.mouse.up(); await settle(page, 1200);
+    const nz = await page.evaluate(async () => {
+      const M = window.__M, A = M.A, out = { after: [...A.voices].filter((v) => v.alive && v.eng === 'zpf').length };
+      const v = M.playNote('zpf', A.ctx.currentTime + 0.01, 262, 0.5, 0.7, {}); await window.__sleep(300); out.held = { as: v.as, zn: !!v.zn };
+      const g0 = v.zn.gN.gain.value; M.setParam('zpf.kratzen', 1); await window.__sleep(200); out.knob = [g0, v.zn.gN.gain.value]; M.setParam('zpf.kratzen', 0.3);
+      v.release(); await window.__sleep(1200);
+      M.setParam('v.eng', 'neb'); M.setParam('l0.eng', 'zpf'); M.setParam('l0.on', true); M.setParam('l1.eng', 'zpf'); M.setParam('l1.on', true); M.setParam('dev.q', '3'); M.seqStart(); let n = 0, over = 0;
+      for (let i = 0; i < 30; i++) { await window.__sleep(50); n = Math.max(n, [...A.voices].filter((x) => x.alive && x.eng === 'zpf' && x.zn).length); over = Math.max(over, M.voiceLoad() - M.getBudget()[0]); }
+      M.seqStop(); M.setParam('dev.q', '1'); M.setParam('l0.on', false); M.setParam('l1.on', false); M.setParam('v.eng', 'zpf'); await window.__sleep(1500);
+      out.lanes = n; out.over = over; out.left = [...A.voices].filter((x) => x.alive && x.eng === 'zpf').map((x) => x.eng + (x.released ? '-r' : '') + ' ' + (x.endAt - A.ctx.currentTime).toFixed(2)).join(); out.note = !M.engSecs.zpf.wkNote.hidden && M.engSecs.zpf.wkNote.textContent; out.mx = M.mxSrcText('fin'); out.fb = M.kqFb('zpf'); out.label = M.engLabel('zpf');
+      return out;
+    });
+    L.ok(!/spielt als/.test(tile) && held && held.as === 'zpf' && !held.wk && held.zn && lv > -60 && rate > 3 && nz.after === 0, `no AudioWorklet: Zapfen plays its own native stand-in (tile „${tile.slice(0, 40)}…“, cost ${held && held.cost}), a finger slides it up to ${lv.toFixed(1)} dBFS (rate ${rate.toFixed(1)}/s), lets go – freed`);
+    L.ok(nz.held.as === 'zpf' && nz.held.zn && nz.knob[1] > nz.knob[0] * 2, `no AudioWorklet: Kratzen turned up reaches a sounding native voice (its noise ${nz.knob.map((x) => x.toFixed(3)).join(' → ')})`);
+    L.ok(nz.lanes > 0 && nz.over <= 1e-9 && !nz.left, `no AudioWorklet: Puls lanes at level 3 play Zapfen natively (up to ${nz.lanes} voices, load − budget ≤ ${nz.over.toFixed(2)}), all end${nz.left ? ' – still alive: ' + nz.left : ''}`);
+    L.ok(/Zapfen vereinfacht \(kein AudioWorklet\)/.test(nz.note || '') && nz.mx === 'Zapfen' && nz.label === 'Zapfen' && !nz.fb, `no AudioWorklet: Zapfen's section says „${nz.note}“, the mixer „${nz.mx}“, no „als …“`);
     L.ok(!errors.length, 'no console errors without AudioWorklet ' + errors.join(' | '));
     await ctx.close();
   }

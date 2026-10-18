@@ -16,6 +16,7 @@ const XP = JSON.parse(process.env.PARAMS || '{}');
     const M = window.__M;
     async function run(eng, q, n) {
       M.P['dev.q'] = q;
+      const nat = /N$/.test(eng); if (nat) eng = eng.slice(0, -1);   // (zpfN: Zapfen's native stand-in – the engine marked broken for the run)
       const ctx = await window.__off(48000, DUR, Object.assign({ 'v.eng': eng === 'null' ? 'hlm' : eng === 'web' ? 'gsp' : eng, 'rev.mix': 0, 'dly.mix': 0 }, XP));
       await M.ensureDSP(ctx);
       ctx.suspend(19 / 375).then(() => {
@@ -27,7 +28,7 @@ const XP = JSON.parse(process.env.PARAMS || '{}');
             continue;
           }
           if (eng === 'null') { const nd = new AudioWorkletNode(ctx, 'myzel-null', { numberOfInputs: 0, outputChannelCount: [1], processorOptions: { on: { on: 0 } } }); nd.connect(ctx.destination); }
-          else M.playNote(eng, ctx.currentTime, M.noteAt((k * 0.37) % 1).f, YH, 0.5, {});
+          else { if (nat) M.A.workletBroken.add(eng); M.playNote(eng, ctx.currentTime, M.noteAt((k * 0.37) % 1).f, YH, 0.5, {}); if (nat) M.A.workletBroken.delete(eng); }
         }
         ctx.resume();
       });

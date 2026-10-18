@@ -1,0 +1,10 @@
+// Zapfen's acceptance rows on the processor alone (Node, fast): floor, ticks, strokes, the stone's click, Bebung low.
+//   env SUBS, ROWS='floor,ticks,stroke,click,bebung'
+const L = require('./dsplib'), Z = require('./zsrc'), ZL = require('./zpflib');
+const SR = 48000, D = Z.load(SR), rows = (process.env.ROWS || 'floor,ticks,stroke,click,bebung').split(',');
+const nt = (o) => L.render(D, { name: 'myzel-scrape', po: { prm: Object.assign({ koerper: o.b || 'zapfen' }, o.prm || {}), seed: 3 }, ch: 1, dur: o.dur || 2, params: { freq: o.f, hoehe: o.y, detune: o.cents || 0 }, msgs: [[0.05, { on: 0.05, f: o.f, y: o.y, vel: o.vel == null ? 0.75 : o.vel, burst: o.burst, gate: o.gate, seed: o.seed || 77 }]] }).L;
+if (rows.includes('floor')) { const fl = {}; for (const b of ['zapfen', 'fels']) for (const f of [110, 220, 440, 880]) fl[b + '@' + f] = +ZL.floor(nt({ b, f, y: 1 }), SR, f, 1.0).toFixed(1); fl['sch0@220'] = +ZL.floor(nt({ f: 220, y: 1, prm: { schuppen: 0 } }), SR, 220, 1.0).toFixed(1); console.log('floor', JSON.stringify(fl)); }
+if (rows.includes('ticks')) for (const b of ['zapfen', 'holz', 'panzer', 'kuerbis', 'fels']) console.log('ticks y0.2', b, [55, 110, 220, 440, 880].map((f) => ZL.ticks(nt({ b, f, y: 0.2, dur: 3 }), SR, 0.3, 2.9, null, b === 'fels' ? 40 : 25).toFixed(1)).join('/'));
+if (rows.includes('stroke')) { const st = []; for (const b of ['zapfen', 'fels']) for (const y of [0, 0.6]) for (const g of [0.03, 0.06, 0.112]) st.push([b, y, g, Math.round(ZL.ticks(nt({ b, f: 220, y, dur: 0.8, burst: true, gate: g }), SR, 0.045, 0.06 + g, null, 2, 1000) * (0.015 + g))].join('/')); console.log('strokes', st.join(', ')); }
+if (rows.includes('click')) { const hc = (y, vel) => Math.round(L.centroid(ZL.hp(nt({ b: 'fels', f: 220, y, vel, dur: 0.5, burst: true, gate: 0.112 }), SR, 1000), SR, 0.05, 4096)); console.log('fels click centroid (112-ms strokes) y0.2/y0.6', hc(0.2, 0.75), hc(0.6, 0.75), 'vel0.3/1', hc(0.2, 0.3), hc(0.2, 1)); }
+if (rows.includes('bebung')) { const m = nt({ f: 440, y: 0.2, dur: 1, cents: 50 }); console.log('bebung low', L.cents(ZL.peakHz(m, SR, 440 * Math.pow(2, 50 / 1200), 0.058, 4096), 440).toFixed(2)); }

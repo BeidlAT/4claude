@@ -314,6 +314,16 @@ out = hpKasten(lpKasten(x)) * 0.3
 - **Params (6):** `zpf.koerper` SEL zapfen/holz/panzer/kuerbis/fels (zapfen, chips) · `zpf.schuppen` 0–1 (0.3) · `zpf.rast` 0–1 (0.7) · `zpf.klang` 0–1 (0.4) · `zpf.strich` 0–1 (0.5) · `zpf.kratzen` 0–1 (0.3). MACRO rast/klang.
 - **Höhe**: scrape rate (tick → buzz → Rast → tone); tilt forward = faster; Ladung target `zpfR` (rate ×) optional P2. **Puls**: the stroke. regen 0.
 - **Acceptance**: y 1 with Rast: perceived f0 = f ± 5 ct; tooth train sideband floor ≥ −35 dB (irregularity measurable vs a pure pulse train); y 0.2: 3–10 ticks/s; Rast transitions: no peak > 6 dB above running RMS; burst 112 ms ≥ 5 ticks; Bebung ±50 ct shifts R at y 1, shifts body at y 0.2; fallback plays; cost ≤ 0.55.
+- **As built (stage 5):** the scrape processor and its own native stand-in, all five bodies, every acceptance row met with the checks' fixes (inventor-zpf, designer-klf). Measured changes of letter (klang/tests `bench.js zpf`, `t-dsp.js`, `*-zpf.js`):
+  - **rate**: geometric from 3/s to f (R = 3^(1−y)·f^y) – SPEC's f·2^(−6+6y) gave 0.9–14 ticks/s at y 0 and 3.9–31 at y 0.2 over 55–880 Hz, KONZEPT promises 3–10 at the bottom: now 5.4–9.2 at y 0.2 at every pitch; Rast, hysteresis and the finger's speed as specified (slew: one-pole τ 15 ms on log R);
+  - **teeth**: each tooth's offset drawn fresh around its grid place (never cumulative: the mean rate is exactly R; a 64-entry table would loop), ±(0.8 + 2.5·Schuppen) % of a period at the top, up to 4× low; heights ±(20 + 30·Schuppen) %; a tooth's force (R/3)^−0.15;
+  - **Bebung** moves rate and body together at every height (a switch at 30/s would jump with a bent wheel; both rows pass);
+  - **body**: modes heard as their velocity (no low tail), T60 × body (Holz 1.3, Panzer 0.5, Kürbis 1.6, Fels 1.4), upper modes shorter; the fundamental's build-up at the rate taken off (locked on f/2ⁿ every tooth adds in phase: +11 dB at the top otherwise); level 3 six modes on alternating sides, the soft side in quadrature;
+  - **the tone**: the stick's ride – the integrated teeth, a saw from ≈ 50/s, high-passed at 0.35·f – with a box formant and a click resonator (a pulse train through the narrow modes alone was a sine: harmonics −32…−60 dB);
+  - **Fels**: each tooth a rasp of slips (the load given up in 14–32 % parts, the next sooner the more is left, 1.6·f falling; at the top one slip a period), a crack into the contact at each slip, the click 1.5–4 kHz with Höhe and velocity (the scream);
+  - **stroke**: at least 5 + 25·gate teeth (SPEC's R_max gave 2.3 teeth in 112 ms at y 0.6), a last knock at 0.92·gate;
+  - **level**: v.out peak vel·1.13 (SPEC 0.6 left the standard phrase 5.5 dB under), the processor's tanh only a guard, every body as loud;
+  - **native stand-in** (the playbackRate buffer alone cannot span nine octaves): the baked 64-tooth buffer below ≈ 40/s, a band-limited saw at R above (a PeriodicWave, its time jittered by noise on a short delay – noise on its frequency pulled it 9–21 ct flat), three band-pass modes, click and box; Fels from a baked creak buffer (SPEC: none). Cost measured, not SPEC's 0.2.
 
 ### 3.9 elm Elmsfeuer – native (hum → corona → arc)
 

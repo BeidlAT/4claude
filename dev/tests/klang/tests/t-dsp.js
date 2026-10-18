@@ -1,6 +1,6 @@
 // The worklet processors on their own, in Node (no browser): myzelDsp() taken from the app and run block by block.
 // Contract (timing, done, kill, NaN guard), robustness under every knob at its extremes, tuning of the reed across
-// Mund/Blatt, the ring's update artefacts and pitch, Moder's digestion and crackle; the aeolian harp's capture, floor, stereo and Puls.   node t-dsp.js
+// Mund/Blatt, the ring's update artefacts and pitch, Moder's digestion and crackle; the aeolian harp's capture, floor, stereo and Puls; Zapfen's teeth, Rast and stone.   node t-dsp.js
 const L = require('./dsplib');
 const SR = 48000;
 const D = L.loadDsp(SR);
@@ -16,8 +16,8 @@ function peakHz(sig, f, at, N) {
   return (b + 0.5 * (a - d) / (a - 2 * c + d)) * hz;
 }
 // -- the contract
-L.ok(['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel-aeol', 'myzel-gendy', 'myzel-web', 'myzel-string', 'myzel-syrinx', 'myzel-null'].every((k) => D.procs[k]), 'module registers myzel-blow, myzel-scan, myzel-bow, myzel-rot, myzel-aeol, myzel-gendy, myzel-web, myzel-string, myzel-syrinx, myzel-null: ' + Object.keys(D.procs).join(', '));
-for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel-aeol', 'myzel-gendy', 'myzel-string', 'myzel-syrinx']) {
+L.ok(['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel-aeol', 'myzel-gendy', 'myzel-web', 'myzel-string', 'myzel-syrinx', 'myzel-scrape', 'myzel-null'].every((k) => D.procs[k]), 'module registers myzel-blow, myzel-scan, myzel-bow, myzel-rot, myzel-aeol, myzel-gendy, myzel-web, myzel-string, myzel-syrinx, myzel-scrape, myzel-null: ' + Object.keys(D.procs).join(', '));
+for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel-aeol', 'myzel-gendy', 'myzel-string', 'myzel-syrinx', 'myzel-scrape']) {
   const r = note(name, 220, 0.6, { at: 0.3, dur: 0.6 });
   const pre = L.rms(r.L, 0, Math.floor(0.3 * SR) - 1), post = L.rms(r.L, Math.floor(0.33 * SR), Math.floor(0.6 * SR));
   L.ok(pre === 0 && post > 1e-3, `${name}: a note posted ahead waits for its time (silent before 0.3 s, ${L.db(post).toFixed(1)} dB after)`);
@@ -35,9 +35,9 @@ for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel
 // -- every knob at its extremes, pitches 16 Hz … 8 kHz, bursts and held, both levels: bounded, finite, ends
 {
   let x = 99; const rnd = () => { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; return (x >>> 0) / 4294967296; };
-  for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel-aeol', 'myzel-gendy', 'myzel-string', 'myzel-syrinx']) {
+  for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel-aeol', 'myzel-gendy', 'myzel-string', 'myzel-syrinx', 'myzel-scrape']) {
     let worst = 0, bad = 0, notDone = 0;
-    const keys = name === 'myzel-blow' ? ['atem', 'mund', 'blatt', 'luft', 'zunge'] : name === 'myzel-bow' ? ['druck', 'bogen', 'daempfung', 'schwebung', 'harz'] : name === 'myzel-string' ? ['daempfung', 'steifheit', 'zupfort', 'hand', 'ebow'] : name === 'myzel-syrinx' ? ['spannung', 'druck', 'schnabel', 'rauheit', 'anstieg'] : name === 'myzel-rot' ? ['pilz', 'knistern', 'schwellen', 'schlaegel'] : name === 'myzel-aeol' ? ['wind', 'boeen', 'nachklang', 'rauschen', 'fang', 'dunkel'] : name === 'myzel-gendy' ? ['zeit', 'rueck'] : ['masse', 'feder', 'mitte', 'daempfung', 'hammer', 'holz'];
+    const keys = name === 'myzel-blow' ? ['atem', 'mund', 'blatt', 'luft', 'zunge'] : name === 'myzel-bow' ? ['druck', 'bogen', 'daempfung', 'schwebung', 'harz'] : name === 'myzel-string' ? ['daempfung', 'steifheit', 'zupfort', 'hand', 'ebow'] : name === 'myzel-scrape' ? ['schuppen', 'rast', 'klang', 'strich', 'kratzen'] : name === 'myzel-syrinx' ? ['spannung', 'druck', 'schnabel', 'rauheit', 'anstieg'] : name === 'myzel-rot' ? ['pilz', 'knistern', 'schwellen', 'schlaegel'] : name === 'myzel-aeol' ? ['wind', 'boeen', 'nachklang', 'rauschen', 'fang', 'dunkel'] : name === 'myzel-gendy' ? ['zeit', 'rueck'] : ['masse', 'feder', 'mitte', 'daempfung', 'hammer', 'holz'];
     for (let i = 0; i < 40; i++) {
       const prm = {}; for (const k of keys) prm[k] = i < 4 ? [0, 1, 0, 1][i] * (k.length % 2 ? 1 : 1) : rnd() < 0.3 ? Math.round(rnd()) : rnd();
       if (name === 'myzel-bow') prm.koerper = ['glas', 'schale', 'stab', 'zunge', 'teich'][i % 5];
@@ -47,6 +47,7 @@ for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel
       if (name === 'myzel-rot') { prm.koerper = ['glocke', 'holz', 'knochen'][i % 3]; prm.nachklang = i < 4 ? [1, 12, 1, 12][i] : 1 + 11 * rnd(); }
       if (name === 'myzel-syrinx') prm.silbe = ['aus', 'chip', 'triller', 'ruf'][i % 4];
       if (name === 'myzel-string') { prm.steg = (i >> 1) % 2 ? 'jawari' : 'flach'; prm.daempfung = 0.3 * Math.pow(8 / 0.3, prm.daempfung); prm.zupfort = 0.05 + 0.45 * prm.zupfort; }   // (the knobs' own ranges)
+      if (name === 'myzel-scrape') prm.koerper = ['zapfen', 'holz', 'panzer', 'kuerbis', 'fels'][i % 5];
       const f = [16, 30, 55, 220, 1000, 3000, 8000][i % 7] * (0.9 + 0.2 * rnd()), y = i % 5 === 0 ? 1 : i % 5 === 1 ? 0 : rnd(), rich = i % 2 === 1, burst = i % 3 === 0;
       // (a bow's modes ring as Dämpfung and the body say – up to 16 s: it must end within two of its rings)
       const ring = name === 'myzel-bow' ? (0.4 + 6 * (1 - prm.daempfung) * (1 - prm.daempfung)) * { glas: 0.6, schale: 2.5, stab: 1.6, zunge: 0.35, teich: 2 }[prm.koerper] : name === 'myzel-aeol' ? prm.nachklang : name === 'myzel-gendy' ? 4.5 * prm.rel : 0;   // (Amöbe: its own fade τ = 0.8·rel down to −100 dB ≈ 8·rel – in the app the voice's release ends it at 1.6·rel)
@@ -57,7 +58,7 @@ for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel
       if (L.nanCount(r.L) || (r.R && L.nanCount(r.R))) bad++;
       worst = Math.max(worst, pk); if (r.alive) notDone++;
     }
-    L.ok(!bad && worst <= 1.2, `${name}: 40 random knob sets (extremes included, 16 Hz–8 kHz, L1/L3, held/burst, shakes${name === 'myzel-blow' ? ', all three pipes' : ''}): no NaN, peak ${worst.toFixed(3)} (≤ 1.2)`);
+    L.ok(!bad && worst <= 1.2, `${name}: 40 random knob sets (extremes included, 16 Hz–8 kHz, L1/L3, held/burst, shakes${name === 'myzel-blow' ? ', all three pipes' : name === 'myzel-scrape' ? ', all five bodies' : ''}): no NaN, peak ${worst.toFixed(3)} (≤ 1.2)`);
     L.ok(notDone === 0, `${name}: every one of them ends within ${name === 'myzel-bow' || name === 'myzel-aeol' ? 'two rings' : name === 'myzel-rot' ? '1.3 × its life + 1 s' : name === 'myzel-gendy' ? 'its own fade (9 × Ausklingen)' : '3 s'} after its end (${notDone} still running)`);
   }
 }
@@ -409,5 +410,54 @@ for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel
   const end = K(440, 0.6, {}, { dur: 1.5, msgs: [[0.5, { off: 0.5 }]] }); L.ok(!end.alive && end.done < 0.6, `khl: after {off} the labia stop within milliseconds – done at ${end.done.toFixed(3)} s`);
   const t0 = process.hrtime.bigint(); K(440, 0.6, {}, { dur: 4 }); const ns1 = Number(process.hrtime.bigint() - t0) / (4 * SR); const t1 = process.hrtime.bigint(); K(440, 0.6, {}, { dur: 4, rich: true }); const ns3 = Number(process.hrtime.bigint() - t1) / (4 * SR);
   console.log(`INFO khl: ${ns1.toFixed(1)} ns/sample level 1, ${ns3.toFixed(1)} level 3 (the harness included)`);
+}
+// -- Zapfen (myzel-scrape): the teeth keep the rate exactly (the jitter never accumulates); sub-sample teeth (vs whole
+// samples: the same processor with u = 0); the Rast's hysteresis; the finger's speed; the stone's rasps; after
+// underruns; a body changed under a note; the stroke; the coast after the end
+{
+  const ZD = (subs) => { process.env.SUBS = JSON.stringify(subs); return require('./zsrc').load(SR); };
+  const scr = (o) => L.render(o.D || D, { name: 'myzel-scrape', po: Object.assign({ seed: 5, rich: !!o.rich, prm: o.prm || {} }, o.po), ch: o.rich ? 2 : 1, dur: o.dur || 2, params: o.params || { freq: o.f, hoehe: o.y }, each: o.each,
+    msgs: [[0, { on: 0, f: o.f, y: o.y, vel: o.vel == null ? 0.75 : o.vel, burst: o.burst, gate: o.gate, seed: 99 }]].concat(o.off != null ? [[o.off, { off: o.off }]] : []).concat(o.msgs || []) });
+  // the mean rate at the top is the note: 2 s → 2·f teeth (+ the first at once)
+  const cnt = [];
+  for (const f of [110, 220, 1003]) for (const b of ['zapfen', 'fels']) { const r = scr({ f, y: 1, dur: 2, prm: { koerper: b, schuppen: 1 } }); cnt.push([f, b, r.node.nT, Math.round(2 * f * (2 - 1 / SR * 0) )]); }
+  L.ok(cnt.every((c) => Math.abs(c[2] - 2 * c[0]) <= 2), 'Zapfen: at the top the teeth come at exactly f (Schuppen 1: their jitter never accumulates) – f/body/teeth in 2 s: ' + cnt.map((c) => c.slice(0, 3).join('/')).join(', '));
+  // sub-sample teeth: a strictly regular train (no jitter, no height variation, no noise) at 1003 Hz (47.86 samples) is
+  // clean between its harmonics; placed on whole samples the rounding pattern rings sidebands
+  { const reg = [['const J = fels ?', 'const J = 0 * (fels ?'], ['(1 + 3 * (1 - ry));\n', '(1 + 3 * (1 - ry)));\n'], ['const hA = 0.2 + 0.3 * p.schuppen;', 'const hA = 0;']];
+    const Dsub = ZD(reg), Dint = ZD(reg.concat([['const u = tk ? 0 : Math.min(1, (ph - nx) / inc); this.nT++;', 'const u = 0; this.nT++;']]));
+    const fl = (Dx) => require('./zpflib').floor(scr({ D: Dx, f: 1003, y: 1, dur: 2, prm: { kratzen: 0 } }).L, SR, 1003, 1.0);
+    const a = fl(Dsub), b = fl(Dint);
+    L.ok(a <= -60 && b - a >= 15, `Zapfen: sub-sample teeth – a strictly regular train at 1003 Hz is clean between its harmonics (${a.toFixed(1)} dB), on whole samples it is not (${b.toFixed(1)} dB)`); }
+  // Rast: Höhe trembling ±0.01 at a step's edge (10 Hz) flips the step at most once; the rate on the step stays exact
+  { const f = 220, oc = Math.log2(f / 3), yb = 1 - 2.5 / oc; let flips = 0, last = null;   // (between f/4 and f/8)
+    scr({ f, y: yb, dur: 2, params: (t) => ({ freq: f, hoehe: yb + (Math.floor(t * 20) % 2 ? 0.01 : -0.01) }), each: (nd, t) => { if (t > 0.2) { if (last != null && nd.lock !== last) flips++; last = nd.lock; } } });
+    L.ok(flips <= 1, `Zapfen: Rast hysteresis (±8 %) – Höhe trembling ±0.01 at the f/4 | f/8 edge flips the step ${flips} times in 1.8 s`); }
+  // the finger's speed: a trembling height (±0.002 at 30 Hz) adds next to nothing, a swinging one up to half the rate
+  { const sp = (amp, hz) => { let mx = 0, ys = 0.3; scr({ f: 220, y: 0.3, dur: 2, prm: { rast: 0 }, params: (t) => { ys += (0.3 + amp * Math.sin(2 * Math.PI * hz * t) - ys) * (1 - Math.exp(-128 / (0.04 * SR))); return { freq: 220, hoehe: ys }; }, each: (nd, t) => { if (t > 0.5) mx = Math.max(mx, Math.min(0.5, nd.sp)); } }); return mx; };   // (Höhe as the app delivers it: setP, τ 40 ms)
+    const a = sp(0.002, 30), b = sp(0.12, 1);
+    L.ok(a <= 0.12 && b >= 0.4, `Zapfen: finger speed – trembling ±0.002 at 30 Hz adds ≤ ${(100 * a).toFixed(0)} % to the rate, swinging ±0.12 at 1 Hz up to ${(100 * b).toFixed(0)} % (≤ 50)`); }
+  // the stone: low on the field each creak is a rasp of slips (a falling chatter), at the top one slip a period
+  { const lo = scr({ f: 220, y: 0.2, dur: 3, prm: { koerper: 'fels' } }), hi = scr({ f: 220, y: 1, dur: 1, prm: { koerper: 'fels' } });
+    const a = lo.node.nS / Math.max(1, lo.node.nT), b = hi.node.nS / Math.max(1, hi.node.nT);
+    L.ok(a >= 3 && a <= 10 && b >= 0.95 && b <= 1.3, `Zapfen Fels: ${a.toFixed(1)} slips per creak low (3–10), ${b.toFixed(2)} per period at the top (≈ 1)`); }
+  // after underruns (lite): three modes, mono; level 3: six, two different sides
+  { const lt = scr({ f: 220, y: 0.6, rich: true, po: { lite: 1 }, dur: 1 }), fu = scr({ f: 220, y: 0.6, rich: true, dur: 1 });
+    let same = true; for (let i = 0; i < lt.L.length; i++) if (lt.L[i] !== lt.R[i]) { same = false; break; }
+    let diff = false; for (let i = 0; i < fu.L.length; i++) if (fu.L[i] !== fu.R[i]) { diff = true; break; }
+    L.ok(lt.node.K === 3 && same && fu.node.K === 6 && diff && L.rms(lt.L, 0.5 * SR, SR) > 1e-3, `Zapfen: level 3 ${fu.node.K} modes in stereo, after underruns ${lt.node.K}, one channel`); }
+  // the body changed four times under a sounding note: bounded, sounding on
+  { const sw = scr({ f: 330, y: 0.7, dur: 2.5, msgs: [[0.5, { set: { koerper: 'fels' } }], [1, { set: { koerper: 'panzer' } }], [1.5, { set: { koerper: 'kuerbis' } }], [2, { set: { koerper: 'holz' } }]] });
+    L.ok(!L.nanCount(sw.L) && L.peak(sw.L) < 1 && [0.7, 1.2, 1.7, 2.2].every((t) => L.rms(sw.L, Math.round(t * SR), Math.round((t + 0.2) * SR)) > 1e-3), `Zapfen: the body changed four times under a note – bounded (peak ${L.peak(sw.L).toFixed(2)}), each sounds`); }
+  // the stroke: 30–60-ms gates are a blip of 5–10 teeth (KONZEPT), low and high on the field, wood and stone
+  { const bl = []; for (const b of ['zapfen', 'fels']) for (const y of [0, 0.6]) for (const g of [0.03, 0.045, 0.06]) { const r = scr({ f: 220, y, burst: true, gate: g, dur: 0.6, prm: { koerper: b } }); bl.push([b, y, g, r.node.nT]); }
+    L.ok(bl.every((x) => x[3] >= 5 && x[3] <= 10), 'Zapfen: 30–60-ms strokes are a blip of 5–10 teeth (body/y/gate/teeth): ' + bl.map((x) => x.join('/')).join(', ')); }
+  // the stroke: ≥ 5 teeth in 112 ms and its last knock, then nothing; the coast after the end
+  { const st = scr({ f: 220, y: 0.3, burst: true, gate: 0.112, dur: 1.5 });
+    const late = L.rms(st.L, Math.round(0.2 * SR), Math.round(1.5 * SR));
+    L.ok(st.node.nT >= 6 && st.node.nT <= 12 && !st.alive, `Zapfen: a 112-ms stroke passes ${st.node.nT} teeth with its last knock (6–12), then rings out and ends (${L.db(late).toFixed(0)} dB after)`);
+    let n1 = 0; const co = scr({ f: 220, y: 0.6, dur: 3, off: 1, each: (nd, t) => { if (t < 1.0) n1 = nd.nT; } });
+    const after = co.node.nT - n1;
+    L.ok(after >= 2 && after <= 40 && !co.alive, `Zapfen: let go, the stick coasts – ${after} more teeth, slowing, then it ends`); }
 }
 process.exit(L.summary() ? 1 : 0);

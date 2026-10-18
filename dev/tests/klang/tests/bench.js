@@ -1,14 +1,14 @@
 // Offline render bench for the new engines (klang SPEC §7.1 + the acceptance rows of §3 and the check files): the
-// worklet engines Halm, Ranke, Harz, Moder, Böe and the native ones Elmsfeuer, Jahresring.
+// worklet engines Halm, Ranke, Harz, Sehne, Zapfen (and Zapfen's own native stand-in), Kehlchen, Moder, Böe, Amöbe, Gespinst and the native ones Elmsfeuer, Jahresring, Rhizom.
 // Renders the real app (slot kd-inst, built by run-all.sh) in OfflineAudioContexts with the engine module loaded, pulls
 // the samples into Node and measures there.   node bench.js [hlm|rnk|hrz|mdr|boe|elm|jrg ...]   → PASS/FAIL lines, out/<key>/report.json,
 // demo WAVs and spectrogram PNGs in out/<key>/. Exit code = number of failures.
 process.env.SEED_BLOBS = '';   // the module must load unchanged (the seed shim is for workers)
 const { chromium, openInst } = require('../../v2/lib');
-const L = require('./dsplib');
+const L = require('./dsplib'), Z = require('./zpflib');
 const fs = require('fs'), path = require('path');
 const URL_ = process.env.KD_URL || 'http://127.0.0.1:8790/kd-inst/index.html';
-const KEYS = process.argv.slice(2).length ? process.argv.slice(2) : ['hlm', 'khl', 'rnk', 'hrz', 'shn', 'mdr', 'boe', 'amo', 'gsp', 'elm', 'jrg', 'rhz'];
+const KEYS = process.argv.slice(2).length ? process.argv.slice(2) : ['hlm', 'khl', 'rnk', 'hrz', 'shn', 'zpf', 'mdr', 'boe', 'amo', 'gsp', 'elm', 'jrg', 'rhz'];
 const OUT = path.join(__dirname, 'out');
 const SR = 48000;
 const DRY = { 'rev.mix': 0, 'dly.mix': 0, 'mst.comp': 0, 'cho.mix': 0, 'pha.mix': 0, 'mov.vib': 0, 'mov.drift': 0, 'mov.pan': 0 };
@@ -120,6 +120,9 @@ async function one(page, o) {
       cost: { DUR: '2', PARAMS: '{"jrg.holz":1,"jrg.jahreszeit":"sommer"}' } },   // (the cost run inside the voices' life)
     // Rhizom: native; pitch on the struck ping with Reiz 0 (no cascade); the voice lives its cascade and the last ping
     rhz: { native: true, struck: true, f0: [110, 220, 440, 880, 1760], ys: [0, 0.5], tol: 3, costMax: 0.65, ring: 4, pp: { 'rhz.reiz': 0 }, cAvg: 6, cost: { DUR: '3' } },
+    // Zapfen: the pitch at the top (SPEC §3.8: y 1, Rast) on the fundamental's line (a harmonic comb would read the
+    // body's inharmonic modes beside the harmonics)
+    zpf: { f0: [55, 110, 220, 440, 880, 1760], ys: [1], tol: 5, costMax: 0.55, line: true, lineAt: 1.0, cWin: true },
   };
   for (const key of KEYS) {
     const tc = T[key], dir = path.join(OUT, key), rep = { key };
@@ -147,13 +150,15 @@ async function one(page, o) {
     ok(loud.burst.rms >= loud.L1.rms - 12, `Puls bursts audible: phrase of 0.2-s hits ${loud.burst.rms} dB vs held phrase ${loud.L1.rms}`);
     // -- timbre vs height: one note at 220 Hz, centroid 0.3–0.4 s
     const yc = {};
-    for (const y of tc.cYs || [0, 0.5, 1]) { let c = 0; const cn = tc.cN || tc.cAvg || 1; for (let i = 0; i < cn; i++) { const x = await one(page, { eng: key, f: 220, y, dur: 1, params: DRY }); c += L.centroid(mono(x), SR, tc.cAt || (tc.struck ? 0.055 : 0.3), 4096) / cn; } yc[y] = Math.round(c); }   // (a struck bar: its strike; a seeded engine: the mean of cAvg notes)
+    for (const y of tc.cYs || [0, 0.5, 1]) {
+      if (tc.cWin) { const m = mono(await one(page, { eng: key, f: 220, y, dur: 2.2, params: DRY })); let c = 0, n = 0; for (let t = 0.3; t < 2.05; t += 0.05) { c += L.centroid(m, SR, t, 4096); n++; } yc[y] = Math.round(c / n); continue; }   // (Zapfen: over many windows – at y 0 a 85-ms window holds a knock or none)
+      let c = 0; const cn = tc.cN || tc.cAvg || 1; for (let i = 0; i < cn; i++) { const x = await one(page, { eng: key, f: 220, y, dur: 1, params: DRY }); c += L.centroid(mono(x), SR, tc.cAt || (tc.struck ? 0.055 : 0.3), 4096) / cn; } yc[y] = Math.round(c); }   // (a struck bar: its strike; a seeded engine: the mean of cAvg notes)
     rep.yCentroidHz = yc;
     if (key === 'mdr') console.log(`INFO mdr: centroid at the strike y 0/0.5/1: ${yc[0]}/${yc[0.5]}/${yc[1]} Hz – Höhe is the moisture, not the strike's colour (its rows: mdrWet below)`);
     else if (tc.struck) ok(yc[0] < yc[1], `centroid: the bar's end brighter than its centre (the nodal line between may stand out): y 0 ${yc[0]} Hz, 0.5 ${yc[0.5]} Hz, 1 ${yc[1]} Hz`);
     else if (tc.partials) console.log(`INFO ${key}: centroid at y ${(tc.cYs || []).join('/')}: ${(tc.cYs || []).map((y) => yc[y]).join('/')} Hz (a whistle: the rows on its partials below)`);
     else { const ys = tc.cYs || [0, 0.5, 1], c = ys.map((y) => yc[y]); ok(c[0] < c[1] && c[1] < c[2], `centroid rises with Höhe: ${ys.map((y, i) => 'y ' + y + ' ' + c[i] + ' Hz').join(', ')}`); }
-    const PP = Object.assign({}, DRY, tc.pp || {}), pitchAt = (m, f, at) => (tc.struck ? peakHz(m, SR, f, 0.15, 16384) : tc.line ? peakHz(m, SR, f, at || 0.6, 32768) : L.combPitch(m, SR, f, at || 0.6, key === 'rnk' ? 32768 : 16384));
+    const PP = Object.assign({}, DRY, tc.pp || {}), pitchAt = (m, f, at) => (tc.struck ? peakHz(m, SR, f, 0.15, 16384) : tc.line ? peakHz(m, SR, f, at || tc.lineAt || 0.6, 32768) : L.combPitch(m, SR, f, at || 0.6, key === 'rnk' ? 32768 : 16384));
     // -- pitch: the grid at 0.6 s (reed: YIN + phase refinement; ring: comb of harmonics with their sidebands)
     const pit = [];
     for (const f of tc.f0) for (const y of tc.ys) {
@@ -165,12 +170,12 @@ async function one(page, o) {
     const worst = pit.reduce((a, b) => (Math.abs(b[2]) > Math.abs(a[2]) ? b : a));
     ok(Math.abs(worst[2]) <= tc.tol, `f0 within ${tc.tol} ct on ${pit.length} notes ${tc.f0[0]}–${tc.f0[tc.f0.length - 1]} Hz (worst ${worst[2]} ct at ${worst[0]} Hz, y ${worst[1]})`);
     // -- Bebung: the pitch bus +50 ct moves the note by 50 ct
-    { const f = 220, x = await one(page, { eng: key, f, y: tc.ys[0] != null && tc.native ? tc.ys[0] : 0.6, dur: 2.2, params: PP, cents: 50 }); const m = mono(x);
-      const fm = tc.struck ? peakHz(m, SR, f * Math.pow(2, 50 / 1200), 0.15, 16384) : tc.line ? peakHz(m, SR, f * Math.pow(2, 50 / 1200), 0.6, 16384) : L.combPitch(m, SR, f * Math.pow(2, 50 / 1200), 0.6, 16384);
+    { const f = 220, x = await one(page, { eng: key, f, y: tc.ys[0] != null && (tc.native || tc.lineAt) ? tc.ys[0] : 0.6, dur: 2.2, params: PP, cents: 50 }); const m = mono(x);
+      const fm = tc.struck ? peakHz(m, SR, f * Math.pow(2, 50 / 1200), 0.15, 16384) : tc.line ? peakHz(m, SR, f * Math.pow(2, 50 / 1200), tc.lineAt || 0.6, tc.lineAt ? 32768 : 16384) : L.combPitch(m, SR, f * Math.pow(2, 50 / 1200), 0.6, 16384);
       const c = L.cents(fm, f); rep.bebung = +c.toFixed(2); ok(Math.abs(c - 50) <= 5, `Bebung: pitch bus +50 ct → ${c.toFixed(2)} ct`); }
     // -- glide: setF moves the pitch (k-rate freq through glideTo)
-    if (!tc.struck) { const x = await one(page, { eng: key, f: 220, y: tc.native ? 0.1 : 0.6, dur: 2.5, params: PP, moves: [[1.0, 'setF', 330]] }); const m = mono(x);
-      const fm = tc.line ? peakHz(m, SR, 330, 1.6, 16384) : L.combPitch(m, SR, 330, 1.6, 16384);
+    if (!tc.struck) { const x = await one(page, { eng: key, f: 220, y: tc.native ? 0.1 : tc.lineAt ? 1 : 0.6, dur: 2.5, params: PP, moves: [[1.0, 'setF', 330]] }); const m = mono(x);
+      const fm = tc.line ? peakHz(m, SR, 330, 1.6, tc.lineAt ? 32768 : 16384) : L.combPitch(m, SR, 330, 1.6, 16384);
       ok(Math.abs(L.cents(fm, 330)) <= tc.tol + 1, `setF 220 → 330 Hz lands at ${fm.toFixed(2)} Hz`); }
     // -- held: Höhe moves the timbre on a sounding voice (Gestik's Höhe arrives through setY)
     if (key === 'hlm' || key === 'elm' || key === 'hrz') { const y0 = key === 'elm' ? 0.2 : 0.4, x = await one(page, { eng: key, f: 220, y: y0, dur: 3, params: DRY, moves: [[1.0, 'setY', 0.85]] }); const m = mono(x);
@@ -1023,6 +1028,143 @@ async function one(page, o) {
         ok(Math.max(...r) - Math.min(...r) <= 2.5 && Object.values(lv).every((x) => x.peak <= -1), `Holz, Metall, Glas: phrase RMS ${Object.entries(lv).map(([k, x]) => k + ' ' + x.rms).join(', ')} (within 2.5 dB), peaks ${Object.values(lv).map((x) => x.peak).join(', ')} (≤ −1)`); }
       { const r = await page.evaluate(() => ({ rg: window.__M.RG_S.some((x) => x[0] === 'rhz') })); ok(r.rg, 'Sporenregen strikes it (RG_S derived: struck, regen ≠ 0)'); }
     }
+    if (key === 'zpf') {
+      const BODIES = ['zapfen', 'holz', 'panzer', 'kuerbis', 'fels'];
+      const P_ = (b, x) => Object.assign({}, DRY, { 'zpf.koerper': b }, x || {});
+      const chan = (x, a, b) => 10 * Math.log10((Math.pow(L.rms(x.L, Math.round(a * SR), Math.round(b * SR)), 2) + Math.pow(L.rms(x.R, Math.round(a * SR), Math.round(b * SR)), 2)) / 2 + 1e-20);
+      // y 1 with Rast: the note itself, every body, 55–1760 Hz – the fundamental's line (teeth on whole samples would
+      // jitter the period by ±18–35 ct at 1–2 kHz, the check)
+      const top = {};
+      for (const b of BODIES) { top[b] = []; for (const f of [55, 110, 220, 440, 880, 1760]) { const m = mono(await one(page, { eng: key, f, y: 1, dur: 1.8, params: P_(b) })); top[b].push(+L.cents(Z.peakHz(m, SR, f, 1.0, 32768), f).toFixed(2)); } }
+      rep.top = top;
+      ok(BODIES.every((b) => top[b].every((c) => Math.abs(c) <= 5)), 'y 1 with Rast: the note within ±5 ct, every body, 55–1760 Hz (ct): ' + BODIES.map((b) => b + ' ' + top[b].join('/')).join(', '));
+      // the ladder below: at the middle of each step the lowest line is f/2ⁿ (f/8, f/4, f/2 at 880 Hz)
+      { const lad = [], f = 880, oc = Math.log2(f / 3);
+        for (const n of [1, 2, 3]) { const y = 1 - n / oc, m = mono(await one(page, { eng: key, f, y, dur: 1.8, params: P_('zapfen') })); lad.push([n, +y.toFixed(3), +L.cents(Z.peakHz(m, SR, f / Math.pow(2, n), 1.0, 32768), f / Math.pow(2, n)).toFixed(2)]); }
+        rep.ladder = lad; ok(lad.every((l) => Math.abs(l[2]) <= 5), 'Rast ladder at 880 Hz: the rate on f/2ⁿ within ±5 ct (n/y/ct): ' + lad.map((l) => l.join('/')).join(', ')); }
+      // the scales are irregular: the top tone's sideband floor (the power between the harmonics re their lines) – and a
+      // strictly periodic tooth train through the same measure
+      { const fl = {}, pure = (() => { const f = 220, n = 3 * SR, x = new Float32Array(n); for (let k = 1; k * f < 20000; k++) for (let i = 0; i < n; i++) x[i] += Math.cos(2 * Math.PI * k * f * i / SR) / 40; return Z.floor(x, SR, f, 1.0); })();
+        for (const b of ['zapfen', 'fels']) for (const f of [110, 220, 440, 880]) { const m = mono(await one(page, { eng: key, f, y: 1, dur: 2, params: P_(b) })); fl[b + '@' + f] = +Z.floor(m, SR, f, 1.0).toFixed(1); }
+        { const m = mono(await one(page, { eng: key, f: 220, y: 1, dur: 2, params: P_('zapfen', { 'zpf.schuppen': 0 }) })); fl['schuppen0@220'] = +Z.floor(m, SR, 220, 1.0).toFixed(1); }
+        rep.floor = fl; rep.floorPure = +pure.toFixed(1);
+        ok(Object.entries(fl).every(([k, v]) => k.startsWith('schuppen0') || v >= -35), `the top's sideband floor ≥ −35 dB (irregular scales; a strictly periodic train: ${pure.toFixed(1)} dB): ` + JSON.stringify(fl)); }
+      // low on the field: 3–10 ticks per second at every pitch (the stone: creaks), every body
+      const tk = {};
+      for (const b of BODIES) { tk[b] = []; for (const f of [55, 110, 220, 440, 880]) { const m = mono(await one(page, { eng: key, f, y: 0.2, dur: 3, params: P_(b) })); tk[b].push(+Z.ticks(m, SR, 0.3, 2.9, null, b === 'fels' ? 40 : 25).toFixed(1)); } }   // (a refractory of 25 ms: a tooth's click and its noise are one tick)
+      rep.ticks02 = tk;
+      ok(BODIES.every((b) => tk[b].every((r) => r >= 3 && r <= 10)), 'y 0.2: 3–10 ticks per second at 55–880 Hz, every body (the stone: creaks): ' + BODIES.map((b) => b + ' ' + tk[b].join('/')).join(', '));
+      // the first tooth at once (a lane's short hit low on the field is never empty; the stone slips at once)
+      { const o0 = []; for (const b of ['zapfen', 'fels']) { const m = mono(await one(page, { eng: key, f: 220, y: 0, dur: 0.5, params: P_(b) })); o0.push(+L.db(L.rms(m, Math.round(0.05 * SR), Math.round(0.08 * SR))).toFixed(1)); }
+        rep.onset = o0; ok(o0.every((d) => d > -40), `y 0: the stick sets on with a tooth at once (first 30 ms ${o0.join(' / ')} dBFS, Zapfen / Fels)`); }
+      // Rast steps: Höhe 0.3 → 1 in 7 s – the largest 10-ms moment within 150 ms of each step vs the running RMS (the
+      // 250 ms before it); the same measure away from the steps for comparison (a tick train has its own crest)
+      { const rs = {};
+        for (const f of [220, 880]) {
+          const moves = [], ys = []; for (let i = 0; i <= 140; i++) { const y = 0.3 + 0.7 * i / 140; moves.push([0.5 + i * 0.05, 'setY', y]); }
+          for (let t = 0; t < 8; t += 0.005) ys.push(t < 0.5 ? 0.3 : Math.min(1, 0.3 + 0.7 * Math.floor((t - 0.5) / 0.05) / 140));
+          const m = mono(await one(page, { eng: key, f, y: 0.3, dur: 8, params: P_('zapfen'), moves })), e = L.env(m, SR, 0.01);
+          const steps = Z.rastSteps(f, ys, 0.005), run = (t) => L.rms(m, Math.round((t - 0.27) * SR), Math.round((t - 0.02) * SR));
+          const pk = (t) => { let x = 0; for (let i = Math.round((t - 0.02) / 0.01); i < Math.round((t + 0.15) / 0.01); i++) x = Math.max(x, e[i] || 0); return x; };
+          const at = steps.filter((s) => s[0] > 0.8 && s[0] < 7.7).map((s) => [+s[0].toFixed(2), s[1] + '→' + s[2], +(L.db(pk(s[0])) - L.db(run(s[0]))).toFixed(1)]);
+          const away = []; for (let t = 0.9; t < 7.6; t += 0.17) if (steps.every((s) => Math.abs(s[0] - t) > 0.3)) away.push(L.db(pk(t)) - L.db(run(t)));
+          rs[f] = { steps: at, steadyMax: +Math.max(...away).toFixed(1) };
+          if (f === 220) { L.wav(path.join(dir, 'rast-sweep.wav'), m, m, SR); rep.pngRast = L.spectro(path.join(dir, 'rast-sweep.wav')); }
+        }
+        rep.rast = rs;
+        // (a step between two tick trains – f/16, f/8 at 220 Hz: 14 and 28 a second – has the trains' own crest: there it
+        // must stay within the largest such moment away from the steps)
+        ok(Object.values(rs).every((r) => r.steps.length >= 3 && r.steps.every((s) => s[2] <= 6 || s[2] <= r.steadyMax + 1)), 'Rast steps: no 10-ms peak > 6 dB above the running RMS (between tick trains: none above their own crest away from the steps): ' + Object.entries(rs).map(([f, r]) => f + ' Hz ' + r.steps.map((s) => s[1] + ' ' + s[2]).join(', ') + ' (away from the steps up to ' + r.steadyMax + ')').join('; ')); }
+      // Puls: a stroke passes ≥ 5 teeth in 112 ms; 30–60-ms gates are a 5–10-tick blip (KONZEPT), low on the field too
+      { const st = [];
+        for (const b of ['zapfen', 'fels']) for (const y of [0, 0.6]) for (const g of [0.03, 0.06, 0.112]) { const m = mono(await one(page, { eng: key, f: 220, y, dur: 0.8, params: P_(b), burst: true, gate: g })); st.push([b, y, g, Math.round(Z.ticks(m, SR, 0.045, 0.06 + g, null, 2, 1000) * (0.015 + g))]); }   // (the stone's slips: counted from 1 kHz)
+        rep.stroke = st;
+        // (counted from the sound: at a 30-ms stroke's 380 teeth a second they run together – t-dsp counts them in the processor: 5–10)
+        // (the stone: every slip of its rasps is heard – its teeth are counted in t-dsp)
+        ok(st.every((s) => (s[2] < 0.05 || s[3] >= 5) && (s[2] > 0.06 || s[0] === 'fels' || s[3] <= 10)), 'Puls strokes: teeth heard in the gate (body/y/gate/count): ' + st.map((s) => s.join('/')).join(', ') + ' (60 and 112 ms ≥ 5; Zapfen\'s 30–60 ms ≤ 10)'); }
+      // Bebung: +50 ct on the pitch bus moves the rate at the top (above) and the body's ring low on the field
+      // (the first knock's ring alone, 85 ms from 15 ms after it: over several knocks the spectrum is the tick rate's comb
+      // across the mode; its first milliseconds hold the attack)
+      { const m = mono(await one(page, { eng: key, f: 440, y: 0.2, dur: 1, params: P_('zapfen'), cents: 50 })); const c = L.cents(Z.peakHz(m, SR, 440 * Math.pow(2, 50 / 1200), 0.065, 4096), 440);
+        rep.bebungLow = +c.toFixed(2); ok(Math.abs(c - 50) <= 5, `Bebung low on the field (y 0.2, 440 Hz): the knock rings ${c.toFixed(2)} ct higher (+50)`); }
+      // the finger's speed adds rate below the Rast; a trembling finger does not (dead zone, leak)
+      { const rate = async (moves) => { const m = mono(await one(page, { eng: key, f: 220, y: 0.3, dur: 4.2, params: P_('zapfen', { 'zpf.rast': 0 }), moves })); return Z.ticks(m, SR, 0.6, 4.1); };
+        const still = await rate([]), tr = [], sw = [];
+        for (let t = 0.3; t < 4.1; t += 1 / 30) tr.push([t, 'setY', 0.3 + 0.002 * (Math.round(t * 30) % 2 ? 1 : -1)]);
+        for (let t = 0.3; t < 4.1; t += 1 / 30) sw.push([t, 'setY', 0.3 + 0.12 * Math.sin(2 * Math.PI * t)]);
+        const trem = await rate(tr), swing = await rate(sw);
+        rep.speed = { still: +still.toFixed(1), tremble: +trem.toFixed(1), swing: +swing.toFixed(1) };
+        ok(Math.abs(trem / still - 1) <= 0.12 && swing / still >= 1.2, `finger speed: still ${still.toFixed(1)}/s, trembling ±0.002 ${trem.toFixed(1)}/s (≤ +12 %), swinging ±0.12 at 1 Hz ${swing.toFixed(1)}/s (≥ +20 %)`); }
+      // the bodies differ (the check: a 0.5 f body with T60 ≤ 200 ms reads as a woodblock): a knock's band levels
+      // (⅓ octaves 100 Hz–8 kHz) and its ring
+      { const bl = {}, ring = {};
+        for (const b of BODIES) { const m = mono(await one(page, { eng: key, f: 220, y: 0, dur: 0.4, params: P_(b) })); const sp = L.spectrum(m, SR, 0.045, 8192), bands = [];
+          for (let c = 100; c < 8000; c *= Math.pow(2, 1 / 3)) { let e = 0; for (let k = Math.round(c / Math.pow(2, 1 / 6) / sp.hz); k < Math.round(c * Math.pow(2, 1 / 6) / sp.hz); k++) e += sp.p[k]; bands.push(10 * Math.log10(e + 1e-30)); }
+          bl[b] = bands; const e = L.env(m, SR, 0.01).map(L.db); let t20 = null; for (let i = 7; i < e.length; i++) if (e[i] < e[6] - 20) { t20 = (i - 6) * 10; break; } ring[b] = t20; }
+        const dist = []; for (let i = 0; i < BODIES.length; i++) for (let j = i + 1; j < BODIES.length; j++) { const a = bl[BODIES[i]], c = bl[BODIES[j]], ma = L.mean(a), mc = L.mean(c); let d = 0; for (let k = 0; k < a.length; k++) d += Math.pow(a[k] - ma - (c[k] - mc), 2); dist.push([BODIES[i] + '/' + BODIES[j], +Math.sqrt(d / a.length).toFixed(1)]); }
+        rep.bodies = { ring20ms: ring, spectralDistanceDb: dist };
+        ok(dist.every((d) => d[1] >= 3), 'the five bodies sound different: a knock\'s ⅓-octave shape differs by ≥ 3 dB RMS between any two: ' + dist.map((d) => d.join(' ')).join(', ') + '; ring to −20 dB (ms) ' + JSON.stringify(ring)); }
+      // the click rises with Höhe and with velocity (Fels' scream, the check)
+      // (on 112-ms strokes: their rate is the stroke's at y 0.2 and 0.6 – only the load differs, not the tone's saw; the
+      // scream is the stone's band 2.6–6 kHz, against its modes' and saw's 1–2.6 kHz – without the click it is 13–22 dB
+      // lower, klang/tests/click-zpf.js)
+      { const hc = async (y, vel) => { const m = mono(await one(page, { eng: key, f: 220, y, vel, dur: 0.5, params: P_('fels'), burst: true, gate: 0.112 })); const sp = L.spectrum(m, SR, 0.05, 4096), e = (lo, hi) => { let x = 0; for (let k = Math.round(lo / sp.hz); k < Math.round(hi / sp.hz); k++) x += sp.p[k]; return x; }; return 10 * Math.log10(e(2600, 6000) / e(1000, 2600)); };
+        const c = [await hc(0.2, 0.75), await hc(0.6, 0.75), await hc(0.2, 0.3), await hc(0.2, 1)].map((v) => +v.toFixed(1));
+        rep.click = c; ok(c[1] - c[0] >= 3 && c[3] - c[2] >= 3, `the stone's scream (2.6–6 kHz re 1–2.6 kHz, 112-ms strokes): y 0.2 → 0.6 ${c[0]} → ${c[1]} dB, velocity 0.3 → 1 ${c[2]} → ${c[3]} dB (each ≥ +3)`); }
+      // level 3 as loud as level 1 per body, per channel; its two sides differ
+      { const l13 = {}, cor = {};
+        for (const b of BODIES) { let pa = 0, pc = 0;
+          for (const y of [0.2, 0.6, 1]) { const a = await one(page, { eng: key, f: 330, y, dur: 2.5, params: P_(b) }), c = await one(page, { eng: key, f: 330, y, dur: 2.5, params: P_(b), q: '3' }); pa += Math.pow(10, chan(a, 0.5, 2.4) / 10); pc += Math.pow(10, chan(c, 0.5, 2.4) / 10);
+            if (y === 1) { let s = 0, sl = 0, sr = 0; for (let i = SR; i < 2 * SR; i++) { s += c.L[i] * c.R[i]; sl += c.L[i] ** 2; sr += c.R[i] ** 2; } cor[b] = +(s / Math.sqrt(sl * sr)).toFixed(2); } }
+          l13[b] = +(10 * Math.log10(pc / pa)).toFixed(1); }
+        rep.l3vsl1 = l13; rep.l3corr = cor;
+        ok(Object.values(l13).every((d) => Math.abs(d) <= 1.5), 'level 3 within ±1.5 dB of level 1 per body (y 0.2/0.6/1): ' + JSON.stringify(l13));
+        ok(Object.values(cor).every((c) => c < 0.9), 'level 3: real stereo – L/R correlation at the top < 0.9: ' + JSON.stringify(cor)); }
+      // ---- the native stand-in (no AudioWorklet in the context): it plays the same source ----
+      { const nat = (o) => page.evaluate(async (o) => {
+          const M = window.__M; M.P['dev.q'] = o.q || '1';
+          const ctx = await window.__off(48000, o.dur, Object.assign({ 'v.eng': 'neb', 'dev.lat': 'std' }, o.params || {}));   // (Nebel selected: no module in this context)
+          M.getQ().budget = 1e4;
+          if (o.cents) { const c = ctx.createConstantSource(); c.offset.value = o.cents; c.connect(M.A.pitchMod); c.start(); }
+          let v = null; ctx.suspend(19 / 375).then(() => { v = o.burst ? M.hit('zpf', ctx.currentTime, o.f, o.y, o.vel || 0.75, { gate: o.gate }) : M.playNote('zpf', ctx.currentTime, o.f, o.y, o.vel || 0.75, {}); window.__lastV = v; ctx.resume(); });
+          if (o.rel != null) ctx.suspend(Math.round(o.rel * 375) / 375).then(() => { if (v && v.release) v.release(); ctx.resume(); });
+          const b = await ctx.startRendering();
+          return Object.assign(window.__ret(b), { as: v && v.as, wk: !!(v && v.wk), dsp: !!ctx.__dspOK });
+        }, o);
+        const NP = (x) => Object.assign({}, DRY, x || {}), nm = async (o) => { const r = await nat(o); const x = pull(r); x.as = r.as; x.wk = r.wk; x.dsp = r.dsp; return x; };
+        const h = await nm({ f: 220, y: 0.6, dur: 1, params: NP() });
+        ok(h.as === 'zpf' && !h.wk && !h.dsp && L.rms(mono(h), 0.3 * SR, 0.9 * SR) > 1e-3, `native: without the module Zapfen plays its own stand-in (as ${h.as}, no processor)`);
+        { const o0 = []; for (let i = 0; i < 4; i++) for (const b of ['zapfen', 'fels']) { const m = mono(await nm({ f: 220 * (1 + 0.1 * i), y: 0, dur: 0.3, params: NP({ 'zpf.koerper': b }) })); o0.push(+L.db(L.rms(m, Math.round(0.05 * SR), Math.round(0.08 * SR))).toFixed(1)); }
+          rep.nativeOnset = o0; ok(o0.every((d) => d > -40), `native: y 0 – the stick sets on with a tooth at once, every time (first 30 ms, dBFS: ${o0.join(' / ')})`); }
+        const ld = {}; for (const [name, burst] of [['L1', false], ['burst', true]]) { const x = pull(await page.evaluate(async ([burst]) => { const M = window.__M; M.P['dev.q'] = '1'; const ctx = await window.__off(48000, 10, { 'v.eng': 'neb', 'rev.mix': 0, 'dly.mix': 0, 'mst.comp': 0, 'cho.mix': 0, 'pha.mix': 0 }); M.getQ().budget = 1e4; return window.__ret(await window.__phr(ctx, 10, 'zpf', { burst })); }, [burst])); ld[name] = stats(x); if (name === 'L1') L.wav(path.join(dir, 'native-phrase-L1.wav'), x.L, x.R, SR); }
+        rep.native = { loud: ld };
+        ok(Math.abs(ld.L1.rms - refMean) <= 2 && Math.abs(ld.L1.rms - loud.L1.rms) <= 2, `native: loudness L1 ${ld.L1.rms} dB vs references' mean ${refMean.toFixed(2)} (±2) and the processor's ${loud.L1.rms}`);
+        ok(Math.max(ld.L1.peak, ld.burst.peak) <= -1 && !ld.L1.nan && !ld.burst.nan && Math.abs(ld.L1.dc) < 0.01, `native: peak ≤ −1 dBFS (${ld.L1.peak}, burst ${ld.burst.peak}), no NaN, no DC`);
+        const nt = []; for (const f of [55, 110, 220, 440, 880, 1760]) { const m = mono(await nm({ f, y: 1, dur: 1.8, params: NP() })); nt.push(+L.cents(Z.peakHz(m, SR, f, 1.0, 32768), f).toFixed(2)); }
+        rep.native.top = nt; ok(nt.every((c) => Math.abs(c) <= 5), 'native: y 1 with Rast the note within ±5 ct, 55–1760 Hz: ' + nt.join(' / '));
+        const ntk = {}; for (const b of ['zapfen', 'fels']) { ntk[b] = []; for (const f of [55, 110, 220, 440, 880]) { const m = mono(await nm({ f, y: 0.2, dur: 3, params: NP({ 'zpf.koerper': b }) })); ntk[b].push(+Z.ticks(m, SR, 0.3, 2.9, null, b === 'fels' ? 40 : 25).toFixed(1)); } }
+        rep.native.ticks02 = ntk; ok(Object.values(ntk).every((r) => r.every((x) => x >= 3 && x <= 10)), 'native: y 0.2 3–10 ticks/creaks per second at 55–880 Hz: ' + JSON.stringify(ntk));
+        { const a = mono(await nm({ f: 220, y: 1, dur: 2.2, params: NP(), cents: 50 })), b = mono(await nm({ f: 440, y: 0.2, dur: 1, params: NP(), cents: 50 }));
+          const c1 = L.cents(Z.peakHz(a, SR, 220 * Math.pow(2, 50 / 1200), 1.0, 32768), 220), c2 = L.cents(Z.peakHz(b, SR, 440 * Math.pow(2, 50 / 1200), 0.065, 4096), 440);
+          rep.native.bebung = [+c1.toFixed(2), +c2.toFixed(2)]; ok(Math.abs(c1 - 50) <= 5 && Math.abs(c2 - 50) <= 5, `native: Bebung +50 ct moves the rate at the top (${c1.toFixed(2)}) and the knocks' ring low (${c2.toFixed(2)})`); }
+        { const st = []; for (const g of [0.06, 0.112]) { const m = mono(await nm({ f: 220, y: 0.6, dur: 0.8, params: NP(), burst: true, gate: g })); st.push([g, Math.round(Z.ticks(m, SR, 0.045, 0.06 + g, null, 2) * (0.015 + g))]); }
+          rep.native.stroke = st; ok(st.every((s) => s[1] >= 5), 'native: a stroke passes ≥ 5 teeth (gate/count): ' + st.map((s) => s.join('/')).join(', ')); }
+        { const m = mono(await nm({ f: 440, y: 0.6, dur: 2.5, params: NP(), rel: 1.0 })); const fin = await page.evaluate(async () => { const v = window.__lastV; await new Promise((r) => setTimeout(r, Math.max(300, (v.endAt - v.t0) * 1000 + 400))); return !v.alive; });
+          rep.native.release = +L.db(L.rms(m, 2.0 * SR, 2.5 * SR)).toFixed(1); ok(L.rms(m, 2.0 * SR, 2.5 * SR) < 1e-5 && fin, `native: let go, it coasts out and the voice is freed (${rep.native.release} dB at 2–2.5 s)`); }
+        { const moves = []; for (let i = 0; i <= 40; i++) moves.push([0.5 + i * 0.1, 'setY', i <= 20 ? i / 20 : (40 - i) / 20]);
+          const x = pull(await page.evaluate(async (moves) => { const M = window.__M; M.P['dev.q'] = '1'; const ctx = await window.__off(48000, 6, { 'v.eng': 'neb', 'rev.mix': 0.3 }); let v = null;
+            ctx.suspend(19 / 375).then(() => { v = M.playNote('zpf', ctx.currentTime, 147, 0, 0.75, {}); ctx.resume(); });
+            for (const [t, , y] of moves) ctx.suspend(Math.round(t * 375) / 375).then(() => { if (v && v.alive) v.setY(y); ctx.resume(); });
+            ctx.suspend(Math.round(4.8 * 375) / 375).then(() => { v.release(); ctx.resume(); });
+            return window.__ret(await ctx.startRendering()); }, moves));
+          L.wav(path.join(dir, 'native-sweep.wav'), x.L, x.R, SR); rep.pngNative = L.spectro(path.join(dir, 'native-sweep.wav')); }
+        { const { execFileSync } = require('child_process');
+          const c = JSON.parse(execFileSync('node', [path.join(__dirname, 'cost.js'), process.env.COST_ROUNDS || '6'], { env: Object.assign({}, process.env, { ENGS: 'zpfN1,zpfN3,hau1,hau3,obt1,obt3,tie1,stm1,swm1,neb3' }), encoding: 'utf8', timeout: 1800000 }).trim().split('\n').pop());
+          const c1 = c.zpfN1 * c.scale, c3 = c.zpfN3 * c.scale; rep.native.cost = { L1: +c1.toFixed(3), L3: +c3.toFixed(3) };
+          console.log(`INFO zpf native: cost level 1 ${c1.toFixed(3)}, level 3 ${c3.toFixed(3)} Nebel units`);
+          const tab = await page.evaluate(() => { const M = window.__M; M.A.workletBroken.add('zpf'); const t = [M.VCOST1.zpf, M.VCOST3.zpf]; M.A.workletBroken.delete('zpf'); return t; });
+          ok(tab[0] >= c1 && tab[1] >= c3, `native: VCOST entries cover the measurement: ${tab} ≥ ${c1.toFixed(2)}, ${c3.toFixed(2)}`); } }
+    }
     // -- demos for listening and the spectrogram: level 3, default effects (12-s phrase), and a held gesture
     { const x = pull(await page.evaluate(async (key) => window.__ret(await window.__phr(await window.__ctx(12, { 'v.eng': key }, '3'), 12, key, { step: 0.7, hold: 0.6 })), key));
       L.wav(path.join(dir, 'demo-L3.wav'), x.L, x.R, SR); rep.pngDemo = L.spectro(path.join(dir, 'demo-L3.wav')); rep.demo = stats(x); }
@@ -1042,11 +1184,11 @@ async function one(page, o) {
   // -- fallback: no module in this context → the stand-in plays, the key stays
   { const r = await page.evaluate(async () => {
       const M = window.__M; const ctx = await window.__off(48000, 1, { 'v.eng': 'neb', 'rev.mix': 0 });   // nothing loaded
-      const W = [['hlm', 'hau', 220], ['rnk', 'neb', 330], ['hrz', 'sch', 440], ['mdr', 'glo', 550], ['boe', 'obt', 294], ['amo', 'tie', 110], ['gsp', 'sai', 247], ['shn', 'sai', 262], ['khl', 'swm', 523]], vs = W.map(([k, , f]) => M.playNote(k, 0.05, f, 0.6, 0.7, {}));
+      const W = [['hlm', 'hau', 220], ['rnk', 'neb', 330], ['hrz', 'sch', 440], ['mdr', 'glo', 550], ['boe', 'obt', 294], ['amo', 'tie', 110], ['gsp', 'sai', 247], ['shn', 'sai', 262], ['khl', 'swm', 523], ['zpf', 'zpf', 587]], vs = W.map(([k, , f]) => M.playNote(k, 0.05, f, 0.6, 0.7, {}));
       const st = window.__stats(await ctx.startRendering(), 0.1);
-      return { got: vs.map((v) => v && [v.eng, v.as]), st, plays: W.map(([k]) => M.wkPlays(k)), dsp: !!ctx.__dsp, want: W.map(([k, s]) => [k, s]) };
+      return { got: vs.map((v) => v && [v.eng, v.as]), st, plays: W.map(([k]) => M.wkPlays(k)), dsp: !!ctx.__dsp, want: W.map(([k, s]) => [k, s]), zn: vs.map((v) => !!(v && v.zn && !v.wk)) };
     });
-    const pass = L.ok(r.want.every(([k, s], i) => r.got[i] && r.got[i][0] === k && r.got[i][1] === s) && r.st.rms > -50 && !r.dsp, 'fallback without the module: Halm plays as Hauch, Ranke as Nebel, Harz as Schale, Moder as Glocke, Böe as Obertöne, Amöbe as Tiefe, Gespinst as Saite, Sehne as Saite, Kehlchen as Schwarm, the key stays (' + JSON.stringify(r.got) + ')');
+    const pass = L.ok(r.want.every(([k, s], i) => r.got[i] && r.got[i][0] === k && r.got[i][1] === s) && r.zn[r.want.findIndex((w) => w[0] === 'zpf')] && r.st.rms > -50 && !r.dsp, 'fallback without the module: Halm plays as Hauch, Ranke as Nebel, Harz as Schale, Moder as Glocke, Böe as Obertöne, Amöbe as Tiefe, Gespinst as Saite, Sehne as Saite, Kehlchen as Schwarm, Zapfen as its own native stand-in, the key stays (' + JSON.stringify(r.got) + ')');
     if (!pass) fails++; }
   const errs = errors.filter((e) => !/Failed to load resource|fonts\.g|myzel-dsp\.js/.test(e));
   if (!L.ok(!errs.length, 'no console errors ' + errs.join(' | '))) fails++;
