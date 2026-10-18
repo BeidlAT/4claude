@@ -15861,6 +15861,9 @@ const RZ = {
   gongbad: { set: { lad: true, sw: true }, txt: 'Schwenken lässt die Gongs singen' },
   glaswiese: { set: { neigen: 'anl' }, mod: [['tiltY', 'hoehe', 0.7, 'anl']], txt: 'Anlehnen = Bogendruck' },
   gespinstgarten: { set: { neigen: 'anl' }, mod: [['tiltY', 'gspK', 0.8, 'anl']], txt: 'Vorneigen hebt die Kopplung des Netzes' },
+  kompostgarten: { set: { neigen: 'regen', rgArt: 'keime', rgS: 'mdr' }, txt: 'Sporenregen aus Kompostglocken' },
+  atemrohr: { set: { neigen: 'anl', seit: 'aus' }, mod: [['tiltY', 'hoehe', 0.8, 'anl']], txt: 'Vorneigen = Atem, mit Ocarina-Vibrato' },
+  hochspannung: { set: { lad: true, ras: true, rasS: 'jrg', rasQ: '16' }, mod: [['ladung', 'pulsD', 0.6, 'lad']], txt: 'Schütteln verdichtet den Puls, Rassel aus Holz' },
   wurzelnetz: { set: { neigen: 'anl' }, mod: [['tiltY', 'rhzR', 0.8, 'anl']], txt: 'Vorneigen macht das Netz reizbar' },
   vogelhain: { set: { neigen: 'anl' }, mod: [['tiltY', 'hoehe', 0.7, 'anl']], txt: 'Anlehnen = Kehldruck' },
   sporenfaehrte: { set: { neigen: 'regen', rgArt: 'keime', rgS: 'klb', rgQ: 'auto' }, txt: 'Sporenregen mit Kalimba, eine Fährte neigt ihn' },
@@ -22317,6 +22320,23 @@ const PRESETS = [
     'l1.on': true, 'l1.eng': 'shn', 'l1.steps': 12, 'l1.puls': 4, 'l1.oct': -1, 'l1.bright': 0.3, 'l1.vol': 0.45,
     'l2.on': true, 'l2.eng': 'rnk', 'l2.steps': 7, 'l2.puls': 2, 'l2.div': '1', 'l2.bright': 0.7, 'l2.vol': 0.4, 'l3.on': false,
     'rev.mix': 0.45, 'rev.size': 9, 'cho.mix': 0.2 } },
+  { key: 'kompostgarten', name: 'Kompostgarten', tags: 'Perkussiv · Polyrhythmus', desc: 'Ein Holzstab im Herbst, darum zerfallende Kompostglocken, ein kratzender Zapfen und ein Netz aus Saiten – vier Spuren gegeneinander.', v: {
+    'v.eng': 'jrg', 'jrg.jahreszeit': 'herbst', 'jrg.laub': 0.5, 't.root': '4', 't.scale': 'pelog', 't.oct': 3, 't.range': 3, 'seq.bpm': 92, 'seq.swing': 0.14,
+    'l0.on': true, 'l0.eng': 'mdr', 'l0.steps': 16, 'l0.puls': 5, 'l0.oct': -1, 'l0.bright': 0.7,
+    'l1.on': true, 'l1.eng': 'zpf', 'l1.steps': 12, 'l1.puls': 7, 'l1.bright': 0.35, 'l1.vol': 0.4,
+    'l2.on': true, 'l2.eng': 'jrg', 'l2.steps': 7, 'l2.puls': 3, 'l2.div': '0.5', 'l2.walk': 0.5,
+    'l3.on': true, 'l3.eng': 'gsp', 'l3.steps': 11, 'l3.puls': 2, 'l3.div': '1', 'gsp.kopplung': 0.5, 'drv.amt': 0.2, 'rev.mix': 0.35 } },
+  { key: 'atemrohr', name: 'Atemrohr', tags: 'Experimentell · Atem', desc: 'Ein Rohrblatt, darunter eine Oktave tiefer eine Rückkopplung, die nachglüht; eine Spur bläst kurze Stöße ins Echo.', v: {
+    'v.eng': 'hlm', 'hlm.rohr': 'rohrblatt', 'hlm.luft': 0.5, 'v.layer': 'glt', 'v.layerInt': -12, 'v.layerLvl': 0.35, 'glt.gluehen': 0.45, 'glt.nachgluehen': 2.5,
+    't.root': '2', 't.scale': 'dor', 't.oct': 3, 't.range': 2, 'v.glide': 0.15,
+    'l0.on': false, 'l1.on': true, 'l1.eng': 'hlm', 'l1.steps': 8, 'l1.puls': 3, 'l1.div': '0.5', 'l1.bright': 0.75, 'l1.vol': 0.35, 'l2.on': false, 'l3.on': false,
+    'dly.div': '0.75', 'dly.fb': 0.4, 'dly.mix': 0.3, 'rev.mix': 0.4, 'seq.bpm': 76 } },
+  { key: 'hochspannung', name: 'Hochspannung', tags: 'Psychedelisch · Elektrisch', desc: 'Brummen, Korona und Lichtbogen über einem Bass aus Zufall, dazu Zaps und kreischender Fels im Puls.', v: {
+    'v.eng': 'elm', 'elm.spannung': 0.55, 'elm.bogen': 0.6, 'v.layer': 'amo', 'v.layerInt': -12, 'v.layerLvl': 0.45, 'amo.zeit': 0.2, 'v.oct': -1,
+    't.root': '4', 't.scale': 'phrdom', 't.oct': 3, 't.range': 2,
+    'l0.on': true, 'l0.eng': 'elm', 'l0.steps': 16, 'l0.puls': 7, 'l0.div': '0.25', 'l0.bright': 0.9, 'l0.vol': 0.5, 'l1.on': false,
+    'l2.on': true, 'l2.eng': 'zpf', 'l2.steps': 9, 'l2.puls': 4, 'l2.bright': 0.95, 'zpf.koerper': 'fels', 'l3.on': false,
+    'drv.type': 'fold', 'drv.amt': 0.35, 'flt.type': 'lowpass', 'flt.freq': 5000, 'flt.lfoDepth': 0.8, 'rev.mix': 0.3, 'seq.bpm': 110 } },
   { key: 'wurzelnetz', name: 'Wurzelnetz', tags: 'Perkussiv · Generativ', desc: 'Jeder Schlag läuft als Lawine durch die Tonleiter – Finger und zwei Spuren laden und erschöpfen dasselbe Netz.', v: {
     'v.eng': 'rhz', 'rhz.knoten': 'holz', 'rhz.reiz': 0.55, 'rhz.erholung': 0.8, 'rhz.weg': 45, 'rhz.glimmen': 0.14, 'rhz.streuung': 0.35,
     't.root': '2', 't.scale': 'mpent', 't.oct': 3, 't.range': 3, 'seq.bpm': 88,
@@ -22486,6 +22506,7 @@ function safeify(vals) {
   lim('neb.cut', 250, 12000); lim('hau.q', 0.3, 40); lim('kor.size', 0.03, 0.6); lim('bor.cut', 150, 4000);
   lim('mdr.nachklang', 1, 8);
   lim('shn.ebow', 0, 0.8);   // (Sehne: a die-thrown E-Bow holds every note at its full level – SPEC §5)
+  lim('glt.gluehen', 0, 0.8); lim('gsp.kopplung', 0, 0.7); lim('hrz.druck', 0, 0.85); lim('boe.nachklang', 0.5, 5);   // (klang SPEC §5: a dice patch never howls, sings by itself or rings on and on)
   lim('amo.zeit', 0, 0.5);   // (Amöbe: wilder durations blur the pitch – klang SPEC §5)   // (klang SPEC §5: a dice patch's Kompostglocke rings at most 8 s)
   for (let i = 0; i < 4; i++) { lim('l' + i + '.vol', 0.2, 1); lim('l' + i + '.prob', 0.35, 1); }
   return vals;
