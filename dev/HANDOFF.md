@@ -28,7 +28,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Claude-Session: <this session's URL>
 ```
 
-**App:** `myzel/index.html`, a single file of about 1.4 MB (German UI, vanilla JS + Web Audio). Each push deploys GitHub Pages (https://beidlat.github.io/4claude/) – only from the branches listed in `.github/workflows/pages.yml`, and only if the repository's `github-pages` environment allows that branch (Settings → Environments → github-pages → deployment branches). Stage 2's branch was refused there (run 18 failed before a runner started): the owner has to allow it (or a pattern `ccr-*`), then re-run the workflow.
+**App:** `myzel/index.html`, a single file of about 1.4 MB (German UI, vanilla JS + Web Audio). GitHub Pages (https://beidlat.github.io/4claude/) deploys from the default branch `ccr-c7c5d0a6-cus3ip` alone: its `github-pages` environment allows no other branch. The stage-2 session had added its own branch to `.github/workflows/pages.yml`; every push there failed before a runner started (runs 18–31, the owner got a failure mail each time) – it is out again. A session's work reaches the app by a pull request into the default branch; Claude opens it and merges it when the owner says so (18.10.2026: „streich ihn und merge dann“ for #4).
 
 **claude.ai version:** the artifact https://claude.ai/artifact/HNZYLEaUvtCfkyYWi3SuDr, private, capability `downloads` – still stage 1.
 - Republish it with the Artifact tool: `url` + `file_path` = `myzel/index.html`.
