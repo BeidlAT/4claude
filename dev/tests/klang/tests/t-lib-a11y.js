@@ -72,7 +72,7 @@ const L = require('./dsplib'), K = require('./klh');
   const r3 = await M(() => ({ v: document.querySelector('#kqSearch').value, open: !document.querySelector('#kqLib').hidden }));
   await key('Escape');
   const r4 = await M(() => ({ open: !document.querySelector('#kqLib').hidden, panel: window.__M.UI.panel, f: document.activeElement === document.querySelector('#p-v-eng .kq-name') }));
-  L.ok(r === 'glo' && r3.v === '' && r3.open && !r4.open && r4.panel === 'klang' && r4.f, 'typing „glocke“ finds Glocke; Esc clears the search, Esc again closes (the panel stays), focus on the name');
+  L.ok(r === 'glo,mdr' && r3.v === '' && r3.open && !r4.open && r4.panel === 'klang' && r4.f, 'typing „glocke“ finds Glocke (and the Kompostglocke, Moder); Esc clears the search, Esc again closes (the panel stays), focus on the name');
   // the row's live word when closed; the field's row label for a layer „Aus“
   await key('ArrowRight');
   r = await M(() => ({ say: document.querySelector('#kqSay').textContent, live: document.querySelector('#kqSay').getAttribute('aria-live'), lab: document.querySelector('#p-v-layer .kq-name').getAttribute('aria-label'), grp: document.querySelector('#' + document.querySelector('#p-v-layer').getAttribute('aria-labelledby')).textContent }));

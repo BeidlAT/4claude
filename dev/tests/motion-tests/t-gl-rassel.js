@@ -1,4 +1,4 @@
-// Rassel-Schläge (slot gl): each swing of a shake strikes a Tropfen (Membran, Schale) – stamped at the top of the
+// Rassel-Schläge (slot gl): each swing of a shake strikes a Tropfen (Membran, Schale, Moder) – stamped at the top of the
 // swing's acceleration, laid on the next 1/16 (1/32, or free) of the Puls's clock, never in the past, one per step, on
 // the Klang strip; a held note gives its pitch; off: nothing; the Puls stopped: its beat clock still sets the grid.
 //   node t-gl-rassel.js
@@ -6,7 +6,7 @@ const { open, ok, close, drivers, M, play, gestik } = require('./gl-h');
 // every start of the three strike engines: when, which pitch, on which strip
 const spy = (page) => page.evaluate(() => {
   const M = window.__M; window.__st = [];
-  for (const e of ['trp', 'mem', 'sch']) {
+  for (const e of ['trp', 'mem', 'sch', 'mdr', 'glo']) {
     const E = M.ENGINES[e];
     if (E.__spy) continue;
     const o = E.start; E.__spy = true;
@@ -63,6 +63,15 @@ const onGrid = (b, d) => Math.abs(b / d - Math.round(b / d)) < 1e-6;
   await play(page, 3, M.shake(2.4, 16, 5, 0.2));
   r = await grab(page);
   ok(r.st.length >= 8 && r.st.every((s) => s.e === 'sch') && r.hits.every((h) => h.b === null && h.t - h.te < 0.15), 'Schale, frei: at once after each top (≤ ' + Math.round(Math.max(...r.hits.map((h) => h.t - h.te)) * 1000) + ' ms), no grid');
+  // Moder (klang stage 4): chosen, its module loads at once (no stand-in Glocke); a Kompostglocke per swing on the 1/16,
+  // on its own processor, at most six ringing (LAD_VMAX)
+  await page.evaluate(() => { const M = window.__M; M.gkSet('rasS', 'mdr'); M.gkSet('rasQ', '16'); M.LAD.hits.length = 0; });
+  const ld = await page.evaluate(async () => { const M = window.__M; for (let i = 0; i < 150 && !(M.A.ctx && M.A.ctx.__dspOK); i++) await new Promise((r) => setTimeout(r, 20)); return !!M.A.ctx.__dspOK; });
+  let wk = true, most = 0;
+  await play(page, 3, M.shake(2.4, 16, 5, 0.2));
+  ({ wk, most } = await page.evaluate(() => { const vs = [...window.__M.A.voices].filter((v) => v.alive && v.eng === 'mdr'); return { wk: vs.every((v) => v.as === 'mdr' && !!v.wk), most: vs.length }; }));
+  r = await grab(page);
+  ok(ld && r.st.length >= 8 && r.st.every((s) => s.e === 'mdr' && s.fin && s.t >= s.now) && r.hits.every((h) => onGrid(h.b, 0.25)) && wk && most <= 6, 'Moder: its module loaded when chosen (' + ld + '), ' + r.st.length + ' Kompostglocken on the 1/16, each on its processor, ' + most + ' ringing at the end (≤ 6)');
   // the Puls stopped: its beat clock still sets the grid
   await page.evaluate(() => { const M = window.__M; M.seqStop(); M.gkSet('rasS', 'trp'); M.gkSet('rasQ', '16'); M.LAD.hits.length = 0; });
   await play(page, 2.6, M.shake(2, 16, 5, 0.2));
