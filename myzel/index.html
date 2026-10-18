@@ -1678,6 +1678,7 @@ body.mlearn #stage::after { content: ""; position: absolute; inset: 0; backgroun
 <symbol id="g-gsp" viewBox="0 0 24 24"><path d="M12 3v18M3.5 7.5l17 9M3.5 16.5l17-9"/><path d="M12 7.6l3.8 2.2v4.4L12 16.4l-3.8-2.2V9.8z" opacity=".7"/></symbol>
 <symbol id="g-glt" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/><path d="M12 4v2.5M12 17.5V20M4 12h2.5M17.5 12H20M6.3 6.3l1.8 1.8M15.9 15.9l1.8 1.8M17.7 6.3l-1.8 1.8M8.1 15.9l-1.8 1.8" opacity=".7"/></symbol>
 <symbol id="g-mdr" viewBox="0 0 24 24"><path d="M12 4.5a7.5 7.5 0 0 1 7.5 7.5c0 2.2-1 4.2-2.5 5.6M4.5 12A7.5 7.5 0 0 1 9 5.1"/><g fill="currentColor" stroke="none"><circle cx="9" cy="19.4" r="1"/><circle cx="12.6" cy="20.1" r=".8"/><circle cx="6" cy="16.4" r="1.1"/></g></symbol>
+<symbol id="g-khl" viewBox="0 0 24 24"><path d="M4 15.5c2.5 3.5 8.5 4 11.5.5 1.6-1.9 1.9-4.6 1-6.6"/><path d="M16.5 9.4c-.4-2.3-2.4-4-4.8-3.8-2.7.2-4.6 2.6-4.2 5.3"/><path d="M16.8 8.2l3.7-.7-3.2 2.3"/><path d="M19.5 3.5c.8.6 1.2 1.5 1.2 2.4M21.5 2c1.2.9 1.8 2.3 1.8 3.7" opacity=".6"/><circle cx="13.3" cy="8.6" r=".9" fill="currentColor" stroke="none"/></symbol>
 <symbol id="g-rhz" viewBox="0 0 24 24"><path d="M3 15.5l4.5-3 4.5 3 4.5-5 4.5 2.5M7.5 12.5L6 6.5M12 15.5l-1 5M16.5 10.5l1.5-5"/><g fill="currentColor" stroke="none"><circle cx="7.5" cy="12.5" r="1.7"/><circle cx="12" cy="15.5" r="1.4"/><circle cx="16.5" cy="10.5" r="1.7"/><circle cx="3" cy="15.5" r=".9" opacity=".6"/><circle cx="21" cy="13" r=".9" opacity=".6"/></g></symbol>
 <symbol id="g-jrg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12.6" cy="12.4" r="5"/><circle cx="13" cy="12.6" r="2"/></symbol>
 <symbol id="g-off" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5" stroke-dasharray="2.4 3.2"/></symbol>
@@ -1839,6 +1840,7 @@ const ENG_META = {
   hlm: { n: 'Halm', fam: 'luft', art: 'haelt', i: 'Rohrblatt, Flöte, Flamme – der Atem ist die Höhe', tags: 'rohrblatt klarinette flöte flute flamme feuer rijke atem blasen reed wind', hoehe: 'Atemdruck', hear: { gate: 1.0 }, rich: 'Stufe 3: zweites Rohr, ±4 Cent' },
   boe: { n: 'Böe', fam: 'luft', art: 'haelt', i: 'Äolsharfe – Saiten rasten im Wind ein und hängen nach', tags: 'äolsharfe windharfe aeolian harp wind böe gust sturm storm saiten strings obertöne harmonics einrasten lock-in akkord chord', hoehe: 'Windstärke', regen: 0, hear: { gate: 1.0 }, rich: 'Stufe 3: vierzehn Saiten, die ungeraden links, die geraden rechts, ein zweiter Wind' },
   elm: { n: 'Elmsfeuer', fam: 'luft', art: 'beides', i: 'Brummen, Knistern, Lichtbogen – der Zap im Puls', tags: 'elektrisch strom netz brummen knistern funke lichtbogen tesla plasma zap electric arc spark hum crackle', hoehe: 'Spannung', hear: { gate: 0.9 }, rich: 'Stufe 3: Knistern und Lichtbogen auf beiden Seiten' },
+  khl: { n: 'Kehlchen', fam: 'luft', art: 'haelt', i: 'Vogelkehle – Lippen, die ab einer Schwelle singen', tags: 'vogel vogelgesang syrinx kehle lippen amsel drossel rotkehlchen rabe zwitschern triller ruf chip pfeifen bird birdsong song trill chirp call whistle', hoehe: 'Kehldruck', regen: 0, hear: { gate: 1.0 }, rich: 'Stufe 3: beide Kehlseiten, links und rechts auf einem Luftsack – zweistimmig, mit Schwebung' },
   neb: { n: 'Nebel', fam: 'dunst', art: 'haelt', i: 'Schwebende Flächen aus verstimmten Oszillatoren', tags: 'fläche pad drone wolke oszillator verstimmt ambient synth' },
   kor: { n: 'Körner', fam: 'dunst', art: 'haelt', i: 'Granulare Wolken aus winzigen Klangkörnern', tags: 'granular grain körner textur wolke cloud' },
   swm: { n: 'Schwarm', fam: 'dunst', art: 'haelt', i: 'Fremdartiger Insektenschwarm – die Fingerhöhe weckt das Chaos', tags: 'insekten schwarm chaos fm swarm insect' },
@@ -1860,7 +1862,7 @@ const ENG_META = {
   rhz: { n: 'Rhizom', fam: 'erde', art: 'schlaegt', i: 'Ein Schlag läuft durch die Skala – Lawinen im Netz', tags: 'rhizom wurzel netz lawine kaskade ausbreitung erschöpfung neuron welle holz metall glas perkussion marimba avalanche cascade network spread ripple', hoehe: 'Ausbreitung', regen: 1, rich: 'Stufe 3: drei Teiltöne je Ping, die Lawine läuft im Stereo die Tonlage entlang' },
 };
 // sources of later versions (and the reserves): a preset that names one says so once and plays Nebel instead
-const ENG_LATER = { glt: 'Glut', zpf: 'Zapfen', khl: 'Kehlchen', unk: 'Unke', fle: 'Flechte', blz: 'Balz' };
+const ENG_LATER = { glt: 'Glut', zpf: 'Zapfen', unk: 'Unke', fle: 'Flechte', blz: 'Balz' };
 // a key that was renamed (old: new), applied before a patch is checked; keys are never reused
 const ENG_ALIAS = {};
 // the one flat order (‹ ›, MIDI stepping, dice, the mixer's source text): by family, in ENG_META's order within it
@@ -2090,6 +2092,14 @@ NUM('rhz.weg', 'Weg (je Stufe)', 15, 150, 40, 'ms', { curve: 'exp' });
 SEL('rhz.knoten', 'Knoten', [['holz', 'Holz'], ['metall', 'Metall'], ['glas', 'Glas']], 'holz', { chips: 1 });
 NUM('rhz.glimmen', 'Glimmen', 0.03, 0.6, 0.12, 's', { curve: 'exp' });
 NUM('rhz.streuung', 'Streuung', 0, 1, 0.3, '%');
+// Kehlchen (worklet myzel-syrinx: a songbird's syrinx; Höhe is the air sac's pressure – breath, chip, tone, rough)
+const KHL_PEAK = 0.31;   // v.out peak per velocity (the standard phrase as loud as Nebel/Glocke/Membran, klang/tests/bench.js)
+SEL('khl.silbe', 'Silbe', [['aus', 'Aus'], ['chip', 'Chip'], ['triller', 'Triller'], ['ruf', 'Ruf']], 'chip', { chips: 1 });
+NUM('khl.druck', 'Druck (Schwelle)', 0, 1, 0.5, '%');
+NUM('khl.spannung', 'Spannung', 0, 1, 0.5, '%');
+NUM('khl.rauheit', 'Rauheit', 0, 1, 0.3, '%');
+NUM('khl.schnabel', 'Schnabel', 0, 1, 0.5, '%');
+NUM('khl.anstieg', 'Anstieg', 0, 1, 0.3, '%');
 // Effekte
 SEL('drv.type', 'Art', [['tube', 'Röhre'], ['fold', 'Falter'], ['crush', 'Bitbrecher']], 'tube', { chips: 1 });
 NUM('drv.amt', 'Stärke', 0, 1, 0.12, '%');
@@ -2232,7 +2242,7 @@ BOOL('midi.pads', 'Pads als Auslöser', false, { dev: 1 });
 BOOL('midi.std', 'Standard-Zuordnungen', true, { dev: 1 });
 
 const GROUP = {
-  v: 'Spielweise', t: 'Stimmung', neb: 'Nebel', kor: 'Körner', hau: 'Hauch', glo: 'Glocke', mem: 'Membran', sai: 'Saite', sch: 'Schale', gng: "Gong", klb: "Kalimba", obt: "Obertöne", stm: "Stimme", swm: "Schwarm", tie: "Tiefe", trp: "Tropfen", hlm: 'Halm', rnk: 'Ranke', elm: 'Elmsfeuer', jrg: 'Jahresring', hrz: 'Harz', shn: 'Sehne', mdr: 'Moder', boe: 'Böe', amo: 'Amöbe', gsp: 'Gespinst', rhz: 'Rhizom',
+  v: 'Spielweise', t: 'Stimmung', neb: 'Nebel', kor: 'Körner', hau: 'Hauch', glo: 'Glocke', mem: 'Membran', sai: 'Saite', sch: 'Schale', gng: "Gong", klb: "Kalimba", obt: "Obertöne", stm: "Stimme", swm: "Schwarm", tie: "Tiefe", trp: "Tropfen", hlm: 'Halm', rnk: 'Ranke', elm: 'Elmsfeuer', jrg: 'Jahresring', hrz: 'Harz', shn: 'Sehne', mdr: 'Moder', boe: 'Böe', amo: 'Amöbe', gsp: 'Gespinst', rhz: 'Rhizom', khl: 'Kehlchen',
   drv: 'Verzerrung', rng: 'Ringmodulator', flt: 'Filter', pha: 'Phaser', cho: 'Schweben', dly: 'Echo', rev: 'Hall', mov: 'Bewegung', mst: 'Summe',
   seq: 'Puls', bor: 'Bordun', rec: 'Aufnahme', dev: 'Gerät', midi: 'MIDI', l0: 'Spur 1', l1: 'Spur 2', l2: 'Spur 3', l3: 'Spur 4',
 };
@@ -2362,8 +2372,8 @@ let SR = 48000;
 // to this table by the native engines measured alongside (Hauch, Obertöne, Nebel L3, …), with a margin (elm with its arc
 // built, jrg while its modes ring, hrz the Glas, mdr its first 4 s with the crackle, boe held at y 0.6, amo across the field at y 0.6 – the highest of several runs + 15 %:
 // all with their full planned sound, the owner's rule is best sound first)
-const VCOST1 = { neb: 1, kor: 0.6, hau: 0.3, glo: 0.7, mem: 0.4, sai: 0.35, sch: 0.9, gng: 1.55, klb: 1.25, obt: 0.75, stm: 1.05, swm: 1.2, tie: 0.75, trp: 0.7, hlm: 0.65, rnk: 0.6, elm: 1.8, jrg: 1.2, hrz: 1.6, mdr: 0.8, boe: 0.75, amo: 0.7, gsp: 0.55, rhz: 0.3, shn: 0.8 };
-const VCOST3 = { neb: 1.9, kor: 1.1, hau: 0.75, glo: 1.4, mem: 0.75, sai: 1.2, sch: 2, gng: 2.8, klb: 2.2, obt: 1.85, stm: 2.4, swm: 2.7, tie: 1.5, trp: 1.5, hlm: 1.25, rnk: 1.25, elm: 4.2, jrg: 2.9, hrz: 3.3, mdr: 1.85, boe: 1.35, amo: 1.6, gsp: 0.85, rhz: 0.9, shn: 1.4 };   // measured: level-1 cost × (level 3 / level 1)
+const VCOST1 = { neb: 1, kor: 0.6, hau: 0.3, glo: 0.7, mem: 0.4, sai: 0.35, sch: 0.9, gng: 1.55, klb: 1.25, obt: 0.75, stm: 1.05, swm: 1.2, tie: 0.75, trp: 0.7, hlm: 0.65, rnk: 0.6, elm: 1.8, jrg: 1.2, hrz: 1.6, mdr: 0.8, boe: 0.75, amo: 0.7, gsp: 0.55, rhz: 0.3, shn: 0.8, khl: 0.6 };
+const VCOST3 = { neb: 1.9, kor: 1.1, hau: 0.75, glo: 1.4, mem: 0.75, sai: 1.2, sch: 2, gng: 2.8, klb: 2.2, obt: 1.85, stm: 2.4, swm: 2.7, tie: 1.5, trp: 1.5, hlm: 1.25, rnk: 1.25, elm: 4.2, jrg: 2.9, hrz: 3.3, mdr: 1.85, boe: 1.35, amo: 1.6, gsp: 0.85, rhz: 0.9, shn: 1.4, khl: 1.1 };   // measured: level-1 cost × (level 3 / level 1)
 // Sehne: the table holds the plucked string (flat or jawari: 0.68 / 1.20 measured at the most); under the E-Bow (its
 // pickup, limiter, band and push) a voice costs 1.13 / 1.93 – it is priced so while its hand is in the E-Bow's zone
 const SHN_EBOW_COST = [1.3, 2.2];
@@ -5287,6 +5297,18 @@ const ENGINES = {
       else wkHold(v, t, peak, 0.004, rel);
     },
   },
+  // Kehlchen: a songbird's syrinx (myzel-syrinx). Höhe is the air sac's pressure: breath below the threshold, then a
+  // chip, a clear whistle, rough at the top; Silbe shapes every onset (a jump of Höhe, a shake and each Puls hit start
+  // one). Let go: the pressure falls, the labia stop within milliseconds. Stand-in: Schwarm.
+  khl: {
+    sustain: true, needs: 'worklet', fallback: 'swm',
+    start(v, t, f, y, vel, o) {
+      wkVoice(v, 'myzel-syrinx', f, y, { prm: wkPrm('khl'), on: { on: t, f, y, vel, burst: !!o.burst, gate: o.burst ? o.gate : 0, seed: wkSeed() } });
+      const peak = vel * KHL_PEAK;
+      if (o.burst) burstEnv(v, t, peak, 0.002, o.gate, 0.06 * (o.decayMul || 1));
+      else wkHold(v, t, peak, 0.004, 0.08);
+    },
+  },
   // Ranke: scanned synthesis on a ring of masses (myzel-scan). Touch = a hammer (Höhe: wide and soft → narrow and
   // bright), held = a steady push keeps the form alive; Puls = hammer only, the ring three times faster. Stand-in: Nebel.
   rnk: {
@@ -8185,9 +8207,181 @@ function myzelDsp() {
     }
   }
 
+  // ---- Kehlchen: myzel-syrinx – a songbird's syrinx (SPEC §3.13, reserve 1) ----
+  // The labia as a normal-form oscillator (Laje/Mindlin): x'' = −x − κx³ − C·x²·x' + b·x' + η, in the phase of the
+  // note (φ = ω t; semi-implicit Euler, two substeps a sample). b is the air-sac pressure: below 0 the labia rest (air
+  // only), at 0 they start to sing (a Hopf threshold, amplitude ∝ √b), higher up the tone turns relaxed and rich. The
+  // pitch is held by a frequency-locked loop (zero crossings → the step's multiplier, 20 ms): pressure and stiffness bend
+  // a labium's pitch by up to two semitones (measured, SPEC), the loop takes it back. Roughness is turbulence in the
+  // drive, every other cycle's pressure up and down at the top (period doubling – a raven's croak) and, at level 3, the
+  // second pair a few cents (rough: up to 100 ct) away, both on one air sac (the pressure one pair's flow takes is the
+  // other's loss: −24 dB tones between). A syllable generator shapes pressure and pitch per onset: Chip (an upward
+  // flick into the note), Triller (pressure pulses, 13–25 a second), Ruf (a down-slurred call, repeated while held);
+  // a jump of Höhe, a shake (Gestik) and every Puls hit start a new one. The throat follows the note, the trachea's
+  // resonance (c/4L, L 3–7 cm: Schnabel) and the beak (a low-pass opening with the pressure) colour it.
+  const KHL_OUT = 0.23, KHL_C = 1, KHL_Q0 = 1.1, KHL_DC = 2 * Math.PI * 20 / SR;
+  const khlCeil = (x) => (x > 0.9 ? 0.9 + 0.1 * tanh((x - 0.9) * 10) : x < -0.9 ? -0.9 - 0.1 * tanh((-x - 0.9) * 10) : x);   // (never past 1: the top's rough peaks)
+  class Syrinx extends MyzelProc {
+    constructor(o) {
+      super(o);
+      this.rich = !!this.po.rich;
+      this.p = { spannung: 0.5, druck: 0.5, schnabel: 0.5, rauheit: 0.3, silbe: 'chip', anstieg: 0.3 };
+      if (this.po.prm) this.set(this.po.prm);
+      this.rng = new PRNG(this.po.seed || 7);
+      this.tA = [new Biquad(), new Biquad()]; this.tB = this.rich ? [new Biquad(), new Biquad()] : null;
+      this.vel = 0.75; this.burst = false; this.gate = 0;
+      this.reset(); this.coef();
+    }
+    reset() {
+      this.xA = this.uA = this.xB = this.uB = 0; this.mA = this.mB = 1;
+      this.pr = -0.6; this.ys = this.y; this.yT = this.y;
+      this.zA = { last: 0, cnt: 0, arm: false, amp: 0, flip: 1 }; this.zB = { last: 0, cnt: 0, arm: false, amp: 0, flip: 1 };
+      this.bA = this.bB = 0; this.sy = 0; this.syN = 0; this.syD = 1; this.tr = 0; this.ruf = 0;
+      for (const q of [this.tA, this.tB]) if (q) for (const f of q) f.z1 = f.z2 = 0;
+    }
+    set(p) {
+      for (const k in p) if (k in this.p) this.p[k] = k === 'silbe' ? String(p[k]) : +p[k] || 0;
+      if (this.tA) this.coef();
+    }
+    // the trachea: c/4L and 3c/4L for L 7 cm (Schnabel 0) … 3 cm (Schnabel 1)
+    coef() {
+      const f1 = 1225 * Math.pow(2.8 / 1.225, this.p.schnabel);
+      for (const q of [this.tA, this.tB]) if (q) q[1].peak(f1, 2.2, 3.5);
+      this.kap = 0.04 + 0.3 * this.p.spannung;   // Spannung: the labia's stiffness – more of the odd partials
+      this.fo = 0;
+    }
+    // the throat (oropharyngeal cavity) follows the note – a songbird tunes it to its fundamental (Riede 2006): the
+    // tone stays pure and even across the field; the trachea's fixed resonance colours the partials
+    oec(f) { if (Math.abs(f - this.fo) > 0.01 * this.fo) { this.fo = f; for (const q of [this.tA, this.tB]) if (q) q[0].peak(Math.min(0.42 * SR, f), 1.4, 4); } }
+    start(m) {
+      this.vel = m.vel != null ? m.vel : 0.75; this.burst = !!m.burst; this.gate = m.burst ? Math.max(1, Math.round((m.gate || 0.22) * SR)) : 0;
+      this.rng = new PRNG((m.seed | 0) || 7);
+      if (!this.wasOn) { this.pr = -0.4; this.xA = 1e-3; this.uA = 0; this.xB = -1e-3; this.uB = 0; this.wasOn = true; this.mA = this.mB = this.guess(); }
+      this.ys = this.yT = this.y;
+      this.trig();
+    }
+    stop() { this.off = true; }
+    extra(m) { if (m.silbe) this.trig(); }
+    // a syllable begins: its shape runs over syD samples (Triller runs on by itself, Ruf repeats while held)
+    trig() {
+      const k = this.p.silbe, r = this.rng.next();
+      this.sy = 0; this.syK = k;
+      this.syD = Math.round((k === 'chip' ? 0.022 + 0.022 * r + 0.02 * (1 - this.vel) : k === 'ruf' ? 0.1 + 0.05 * r : 0.05) * SR);
+      if (k === 'ruf') this.ruf = Math.round((0.55 + 0.35 * this.rng.next()) * SR);
+      if (k === 'triller') this.tr = 0;
+    }
+    // the step's first multiplier: the labia's own pitch at the pressure the note starts with (a short run without
+    // sound: a dozen periods), so the first chip already lands where the loop would bring it
+    guess() {
+      const b = Math.max(0.02, this.bOf(this.y)), k = this.kap, h = 2 * Math.PI * Math.min(this.f, 6000) / SR / 2;
+      let x = 0.5, u = 0, last = 0, t = 0, n = 0, t0 = 0, per = 0;
+      for (let i = 0; i < 40000 && n < 14; i++) {
+        for (let s = 0; s < 2; s++) { u += h * (-x - k * x * x * x - KHL_C * x * x * u + b * u); x += h * u; }
+        t++;
+        if (last < 0 && x >= 0) { const tc = t - x / (x - last); if (n === 4) t0 = tc; if (n >= 4) per = (tc - t0) / Math.max(1, n - 4); n++; }
+        last = x;
+      }
+      const T = SR / Math.min(this.f, 6000);
+      return per > 0 ? Math.min(1.8, Math.max(0.6, per / T)) : 1;
+    }
+    // the pressure a height asks for (Druck moves the threshold: at 0.5 the labia start at y ≈ 0.19)
+    bOf(y) { return -0.3 + 1.6 * y + (this.p.druck - 0.5) * 0.6; }
+    render(L, R, a, b) {
+      const n = b - a, p = this.p, rr = p.rauheit, two = this.rich && !this.lite, kap = this.kap, C = KHL_C;
+      // the pressure: up with Anstieg (a harder touch faster: a chip), down within ≈ 5 ms after the end
+      const yk = 1 - Math.exp(-n / (0.012 * SR)); this.ys += yk * (this.y - this.ys);
+      if (!this.off && Math.abs(this.y - this.yT) > 0.12) { this.yT = this.y; if (p.silbe !== 'aus' && p.silbe !== 'triller') this.trig(); }   // a jump of Höhe: a new syllable
+      const ys = this.ys, bT = this.off ? -0.8 : this.bOf(ys);
+      const rise = (0.002 + 0.16 * p.anstieg * p.anstieg) * (1.45 - 0.9 * this.vel), rk = 1 - Math.exp(-1 / ((bT > this.pr ? rise : 0.005) * SR));
+      const top = Math.max(0, Math.min(1, (ys - 0.55) / 0.4)), pd = rr * top * top * 0.7;   // period doubling at the top
+      const eta = rr * 0.35 + 0.004, w0 = 2 * Math.PI * this.f / SR, cB = cents(two ? 6 + 94 * rr * top : 0);
+      const K = two ? 0.15 + 0.55 * rr : 0;   // the shared air sac
+      const bk = Math.min(0.45, (1800 + 9000 * Math.max(0, ys)) * (0.6 + 0.8 * p.schnabel) / SR), bkc = 1 - Math.exp(-2 * Math.PI * bk);
+      // what sounds is the air let through: the labia's opening (rest 1.1) – past it they shut for part of each cycle, so
+      // the higher the pressure (the wider the swing), the more partials; a little of the opening's speed on top
+      const br = 0.1 + 0.25 * Math.max(0, Math.min(1, (ys - 0.3) / 0.7)), og = KHL_OUT * (two ? 0.75 : 1);   // (level 3 is stereo past the voice's centre panner: as loud as level 1)
+      this.oec(this.f);
+      const fa0 = this.tA[0], fa1 = this.tA[1], fb0 = two ? this.tB[0] : fa0, fb1 = two ? this.tB[1] : fa1;
+      const a0b0 = fa0.b0, a0b1 = fa0.b1, a0b2 = fa0.b2, a0a1 = fa0.a1, a0a2 = fa0.a2, a1b0 = fa1.b0, a1b1 = fa1.b1, a1b2 = fa1.b2, a1a1 = fa1.a1, a1a2 = fa1.a2;
+      let za1 = fa0.z1, za2 = fa0.z2, zb1 = fa1.z1, zb2 = fa1.z2, zc1 = fb0.z1, zc2 = fb0.z2, zd1 = fb1.z1, zd2 = fb1.z2;
+      const zA = this.zA, zB = this.zB, trR = (13 + 12 * ys) / SR, kd = this.syK, off = this.off, burst = this.burst;
+      let xA = this.xA, uA = this.uA, xB = this.xB, uB = this.uB, pr = this.pr, lA = this.bA, lB = this.bB, rs = this.rng.s | 0;
+      let mA = this.mA, mB = this.mB, cA = zA.cnt, sA0 = zA.last, gA = zA.arm, aA = zA.amp, fA = zA.flip, cBn = zB.cnt, sB0 = zB.last, gB = zB.arm, aB = zB.amp, fB = zB.flip;
+      let sy = this.sy, syD = this.syD, tr = this.tr, ruf = this.ruf, gate = this.gate, wsL = NaN, csg = 1, dA = this.dA || 0, dB = this.dB || 0;
+      const aG = 0.55 + 0.45 * rr;
+      for (let i = a; i < b; i++) {
+        pr += rk * (bT - pr);
+        // the syllable: a pressure offset and a pitch shape
+        let sb = 0, sg = 0;
+        if (kd === 'triller' && !off) {   // pulses with gaps: under the threshold for a third of each
+          tr += trR; if (tr >= 1) tr -= 1;
+          sb = tr < 0.66 ? 0.25 * Math.sin(Math.PI * tr / 0.66) : -0.6 - (pr > 0 ? pr : 0); sg = tr < 0.15 ? -90 * (1 - tr / 0.15) : 0;
+        } else if (sy < syD) {
+          const ph = sy / syD; sy++;
+          if (kd === 'chip') { sg = -260 * (1 - ph) * (1 - ph); sb = 0.5 * (1 - ph); }
+          else if (kd === 'ruf') { sg = 320 * Math.pow(1 - ph, 1.5); sb = 0.35 * Math.sin(Math.PI * ph); }
+        } else if (kd === 'ruf' && !off && !burst) {   // the call again, after a breath
+          if (--ruf <= 0) { this.sy = sy; this.trig(); sy = this.sy; syD = this.syD; ruf = this.ruf; }
+          else if (ruf < 0.05 * SR) sb = -0.7 - (pr > 0 ? pr : 0);
+        }
+        const bb = pr + sb, pos = bb > 0 ? bb : 0, gw = pr + 0.6 < 0 ? 0 : pr + 0.6 > 0.2 ? 0.2 : pr + 0.6;
+        if (sg !== wsL) { wsL = sg; csg = sg === 0 ? 1 : cents(sg); }
+        const ws = 0.5 * w0 * csg;
+        // pair A (and B), two substeps; the pressure each sees: the sac's, less the other's flow (K), every other
+        // cycle up or down (period doubling)
+        rs ^= rs << 13; rs ^= rs >>> 17; rs ^= rs << 5; const r1 = (rs >>> 0) / 2147483648 - 1;   // (noise −1 … 1, xorshift inline)
+        const nA = eta * r1 * (gw + pos);
+        const bAe = bb * (1 + pd * fA) - K * xB * xB, hA = ws * mA;
+        uA += hA * (-xA - kap * xA * xA * xA - C * xA * xA * uA + bAe * uA + nA); xA += hA * uA;
+        uA += hA * (-xA - kap * xA * xA * xA - C * xA * xA * uA + bAe * uA + nA); xA += hA * uA;
+        // the loop: a crossing upward, its period against the note's (with the syllable's pitch)
+        cA++;
+        if (xA < -0.3 * aA) gA = true;
+        if (gA && sA0 < 0 && xA >= 0) {
+          const tc = cA - xA / (xA - sA0); gA = false; fA = -fA;
+          if (tc > 2 && aA > 0.05 && bb > 0.02) { const T = Math.PI / ws; mA *= Math.pow(tc / T, 1 - Math.exp(-tc / (0.02 * SR))); mA = mA > 1.8 ? 1.8 : mA < 0.6 ? 0.6 : mA; }
+          cA -= tc;
+        }
+        sA0 = xA; aA = xA > aA ? xA : -xA > aA ? -xA : aA * 0.9995;
+        // air: the sac's flow through the trachea, with or without the labia (singing, less of it)
+        rs ^= rs << 13; rs ^= rs >>> 17; rs ^= rs << 5; const pa = pr + 0.6, air = aG * (pa < 0 ? 0 : pa > 0.6 ? 0.6 : pa) * (aA > 0.3 ? 0.35 : 1) * ((rs >>> 0) / 2147483648 - 1);
+        // throat (it follows the note) and trachea, then the beak
+        const qA = xA + KHL_Q0, wA = 0.5 * (qA + Math.sqrt(qA * qA + 0.02)); dA += KHL_DC * (wA - dA);
+        let v = wA - dA + br * uA + air, y0 = a0b0 * v + za1; za1 = a0b1 * v - a0a1 * y0 + za2; za2 = a0b2 * v - a0a2 * y0;
+        let y1 = a1b0 * y0 + zb1; zb1 = a1b1 * y0 - a1a1 * y1 + zb2; zb2 = a1b2 * y0 - a1a2 * y1;
+        lA += bkc * (y1 - lA);
+        if (two) {
+          const bBe = bb * (1 + pd * fB) - K * xA * xA, hB = ws * cB * mB, nB = eta * r1 * (gw + pos);
+          uB += hB * (-xB - kap * xB * xB * xB - C * xB * xB * uB + bBe * uB + nB); xB += hB * uB;
+          uB += hB * (-xB - kap * xB * xB * xB - C * xB * xB * uB + bBe * uB + nB); xB += hB * uB;
+          cBn++;
+          if (xB < -0.3 * aB) gB = true;
+          if (gB && sB0 < 0 && xB >= 0) {
+            const tc = cBn - xB / (xB - sB0); gB = false; fB = -fB;
+            if (tc > 2 && aB > 0.05 && bb > 0.02) { const T = Math.PI / (ws * cB); mB *= Math.pow(tc / T, 1 - Math.exp(-tc / (0.02 * SR))); mB = mB > 1.8 ? 1.8 : mB < 0.6 ? 0.6 : mB; }
+            cBn -= tc;
+          }
+          sB0 = xB; aB = xB > aB ? xB : -xB > aB ? -xB : aB * 0.9995;
+          const qB = xB + KHL_Q0, wB = 0.5 * (qB + Math.sqrt(qB * qB + 0.02)); dB += KHL_DC * (wB - dB);
+          v = wB - dB + br * uB + air; y0 = a0b0 * v + zc1; zc1 = a0b1 * v - a0a1 * y0 + zc2; zc2 = a0b2 * v - a0a2 * y0;
+          y1 = a1b0 * y0 + zd1; zd1 = a1b1 * y0 - a1a1 * y1 + zd2; zd2 = a1b2 * y0 - a1a2 * y1;
+          lB += bkc * (y1 - lB);
+          const oL = og * (lA + 0.3 * lB), oR = og * (lB + 0.3 * lA);
+          L[i] = oL > 0.9 || oL < -0.9 ? khlCeil(oL) : oL; if (R) R[i] = oR > 0.9 || oR < -0.9 ? khlCeil(oR) : oR;
+        } else { const o = og * lA; L[i] = o > 0.9 || o < -0.9 ? khlCeil(o) : o; if (R) R[i] = L[i]; }
+        if (burst && gate > 0 && --gate === 0) this.off = true;   // a Puls hit: the gate is the syllable's breath
+      }
+      this.xA = flush(xA); this.uA = flush(uA); this.xB = flush(xB); this.uB = flush(uB); this.pr = pr; this.bA = flush(lA); this.bB = flush(lB); this.rng.s = rs || 0x2545F491;
+      this.mA = mA; this.mB = mB; zA.cnt = cA; zA.last = sA0; zA.arm = gA; zA.amp = aA; zA.flip = fA; zB.cnt = cBn; zB.last = sB0; zB.arm = gB; zB.amp = aB; zB.flip = fB;
+      this.sy = sy; this.syD = syD; this.tr = tr; this.ruf = ruf; this.gate = gate; this.dA = dA; this.dB = dB;
+      fa0.z1 = flush(za1); fa0.z2 = flush(za2); fa1.z1 = flush(zb1); fa1.z2 = flush(zb2);
+      if (two) { fb0.z1 = flush(zc1); fb0.z2 = flush(zc2); fb1.z1 = flush(zd1); fb1.z2 = flush(zd2); }
+    }
+  }
+
   // an empty voice: the per-node price of the contract (SPEC §8 step 1 gate, ≈ 0.06 + 0.03 per param)
   class Null extends MyzelProc { render(L, R, a, b) { for (let i = a; i < b; i++) L[i] = 0; } }
-  for (const [k, C] of [['myzel-blow', Blow], ['myzel-scan', Scan], ['myzel-bow', Bow], ['myzel-rot', Rot], ['myzel-aeol', Aeol], ['myzel-gendy', Gendy], ['myzel-web', Web], ['myzel-string', Strg], ['myzel-null', Null]]) registerProcessor(k, C);
+  for (const [k, C] of [['myzel-blow', Blow], ['myzel-scan', Scan], ['myzel-bow', Bow], ['myzel-rot', Rot], ['myzel-aeol', Aeol], ['myzel-gendy', Gendy], ['myzel-web', Web], ['myzel-string', Strg], ['myzel-syrinx', Syrinx], ['myzel-null', Null]]) registerProcessor(k, C);
   return { SIN, NOISE, Reso, Biquad, Allpass1, OnePole, DcBlock, FracDelay, PRNG };   // (for later processors; unused here)
 }
 // end myzelDsp
@@ -8356,6 +8550,7 @@ const RHZ_KN = {
   metall: { r: [1, 2.76, 5.4], a: [1, 0.45, 0.2], d: [1, 0.7, 0.45], tau: 1.8, bp: 5, q: 2, ck: 0.0011, cl: 0.35, lv: 0.69 },
   glas: { r: [1, 2.32, 4.25], a: [1, 0.38, 0.16], d: [1, 0.8, 0.5], tau: 1.4, bp: 7, q: 3, ck: 0.0008, cl: 0.3, lv: 0.87 },
 };
+const rhzInUse = () => [P['v.eng'], P['v.layer'], ...[0, 1, 2, 3].map((i) => P['l' + i + '.on'] && P['l' + i + '.eng']), RG.on && GK.p && GK.p.rgS, GK.p && GK.p.ras && GK.p.rasS].includes('rhz');
 const rhzReiz = (t) => clamp(P['rhz.reiz'] + (MOD.t.rhzR && MOD.t.rhzR.s.size ? 0.6 * modVal('rhzR', t) : 0), 0, 1);   // (Gestik: tilt and Ladung)
 // offline (tests) or a stopped clock: a strike's whole cascade is laid out at once (RHZ.step: tests run the clock themselves)
 const rhzAhead = () => !RHZ.step && ((typeof OfflineAudioContext !== 'undefined' && A.ctx instanceof OfflineAudioContext) || A.ctx.state !== 'running');
@@ -8488,6 +8683,7 @@ function wkShake(e) {
     if (!v.alive || v.released || !v.wk) continue;
     if (v.as === 'rnk') v.wk.port.postMessage({ hammer: 0.3 + 0.7 * clamp(e.v, 0, 1) });   // (as strong as a touch at a full swing: the held ring carries its push and taps)
     else if (v.as === 'amo') v.wk.port.postMessage({ zuck: 0.4 + 0.6 * clamp(e.v, 0, 1) });   // Amöbe: each swing a burst of the form that heals (KONZEPT §2.5)
+    else if (v.as === 'khl') v.wk.port.postMessage({ silbe: 1 });   // Kehlchen: each swing a syllable
   }
 }
 
@@ -10388,7 +10584,7 @@ midiTarget('morph', 'Morph A↔B', null, { group: 'Mixer', cont: true, get: () =
 const MACRO = { neb: ['neb.cut', 'neb.res'], kor: ['kor.dens', 'kor.size'], hau: ['hau.color', 'hau.q'], glo: ['glo.index', 'glo.ratio'], mem: ['mem.drop', 'mem.decay'],
   sai: ['sai.bright', 'sai.decay'], sch: ['sch.bright', 'sch.beat'], gng: ['gng.bloom', 'gng.bright'], klb: ['klb.over', 'klb.buzz'], obt: ['obt.focus', 'obt.wander'],
   stm: ['stm.vib', 'stm.choir'], swm: ['swm.chaos', 'swm.unrest'], tie: ['tie.drive', 'tie.drop'], trp: ['trp.chirp', 'trp.rain'],
-  hlm: ['hlm.atem', 'hlm.blatt'], rnk: ['rnk.feder', 'rnk.daempfung'], elm: ['elm.spannung', 'elm.knistern'], jrg: ['jrg.schnitt', 'jrg.holz'], hrz: ['hrz.druck', 'hrz.harz'], shn: ['shn.ebow', 'shn.daempfung'], mdr: ['mdr.pilz', 'mdr.knistern'], boe: ['boe.wind', 'boe.fang'], amo: ['amo.zeit', 'amo.punkte'], gsp: ['gsp.kopplung', 'gsp.nachklang'], rhz: ['rhz.reiz', 'rhz.weg'] };
+  hlm: ['hlm.atem', 'hlm.blatt'], rnk: ['rnk.feder', 'rnk.daempfung'], elm: ['elm.spannung', 'elm.knistern'], jrg: ['jrg.schnitt', 'jrg.holz'], hrz: ['hrz.druck', 'hrz.harz'], shn: ['shn.ebow', 'shn.daempfung'], mdr: ['mdr.pilz', 'mdr.knistern'], boe: ['boe.wind', 'boe.fang'], amo: ['amo.zeit', 'amo.punkte'], gsp: ['gsp.kopplung', 'gsp.nachklang'], rhz: ['rhz.reiz', 'rhz.weg'], khl: ['khl.druck', 'khl.rauheit'] };
 const macroId = (k) => (MACRO[P['v.eng']] || MACRO.neb)[k];
 midiTarget('macro.a', 'Klang-Makro A', null, { group: 'Klang', cont: true, pidf: () => macroId(0) });
 midiTarget('macro.b', 'Klang-Makro B', null, { group: 'Klang', cont: true, pidf: () => macroId(1) });
@@ -13901,7 +14097,7 @@ function ladCardSync(C, noGyro) {
   tx(C.eTxt, GK.live && !GK.dmSeen ? 'Dieses Gerät meldet nur seine Lage, keine Beschleunigung – Schütteln lädt hier nichts auf (Neigen, Wenden und Ruhe gehen).'
     : p.entl < 1 ? 'Kurz: eine echte Rassel – sie klingt nur, solange du schüttelst.' : p.entl >= 15 ? 'Lang: ein Aufbau über viele Takte, während deine Hände längst wieder spielen.' : 'Nach dem Schütteln entlädt es sich über ' + dec(String(p.entl)) + ' s.');
   // what the charge does in the sound that plays now
-  const has = [SEQ.on && 'der Puls voller und heller', (P['v.eng'] === 'kor' || P['v.layer'] === 'kor') && 'Körner dichter', (P['v.eng'] === 'trp' || P['v.layer'] === 'trp') && 'Tropfen-Regen', gspInUse() && 'Gespinst koppelt stärker'].filter(Boolean);
+  const has = [SEQ.on && 'der Puls voller und heller', (P['v.eng'] === 'kor' || P['v.layer'] === 'kor') && 'Körner dichter', (P['v.eng'] === 'trp' || P['v.layer'] === 'trp') && 'Tropfen-Regen', gspInUse() && 'Gespinst koppelt stärker', rhzInUse() && 'das Rhizom reizbarer'].filter(Boolean);
   tx(C.lTxt, has.length ? 'In diesem Klang: ' + has.join(', ') + ', das Echo leiert.' : 'In diesem Klang: gehaltene Töne heller, mehr Echo und Schweben – mit Puls, Körnern oder Tropfen wirkt mehr.');
   tx(C.rTxt, p.ras ? 'Jeder Schüttel-Höhepunkt spielt einen Schlag, ' + (p.rasQ === 'frei' ? 'ohne Raster (für langsame Tempi).' : 'auf die nächste ' + (p.rasQ === '32' ? '1/32' : '1/16') + ' des Pulses gelegt.') + ' Er läuft über den Kanal „Klang“.' : 'Rassel-Schläge: jeder Schüttel-Höhepunkt spielt zusätzlich einen Tropfen, eine Membran, eine Schale, den Holzstab (Jahresring) oder eine Kompostglocke (Moder) im Raster.');
   const st = GK.R && GK.R.st;
@@ -14839,6 +15035,10 @@ const RZ = {
   regenwald: { set: { neigen: 'regen', rgArt: 'keime', rgS: 'trp' }, txt: 'Sporenregen mit Tropfen' },
   kalimbatraum: { set: { neigen: 'regen', rgArt: 'keime', rgS: 'klb' }, txt: 'Sporenregen mit Kalimba' },
   gongbad: { set: { lad: true, sw: true }, txt: 'Schwenken lässt die Gongs singen' },
+  glaswiese: { set: { neigen: 'anl' }, mod: [['tiltY', 'hoehe', 0.7, 'anl']], txt: 'Anlehnen = Bogendruck' },
+  gespinstgarten: { set: { neigen: 'anl' }, mod: [['tiltY', 'gspK', 0.8, 'anl']], txt: 'Vorneigen hebt die Kopplung des Netzes' },
+  wurzelnetz: { set: { neigen: 'anl' }, mod: [['tiltY', 'rhzR', 0.8, 'anl']], txt: 'Vorneigen macht das Netz reizbar' },
+  vogelhain: { set: { neigen: 'anl' }, mod: [['tiltY', 'hoehe', 0.7, 'anl']], txt: 'Anlehnen = Kehldruck' },
   sporenfaehrte: { set: { neigen: 'regen', rgArt: 'keime', rgS: 'klb', rgQ: 'auto' }, txt: 'Sporenregen mit Kalimba, eine Fährte neigt ihn' },
 };
 // the recipe that should act: Gestik on, recipes on, the current preset has one
@@ -15514,7 +15714,7 @@ function onParamChanged(id) {
     case 'neb':
       if (id === 'neb.cut' || id === 'neb.ymod' || id === 'neb.res') for (const t of touches.values()) for (const { v } of t.voices) if (v.alive && v.eng === 'neb') { v.setY(modY(t)); setP(v.filt.Q, P['neb.res']); }
       break;
-    case 'hlm': case 'rnk': case 'hrz': case 'shn': case 'mdr': case 'boe': case 'amo':   // the sounding voices follow at once (the processor reads its knobs per block; Moder's body, mallet and Nachklang at the next strike)
+    case 'hlm': case 'rnk': case 'hrz': case 'shn': case 'khl': case 'mdr': case 'boe': case 'amo':   // the sounding voices follow at once (the processor reads its knobs per block; Moder's body, mallet and Nachklang at the next strike)
       for (const v of A.voices) if (v.alive && v.wk && v.as === pre) v.wk.port.postMessage({ set: wkPrm(pre) });
       if (id === 'hrz.koerper') for (const fn of CTL['hrz.daempfung'] || []) fn(P['hrz.daempfung'], null);   // (its Nachklang is the body's)
       if (id === 'hlm.rohr') {   // each pipe names the knobs its own way, and says how it plays
@@ -20395,6 +20595,7 @@ const ENG_NOTE = {
   })[P['hlm.rohr']] || '',
   boe: 'Die Höhe ist die Windstärke: je höher der Finger, desto höher der Oberton, den der Wind fängt. Trifft er eine Saite, rastet sie ein und singt; dazwischen streift er nur – die Saiten von vorher klingen nach, so bleibt ein Akkord hängen. Böen und ein langsam wandernder Wind lassen ihn von selbst umspringen. Aufsetzen ist eine Anfangsböe, im Puls ein Böen-Zupf. Loslassen: Der Wind legt sich, die Saiten klingen aus (Nachklang).',
   shn: 'Aufsetzen zupft die Saite, Gleiten zieht sie (ohne neuen Anschlag). Die Höhe ist die Hand: unten dämpft der Handballen – ein kurzer, dumpfer Zupf –, in der Mitte klingt die Saite offen, bei etwa drei Vierteln berührt der Finger einen Knoten (Flageolett: Oktave, Duodezime, Doppeloktave), ganz oben legt ein E-Bow Energie nach – die Saite schwillt wieder an und hält, ganz oben kippt sie in die Oktave. Loslassen dämpft. Steg Jawari: der Zupf blüht nach oben in ein Sirren auf. Im Puls ein Zupf, nach dem Gate gedämpft.',
+  khl: 'Zwei Stimmlippen einer Vogelkehle. Die Höhe ist der Druck im Luftsack: unten nur Atem, ab etwa einem Fünftel springen die Lippen an – ein Chip, dann ein klarer Pfiff, oben wird er rau (jede zweite Schwingung mehr Druck: das Krächzen). Silbe formt jeden Einsatz: Chip (ein kurzer Aufwärtsschnipser in den Ton), Triller (Druckstöße, 13–25 je Sekunde), Ruf (ein abwärts geschleifter Ruf, der sich wiederholt, solange du hältst). Ein Sprung der Höhe, ein Schütteln und jeder Puls-Schlag beginnen eine neue Silbe. Druck verschiebt die Schwelle, Spannung macht die Lippen steifer (mehr Obertöne), Schnabel ist die Länge der Luftröhre, Anstieg die Zeit, bis der Druck steht.',
   rnk: 'Aufsetzen schlägt den Ring an – unten breit und weich, oben schmal und hell; gehalten hält ein leiser Druck die Form in Bewegung. Im Puls ein Hammerschlag, Schütteln (Gestik) schlägt nach.',
   elm: 'Die Höhe ist die Spannung: unten brummt das Netz (in die Bassoktave gefaltet), darüber knistert die Korona, erst einzeln, dann dicht, oben zündet der Lichtbogen über dem Ton – er lebt vom Knistern und springt selten in Quinten und Oktaven. Aufsetzen ist ein Zündstoß, im Puls ein Zap mit Knisterschweif.',
   jrg: 'Die Höhe ist der Treffpunkt auf dem Stab: unten die Mitte (voll und rund), etwas über der Mitte die Knotenlinie (der Grundton verschwindet, ein hohles Klopfen), oben das Ende (hell). Der Stab lebt in einem Jahr: Frühling dünn und hell, Sommer warm und lang, Herbst mit Laubrascheln, Winter gläsern mit Eisriss. Spielen lässt ihn altern (höchstens 6 Cent tiefer); Verjüngen und Schlafen machen ihn wieder jung.',
@@ -21278,6 +21479,31 @@ const PRESETS = [
     'flt.freq': 9000, 'flt.lfoRate': 0.03, 'flt.lfoDepth': 0.8, 'dly.mix': 0.15, 'rev.size': 14, 'rev.damp': 0.5, 'rev.mix': 0.6, 'mov.drift': 6, 'seq.bpm': 50,
     'l0.on': false, 'l1.on': false, 'l2.on': false, 'l3.on': true, 'l3.eng': 'gng', 'l3.steps': 9, 'l3.puls': 1, 'l3.div': '1', 'l3.deg': 0, 'l3.oct': -1, 'l3.vol': 0.45, 'l3.bright': 0.4,
     'bor.on': true, 'bor.oct': 1, 'bor.lvl': 0.25, 'bor.int': '2', 'bor.cut': 220 } },
+  { key: 'glaswiese', name: 'Glaswiese', tags: 'Ambient · Reibung', desc: 'Ein gestrichenes Glas über einer Äolsharfe, darunter zerfallende Kompostglocken im Puls.', v: {
+    'v.eng': 'hrz', 'hrz.koerper': 'glas', 'hrz.druck': 0.45, 'hrz.harz': 0.25, 'v.layer': 'boe', 'v.layerLvl': 0.3, 'v.layerInt': 12, 'boe.wind': 0.35,
+    't.root': '4', 't.scale': 'hira', 't.oct': 3, 't.range': 3,
+    'l0.on': true, 'l0.eng': 'mdr', 'l0.steps': 16, 'l0.puls': 3, 'l0.div': '1', 'l0.bright': 0.6, 'l0.vol': 0.5, 'l1.on': false, 'l2.on': false, 'l3.on': false,
+    'rev.mix': 0.5, 'rev.size': 10, 'dly.mix': 0.25, 'bor.on': true, 'bor.int': '1.5', 'bor.lvl': 0.25, 'seq.bpm': 60 } },
+  { key: 'gespinstgarten', name: 'Gespinstgarten', tags: 'Experimentell · Ökologie', desc: 'Ein Netz aus Saiten, in das Finger und drei Spuren zupfen – lebende Saite und Ranke schwingen mit.', v: {
+    'v.eng': 'gsp', 'gsp.kopplung': 0.55, 'gsp.nachklang': 3, 'gsp.saiten': 'zwei', 'gsp.halo': -6, 't.root': '9', 't.scale': 'dpent', 't.oct': 3, 't.range': 3, 'seq.bpm': 84,
+    'l0.on': true, 'l0.eng': 'gsp', 'l0.steps': 16, 'l0.puls': 5, 'l0.bright': 0.5,
+    'l1.on': true, 'l1.eng': 'shn', 'l1.steps': 12, 'l1.puls': 4, 'l1.oct': -1, 'l1.bright': 0.3, 'l1.vol': 0.45,
+    'l2.on': true, 'l2.eng': 'rnk', 'l2.steps': 7, 'l2.puls': 2, 'l2.div': '1', 'l2.bright': 0.7, 'l2.vol': 0.4, 'l3.on': false,
+    'rev.mix': 0.45, 'rev.size': 9, 'cho.mix': 0.2 } },
+  { key: 'wurzelnetz', name: 'Wurzelnetz', tags: 'Perkussiv · Generativ', desc: 'Jeder Schlag läuft als Lawine durch die Tonleiter – Finger und zwei Spuren laden und erschöpfen dasselbe Netz.', v: {
+    'v.eng': 'rhz', 'rhz.knoten': 'holz', 'rhz.reiz': 0.55, 'rhz.erholung': 0.8, 'rhz.weg': 45, 'rhz.glimmen': 0.14, 'rhz.streuung': 0.35,
+    't.root': '2', 't.scale': 'mpent', 't.oct': 3, 't.range': 3, 'seq.bpm': 88,
+    'l0.on': true, 'l0.eng': 'rhz', 'l0.steps': 16, 'l0.puls': 5, 'l0.bright': 0.35, 'l0.vol': 0.55,
+    'l1.on': true, 'l1.eng': 'rhz', 'l1.steps': 12, 'l1.puls': 3, 'l1.oct': 1, 'l1.bright': 0.2, 'l1.vol': 0.4,
+    'l2.on': true, 'l2.eng': 'mem', 'l2.steps': 8, 'l2.puls': 3, 'l2.oct': -1, 'l2.vol': 0.45, 'l3.on': false,
+    'rev.mix': 0.35, 'rev.size': 7, 'dly.div': '0.75', 'dly.fb': 0.35, 'dly.mix': 0.2 } },
+  { key: 'vogelhain', name: 'Vogelhain', tags: 'Natur · Atem', desc: 'Eine Vogelkehle unter dem Finger – Chips, Pfiffe, oben rau –, dazu zwitschernde Spuren und Tropfen.', v: {
+    'v.eng': 'khl', 'khl.silbe': 'chip', 'khl.rauheit': 0.25, 'khl.schnabel': 0.6, 'khl.anstieg': 0.25,
+    't.root': '7', 't.scale': 'mpent', 't.oct': 4, 't.range': 2, 'seq.bpm': 96, 'v.glide': 0.08,
+    'l0.on': true, 'l0.eng': 'khl', 'l0.steps': 16, 'l0.puls': 6, 'l0.bright': 0.6, 'l0.vol': 0.4,
+    'l1.on': true, 'l1.eng': 'khl', 'l1.steps': 7, 'l1.puls': 2, 'l1.div': '0.5', 'l1.oct': 1, 'l1.bright': 0.8, 'l1.vol': 0.3,
+    'l2.on': true, 'l2.eng': 'trp', 'l2.steps': 11, 'l2.puls': 3, 'l2.oct': -1, 'l2.vol': 0.35, 'l3.on': false,
+    'rev.mix': 0.45, 'rev.size': 9, 'dly.div': '0.75', 'dly.fb': 0.3, 'dly.mix': 0.25 } },
   // the demo of Gestik's signature: its recipe is Sporenregen with Kalimba, and it brings a Fährte that leans the rain
   { key: 'sporenfaehrte', name: 'Sporenregen + Fährte', tags: 'Gestik · Generativ', desc: 'Gestik einschalten, ein paar Töne spielen: eine Fährte neigt den Kalimba-Regen hin und her, er spielt deine Töne von selbst.', fmt: 2, fae: rzDemoFae(), v: {
     'v.eng': 'klb', 'v.layer': 'glo', 'v.layerLvl': 0.15, 'v.layerInt': 12, 't.root': '2', 't.scale': 'mpent', 't.oct': 3, 't.range': 3,

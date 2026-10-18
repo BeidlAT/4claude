@@ -16,7 +16,7 @@ const L = require('./dsplib'), K = require('./klh');
   });
   L.ok(r.role === 'group' && r.n === 3 && r.h >= 44 && !r.small && r.pid === 'v.eng' && !r.chips, 'field: #p-v-eng is a group of ‹ name › (' + r.h + ' px, all targets ≥ 44 px), data-pid kept, no chips');
   L.ok(/Nebel · Dunst/.test(r.name) && /Klangquelle für die Spielfläche: Nebel, Dunst, hält\. Bibliothek öffnen/.test(r.label), 'name line „' + r.name + '“, label „' + r.label + '“');
-  L.ok(r.order === 'hau obt stm hlm boe elm neb kor swm amo hrz shn rnk sai jrg glo sch gng klb gsp tie mem trp mdr rhz', 'ENG_OPTS by family (' + r.order + ')');
+  L.ok(r.order === 'hau obt stm hlm boe elm khl neb kor swm amo hrz shn rnk sai jrg glo sch gng klb gsp tie mem trp mdr rhz', 'ENG_OPTS by family (' + r.order + ')');
   // ‹ › step and probe
   await page.click('#p-v-eng .kq-step:last-child'); await page.waitForTimeout(120);
   r = await M(() => ({ eng: window.__M.P['v.eng'], pr: [...window.__M.A.voices].filter((v) => v.alive && v.probe && !v.probeEnd).map((v) => v.eng), say: document.querySelector('#kqSay').textContent }));

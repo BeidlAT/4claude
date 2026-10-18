@@ -16,8 +16,8 @@ function peakHz(sig, f, at, N) {
   return (b + 0.5 * (a - d) / (a - 2 * c + d)) * hz;
 }
 // -- the contract
-L.ok(['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel-aeol', 'myzel-gendy', 'myzel-web', 'myzel-string', 'myzel-null'].every((k) => D.procs[k]), 'module registers myzel-blow, myzel-scan, myzel-bow, myzel-rot, myzel-aeol, myzel-gendy, myzel-web, myzel-string, myzel-null: ' + Object.keys(D.procs).join(', '));
-for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel-aeol', 'myzel-gendy', 'myzel-string']) {
+L.ok(['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel-aeol', 'myzel-gendy', 'myzel-web', 'myzel-string', 'myzel-syrinx', 'myzel-null'].every((k) => D.procs[k]), 'module registers myzel-blow, myzel-scan, myzel-bow, myzel-rot, myzel-aeol, myzel-gendy, myzel-web, myzel-string, myzel-syrinx, myzel-null: ' + Object.keys(D.procs).join(', '));
+for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel-aeol', 'myzel-gendy', 'myzel-string', 'myzel-syrinx']) {
   const r = note(name, 220, 0.6, { at: 0.3, dur: 0.6 });
   const pre = L.rms(r.L, 0, Math.floor(0.3 * SR) - 1), post = L.rms(r.L, Math.floor(0.33 * SR), Math.floor(0.6 * SR));
   L.ok(pre === 0 && post > 1e-3, `${name}: a note posted ahead waits for its time (silent before 0.3 s, ${L.db(post).toFixed(1)} dB after)`);
@@ -35,9 +35,9 @@ for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel
 // -- every knob at its extremes, pitches 16 Hz … 8 kHz, bursts and held, both levels: bounded, finite, ends
 {
   let x = 99; const rnd = () => { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; return (x >>> 0) / 4294967296; };
-  for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel-aeol', 'myzel-gendy', 'myzel-string']) {
+  for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel-aeol', 'myzel-gendy', 'myzel-string', 'myzel-syrinx']) {
     let worst = 0, bad = 0, notDone = 0;
-    const keys = name === 'myzel-blow' ? ['atem', 'mund', 'blatt', 'luft', 'zunge'] : name === 'myzel-bow' ? ['druck', 'bogen', 'daempfung', 'schwebung', 'harz'] : name === 'myzel-string' ? ['daempfung', 'steifheit', 'zupfort', 'hand', 'ebow'] : name === 'myzel-rot' ? ['pilz', 'knistern', 'schwellen', 'schlaegel'] : name === 'myzel-aeol' ? ['wind', 'boeen', 'nachklang', 'rauschen', 'fang', 'dunkel'] : name === 'myzel-gendy' ? ['zeit', 'rueck'] : ['masse', 'feder', 'mitte', 'daempfung', 'hammer', 'holz'];
+    const keys = name === 'myzel-blow' ? ['atem', 'mund', 'blatt', 'luft', 'zunge'] : name === 'myzel-bow' ? ['druck', 'bogen', 'daempfung', 'schwebung', 'harz'] : name === 'myzel-string' ? ['daempfung', 'steifheit', 'zupfort', 'hand', 'ebow'] : name === 'myzel-syrinx' ? ['spannung', 'druck', 'schnabel', 'rauheit', 'anstieg'] : name === 'myzel-rot' ? ['pilz', 'knistern', 'schwellen', 'schlaegel'] : name === 'myzel-aeol' ? ['wind', 'boeen', 'nachklang', 'rauschen', 'fang', 'dunkel'] : name === 'myzel-gendy' ? ['zeit', 'rueck'] : ['masse', 'feder', 'mitte', 'daempfung', 'hammer', 'holz'];
     for (let i = 0; i < 40; i++) {
       const prm = {}; for (const k of keys) prm[k] = i < 4 ? [0, 1, 0, 1][i] * (k.length % 2 ? 1 : 1) : rnd() < 0.3 ? Math.round(rnd()) : rnd();
       if (name === 'myzel-bow') prm.koerper = ['glas', 'schale', 'stab', 'zunge', 'teich'][i % 5];
@@ -45,6 +45,7 @@ for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel
       if (name === 'myzel-aeol') prm.nachklang = 0.5 * Math.pow(12, prm.nachklang);   // (0.5–6 s, exp)
       if (name === 'myzel-gendy') { prm.verteilung = ['linear', 'cauchy', 'logist', 'sinus'][i % 4]; prm.punkte = 3 + Math.floor(rnd() * 22); prm.att = 0.005 * Math.pow(400, rnd()); prm.rel = 0.05 * Math.pow(120, i < 4 ? [0, 1, 0, 1][i] : rnd()); }
       if (name === 'myzel-rot') { prm.koerper = ['glocke', 'holz', 'knochen'][i % 3]; prm.nachklang = i < 4 ? [1, 12, 1, 12][i] : 1 + 11 * rnd(); }
+      if (name === 'myzel-syrinx') prm.silbe = ['aus', 'chip', 'triller', 'ruf'][i % 4];
       if (name === 'myzel-string') { prm.steg = (i >> 1) % 2 ? 'jawari' : 'flach'; prm.daempfung = 0.3 * Math.pow(8 / 0.3, prm.daempfung); prm.zupfort = 0.05 + 0.45 * prm.zupfort; }   // (the knobs' own ranges)
       const f = [16, 30, 55, 220, 1000, 3000, 8000][i % 7] * (0.9 + 0.2 * rnd()), y = i % 5 === 0 ? 1 : i % 5 === 1 ? 0 : rnd(), rich = i % 2 === 1, burst = i % 3 === 0;
       // (a bow's modes ring as Dämpfung and the body say – up to 16 s: it must end within two of its rings)
@@ -385,5 +386,28 @@ for (const name of ['myzel-blow', 'myzel-scan', 'myzel-bow', 'myzel-rot', 'myzel
   const lt = R({ name: SN, po: { rich: true, lite: 1, seed: 1 }, ch: 2, dur: 1, params: { freq: 220, hoehe: 0.5 }, msgs: [[0, { on: 0, f: 220, y: 0.5, vel: 0.8 }]] });
   let same = true; for (let i = 0; i < lt.L.length; i++) if (lt.L[i] !== lt.R[i]) { same = false; break; }
   L.ok(same && L.rms(lt.L, 0.1 * SR, 0.5 * SR) > 1e-3 && Math.abs(L.cents(fine(lt.L, 220, 0.3, 16384), 220)) <= 3, 'string after underruns (lite): one string, the same on both channels, in tune');
+}
+// -- Kehlchen (myzel-syrinx): the frequency-locked loop over (f, pressure); the threshold; a chip's flick; Triller's
+// pulses; Ruf repeats; Rauheit's period doubling; the end
+{
+  const K = (f, y, prm, o = {}) => R({ name: 'myzel-syrinx', po: { seed: 5, rich: !!o.rich, prm: Object.assign({ silbe: 'aus', rauheit: 0 }, prm || {}) }, dur: o.dur || 1, ch: 2, params: o.params || { freq: f, hoehe: y }, msgs: [[0, { on: 0, f, y, vel: 0.75, seed: 5 }]].concat(o.msgs || []) });
+  const bpf = (x, f) => { const w = 2 * Math.PI * f / SR, al = Math.sin(w) / 2, a0 = 1 + al, b0 = al / a0, a1 = -2 * Math.cos(w) / a0, a2 = (1 - al) / a0, y = new Float32Array(x.length); let x1 = 0, x2 = 0, y1 = 0, y2 = 0; for (let i = 0; i < x.length; i++) { const v = b0 * x[i] - b0 * x2 - a1 * y1 - a2 * y2; x2 = x1; x1 = x[i]; y2 = y1; y1 = v; y[i] = v; } return y; };
+      const zc = (x0, a, b, f) => { const x = bpf(x0, f); a = Math.round(a * SR); b = Math.round(b * SR); const c = []; let l = x[a]; for (let i = a + 1; i < b; i++) { if (l < 0 && x[i] >= 0) c.push(i - x[i] / (x[i] - l)); l = x[i]; } return c.length > 2 ? SR * (c.length - 1) / (c[c.length - 1] - c[0]) : 0; };
+  let worst = 0, at = '';
+  for (const f of [110, 220, 440, 880, 1760, 3000, 4500, 6000]) for (const y of [0.25, 0.5, 0.75, 1]) { const c = L.cents(zc(K(f, y, {}, { dur: 0.8 }).L, 0.45, 0.8, f), f); if (Math.abs(c) > Math.abs(worst)) { worst = c; at = f + ' Hz, y ' + y; } }
+  L.ok(Math.abs(worst) <= 10, `khl: the loop holds the pitch over 110 Hz–6 kHz × y 0.25–1 (worst ${worst.toFixed(2)} ct at ${at}; SPEC ≤ 10, the bare labia drift up to two semitones)`);
+  const r1 = K(880, 0.1), r2 = K(880, 0.3); L.ok(L.db(L.rms(r2.L, 0.5 * SR)) - L.db(L.rms(r1.L, 0.5 * SR)) >= 20, `khl: the threshold – y 0.1 ${L.db(L.rms(r1.L, 0.5 * SR)).toFixed(1)} dB, y 0.3 ${L.db(L.rms(r2.L, 0.5 * SR)).toFixed(1)} dB (≥ 20 dB jump)`);
+  const ch = K(2000, 0.6, { silbe: 'chip' }, { dur: 0.4 }), c0 = L.cents(zc(ch.L, 0.006, 0.014, 2000), 2000), c1 = L.cents(zc(ch.L, 0.2, 0.35, 2000), 2000);
+  L.ok(c0 <= -40 && Math.abs(c1) <= 5, `khl: Chip – ${c0.toFixed(0)} ct at 6–14 ms (≤ −40), ${c1.toFixed(1)} ct after`);
+  const tr = K(2500, 0.6, { silbe: 'triller' }, { dur: 1.5 }), e = L.env(tr.L.subarray(0.3 * SR), SR, 0.004).map((v) => L.db(v)), mx = Math.max(...e), mn = Math.min(...e); let cr = 0; for (let i = 1; i < e.length; i++) if (e[i - 1] < (mx + mn) / 2 && e[i] >= (mx + mn) / 2) cr++;
+  L.ok(cr / 1.2 >= 13 && cr / 1.2 <= 25 && mx - mn >= 15, `khl: Triller – ${(cr / 1.2).toFixed(1)} syllables a second at y 0.6 (13 + 12 y), swing ${(mx - mn).toFixed(1)} dB`);
+  const rf = K(1500, 0.6, { silbe: 'ruf' }, { dur: 3 }), s0 = L.cents(zc(rf.L, 0.008, 0.03, 1500), 1500);
+  L.ok(s0 >= 150, `khl: Ruf – slurred down from ${s0.toFixed(0)} ct`);
+  const sub = (rr, rich) => { const x = K(440, 1, { rauheit: rr }, { rich, dur: 1 }); const sp = L.spectrum(x.L, SR, 0.5, 16384); return Math.max(L.harm(sp, 220, 1), L.harm(sp, 660, 1)) - L.harm(sp, 440, 1); };
+  const a = sub(0, false), b = sub(1, false), c = sub(1, true);
+  L.ok(a <= -45 && b >= -30 && c >= -30, `khl: Rauheit at the top – subharmonics ${a.toFixed(1)} dB at 0, ${b.toFixed(1)} at 1, level 3 (the pair on one air sac) ${c.toFixed(1)}`);
+  const end = K(440, 0.6, {}, { dur: 1.5, msgs: [[0.5, { off: 0.5 }]] }); L.ok(!end.alive && end.done < 0.6, `khl: after {off} the labia stop within milliseconds – done at ${end.done.toFixed(3)} s`);
+  const t0 = process.hrtime.bigint(); K(440, 0.6, {}, { dur: 4 }); const ns1 = Number(process.hrtime.bigint() - t0) / (4 * SR); const t1 = process.hrtime.bigint(); K(440, 0.6, {}, { dur: 4, rich: true }); const ns3 = Number(process.hrtime.bigint() - t1) / (4 * SR);
+  console.log(`INFO khl: ${ns1.toFixed(1)} ns/sample level 1, ${ns3.toFixed(1)} level 3 (the harness included)`);
 }
 process.exit(L.summary() ? 1 : 0);
