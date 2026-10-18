@@ -2388,28 +2388,31 @@ let SR = 48000;
 // Polyphony is limited by cost, not by count: one unit ≈ one Nebel voice at level 1. Cheap engines get more voices.
 // Level 1 keeps phones safe, level 2 plays more at once, level 3 gives every voice more oscillators, partials and
 // modes and fills a desktop core up to a budget measured on this device (see calibrate()).
-// hlm, rnk, elm, jrg, hrz, mdr, boe, amo (the new engines): klang bench cost.js – 24 voices against 24 Nebel voices offline, scaled
-// to this table by the native engines measured alongside (Hauch, Obertöne, Nebel L3, …), with a margin (elm with its arc
-// built, jrg while its modes ring, hrz the Glas, mdr its first 4 s with the crackle, boe held at y 0.6, amo across the field at y 0.6 – the highest of several runs + 15 %:
-// all with their full planned sound, the owner's rule is best sound first)
-const VCOST1 = { neb: 1, kor: 0.6, hau: 0.3, glo: 0.7, mem: 0.4, sai: 0.35, sch: 0.9, gng: 1.55, klb: 1.25, obt: 0.75, stm: 1.05, swm: 1.2, tie: 0.75, trp: 0.7, hlm: 0.65, rnk: 0.6, elm: 1.8, jrg: 1.2, hrz: 1.6, mdr: 0.8, boe: 0.75, amo: 0.7, gsp: 0.55, rhz: 0.3, shn: 0.8, khl: 0.6 };
-const VCOST3 = { neb: 1.9, kor: 1.1, hau: 0.75, glo: 1.4, mem: 0.75, sai: 1.2, sch: 2, gng: 2.8, klb: 2.2, obt: 1.85, stm: 2.4, swm: 2.7, tie: 1.5, trp: 1.5, hlm: 1.25, rnk: 1.25, elm: 4.2, jrg: 2.9, hrz: 3.3, mdr: 1.85, boe: 1.35, amo: 1.6, gsp: 0.85, rhz: 0.9, shn: 1.4, khl: 1.1 };   // measured: level-1 cost × (level 3 / level 1)
-// Sehne: the table holds the plucked string (flat or jawari: 0.68 / 1.20 measured at the most); under the E-Bow (its
-// pickup, limiter, band and push) a voice costs 1.13 / 1.93 – it is priced so while its hand is in the E-Bow's zone
-const SHN_EBOW_COST = [1.3, 2.2];
-// Halm's pipes cost what they compute: the flame's tube (four waves, the lag line, King's law, the fire beside it) about
-// three reeds – a voice is priced by the pipe chosen when it starts
-const HLM_COST = { rohrblatt: [0.65, 1.25], floete: [0.65, 1.25], flamme: [1.7, 3.2] };
+// The new engines (hlm … khl): the final calibration on a quiet machine (klang bench recal.js, 18.10.2026) – cost.js, 24
+// voices against 24 Nebel voices offline, scaled to this table by the native engines measured alongside (Hauch, Obertöne,
+// Tiefe, Stimme, Schwarm, Nebel L3: the median), two runs each and every body, bridge and syllable – the highest + 15 %
+// (elm with its arc built, jrg while its modes ring, mdr its first 4 s with the crackle, boe held at y 0.6, amo across
+// the field at y 0.6; all with their full planned sound, the owner's rule is best sound first)
+const VCOST1 = { neb: 1, kor: 0.6, hau: 0.3, glo: 0.7, mem: 0.4, sai: 0.35, sch: 0.9, gng: 1.55, klb: 1.25, obt: 0.75, stm: 1.05, swm: 1.2, tie: 0.75, trp: 0.7, hlm: 0.68, rnk: 0.63, elm: 1.09, jrg: 1.13, hrz: 1.71, mdr: 0.84, boe: 0.69, amo: 0.47, gsp: 0.34, rhz: 0.71, shn: 0.78, khl: 0.84 };
+const VCOST3 = { neb: 1.9, kor: 1.1, hau: 0.75, glo: 1.4, mem: 0.75, sai: 1.2, sch: 2, gng: 2.8, klb: 2.2, obt: 1.85, stm: 2.4, swm: 2.7, tie: 1.5, trp: 1.5, hlm: 1.15, rnk: 1.07, elm: 2.51, jrg: 2.67, hrz: 3.85, mdr: 1.67, boe: 1.11, amo: 1.34, gsp: 1.01, rhz: 1.38, shn: 1.49, khl: 1.53 };   // measured: level-1 cost × (level 3 / level 1)
+// Sehne: the table holds the plucked string (jawari the dearer bridge: 0.68 / 1.29 measured at the most); under the
+// E-Bow (its pickup, limiter, band and push) a voice costs 0.94 / 1.84 with the jawari (flat 0.75 / 1.49) – it is
+// priced so while its hand is in the E-Bow's zone
+const SHN_EBOW_COST = [1.08, 2.11];
+// Halm's pipes cost what they compute: the flute's frequency-locked bore above the reed (0.77 / 1.38 against 0.59 / 1.0
+// measured), the flame's tube (four waves, the lag line, King's law, the fire beside it) about 2.4 reeds – a voice is
+// priced by the pipe chosen when it starts
+const HLM_COST = { rohrblatt: [0.68, 1.15], floete: [0.88, 1.59], flamme: [1.63, 2.93] };
 for (const [i, T] of [[0, VCOST1], [1, VCOST3]]) Object.defineProperty(T, 'hlm', { get: () => (HLM_COST[P['hlm.rohr']] || HLM_COST.rohrblatt)[i], enumerable: true });
 // Zapfen costs what it plays: the processor, or – without AudioWorklet – its native stand-in (≈ 24 nodes; the same voice
-// at both levels, its level-3 figure is what the method measures there). klang bench cost.js, seven runs each with other
-// builders' renders on the machine: processor 0.60–0.77 / 0.92–1.31, native 0.55–1.12 / 0.84–2.11 – the highest + 15 %
-const ZPF_COST = { wk: [0.89, 1.51], nat: [1.3, 2.45] };
+// at both levels, its level-3 figure is what the method measures there). The final calibration, all five bodies:
+// processor 0.65–0.76 / 1.06–1.30 (Holz the dearest), native 1.05–1.20 / 1.51–1.74 – the highest + 15 %
+const ZPF_COST = { wk: [0.88, 1.49], nat: [1.38, 2] };
 for (const [i, T] of [[0, VCOST1], [1, VCOST3]]) Object.defineProperty(T, 'zpf', { get: () => (wkReady('zpf') ? ZPF_COST.wk : ZPF_COST.nat)[i], enumerable: true });
 // Glut: the worklet loop, or – without AudioWorklet (and while the module loads) – its own native loop, priced as such
-// (klang bench cost.js, the highest of four runs + 15 % – this machine scatters: the loop 0.50–0.71 / 1.02–1.45, level 3
-// two loops; the native loop's 26 nodes 0.67–1.87 / 1.22–2.12)
-const GLT_COST = { wk: [0.82, 1.67], nat: [2.15, 2.45] };
+// (the final calibration, the highest + 15 %: the loop 0.68–0.75 / 1.34–1.38, level 3 two loops; the native loop's 26
+// nodes 0.89–0.97 / 1.70–1.79)
+const GLT_COST = { wk: [0.86, 1.58], nat: [1.12, 2.06] };
 for (const [i, T] of [[0, VCOST1], [1, VCOST3]]) Object.defineProperty(T, 'glt', { get: () => (A.ctx && gltNat() ? GLT_COST.nat : GLT_COST.wk)[i], enumerable: true });
 const QP = {
   1: { budget: MOBILE ? 14 : 22, maxv: 32, grainMax: MOBILE ? 80 : 128, overlap: MOBILE ? 16 : 24, os: MOBILE ? '2x' : '4x', rich: false, korDens: 1, cost: VCOST1 },
@@ -9305,7 +9308,8 @@ const wkSeed = () => ((Math.random() * 2147483647) | 0) || 1;
 // sends sum into the web, the web returns on its own mixer channel „Gespinst“ (Halo = its level). Built at the first
 // Gespinst note once the module is there; counted in the budget while it rings (it idles itself after Ruhe); rebuilt
 // when the level (8 or 12 strings) changes; retuned (a 90-ms glide) with the field's scale; {clear} at Stille/Schlafen.
-const GSP_PEAK = 1.5, GSP_COST = [3.1, 6];
+// (the web's cost: 24 webs against 24 Nebel voices, the voices' method – 1.82–2.15 / 2.51–2.70 measured, the highest + 15 %)
+const GSP_PEAK = 1.5, GSP_COST = [2.47, 3.11];
 const gspInUse = () => [P['v.eng'], P['v.layer'], ...[0, 1, 2, 3].map((i) => P['l' + i + '.on'] && P['l' + i + '.eng']), RG.on && GK.p && GK.p.rgS].includes('gsp');
 // the strings: the first N degrees of the field's scale from its base octave (Saiten „Zwei Oktaven“: every other one,
 // over two octaves); a free field has no scale – the root's harmonics then
@@ -9365,8 +9369,9 @@ function gspTick() { const W = A.gsp; if (W && W.active && Math.abs(gspKop() - W
 // degrees: there each strike runs its own small net (a pentatonic around its note).
 const RHZ = { q: [], vs: new Set(), h: 0, sp: null, step: false };
 // level: the standard phrase as loud as Nebel/Glocke/Membran (klang/tests/bench.js); at most 12 pings a voice at once
-// (level 3: 20); the budget counts each voice by its pings (base + per ping, measured: klang/tests/cost.js)
-const RHZ_PEAK = 0.375, RHZ_CAP = [12, 20], RHZ_MAXF = 40, RHZ_MAXT = 2.5, RHZ_COST = { base: 0.07, ping: [0.045, 0.11] };
+// (level 3: 20); the budget counts each voice by its pings ringing at once, base + per ping (klang/tests/cost.js with
+// rhz-pings.js, a window the voices live through: one ping 0.62 / 1.20, each more 0.29 / 0.38 – + 15 %; VCOST = one ping)
+const RHZ_PEAK = 0.375, RHZ_CAP = [12, 20], RHZ_MAXF = 40, RHZ_MAXT = 2.5, RHZ_COST = { base: [0.38, 0.94], ping: [0.33, 0.44] };
 // the bodies: partials (ratio, level, decay factor), the decay against Glimmen, the knock's band (× the ping's note),
 // its Q, length and level; lv: the body's level (the longer rings sit lower: one phrase loudness for all three)
 const RHZ_KN = {
@@ -9467,7 +9472,7 @@ function rhzPing(v, at, j, g, strike) {
   const ca = amp * kn.cl * (0.35 + 0.65 * R.vel) * (0.6 + 0.6 * R.y);
   R.cg.gain.setValueAtTime(0, at); R.cg.gain.linearRampToValueAtTime(ca, at + 0.0004); R.cg.gain.setTargetAtTime(0, at + 0.0004, kn.ck);
   R.pings.push(x); R.lastEnd = Math.max(R.lastEnd, x.end, at + 0.02);
-  v.cost = Math.max(v.cost, RHZ_COST.base + RHZ_COST.ping[R.rich ? 1 : 0] * R.pings.length);   // (the budget hears a big cascade)
+  v.cost = Math.max(v.cost, RHZ_COST.base[R.rich ? 1 : 0] + RHZ_COST.ping[R.rich ? 1 : 0] * R.pings.length);   // (the budget hears a big cascade)
   if (sp.vis) visPush({ t: at, kind: 'hit', x: noteX(j), y: 0.15 + 0.7 * R.y, s: 0.3 + 0.5 * amp });
 }
 // the clock: every charge due before the horizon arrives (a node still resting swallows it); a voice whose charges

@@ -3,17 +3,19 @@
 // interleaved rounds and each keeps its fastest round. Native engines are measured alongside: their VCOST entries
 // (from an earlier calibration on another machine) give the scale between this machine's raw ratio and the table.
 //   node cost.js [rounds]      env: ENGS=hlm1,hlm3,… NV=24 DUR=4 PARAMS='{"jrg.holz":1}' Y=0.6 (the voices' height)     prints one JSON line
+// (NW=24: 'web' renders 24 of Gespinst's webs at once, the voices' method – one web alone carries the worklet's fixed
+// share of the render and its noise, both multiplied by NV)
 // (a struck engine needs DUR within its voices' life – Jahresring: PARAMS holz 1 and a summer, DUR 2)
 // A candidate written 'gltN1' is Glut's own native loop: its context gets no module.
 process.env.SEED_BLOBS = '';
 const { chromium, openInst } = require('../../v2/lib');
-const ROUNDS = +process.argv[2] || 6, DUR = +process.env.DUR || 4, NV = +process.env.NV || 24;
+const ROUNDS = +process.argv[2] || 6, DUR = +process.env.DUR || 4, NV = +process.env.NV || 24, NW = +process.env.NW || 1;
 const ENGS = (process.env.ENGS || 'null1,hlm1,hlm3,rnk1,rnk3,hau1,hau3,obt1,obt3,neb3').split(',');
 const XP = JSON.parse(process.env.PARAMS || '{}');
 (async () => {
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
   const { page } = await openInst(browser, process.env.KD_URL || 'http://127.0.0.1:8790/kd-inst/index.html', false);
-  const r = await page.evaluate(async ([ROUNDS, DUR, NV, ENGS, XP, YH]) => {
+  const r = await page.evaluate(async ([ROUNDS, DUR, NV, ENGS, XP, YH, NW]) => {
     const M = window.__M;
     async function run(eng, q, n) {
       M.P['dev.q'] = q;
@@ -22,8 +24,9 @@ const XP = JSON.parse(process.env.PARAMS || '{}');
       if (!nat) await M.ensureDSP(ctx);
       ctx.suspend(19 / 375).then(() => {
         for (let k = 0; k < n; k++) {
-          if (eng === 'web') {   // Gespinst's web alone, kept ringing by a steady noise (one node: its cost × NV below)
-            if (k) continue;
+          if (eng === 'web') {   // Gespinst's web alone, kept ringing by a steady noise (NW nodes: their cost × NV / NW below)
+            if (k >= NW) continue;
+            M.A.gsp = null;   // (a fresh web each: gspWeb() builds one when none is held)
             const W = M.gspWeb(), nb = ctx.createBuffer(1, 48000, 48000), d = nb.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * 0.05;
             const src = ctx.createBufferSource(); src.buffer = nb; src.loop = true; src.connect(W.inp); src.start();
             continue;
@@ -41,8 +44,8 @@ const XP = JSON.parse(process.env.PARAMS || '{}');
       if (ENGS.includes('web3')) keep('base3', await run('neb', '3', 0));   // (the web is one node: level 3's own graph must not be counted ×NV)
       for (const eq of ENGS) keep(eq, await run(eq.slice(0, -1), eq.slice(-1), NV));
     }
-    const unit = best.neb1 - best.base, out = { nebMs: +unit.toFixed(1), rounds: ROUNDS, nv: NV };
-    for (const eq of ENGS) out[eq] = +((best[eq] - (eq === 'web3' ? best.base3 : best.base)) / unit * (eq.startsWith('web') ? NV : 1)).toFixed(3);
+    const unit = best.neb1 - best.base, out = { nebMs: +unit.toFixed(1), rounds: ROUNDS, nv: NV, nw: NW };
+    for (const eq of ENGS) out[eq] = +((best[eq] - (eq === 'web3' ? best.base3 : best.base)) / unit * (eq.startsWith('web') ? NV / NW : 1)).toFixed(3);
     const tab = (k, q) => (q === '3' ? M.VCOST3 : M.VCOST1)[k];
     // the scale: table / measured, over the held native engines measured here
     const refs = ENGS.filter((eq) => !/^(hlm|rnk|null|web|elm|jrg|hrz|glt|boe|amo|shn|zpf|mdr|gsp|khl|rhz)/.test(eq)), sc = refs.map((eq) => tab(eq.slice(0, -1), eq.slice(-1)) / out[eq]);
@@ -50,7 +53,7 @@ const XP = JSON.parse(process.env.PARAMS || '{}');
     out.scale = +(med.length % 2 ? med[mid] : (med[mid - 1] + med[mid]) / 2).toFixed(3); out.scaleEach = Object.fromEntries(refs.map((eq, i) => [eq, +sc[i].toFixed(2)]));
     M.P['dev.q'] = '1';
     return out;
-  }, [ROUNDS, DUR, NV, ENGS, XP, +(process.env.Y || 0.6)]);
+  }, [ROUNDS, DUR, NV, ENGS, XP, +(process.env.Y || 0.6), NW]);
   console.log(JSON.stringify(r));
   await browser.close();
 })();
