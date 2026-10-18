@@ -1,6 +1,6 @@
 // The new engines in a live (real-time) session, the way a player meets them (klang SPEC §7.2 t-eng-live): chosen by
 // their chip, a finger held and moved on the field (setF/setY), let go, a MIDI keyboard, a Puls lane, the second
-// layer, level 3, a shake under Gestik, the mixer's source text – and without AudioWorklet: the stand-ins, the note in
+// layer, level 3, a shake under Gestik, the mixer's source text (Halm, Ranke, Harz, Böe) – and without AudioWorklet: the stand-ins, the note in
 // the engine section, the toast. Also: the iframe hint.   node t-eng-live.js   (slot kn-inst, built by run-all.sh)
 const { chromium } = require('/opt/node22/lib/node_modules/playwright');
 const L = require('./dsplib');
@@ -26,8 +26,8 @@ const settle = (page, ms) => page.evaluate((ms) => window.__sleep(ms), ms);
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
   const { page, errors, ctx } = await open(browser, { mobile: false });   // desktop: the keyboard is asked for at start
   await page.click('#btnStart'); await settle(page, 700);
-  const ring = (key) => (key === 'hlm' ? 500 : key === 'rnk' ? 1500 : 2600);   // (Harz's glass rings on after the bow lifts)
-  for (const key of ['hlm', 'rnk', 'hrz']) {
+  const ring = (key) => (key === 'hlm' ? 500 : key === 'rnk' ? 1500 : key === 'boe' ? 6500 : key === 'amo' ? 900 : 2600);   // (Harz's glass rings on after the bow lifts; Böe's strings with their Nachklang, 3 s)
+  for (const key of ['hlm', 'rnk', 'hrz', 'boe', 'amo']) {
     // the chip in the Klang panel (the library UI comes later)
     await page.evaluate(() => window.__M.openPanel('klang'));
     // (stage 1b: the chips became the row + library – chosen by its tile)
@@ -58,7 +58,7 @@ const settle = (page, ms) => page.evaluate((ms) => window.__sleep(ms), ms);
       for (let i = 0; i < 30; i++) { await window.__sleep(50); const b = M.getBudget()[0], l = M.voiceLoad(); vb3 = b; maxV = Math.max(maxV, M.A.voices.size); maxL = Math.max(maxL, l); if (l > b + 1e-9) over++; }   // (level 3's budget, as it stands at each moment)
       const lanes = [...M.A.voices].filter((v) => v.eng === key).map((v) => v.as + (v.wk ? '*' : ''));
       M.seqStop(); M.setParam('dev.q', '1'); M.setParam('l0.on', false); M.setParam('l1.on', false); M.setParam('v.layer', 'off'); M.setParam('v.eng', key);
-      await window.__sleep(key === 'hlm' ? 600 : key === 'rnk' ? 1500 : 3500);
+      await window.__sleep(key === 'hlm' ? 600 : key === 'rnk' ? 1500 : key === 'boe' ? 4500 : key === 'amo' ? 1200 : 3500);
       return { maxV, maxL: +maxL.toFixed(2), vb: vb3, over, lanes, left: M.A.voices.size, broken: [...M.A.workletBroken], mx: M.mxSrcText('l0') };
     }, key);
     L.ok(busy.lanes.length && busy.lanes.every((s) => s === key + '*') && !busy.over && busy.left === 0 && !busy.broken.length, `${key}: Puls lanes at level 3 play it (${busy.lanes.length} voices sounding, max load ${busy.maxL} ≤ ${busy.vb}), all end, nothing broken (${JSON.stringify({ over: busy.over, left: busy.left, broken: busy.broken, lanes: busy.lanes.join() })})`);
@@ -72,6 +72,19 @@ const settle = (page, ms) => page.evaluate((ms) => window.__sleep(ms), ms);
         return { a: 20 * Math.log10(a), b: 20 * Math.log10(b), left: A.voices.size };
       });
       L.ok(sh.b > sh.a + 1 && sh.left === 0, `rnk: a shake strikes the held ring (${sh.a.toFixed(1)} → ${sh.b.toFixed(1)} dBFS)`);
+    }
+    // Amöbe: a shake's swing reaches the held voice as a burst ({zuck}) – the form breaks (the waveform a period apart
+    // differs more right after it), the level holds (normalised), the voice ends after the lift
+    if (key === 'amo') {
+      const sh = await page.evaluate(async () => {
+        const M = window.__M, A = M.A, v = M.playNote('amo', A.ctx.currentTime + 0.01, 110, 0.3, 0.7, {});
+        let got = 0; const pm = v.wk.port.postMessage.bind(v.wk.port); v.wk.port.postMessage = (m) => { if (m && m.zuck) got++; pm(m); };
+        const grab = () => { const b = new Float32Array(A.analyser.fftSize); A.analyser.getFloatTimeDomainData(b); let s = 0; for (const x of b) s += x * x; return { rms: Math.sqrt(s / b.length) }; };
+        await window.__sleep(1200); const a = grab(); for (let i = 0; i < 3; i++) { M.wkShake({ v: 1 }); await window.__sleep(40); } const b = grab();
+        v.release(); await window.__sleep(900);
+        return { got, a: 20 * Math.log10(a.rms), b: 20 * Math.log10(b.rms), left: [...A.voices].filter((x) => x.eng === 'amo').length };
+      });
+      L.ok(sh.got === 3 && Math.abs(sh.b - sh.a) < 6 && sh.left === 0, `amo: three swings of a shake reach the held voice as bursts (${sh.got}), the level holds (${sh.a.toFixed(1)} → ${sh.b.toFixed(1)} dBFS), it ends after the lift`);
     }
   }
   // knobs follow live; MACRO; mixer text
@@ -166,6 +179,27 @@ const settle = (page, ms) => page.evaluate((ms) => window.__sleep(ms), ms);
     });
     L.ok(ras.kept === 'mdr' && ras.as === 'mdr' && ras.wk && /Moder/.test(ras.chips), `mdr: a Rassel sound – kept by the check, its chip (${ras.chips}), a swing strikes a Moder voice on its processor (${JSON.stringify(ras)})`);
   }
+  // Böe: a knob turned under a sounding voice reaches its processor; MACRO, mixer source, MIDI group, the section's note
+  const kb = await page.evaluate(async () => {
+    const M = window.__M, A = M.A; M.setParam('v.eng', 'boe'); M.openPanel('klang'); await window.__sleep(100);
+    const v = M.playNote('boe', A.ctx.currentTime + 0.01, 220, 0.5, 0.7, {}); await window.__sleep(300);
+    let got = null; const pm = v.wk.port.postMessage.bind(v.wk.port); v.wk.port.postMessage = (m) => { if (m && m.set && !got) got = m.set; pm(m); };
+    M.setParam('boe.fang', 0.8); M.setParam('boe.nachklang', 1.5); const sec = M.engSecs.boe, txt = sec ? sec.textContent : '';
+    v.release(); M.setParam('boe.fang', 0.3); M.setParam('boe.nachklang', 3); M.closePanel(); await window.__sleep(200);
+    return { got, macro: [M.macroId(0), M.macroId(1)], mx: M.mxSrcText('fin'), group: M.GROUP.boe, note: /Windstärke/.test(txt) && /Nachklang/.test(txt), cost: [M.VCOST1.boe, M.VCOST3.boe] };
+  });
+  L.ok(kb.got && kb.got.fang === 0.8 && kb.macro.join() === 'boe.wind,boe.fang' && kb.mx === 'Böe' && kb.group === 'Böe' && kb.note && kb.cost[0] > 0, `Böe: Fang reaches the sounding processor (${JSON.stringify(kb.got)}), MACRO A/B ${kb.macro}, mixer „${kb.mx}“, group „${kb.group}“, the section tells how it plays, VCOST ${kb.cost}`);
+  // Amöbe: Verteilung and Punkte turned while a note sounds reach its processor; MACRO, mixer text, the section's chips
+  const ka = await page.evaluate(async () => {
+    const M = window.__M, A = M.A; M.setParam('v.eng', 'amo'); M.openPanel('klang'); await window.__sleep(100);
+    const chips = [...document.querySelectorAll('[data-pid="amo.verteilung"] .chip, #p-amo-verteilung .chip')].map((c) => c.textContent);
+    const v = M.playNote('amo', A.ctx.currentTime + 0.01, 82.4, 0.5, 0.7, {}); await window.__sleep(300);
+    const got = []; const pm = v.wk.port.postMessage.bind(v.wk.port); v.wk.port.postMessage = (m) => { if (m && m.set) got.push(m.set); pm(m); };
+    M.setParam('amo.verteilung', 'cauchy'); M.setParam('amo.punkte', 20); await window.__sleep(100); v.release(); M.setParam('amo.verteilung', 'linear'); M.setParam('amo.punkte', 12); M.closePanel(); await window.__sleep(1200);
+    return { got, chips, macro: [M.macroId(0), M.macroId(1)], mx: M.mxSrcText('fin'), group: M.GROUP.amo, note: M.ENG_NOTE.amo, left: [...A.voices].filter((x) => x.eng === 'amo').length };
+  });
+  L.ok(ka.got.length >= 2 && ka.got[0].verteilung === 'cauchy' && ka.got[1].punkte === 20 && ka.left === 0, 'Amöbe: Verteilung and Punkte reach the sounding processor ({set}: ' + JSON.stringify(ka.got.slice(0, 2).map((g) => [g.verteilung, g.punkte])) + ')');
+  L.ok(ka.macro.join() === 'amo.zeit,amo.punkte' && ka.mx === 'Amöbe' && ka.group === 'Amöbe' && /lebt unten/i.test(ka.note.replace('Sie lebt unten', 'lebt unten')), `Amöbe: MACRO A/B ${ka.macro}, mixer source „${ka.mx}“, MIDI group ${ka.group}, the note says it lives low`);
   const errs = errors.filter((e) => !/myzel-dsp\.js|Failed to load resource/.test(e));
   L.ok(!errs.length, 'no console errors ' + errs.join(' | '));
   await ctx.close();
@@ -176,11 +210,11 @@ const settle = (page, ms) => page.evaluate((ms) => window.__sleep(ms), ms);
     await page.evaluate(() => window.__M.openPanel('klang'));
     await page.click('#p-v-eng .kq-name'); await page.click('.kq-fams .chip[data-fam="luft"]'); await page.click('.kq-tile[data-k="hlm"] .kq-pick'); await page.click('.kq-done'); await settle(page, 300);
     const r = await page.evaluate(async () => {
-      const M = window.__M, A = M.A, v = M.playNote('hlm', A.ctx.currentTime + 0.01, 220, 0.6, 0.7, {}), w = M.playNote('rnk', A.ctx.currentTime + 0.01, 330, 0.6, 0.7, {}), x = M.playNote('hrz', A.ctx.currentTime + 0.01, 440, 0.6, 0.7, {}), z = M.playNote('mdr', A.ctx.currentTime + 0.01, 550, 0.6, 0.7, {});
-      await window.__sleep(200); v.release(); w.release(); if (x.release) x.release();
-      return { state: M.DSP.state, as: [v.as, w.as, x.as, z.as], eng: [v.eng, w.eng, x.eng, z.eng], note: !M.engSecs.hlm.wkNote.hidden && M.engSecs.hlm.wkNote.textContent, toast: document.querySelector('#toastMsg').textContent, mx: M.mxSrcText('fin'), patch: M.P['v.eng'] };
+      const M = window.__M, A = M.A, W = [['hlm', 'hau', 220], ['rnk', 'neb', 330], ['hrz', 'sch', 440], ['mdr', 'glo', 550], ['boe', 'obt', 294], ['amo', 'tie', 110]], vs = W.map(([k, , f]) => M.playNote(k, A.ctx.currentTime + 0.01, f, 0.6, 0.7, {}));
+      await window.__sleep(200); for (const v of vs) if (v && v.release && !v.released) v.release();
+      return { state: M.DSP.state, as: vs.map((v) => v.as), eng: vs.map((v) => v.eng), want: W.map((w) => w[1]), keys: W.map((w) => w[0]), note: !M.engSecs.hlm.wkNote.hidden && M.engSecs.hlm.wkNote.textContent, toast: document.querySelector('#toastMsg').textContent, mx: M.mxSrcText('fin'), patch: M.P['v.eng'] };
     });
-    L.ok(r.state === 'kein' && r.as.join() === 'hau,neb,sch,glo' && r.eng.join() === 'hlm,rnk,hrz,mdr' && r.patch === 'hlm', `no AudioWorklet: Halm plays as Hauch, Ranke as Nebel, Harz as Schale, Moder as Glocke, the patch keeps „hlm“ (${JSON.stringify(r.as)})`);
+    L.ok(r.state === 'kein' && r.as.join() === r.want.join() && r.eng.join() === r.keys.join() && r.patch === 'hlm', `no AudioWorklet: the stand-ins play – ${r.keys.map((k, i) => k + ' → ' + r.as[i]).join(', ')} – the patch keeps „hlm“`);
     L.ok(/Halm vereinfacht als Hauch/.test(r.note || '') && /kein AudioWorklet/.test(r.toast) && r.mx === 'Halm (als Hauch)', `…and says so: section „${r.note}“, toast „${r.toast}“, mixer „${r.mx}“`);
     L.ok(!errors.length, 'no console errors without AudioWorklet ' + errors.join(' | '));
     await ctx.close();
@@ -188,7 +222,7 @@ const settle = (page, ms) => page.evaluate((ms) => window.__sleep(ms), ms);
   // -- in a frame (claude.ai): one hint to open it in its own tab
   {
     const ctx = await browser.newContext({ viewport: { width: 800, height: 900 } }); const page = await ctx.newPage();
-    await page.goto(process.env.KN_FRAME || URL_.replace(/kn-inst\/index\.html$/, 'kn-frame.html'));   // a parent page from the same server (a secure context: AudioWorklet exists)
+    await page.goto(process.env.KN_FRAME || URL_.replace(/(kn[^/]*)-inst\/index\.html$/, '$1-frame.html'));   // a parent page from the same server (a secure context: AudioWorklet exists)
     const fr = await (await page.waitForSelector('#f')).contentFrame(); await fr.waitForFunction(() => !!window.__M);
     await fr.click('#btnStart'); await fr.waitForTimeout(300);
     await fr.evaluate(() => window.__M.setParam('v.eng', 'rnk')); await fr.waitForTimeout(300);

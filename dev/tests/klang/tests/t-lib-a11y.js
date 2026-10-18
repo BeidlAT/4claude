@@ -36,9 +36,9 @@ const L = require('./dsplib'), K = require('./klh');
   await key('ArrowDown'); let f1 = await foc();
   await key('ArrowDown'); let f2 = await foc(); await key('End'); const f3 = await foc(); await key('Home'); const f4 = await foc();
   await key('s'); const f5 = await foc();
-  L.ok(f1 === 'tile:neb' && f2 === 'tile:kor' && f3 === 'tile:swm' && f4 === 'tile:neb' && f5 === 'tile:swm', 'search ↓ Nebel, ↓ Körner, End Schwarm, Home Nebel, „s“ Schwarm');
+  L.ok(f1 === 'tile:neb' && f2 === 'tile:kor' && f3 === 'tile:amo' && f4 === 'tile:neb' && f5 === 'tile:swm', 'search ↓ Nebel, ↓ Körner, End Amöbe, Home Nebel, „s“ Schwarm');
   r = await M(() => [...document.querySelectorAll('.kq-pick')].map((p) => p.tabIndex).join());
-  L.ok(r === '-1,-1,0', 'roving tabindex follows the focus (' + r + ')');
+  L.ok(r === '-1,-1,0,-1', 'roving tabindex follows the focus (' + r + ')');
   // Space chooses and probes; stays open, focus stays
   await key('Space');
   r = await M(() => ({ eng: window.__M.P['v.eng'], pr: [...window.__M.A.voices].filter((v) => v.alive && v.probe && !v.probeEnd).map((v) => v.eng), live: document.querySelector('.kq-live').textContent }));

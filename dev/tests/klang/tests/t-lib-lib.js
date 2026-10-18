@@ -44,11 +44,11 @@ const L = require('./dsplib'), K = require('./klh');
   // families and search
   await page.click('.kq-fams .chip[data-fam="luft"]'); await page.waitForTimeout(80);
   s = await st();
-  L.ok(s.fam === 'luft' && s.tiles.join() === 'hau,obt,stm,hlm,elm', 'Luft: ' + s.tiles);
+  L.ok(s.fam === 'luft' && s.tiles.join() === 'hau,obt,stm,hlm,boe,elm', 'Luft: ' + s.tiles);
   await page.click('.kq-fams .chip[data-fam="alle"]'); await page.waitForTimeout(80);
   s = await st();
   r = await M(() => [...document.querySelectorAll('.kq-fh')].map((h) => h.firstChild.textContent));
-  L.ok(s.tiles.length === 20 && r.join() === 'Luft,Dunst,Holz,Erz,Erde', 'Alle: 20 tiles under five sticky heads');
+  L.ok(s.tiles.length === 22 && r.join() === 'Luft,Dunst,Holz,Erz,Erde', 'Alle: 22 tiles under five sticky heads');
   const search = async (q) => { await page.fill('#kqSearch', q); await page.waitForTimeout(60); return (await st()).tiles; };
   r = { oe: await search('koerner'), uml: await search('Körner'), bow: await search('flute'), fam: await search('erz'), art: await search('schlägt'), bass: await search('808'), none: await search('qqq') };
   s = await st();

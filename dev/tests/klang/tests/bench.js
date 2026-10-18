@@ -1,14 +1,14 @@
 // Offline render bench for the new engines (klang SPEC §7.1 + the acceptance rows of §3 and the check files): the
-// worklet engines Halm, Ranke, Harz, Moder and the native ones Elmsfeuer, Jahresring.
+// worklet engines Halm, Ranke, Harz, Moder, Böe and the native ones Elmsfeuer, Jahresring.
 // Renders the real app (slot kd-inst, built by run-all.sh) in OfflineAudioContexts with the engine module loaded, pulls
-// the samples into Node and measures there.   node bench.js [hlm|rnk|hrz|mdr|elm|jrg ...]   → PASS/FAIL lines, out/<key>/report.json,
+// the samples into Node and measures there.   node bench.js [hlm|rnk|hrz|mdr|boe|elm|jrg ...]   → PASS/FAIL lines, out/<key>/report.json,
 // demo WAVs and spectrogram PNGs in out/<key>/. Exit code = number of failures.
 process.env.SEED_BLOBS = '';   // the module must load unchanged (the seed shim is for workers)
 const { chromium, openInst } = require('../../v2/lib');
 const L = require('./dsplib');
 const fs = require('fs'), path = require('path');
 const URL_ = process.env.KD_URL || 'http://127.0.0.1:8790/kd-inst/index.html';
-const KEYS = process.argv.slice(2).length ? process.argv.slice(2) : ['hlm', 'rnk', 'hrz', 'mdr', 'elm', 'jrg'];
+const KEYS = process.argv.slice(2).length ? process.argv.slice(2) : ['hlm', 'rnk', 'hrz', 'mdr', 'boe', 'amo', 'elm', 'jrg'];
 const OUT = path.join(__dirname, 'out');
 const SR = 48000;
 const DRY = { 'rev.mix': 0, 'dly.mix': 0, 'mst.comp': 0, 'cho.mix': 0, 'pha.mix': 0, 'mov.vib': 0, 'mov.drift': 0, 'mov.pan': 0 };
@@ -69,8 +69,10 @@ async function one(page, o) {
     const M = window.__M, ctx = await window.__ctx(o.dur, Object.assign({ 'v.eng': o.eng }, o.params || {}), o.q || '1');
     if (o.age != null) M.A.jrgAge = o.age;
     if (o.cents) { const c = ctx.createConstantSource(); c.offset.value = o.cents; c.connect(M.A.pitchMod); c.start(); }
+    if (o.rseed) { let x = o.rseed; Math.random = () => { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; return ((x >>> 0) % 1e9) / 1e9; }; }   // (the same voice seeds for two renders: level 1 against level 3)
     let v = null;
-    ctx.suspend(19 / 375).then(() => { v = o.burst ? M.hit(o.eng, ctx.currentTime, o.f, o.y, o.vel || 0.75, { gate: o.gate }) : M.playNote(o.eng, ctx.currentTime, o.f, o.y, o.vel || 0.75, {}); window.__v = v; ctx.resume(); });
+    const vel = o.vel != null ? o.vel : 0.75;
+    ctx.suspend(19 / 375).then(() => { v = o.burst ? M.hit(o.eng, ctx.currentTime, o.f, o.y, vel, { gate: o.gate, pan: o.pan || 0 }) : M.playNote(o.eng, ctx.currentTime, o.f, o.y, vel, { pan: o.pan || 0 }); window.__v = v; ctx.resume(); });
     const q = (t) => Math.round(t * 375) / 375, kick = (t) => ctx.suspend(q(t) + 1 / 375).then(() => ctx.resume());   // deliver port messages (offline: only at a suspend)
     for (const [t, what, arg] of o.moves || []) { ctx.suspend(q(t)).then(() => { if (v && v.alive) { if (what === 'setY') v.setY && v.setY(arg); else if (what === 'setF') v.setF(arg, 0.1); else if (what === 'hammer') M.wkShake({ v: arg }); } ctx.resume(); }); if (what === 'hammer') kick(t); }
     if (o.rel != null) { ctx.suspend(q(o.rel)).then(() => { if (v && v.release) v.release(); ctx.resume(); }); kick(o.rel); }
@@ -100,6 +102,10 @@ async function one(page, o) {
     hrz: { f0: [110, 220, 440, 880, 1568], ys: [0.45], tol: 5, costMax: 1.2 },   // (the default body, Glas; every body below)
     // Moder: struck – pitch on the fundamental's line at the strike (wet: the swell's moisture), the voice lives its Nachklang
     mdr: { struck: true, f0: [110, 220, 440, 880, 1760], ys: [0.7], tol: 2, costMax: 0.65, ring: 5 * 1.3 + 0.15, cost: { DUR: '4' } },
+    boe: { f0: [110, 220, 440, 880, 1760], ys: [0.2, 0.5, 0.8], tol: 5, costMax: 0.8, pp: { 'boe.rauschen': 0 } },   // (pitch: the strings, without the wind's band among them)
+    // Amöbe: the lock at Zeit 0 (SPEC: ≤ 3 ct, 50–500 Hz; a short window's estimate scatters with the harmonics' wander
+    // higher up – the long-window lock is amoLock below); every note has its own seed polygon: centroids averaged
+    amo: { f0: [55, 110, 220, 440], ys: [0.2, 0.5], tol: 3, costMax: 0.45, pp: { 'amo.zeit': 0 }, cAvg: 6 },
     // native: pitch on the hum with Netz 0 (the note itself) low on the field; the bar's fundamental at the strike
     elm: { native: true, f0: [55, 110, 220, 440, 880, 1760], ys: [0.1], tol: 5, costMax: 0.8, pp: { 'elm.netz': 0 } },
     jrg: { native: true, struck: true, f0: [110, 220, 440, 880, 1760], ys: [0, 0.3], tol: 2, costMax: 0.75, pp: { 'jrg.jahreszeit': 'sommer' },
@@ -130,7 +136,7 @@ async function one(page, o) {
     ok(loud.burst.rms >= loud.L1.rms - 12, `Puls bursts audible: phrase of 0.2-s hits ${loud.burst.rms} dB vs held phrase ${loud.L1.rms}`);
     // -- timbre vs height: one note at 220 Hz, centroid 0.3–0.4 s
     const yc = {};
-    for (const y of [0, 0.5, 1]) { const x = await one(page, { eng: key, f: 220, y, dur: 1, params: DRY }); yc[y] = Math.round(L.centroid(mono(x), SR, tc.struck ? 0.055 : 0.3, 4096)); }   // (a struck bar: its strike)
+    for (const y of [0, 0.5, 1]) { let c = 0; for (let i = 0; i < (tc.cAvg || 1); i++) { const x = await one(page, { eng: key, f: 220, y, dur: 1, params: DRY }); c += L.centroid(mono(x), SR, tc.struck ? 0.055 : 0.3, 4096); } yc[y] = Math.round(c / (tc.cAvg || 1)); }   // (a struck bar: its strike; a seeded engine: the mean of cAvg notes)
     rep.yCentroidHz = yc;
     if (key === 'mdr') console.log(`INFO mdr: centroid at the strike y 0/0.5/1: ${yc[0]}/${yc[0.5]}/${yc[1]} Hz – Höhe is the moisture, not the strike's colour (its rows: mdrWet below)`);
     else if (tc.struck) ok(yc[0] < yc[1], `centroid: the bar's end brighter than its centre (the nodal line between may stand out): y 0 ${yc[0]} Hz, 0.5 ${yc[0.5]} Hz, 1 ${yc[1]} Hz`);
@@ -170,6 +176,16 @@ async function one(page, o) {
       rep.life = fin.life;
       const tl = L.db(L.rms(m, rg * SR, (rg + 0.5) * SR));
       ok(tl < -100 && !fin.alive && fin.life < rg + 0.5, `rings out and is freed (life ${fin.life} s, ${tl.toFixed(1)} dB at ${rg}–${rg + 0.5} s${fin.alive ? ', still alive' : ''})`); }
+    else if (key === 'boe') {   // the strings ring on with Nachklang (3 s): SPEC – after release ≥ 1 s; the voice ends by itself
+      const x = await one(page, { eng: key, f: 440, y: 0.36, dur: 8, params: DRY, rel: 1.0 }); const m = mono(x);
+      const held = L.rms(m, 0.6 * SR, 0.95 * SR), e = L.env(m, SR, 0.005); let t60 = Infinity; for (let i = 200; i < e.length; i++) if (e[i] < held * 0.001) { t60 = (i - 200) * 5; break; }
+      rep.release60ms = t60;
+      ok(t60 >= 1000 && t60 < 6000, `boeRing: after release the strings ring ${t60} ms to −60 dB (SPEC ≥ 1 s at Nachklang 3)`);
+      const tail = L.env(m, SR, 0.1).slice(14); let worstUp = 0; for (let i = 1; i < tail.length; i++) if (tail[i] > 1e-5) worstUp = Math.max(worstUp, L.db(tail[i]) - L.db(tail[i - 1]));
+      rep.tailRise = +worstUp.toFixed(2);
+      ok(worstUp <= 1.5, `release tail monotone once the wind is gone (largest rise between 100-ms windows ${worstUp.toFixed(2)} dB ≤ 1.5: the ringing strings beat a little)`);
+      const fin = await page.evaluate(async () => { const v = window.__lastV; await new Promise((r) => setTimeout(r, 300)); return { alive: v.alive }; });
+      ok(L.rms(m, 7.5 * SR, 8 * SR) < 1e-5 && !fin.alive, 'silent after the ring, the voice freed (the processor ends it)'); }
     else { const x = await one(page, { eng: key, f: 440, y: 0.6, dur: 3, params: DRY, rel: 1.0 }); const m = mono(x);
       const held = L.rms(m, 0.6 * SR, 0.95 * SR), e = L.env(m, SR, 0.005); let t60 = Infinity; for (let i = 200; i < e.length; i++) if (e[i] < held * 0.001) { t60 = (i - 200) * 5; break; }
       rep.release60ms = t60;
@@ -184,7 +200,7 @@ async function one(page, o) {
     { const held = await one(page, { eng: key, f: 440, y: 0.6, dur: 1.2, params: DRY }); const hRms = L.rms(mono(held), 0.6 * SR, 1.1 * SR);
       const bl = [];
       for (const g of [0.06, 0.112, 0.22, 0.5]) {
-        const d = tc.struck ? (key === 'mdr' ? 3.2 : 4) : 1.6, x = await one(page, { eng: key, f: 440, y: 0.6, dur: d, params: DRY, burst: true, gate: g }); const m = mono(x);   // (a struck voice rings out its own time)
+        const d = tc.struck ? (key === 'mdr' ? 3.2 : 4) : key === 'boe' ? 4 : 1.6, x = await one(page, { eng: key, f: 440, y: 0.6, dur: d, params: DRY, burst: true, gate: g }); const m = mono(x);   // (a struck voice rings out its own time; Böe's gust-pluck rings past the gate, ≤ 1.5 s)
         const e = L.env(m.subarray(0.05 * SR, (0.05 + g) * SR), SR, 0.02); const mx = Math.max(...e);
         bl.push([g, +(L.db(mx) - L.db(hRms)).toFixed(1), +L.db(L.rms(m, Math.floor((d - 0.3) * SR), Math.floor(d * SR))).toFixed(1)]);
       }
@@ -495,6 +511,160 @@ async function one(page, o) {
           return window.__ret(await ctx.startRendering()); }));
         L.wav(path.join(dir, 'bodies-L3.wav'), x.L, x.R, SR); rep.pngBodies = L.spectro(path.join(dir, 'bodies-L3.wav')); }
     }
+    if (key === 'boe') {
+      const P_ = (x) => Object.assign({}, DRY, x || {});
+      const yOf = (ratio, wind = 0.4) => (ratio - 0.7) / 7 / (0.5 + wind);   // the height whose shedding sits at `ratio` harmonics (no walk, no gust)
+      const band = (m, f, k, t, N = 2048) => { const sp = L.spectrum(m, SR, t, N); let e = 0; for (let i = Math.round((k - 0.25) * f / sp.hz); i <= Math.round((k + 0.25) * f / sp.hz); i++) e += sp.p[i]; return 10 * Math.log10(e + 1e-30); };
+      const rise = (m, f, k, t0, win, tb = t0) => { const b = [], a = []; for (let t = tb - 0.15; t + 2048 / SR <= tb; t += 0.01) b.push(Math.pow(10, band(m, f, k, t) / 10)); for (let t = t0; t + 2048 / SR <= t0 + win; t += 0.01) a.push(band(m, f, k, t)); return Math.max(...a) - 10 * Math.log10(b.reduce((x, y) => x + y, 0) / b.length); };
+      // boeCapture (SPEC): the wind moved from string k−1 to 0.3 harmonics past string k (Böen 0, Rauschen 0: the strings
+      // alone) – when the shedding crosses k·f (Höhe follows in 40 ms: 59 ms after the move) string k catches and its
+      // energy rises ≥ 10 dB within 150 ms (stepping only onto k·f the hysteresis of the strings above 4 – 1.6 bands =
+      // 0.94 harmonics at string 5 – may hold the old string: that is the hysteresis, not a missed capture)
+      const cp = {};
+      for (const k of [2, 3, 4, 5, 6]) { const m = mono(await one(page, { eng: key, f: 220, y: yOf(k - 1), vel: 0.05, dur: 2.2, params: P_({ 'boe.boeen': 0, 'boe.rauschen': 0 }), moves: [[1.5, 'setY', yOf(k + 0.3)]] })); cp[k] = +rise(m, 220, k, 1.5 + 0.04 * Math.log(1.3 / 0.3), 0.15, 1.5).toFixed(1); }
+      rep.capture = cp;
+      ok(Object.values(cp).every((d) => d >= 10), 'boeCapture: the wind moves onto string k – its energy rises within 150 ms (dB, k 2–6): ' + JSON.stringify(cp) + ' (≥ 10)');
+      // the finger drives the capture on a sounding voice, default knobs (wind band, walk, gusts): string 2 → 6
+      { const m = mono(await one(page, { eng: key, f: 220, y: yOf(2), dur: 2.4, params: DRY, rseed: 4242, moves: [[1.5, 'setY', yOf(6)]] })); rep.setY = +rise(m, 220, 6, 1.5, 0.3).toFixed(1);
+        ok(rep.setY >= 10, `Höhe drives the capture on a held voice (default knobs): string 2 → 6, string 6 rises ${rep.setY} dB within 0.3 s (≥ 10)`); }
+      // boeFloor (SPEC): between strings 1 and 2 (Böen 0, Nachklang 0.5: what the touch caught has rung out) the strings'
+      // excitation drops ≥ 15 dB, the output stays ≥ −45 dB under the caught string's peak – the fundamental's floor
+      { const P0 = P_({ 'boe.boeen': 0, 'boe.nachklang': 0.5 }), S0 = Object.assign({}, P0, { 'boe.rauschen': 0 });
+        const c = mono(await one(page, { eng: key, f: 220, y: yOf(2), vel: 0.05, dur: 4, params: S0 })), d = mono(await one(page, { eng: key, f: 220, y: yOf(1.45), vel: 0.05, dur: 4, params: S0 })), dw = mono(await one(page, { eng: key, f: 220, y: yOf(1.45), vel: 0.05, dur: 4, params: P0 }));
+        const pk = L.peak(c.subarray(2 * SR)), drop = L.db(L.rms(d, 2.5 * SR, 4 * SR)) - L.db(L.rms(c, 2.5 * SR, 4 * SR)), fl = L.db(L.rms(d, 2.5 * SR, 4 * SR)) - L.db(pk), flw = L.db(L.rms(dw, 2.5 * SR, 4 * SR)) - L.db(pk);
+        const k1 = band(d, 220, 1, 3, 16384) - Math.max(...[2, 3, 4].map((k) => band(d, 220, k, 3, 16384)));
+        rep.floor = { drop: +drop.toFixed(1), strings: +fl.toFixed(1), withWind: +flw.toFixed(1), fundamentalOverOthers: +k1.toFixed(1) };
+        ok(drop <= -15 && fl >= -45 && k1 >= 6, `boeFloor: between strings 1 and 2 the strings drop ${drop.toFixed(1)} dB (≤ −15) and stay at ${fl.toFixed(1)} dB under the caught peak (≥ −45; with the wind ${flw.toFixed(1)}), carried by the fundamental (${k1.toFixed(1)} dB over strings 2–4)`); }
+      // one string at a time (check): its neighbours ≥ 17 dB under it (their excitation is −20 dB; noise-driven bands wander ±3 dB)
+      { const m = mono(await one(page, { eng: key, f: 220, y: yOf(4), vel: 0.05, dur: 4.5, params: P_({ 'boe.boeen': 0, 'boe.rauschen': 0, 'boe.nachklang': 0.5 }) }));
+        const lv = (k) => { let s = 0, n = 0; for (let t = 2; t < 4.1; t += 0.1) { s += Math.pow(10, band(m, 220, k, t, 8192) / 10); n++; } return 10 * Math.log10(s / n); };
+        const l4 = lv(4), nb = [+(lv(3) - l4).toFixed(1), +(lv(5) - l4).toFixed(1)]; rep.leak = nb;
+        ok(nb.every((d) => d <= -17), `one string at a time: string 4 caught, its neighbours 3 and 5 at ${nb.join(' / ')} dB (≤ −17)`); }
+      // boeLevel (SPEC): the level across the field within ±4 dB – held 5 s at each string's centre (default knobs,
+      // 220/440 Hz, two seeds each); the dead zones between them for information
+      { const lv = {}, dz = {};
+        const meas = async (y) => { let s = 0, n = 0; for (const f of [220, 440]) for (const rs of [101, 202]) { const m = mono(await one(page, { eng: key, f, y, dur: 5, params: DRY, rseed: rs + Math.round(y * 1000) })); s += Math.pow(L.rms(m, 1 * SR, 5 * SR), 2); n++; } return 10 * Math.log10(s / n); };
+        for (const k of [1, 2, 3, 4, 5, 6, 7]) lv[k] = await meas(yOf(k));
+        for (const r of [1.45, 2.45]) dz[r] = await meas(yOf(r));
+        const vals = Object.values(lv), mid = (Math.max(...vals) + Math.min(...vals)) / 2;
+        rep.levelY = { strings: Object.fromEntries(Object.entries(lv).map(([k, v]) => [k, +(v - mid).toFixed(1)])), deadZones: Object.fromEntries(Object.entries(dz).map(([k, v]) => [k, +(v - mid).toFixed(1)])) };
+        ok(Math.max(...vals) - Math.min(...vals) <= 8, 'boeLevel: level across the field within ±4 dB (held at the strings 1–7, dB around the middle): ' + JSON.stringify(rep.levelY.strings) + '; between strings 1|2 and 2|3: ' + JSON.stringify(rep.levelY.deadZones)); }
+      // Nachklang is a timbre, not a volume (check): a held note at Nachklang 1 vs 6 within ±3 dB
+      { const lv = []; for (const nk of [1, 6]) { let s = 0; for (const rs of [11, 22, 33]) { const m = mono(await one(page, { eng: key, f: 330, y: 0.45, dur: 5, params: P_({ 'boe.nachklang': nk }), rseed: rs })); s += Math.pow(L.rms(m, 1 * SR, 5 * SR), 2); } lv.push(10 * Math.log10(s / 3)); }
+        rep.nachklangLevel = +(lv[1] - lv[0]).toFixed(1); ok(Math.abs(lv[1] - lv[0]) <= 3, `Nachklang 6 vs 1: held level ${rep.nachklangLevel} dB (±3: the excitation is normalised to the ring)`); }
+      // level 3 vs level 1 per channel (the panner folds a stereo voice's sides off centre): the same seeds, short (0.45 s)
+      // and held notes, pan 0 / ±0.4, six notes each; and the sides decorrelated
+      { const chan = (x) => { let s = 0; for (let i = 0.1 * SR; i < x.L.length; i++) s += x.L[i] * x.L[i] + x.R[i] * x.R[i]; return s; }, l13 = {};
+        for (const [nm, dur, rel] of [['short', 2.5, 0.45], ['held', 4, null]]) for (const pan of [0, 0.4, -0.4]) { let a = 0, c = 0; for (let i = 0; i < 6; i++) { const o = { eng: key, f: [147, 196, 262, 330, 440, 587][i], y: 0.15 + 0.13 * i, dur, params: DRY, rel, pan, rseed: 900 + i }; a += chan(await one(page, o)); c += chan(await one(page, Object.assign({}, o, { q: '3' }))); } l13[nm + '@' + pan] = +(10 * Math.log10(c / a)).toFixed(2); }
+        rep.l3vsl1 = l13;
+        ok(Object.values(l13).every((d) => Math.abs(d) <= 1.5), 'level 3 within ±1.5 dB of level 1 per channel (same seeds): ' + JSON.stringify(l13));
+        const x = await one(page, { eng: key, f: 220, y: 0.45, dur: 4, params: DRY, q: '3' }); let ab = 0, aa = 0, bb = 0; for (let i = 0.5 * SR; i < 4 * SR; i++) { ab += x.L[i] * x.R[i]; aa += x.L[i] ** 2; bb += x.R[i] ** 2; }
+        rep.l3corr = +(ab / Math.sqrt(aa * bb)).toFixed(2); ok(Math.abs(rep.l3corr) < 0.3, `level 3: the sides decorrelated (L/R correlation ${rep.l3corr}, |·| < 0.3)`); }
+      // dice: no silent corner – y 0 (the wind under the fundamental) audible against y 0.5
+      { const a = mono(await one(page, { eng: key, f: 220, y: 0, dur: 2, params: DRY })), b = mono(await one(page, { eng: key, f: 220, y: 0.5, dur: 2, params: DRY }));
+        rep.y0 = +(L.db(L.rms(a, 0.5 * SR, 2 * SR)) - L.db(L.rms(b, 0.5 * SR, 2 * SR))).toFixed(1); ok(rep.y0 >= -35, `y 0 audible: ${rep.y0} dB vs y 0.5 (≥ −35)`); }
+      // demos: a sweep up through the strings and a rest (the chord of memory), and 24 s held at default (walk, gusts)
+      { const moves = []; for (let i = 0; i <= 30; i++) moves.push([0.5 + i * 0.2, 'setY', 0.05 + 0.8 * i / 30]); moves.push([7, 'setY', 0.3]);
+        const x = await one(page, { eng: key, f: 147, y: 0.05, dur: 16, params: Object.assign({}, DRY, { 'rev.mix': 0.3 }), moves, rel: 12, q: '3' });
+        L.wav(path.join(dir, 'ghost-chord.wav'), x.L, x.R, SR); rep.pngGhost = L.spectro(path.join(dir, 'ghost-chord.wav'));
+        const h = await one(page, { eng: key, f: 196, y: 0.45, dur: 24, params: Object.assign({}, DRY, { 'rev.mix': 0.3 }), rel: 20, q: '3' });
+        L.wav(path.join(dir, 'held-24s.wav'), h.L, h.R, SR); rep.pngHeld = L.spectro(path.join(dir, 'held-24s.wav')); }
+    }
+    if (key === 'amo') {
+      const P_ = (x) => Object.assign({}, DRY, x || {});
+      // the waveform's change from one period to the next (rms, relative; T in whole samples) and its largest local step
+      const perFlux = (m, T, t0, t1) => { const out = [], pk = []; for (let s = Math.round(t0 * SR); s + 2 * T < t1 * SR; s += T) { let dd = 0, ee = 0, mx = 0; for (let i = 0; i < T; i++) { const q = m[s + i + T] - m[s + i]; dd += q * q; ee += m[s + i] * m[s + i]; mx = Math.max(mx, Math.abs(q)); } out.push(Math.sqrt(dd / ee)); pk.push(mx / Math.sqrt(ee / T)); } return { flux: L.mean(out), pk, all: out }; };
+      // distance of one period from a reference period (relative rms)
+      const dist = (m, T, ref, t) => { const a = Math.round(t * SR), r = Math.round(ref * SR); let dd = 0, ee = 0; for (let i = 0; i < T; i++) { const q = m[a + i] - m[r + i]; dd += q * q; ee += m[r + i] * m[r + i]; } return Math.sqrt(dd / ee); };
+      // amoLock: the period holds (Gendy3) – the autocorrelation's peak near the period over 3.5 s (a short window's
+      // harmonic estimate scatters with the harmonics' wander, the fundamental's phase too at y 0.8 low down: ±5 ct with
+      // no drift; see lock-amo.js)
+      const { lockAC } = require('./lock-amo'), lockC = lockAC;
+      const lk = [];
+      for (const f of [50, 82.4, 110, 220, 330, 440, 500]) for (const y of [0.2, 0.5, 0.8]) lk.push([f, y, +lockC(mono(await one(page, { eng: key, f, y, dur: 4.2, params: P_({ 'amo.zeit': 0 }) })), f, 0.5, 4.1).toFixed(2)]);
+      rep.lock = lk;
+      const lw = lk.reduce((a, b) => (Math.abs(b[2]) > Math.abs(a[2]) ? b : a));
+      ok(Math.abs(lw[2]) <= 3, `amoLock: the pitch holds at Zeit 0, 50–500 Hz, y 0.2/0.5/0.8 (the autocorrelation's peak over 3.5 s): worst ${lw[2]} ct at ${lw[0]} Hz, y ${lw[1]} (≤ 3)`);
+      { const zl = []; for (const f of [55, 110, 220]) zl.push(+lockC(mono(await one(page, { eng: key, f, y: 0.6, dur: 4.2, params: P_() })), f, 0.5, 4.1).toFixed(2));
+        rep.lockZeit = zl; ok(zl.every((c) => Math.abs(c) <= 3), `amoLock: with Zeit's wandering durations (0.15, y 0.6) the period still holds: ${zl.join(' / ')} ct at 55/110/220 Hz`); }
+      // amoSteady: the level over 2 s at y 0.3 (per-period normalisation)
+      { const st = []; for (const f of [55, 110, 220]) { const e = L.env(mono(await one(page, { eng: key, f, y: 0.3, dur: 2.6, params: P_() })), SR, 0.1).slice(4, 24).map(L.db); const mu = L.db(Math.sqrt(L.mean(e.map((d) => Math.pow(10, d / 10))))); st.push([f, +(Math.max(...e) - mu).toFixed(1), +(Math.min(...e) - mu).toFixed(1)]); }
+        rep.steady = st; ok(st.every((s) => s[1] <= 3 && s[2] >= -3), 'amoSteady: RMS over 2 s at y 0.3 within ±3 dB (100-ms windows, max/min vs mean): ' + st.map((s) => s[0] + ' Hz +' + s[1] + '/' + s[2]).join(', ')); }
+      // DC at the wildest corner (y 1, Zeit 1, Ausreißer, 55 Hz) – the seed is DC-free, the blocker takes the period's wander
+      { const x = await one(page, { eng: key, f: 55, y: 1, dur: 3, params: P_({ 'amo.zeit': 1, 'amo.verteilung': 'cauchy' }) }); const m = mono(x), dc = L.mean(m, 0.3 * SR), r = L.rms(m, 0.3 * SR);
+        rep.dcWild = [+dc.toFixed(5), +L.db(r).toFixed(1)]; ok(Math.abs(dc) < 0.01, `DC at y 1, Zeit 1, Ausreißer, 55 Hz: ${dc.toFixed(5)} (< 0.01; RMS ${L.db(r).toFixed(1)} dBFS)`); }
+      // amoHoehe: Höhe = unrest – the noise between the harmonics, the per-period change and the energy above 2 kHz rise
+      // (band energies, not a power centroid: lesson 5); three notes each
+      const hh = {};
+      for (const f of [55, 110, 220]) { hh[f] = [];
+        for (const y of [0, 0.5, 1]) { let on = 0, off = 0, hi = 0, tot = 0, fl = 0;
+          for (let i = 0; i < 3; i++) { const fq = f === 220 ? 200 : f === 110 ? 100 : 50, m = mono(await one(page, { eng: key, f: fq, y, dur: 2, params: P_() })), sp = L.spectrum(m, SR, 0.6, 32768);
+            for (let k = 1; k * sp.hz < 16000; k++) { const hz = k * sp.hz, d = Math.abs(hz - Math.round(hz / fq) * fq); if (d > fq / 4) off += sp.p[k]; else on += sp.p[k]; tot += sp.p[k]; if (hz > 2000) hi += sp.p[k]; }
+            fl += perFlux(m, Math.round(SR / fq), 0.5, 1.9).flux / 3; }
+          hh[f].push({ y, noise: +(10 * Math.log10(off / on)).toFixed(1), hi: +(10 * Math.log10(hi / tot)).toFixed(1), flux: +fl.toFixed(3) }); } }
+      rep.hoehe = hh;
+      ok(Object.values(hh).every((r) => r[1].noise - r[0].noise >= 8 && r[2].noise - r[1].noise >= 8), 'amoHoehe: the noise between the harmonics rises with Höhe (y 0/0.5/1, ≥ 8 dB a step): ' + Object.entries(hh).map(([f, r]) => f + ' Hz ' + r.map((x) => x.noise).join('/')).join(', '));
+      ok(Object.values(hh).every((r) => r[1].flux > 2 * r[0].flux && r[2].flux > 2 * r[1].flux), 'amoHoehe: the change from period to period rises with Höhe (calm → wandering → raging): ' + Object.entries(hh).map(([f, r]) => f + ' Hz ' + r.map((x) => x.flux).join('/')).join(', '));
+      ok(Object.values(hh).every((r) => r[2].hi > r[0].hi + 3), 'amoHoehe: more energy above 2 kHz at the top (share, dB): ' + Object.entries(hh).map(([f, r]) => f + ' Hz ' + r.map((x) => x.hi).join('/')).join(', '));
+      // amoAlias: above 1 kHz the folded products stay ≤ −30 dB (K_eff) – against a 4×-rate reference in Node (the same
+      // processor, the same seed; see alias-amo.js)
+      { const { aliasAt } = require('./alias-amo'); const al = [];
+        for (const rich of [false, true]) for (const f of [1013, 1511, 2011]) for (const y of [0.5, 1]) { const r = aliasAt(f, y, { rich, prm: { zeit: 0.15 } }); al.push([rich ? 'L3' : 'L1', f, y, +r.worst.toFixed(1), +r.total.toFixed(1)]); }
+        rep.alias = al;
+        ok(al.every((a) => a[3] <= -30 && a[4] <= -30), 'amoAlias: above 1 kHz the strongest folded line and the folded energy between the harmonics ≤ −30 dB: ' + al.map((a) => a[0] + ' ' + a[1] + '/' + a[2] + ' ' + a[3] + '/' + a[4]).join(', ')); }
+      // amoZucken: a Puls hit is a 35-ms wild run, every hit freshly seeded – two hits at the same (f, y) differ; the run
+      // shows as change between periods in its window against later
+      { const h = async () => mono(await one(page, { eng: key, f: 200, y: 0.6, dur: 0.6, params: P_(), burst: true, gate: 0.22 }));
+        const a = await h(), b = await h(); let ab = 0, aa = 0, bb = 0; for (let i = Math.round(0.06 * SR); i < 0.25 * SR; i++) { ab += a[i] * b[i]; aa += a[i] * a[i]; bb += b[i] * b[i]; }
+        const cor = ab / Math.sqrt(aa * bb), z1 = perFlux(a, 240, 0.055, 0.09).flux, z2 = perFlux(a, 240, 0.12, 0.25).flux;
+        rep.zucken = { corr: +cor.toFixed(2), fluxRun: +z1.toFixed(3), fluxAfter: +z2.toFixed(3) };
+        ok(Math.abs(cor) < 0.9, `amoZucken: two Puls hits at 200 Hz, y 0.6 differ (waveform correlation ${cor.toFixed(2)} < 0.9)`);
+        ok(z1 >= 2 * z2, `amoZucken: the 35-ms run – change per period ${z1.toFixed(3)} in it vs ${z2.toFixed(3)} after (≥ 2×)`); }
+      // amoHeal: a Höhe spike (Gestik's shake through Höhe) and a shake's swing (wkShake) break the form; Rückkehr heals
+      // it (the distance of a period from one before the burst: up, then back), without Rückkehr it stays broken
+      { const heal = async (moves, rueck) => { const m = mono(await one(page, { eng: key, f: 200, y: 0.3, dur: 3.4, params: P_({ 'amo.rueck': rueck }), moves })); return [dist(m, 240, 0.9, 0.95), Math.max(...[1.05, 1.1, 1.15, 1.2].map((t) => dist(m, 240, 0.9, t))), L.mean([2.6, 2.8, 3.0].map((t) => dist(m, 240, 0.9, t)))].map((v) => +v.toFixed(2)); };
+        const sp = await heal([[1.0, 'setY', 1], [1.12, 'setY', 0.3]], 0.3), sk = await heal([[1.0, 'hammer', 1]], 0.3), s0 = await heal([[1.0, 'setY', 1], [1.12, 'setY', 0.3]], 0);
+        rep.heal = { spike: sp, shake: sk, spikeNoReturn: s0 };
+        ok(sp[1] >= 3 * sp[0] && sp[2] <= 0.5 * sp[1], `amoHeal: a Höhe spike breaks the form and it heals (distance from before: ${sp.join(' → ')}; Rückkehr 0: ${s0.join(' → ')})`);
+        ok(s0[2] > 1.5 * sp[2], `amoHeal: without Rückkehr it stays changed (${s0[2]} vs ${sp[2]} after 1.6 s)`);
+        ok(sk[1] >= 2 * sk[0] && sk[2] <= 0.6 * sk[1], `amoHeal: a shake's swing (Gestik) is a burst that heals (${sk.join(' → ')})`); }
+      // amoDist: the distributions differ – Ausreißer: still, now and then a big jump (the change from one period to the
+      // next: 99th percentile vs median) where the uniform moves evenly; Sinus: no dice – still low on the field, moving above
+      { const pk = async (d, y) => { let r = 0; for (let i = 0; i < 3; i++) { const p = perFlux(mono(await one(page, { eng: key, f: 200, y, dur: 2.5, params: P_({ 'amo.verteilung': d }) })), 240, 0.5, 2.4); const s = p.all.sort((a, b) => a - b); r += s[Math.floor(0.99 * s.length)] / s[Math.floor(0.5 * s.length)] / 3; } return r; };
+        const pl = await pk('linear', 0.5), pc = await pk('cauchy', 0.5), pg = await pk('logist', 0.5);
+        const sn = async (y) => perFlux(mono(await one(page, { eng: key, f: 200, y, dur: 2.5, params: P_({ 'amo.verteilung': 'sinus' }) })), 240, 1.0, 2.4).flux;
+        const s0 = await sn(0), s6 = await sn(0.6);
+        rep.dist = { outliers: { linear: +pl.toFixed(2), logist: +pg.toFixed(2), cauchy: +pc.toFixed(2) }, sinus: [+s0.toFixed(4), +s6.toFixed(3)] };
+        ok(pc >= 3 * pl && pg >= 0.9 * pl, `amoDist: Ausreißer – the change per period, 99th percentile / median: linear ${pl.toFixed(2)}, logistisch ${pg.toFixed(2)}, Ausreißer ${pc.toFixed(2)} (≥ 3× linear: rare big jumps)`);
+        ok(s0 < 0.01 && s6 > 0.03, `amoDist: Sinus – still at y 0 (change per period ${s0.toFixed(4)}), moving at y 0.6 (${s6.toFixed(3)})`); }
+      // the envelope knobs: Einschwingen (att 1 s → t90 ≈ 0.9 s) and Ausklingen (rel 2 s: −20 dB ≈ 0.9 s after the lift)
+      { const ma = mono(await one(page, { eng: key, f: 110, y: 0.4, dur: 2.5, params: P_({ 'amo.att': 1 }) })), t9 = L.t90(ma, SR, 0.05, L.rms(ma, 1.6 * SR, 2.4 * SR));
+        const mr = mono(await one(page, { eng: key, f: 110, y: 0.4, dur: 3.5, params: P_({ 'amo.rel': 2 }), rel: 1.0 })), e = L.env(mr, SR, 0.02).map(L.db), a = Math.round(0.95 / 0.02); let t20 = null; for (let i = a; i < e.length; i++) if (e[i] < e[a] - 20) { t20 = (i - a) * 0.02; break; }
+        rep.knobs = { t90: +t9.toFixed(2), rel20: t20 };
+        ok(t9 >= 0.6 && t9 <= 1.2 && t20 != null && t20 >= 0.6 && t20 <= 1.4, `Einschwingen 1 s: t90 ${t9.toFixed(2)} s; Ausklingen 2 s: −20 dB after ${t20} s`); }
+      // level 3: two amoebas, decorrelated (L/R correlation of a held note), as loud as level 1 per channel at pan 0 and
+      // ±0.4, held notes (four seeds)
+      { let cr = 0; const lv = {};
+        for (const pan of [0, -0.4, 0.4]) { let p1 = 0, p3 = 0;
+          for (let i = 0; i < 4; i++) { const f = [55, 98, 147, 220][i], a = await one(page, { eng: key, f, y: 0.5, dur: 2, params: P_(), pan }), c = await one(page, { eng: key, f, y: 0.5, dur: 2, params: P_(), pan, q: '3' });
+            const pw = (x) => (Math.pow(L.rms(x.L, 0.4 * SR, 1.9 * SR), 2) + Math.pow(L.rms(x.R, 0.4 * SR, 1.9 * SR), 2)) / 2; p1 += pw(a); p3 += pw(c);
+            if (pan === 0) { let ab = 0, aa = 0, bb = 0; for (let k = 0.4 * SR; k < 1.9 * SR; k++) { ab += c.L[k] * c.R[k]; aa += c.L[k] ** 2; bb += c.R[k] ** 2; } cr += ab / Math.sqrt(aa * bb) / 4; } }
+          lv[pan] = +(10 * Math.log10(p3 / p1)).toFixed(2); }
+        rep.l3 = { held: lv, corrLR: +cr.toFixed(2) };
+        ok(Object.values(lv).every((d) => Math.abs(d) <= 1.5), 'level 3 as loud as level 1, held notes at pan 0/−0.4/0.4 (dB): ' + JSON.stringify(lv));
+        ok(Math.abs(cr) < 0.5, `level 3: the two amoebas are decorrelated (L/R correlation ${cr.toFixed(2)})`); }
+      // above the declared range: the level holds (normalised), the polygon keeps fewer points (K_eff) – INFO
+      { const hi = []; for (const f of [55, 220, 880, 1760, 3520]) { const m = mono(await one(page, { eng: key, f, y: 0.5, dur: 1.5, params: P_() })); hi.push([f, +L.db(L.rms(m, 0.5 * SR, 1.4 * SR)).toFixed(1), Math.round(L.centroid(m, SR, 0.8, 8192))]); }
+        rep.high = hi;
+        console.log('INFO amo: above 500 Hz (level dBFS, centroid Hz): ' + hi.map((h) => h[0] + ' Hz ' + h[1] + '/' + h[2]).join(', '));
+        ok(hi.every((h) => Math.abs(h[1] - hi[1][1]) <= 3), 'the level holds from 55 Hz to 3.5 kHz within ±3 dB of 220 Hz: ' + hi.map((h) => h[0] + ' ' + h[1]).join(', ')); }
+      // demos: a bass line low on the field, the y sweep at 55 Hz, a healing shake, the four distributions
+      { const x = await one(page, { eng: key, f: 55, y: 0, dur: 8, params: P_({ 'rev.mix': 0.2 }), moves: Array.from({ length: 31 }, (_, i) => [0.5 + i * 0.2, 'setY', i <= 15 ? i / 15 : (30 - i) / 15]), rel: 7 });
+        L.wav(path.join(dir, 'sweep-55.wav'), x.L, x.R, SR); rep.pngSweep55 = L.spectro(path.join(dir, 'sweep-55.wav')); }
+      { const x = await one(page, { eng: key, f: 82.4, y: 0.35, dur: 6, params: P_({ 'rev.mix': 0.2 }), moves: [[1.5, 'hammer', 1], [1.62, 'hammer', 1], [3.5, 'setY', 1], [3.65, 'setY', 0.35]], rel: 5.4 });
+        L.wav(path.join(dir, 'heal.wav'), x.L, x.R, SR); rep.pngHeal = L.spectro(path.join(dir, 'heal.wav')); }
+      for (const d of ['linear', 'cauchy', 'logist', 'sinus']) { const x = await one(page, { eng: key, f: 73.4, y: 0.6, dur: 4, params: P_({ 'amo.verteilung': d, 'rev.mix': 0.2 }), rel: 3.4, q: '3' }); L.wav(path.join(dir, 'dist-' + d + '.wav'), x.L, x.R, SR); }
+    }
     if (key === 'elm') {
       // stages on their own (the voice's parts muted after it is built): hum, corona, arc
       const part = async (y, keep, extra = {}) => pull(await page.evaluate(async (o) => {
@@ -592,16 +762,16 @@ async function one(page, o) {
     { const x = pull(await page.evaluate(async (key) => window.__ret(await window.__phr(await window.__ctx(8, { 'v.eng': key, 'rev.mix': 0.2 }, '1'), 8, key, { burst: true, step: 0.25, gate: 0.11 })), key));
       L.wav(path.join(dir, 'puls.wav'), x.L, x.R, SR); rep.pngPuls = L.spectro(path.join(dir, 'puls.wav')); }
     fs.writeFileSync(path.join(dir, 'report.json'), JSON.stringify(rep, null, 1));
-    console.log('spectrograms: ' + [rep.pngDemo, rep.pngGesture, rep.pngPuls, rep.pngHeld].filter(Boolean).join(' '));
+    console.log('spectrograms: ' + [rep.pngDemo, rep.pngGesture, rep.pngPuls, rep.pngHeld, rep.pngGhost].filter(Boolean).join(' '));
   }
   // -- fallback: no module in this context → the stand-in plays, the key stays
   { const r = await page.evaluate(async () => {
       const M = window.__M; const ctx = await window.__off(48000, 1, { 'v.eng': 'neb', 'rev.mix': 0 });   // nothing loaded
-      const a = M.playNote('hlm', 0.05, 220, 0.6, 0.7, {}), b = M.playNote('rnk', 0.05, 330, 0.6, 0.7, {}), c = M.playNote('hrz', 0.05, 440, 0.6, 0.7, {}), d = M.playNote('mdr', 0.05, 550, 0.6, 0.7, {});
+      const W = [['hlm', 'hau', 220], ['rnk', 'neb', 330], ['hrz', 'sch', 440], ['mdr', 'glo', 550], ['boe', 'obt', 294], ['amo', 'tie', 110]], vs = W.map(([k, , f]) => M.playNote(k, 0.05, f, 0.6, 0.7, {}));
       const st = window.__stats(await ctx.startRendering(), 0.1);
-      return { a: a && [a.eng, a.as], b: b && [b.eng, b.as], c: c && [c.eng, c.as], d: d && [d.eng, d.as], st, plays: [M.wkPlays('hlm'), M.wkPlays('rnk'), M.wkPlays('hrz'), M.wkPlays('mdr')], dsp: !!ctx.__dsp };
+      return { got: vs.map((v) => v && [v.eng, v.as]), st, plays: W.map(([k]) => M.wkPlays(k)), dsp: !!ctx.__dsp, want: W.map(([k, s]) => [k, s]) };
     });
-    const pass = L.ok(r.a[0] === 'hlm' && r.a[1] === 'hau' && r.b[1] === 'neb' && r.c[0] === 'hrz' && r.c[1] === 'sch' && r.d[0] === 'mdr' && r.d[1] === 'glo' && r.st.rms > -50 && !r.dsp, 'fallback without the module: Halm plays as Hauch, Ranke as Nebel, Harz as Schale, Moder as Glocke, the key stays (' + JSON.stringify(r) + ')');
+    const pass = L.ok(r.want.every(([k, s], i) => r.got[i] && r.got[i][0] === k && r.got[i][1] === s) && r.st.rms > -50 && !r.dsp, 'fallback without the module: Halm plays as Hauch, Ranke as Nebel, Harz as Schale, Moder as Glocke, Böe as Obertöne, Amöbe as Tiefe, the key stays (' + JSON.stringify(r.got) + ')');
     if (!pass) fails++; }
   const errs = errors.filter((e) => !/Failed to load resource|fonts\.g|myzel-dsp\.js/.test(e));
   if (!L.ok(!errs.length, 'no console errors ' + errs.join(' | '))) fails++;
