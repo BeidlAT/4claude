@@ -50,9 +50,11 @@ const OLD_ENGS = ['neb', 'kor', 'hau', 'obt', 'stm', 'swm', 'tie', 'glo', 'mem',
   // -- the presets and an old saved patch load unchanged in the new build
   {
     const { page } = await openInst(browser, NEW);
-    const r = await page.evaluate(() => { const M = window.__M, out = []; for (const p of M.PRESETS) { M.loadPreset(p); out.push([p.key, M.P['v.eng'] === (p.v['v.eng'] || 'neb'), M.dspWanted()]); } return out; });
-    L.ok(r.every((x) => x[1] && !x[2]), `all ${r.length} presets load their engines and ask for no worklet`);
     const { page: po } = await openInst(browser, OLD);
+    const oldKeys = await po.evaluate(() => window.__M.PRESETS.map((p) => p.key));   // (the presets of the app before stage 1; the klang presets play the new sources)
+    const r = await page.evaluate(() => { const M = window.__M, out = []; for (const p of M.PRESETS) { M.loadPreset(p); out.push([p.key, M.P['v.eng'] === (p.v['v.eng'] || 'neb'), M.dspWanted()]); } return out; });
+    const old = r.filter((x) => oldKeys.includes(x[0])), nw = r.filter((x) => !oldKeys.includes(x[0]));
+    L.ok(r.every((x) => x[1]) && old.length === oldKeys.length && old.every((x) => !x[2]), `all ${r.length} presets load their engines; the ${old.length} old ones ask for no worklet (of the ${nw.length} new ones ${nw.filter((x) => x[2]).length} do)`);
     const vals = await po.evaluate(() => { const M = window.__M; M.setParam('v.eng', 'gng'); M.setParam('v.layer', 'trp'); M.setParam('l2.eng', 'klb'); return M.patchValues(); });
     const back = await page.evaluate((vals) => { const M = window.__M; M.loadValues(vals, false); return [M.P['v.eng'], M.P['v.layer'], M.P['l2.eng'], M.P['hlm.atem'], M.P['rnk.feder'], M.dspWanted()]; }, vals);
     L.ok(back[0] === 'gng' && back[1] === 'trp' && back[2] === 'klb' && back[3] === 0.5 && back[4] === 0.5 && !back[5], 'an old saved patch loads: its engines, defaults for the new knobs ' + JSON.stringify(back));

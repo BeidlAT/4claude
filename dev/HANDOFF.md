@@ -1,4 +1,4 @@
-# Übergabe: Myzel – neue Klangquellen (Stand 18.10.2026, alle Klangquellen gebaut)
+# Übergabe: Myzel – neue Klangquellen (Stand 18.10.2026, alle Klangquellen gebaut, Kosten auf ruhiger Maschine gemessen)
 
 ## Für den Besitzer
 
@@ -10,6 +10,7 @@ Alle Klangquellen der Planung sind gebaut, getestet und auf dem Branch gepusht �
 - **Etappe 6:** Gespinst (ein Netz aus Saiten mit eigenem Mixer-Kanal).
 - **Reserven:** Kehlchen (Vogelkehle mit Chip, Triller, Ruf) und Rhizom (Lawinen durch die Tonleiter).
 - **Presets:** Glaswiese, Kompostgarten, Atemrohr, Hochspannung, Gespinstgarten, Wurzelnetz, Vogelhain – jedes mit Gestik-Rezept.
+- **Kosten:** Alle neuen Quellen sind auf ruhiger Maschine nachgemessen und ehrlich eingetragen (jeder Körper, jeder Steg, jede Silbe). Das ändert nur, wie viele Stimmen gleichzeitig spielen dürfen, nicht den Klang. Rhizom war zu billig eingetragen, das Gespinst-Netz, Elmsfeuer und Gluts Ersatz ohne Rechenkern zu teuer.
 
 Offen sind nur noch Dinge fürs Ohr und ein paar Entscheidungen (unten bei „Owner's calls“), dazu die Veröffentlichung: Die App unter beidlat.github.io aktualisiert sich, sobald dieser Branch in den Standard-Branch übernommen ist (ein Pull Request, den du öffnest oder bei mir bestellst).
 
@@ -76,7 +77,7 @@ Then use these:
   - `motion-tests/run-all.sh` is long; a few timing checks flake under load, so re-run those alone.
 - Syntax check: `sh <scratch>/motion-tests/syn.sh myzel/index.html`.
 - `sh <scratch>/reg.sh` runs every regression suite after a stage (v2, mixfunc, mixui, MIDI, Gestik) into `<scratch>/reglogs/`, summary on stdout.
-- Cost (`klang/tests/cost.js`): this machine's render times scatter by ±20 % between runs. The script keeps each candidate's fastest of N interleaved rounds and scales by the **median** of the held native references; struck engines need `DUR` inside their voices' life (Jahresring: `DUR=2 PARAMS='{"jrg.holz":1,"jrg.jahreszeit":"sommer"}'`). Re-run before believing a single number.
+- Cost (`klang/tests/cost.js`): this machine's render times scatter by ±20 % between runs. The script keeps each candidate's fastest of N interleaved rounds and scales by the **median** of the held native references; struck engines need `DUR` inside their voices' life (Jahresring: `DUR=2 PARAMS='{"jrg.holz":1,"jrg.jahreszeit":"sommer"}'`; Rhizom: see the final calibration below). A singleton (Gespinst's web) is measured as 24 of them (`NW=24`). Re-run before believing a single number – busy builders skewed it by up to 1.7×; on a quiet machine two runs agree within ≈ 10 %. `recal.js` is the full calibration.
 
 ### Notes from stage 1
 - **OfflineAudioContext:** port messages to a processor only arrive at the next `suspend()`. The note-on therefore travels in `processorOptions.on`; tests add a suspend one block after a message (see `klang/tests/bench.js`).
@@ -87,12 +88,12 @@ Then use these:
   - All 26 glyphs are already in the sprite. `ENG_LATER` names the unbuilt keys; remove a key from it when it ships.
 - **Open from stage 1:**
   - Ranke's held flutter has to be judged by ear.
-  - Halm level 1 costs about 0.58 against the 0.55 target.
+  - Halm level 1 costs 0.59 (final calibration) against the 0.55 target.
   - Long-press drag scrolling on real phones is untested.
   - Worklet load time and thread move on a mid-range Android are not measured.
 
 ### Notes from stage 2 (Elmsfeuer, Jahresring)
-- **Built to SPEC §3.9/§3.12 with their full sound** (a first version had simplified both to reach SPEC's cost targets; the owner rejected that – best sound first). Cost as measured: Elmsfeuer ≈ 1.0–1.6 units at level 1 with its arc (≈ 2–4 at level 3), Jahresring ≈ 0.8–1.1 while its modes ring (≈ 2–2.7 at level 3); VCOST 1.8/4.2 and 1.2/2.9. The bench reports cost as INFO, it no longer fails on it.
+- **Built to SPEC §3.9/§3.12 with their full sound** (a first version had simplified both to reach SPEC's cost targets; the owner rejected that – best sound first). Cost as measured: Elmsfeuer ≈ 1.0–1.6 units at level 1 with its arc (≈ 2–4 at level 3), Jahresring ≈ 0.8–1.1 while its modes ring (≈ 2–2.7 at level 3); VCOST 1.8/4.2 and 1.2/2.9 – the final calibration on a quiet machine measured 0.93–0.95 / 2.0–2.2 and 0.82–0.98 / 2.05–2.32 (VCOST now 1.09/2.51 and 1.13/2.67). The bench reports cost as INFO, it no longer fails on it.
 - **Chromium cuts a BiquadFilter's output** after its own tail estimate once its input is silent – for a high-Q band-pass excited by a click that is long before the mode has rung out (Q 150 at 440 Hz: cut at 0.29 s, T60 0.75 s). Jahresring's contact source loops a −140 dB trickle until the voice ends (`jrgImp`). Any future native resonator needs the same.
 - **Where the build differs from SPEC's letter, and why** (each measured): the hum is one PeriodicWave with SPEC's lopsided tanh baked in (same sound as two oscillators and a shaper, without aliasing or offset); the corona's pre-gain is set so the threshold lies z = 4.1 → 1.4 standard deviations out (SPEC's 0.6 + 1.2·y gave almost no ticks; the acceptance asks 50–300/s) and its level `knistern·(0.2 + y)` is evened out with the density (else the ticks low are inaudible and the fizz high buries the arc); the arc's follower has a soft ceiling (bursts of ticks would pop) and its tanh is oversampled (2×, level 3 4×); a high-pass after the arc's tanh takes its offset; the shared loops (steps, two gates) are 16 s, not 2 s (the check's „repeats audibly“), the steps capped at 2.7 jumps/s; zap steps stay in key (KONZEPT „in der Tonart“ over SPEC's „depth ∝ vel“); a zap halves the hum so the arc leads. Jahresring: the mallet is its contact (a click, the same every hit) plus SPEC's 2–6 ms noise burst, so no hit comes out weak; a soft mallet weakens the upper modes and the box opens toward the bar's end (both for SPEC's „centre round, end bright“); the knock passes the box (SPEC's „knock noise“); the ice crack adds a 2-ms tick past the box so it is heard.
 - **Native cost is per node, ~6–10 ns each** (≈ 0.05–0.07 units), more than SPEC's 0.03/AudioParam.
@@ -101,7 +102,7 @@ Then use these:
 - **By ear, still open:** the arc's character, the crackle density at default height, the Jahresring box/tube/knock balance, leaves and ice levels.
 
 ### Notes from stage 3 (Harz)
-- **Built to SPEC §3.1 with every acceptance row and the check's fixes** (inventor-hrz, inventor-dax, performer-tum), all five bodies. Measured (bench, out/hrz): in tune within 1.9 ct without Schwebung at 110–1568 Hz; t90 0.2–0.6 s; mode 2 ≥ 34 dB under mode 1 at y 0.1/0.85; h2/h3 rise with Höhe; the ring after release within 0–15 % of the Dämpfung mapping; level 3 within ±0.4 dB of level 1 at any pan; cost ≈ 0.9–1.4 units at level 1, 1.7–2.9 at level 3 (VCOST 1.6/3.3, the highest run + 15 %).
+- **Built to SPEC §3.1 with every acceptance row and the check's fixes** (inventor-hrz, inventor-dax, performer-tum), all five bodies. Measured (bench, out/hrz): in tune within 1.9 ct without Schwebung at 110–1568 Hz; t90 0.2–0.6 s; mode 2 ≥ 34 dB under mode 1 at y 0.1/0.85; h2/h3 rise with Höhe; the ring after release within 0–15 % of the Dämpfung mapping; level 3 within ±0.4 dB of level 1 at any pan; cost ≈ 0.9–1.4 units at level 1, 1.7–2.9 at level 3 (VCOST 1.6/3.3, the highest run + 15 %; final calibration over all five bodies 1.11–1.49 / 1.97–3.35, VCOST 1.71/3.85).
 - **Where the build differs from SPEC's letter, and why** (each measured in Node, `klang/tests/*-hrz.js`):
   - the onset seed is one period of each band's own sine, not low-passed noise (a noise burst falls mostly outside the 32-Hz bands: −62 dB, t90 1–1.7 s);
   - a pass loses g per period **plus the band-pass's group delay** 1/(π·32 Hz) ≈ 10 ms (else the ring after release was 4–5× the Dämpfung mapping); D = SR/f exactly (the RBJ band has zero phase at its centre), no τ_bp subtracted;
@@ -121,7 +122,7 @@ Then use these:
   - **Overblowing**: a sounding fundamental never let go, whatever the heater did (grid over pos 0.1–0.15 × τ 0.05–0.4, and the "drive ∝ sin(2πn·pos)·sin(2πn·τ)" settings that should damp it – the saturated tube does not follow the linear rule). What works: heater at ⅛, lag ⅛ period, heat held at 0.07, and a **flare** – the ends let the old mode out for 30 ms, the new one starts from a period of itself (both ways; hysteresis 0.9/0.875; notes below 1 kHz). Measured h2 − h1 +25…+37 dB at 110–880 Hz, level within 1 dB of the fundamental after a lift (`1 + 2.7 + f/330`).
   - The fire: a rumble (LP 120–720 Hz) and a turbulent hiss beside the tube, the hiss also inside it (it whispers on the note); ≈ 14 dB under the song at y 0.1. Cracks: Poisson, 1.5–36/s with heat × Feuer, a 1.5-ms burst high-passed at 1.5 kHz, harder with heat (heard over the song: counted above 5 kHz, 3/s low, 21/s high). Let go: the flame dies, the tube rings out within ≈ 0.5 s at any pitch (`rr`), one last crack 40–160 ms later; native release 0.8 s.
   - Pitch: the fundamental's line is within 0.3 ct (the FLL); a harmonic comb reads −3…−13 ct there because the fire rings the tube's own, slightly stretched modes – measure the line.
-- **Cost** (measured with three builders running – to re-measure quietly): reed 0.47/1.5 (?), flute 0.43/0.78, flame 1.41/1.70; `HLM_COST` flute = reed, flame 1.7/3.2.
+- **Cost** (final calibration, quiet machine): reed 0.55–0.59 / 0.91–1.0, flute 0.76–0.77 / 1.33–1.38, flame 1.37–1.42 / 2.48–2.55; `HLM_COST` 0.68/1.15, 0.88/1.59, 1.63/2.93 (the first figures, taken with three builders running, had the flute under the reed).
 - **By ear, still open:** the flame's fire/crack balance and the surge's speed; the flute's air below y 0.12.
 
 ### Notes from stages 4–7 and the reserves (built on 17./18.10.2026; builders' reports condensed in SPEC's „As built“ lines)
@@ -131,13 +132,18 @@ Then use these:
 - **Kehlchen:** the labia in the note's phase with a frequency-locked loop (≤ 0.2 ct over 110 Hz–6 kHz at every pressure); the sound is the flow through the opening (a smooth max), so partials rise with pressure; the throat follows the note.
 - **Sehne / Zapfen / Glut:** see their builders' notes in SPEC §3.7/§3.8/§3.3. Zapfen and Glut are their own stand-ins without AudioWorklet (`fallback: 'native'`, `wkReady()`); their native voices are priced separately (getters on `VCOST1/3`).
 - **Tests:** `bench.js` covers every engine (`node bench.js <key>`; table `T` gained `line`/`lineAt` (pitch on the fundamental's line), `cYs`/`partials`/`cWin` (centroid variants), `burstDur`, `rel`); `t-dsp.js` every processor (147 rows); `t-eng-live.js` every worklet engine live (`KN_URL`); `listen-new.js OUTDIR` renders listening demos; `recal.js` the final cost calibration. The Gestik suites know the new Ladung targets (Gespinst-Kopplung, Rhizom-Reiz) and the Gespinst strip.
+### Notes from the final cost calibration (18.10.2026, session `ccr-183ec81a-rkp3np`)
+- `klang/tests/recal.js` (≈ 3 h, nothing else running) measures every new source at levels 1 and 3 – every body, bridge, pipe and syllable, the native stand-ins, Gespinst's web, Rhizom's split – two runs each, and prints the highest + 15 %. On a quiet machine the two runs of an entry agree within ≈ 10 %; the earlier entries, measured while builders ran, were up to 1.7× off either way. The figures and the new table are in SPEC §2.4 („As built (final calibration)“).
+- **Gespinst's web:** one web alone carries the worklet's fixed share of the render, and cost.js multiplies a single node's figure ×24 (3.7–5.0 units, scattering). `NW=24` renders 24 webs against 24 Nebel voices, the voices' own method: 1.8–2.2 / 2.5–2.7 (the builder's 1.7 after the Lagrange fix agrees). The bench's web row uses it.
+- **Rhizom:** its voices end with their cascade, so cost.js's 3-s window averaged them over a third of their life (0.29 – it matched the old entry 0.3 by chance). `rhz-pings.js` counts the pings ringing and how long the voices live; a voice with one ping costs 0.62 / 1.20 while it sounds, each ping beside it 0.29 / 0.38 (same NV for both settings, so level 3's graph share cancels). Entered: VCOST 0.71/1.38, `RHZ_COST` base 0.38/0.94 + 0.33/0.44 per ping ringing (`base` is per level now). A Rhizom shower now takes at least 2.4× the budget it did, so on a phone fewer strikes ring at once (stolen as before).
+- Dearer variants priced in: Sehne's jawari (plucked 0.68/1.29, E-Bow 0.94/1.84), Zapfen's Holz (worklet 0.76/1.30) and Panzer native (1.74 at level 3), Jahresring's winter (0.98 at level 1), Kehlchen's Triller (0.73/1.33), Harz's Stab at level 1 (1.49).
 - **Lessons** (also in `dev/tests/klang/BRIEF-engines.md`, the builders’ brief): offline port messages arrive only at a suspend (kick one after each); a float sample index gives NaN (round it); measure a self-oscillator's pitch on its fundamental's line, not with a comb; a level-3 voice that outputs stereo skips the voice's centre panner (−3 dB at level 1) – scale it.
 
 ### Owner's calls (open)
 - Moder: default Nachklang 5 s (KONZEPT says „4–6 s Brummen“) – kept.
 - Böe: default Nachklang 3 s (KONZEPT „vier bis sechs Sekunden“); library sentence 53 characters (SPEC's limit 52).
-- Sehne: the knob is „Nachklang“ (a time) where KONZEPT says „Dämpfung“; Saite's library sentence is now „Gezupfte Saiten – leicht, viele Stimmen zugleich“; the E-Bow costs ~1.1/1.9 units and is priced only while the hand is in its zone.
-- Zapfen and Glut: their native stand-ins cost more than SPEC's estimate (≈ 1.3 and 2.2 units) because they keep the full sound (the owner's rule); a lean version would sound clearly worse.
+- Sehne: the knob is „Nachklang“ (a time) where KONZEPT says „Dämpfung“; Saite's library sentence is now „Gezupfte Saiten – leicht, viele Stimmen zugleich“; the E-Bow costs up to 0.94/1.84 units (jawari; final calibration) and is priced only while the hand is in its zone.
+- Zapfen and Glut: their native stand-ins cost more than SPEC's estimate (≈ 1.2 and 1.0 units, final calibration) because they keep the full sound (the owner's rule); a lean version would sound clearly worse.
 - Zapfen: the Rast-step row reads „within the tick train's own crest + 1 dB“ (a 14/s train alone has 6–7 dB crest).
 
 ### Still open
@@ -146,4 +152,4 @@ Then use these:
 - The claude.ai artifact is still stage 1 (see above).
 
 ### Other open items
-- Backup: the owner wanted a private GitHub repo `4claude-backup`; still waiting for them to create it. Downloadable bundle/ZIP backups have been provided before (`git bundle create … --all` plus `git archive`).
+- Backup: the private repo `BeidlAT/myzelbackup` holds a full copy of every branch (made 18.10.2026); it does not update itself – on „Backup aktualisieren“ push the new state there (add the repo to the session first).
