@@ -146,6 +146,16 @@ asks for ≥ 8 calm sixteenths and one pass, and checks every sample within the 
 line (origin) at its seam (`hxTaktSet`). Tempo corrections (½, ×2, the finder's 3/4 reading) act at the loop's next seam
 (a bar line): the new slope and the loop's beats in one message (`hxBatch`), so its seams stay on bar lines.
 
+**As built (step 1c): Spielverzögerung.** „Klopf mit“ in the card (`hxKlopfStart`): twelve clicks at 100 BPM on the click
+path (§6.3), the first four to settle in; each tap (press-acting, its event time mapped onto the audio clock) is taken
+against the nearest click, from −150 to +450 ms; after eight the median is `lat` in `myzel.hx.dev.v1` (`hxLat()`, 0–400
+ms; fewer than four: „noch einmal“). Measured against the click's time *on the audio clock*, not its heard time: the
+output latency is part of what a note played to the click is late by, and a loop must take it out too (the letter's
+„heard time“ would leave it in). A harvest of kind `grid` (a Takt) while the Puls or a device's clock runs reads its
+window `lat` later (`hxHarvest`); the loop's phase shows it (`L.nudge = −lat`: the card's Phase, ±5 ms and undo as any
+nudge). Audio and notes are read together, so nothing else moves. t-hx-taps: taps 70 ms after their clicks → 75 ms;
+bursts played 70 ms after the beats sound on the beats in the loop (within 0.1 ms).
+
 ---
 
 ## 3. `myzel-ring` – the looper processor
@@ -240,6 +250,17 @@ changed from „played the whole pass“ to „sounded into this seam“: a Schi
 harvest „sofort, im Takt“, a retro Schicht) is joined at its first seam by the crossfade/Ausklang – before, it jumped
 from its end to its start. The meter carries both rings' input level (15 Hz; the Korb's „leer“ and a phrase's ring end).
 t-hx-proc stays green (33/33; its Gong row scatters with the material, see §22).
+
+**As built (step 1c).** Two outputs per Schicht, not per loop: `S.out` 0|1 (`V[0]`, `V[1]` per-output sums, each output
+written only when used), so a loop's dry Schicht (out 1, through the live chain's copy) and its baked one (out 0) can
+cross at a seam – `{replace}` carries `out`, the seam crossfades the two versions across the outputs. Per Schicht the
+seam's place `zo` (Nahtwahl, frames after the bar line: the pass that ended goes on to `pre + len + zo`, the start
+reads from `pre + zo`) and its gain curve `kc` (§7), both adopted at a pass start (`zoN`, `kcN`). Taumeln (§9) in the
+processor: input 1 carries the live drift (`A.driftG`, cents); its value at each quantum is kept in a ring and copied with
+every grab and live fill into the Schicht (`dr`: one value per 128 frames, stored with it); a Schicht with Taumeln on
+reads at `2^((d_now − d_rec(pos))/1200)` (per quantum, through the shared resampler; `{tau:{loop, on}}`), bit-exact
+again when the two agree. Stop at a seam: the Ausklänge of earlier passes still ringing become free tails and ring out
+(before, they were cut at the stop). `{aus}` gained `zo`, `kc`; `{schicht}`/`{replace}` `out`, `zo`, `kc`, `dr`.
 
 ---
 
@@ -362,6 +383,14 @@ button; Android vibration; audible click). Click: `hx.klick = aus | zaehl | ein`
 tapped). In mode "neue Schleife" later recordings auto-close after the base length × the chosen multiple (×1/×2/×4
 chips while waiting).
 
+**As built (step 1c).** `hx.ein` (Einzählen: aus · sicht · vib · ton, default sicht) and `hx.klick` (Klick: aus · beim
+Einzählen · auf den Zählzeiten, default aus) in the card's settings. The click (`hxClickAt`: a 1568-Hz sine burst, 2093 Hz
+on the 1, 1.5-ms rise, 12-ms decay) goes into `A.monSt` – after the master, before the destination: neither Humus tap nor
+the recorder hears it (t-hx-taps: ≤ −130 dB under the monitor's click in Gespielt and in the master's input). Scheduled
+in `hxTick` on the Taktgeber's beats (`zaehl`/`ton`: before a waiting recording's bar; `ein`: every beat while a Takt
+runs). `vib`: `navigator.vibrate` timed to the heard beat (where a device has it; the number shows anyway). The big
+count-in number only when `hx.ein` is not „aus“.
+
 ### 6.4 Schichten, overdub, retro layers
 - Retro Schicht: "the pass" = if the decision falls in the last ¼ of the target's pass, this pass at its end (pending,
   cancellable), else the pass just completed. Its window = the target loop's last pass frames in the Gespielt ring
@@ -455,6 +484,42 @@ measured in t-hx-ernten 33/33 and t-hx-grammar 30/30):
 - **Wuchs ties:** notes held across one seam ring on (pass k's voice rings in its tail). Notes held ≥ the loop length are
   re-struck per pass (limit; documented).
 
+**As built (step 1c).** `hxProbe` runs once the window's end and the room after it have sounded (w1 + Zc + 85 ms): it
+grabs both regions (the start and what followed the end), decides cold/warm (the start ≥ 10 dB under the continuation and
+≥ 30 ms of Ausklang → `ola`; else `xf`: 40 ms for sustained sound, 10 ms otherwise, never into a foreign onset), the
+Nahtwahl and the gain curve, and sends `{aus}`.
+- **Margins** as in 1b (½ bar or 1 s each side).
+- **Nahtwahl** (`hxNaht`): only where the repetition is confirmed – the notes after the window's end are those after its
+  start, one length later; the seam then moves forward by `zo` ∈ (0, Zc], Zc = min(½ bar | 0.5 s, 0.4 · length, post −
+  0.1 s), to the quietest place where both sides agree (cost = power · (1.25 − ρ) · a small distance penalty), taken only
+  when ≥ 1.3× better than the bar line. Forbidden: 5 ms before to 60 ms after any onset of the notes ∪ the spectral-flux
+  detector (FFT 512, hop 128, on the grabbed audio) – the latter shifted by a per-source attack (`HX_ATT`: Harz 0.25 s,
+  Halm 0.12, Böe 0.4, Moder 0.3, Glut 0.3, Kehle 0.06, Amöbe 0.05). The musical phase stays on the bar line. t-hx-seams:
+  a strike on every bar line in a repetition → the seam 419 ms in, its fade clear of every zone; no repetition → 0.
+- **Time-local level** (owner's step-1b point: the Gong dipped to −1.7 dB): `hxSeamK` computes K + 1 gains over the fade
+  (one per 32 frames; 1 at both ends) so the output's short-term power (10-ms Hann windows, stereo) equals the
+  equal-power blend of the two sides' own there; four iterations, smoothed twice each, clamped 0.5–2; the processor
+  interpolates it. It replaces the single-ρ law wherever a curve is sent (seams, the bake swap, the Ausklang splice);
+  the ρ law stays for gestures without a probe. t-hx-seams, 10 random runs each of Gong, Harz, Bordun and Böe material
+  rendered by the app: short-term RMS within −0.85 … +0.75 dB of the two sides at every seam (±1); third difference ≤
+  1.26× the material's – normalised by the curve's largest gain (up to 1.44 on an anti-correlated Bordun seam: holding
+  the level there lifts both sides, a slow gain and no click; un-normalised one run of ten reached 1.51).
+- **First-pass rule** as written: the first pass (its seam is the window's end, the live voices still ringing) plays the
+  start alone (t-hx-seams: exact), every later one the start + the Ausklang (exact).
+- **Ausklang until the first foreign onset:** a note of a source the Schicht captured (`hxForeign`), or – a loop without
+  notes – an onset of the flux detector in the audio after the window's end (`hxAusWatch`, four times a second); cut
+  5 ms before it, 30-ms fade. With notes the rest is rendered (`hxTail`): the notes that sounded into the window's end
+  (struck up to 12 s before it, held ones with their curves) in the Werk-Rahmen's `tail` job with the patch, the quality
+  level, the Jahresring's age and season and the mask; level-matched on the 60 ms before, spliced behind a 30-ms
+  crossfade with the seam's own gain curve (a plain equal-power fade bulged +1.9 dB: the render is the same notes'
+  sibling, partly correlated), until −90 dB or 12 s. Measured: −31.0 → −31.5 → −31.2 dBFS through the splice.
+- **Auftakt** (`hxAuftaktPlan`): notes struck in the h = min(½ bar | 1 s, ½ length) before phase 0 after a ≥ 0.3-s rest
+  (a note held on into the window is the window's own); laid onto the end as a Schicht of its own (kind `auftakt`, read
+  from len − n to len) only if the end's last h holds no onset (notes ∪ flux); else the chip „Auftakt anfügen“ (the rail's
+  chips and the card).
+- **Stop:** angehalten at its seam the loop plays its stored Ausklang once; the Ausklänge of the passes before ring out
+  with it (t-hx-seams: within 1.5e-9 of the sum, then silence).
+
 ---
 
 ## 8. Werk-Rahmen
@@ -486,6 +551,28 @@ charges, its Jahresring age, its `A.elmDrift`; live underruns not increased (hea
 **Fallback** (no iframe, e.g. a sandbox forbids it): bake disabled → loops play via out1 (follow the live chain) with a
 note in the card; Wuchs unavailable → Live mode (§10.6) offered instead.
 
+**As built (step 1c).** `HXW.on` (`?werk=1`) is read before anything else: `store.set` refuses, the boot builds no UI, no
+MIDI, no Gestik, no live context, and `pwa/build.py` registers no service worker there; `hxwBoot` answers on the
+transferred port (`ready`) once its shared state is built: `hxwShared` with fixed seeds – `A.uni`, the drift buffers,
+Schwarm's chirps and flutter, Klangbrett's knock, Obertöne' walk, Elmsfeuer's loops, Jahresring's impulses, Zupf's
+buffers, the Körner textures (awaited); the KS cache exact (no neighbour substitution), Jahresring without the wall
+clock (age and season from the job), Gespinst and Rhizom one own web / net per render. Every job seeds `Math.random`
+(xorshift) from its seed. Boot: 204 ms to `ready` here; started by the first job (a harvest's bake or tail: `hxwCall` →
+`hxWerk()`), the parent gives up after 4 s without an answer (45 s overall) → fallback. Jobs: `ping`; `bake` (§9); `tail` and `wuchs` (`hxwNotes`: the
+whole app graph built offline via `initAudio` on `HXW.ctx`, tapped at `A.hxIn0`; notes, curves and releases at
+`suspend`s per block; grains and Rhizom ticks every 25 ms; returns L/R from `from`) – streaming to the processor comes
+with Wuchs (step 4). Isolation (t-hx-werk, the c1-swap port): a full live budget (39 Nebel notes, load 39.93 of 40) keeps
+every voice while 12 Gong voices render; the live Gespinst web, `A.elmDrift`, the Jahresring's age and season and the
+Rhizom's queued charges stay; no live callback gap > 30 ms more. Determinism (same seed twice, level 3, a phrase):
+26 of 28 sources within −100 dB (worst Gong −102.7; Halm, Ranke, Sehne, Kehle bit-exact). **Exceptions (for the
+owner):** Schwarm (+0.7 dB – a different performance) and Tropfen (−94.5 dB): Chromium sums three or more connections
+into one input in no fixed order; the ulp differences are amplified by Schwarm's chaotic FM loop and Tropfen's chirped
+droplets (reproduced in a plain page; a rewiring of Schwarm's fan-in did not remove it and was reverted). Render time
+per second of audio (level 3, a 4-note phrase): median 0.062 s, max 0.134 s (Harz, Schwarm); a bake ≈ 0.05 s per
+second. Fallback (t-hx-werk: the frame's URL blocked): the bake is off, loops play dry through the live chain (out 1),
+the card says „Einbrennen und der Ausklang aus den Noten gehen in dieser Ansicht nicht (kein Werk-Rahmen): Schleifen
+folgen der Effektkette.“
+
 ---
 
 ## 9. Abdruck bake and Taumeln
@@ -507,6 +594,23 @@ note in the card; Wuchs unavailable → Live mode (§10.6) offered instead.
 **Acceptance:** after harvest, sweeping the live filter does not change a baked loop (spectral check); a loop recorded
 with the filter LFO running and baked shows the same LFO phase as the recording (correlation ≥ 0.99 of the envelope);
 with Taumeln on, a held A4 in a loop and the same live note beat < 0.3 Hz.
+
+**As built (step 1c).** Chain state: the chain's `upd*` functions log every change (`HXL.ev`, Humus time: drive, ring,
+filter, phaser, chorus, Kreisen) and the mod layer's deflections of filter, phaser, ring, pan and chorus as ramps and
+points (`HXL.mod`); LFO phases from their start time (`A.lfoT0`) and rate history (`HXP`). `hxChainRec(ta, tb)` → a
+snapshot, the changes, the mod lines, each LFO's phase at the window. The `bake` job renders the dry Abdruck (pre +
+len + post + Ausklang) through `makeChain` in the Werk-Rahmen: the snapshot set at once, the changes at their frames
+(`suspend`), the mod lines as ConstantSources, each LFO a PeriodicWave started at its recorded phase. The baked version
+replaces the dry one at the next seam (`hxSchPlay`: out 1 → out 0, the seam's crossfade with its gain curve), is saved
+beside the dry (§19), and re-made when a re-cut changes the audio. „folgt der Effektkette“ (`hxFolgt`) keeps or puts the
+loop on out 1, dry; Zusammenlegen asks for baked Schichten first (or folgt). Taumeln: the letter's main-thread estimate
+of the drift was replaced by the processor's own input (§3) – a model of the AudioBufferSource's playbackRate integral
+was off by up to 0.9 s of the drift buffer live; the processor reads the drift that really sounded. Measured
+(t-hx-bake): baked vs the live chain heard then −46.5 dB sample for sample; LFO envelope correlation 0.9999 (it swings
+7.7 dB; shifted 0.15–0.4 s it would be ≤ 0.21); a baked pass after the live filter, ring and drive moved, and while a
+preset loads: identical (0 difference); folgt: the filter's 400 Hz → 6 kHz moves it (brightness 310 → 925 Hz); the
+swap out 1 → out 0 at a seam: third difference 0.97–0.99× mid-pass, RMS −0.42 … +0.89 dB; Taumeln on: a held A4 against
+the same live note beats 0.001 Hz (drift ±8 ct at 2.5 Hz); off: up to 1.7 Hz.
 
 ---
 
@@ -605,6 +709,14 @@ the events m before with every IOI within ±15 % – the smallest such m with a 
 first repetition's first note (its anchor); „the start“ variant for auto-close (`hx.autoclose`, default off) and for a
 phrase whose second cycle has begun. It drives the Korb's light (lumen; not when the cycle is in a Schleife already: its
 degrees as a rotation of a loop's notes, or harvested from this very playing) and the lengths above.
+
+**As built (step 1c): the margin.** `hxTaktFinden` also returns `margin` = the best reading's score minus the best
+reading *of another pulse* (a grid whose beat count is not the best's × 2^k – the same grid at half or double tempo or in
+the other metre is no rival; the corrections offer it). `hxTaktOk(tk)`: clarity ≥ 0.55 and margin ≥ 0.8 (`HX_MARGIN`),
+else frei – in every harvest path. Fitted on t-hx-ohr's 360 phrases (it keeps 291 of the 292 that read clear) and 2000
+short free phrases (2–6 notes, every IOI free 0.12–1.2 s, the tap 0.3–1.5 s after the last): a chance grid 548 → 232
+times (11.6 %). By notes: 2 – never (fewer than 3 onsets), 3 – 30 %, 4 – 16 %, 5 – 8 %, 6 – 5 %. Three notes stay the
+hardest: a bar of three quarters must still read as one.
 
 ### 12.2 Eigensinn (Etappe 2a: Treu/Lebendig; Etappe 3: Variieren/Wandern)
 - Lebendig: new seed per pass; timing breath: offsets from the loop's groove spread × ⅓ with 1/f-like noise (pink by
@@ -777,6 +889,14 @@ pending wedge, a hold, a level) or when what it shows changed – idle it cost 0
 0.04 ms (two loops playing: 0.32 ms); the Korb's plan (every 250 ms) 0.4–1.5 ms there. Without that, `motion-tests/
 t-gf-cost`'s main-thread budgets (a flush < 0.3 ms) failed.
 
+**As built (step 1c).** Folded height 24 px (the letter). A screen under 800 px high folds the rail by itself while a
+panel is open (`hxRailAuto`: the mixer, the library, any sheet; Korb, Hauptknopf, the rings' dots and ↶ stay); its fold
+button opens it for that panel, the setting `hx.rail` is untouched. With the rail there, a portrait screen ≤ 780 px high
+tightens the library's head rows a little (head 44 px, search and family row closer; every target keeps 44 px):
+`klang/tests/t-lib-shots` p360 4/4 tiles in view, the field 118 px (the §16 conflict of step 1b is gone). The card gained:
+Effektkette (eingebrannt · folgt; without a Werk-Rahmen the note why), Taumeln an/aus, „Auftakt anfügen“ when offered,
+and in the settings Einzählen, Klick and „Klopf mit“ (with the measured Spielverzögerung).
+
 ---
 
 ## 17. Controls
@@ -862,6 +982,12 @@ in the middle of a punch: the finished Schichten back bit-exact (hashes equal), 
 22 050 Hz → 44 100 Hz: a 1-kHz sine back at 1000 Hz, 0.3000; 96 kHz → 44 100 Hz: 1 and 18 kHz within 0.001 dB, a 30-kHz
 tone not folded (−155 dB at 14.1 kHz) (t-hx-persist 15/15).
 
+**As built (step 1c).** A baked version is stored beside the dry one (`ringsegs` under the Schicht's key + `~b`, its own
+segment count), with the Schicht's `zo`, `kc` (dry and baked curves) and `dr`; a restore brings back both and plays the
+baked one; restored on another rate the baked version is dropped (re-baked from the converted dry) and `zo` scaled.
+The dry and baked counters are separate (a bake's save once reset the dry's – a reload mid-overdub lost a Schicht;
+t-hx-persist 15/15 again).
+
 ---
 
 ## 20. Parameters (`PD`, all `rec:1` unless noted – kept out of patches; loop-local values live in loop objects)
@@ -897,6 +1023,18 @@ level for the meter on top of step 1a's 0.59 / 0.55), a playing Schicht 0.19 / 0
 phone's level-1 budget (14) has ≈ 7 % less room for voices while the Humus records. A sample-rate conversion on restore
 (`{rs}`, 160 taps, ≈ 0.6 ms per 512 frames on this machine – some 30 units while it ran) is not on the live audio thread
 at all: it runs in an offline render of its own.
+
+**As built (step 1c).** Re-measured with `cost.js` (three runs; the second's baseline came out negative – a disturbed
+round – so its capture is taken with the baseline at 0): capture 0.93 / 1.08 / 0.88, a playing Schicht 0.34 / 0.36 /
+0.28 (more than 1b's 0.19–0.21: per-Schicht outputs, the seam's place and gain curve, the Taumeln check), resampling
++1.04 / +1.03, and new: the live chain's copy for out 1 (`hxf` − `hxz`, `fx1`: counted while any Schicht plays dry on
+out 1 – a first pass before its bake, a loop that follows the chain, no Werk-Rahmen) 2.45 / 2.33. Entered (higher +
+15 %): `HX_COST = { capture: 1.07, schicht: 0.41, rs: 1.19, fx1: 2.81 }`. Taumeln on (the default) with the drift on
+(`mov.drift` default 6 ct) resamples every playing Schicht all the time, so each counts schicht + rs = 1.6 units – on a
+phone at level 1 (budget 14) the capture and four playing Schichten take 7.5, about half the room for live voices.
+Measured and entered, not traded: Taumeln off for a loop (or the drift at 0) gives its 1.19 back. The Werk-Rahmen's
+renders are not voice budget (§10.5): at level 3 a phrase renders at 0.062 s per second of audio (median; max 0.134 s,
+Harz and Schwarm), a bake at ≈ 0.05 s per second – offline, on the browser's rendering thread, beside the live one.
 
 ---
 
@@ -971,3 +1109,14 @@ Other suites touched by 1b: the Ringleiste takes 56 px from the field, so the pa
 After a container restart the build machine stalls its audio several times a second (3–19 ms); there the Gestik
 suites' timing and cost rows (`t-gm-stream`, `t-gm-cost`, `t-gl-schlafen`, `t-gf-cost`, `t-gs-cost`, `t-gx-live`'s chord
 order, `t-gf-loop`'s followed tempo) fail now and then on the step-1a build as well – compared run for run, not 1b.
+
+### As built (step 1c): suites
+`t-hx-werk` (15: boot, render-only, isolation, callback gaps, determinism of 28 sources – two documented exceptions –,
+fallback), `t-hx-bake` (13: dry first pass then baked, the LFO's phase, live moves and presets leave a baked loop, folgt,
+the swap's seam offline and live, Taumeln on/off), `t-hx-seams` (17: Gong/Harz/Bordun/Böe ×10 random runs; cold/warm,
+the first-pass rule, the foreign onset's cut and the rendered rest, a window without notes, the Auftakt and its chip,
+Nahtwahl, stop; `PARTS`, `KINDS`, `RUNS` to run a part). `t-hx-taps` +5 (the click on its path, the count-in, „Klopf
+mit“, a harvest against the Puls with the Spielverzögerung: 17), `t-hx-ohr` +2 (the margin: 15), `t-hx-ui` +8 (the
+auto-fold at every size: 64), `t-hx-persist` reads the playing (baked) versions. `hx-h.js` gained the recorder
+`hx-recf` (the frame it began at). The klang `cost.js` gained `hxf`/`hxz` (the chain's copy, §21). Fixed on the way:
+a harvest of sound without notes against a fixed length (`hx.laenge` fest) took up to 4 bars instead of the set ones.

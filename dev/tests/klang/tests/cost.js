@@ -11,7 +11,9 @@
 // 'hxn1' those into NH tap sets (four strip gains into a sum, as the Gespielt tap), 'hxc1' each set into a node with
 // both rings recording (ring 1 written by its myzel-ring-in node, as in the app) – HX_COST.capture = hxc − hxq (the nodes and taps); 'hx01' a bare node (NV), 'hxs1' with one
 // playing Schicht (a 2-bar loop at 120 BPM, a crossfaded seam every pass), 'hxr1' resampled ({rate} 17 ct) –
-// HX_COST.schicht = hxs − hx0, HX_COST.rs = hxr − hxs
+// HX_COST.schicht = hxs − hx0, HX_COST.rs = hxr − hxs; (step 1c) 'hxf1' NV copies of the live chain (makeChain with the
+// patch's settings, as hxChain builds out 1's), each fed by a noise source, 'hxz1' the NV sources alone –
+// HX_COST.fx1 = hxf − hxz
 process.env.SEED_BLOBS = '';
 const { chromium, openInst } = require('../../v2/lib');
 const ROUNDS = +process.argv[2] || 6, DUR = +process.env.DUR || 4, NV = +process.env.NV || 24, NW = +process.env.NW || 1, NH = +process.env.NH || 8;
@@ -27,6 +29,20 @@ const XP = JSON.parse(process.env.PARAMS || '{}');
       const nat = /N$/.test(eng); if (nat) eng = eng.slice(0, -1);   // (zpfN, gltN: the native stand-in of an engine with fallback 'native' – the engine marked broken for the run)
       const ctx = await window.__off(48000, DUR, Object.assign({ 'v.eng': eng === 'null' ? 'hlm' : eng === 'web' ? 'gsp' : /^hx/.test(eng) ? 'neb' : eng, 'rev.mix': 0, 'dly.mix': 0 }, XP, nat ? { 'v.eng': 'neb' } : {}));
       if (!nat) await M.ensureDSP(ctx);
+      if (eng === 'hxf') {   // the live chain's copy, NV of them (built before the render)
+        const SR = 48000, nb = ctx.createBuffer(2, SR, SR);
+        for (let c = 0; c < 2; c++) { const d = nb.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * 0.1; }
+        for (let k = 0; k < NV; k++) {
+          const c = M.makeChain(); M.updDrive(c); M.updRing(c); M.updFilter(c); M.updPhaser(c); M.updChorus(c);
+          const sr = ctx.createBufferSource(); sr.buffer = nb; sr.loop = true; sr.connect(c.in); sr.start(); c.out.connect(ctx.destination);
+        }
+        const t0 = performance.now(); await ctx.startRendering(); return performance.now() - t0;
+      }
+      if (eng === 'hxz') {   // its stand-in without the chain: the NV noise sources alone
+        const SR = 48000, nb = ctx.createBuffer(2, SR, SR);
+        for (let k = 0; k < NV; k++) { const sr = ctx.createBufferSource(); sr.buffer = nb; sr.loop = true; sr.connect(ctx.destination); sr.start(); }
+        const t0 = performance.now(); await ctx.startRendering(); return performance.now() - t0;
+      }
       if (eng.startsWith('hx')) {   // (built before the render starts: making and cloning the buffers is not the render's time)
         const SR = 48000, cap = /^hx[qnc]$/.test(eng), N = cap ? Math.min(NV, NH) : NV;
         if (!window.__hxCh) { const len = 4 * SR, nn = len + SR, ch = []; for (let c = 0; c * 8192 < nn; c++) { const L = new Float32Array(8192), R = new Float32Array(8192); for (let j = 0; j < 8192; j++) { L[j] = Math.sin((c * 8192 + j) * 0.031) * 0.1; R[j] = Math.sin((c * 8192 + j) * 0.029) * 0.1; } ch.push([L, R]); } window.__hxCh = { ch, len, n: nn }; }

@@ -153,14 +153,15 @@ const ORIGIN = 'http://127.0.0.1:8790/';
       await window.__until(M.tgTime(B0 + 8) + 0.05 + lat);
       M.hxKorb(null);
       M.setParam('hx.modus', 'neu');
-      for (let i = 0; i < 150 && L.sch.some((id) => !M.HX.sch.get(id).aud); i++) await window.__sleep(100);
+      for (let i = 0; i < 150 && L.sch.some((id) => !M.HX.sch.get(id).aud || (M.HX.sch.get(id).chain && !M.HX.sch.get(id).baked)); i++) await window.__sleep(100);   // (and baked)
       const sch = L.sch.map((id) => M.HX.sch.get(id)), Lf = M.hxPassF(L, 1) - M.hxPassF(L, 0);
       // the steady pass of the Schichten as they are, rendered by the processor
       const render = async (list) => {
         const tail = Math.max(0, ...list.map((S) => (S.aus ? S.aus.len : 0))), passes = Math.ceil(tail / Lf) + 2, ctx = new OfflineAudioContext(2, Lf * (passes + 2), A.ctx.sampleRate);
         await M.ensureDSP(ctx);
         const msgs = [{ loop: { id: 1, lock: 'frei', L: Lf, ph0: 0 } }];
-        list.forEach((S, i) => msgs.push({ schicht: { loop: 1, id: i + 1, chunks: S.aud, n: S.n, pre: S.pre, len: S.len, ausklang: S.aus ? { off: S.aus.off, len: S.aus.len, fade: Math.min(Math.round(0.03 * A.ctx.sampleRate), S.aus.len) } : null, gain: S.gain, join: S.join, X: S.X, rho: S.rho, fin: 0 } }));
+        // (step 1c: each Schicht as it plays – its baked version, the chain burnt in – with its seam's place and curve)
+        list.forEach((S, i) => msgs.push({ schicht: { loop: 1, id: i + 1, chunks: S.baked && S.bak ? S.bak : S.aud, n: S.n, pre: S.pre, len: S.len, ausklang: S.aus ? { off: S.aus.off, len: S.aus.len, fade: Math.min(Math.round(0.03 * A.ctx.sampleRate), S.aus.len) } : null, gain: S.gain, join: S.join, X: S.X, rho: S.rho, zo: S.zo || 0, kc: (S.baked ? S.kcB : S.kc) || 0, fin: 0 } }));
         const node = new AudioWorkletNode(ctx, 'myzel-ring', { numberOfInputs: 2, numberOfOutputs: 2, outputChannelCount: [2, 2], channelCount: 2, channelCountMode: 'explicit', processorOptions: { humusS: 2, chunk: 8192, msgs } });
         node.connect(ctx.destination, 0);
         const b = await ctx.startRendering(); return { L: b.getChannelData(0), at: passes * Lf };

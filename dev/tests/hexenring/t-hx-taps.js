@@ -3,11 +3,16 @@
 // level), while the master carries it; „Gespielt“ is post-mute (a muted strip is not in the Humus); „Alles“ is the
 // master's input, the Schleifen included (step 1b: true resampling – a node of its own downstream of A.masterIn,
 // myzel-ring-in, writes ring 1 at the processor's frame count: both rings stay aligned to the frame); the strip is hidden in the mixer until the
-// first Schleife and its settings are not the patch's.   node t-hx-taps.js
-const H = require('./hx-h');
+// first Schleife and its settings are not the patch's. (step 1c) The click (hx.klick, the count-in's hx.ein „ton“) sounds on
+// the monitor after the master – no tap hears it (≤ −100 dB); „Klopf mit“ measures the Spielverzögerung from eight taps,
+// and a loop harvested against the running Puls reads its window that much later: what was played late sits on the beat.
+//   node t-hx-taps.js
+const H = require('./hx-h'), G = require('./hx-g');
 const { ok } = H;
 (async () => {
   const { page, errors } = await H.open({});
+  await G.gtools(page);
+  if (process.env.DBG) { page.on('console', (m) => console.log('  page:', m.text())); await page.evaluate(() => { window.__dbg = 1; }); }
   const ev = (fn, a) => page.evaluate(fn, a);
   // the graph
   let r = await ev(() => {
@@ -88,6 +93,90 @@ const { ok } = H;
   });
   ok(r.muted0 < -200 && r.open0 > -40, `„Gespielt“ is post-mute: the Bordun muted on its strip leaves the Humus silent (${r.muted0.toFixed(0)} dB), unmuted it is there (${r.open0.toFixed(1)} dB)`);
   ok(r.muted1 < -200, `…and „Alles“ hears the mix as it is: the muted strip is not in it either (${r.muted1.toFixed(0)} dB)`);
+
+  // the click: on every beat while the Puls runs (hx.klick „ein“), and the count-in's (hx.ein „ton“) before a waiting
+  // recording's bar – into the monitor after the master: neither Humus tap nor the master's input hears it
+  r = await ev(async () => {
+    const M = window.__M, A = M.A, ctx = A.ctx, SR = ctx.sampleRate, FC = 1568;
+    M.setParam('rev.mix', 0); M.setParam('dly.mix', 0); M.setParam('seq.bpm', 120);
+    for (const i of [0, 1, 2, 3]) M.setParam('l' + i + '.on', false);
+    if (!M.SEQ.on) M.seqStart();
+    const rec = (node) => { const r = new AudioWorkletNode(ctx, 'hx-recf', { numberOfInputs: 1, numberOfOutputs: 1, channelCount: 2, channelCountMode: 'explicit' }); const z = ctx.createGain(); z.gain.value = 0; node.connect(r); r.connect(z).connect(ctx.destination); return r; };
+    // live sound meanwhile: a 100-Hz tone on the field's strip (the taps are listening)
+    const os = ctx.createOscillator(), og = ctx.createGain(); os.frequency.value = 100; og.gain.value = 0.1; os.connect(og).connect(M.stripIn('fin')); os.start();
+    await window.__sleep(400);
+    const R = { g: rec(A.hxIn0), a: rec(A.masterIn), m: rec(A.monSt) };
+    M.setParam('hx.klick', 'ein');
+    await window.__sleep(2600);
+    M.setParam('hx.klick', 'aus');
+    await window.__sleep(300);
+    const got = {}; for (const k in R) { got[k] = await window.__recGet(R[k]); try { (k === 'g' ? A.hxIn0 : k === 'a' ? A.masterIn : A.monSt).disconnect(R[k]); } catch (e) {} }
+    const bin = (x, f) => { const N = Math.min(x.length, 2 * SR); let re = 0, im = 0, w0 = 0; for (let i = 0; i < N; i++) { const t = i / (N - 1), w = 0.35875 - 0.48829 * Math.cos(2 * Math.PI * t) + 0.14128 * Math.cos(4 * Math.PI * t) - 0.01168 * Math.cos(6 * Math.PI * t), ph = 2 * Math.PI * f * i / SR; re += w * x[i] * Math.cos(ph); im += w * x[i] * Math.sin(ph); w0 += w; } return 2 * Math.hypot(re, im) / w0; };
+    // the clicks in the monitor: bursts after ≥ 100 ms of quiet in a 1.5-kHz band (the tone is 100 Hz) – their times on the beats
+    const clicks = (x, f0) => { const out = []; let last = -1e9; const hp = (i) => x[i] - 2 * x[i - 1] + x[i - 2]; for (let i = 2; i < x.length; i++) if (Math.abs(hp(i)) > 0.002 && i - last > 0.1 * SR) { out.push((f0 + i) / SR); last = i; } else if (Math.abs(hp(i)) > 0.002) last = i; return out; };
+    const cm = clicks(got.m.L, got.m.f0), off = cm.map((t) => { const b = M.tgBeat(t); return (b - Math.round(b)) * 60 / M.tgBpm(t) * 1000; });
+    const out = { m: 20 * Math.log10(bin(got.m.L, FC) + 1e-20), g: 20 * Math.log10(bin(got.g.L, FC) + 1e-20), a: 20 * Math.log10(bin(got.a.L, FC) + 1e-20), live: 20 * Math.log10(bin(got.g.L, 100) + 1e-20), n: cm.length, off: Math.max(...off.map(Math.abs)) };
+    // the count-in: a recording asked for at beat 1.5 of a bar waits for the next – clicks on beats 2 and 3 (aus: none on the others)
+    M.setParam('hx.ein', 'ton');
+    const b0 = Math.ceil(M.tgBeat(ctx.currentTime + 0.5) / 4) * 4;
+    await window.__until(M.tgTime(b0 + 1.5));
+    const R2 = { m: rec(A.monSt), g: rec(A.hxIn0) };
+    M.hxRecStart(M.hxHeard(), 0);
+    out.wait = M.HX.rec && M.HX.rec.phase; out.rb0 = M.HX.rec && M.HX.rec.b0 - b0;
+    await window.__until(M.tgTime(b0 + 6.2));
+    M.hxRecCancel(true);
+    const g2 = { m: await window.__recGet(R2.m), g: await window.__recGet(R2.g) };
+    A.monSt.disconnect(R2.m); A.hxIn0.disconnect(R2.g);
+    const c2 = clicks(g2.m.L, g2.m.f0).map((t) => +(M.tgBeat(t) - b0).toFixed(2));
+    out.count = c2; out.countTap = 20 * Math.log10(bin(g2.g.L, FC) + 1e-20) - 20 * Math.log10(bin(g2.m.L, FC) + 1e-20);
+    M.setParam('hx.ein', 'sicht');
+    os.stop(); os.disconnect();
+    if (M.SEQ.on) M.seqStop();
+    return out;
+  });
+  ok(r.n >= 4 && r.off < 3, `hx.klick „ein“: the click on every beat in the monitor (${r.n} in 2.6 s, at most ${r.off.toFixed(1)} ms off the beat)`);
+  ok(r.g - r.m <= -100 && r.a - r.m <= -100 && r.live > -40, `…on a path no tap hears: „Gespielt“ ${(r.g - r.m).toFixed(0)} dB, the master's input („Alles“) ${(r.a - r.m).toFixed(0)} dB under the monitor's click (≤ −100) – the taps live (the field's tone ${r.live.toFixed(1)} dBFS)`);
+  ok(r.wait === 'wait' && r.rb0 === 4 && r.count.length === 2 && Math.abs(r.count[0] - 2) < 0.01 && Math.abs(r.count[1] - 3) < 0.01 && r.countTap <= -100, `hx.ein „ton“: a recording asked for at beat 1.5 counts in on beats ${r.count.join(', ')} before its bar (${r.rb0}) – none after; the Humus does not hear it (${r.countTap.toFixed(0)} dB)`);
+
+  // „Klopf mit“: eight taps 70 ms after their clicks → the Spielverzögerung (the median, stored per device)
+  r = await ev(async () => {
+    const M = window.__M, A = M.A, ctx = A.ctx;
+    M.hxKlopfStart();
+    const K = M.HX.klopf, n = K.clicks.length;
+    for (let i = 2; i < 10; i++) { await window.__until(K.clicks[i] + 0.07); M.hxKlopfTap(null); }
+    return { lat: M.hxLat(), dev: M.hxDev().lat, open: !!M.HX.klopf, n };
+  });
+  ok(Math.abs(r.lat - 0.07) < 0.012 && r.dev === r.lat && !r.open, `„Klopf mit“: eight taps 70 ms after their clicks → Spielverzögerung ${(r.lat * 1000).toFixed(0)} ms, stored for the device`);
+
+  // a loop harvested against the running Puls: its window read that much later – bursts played 70 ms after the beats
+  // (as a player hears and answers late) sound on the beats in the loop
+  r = await ev(async () => {
+    const M = window.__M, A = M.A, ctx = A.ctx, SR = ctx.sampleRate;
+    M.hxDev('lat', 0.07);
+    M.setParam('seq.bpm', 120); for (const i of [0, 1, 2, 3]) M.setParam('l' + i + '.on', false);
+    if (!M.SEQ.on) M.seqStart();
+    M.setParam('hx.laenge', 'fest'); M.setParam('hx.festT', 1); M.setParam('mov.drift', 0); M.setParam('mov.vib', 0);
+    for (const e of M.HX.ev) if (e) e.probe = true;   // (the notes of the parts before are forgotten: this bar is sound alone)
+    await window.__sleep(600);
+    const b0 = Math.ceil(M.tgBeat(ctx.currentTime + 0.4) / 4) * 4, T = (b) => M.tgTime(b0 + b);
+    const burst = (t) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = 2000; g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.3, t + 0.0005); g.gain.setTargetAtTime(0, t + 0.004, 0.003); o.connect(g).connect(M.stripIn('fin')); o.start(t); o.stop(t + 0.06); };
+    for (let k = 0; k < 4; k++) burst(T(k) + 0.07);
+    await window.__until(T(4) + 0.09);
+    const plan = M.hxKorbPlan(M.hxHeard()), L = M.hxHarvest(plan, {}), S = L && M.HX.sch.get(L.sch[0]);
+    const rec = new AudioWorkletNode(ctx, 'hx-recf', { numberOfInputs: 1, numberOfOutputs: 1, channelCount: 2, channelCountMode: 'explicit' }), z = ctx.createGain(); z.gain.value = 0;
+    M.HX.node.connect(rec, 0); M.HX.node.connect(rec, 1); rec.connect(z).connect(ctx.destination);
+    await window.__until(T(8) + 0.2);
+    const g = await window.__recGet(rec); M.HX.node.disconnect(rec);
+    const on = []; let last = -1e9;
+    for (let i = 0; i < g.L.length; i++) if (Math.abs(g.L[i]) > 0.02) { if (i - last > 0.2 * SR) on.push((g.f0 + i) / SR); last = i; }
+    const off = on.map((t) => { const b = M.tgBeat(t); return (b - Math.round(b)) * 60 / M.tgBpm(t) * 1000; });
+    const o = { lock: L && L.d.lock, nudge: L && L.nudge, shift: S && (S.cut.w0 - Math.round(M.hxF(plan.w0))) / SR, bars: plan.bars, pw0: plan.w0 - T(0), n: on.length, off };
+    M.hxDev('lat', 0);
+    await window.__reset();
+    if (M.SEQ.on) M.seqStop();
+    return o;
+  });
+  ok(r.lock === 'takt' && Math.abs(r.shift - 0.07) < 0.002 && r.n >= 3 && r.off.every((x) => Math.abs(x) < 2), `harvested against the Puls with 70 ms Spielverzögerung: the window read ${(r.shift * 1000).toFixed(1)} ms later, the bursts played late now sound on the beats (${r.off.map((x) => x.toFixed(1)).join(', ')} ms; phase ${(r.nudge * 1000).toFixed(0)} ms; ${r.bars} T)`);
 
   // the mixer: the strip appears with the first Schleife (and goes with the last)
   r = await ev(async () => {

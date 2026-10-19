@@ -1,8 +1,8 @@
 // Hexenring – the Ringleiste on screen (SPEC §16; tests §22): at 360×740, 390×844 (phones), 820×1180 (iPad) and
 // 1366×768 (PC) and a phone turned (740×360): the rail is there once sound starts, 56 px, under the field and never over
 // it (in the field's column beside an open panel), 4 rings a page on phones and 8 on iPad/PC, the chips and corrections
-// inside the rail where the rings are (never over the field), folded 26 px with Korb and Hauptknopf, a toolbar with a
-// live region, the coach mark once. Screenshots go to SHOTS (default ./out/ui-*.png) – look at them.   node t-hx-ui.js
+// inside the rail where the rings are (never over the field), folded 24 px with Korb and Hauptknopf – by itself on a
+// short screen (< 800 px high) while a panel is open – a toolbar with a live region, the coach mark once. Screenshots go to SHOTS (default ./out/ui-*.png) – look at them.   node t-hx-ui.js
 const G = require('./hx-g'), H = require('./hx-h');
 const { ok } = H;
 const SHOTS = process.env.SHOTS || __dirname + '/out';
@@ -52,6 +52,12 @@ const SHOTS = process.env.SHOTS || __dirname + '/out';
     await page.evaluate(async () => { window.__M.hxCardOpen(0); await window.__sleep(700); });
     g = await geo();
     ok(g.sheet && g.shown && g.rail.y >= g.stage.b - 1 && (g.sheet.y >= g.rail.b - 1 || g.sheet.x >= g.rail.r - 1), `${name}:   with the panel open the rail stays at the field (${g.sheet && g.sheet.y >= g.rail.b - 1 ? 'panel below' : 'panel beside'})`);
+    const short = h < 800;
+    ok(Math.abs(g.rail.h - (short ? 24 : 56)) < 1 && g.korb && g.haupt, `${name}:   ${short ? 'a short screen: the rail folds while the panel is open' : 'a tall screen: the rail stays open with the panel'} (${g.rail.h} px), Korb and Hauptknopf stay`);
+    if (short) {
+      const u = await page.evaluate(async () => { const M = window.__M; M.HXU.fold.click(); await window.__sleep(200); const a = M.HXU.rail.getBoundingClientRect().height; M.closePanel(); await window.__sleep(200); const b = M.HXU.rail.getBoundingClientRect().height; M.hxCardOpen(0); await window.__sleep(300); return { a, b, c: M.HXU.rail.getBoundingClientRect().height, p: M.P['hx.rail'] }; });
+      ok(Math.abs(u.a - 56) < 1 && Math.abs(u.b - 56) < 1 && Math.abs(u.c - 24) < 1 && u.p === 'offen', `${name}:   its fold button opens it for that panel (${u.a} px); closed ${u.b}, the next panel folds it again (${u.c}); the setting stays (${u.p})`);
+    }
     await page.screenshot({ path: SHOTS + '/ui-' + name + '-4.png' });
     // a tall panel (the mixer: on a short phone it leaves the field 118 px) – the rail keeps its place between them
     await page.evaluate(async () => { const M = window.__M; M.closePanel(); M.openPanel('mix'); await window.__sleep(600); });
@@ -61,7 +67,7 @@ const SHOTS = process.env.SHOTS || __dirname + '/out';
     // folded
     await page.evaluate(async () => { const M = window.__M; M.closePanel(); M.setParam('hx.rail', 'klein'); await window.__sleep(300); });
     g = await geo();
-    ok(Math.abs(g.rail.h - 26) < 1 && g.korb && g.haupt, `${name}:   folded: ${g.rail.h} px, Korb and Hauptknopf stay`);
+    ok(Math.abs(g.rail.h - 24) < 1 && g.korb && g.haupt, `${name}:   folded: ${g.rail.h} px, Korb and Hauptknopf stay`);
     await page.screenshot({ path: SHOTS + '/ui-' + name + '-5.png' });
     const a11y = await page.evaluate(() => { const M = window.__M; M.setParam('hx.rail', 'offen'); return { live: document.getElementById('hxLive').textContent, ring: M.HXU.rings[0].getAttribute('aria-label') }; });
     ok(/Schleife/.test(a11y.ring) && /spielt|stumm/.test(a11y.ring) && a11y.live.length > 0, `${name}:   rings say what they are („${a11y.ring}“); the live region said „${a11y.live}“`);

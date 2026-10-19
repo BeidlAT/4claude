@@ -6,6 +6,7 @@
 //   __ring(ctx, po)                – a myzel-ring node (2 inputs, 2 stereo outputs); its replies in node.__got
 //   __chunks(n, fL, fR)            – n frames as 8192-frame [L, R] chunks, fL(i)/fR(i) the samples
 //   __read(chunks, i)              – one frame [l, r]
+//   (processors 'hx-rec' and 'hx-recf' – the latter also gives the frame it began at: __recGet(node).f0)
 //   __sleep(ms)
 const { chromium } = require('/opt/node22/lib/node_modules/playwright');
 const URL_HX = process.env.HX_URL || 'http://127.0.0.1:8790/hx-inst/index.html';
@@ -43,7 +44,13 @@ class HxRec extends AudioWorkletProcessor {
   constructor(o) { super(); this.L = []; this.R = []; this.n = 0; this.port.onmessage = () => { this.port.postMessage({ L: this.L, R: this.R, n: this.n }); }; }
   process(inp) { const a = inp[0]; if (a && a[0]) { this.L.push(a[0].slice()); this.R.push((a[1] || a[0]).slice()); this.n += a[0].length; } return true; }
 }
-registerProcessor('hx-rec', HxRec);`;
+registerProcessor('hx-rec', HxRec);
+// a recorder that knows the frame it began at (currentFrame: the live myzel-ring counts the same frames)
+class HxRecF extends AudioWorkletProcessor {
+  constructor(o) { super(); this.L = []; this.R = []; this.n = 0; this.f0 = -1; this.port.onmessage = () => { this.port.postMessage({ L: this.L, R: this.R, n: this.n, f0: this.f0 }); }; }
+  process(inp) { const a = inp[0]; if (this.f0 < 0) this.f0 = currentFrame; if (a && a[0]) { this.L.push(a[0].slice()); this.R.push((a[1] || a[0]).slice()); this.n += a[0].length; } else { const z = new Float32Array(128); this.L.push(z); this.R.push(z); this.n += 128; } return true; }
+}
+registerProcessor('hx-recf', HxRecF);`;
 async function tools(page) {
   await page.evaluate((TEST_SRC) => {
     const M = window.__M;
@@ -85,7 +92,7 @@ async function tools(page) {
       return A.ctx;
     };
     // a recorder's chunks as one Float32Array per channel
-    window.__recGet = (node) => new Promise((res) => { node.port.onmessage = (e) => { const d = e.data, L = new Float32Array(d.n), R = new Float32Array(d.n); let o = 0; for (let i = 0; i < d.L.length; i++) { L.set(d.L[i], o); R.set(d.R[i], o); o += d.L[i].length; } res({ L, R }); }; node.port.postMessage(1); });
+    window.__recGet = (node) => new Promise((res) => { node.port.onmessage = (e) => { const d = e.data, L = new Float32Array(d.n), R = new Float32Array(d.n); let o = 0; for (let i = 0; i < d.L.length; i++) { L.set(d.L[i], o); R.set(d.R[i], o); o += d.L[i].length; } res({ L, R, f0: d.f0 }); }; node.port.postMessage(1); });
   }, TEST_SRC);
 }
 async function open(o = {}) {

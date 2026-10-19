@@ -2,7 +2,9 @@
 //  a) Takt finden on synthetic phrases at 60–180 BPM (1, 2, 4 bars; quarters, eighths, syncopes, sixteenths, sparse;
 //     a waltz), every onset humanised by ±25 ms, the window's end off by up to ±40 ms (a tap is no metronome):
 //     top-1 and top-3 rates, octave errors (half / double tempo) counted, the length fitted back to the bars;
-//     rubato (random onsets) reads as low pulse clarity → frei
+//     rubato (random onsets) reads as low pulse clarity → frei; (step 1c) the margin: a reading of another pulse
+//     scoring nearly as well → frei – short free phrases of 2–6 notes rarely find a chance grid, the phrases above keep
+//     theirs
 //  b) Wiederholung: a figure repeated (same degrees, or transposed: the same intervals), IOIs within ±15 %, at least 5
 //     events and 1 s; not for a figure whose rhythm changes by 25 %, a random line, or too few events; „the start“
 //   node t-hx-ohr.js
@@ -27,6 +29,7 @@ const { ok } = H;
       const res = M.hxTaktFinden(ons, L), c = res.cands, want = bars * m;
       const hit = (x) => x && x.n === want && x.m === m;
       out.n++;
+      if (res.clarity >= 0.55) { out.clr = (out.clr || 0) + 1; if (M.hxTaktOk(res)) out.kept = (out.kept || 0) + 1; }
       const k = c.findIndex(hit);
       if (k === 0) out.top1++; else out.miss.push([bpm, name, bars, c[0] && c[0].n + '/' + c[0].m + ' ' + c[0].bpm.toFixed(0), k]);
       if (k >= 0 && k < 3) out.top3++;
@@ -39,11 +42,22 @@ const { ok } = H;
     for (let i = 0; i < 40; i++) {
       const L = 3 + rnd() * 5, ons = []; for (let j = 0; j < 6 + Math.floor(rnd() * 8); j++) ons.push({ t: rnd() * (L - 0.1), v: 0.6, f: 220, d: [j] });
       ons.sort((a, b) => a.t - b.t);
-      rubN++; if (M.hxTaktFinden(ons, L).clarity < 0.55) rub++;
+      rubN++; if (!M.hxTaktOk(M.hxTaktFinden(ons, L))) rub++;
     }
+    // short free phrases: 2–6 notes, every IOI free (0.12–1.2 s), the tap 0.3–1.5 s after the last – a grid only by chance
+    const fr = { n: 0, cl: 0, takt: 0, byK: {} }; seed = 1234;
+    for (let i = 0; i < 2000; i++) {
+      const k = 2 + Math.floor(rnd() * 5), ons = []; let t = 0;
+      for (let j = 0; j < k; j++) { ons.push({ t, v: 0.5 + 0.4 * rnd(), f: 110 * Math.pow(2, rnd() * 3), d: [j] }); t += 0.12 * Math.pow(10, rnd()); }
+      const res = M.hxTaktFinden(ons, ons[k - 1].t + 0.3 + rnd() * 1.2), B = (fr.byK[k] = fr.byK[k] || [0, 0]);
+      fr.n++; B[0]++;
+      if (res.clarity >= 0.55) fr.cl++;
+      if (M.hxTaktOk(res)) { fr.takt++; B[1]++; }
+    }
+    out.fr = fr;
     // the metric phrases above read clear
     let clr = 0; seed = 99;
-    for (let i = 0; i < 40; i++) { const bpm = 70 + rnd() * 100, T = 60 / bpm, ons = []; for (let b = 0; b < 8; b++) ons.push({ t: b * T + (rnd() * 2 - 1) * 0.025, v: 0.7, f: 220, d: [b] }); if (M.hxTaktFinden(ons, 8 * T).clarity >= 0.55) clr++; }
+    for (let i = 0; i < 40; i++) { const bpm = 70 + rnd() * 100, T = 60 / bpm, ons = []; for (let b = 0; b < 8; b++) ons.push({ t: b * T + (rnd() * 2 - 1) * 0.025, v: 0.7, f: 220, d: [b] }); if (M.hxTaktOk(M.hxTaktFinden(ons, 8 * T))) clr++; }
     // ---- b) Wiederholung ----
     const mk = (degs, iois, reps, o = {}) => { const a = []; let t = 0; for (let r = 0; r < reps; r++) degs.forEach((d, i) => { a.push({ t, d: [d + (o.tr && r ? o.tr : 0)], v: 0.7, f: 220 }); t += iois[i] * (o.stretch && r === reps - 1 ? o.stretch : 1) * (1 + (o.jit ? (rnd() * 2 - 1) * o.jit : 0)); }); return a; };
     const W = (a) => M.hxWiederholung(a);
@@ -67,6 +81,10 @@ const { ok } = H;
   const lm = a.len.reduce((x, y) => x + y, 0) / a.len.length, lx = Math.max(...a.len);
   ok(lm < 15 && lx < 60, `  the length fitted from the onsets: mean ${lm.toFixed(1)} ms, max ${lx.toFixed(1)} ms off the true bars (the window's end was up to 40 ms off)`);
   ok(r.rub / r.rubN >= 0.85 && r.clr / 40 >= 0.9, `pulse clarity: rubato (random onsets) reads frei ${r.rub}/${r.rubN}, a steady line clear ${r.clr}/40`);
+  const f = a.fr;
+  console.log('INFO free phrases reading a Takt, by notes [n, takt]:', JSON.stringify(f.byK));
+  ok(a.kept >= a.clr - 2, `the margin (a rival reading of another pulse within ${'0.8'}): the clear phrases above keep their Takt – ${a.kept} of ${a.clr}`);
+  ok(f.takt / f.n <= 0.13 && f.takt < 0.5 * f.cl, `  ${f.n} short free phrases (2–6 notes): a chance grid ${f.takt} times (${(100 * f.takt / f.n).toFixed(1)} %; by clarity alone ${f.cl}) – the rest stays frei`);
   const b = r.b;
   ok(b.same && Math.abs(b.same.p - 2) < 0.01 && b.same.m === 6, `Wiederholung: a 6-note figure of 2 s, three times → cycle ${b.same && b.same.p.toFixed(3)} s, ${b.same && b.same.m} events`);
   ok(b.trans && Math.abs(b.trans.p - 2) < 0.01, '  transposed (the same intervals) – found');
