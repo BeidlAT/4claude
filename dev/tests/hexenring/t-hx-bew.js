@@ -223,12 +223,12 @@ async function check(page, t0, t1) {
     ck(await page.evaluate(() => window.__bew() && window.__bew().state === 'spielt'), '  turning the knob again: it keeps playing around the new position');
     await page.evaluate(async () => { const M = window.__M; for (const L of M.hxLoopsLive()) M.hxDelete(L); await window.__sleep(200); });
     // a pad learned to the Korb (momentary) takes Bewegung and plays no note
-    await page.evaluate(async () => { const M = window.__M; M.midiLearn(true); M.learnPick('hx.korb'); window.__send([0x99, 40, 100], 'p2'); await window.__sleep(60); window.__send([0x89, 40, 0], 'p2'); await window.__sleep(600); M.midiLearn(false); M.modSet('map:test:9', 'pan', 0.6); });
+    await page.evaluate(async () => { const M = window.__M; M.midiLearn(true); M.learnPick('hx.korb'); window.__send([0x99, 40, 100], 'p2'); await window.__sleep(60); window.__send([0x89, 40, 0], 'p2'); await window.__sleep(600); M.midiLearn(false); window.__drive('map:test:9', 'pan', '0.6*Math.sin(2*Math.PI*t/0.7)'); });
     await sleep(2400);
     await page.evaluate(async () => { const M = window.__M, E = Math.ceil(M.tgBeat(M.heardT()) / 4 + 1e-9) * 4; while (M.tgBeat(M.heardT()) < E + 0.25) await window.__sleep(5); window.__send([0x99, 40, 100], 'p2'); await window.__sleep(60); window.__send([0x89, 40, 0], 'p2'); for (let i = 0; i < 40 && !(window.__bew() && window.__bew().lanes.length); i++) await window.__sleep(25); });
     let r = await page.evaluate(() => ({ b: window.__bew(), notes: window.__M.touches.size }));
     ck(r.b && r.b.lanes[0].k === 'pan' && r.notes === 0, 'a pad on the Korb takes the last bar of Bewegung (Panorama) and plays no note');
-    await page.evaluate(() => window.__M.modSet('map:test:9', 'pan', 0));
+    await page.evaluate(() => window.__undrive('map:test:9', 'pan'));
     // (last: a note sounded – the Korb takes sound from here on)
     await page.evaluate(async () => { const M = window.__M; for (const L of M.hxLoopsLive()) M.hxDelete(L); await window.__sleep(100); });
     // the X-Y pad as a finger: a note that sounds – the Korb takes the sound; its height is the Schleife's Bewegung
@@ -358,12 +358,12 @@ async function check(page, t0, t1) {
     r = await page.evaluate(async () => {
       const M = window.__M, o = {};
       M.hxHinSet(true); o.bind = M.MAP.user.some((b) => b.type === 'gest' && b.num === 1 && b.target === 'hx.hin');
-      M.modSet('map:test:7', 'pan', 0.5); await window.__sleep(2400);
+      window.__drive('map:test:7', 'pan', '0.5*Math.sin(2*Math.PI*t/0.6)'); await window.__sleep(2400);
       const n = M.hxLoopsLive().length;
       window.__sensor(true, { beta: 0, roll: 0 }, 0);   // lying flat and still: Ruhe
       for (let i = 0; i < 80 && M.hxLoopsLive().length === n; i++) await window.__sleep(50);
       o.made = M.hxLoopsLive().length - n; o.ruhe = !!M.GK.ev.ruhe;
-      M.modSet('map:test:7', 'pan', 0); M.hxHinSet(false); o.off = !M.MAP.user.some((b) => b.target === 'hx.hin');
+      window.__undrive('map:test:7', 'pan'); M.hxHinSet(false); o.off = !M.MAP.user.some((b) => b.target === 'hx.hin');
       return o;
     });
     ck(r.bind && r.ruhe && r.made === 1 && r.off, `„Hinlegen erntet“ (opt-in, a binding of Ruhe): the phone put down – the Korb takes what came before (${r.made} Schleife); off again`);

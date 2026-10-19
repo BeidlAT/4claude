@@ -13,7 +13,10 @@
 // playing Schicht (a 2-bar loop at 120 BPM, a crossfaded seam every pass), 'hxr1' resampled ({rate} 17 ct) –
 // HX_COST.schicht = hxs − hx0, HX_COST.rs = hxr − hxs; (step 1c) 'hxf1' NV copies of the live chain (makeChain with the
 // patch's settings, as hxChain builds out 1's), each fed by a noise source, 'hxz1' the NV sources alone –
-// HX_COST.fx1 = hxf − hxz
+// HX_COST.fx1 = hxf − hxz; (step 1d) 'hxm1' a loop of four Schichten at the loop's own rate (17 ct) – summed, resampled
+// once – and 'hxp1' the same read one by one (po.noSum, step 1c's way): the summed loop costs 4 × schicht + one rs;
+// 'hxd1' one Schicht being de-drifted (Taumeln: drift 4 ct live, its own 8 ct at 2.5 Hz, the job running all along) –
+// HX_COST.dd = hxd − hxr
 process.env.SEED_BLOBS = '';
 const { chromium, openInst } = require('../../v2/lib');
 const ROUNDS = +process.argv[2] || 6, DUR = +process.env.DUR || 4, NV = +process.env.NV || 24, NW = +process.env.NW || 1, NH = +process.env.NH || 8;
@@ -53,17 +56,27 @@ const XP = JSON.parse(process.env.PARAMS || '{}');
           if (cap) { sum = ctx.createGain(); for (const sr of srcs) { const g = ctx.createGain(); sr.connect(g).connect(sum); } }   // the Gespielt tap's shape: four strip gains into a sum
           if (eng === 'hxn') { sum.connect(ctx.destination); continue; }
           const msgs = [], C = window.__hxCh;
-          if (eng === 'hxs' || eng === 'hxr') {
-            msgs.push({ seg: [[0, 0, SR * 60 / 120]], reset: 1 }, { loop: { id: 1, lock: 'takt', b0: 0, beats: 8 } }, { schicht: { loop: 1, id: 1, chunks: C.ch, n: C.n, pre: 0, len: C.len, join: 'xf', X: 480, rho: 0.2 } });
-            if (eng === 'hxr') msgs.push({ rate: { loop: 1, cents: 17 } });
+          let po = {};
+          if (eng === 'hxs' || eng === 'hxr' || eng === 'hxm' || eng === 'hxp') {
+            msgs.push({ seg: [[0, 0, SR * 60 / 120]], reset: 1 }, { loop: { id: 1, lock: 'takt', b0: 0, beats: 8 } });
+            for (let s = 0; s < (eng === 'hxm' || eng === 'hxp' ? 4 : 1); s++) msgs.push({ schicht: { loop: 1, id: s + 1, chunks: C.ch, n: C.n, pre: 0, len: C.len, join: 'xf', X: 480, rho: 0.2 } });
+            if (eng !== 'hxs') msgs.push({ rate: { loop: 1, cents: 17 } });
+            if (eng === 'hxp') po = { noSum: 1 };
+          }
+          if (eng === 'hxd') {   // (a long Schicht: its de-drift job runs through the whole render, at the app's pace)
+            if (!window.__hxChD) { const nn = 14 * SR, ch = []; for (let c = 0; c * 8192 < nn; c++) { const L = new Float32Array(8192), R = new Float32Array(8192); for (let j = 0; j < 8192; j++) { L[j] = Math.sin((c * 8192 + j) * 0.031) * 0.1; R[j] = L[j]; } ch.push([L, R]); } const dr = new Float32Array(Math.ceil(nn / 128) + 1); for (let k = 0; k < dr.length; k++) dr[k] = 8 * Math.sin(2 * Math.PI * 2.5 * k * 128 / SR); window.__hxChD = { ch, n: nn, dr }; }
+            const D = window.__hxChD, pool = []; for (let i = 0; i < 12 + Math.ceil(D.n * 1.02 / 8192) + 2; i++) pool.push([new Float32Array(8192), new Float32Array(8192)]);
+            msgs.push({ seg: [[0, 0, SR * 60 / 120]], reset: 1 }, { loop: { id: 1, lock: 'takt', b0: 0, beats: 24 } }, { schicht: { loop: 1, id: 1, chunks: D.ch, n: D.n, pre: SR, len: 12 * SR, join: 'xf', X: 480, rho: 0.2, tau: true, dd: 1, dr: D.dr } }, { pool });
+            po = { rid: 5000 + k, drift: 1, ddPool: 1, humusS: 1 };
           }
           if (eng === 'hxc') { const hN = Math.ceil(16 * SR / 8192), pool = []; for (let i = 0; i < 2 * hN; i++) pool.push([new Float32Array(8192), new Float32Array(8192)]); msgs.push({ pool }); }
-          const nd = new AudioWorkletNode(ctx, 'myzel-ring', { numberOfInputs: 2, numberOfOutputs: 2, outputChannelCount: [2, 2], channelCount: 2, channelCountMode: 'explicit', processorOptions: Object.assign({ humusS: 16, msgs }, cap ? { rid: k + 1 } : {}) });
+          const nd = new AudioWorkletNode(ctx, 'myzel-ring', { numberOfInputs: 2, numberOfOutputs: 2, outputChannelCount: [2, 2], channelCount: 2, channelCountMode: 'explicit', processorOptions: Object.assign({ humusS: 16, msgs }, cap ? { rid: k + 1 } : {}, po) });
           if (cap) {   // (as the app: Gespielt into input 0; „Alles“ through its own node myzel-ring-in, silent into the output)
             sum.connect(nd, 0, 0);
             const rin = new AudioWorkletNode(ctx, 'myzel-ring-in', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1], channelCount: 2, channelCountMode: 'explicit', channelInterpretation: 'speakers', processorOptions: { rid: k + 1 } }), z = ctx.createGain();
             z.gain.value = 0; srcs[0].connect(rin); rin.connect(z).connect(ctx.destination);
           }
+          if (eng === 'hxd') { const cs = ctx.createConstantSource(); cs.offset.value = 4; cs.connect(nd, 0, 1); cs.start(); }   // (the live drift: 4 ct)
           nd.connect(ctx.destination, 0);
         }
         const t0 = performance.now(); await ctx.startRendering(); return performance.now() - t0;
