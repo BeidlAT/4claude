@@ -13261,8 +13261,9 @@ function ctxSync() {
   // (Hexenring step 1b: a stall under 100 ms is walked as well – a receiver of our clock sees no jump; the Taktgeber
   // follows a moving mapping within ¼ beat, see tgFollow)
   if (!(Math.abs(d) < 100)) { if (A.ctxOff != null) A.ctxJump = true; A.ctxOff = floor; }
-  else A.ctxOff += clamp(d, -0.025 * dt, 0.025 * dt);   // walked at ≤ 2.5 % of the time passing, however often it is
-  // called: a clock pulse's gap moves by ≤ 0.5 ms at 120 BPM (per call it was up to 1 ms – two calls between pulses: 1–2)
+  else { const k = Math.min(0.4, 0.015 * dt); A.ctxOff += clamp(d, -k, k); }   // walked at ≤ 1.5 % of the time passing
+  // and ≤ 0.4 ms a call, however often it is called: a clock pulse's gap moves by well under a USB MIDI frame (per call
+  // it was up to 1 ms, two calls between two pulses: 2 ms) – a 15-ms stall is walked in a second
 }
 const perfAt = (t) => t * 1000 + A.ctxOff;
 const ctxAt = (ms) => { if (A.ctxOff == null) ctxSync(); return (ms - A.ctxOff) / 1000; };
@@ -24653,8 +24654,10 @@ function tgRebase(b0, t0) { const o = TG.o; TG.o = tgCb(t0) - b0; TG.ver++; TG.a
 function tgFollow(tA, bA, bpm, moved) {
   const t1 = A.ctx.currentTime + TG_LEAD, e = bA + ((t1 - tA) * bpm) / 60 - tgBeat(t1), es = (e * 60) / bpm;   // the error at t1 (beats, s)
   if (Math.abs(es) < 0.001) { if (Math.abs(bpm - TG.want) >= 0.01) tgRetempo(bpm); return; }   // within a millisecond (the loop's own noise): the tempo only
-  // (moved: the audio↔performance mapping changed since the last pulse – our clock stalled, not the device: fast too)
-  const T = Math.abs(es) > 0.015 || moved ? Math.min(15 / bpm, Math.max(0.05, Math.abs(es) / 0.6)) : Math.max(60 / bpm, 10 * Math.abs(es));   // (≤ ¼ beat for a stall; else ≥ 1 beat, the slope at most ±10 %)
+  // (moved: the audio↔performance mapping changed since the last pulse – our clock stalled, not the device: fast too,
+  // once the error is more than the pulses' own jitter – below 3 ms it slews as any small error)
+  const fast = Math.abs(es) > 0.015 || (moved && Math.abs(es) > 0.003);
+  const T = fast ? Math.min(15 / bpm, Math.max(0.05, Math.abs(es) / 0.6)) : Math.max(60 / bpm, 10 * Math.abs(es));   // (≤ ¼ beat for a stall; else ≥ 1 beat, the slope at most ±10 %)
   TG.want = bpm;
   tgAdd(t1, bpm + (60 * e) / T);
   tgAdd(t1 + T, bpm);

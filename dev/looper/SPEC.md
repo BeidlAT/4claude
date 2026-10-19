@@ -131,14 +131,17 @@ error > 15 ms – and any error that comes from our own clock (the audio↔perfo
 an audio stall, not the device) – is corrected within ¼ beat (`tgFollow(…, moved)`: a slope over `max(50 ms,
 |error|/0.6)`, ≤ ¼ beat, never below 40 % of the tempo). The beat still never jumps; a Takt Schleife's next seam simply
 comes that much earlier or later (its crossfade joins it). Two more pieces were needed: `ctxSync` walks a stall under
-100 ms (before: a jump from 15 ms on – the clock-out check „stamps step ≤ 1 ms“ failed on such stalls), at ≤ 2.5 % of the
-time passing however often it is called (before: up to 1 ms a call – with two calls between two clock pulses the
-check „the clock keeps running at the tempo“, gaps within 0.6 ms, failed once in nine runs); after a jump (a stall
-≥ 100 ms) `tick()` re-reads the device's clock (`clkFollow`) before the Puls schedules. Measured: `midi-tests/t-clock`
-green in 7 runs (29/29 each; the gaps after Stop within 0.07 ms); a diagnostic of its Puls window, six runs with stalls
-of 3–5 ms inside it: the Puls's hits within 0.33–0.96 ms (max) of the device's sixteenths (step 1a: up to 7.5 ms).
-`t-hx-clock` green (19/19; one run in six had too few calm samples for its device-clock rows – 8 of > 20 – while the
-audio clock walked; their errors were ≤ 1 ms all the same). A free first Schleife sets the Takt at its entry: the tempo from the Takt finder, the bar
+100 ms (before: a jump from 15 ms on – the clock-out check „stamps step ≤ 1 ms“ failed on such stalls), at ≤ 1.5 % of the
+time passing and ≤ 0.4 ms a call, however often it is called (before: up to 1 ms a call – with two calls between two
+clock pulses the checks on the pulses' gaps, within 0.6 / 1.1 ms, failed now and then); a 15-ms stall is walked in a
+second. After a jump (a stall ≥ 100 ms) `tick()` re-reads the device's clock (`clkFollow`) before the Puls schedules.
+A moved mapping makes `tgFollow` fast only when the error is over 3 ms (below, it slews as any small error – fast
+corrections of mere jitter bent a following Fährte). Measured on two machines (the second, after a container restart,
+stalls 3–19 ms several times a second): `midi-tests/t-clock` 29/29 in 7 runs on the first (with a 2.5-% walk) and, as built, 5 of 5 on the second
+(the pulses' gaps after Stop within 0.4 ms); a diagnostic of its Puls window with such stalls inside it: the Puls's hits
+within 0.46–2.9 ms (max) of the device's sixteenths (step 1a: up to 7.5 ms; the check allows 6).
+`t-hx-clock` green (19/19; two runs of twelve had too few calm samples for its device-clock rows – 8 or 9 of > 20 –
+while the audio clock walked; their errors were ≤ 1 ms all the same, and over all samples ≤ 3.3 ms). A free first Schleife sets the Takt at its entry: the tempo from the Takt finder, the bar
 line (origin) at its seam (`hxTaktSet`). Tempo corrections (½, ×2, the finder's 3/4 reading) act at the loop's next seam
 (a bar line): the new slope and the loop's beats in one message (`hxBatch`), so its seams stay on bar lines.
 
