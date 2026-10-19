@@ -9585,7 +9585,7 @@ function myzelDsp() {
         }
         L.stopAt = null;
       } else if (L.st.v > 0 || L.st.i < L.st.N) for (let i = 0; i < L.sch.length; i++) { const S = L.sch[i]; if (S.pp && S.join === 'ola' && S.aend > S.aoff) this.tail(S, false, 0, S.aoff, 0); }
-      for (let i = 0; i < L.sch.length; i++) { const S = L.sch[i]; if (S.ddN && !S.old && !S.dead && !S.dying) this.ddAdopt(L, S); }   // (step 1d)
+      for (let i = 0; i < L.sch.length; i++) { const S = L.sch[i]; if (S.ddN && !S.old && !S.dead && !S.dying) { if (S.tau) this.ddAdopt(L, S); else { this.ddBack(S.id, S.ddN.dst); S.ddN = null; S.ddReq = -1; } } }   // (step 1d; Taumeln off meanwhile: its own audio stays, bit for bit)
       this.port.postMessage({ passStart: { loop: L.id, k: L.k, f: L.s0 } });
     }
     // a tail stream from the seam on: the Ausklang (src 0) or the Schicht's own audio from base (src 1); free: not under
@@ -9608,7 +9608,7 @@ function myzelDsp() {
       for (let i = 0; i < this.jobs.length; i++) if (this.jobs[i].S === S) return;   // (still filling: once it is complete)
       S.ddReq = S.pv;
       let z = true; for (let i = 0; i < S.dr.length; i++) if (S.dr[i] !== 0) { z = false; break; }
-      if (z) { S.ddA = true; S.dr0 = null; S.ddMap = null; S.aoffS = S.aoff; this.port.postMessage({ ddAdopt: { schicht: S.id } }); return; }   // (played without drift: nothing to take out)
+      if (z) { S.ddA = true; S.dr0 = null; S.ddMap = null; S.aoffS = S.aoff; this.port.postMessage({ ddAdopt: { schicht: S.id, z: 1 } }); return; }   // (played without drift: nothing to take out)
       const n = Math.ceil((S.tot * 1.012 + 1024) / this.CH), dst = this.ddPool ? this.take(n) : null;
       if (dst) this.ddStart({ schicht: S.id, pv: S.pv, dst }); else this.port.postMessage({ ddReq: { schicht: S.id, pv: S.pv, n } });
     }
@@ -26147,7 +26147,7 @@ function hxMsg2(m) {
   // (step 1d) a de-drifted version: the processor asks for its chunks, says while it makes one and when it took over
   if (m.ddReq) { const d = m.ddReq; if (HX.sch.has(d.schicht) && HX.node) { const [dst, tr] = hxChunks(d.n * HX_CH); hxPost({ ddGo: { schicht: d.schicht, pv: d.pv, dst } }, tr); } }
   if (m.ddRun) { if (m.ddRun.on) HX.ddRun.add(m.ddRun.schicht); else HX.ddRun.delete(m.ddRun.schicht); hxCount(); }
-  if (m.ddAdopt) { const S = HX.sch.get(m.ddAdopt.schicht); if (S) { S.ddOn = true; hxCount(); } }
+  if (m.ddAdopt) { const S = HX.sch.get(m.ddAdopt.schicht); if (S) { S.ddOn = true; S.ddZ = !!m.ddAdopt.z; hxCount(); } }
   if (m.filled) {   // a live fill is complete: the page's copy (for storage, undo, re-cuts)
     const d = m.filled, S = HX.sch.get(d.schicht);
     if (S && d.lost >= 0 && (d.v || 0) === (S.ver || 0) && d.chunks) {
@@ -27377,7 +27377,17 @@ function hxFolgt(L, on) {
 // also across a reload). Playing, it reads each Schicht faster or slower by the drift now against the drift there – a
 // pitch that follows the live one exactly, the content a few milliseconds early or late within a pass, back in phase at
 // every seam. Off: the loop keeps its recorded tuning. ----
-function hxTaumelnSet(L, on) { L.taumeln = !!on; hxPost({ tau: { loop: L.id, on: !!on } }); hxCount(); hxSay(hxName(L) + (on ? ': taumelt mit' : ': bleibt in ihrer Stimmung')); hxSaveMeta(L.id); hxCardDirty(); }
+// (step 1d) Taumeln off: a de-drifted Schicht plays its own audio again from the next seam – as recorded, bit for bit
+// (the processor holds only the de-drifted version; read against its own drift it would be resampled and ~ −69 dB off)
+function hxTauOrig(L) {
+  const sw = hxNextSeam(L);
+  for (const id of L.sch) {
+    const S = HX.sch.get(id); if (!S || !S.ddOn || S.ddZ || !S.aud) continue;
+    const s = hxSnapS(S), c = { in: s.cut.in, w0: s.cut.w0, w1: s.cut.w1, f0: s.cut.f0, pre: s.pre, len: s.len, post: s.cut.post, n: s.n, aus: s.aus };
+    hxSchSwap(S, c, { aud: s.aud, bak: s.bak, zo: s.zo, kc: s.kc, kcB: s.kcB, dr: s.dr, cutAus: s.cutAus, spliced: s.spliced, f: sw.f, join: s.join, X: s.X, rho: s.rho, fade: Math.min(Math.round(0.03 * SR), s.aus ? s.aus.len : 0) });
+  }
+}
+function hxTaumelnSet(L, on) { L.taumeln = !!on; hxPost({ tau: { loop: L.id, on: !!on } }); if (!on) hxTauOrig(L); hxCount(); hxSay(hxName(L) + (on ? ': taumelt mit' : ': bleibt in ihrer Stimmung')); hxSaveMeta(L.id); hxCardDirty(); }
 
 // ---- seams, complete (SPEC §7) ----
 // the attack offsets of sources whose sound rises well after the note (bowed, blown, swelling): a note's forbidden zone

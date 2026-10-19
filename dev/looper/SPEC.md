@@ -633,8 +633,12 @@ source's end; the 160-tap kernel of the restore conversion at 0.97 of Nyquist; 6
 this machine's audio thread until scheduled notes stayed silent) → `S.ddN`, taken over at the Schicht's next pass start
 (`ddAdopt`: the old version goes on as that seam's continuation and in the Ausklänge already ringing, read as before,
 then back to the page). A de-drifted version reads at the live drift alone (`dvF`), so a loop's Schichten share one rate
-and (a) sums them; its own drift re-indexed (`dr0`) serves Taumeln off and the reads of versions it replaced (`rX`). A
-new version (a bake, a re-cut, ↶) reads as played until its own de-drifted one comes. The page keeps the original audio
+and (a) sums them; its own drift re-indexed (`dr0`) serves Taumeln off until the next seam (below) and the reads of versions it replaced
+(`rX`). A
+new version (a bake, a re-cut, ↶) reads as played until its own de-drifted one comes. Taumeln off: from the next seam each
+de-drifted Schicht gets its own audio back from the page (`hxTauOrig`) – as recorded, bit for bit, read without
+resampling (the de-drifted version read against its own drift would be resampled and ~ −69 dB off); a job finished
+meanwhile is dropped (`advance`); Taumeln on again: de-drifted anew. The page keeps the original audio
 – storage, undo, bake, re-cuts are unchanged; the de-drifted version is the processor's alone, made again after a
 reload. **The sound.** Measured against the exact path (analytic tones, the drift as the processor reads it): the
 de-drifted read −69 dB; step 1c's read, which took the drift at each span's start, lagged it by up to ½ frame (−30 dB at

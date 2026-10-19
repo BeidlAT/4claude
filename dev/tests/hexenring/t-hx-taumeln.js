@@ -6,7 +6,8 @@
 // the step-1c one; after, it is nearer the exact path than the step-1c read (whose drift is now read at the span's
 // middle: before, at its start, it lagged by up to ½ frame); no click where it takes over; a new version (a bake) reads as
 // played until its own de-drifted one comes. Live: a harvest with Taumeln – the page lends the chunks, the cost counts
-// one resampling per loop and output once its Schichten took over (HX.rs), the job's own cost while it runs.
+// one resampling per loop and output once its Schichten took over (HX.rs), the job's own cost while it runs; Taumeln off:
+// each Schicht plays its own audio again from the next seam.
 // (offline the jobs run 512 frames a quantum – their pace, not their result; live 64)
 //   node t-hx-taumeln.js
 const G = require('./hx-g'), H = require('./hx-h');
@@ -91,12 +92,19 @@ const { ok } = H;
     o.dd = []; for (let i = 0; i < 400; i++) { M.hxCount(); o.dd.push(M.HX.dd); const all = Lp.sch.every((id) => M.HX.sch.get(id) && M.HX.sch.get(id).ddOn); if (all) break; await window.__sleep(100); }
     o.on = Lp.sch.map((id) => !!(M.HX.sch.get(id) || {}).ddOn); M.hxCount(); o.rs2 = M.HX.rs; o.ddMax = Math.max(...o.dd);
     o.load = M.hxLoad();
+    // Taumeln off: from the next seam each Schicht plays its own audio again (bit for bit, no resampling)
+    M.hxTaumelnSet(Lp, false);
+    const sw = M.hxNextSeam(Lp); await window.__until(M.hxT(sw.f) + 0.3);
+    const rep = await M.hxReport();
+    o.offOn = Lp.sch.map((id) => !!(M.HX.sch.get(id) || {}).ddOn); o.offDd = rep && rep.dd ? rep.dd.find((x) => x.length === Lp.sch.length) || null : null; M.hxCount(); o.rsOff = M.HX.rs;   // (dd: its only loop)
+    M.hxTaumelnSet(Lp, true);
     M.setParam('mov.drift', 6);
     return o;
   });
   ok(L.sch === 3, `live: a Schleife with three Schichten (Taumeln on, drift 8 ct): ${L.sch}`);
   ok(L.on.every(Boolean), `  every Schicht's de-drifted version took over (the page lent the chunks; ${L.on.filter(Boolean).length}/3)`);
   ok(L.rs1 >= 2 && L.rs2 === 1, `  the cost: ${L.rs1} resamplings while some read against their own drift → ${L.rs2} for the loop once all took over (HX.rs)`);
+  ok(L.offOn.every((x) => !x) && L.offDd && L.offDd.length === 3 && L.offDd.every((x) => x === 0) && L.rsOff === 0, `  Taumeln off: from the next seam every Schicht plays its own audio again, as recorded (de-drifted at the processor: ${JSON.stringify(L.offDd)}; resamplings ${L.rsOff})`);
   ok(L.ddMax >= 1, `  while a de-drifted version is made its job is counted (HX.dd up to ${L.ddMax}, HX_COST.dd each)`);
   console.log('errors:', errors.length ? errors.join(' | ') : 'none');
   ok(!errors.length, 'no page errors (live)');
