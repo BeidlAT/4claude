@@ -6,7 +6,8 @@
 //     (a probe samples the Filter target); Verblassen per pass; the patch is never written; deleting it leaves the
 //     Filter exactly at the patch; nothing moved: nothing taken; a knob (a patch parameter) loops relative to where it was
 //     left and keeps playing around a new position; an X-Y pad's height is part of an audio Schleife's Bewegung (it
-//     sounded – the Korb takes the sound); a pad on the Korb takes Bewegung and plays no note
+//     sounded – the Korb takes the sound); a pad on the Korb takes Bewegung and plays no note; it takes no sound (never
+//     the Fokus, no overdub into it)
 //   clock – a tempo change mid-pass (it follows in beats); a 300-ms stall of the page (the audio thread plays on); the
 //     Puls starting (it joins the Schleife's bar lines); an external MIDI clock (it follows its tempo and bars)
 //   latency shift – Gestik's lanes are written earlier by the sensor's measured delay than a knob's
@@ -135,6 +136,16 @@ async function check(page, t0, t1) {
     await sleep(1500);
     const c5 = await check(page, tp + 0.05, tp + 1.4);
     ck(c5.mean < 0.004 && c5.mx < 0.04, '  and plays on with the Puls (mean ' + c5.mean.toFixed(5) + ')');
+    // it takes no sound: never the Fokus – the Hauptknopf in „dieselbe Schleife“ records a new Schleife, no overdub into it
+    const fk = await page.evaluate(async () => {
+      const M = window.__M, L = M.hxLoopsLive().find((x) => x.bew), o = { fok: M.HX.fokus === L.id || !!M.hxFok() };
+      M.setParam('hx.modus', 'dieselbe'); M.HX.fokus = L.id;
+      M.hxHaupt(null); o.punch = !!M.HX.punch; o.rec = !!M.HX.rec; o.sch = L.sch.length;
+      if (M.HX.rec) M.hxRecCancel(); if (M.HX.punch) M.hxPunchEnd(M.A.ctx.currentTime);
+      M.setParam('hx.modus', 'neu');
+      return o;
+    });
+    ck(!fk.fok && !fk.punch && fk.rec && fk.sch === 0, `  it takes no sound: never the Fokus; „dieselbe Schleife“ records a new one instead of overdubbing it (${JSON.stringify(fk)})`);
     // deleting it (its card – ↶ undoes): its sources leave the layer, the Filter is back at the patch exactly
     await page.evaluate(() => { const M = window.__M; M.hxDelete(M.hxLoopsLive().find((x) => x.bew)); });
     await sleep(600);

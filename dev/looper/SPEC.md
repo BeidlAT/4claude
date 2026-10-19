@@ -843,7 +843,9 @@ the Schleifen's keys, stored with the session record (`'_s'` in IndexedDB, with 
 `hxLichMerken` takes what sounds now (and, with `hx.lichMix`, the mixer scene – `mxSnapTake`; with `hx.lichPuls`, the
 Puls on/off); `hx.regel` is a new one's rule. `hxLichGo(Li)`: the moment from the rule (`hxLichT`: the next bar line ≥
 `HX_LEAD`, or the next seam of the longest Schleife; no Takt and only free loops: at once), every state and level sent
-for that moment's frames (`hxState`/`hxGain` with `at`; an angehalten one re-enters from its start), Eigensinn through
+for that moment's frames (`hxState`/`hxGain` with `at`; an angehalten one re-enters from its start; the processor ignores
+a state change for a loop it is clearing – a Schleife deleted just before the 1, still fading out there, came back on it
+before, sounding without a ring and never giving its buffers back: found by the fuzz, t-hx-form checks it), Eigensinn through
 the guard, the Puls started just ahead so it joins on that bar line (or `SEQ.stopB`), the scene's values at the moment
 (`hxFormTick`); a pending entry `licht` (its cancel puts back what it changed). The form button `#hxForm` at the rail's
 right end: tap = the next Lichtung, cyclic (`hxFormTap`; tapped while one waits: cancelled; none yet: the row); held
@@ -1102,7 +1104,10 @@ twice in the window (a preset or a value set once is a jump, not a gesture – i
 replay live:** only a Schleife of Bewegung's – moving the instrument is all it is. An audio Schleife never moves the live
 instrument: its Bewegung (`L.mv`) is in its sound already – voice lanes (height, Ausdruck, bends) drive its own notes when
 it grows (Wuchs, 2a), chain lanes are baked into it or it follows the live chain, echo, hall and the A/B morph act on the
-whole mix and stay the player's. A device's Start moves the origin as for audio Schleifen (§2 1a: loops keep their beats).
+whole mix and stay the player's. A device's Start moves the origin as for audio Schleifen (§2 1a: loops keep their beats). It
+takes no sound: never the Fokus (`hxFok`, `hxLoopMake`), so „dieselbe Schleife“, a held Korb and a ring's R record or
+harvest a new Schleife instead of overdubbing it (`hxPunchStart`, `hxRetroPlan` refuse it) – the fuzz had found Schichten
+of audio punched into one.
 Migration: old bindings (§17), „Hinlegen wird Schleife“ → the Ruhe binding, presets/scenes/files as above (the built-in
 „Sporenfährte“ is „Sporenregen + Bewegung“, its recipe and its Schleife). The Gestik card's line names the playing
 Schleife of Bewegung; its tilt (`disp`) still draws the ghost spore.
@@ -1252,7 +1257,7 @@ rings (the live web's measured cost, §15).
 | `t-hx-bew.js` | (step 1d) the Fährte's checks ported to Schleifen of Bewegung: the layer, the Korb, playback, clock, latency shift, save format (§18) |
 | `t-hx-taumeln.js` | (step 1d) one resampling per loop: summed reads = separate ones; de-drifted Schichten nearer the exact path than step 1c's read; cost (§9, §21) |
 | `t-hx-persist.js` | reload mid-dub restores bit-exact; quota failure path; SR change resample |
-| `t-hx-fuzz.js` | 2000 random sequences of all actions + Stille/presets/scenes/tempo/Schlafen/hidden tab → no stuck notes (`A.voices.size === 0` after Stille), no NaN, no exceptions |
+| `t-hx-fuzz.js` | 2000 random sequences of all actions + Stille/presets/scenes/tempo/Schlafen/hidden tab → no stuck notes (`A.voices.size === 0` after Stille), no NaN, no exceptions; (step 1d) the books match – every Schicht with its Schleife, every cleared Schleife given back –, memory within the Speichergrenze |
 | `t-hx-ki.js` | Eigensinn operators keep scale/strong beats, MaxOrder ≤ 6, roles, Platz machen, die anderen spielen, answers' constraints, Begleiten in scale, Wiederkehr rules, Puls lernt |
 | `t-hx-oeko.js` | Nähren paths never re-captured; Treffen setzen meets exactly once at T; Einwurzeln follows a scale change; Mikro latency ±1 ms with a DelayNode loopback; YIN notes |
 | bench | `cost.js` rows for the processor, streams, webs; `bench.js` rows for Glut/Sehne after their inputs |

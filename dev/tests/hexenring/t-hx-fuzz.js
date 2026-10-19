@@ -3,8 +3,9 @@
 // (Lichtungen, Kern, Lücke, Schluss), Nähren, Auslese, corrections, chips, „nur Bewegung“, Bewegung from a preset –
 // mixed with notes, movement, Stille, presets, the mixer's scenes and morph, tempo changes, the Puls, Schlafen and
 // waking, a hidden tab and reloads. After every sequence Stille: no note may stay (A.voices.size === 0, no finger);
-// never a NaN or an infinity at the master or out of the processor; no exception; memory bounded – the Hexenring's
-// own count within its Speichergrenze, the page's heap after a collection not growing past it.
+// never a NaN or an infinity at the master or out of the processor; no exception; the books match (every Schicht with
+// its Schleife, every cleared Schleife given back); memory bounded – the Hexenring's own count within its Speichergrenze,
+// the page's heap after a collection not growing past it.
 //   node t-hx-fuzz.js            FUZZ_N=2000 actions (default), FUZZ_SEED=1
 const G = require('./hx-g'), H = require('./hx-h');
 const { ok } = H;
@@ -82,7 +83,9 @@ async function install(page) {
       M.modSet('map:fz:1', 'flt', 0); M.modSet('map:fz:1', 'pan', 0); M.modSet('map:fz:1', 'dly', 0); M.modSet('map:fz:1', 'hoehe', 0);
       M.panic();
       let i = 0; for (; i < 60 && (M.A.voices.size || M.touches.size); i++) await sleep(50);
-      return { voices: M.A.voices.size, touches: M.touches.size, ms: i * 50, loops: M.hxLoopsLive().length, mem: M.hxMemUsed(), cap: M.P['hx.mem'] * 1048576, state: M.A.ctx.state };
+      await sleep(300);
+      const orph = [...M.HX.sch.values()].filter((S) => !M.HX.loops.has(S.loop)).length, weg = [...M.HX.loops.values()].filter((L) => L.state === 'weg').map((L) => L.id);
+      return { voices: M.A.voices.size, touches: M.touches.size, ms: i * 50, loops: M.hxLoopsLive().length, mem: M.hxMemUsed(), cap: M.P['hx.mem'] * 1048576, state: M.A.ctx.state, orph, weg };
     };
   }, MEM_MB);
 }
@@ -93,7 +96,8 @@ async function install(page) {
   const heap = async () => { await cdp.send('HeapProfiler.collectGarbage'); const u = await cdp.send('Runtime.getHeapUsage'); return Math.round(u.usedSize / 1048576); };
   await page.evaluate(async () => { await window.__reset(); window.__grid(110); await window.__sleep(300); });
   await install(page);
-  const stuck = [], over = [], heaps = [];
+  const stuck = [], over = [], heaps = [], books = [];
+  let weg0 = [];
   let done = 0, seqs = 0, reloads = 0, h0 = null, nan = 0, exc = [], acts = {};
   const t0 = Date.now();
   while (done < N) {
@@ -105,6 +109,8 @@ async function install(page) {
     seqs++;
     const s = await page.evaluate(() => window.__settle());
     if (s.voices || s.touches) stuck.push(`seq ${seqs}: ${s.voices} voices, ${s.touches} fingers after Stille`);
+    const stale = s.weg.filter((id) => weg0.includes(id)); weg0 = s.weg;
+    if (s.orph || stale.length) books.push(`seq ${seqs}: ${s.orph} Schichten without their Schleife, Schleifen ${stale.join(',') || '–'} cleared a sequence ago and still held`);
     if (s.mem > s.cap + 64 * 1048576) over.push(`seq ${seqs}: ${Math.round(s.mem / 1048576)} MB of ${Math.round(s.cap / 1048576)}`);
     if (seqs % 25 === 0 || seqs === 5) { const hp = await heap(); heaps.push([seqs, hp, Math.round(s.mem / 1048576), s.loops]); if (seqs === 5) h0 = hp; }
     // a reload now and then: the Schleifen come back from storage, the fuzz goes on with them
@@ -115,7 +121,7 @@ async function install(page) {
       await page.click('#btnStart'); await page.waitForFunction(() => window.__M.HX.state === 'ok', null, { timeout: 10000 });
       await page.waitForTimeout(800);
       await install(page);
-      cdp = await cdp0();
+      cdp = await cdp0(); weg0 = [];
       reloads++;
     }
   }
@@ -128,6 +134,7 @@ async function install(page) {
   ok(!stuck.length, 'after every Stille: no note and no finger stays (A.voices.size === 0)' + (stuck.length ? ' – ' + stuck.slice(0, 5).join('; ') : ''));
   ok(nan === 0, `never a NaN or an infinity at the master or out of the processor (${nan} samples)`);
   ok(!exc.length && !errors.length, 'no exception in an action, no page error' + (exc.length || errors.length ? ': ' + exc.concat(errors).slice(0, 6).join(' | ') : ''));
+  ok(!books.length, 'the books match: no Schicht left without its Schleife, no cleared Schleife held past a sequence (the processor gave every buffer back)' + (books.length ? ' – ' + books.slice(0, 3).join('; ') : ''));
   ok(!over.length, `memory bounded: the Hexenring's own count stays within its Speichergrenze (${MEM_MB} MB)` + (over.length ? ' – ' + over.slice(0, 3).join('; ') : ''));
   ok(h0 != null && hEnd - h0 < MEM_MB + 64, `  the page's heap after a collection: ${h0} MB after 5 sequences → ${hEnd} MB at the end (bound: + ${MEM_MB + 64} MB)`);
   await H.close();

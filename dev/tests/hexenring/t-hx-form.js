@@ -6,7 +6,8 @@
 // output; angehalten at the end), abbauend (one per pass of the longest, the youngest first), mixer scenes carrying
 // Lichtungen (the morph fades only the levels; one-sided: half way switches), Schlafen and Wenden (angehalten at the next
 // bar line with their Ausklang; „3 · 2 · 1“ and back on the next 1; a long sleep keeps them angehalten), the form kept
-// over a reload, the §6.4 guard (no Eigensinn change for three passes after a Schicht), „eine Runde“.   node t-hx-form.js
+// over a reload, the §6.4 guard (no Eigensinn change for three passes after a Schicht), „eine Runde“, a Schleife deleted
+// while a Lichtung's switch to it waits.   node t-hx-form.js
 const G = require('./hx-g'), H = require('./hx-h');
 const { ok } = H;
 const BPM = 150;
@@ -330,6 +331,36 @@ const BPM = 150;
   });
   ok(r.end && !r.punch && r.sch === 3 && r.span === r.pass, `„eine Runde“: a punch in mode „dieselbe Schleife“ ends by itself one pass after the press (${r.span} frames = one pass; its group of ${r.sch - 1} Schichten)`);
   ok(!r.g0 && r.set === false && r.want === 'lebendig' && r.eig === 'treu' && r.g1 && r.eig2 === 'lebendig', `the guard: no Eigensinn change for three passes after a Schicht (asked: waits; ${r.kG} passes on: applied)`);
+
+  // ---- a Schleife deleted while a Lichtung's switch waits for the 1: it stays gone (the processor ignores a change
+  // scheduled before its clear – it neither sounds again nor keeps its buffers) ----
+  r = await ev(async () => {
+    const M = window.__M, o = {};
+    const s4 = await window.__mk(1, [2, 5, 9, 5], 'glo');
+    const L4 = M.HX.loops.get(M.HX.slot[s4]), id = L4.id, sids = L4.sch.slice();
+    await window.__until(M.tgTime(window.__nextBar(0.05)) + 0.3);
+    const Li = M.hxLichMerken();   // (with it on)
+    M.hxState(L4.id, 'stumm', null, { X: 0.02 }); L4.state = 'stumm';
+    await window.__until(M.tgTime(window.__nextBar(0.1)) + 0.25);
+    M.hxLichGo(Li);   // its switch back to „spielt“ on the 1, already at the processor
+    o.pend = M.HX.pend.some((x) => x.kind === 'licht');
+    const tB = M.tgTime(window.__nextBar(0.05));
+    await window.__until(tB - 0.025);   // (deleted inside its fade-out's reach of the 1: the switch arrives while it is still dying)
+    o.before = M.A.ctx.currentTime < tB - 0.008;
+    M.hxDelete(L4);
+    await window.__until(tB + 1.2);
+    o.gone = !M.HX.loops.has(id) && sids.every((x) => !M.HX.sch.has(x));
+    o.live = M.hxLoopsLive().length;
+    if (M.HX.lich.includes(Li)) M.hxLichDel(Li);
+    // one cleared before its first pass (its entry 100 bars ahead): its buffers come back at once, not at its entry
+    const id2 = M.hxLoopNew({ lock: 'takt', b0: Math.ceil(M.tgBeat(M.A.ctx.currentTime) / 4) * 4 + 400, beats: 4 });
+    await window.__sleep(200); o.made = M.HX.loops.has(id2);
+    M.hxClear(id2, null, 0.02); await window.__sleep(500);
+    o.early = !M.HX.loops.has(id2);
+    return o;
+  });
+  ok(r.pend && r.before && r.gone && r.live === 3, `a Schleife deleted just before a Lichtung's switch to it on the 1 (still fading out then): gone for good at the processor too (its buffers back: ${r.gone}; deleted in time: ${r.before})`);
+  ok(r.made && r.early, `  one cleared before its first pass (its entry 100 bars ahead): its buffers come back at once (${r.early})`);
 
   // ---- the form survives a reload ----
   r = await ev(async () => { const M = window.__M; await window.__sleep(800); return { n: M.HX.lich.length, cur: M.HX.lichCur }; });

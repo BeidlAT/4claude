@@ -9720,7 +9720,7 @@ function myzelDsp() {
         else { if (d.L) L.Lf = Math.max(1, Math.round(d.L)); L.ph0 = L.k >= 0 ? L.s1 - (L.k + 1) * L.Lf : L.ph0; }
         L.re = true;
       } else if (e.kind === 'state') {
-        const L = this.lp(d.loop); if (!L) return;
+        const L = this.lp(d.loop); if (!L || L.dying) return;   // (step 1d: a change scheduled before the loop was cleared – a Lichtung's, the Kern's – never brings it back)
         const to = d.to, N = this.xf(d.X);
         if (to !== 'spielt') L.wantIn = 0;   // (a re-entry still to come is off)
         if (to === 'spielt') {
@@ -9996,14 +9996,15 @@ function myzelDsp() {
       while (hi - lo > 1) { const m = (lo + hi) >> 1; if (A[m] <= x) lo = m; else hi = m; }
       return map.i0 + 32 * (lo + (x - A[lo]) / (A[hi] - A[lo]));
     }
-    // every loop, frames [F + a, F + b) of the block
+    // every loop, frames [F + a, F + b) of the block (step 1d: one cleared before its first pass – nothing of it sounds yet,
+    // its envelopes never step – goes at once; before, it kept its buffers until its entry came, if ever)
     play(outs, F, a, b) {
       for (let s = a; s < b; s += this.S) {
         const e = Math.min(b, s + this.S);
         for (let i = 0; i < this.loops.length; i++) {
           const L = this.loops[i];
           this.loopSpan(L, F + s, F + e, s, outs);
-          if (L.dying && L.st.i >= L.st.N && L.st.v === 0) { this.give({ loop: L.id }, L.sch.filter((S) => !S.dead).concat(L.sch.filter((S) => S.old).map((S) => S.old), ...L.sch.map((S) => S.park || []), L.sch.filter((S) => S.ddN).map((S) => ({ ch: S.ddN.dst })))); this.loops.splice(i--, 1); }
+          if (L.dying && (L.k < 0 || (L.st.i >= L.st.N && L.st.v === 0))) { this.give({ loop: L.id }, L.sch.filter((S) => !S.dead).concat(L.sch.filter((S) => S.old).map((S) => S.old), ...L.sch.map((S) => S.park || []), L.sch.filter((S) => S.ddN).map((S) => ({ ch: S.ddN.dst })))); this.loops.splice(i--, 1); }
         }
       }
     }
@@ -24808,7 +24809,11 @@ function hxMsg(m) {
   if (m.freed) {
     const d = m.freed, key = d.schicht != null && !d.old ? 's' + d.schicht : d.loop != null ? 'l' + d.loop : null, w = key && HX.wait.get(key);
     if (d.schicht != null && !d.old) HX.sch.delete(d.schicht);
-    if (d.loop != null) { const L = HX.loops.get(d.loop); if (L) for (const id of L.sch) HX.sch.delete(id); HX.loops.delete(d.loop); hxCount(); hxStripSync(); }
+    if (d.loop != null) {
+      const L = HX.loops.get(d.loop); if (L) for (const id of L.sch) HX.sch.delete(id);
+      for (const [id, S] of HX.sch) if (S.loop === d.loop) { HX.sch.delete(id); const ws = HX.wait.get('s' + id); if (ws) { HX.wait.delete('s' + id); ws(null); } }   // Hexenring: (step 1d) one taken back while it faded came back with its loop
+      HX.loops.delete(d.loop); hxCount(); hxStripSync();
+    }
     if (w) { HX.wait.delete(key); w(d.chunks); } else HX.back.push(d.chunks);   // (kept for a redo; dropped once the next step's history knows better)
     if (HX.back.length > 64) HX.back.shift();
   }
@@ -25335,8 +25340,8 @@ function hxLoopMake(o) {
   Object.assign(L, { slot: o.slot, key: o.key || hxKey('l'), bpb: o.bpb || 4, notes: o.notes || [], mv: o.mv || null, cut: o.cut || null, eng: o.eng || 'neb', setTG: !!o.setTG,
     gain: o.gain != null ? o.gain : 1, made: Date.now(), ps: [], src: o.src || 0, bpm: o.bpm || tgBpm(hxNowT()), lv: [0, 0], taumeln: o.taumeln !== false, folgt: !!o.folgt, eig: HX_EIG.includes(o.eig) ? o.eig : 'treu' });
   HX.slot[o.slot] = id;
-  if (!HX.fokus || !HX.loops.has(HX.fokus)) HX.fokus = id;
-  if (o.fokus !== false) HX.fokus = id;
+  if (o.eng !== 'bew' && (!HX.fokus || !HX.loops.has(HX.fokus) || HX.loops.get(HX.fokus).bew)) HX.fokus = id;   // Hexenring: (step 1d) never a Schleife of Bewegung
+  if (o.fokus !== false && o.eng !== 'bew') HX.fokus = id;
   hxPersistAsk();
   return L;
 }
@@ -25358,7 +25363,7 @@ function hxLenText(L) {
 
 // ---- Ernten (KONZEPT §2.3): what a Korb tap at heard time T takes – and where the Schleife enters ----
 const hxZiel = () => HX.slot.findIndex((x) => !x);
-const hxFok = () => { const L = HX.loops.get(HX.fokus); return L && L.state !== 'weg' && L.slot != null ? L : null; };
+const hxFok = () => { const L = HX.loops.get(HX.fokus); return L && L.state !== 'weg' && L.slot != null && !L.bew ? L : null; };   // (step 1d: a Schleife of Bewegung is never the Fokus – nothing is overdubbed into it)
 function hxSounding(o, now) { return o.t1 != null ? o.t1 : o.held ? now : o.t + 0.25; }
 // the phrase that ends at E: its first onset after ≥ 1 s without a note sounding (−Infinity: it never paused)
 function hxPhraseStart(ons, E, now) {
@@ -25464,6 +25469,7 @@ function hxInLoop(rep) {
 // the retro Schicht (KONZEPT §2.4): decided in the last ¼ of a pass → this pass, entering at its end (pending); else the
 // pass just completed, entering now. Always from the Gespielt ring.
 function hxRetroPlan(L, T) {
+  if (L.bew) return null;   // Hexenring: (step 1d) a Schleife of Bewegung takes no sound
   const fT = Math.round(hxF(T)), k = hxPassK(L, fT), a = hxPassF(L, k), b = hxPassF(L, k + 1), late = (fT - a) / Math.max(1, b - a) >= 0.75;
   const kk = late ? k : k - 1, f0 = hxPassF(L, kk), f1 = hxPassF(L, kk + 1), c = hxCut(0, 0, 0, { f0, f1 });
   if (!hxReach(c)) return null;
@@ -25682,6 +25688,7 @@ function hxRecAutoClose() {
 // ---- punch overdub into the Fokus (mode „dieselbe Schleife“): from the press frame out of the Humus, 10-ms fades,
 // one Schicht per pass (a group): each enters at the start of the pass after the one it was played in ----
 function hxPunchStart(L, T, e) {
+  if (L.bew) return;   // Hexenring: (step 1d) a Schleife of Bewegung takes no sound
   if (!hxMemOk(L.d.lock === 'takt' ? Math.round(hxLen(L) * SR) * 2 : L.d.L * 2)) return;
   const P0 = { loop: L.id, lk: L.key, group: ++HX.groupN, a: Math.round(hxF(T)), sks: [], k: null, hold: e ? { pid: e.pointerId, T, ptt: true } : null };
   if (P['hx.runde']) { const k = hxPassK(L, P0.a); P0.end = P0.a + (hxPassF(L, k + 1) - hxPassF(L, k)); }   // (step 1d: „eine Runde“ – it ends one pass after the press)
@@ -25807,7 +25814,7 @@ function hxDrop(L, X) {
   if (L.bew) modClear('hxb' + L.id + ':*');   // (step 1d: a Schleife of Bewegung leaves the mod layer)
   if (HXN.webs.has(L.id)) hxWebDrop(L.id, true);   // (its own web rings out and goes)
   L.slot = null;
-  if (!HX.fokus) { const n = hxLoopsLive().sort((a, b) => b.made - a.made)[0]; if (n) HX.fokus = n.id; }
+  if (!HX.fokus) { const n = hxLoopsLive().filter((x) => !x.bew).sort((a, b) => b.made - a.made)[0]; if (n) HX.fokus = n.id; }
   hxRailDirty(); hxCardDirty(); hxStripSync();
 }
 function hxDelete(L) {
@@ -28043,7 +28050,7 @@ function hxRingRec(slot, e) {
   const L = HX.loops.get(HX.slot[slot]);
   if (HX.punch) { const was = HX.punch.loop; hxPunchEnd(hxHeard(e)); if (L && was === L.id) return; }
   if (!L || (HX.rec && HX.rec.slot === slot)) { hxRingTap(slot, e); return; }
-  if (L.state === 'spielt') { HX.fokus = L.id; hxPunchStart(L, hxHeard(e), null); hxRailDirty(); }
+  if (L.state === 'spielt' && !L.bew) { HX.fokus = L.id; hxPunchStart(L, hxHeard(e), null); hxRailDirty(); }
   else hxRingTap(slot, e);
 }
 // solo: the others stumm at the bar line; again: they come back (the states before it)
