@@ -1332,3 +1332,35 @@ for three minutes, every frame would have copied the whole list). Regression (`r
 `t-gs-cost`, `v2/bars` G's onset, `klang/t-eng-native`'s 6-s hold – each passes or fails alike on both); `t-gs-raster`
 „held notes fill the voice budget“ now rounds the Hexenring's share up to a whole unit for that check (with the capture
 at 1.07 the whole notes left room the rain took). `klang/t-parity` and `midi-tests/t-parity` needed no change.
+
+### As built (step 1d): suites
+`t-hx-form` (30: Lichtungen merken and the form button – a real press, pending on it, a second tap cancels, held: the
+row –, am Takt / am Schleifenende, Kern there and back, Lücke from the processor's frames, Schluss am Ende / welkend
+(seeded) / abbauend, scenes carrying Lichtungen, Schlafen and Wenden, the §6.4 guard, „eine Runde“, a Schleife deleted
+just before a Lichtung's switch to it, one cleared before its first pass, the form after a reload), `t-hx-ctl` (23: the
+`hx.*` targets, momentary learn, pads, the Fährte's bindings migrated, pedal profiles with the hold test, the
+capture-phase keys before a focused knob, the computer's keys, the nanoKONTROL2 page, the nanoKEY chip), `t-hx-bew`
+(66: the Fährte's checks ported – the list in §18 –, a Schleife of Bewegung never the Fokus), `t-hx-oeko` (13: Nähren ·
+Gespinst and Körner, never re-captured), `t-hx-fuzz` (7: 2000 random actions in 100 sequences with reloads – no stuck
+note, no NaN, no exception, the books match, memory bounded), `t-hx-taumeln` (14: §9's summed reads and de-drifted
+Schichten offline against step 1c's paths and the exact one, a negative `pre`, live: the lent chunks, the cost, Taumeln
+off). `t-hx-ohr` +12 (the Auslese: 27), `t-hx-ui` +5 (the 260-px rule, the form button: 69). The klang `cost.js` gained
+`hxm`, `hxp`, `hxd` (§21). Deleted with the Fährte's UI: `motion-tests/t-gf-loop`, `t-gf-pc`, `t-gf-save`, `t-gf-gk`
+and the scripts `gf-block`, `gf-ui`, `gf-smoke`, `shot-gf` (their checks: §18); `t-gf-cost`, `t-gf-parity`, `t-gq-soak`,
+`t-gs-regen`, `t-gs-rezept`, `t-gu-ui`, `t-gx-live` adapted (a Schleife of Bewegung where they used the Fährte's loop).
+**Found by the fuzz and fixed** (each with its own check now): a negative index in `drAt` (a Schicht whose window
+reached before the Humus read its Taumeln as NaN); an Auftakt's de-drift (`pre` < 0: knots from before the buffer); a
+version given back while a summed read still waited for it (`gvQ`, `S.park`); a loop being cleared revived by a state
+change already queued (a Lichtung's switch on the 1 – it sounded on without a ring, its buffers never came back); a loop
+cleared before its first pass never freed; Schichten taken back while their loop faded left in the page's books; a
+Schleife of Bewegung as the Fokus (sound punched into it). Also: Taumeln off gives a de-drifted Schicht its own audio
+back (§9). **Regression** (`reg.sh`, `klang/tests/run-all.sh` with `SKIP_BENCH=1`, `smoke-all`, all Hexenring suites):
+green except rows that fail on step 1c's build as well, compared run for run on the same machine – `t-gm-stream`'s
+„the sound moved all the time“, `t-gl-schlafen`'s „woken“, `t-gf-cost`'s and `t-gs-cost`'s timing rows,
+`klang/t-eng-live`'s khl Puls row (a voice left), and in the Hexenring suites `t-hx-bake`'s pass comparisons and its
+live swap seam, `t-hx-werk`'s determinism (zpf, once) and `t-hx-bew`'s external clock (once) – each passed alone or
+failed on the earlier build too (`t-hx-bake`: on step 1d's first commit, before one resampling per loop); `v2/bars` G („armed recording starts on the
+first note“, < 256 samples) lands at about 60 samples or one or two render quanta later – 142 on step 1c's build, 184
+and 270 on step 1d's first commit, 186–279 on the later ones (alternating builds on the same machine; the main thread
+spends 3–4 ms in `onDown`, the note's start meets the next render callback or the one after). `klang/t-lib-shots` „p360“ passed this time. `smoke-all`: 28 sources, none
+silent.
