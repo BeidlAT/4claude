@@ -9,8 +9,9 @@ const { launch, page, start, touchDrag, line, tap, ok } = require('./lib.js');
   const S = (id, v) => pg.evaluate(([i, v]) => window.__M.setParam(i, v), [id, v]);
   const box = async (sel) => (await pg.$(sel)).boundingBox();
   // (Gestik part 6 added the channel „Regen“ to the Spiel group: Spur 1 now stands one strip further right – the rack
-  // is scrolled so it is fully in view, as a player would)
-  await pg.evaluate(() => { const M = window.__MX.MX, g = M.ch.l0.g; if (g) document.querySelector('.mx-scroll').scrollLeft = Math.max(0, g.x + g.w - (M.vw - M.sumW) + 4); });
+  // is scrolled so it is fully in view, as a player would – by the strip's own box: with the Hexenring's Ringleiste
+  // under the field a 390 × 844 phone gets the „side“ strips, their knobs beside the stem)
+  await pg.evaluate(() => { const M = window.__MX.MX, el = M.ch.l0.el, sc = document.querySelector('.mx-scroll'); if (el) { const r = el.getBoundingClientRect(), rr = M.row.getBoundingClientRect(); sc.scrollLeft = Math.max(0, r.right - rr.left - (M.vw - M.sumW) + 4); } });
   await pg.waitForTimeout(300);
   // 1 two quick nudges on knobs never reset
   await S('xl0.dly', 0);

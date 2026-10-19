@@ -1,8 +1,9 @@
 // Hexenring – the taps and the strip (SPEC §4; tests §22): with loops playing (out 0 and out 1) and live sound going
-// on, neither tap holds loop signal (a marker tone in the loops, measured narrow-band: ≤ −100 dB under the loop's own
-// level), while the master carries it; „Gespielt“ is post-mute (a muted strip is not in the Humus); „Alles“ is
-// A.masterSum and excludes the strip „Hexenring“, which goes straight to A.masterIn; the strip is hidden in the mixer
-// until the first Schleife and its settings are not the patch's.   node t-hx-taps.js
+// on, „Gespielt“ holds no loop signal (a marker tone in the loops, measured narrow-band: ≤ −100 dB under the loop's own
+// level), while the master carries it; „Gespielt“ is post-mute (a muted strip is not in the Humus); „Alles“ is the
+// master's input, the Schleifen included (step 1b: true resampling – a node of its own downstream of A.masterIn,
+// myzel-ring-in, writes ring 1 at the processor's frame count: both rings stay aligned to the frame); the strip is hidden in the mixer until the
+// first Schleife and its settings are not the patch's.   node t-hx-taps.js
 const H = require('./hx-h');
 const { ok } = H;
 (async () => {
@@ -13,7 +14,7 @@ const { ok } = H;
     const M = window.__M, A = M.A, st = M.MIX.s.hxr;
     return { route: M.P['xhxr.route'], to: st.dTo === A.masterIn, mask: [...M.HX.mask].join(' '), taps: M.MIX.src.filter((s) => s.hxT).map((s) => s.k).join(' '), rec: !!M.PD['xhxr.vol'].rec, inPatch: 'xhxr.vol' in M.patchValues() };
   });
-  ok(r.route === 'dir' && r.to, 'the strip „Hexenring“ goes straight to A.masterIn (route dir), behind the „Alles“ tap at A.masterSum');
+  ok(r.route === 'dir' && r.to, 'the strip „Hexenring“ goes straight to A.masterIn (route dir), where „Alles“ listens (myzel-ring-in)');
   ok(r.taps === 'fin eb2 rgn gsp' && r.mask === 'fin eb2 rgn gsp', `„Gespielt“ taps the strips ${r.taps} (after their mute/solo gate); the Puls and the Bordun only by the mask`);
   ok(r.rec && !r.inPatch, 'the strip\'s settings stay out of the patch (a preset never changes the loops)');
 
@@ -32,7 +33,7 @@ const { ok } = H;
     for (let i = 0; i < 4; i++) setTimeout(() => { const v = M.playNote('glo', ctx.currentTime + 0.01, 110 * (1 + i / 4), 0.3, 0.6, {}); }, 300 + i * 500);
     await window.__sleep(2500);
     const rec = (node) => { const r = new AudioWorkletNode(ctx, 'hx-rec', { numberOfInputs: 1, numberOfOutputs: 1, channelCount: 2, channelCountMode: 'explicit' }); const z = ctx.createGain(); z.gain.value = 0; node.connect(r); r.connect(z).connect(ctx.destination); return r; };
-    const R = { g: rec(A.hxIn0), a: rec(A.masterSum), s: rec(M.MIX.s.hxr.dry), o: rec(A.out) };
+    const R = { g: rec(A.hxIn0), a: rec(A.masterIn), s: rec(M.MIX.s.hxr.dry), o: rec(A.out) };
     await window.__sleep(2500);
     const got = {}; for (const k in R) got[k] = await window.__recGet(R[k]);
     // narrow band: a Blackman–Harris window, the marker's bin (and the Bordun's level, to show the tap is live)
@@ -46,7 +47,29 @@ const { ok } = H;
   const d = (k) => +(r[k].m - r.s.m).toFixed(1);
   ok(r.s.m > -30 && Math.abs(r.o.m - r.s.m) < 3, `the loops sound: the marker in the strip ${r.s.m.toFixed(1)} dBFS, at the master ${r.o.m.toFixed(1)} dBFS`);
   ok(d('g') <= -100 && r.g.rms > -50, `„Gespielt“ tap: the marker ${d('g')} dB under the loops (≤ −100), while the live sound is there (${r.g.rms.toFixed(1)} dBFS)`);
-  ok(d('a') <= -100 && r.a.rms > -50, `„Alles“ tap (A.masterSum): the marker ${d('a')} dB under the loops (≤ −100) – the strip is not in it (live ${r.a.rms.toFixed(1)} dBFS)`);
+  ok(Math.abs(d('a')) < 1.5 && r.a.rms > -50, `„Alles“ (the master's input) hears the loops: the marker ${d('a')} dB from the strip's (live ${r.a.rms.toFixed(1)} dBFS)`);
+
+  // the two rings aligned to the frame: one signal into both taps – the Gespielt ring and the Alles ring hold it at the
+  // same frames (myzel-ring-in writes ring 1 at the processor's frame count – no cycle, no delay), sample for sample
+  r = await ev(async () => {
+    const M = window.__M, A = M.A, ctx = A.ctx;
+    M.setParam('rev.mix', 0); M.setParam('dly.mix', 0); await window.__sleep(3000);
+    const n = ctx.sampleRate * 2, b = ctx.createBuffer(2, n, ctx.sampleRate);
+    for (let c = 0; c < 2; c++) { const x = b.getChannelData(c); let s = 12345 + c; for (let i = 0; i < n; i++) { s = (s * 1103515245 + 12345) & 0x7fffffff; x[i] = 0.2 * (s / 0x7fffffff - 0.5); } }
+    const src = ctx.createBufferSource(); src.buffer = b; src.connect(A.hxIn0); src.connect(A.masterSum);
+    const t0 = ctx.currentTime + 0.1; src.start(t0);
+    await window.__sleep(2600);
+    const f0 = Math.round(M.hxF(t0)) + 4800, f1 = f0 + 48000;
+    const [g, a] = await Promise.all([M.hxGrab({ in: 0, f0, f1 }), M.hxGrab({ in: 1, f0, f1 })]);
+    let diff = 0, pk = 0, best = { lag: 0, c: -1 };
+    const at = (G, i) => { const ch = G.chunks[Math.floor(i / 8192)]; return ch ? ch[0][i % 8192] : 0; };
+    for (let i = 0; i < 48000; i++) { const x = at(g, i), y = at(a, i); diff = Math.max(diff, Math.abs(x - y)); pk = Math.max(pk, Math.abs(x)); }
+    for (let lag = -256; lag <= 256; lag += 1) { let c = 0; for (let i = 300; i < 20000; i += 3) c += at(g, i) * at(a, i + lag); if (c > best.c) best = { lag, c }; }
+    return { diff, pk, lag: best.lag };
+  });
+  // (white noise one frame off would leave a difference as large as the noise itself; what remains is the field's last
+  // notes' tail, which reaches the master's input through the insert chain)
+  ok(r.lag === 0 && r.pk > 0.05 && r.diff < r.pk * 0.05, `the two rings are aligned to the frame: lag ${r.lag}, largest difference ${r.diff.toExponential(1)} at a peak of ${r.pk.toFixed(2)}`);
 
   // Gespielt is post-mute: the Bordun muted on its strip is not in the Humus; unmuted it is
   r = await ev(async () => {

@@ -9,7 +9,7 @@
 // A candidate written 'gltN1' is Glut's own native loop: its context gets no module.
 // Hexenring (SPEC §21), myzel-ring nodes against NV Nebel voices: 'hxq1' four noise sources (the strips' stand-in),
 // 'hxn1' those into NH tap sets (four strip gains into a sum, as the Gespielt tap), 'hxc1' each set into a node with
-// both rings recording – HX_COST.capture = hxc − hxq (the node and its taps); 'hx01' a bare node (NV), 'hxs1' with one
+// both rings recording (ring 1 written by its myzel-ring-in node, as in the app) – HX_COST.capture = hxc − hxq (the nodes and taps); 'hx01' a bare node (NV), 'hxs1' with one
 // playing Schicht (a 2-bar loop at 120 BPM, a crossfaded seam every pass), 'hxr1' resampled ({rate} 17 ct) –
 // HX_COST.schicht = hxs − hx0, HX_COST.rs = hxr − hxs
 process.env.SEED_BLOBS = '';
@@ -42,8 +42,12 @@ const XP = JSON.parse(process.env.PARAMS || '{}');
             if (eng === 'hxr') msgs.push({ rate: { loop: 1, cents: 17 } });
           }
           if (eng === 'hxc') { const hN = Math.ceil(16 * SR / 8192), pool = []; for (let i = 0; i < 2 * hN; i++) pool.push([new Float32Array(8192), new Float32Array(8192)]); msgs.push({ pool }); }
-          const nd = new AudioWorkletNode(ctx, 'myzel-ring', { numberOfInputs: 2, numberOfOutputs: 2, outputChannelCount: [2, 2], channelCount: 2, channelCountMode: 'explicit', processorOptions: { humusS: 16, msgs } });
-          if (cap) { sum.connect(nd, 0, 0); srcs[0].connect(nd, 0, 1); }
+          const nd = new AudioWorkletNode(ctx, 'myzel-ring', { numberOfInputs: 2, numberOfOutputs: 2, outputChannelCount: [2, 2], channelCount: 2, channelCountMode: 'explicit', processorOptions: Object.assign({ humusS: 16, msgs }, cap ? { rid: k + 1 } : {}) });
+          if (cap) {   // (as the app: Gespielt into input 0; „Alles“ through its own node myzel-ring-in, silent into the output)
+            sum.connect(nd, 0, 0);
+            const rin = new AudioWorkletNode(ctx, 'myzel-ring-in', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1], channelCount: 2, channelCountMode: 'explicit', channelInterpretation: 'speakers', processorOptions: { rid: k + 1 } }), z = ctx.createGain();
+            z.gain.value = 0; srcs[0].connect(rin); rin.connect(z).connect(ctx.destination);
+          }
           nd.connect(ctx.destination, 0);
         }
         const t0 = performance.now(); await ctx.startRendering(); return performance.now() - t0;

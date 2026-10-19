@@ -52,7 +52,7 @@ existing code are minimal and commented with `// Hexenring:`.
 
 ```
 voices ─► strips fin · eb2 · rgn · gsp (· l0–l3 · bor, by mask) ── tap after the mute/solo gate ──┐ "Gespielt" (in 0)
-A.masterSum (all strips, returns; never the Hexenring strip) ─────────────── tap ──────────────────┤ "Alles"   (in 1)
+A.masterIn (everything heard, the Schleifen too – step 1b) ── myzel-ring-in, at the same frame ───┤ "Alles"   (ring 1)
                                                                                                     ▼
                        ┌──────────── myzel-ring (AudioWorklet, live context) ───────────────┐
                        │ Humus rings (2 × 64 s stereo) · Schleifen/Schichten · seams · clock │
@@ -125,6 +125,22 @@ a loop's pass starts within 0.9 ms of the device's bar lines, slopes within 0.3�
 stall in audio time and TG slews back over ≥ 1 beat instead of jumping; `midi-tests/t-clock.js` asks the Puls's hits
 within 6 ms of the device's sixteenths and failed 2 of 5 runs where a stall fell into its window (the old code
 re-anchored at once). The spec's slews were kept; the owner decides. `HX.lat` (Spielverzögerung) comes with the grammar.
+
+**As built (step 1b).** The owner's decision on the conflict above: small phase errors still slew over ≥ 1 beat; an
+error > 15 ms – and any error that comes from our own clock (the audio↔performance mapping moved since the last pulse:
+an audio stall, not the device) – is corrected within ¼ beat (`tgFollow(…, moved)`: a slope over `max(50 ms,
+|error|/0.6)`, ≤ ¼ beat, never below 40 % of the tempo). The beat still never jumps; a Takt Schleife's next seam simply
+comes that much earlier or later (its crossfade joins it). Two more pieces were needed: `ctxSync` walks a stall under
+100 ms (before: a jump from 15 ms on – the clock-out check „stamps step ≤ 1 ms“ failed on such stalls), at ≤ 2.5 % of the
+time passing however often it is called (before: up to 1 ms a call – with two calls between two clock pulses the
+check „the clock keeps running at the tempo“, gaps within 0.6 ms, failed once in nine runs); after a jump (a stall
+≥ 100 ms) `tick()` re-reads the device's clock (`clkFollow`) before the Puls schedules. Measured: `midi-tests/t-clock`
+green in 7 runs (29/29 each; the gaps after Stop within 0.07 ms); a diagnostic of its Puls window, six runs with stalls
+of 3–5 ms inside it: the Puls's hits within 0.33–0.96 ms (max) of the device's sixteenths (step 1a: up to 7.5 ms).
+`t-hx-clock` green (19/19; one run in six had too few calm samples for its device-clock rows – 8 of > 20 – while the
+audio clock walked; their errors were ≤ 1 ms all the same). A free first Schleife sets the Takt at its entry: the tempo from the Takt finder, the bar
+line (origin) at its seam (`hxTaktSet`). Tempo corrections (½, ×2, the finder's 3/4 reading) act at the loop's next seam
+(a bar line): the new slope and the loop's beats in one message (`hxBatch`), so its seams stay on bar lines.
 
 ---
 
@@ -202,6 +218,25 @@ mute, undo, stop, swap ≤ 1.0× with the gain only falling; Gong/Harz/Bordun re
 material's own third difference there, RMS within −0.18…+0.18 dB of the two sides; resampler ±17 ct flat within
 0.001 dB to 20 kHz, residual −94.5 dB (1 kHz) … −82.5 dB (20 kHz); the page blocked 2 s: no wrong frame.
 
+**As built (step 1b).** Added for the grammar (all in messages, nothing allocated in `process()`): a Schicht may enter at
+the start of a given pass (`seamK`: a delayed harvest, a punch's pass, a retro Schicht in the last quarter); it may be
+**filled live** from a Humus ring while it already plays (`fill: {in, f0, gate}` with its own chunks and a `copy` set
+returned as `{filled}` when complete – its frames are read a whole pass after they were captured, so the copy is always
+ahead; a harvest's entry is therefore exact even when its window ends in the future, e.g. „ab Takt 9“); a punch's gate
+(the smooth law over 10 ms at the press frame, `{gate:{b}}` at the release – frames already copied past it are faded in
+the message); `{geom}` (a re-cut's length or a tempo correction's beats, keeping the seam ahead where it is, at once or at
+a frame); `{aus}` (the seam's character once the window's end has sounded: join, X, ρ; the Ausklang cut at the first
+foreign onset with a 30-ms fade – read as it is now by the tails – and the fill trimmed to what is still needed); `{rs}`
+(a sample-rate conversion job: the resampler's design with a longer kernel – 160 taps × 256 phases, Kaiser β 10, the
+cut at 0.955 × the lower Nyquist, so nothing folds down and no image comes up; `blk` frames a block; the page runs it in
+an offline render of its own – ≈ 0.6 ms per 512 frames here, too much for the live thread; measured 96 kHz → 44.1 kHz:
+1 kHz and 18 kHz within 0.001 dB, a 30-kHz tone −155 dB where it would fold);
+`{state}` with `ph0` (a Frei loop from its start); a re-entry still pending is dropped by any other state. The `pp` rule
+changed from „played the whole pass“ to „sounded into this seam“: a Schicht that entered mid-pass with its fade-in (a
+harvest „sofort, im Takt“, a retro Schicht) is joined at its first seam by the crossfade/Ausklang – before, it jumped
+from its end to its start. The meter carries both rings' input level (15 Hz; the Korb's „leer“ and a phrase's ring end).
+t-hx-proc stays green (33/33; its Gong row scatters with the material, see §22).
+
 ---
 
 ## 4. Capture taps and the Hexenring strip
@@ -209,9 +244,12 @@ material's own third difference there, RMS within −0.18…+0.18 dB of the two 
 - **"Gespielt" (in 0):** per source strip, a tap after the mute/solo gate (`st.dry` output) for `fin`, `eb2`, `rgn`,
   `gsp` by default; `l0–l3`, `bor` join when the mask says so ("Puls mit", "Bordun mit"). The taps sum into in0. This
   is what you heard of your sources, post-fader, post-mute, dry of the insert chain and the returns.
-- **"Alles" (in 1):** `A.masterSum` (all strips incl. returns). The Hexenring strip routes to a new node `A.masterIn`
-  inserted between `A.masterSum` and the master chain, so loops are never in either tap.
-- **Rule:** everything a Schleife produces (playback, Nähren voices, its own webs) sounds on a path no tap hears.
+- **"Alles" (ring 1):** everything heard, the Schleifen included (owner's decision, step 1b: true resampling – an
+  Alles harvest while loops play is a bounce): `A.masterIn`, the master's input, where `A.masterSum` (all strips incl.
+  returns) and the Hexenring strip join. Written by its own node `myzel-ring-in` downstream of `A.masterIn`, aligned to
+  the frame with in0. The retro Schicht and the default harvest always take Gespielt.
+- **Rule:** everything a Schleife produces (playback, Nähren voices, its own webs) sounds on a path the Gespielt tap
+  does not hear.
   Loop-driven voices (Live mode, Nähren into Rhizom/Regen) use `o.bus = stripIn('hxr')`; the Gespinst halo of a feeding
   loop comes from the loop's own web instance into `hxr`.
 - **Strip `hxr`** ("Hexenring", info "Schleifen"): a `STRIPS` entry; add to `mxChannels.own` (colour, group "spiel"),
@@ -221,8 +259,9 @@ material's own third difference there, RMS within −0.18…+0.18 dB of the two 
   documented compromise (KONZEPT §3.3).
 - Mute/solo of `hxr` work as for any strip. Meters tap as for others.
 
-**Acceptance:** with loops playing and overdubbing, the in0/in1 taps contain no loop signal (correlation test with a
-marker tone in a loop: ≤ −100 dB in the taps).
+**Acceptance:** with loops playing and overdubbing, the in0 tap contains no loop signal (correlation test with a
+marker tone in a loop: ≤ −100 dB in the tap); ring 1 holds the loops at their level and is frame-aligned with ring 0
+(step 1b).
 
 **As built (step 1a).** Taps after `st.dry` as specified; a masked-out strip has no tap node at all (`hxMask`, 3-ms
 ramps). The strip `hxr` stands after „Regen“ in the Spiel group, hidden until the first Schleife (`mxRgnSync`); its
@@ -238,6 +277,19 @@ Bordun and notes going on): a marker in two loops (out 0, out 1) −130 dB under
 updated: `klang/tests/t-parity.js` (old engines: the module loads once, at sound start; their voices stay native),
 `klang/tests/t-lib-fb.js` (the module stands before the first probe), `motion-tests/t-gl-parity.js` (one strip more,
 unity), `motion-tests/t-gs-raster.js` (the budget holds the capture: one held note fewer fits).
+
+**As built (step 1b): „Alles“ hears the Schleifen** (owner's decision: true resampling – an Alles harvest while loops
+play is a bounce; the retro Schicht and the default harvest always take Gespielt). Ring 1 now records `A.masterIn` (the
+master's input: every strip, the returns, the strip „Hexenring“). That path runs through the processor's own output, so
+it cannot be the processor's input without a cycle (a cycle needs a DelayNode, and Chrome made its delay depend on the
+graph: −128, 0 or +128 frames in tests). Instead a small node of its own, `myzel-ring-in` (in `myzelDsp()`), downstream
+of `A.masterIn` (its output silent into the destination, so it is pulled every quantum), writes the Ring's ring 1 through
+a registry in the worklet scope (`RINGS[rid]`) at the Ring's own frame count (`currentFrame + cfOff`) – both rings stay
+aligned to the frame whichever node runs first (t-hx-taps: white noise into both taps, lag 0, the rest 1.3–1.7e-4 at a
+peak of 0.10 – the field's last notes reaching the master through the insert chain). The step-1a conflict (the loops'
+echo and hall in „Alles“) is gone with it: Alles is meant to hear everything. A marker in the loops sits 0 dB from the
+strip's in Alles and −130 dB under the loops in Gespielt; a muted strip is in neither. The per-loop card offers
+Gespielt/Alles as a re-cut from the other ring while the Humus holds the window.
 
 ---
 
@@ -327,6 +379,53 @@ patch undo (`HIST`) stays separate; the toast after a Hexenring undo says "Schle
 
 **Acceptance (Playwright, see §22):** every row of the grammar and rule tables, the precedence list, stumm vs
 angehalten re-entry phases, Stille → Weiter / Leeren, alle leeren + undo, tempo release.
+
+**As built (step 1b).** The whole grammar is on the main thread (`hxKorb`, `hxHaupt`, `hxRingTap`, `hxUndoStep`, …); every
+start, entry and swap reaches the processor as a frame of its own clock. Where the build fills in the letter (each
+measured in t-hx-ernten 33/33 and t-hx-grammar 30/30):
+- **Korb plan** (`hxKorbPlan(T)`, recomputed 4×/s for the label): with a Takt – a tap ≤ min(⅛ bar, 250 ms) after a bar line
+  takes N bars up to it and enters at once in phase; later, N bars up to the next bar line, entering there (pending,
+  „ab Takt N“, a second tap or ↶ cancels); the player stopped (rest ≥ max(1 bar, 2 s) after the ring end) – the bars of
+  the phrase with its ring, from its start on the next 1. Without a Takt – a repetition: the running cycle, entering where
+  it ends (anchored at the first note of the first repetition); none: from the first note after ≥ 1 s without a note
+  sounding to the tap (or to the phrase's ring end when stopped ≥ 2 s), from its start right after the tap (40 ms ahead).
+  „Sounding“: a held voice until its release; a struck one (no release) 0.25 s, then the input level (≤ −55 dBFS).
+  Nothing in the Humus: a hint. Eight loops (mode neu): „voll“.
+- **Length** (auto): N ∈ {1, 2, 4, 8} scored +3 when the repetition's cycle is N bars (+1.5 a multiple), +2 for a phrase
+  boundary at its start (the phrase begins in its first bar – or a repetition's cycle begins there), −2 when it cuts a
+  phrase that began earlier, a slight prior for 2 and 4, −¼·log2 N. „fest N Takte“ and „wie Schleife 1“ as options.
+  Ernte-Länge for the first free loop comes from the Takt finder (§12.1).
+- **Precedence:** the Korb during a recording or a wait replaces it; a second tap over the same window (same end within
+  60 ms, < 20 s later) is no second Schleife (a re-cut when its start differs); a second tap on a waiting harvest cancels.
+- **Seam of a harvest** (§7 basics, the Werk-Rahmen's tail render follows in step 2): a probe of 40 ms at the window's
+  start and after its end decides cold (start ≥ 10 dB under what followed, and ≥ 30 ms of Ausklang) → overlap-added
+  Ausklang, else the crossfade (40 ms for sustained sound, else 10 ms, never into the next onset) with measured ρ; the
+  Ausklang ends 5 ms before the first foreign onset (≤ 6 s).
+- **Hauptknopf:** start takt (the bar line; within the grace the one just passed, from the Humus), ton (the first note of a
+  captured source; with a Takt its bar line), sofort (with a Takt: its bar line); without a Takt the window starts at the
+  first note after the press (≤ 1.5 s). With a base length (the first Takt loop, or „fest“) the Schleife is made at the
+  start and enters at its end (×1/×2/×4 chips while it waits and records); a tap during it closes at the next bar line;
+  without a base a tap closes there; without a Takt at the tap (Takt finder). Held ≥ 0.5 s and ≥ a beat: release closes
+  (with a Takt at the nearest bar line). An empty ring tapped records into it.
+- **„dieselbe Schleife“:** the Hauptknopf punches the Fokus from the press frame (10-ms smooth gate), one Schicht per pass
+  (`join 'cut'`: the group's sum is continuous by construction), each entering at the start of the pass after its own;
+  one history step per punch; the Korb layers by the retro rule. Without a Fokus it records a new loop.
+- **Retro rule / „→ N“:** decided in the last ¼ of the target's pass → this pass, entering at its end (pending); else the
+  pass just completed, entering at once (10-ms fade-in). „→ N“ uses the harvest's press time; the harvest is undone.
+- **States:** a ring tap within min(⅛ bar, 150 ms) after a bar line acts there (now), else at the next one (pending, a grey
+  wedge); a Frei loop without a Takt at once (40 ms). angehalten → from its start on the next 1. A hold (0.5 s) or a
+  vertical drag (> 12 px: level) takes the press's action back (pending cancelled, a fade reversed).
+- **Stille:** the toast „N Schleifen angehalten – … · Weiter · Leeren“ (`toast()` takes two actions now); the Hauptknopf
+  shows ▶ („weiter“) while any is angehalten after Stille; Weiter = all from their starts on the same 1.
+- **History:** content steps (harvest, Schicht/punch group, re-cut, delete, alle leeren, Zusammenlegen, Zurückholen); a
+  correction's undo goes back to the exact earlier audio at the next seam. ↶ cancels the newest pending action first (and
+  a waiting recording), held 1.5 s (a red ring fills) = alle leeren; ↷ for 8 s. Snapshots keep the page's copy of the
+  audio; a step whose audio was still being recorded redoes as a re-cut from the Humus. The memory cap reclaims the oldest
+  steps' audio first.
+- **Tempo release:** the last Schleife gone while one gave the tempo: it is held 8 s (`TG.keep`) with the chip „Tempo
+  behalten · 91“; not tapped, it goes back to the slider.
+- Not yet: `HX.lat` (Spielverzögerung, „Klopf mit“), count-in by vibration or click (`hx.ein`, `hx.klick`), the guard
+  against Eigensinn changes after a Schicht (nothing varies yet), „eine Runde“ for punches – later steps.
 
 ---
 
@@ -485,6 +584,24 @@ pitch change; a pad keeps its exact samples.
   `t' = grid + (1 − q)·δ + q·template`, q default 0; "Puls übernimmt Groove".
 - **e) Spielverzögerung** – §2.
 
+**As built (step 1b): a) and b).** `hxTaktFinden(onsets, L)`: n = 3…64 beats in meters 4 and 3 (whole bars), 40–220
+BPM; S = 3·fit (onsets on the beat or ÷2 ÷4 ÷3, weights 1/.8/.55/.5, σ 25 ms, velocity-weighted) + 0.6·fit on the beat +
+1.5·IOI agreement (T, T/2, 2T, T/4, 1.5T) + 4·accent (loud and low onsets on the candidate's downbeats vs all) + 0.3·tempo
+prior (log-normal at 100, σ 0.45) + 0.6·bar prior (1/2/4/8; 3er −0.4); weights fitted on t-hx-ohr's phrases. Clarity =
+the best's mean fit; < 0.55 → frei. The length is refitted from the onsets near beats and half beats (`hxTaktLen`, ±8 %):
+the tap's error does not become the tempo. Measured (t-hx-ohr, 360 phrases 60–180 BPM, six patterns incl. a waltz, 1/2/4
+bars, ±25 ms humanised, the window's end ±40 ms): top-1 85.0 %, top-3 100 %, octave errors 15.0 % (all at 60–96 BPM: an
+even line of eighths at 60 is a line of quarters at 120 unless its accents say otherwise – „Tempo ½ · ×2“ is one tap), the
+fitted length mean 9.6 ms off (max 47 ms); random onsets read frei 39/40, a steady line clear 40/40. Known limit: a short
+rubato phrase (≈ 7 notes in 3 s) can find a grid by chance at one window length and not at the next (clarity 0.35–0.64
+for the same phrase as the tap moves by 10 ms) – then the loop is a Takt loop of that tempo, its length within ±8 %;
+„Tempo ½ · ×2“ and ✕ undo it. More notes make it sturdier. `hxWiederholung(onsets)`: chords
+within 30 ms are one event (degrees, or the same intervals when transposed); the suffix of max(m, 5) events, ≥ 1 s, equals
+the events m before with every IOI within ±15 % – the smallest such m with a cycle ≥ 1 s; the region reaches back to the
+first repetition's first note (its anchor); „the start“ variant for auto-close (`hx.autoclose`, default off) and for a
+phrase whose second cycle has begun. It drives the Korb's light (lumen; not when the cycle is in a Schleife already: its
+degrees as a rotation of a loop's notes, or harvested from this very playing) and the lengths above.
+
 ### 12.2 Eigensinn (Etappe 2a: Treu/Lebendig; Etappe 3: Variieren/Wandern)
 - Lebendig: new seed per pass; timing breath: offsets from the loop's groove spread × ⅓ with 1/f-like noise (pink by
   Voss-McCartney), seeded per pass.
@@ -621,6 +738,41 @@ Vergessen; export/import JSON.
   has a tap path in the card), contrast ≥ 4.5 for text / 3 for strokes, reduced motion: playhead steps per beat.
 - The Fährte button `#btnFae`, its tag and its panel section are removed (§18).
 
+**As built (step 1b).** `#hxRail` (role toolbar, ← → between its buttons, one tab stop) sits with `#stage` in a new column
+`#stcol` (portrait: the panel below the column; landscape/≥ 900 px: beside it – no other layout rule changed). 56 px;
+folded 26 px (Korb, Hauptknopf, ring dots, ↶). Real buttons over `#hxCv`, drawn in `frame()` from cached button positions:
+the Taktlinie on the top edge (four beats of the bar, the 1 spore-orange, the heard beat lit; dotted while frei), the Korb
+(a basket, lumen glow; its word = the plan's label or the pending „ab Takt N“), the Hauptknopf (ring with a creme dot; red
+disc + progress only while recording, dashed red with the beats left while waiting, waves while listening, a red ring
+with + while punching, ▶ after Stille, an inner ring in mode „dieselbe“), the rings (spores: angle = phase, radius =
+pitch in the loop's range, size = velocity; playhead; bar ticks; one thin inner ring per further Schicht; stumm hollow
+with a stroke and the head running; angehalten ▶; pending a grey wedge to its bar line; Fokus brackets; Ziel dashed
+orange „+“; recording red disc; waiting dashed red with an arc; level while dragged; its number), the word under each
+ring (aufnehmen · schließen · abbrechen · stumm · an · weiter), ↶ (a red ring filling while held), ↷, the pager („+N
+spielen“ / „Seite“), the fold chevron on the Taktlinie. 4 rings a page when 8 × 44 px do not fit (phones), else 8. The chips
+(→ N, corrections, ×1 ×2 ×4, „Tempo behalten“, ✕) replace the rings for 8 s (scrolling sideways inside the rail).
+Field: `visPush` kind `hx` – dotted fairy rings with the loop's number at the note's column and height as it sounds
+(scheduled ahead in `hxTick`); the count-in number in the field's centre. Coach mark once (`myzel.hx.dev.v1`). The card:
+the section „Hexenring“ on top of the Aufnahme panel – Weiter / Zurück / Wiederholen / Alle leeren (the tap paths of every
+hold), per Schleife state chips and Fokus, level, its Schichten (level, Stumm, ✕), phase (±5 ms, ±1 beat: the Schichten
+read earlier or later, crossed at once), the corrections, Quelle Gespielt/Alles, Zusammenlegen, Löschen; the graveyard
+(Zurückholen, Endgültig entfernen); settings (`hx.modus/start/laenge/festT/pulsMit/borMit/autoclose/rail/humus/mem`, the
+memory used, the device storage estimate). A polite live region says each change (never beats). Screenshots at 360×740,
+390×844, 820×1180, 1366×768 and 740×360 (t-hx-ui 56/56): the rail under the field and never over it, the chips inside it,
+no sideways scrolling, the panel below or beside with the rail at the field.
+The tall sheets (mixer; the sound library) used to leave the field 118 px (132 above 780 px of height); with the rail
+visible they now leave that plus the rail's height (`--hxr` on `#app`: 56, folded 26) – before, the rail overflowed
+under the sheet. **Conflict (reported, for the owner):** on a 360 × 740 phone the field (118 px) + the rail (56 px) + the
+library cannot all fit with every tile of a family in view: the library sheet is 460 px instead of 516, and Dunst
+shows 3 of its 4 tiles without scrolling (`klang/tests/t-lib-shots` „p360: every tile of the family in view“ fails,
+3/4). The other choices – hide or fold the rail while the library is open, or a smaller field – each break a rule of
+their own; the build keeps the rail as set and lets the list scroll. With the mixer open, a 390 × 844 phone now has the
+mixer's „side“ strips (knobs beside the stem, as on 360 × 740) instead of „classic“ (`mixui/f/func.js` scrolls by the
+strip's box now). Drawing: the rail's canvas is drawn only while something moves (a playhead, a recording or wait, a
+pending wedge, a hold, a level) or when what it shows changed – idle it cost 0.31 ms a frame on a 4× throttled CPU, now
+0.04 ms (two loops playing: 0.32 ms); the Korb's plan (every 250 ms) 0.4–1.5 ms there. Without that, `motion-tests/
+t-gf-cost`'s main-thread budgets (a flush < 0.3 ms) failed.
+
 ---
 
 ## 17. Controls
@@ -668,6 +820,9 @@ Vergessen; export/import JSON.
 a playing loop, `rs` per Schicht of a resampled one. Keep-alive: a playing Schleife keeps the context awake (`hxBusy`).
 `panic` sets every Schleife `angehalten` (buffers kept; the toast and „Weiter“ come with the Ringleiste).
 
+**As built (step 1b).** `panic` → `hxStille()`: recordings and punches end, pending state changes are dropped, every
+Schleife angehalten; its toast becomes „N Schleifen angehalten – … · Weiter · Leeren“.
+
 ---
 
 ## 19. Persistence
@@ -680,6 +835,28 @@ a playing loop, `rs` per Schicht of a resampled one. Keep-alive: a playing Schle
 - Sample rate stored per Schicht; restore on another rate resamples with the polyphase resampler.
 - Memory cap `hx.mem` (default 1.5 GB on desktop, 600 MB on iPad, 300 MB on phones) shared with takes; at the cap:
   offer Zusammenlegen / delete old graveyard entries; never silently drop audio.
+
+**As built (step 1b).** `idbOpen` opens version 2 and creates only missing stores (a version-1 database keeps its takes;
+`restoreTakes` reads only `takes`); `onblocked` toasts and the open completes once the old tab lets go; an old tab is told
+on `onversionchange`. A Schleife's record `rings` {id = its key, geometry (the musical b0), bars, notes, Bewegung, cut,
+source, tempo, the Takt finder's readings, Schichten with join/X/ρ/Ausklang/gain/mute/kind/group/sr and how many segments
+are stored}; a session record `_s` (the Takt's tempo, keep, the Fokus). The audio goes as 4-s segments of the page's copy,
+one per idle moment (`requestIdleCallback`), after each Schicht's live fill completed; a Schleife deleted (or undone) is
+removed from the stores, one brought back is written again. Restore: after sound starts, every Schicht whose segments are
+all there comes back bit-exact into its slot, angehalten, with the tempo they were made in; toast „Hexenring
+wiederhergestellt: N Schleifen, angehalten · ▶ Weiter“, the Hauptknopf ▶. A Schicht stored at another rate goes through
+the processor's resampler (`{rs}`) in an offline render of its own (never the live audio thread), every frame count
+scaled; one that could not be converted stays out of its loop (never at the wrong speed) and the toast says so. Quota: a failed write → toast „Der Gerätespeicher ist voll –
+neue Schichten werden nicht mehr gesichert. Sie spielen weiter. · Aufräumen“, nothing in RAM touched. The memory cap
+`hx.mem` (default 1500 / 600 iPad / 300 phone MB) counts the processor's and the page's copy of every Schicht, the
+graveyard, the history's audio, the takes in RAM and the Humus; at the cap the oldest history states give back their
+audio, then a new harvest/recording is refused with „Speichergrenze erreicht … · Aufräumen“ (the card: Endgültig
+entfernen, Zusammenlegen) – nothing is dropped by itself. Zusammenlegen renders the loop's steady pass with the processor
+offline (Ausklänge of earlier passes in it) and joins it to itself (ρ 1): exact (t-hx-persist: 3.7e-9 at a peak of 0.51);
+the first pass after an angehalten re-entry then carries the earlier passes' tails (a documented difference). A reload
+in the middle of a punch: the finished Schichten back bit-exact (hashes equal), the running pass is lost with the Humus.
+22 050 Hz → 44 100 Hz: a 1-kHz sine back at 1000 Hz, 0.3000; 96 kHz → 44 100 Hz: 1 and 18 kHz within 0.001 dB, a 30-kHz
+tone not folded (−155 dB at 14.1 kHz) (t-hx-persist 15/15).
 
 ---
 
@@ -708,6 +885,14 @@ the render), two runs on this machine: capture (the node with both rings recordi
 of it the taps ≈ 0.1; a playing Schicht 0.19 / 0.27; resampling a Schicht +0.75 / +0.83. Entered (higher + 15 %):
 `HX_COST = { capture: 0.68, schicht: 0.31, rs: 0.95 }` – the capture runs from the first note, so a phone's level-1 budget
 (14) has ≈ 5 % less room for voices.
+
+**As built (step 1b).** `hxc` now builds what the app builds: the Ring with `rid` and its `myzel-ring-in` node fed
+by the sources (silent into the destination). Two runs: capture 0.81 / 0.71 (the node of its own and both rings' input
+level for the meter on top of step 1a's 0.59 / 0.55), a playing Schicht 0.19 / 0.21, resampling +0.79 / +0.84. Entered
+(higher + 15 %, the Schicht keeps step 1a's higher run): `HX_COST = { capture: 0.93, schicht: 0.31, rs: 0.96 }` – a
+phone's level-1 budget (14) has ≈ 7 % less room for voices while the Humus records. A sample-rate conversion on restore
+(`{rs}`, 160 taps, ≈ 0.6 ms per 512 frames on this machine – some 30 units while it ran) is not on the live audio thread
+at all: it runs in an offline render of its own.
 
 ---
 
@@ -760,3 +945,21 @@ of deciding them.
 `t-hx-proc` (32 checks: the hour, Frei, pool, E10 seams, mute/undo/stop/swap, Gong/Harz/Bordun, Ausklang, resampler,
 2-s stall), `t-hx-taps` (11), `t-hx-clock` (19), `t-hx-humus` (11: §5). Helpers in `hx-h.js` (offline ring contexts, an
 index checker and a recorder processor); the MIDI parts use `midi-tests/h.js` on the hx slot.
+
+### As built (step 1b): suites
+`t-hx-ernten` (33: the table's rows, labels, light, lengths, precedence, every correction re-cut without a gap and its
+undo), `t-hx-grammar` (30: Hauptknopf tap / push-to-talk / short press / count-in / ×2 / close during auto-length,
+stumm vs angehalten phases, Stille → Weiter / Leeren, ↶ held, ↷, tempo release, punch groups, „→ N“, the retro rule,
+Ziel, delete and Zurückholen – real pointer presses where the gesture matters), `t-hx-ohr` (13), `t-hx-persist` (15),
+`t-hx-ui` (56, screenshots in `out/ui-*.png`; with the mixer open too). Helpers for them in `hx-g.js`. `t-hx-taps` gained the Alles alignment
+(12). `t-hx-proc`, `t-hx-clock`, `t-hx-humus` unchanged and green – except one row that scatters with its material:
+the Gong renders differently each time (its strike is random), and over six runs of `t-hx-proc` its seams' short-term
+RMS dipped −0.1 … −1.7 dB (ρ −0.8 … +0.5) against the ±1 dB of §7 – two runs failed it. The seam law of step 1a
+(one ρ for the whole fade) is unchanged in 1b; a ρ weighted like the cross term or per channel helps only a little (an
+offline simulation on eight Gong renders), a time-local normalisation would be the remedy – for the owner to decide.
+Other suites touched by 1b: the Ringleiste takes 56 px from the field, so the parity tests against older builds
+(`midi-tests/t-parity`, `motion-tests/t-gk-parity`, `t-gf-parity`, `t-gs-parity`) grow the window by the rail's height
+(`fieldAsBefore`) – the field is the one before, pixel for pixel, and they compare bit for bit as before;
+`motion-tests/t-gl-ladung` allows the key `myzel.hx.dev.v1` (the coach mark, seen once: a device flag, not the patch).
+`mixui/f/func.js` scrolls Spur 1 into view by the strip's box (the mixer's „side“ strips on a 390 × 844 phone, §16).
+`klang/tests/t-lib-shots` „p360: every tile of the family in view“ fails (3/4) – the conflict in §16, for the owner.

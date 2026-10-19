@@ -15,8 +15,15 @@ const SEQ = [
   [[0x9f, 49, 64]], [[0xbf, 64, 127]], [[0x8f, 49, 0]], [[0xbf, 64, 0]], [[0xbf, 123, 0]],
   [[0x90, 59, 45]], [[0x90, 59, 0]],
 ];
+// (the Hexenring's Ringleiste, shown once sound runs, takes its height from the field: the window grows by it, so the
+// field is the one before, pixel for pixel)
+async function fieldAsBefore(page) {
+  const h = await page.evaluate(() => { const r = document.getElementById('hxRail'); return r && !r.hidden ? r.getBoundingClientRect().height : 0; });
+  if (h) { const v = page.viewportSize(); await page.setViewportSize({ width: v.width, height: v.height + Math.round(h) }); await page.waitForTimeout(200); }
+}
 async function run(url) {
   const { page, errors } = await open({ url, cfg: { ins: [['k1', 'Testkeyboard']], seed: 777, storage: { 'myzel.midimap.v1': JSON.stringify({ v: 1, binds: [{ dev: 'Testkeyboard', ch: 15, type: 'nrpn', num: 42 * 128 + 3, target: 'rev.mix', mode: 'abs', to: false }] }) } } });
+  await fieldAsBefore(page);
   await page.evaluate(() => { window.__M.setParam('v.eng', 'neb'); window.__M.setParam('v.layer', 'off'); });
   const snaps = await page.evaluate(async (steps) => {
     const M = window.__M, out = [];
