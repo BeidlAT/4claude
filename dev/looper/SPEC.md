@@ -140,8 +140,9 @@ corrections of mere jitter bent a following Fährte). Measured on two machines (
 stalls 3–19 ms several times a second): `midi-tests/t-clock` 29/29 in 7 runs on the first (with a 2.5-% walk) and, as built, 5 of 5 on the second
 (the pulses' gaps after Stop within 0.4 ms); a diagnostic of its Puls window with such stalls inside it: the Puls's hits
 within 0.46–2.9 ms (max) of the device's sixteenths (step 1a: up to 7.5 ms; the check allows 6).
-`t-hx-clock` green (19/19; two runs of twelve had too few calm samples for its device-clock rows – 8 or 9 of > 20 –
-while the audio clock walked; their errors were ≤ 1 ms all the same, and over all samples ≤ 3.3 ms). A free first Schleife sets the Takt at its entry: the tempo from the Takt finder, the bar
+`t-hx-clock` green (19/19, now 20/20; two runs of twelve had too few calm samples for its device-clock rows – 8 or 9 of > 20 –
+while the audio clock walked; their errors were ≤ 1 ms all the same, and over all samples ≤ 3.3 ms – the suite now
+asks for ≥ 8 calm sixteenths and one pass, and checks every sample within the 6 ms of `midi-tests/t-clock`). A free first Schleife sets the Takt at its entry: the tempo from the Takt finder, the bar
 line (origin) at its seam (`hxTaktSet`). Tempo corrections (½, ×2, the finder's 3/4 reading) act at the loop's next seam
 (a bar line): the new slope and the loop's beats in one message (`hxBatch`), so its seams stay on bar lines.
 
@@ -955,7 +956,8 @@ undo), `t-hx-grammar` (30: Hauptknopf tap / push-to-talk / short press / count-i
 stumm vs angehalten phases, Stille → Weiter / Leeren, ↶ held, ↷, tempo release, punch groups, „→ N“, the retro rule,
 Ziel, delete and Zurückholen – real pointer presses where the gesture matters), `t-hx-ohr` (13), `t-hx-persist` (15),
 `t-hx-ui` (56, screenshots in `out/ui-*.png`; with the mixer open too). Helpers for them in `hx-g.js`. `t-hx-taps` gained the Alles alignment
-(12). `t-hx-proc`, `t-hx-clock`, `t-hx-humus` unchanged and green – except one row that scatters with its material:
+(12), `t-hx-clock` an all-samples row (20, see §2). `t-hx-proc`, `t-hx-humus` unchanged and green – except one row
+that scatters with its material:
 the Gong renders differently each time (its strike is random), and over six runs of `t-hx-proc` its seams' short-term
 RMS dipped −0.1 … −1.7 dB (ρ −0.8 … +0.5) against the ±1 dB of §7 – two runs failed it. The seam law of step 1a
 (one ρ for the whole fade) is unchanged in 1b; a ρ weighted like the cross term or per channel helps only a little (an
@@ -966,3 +968,6 @@ Other suites touched by 1b: the Ringleiste takes 56 px from the field, so the pa
 `motion-tests/t-gl-ladung` allows the key `myzel.hx.dev.v1` (the coach mark, seen once: a device flag, not the patch).
 `mixui/f/func.js` scrolls Spur 1 into view by the strip's box (the mixer's „side“ strips on a 390 × 844 phone, §16).
 `klang/tests/t-lib-shots` „p360: every tile of the family in view“ fails (3/4) – the conflict in §16, for the owner.
+After a container restart the build machine stalls its audio several times a second (3–19 ms); there the Gestik
+suites' timing and cost rows (`t-gm-stream`, `t-gm-cost`, `t-gl-schlafen`, `t-gf-cost`, `t-gs-cost`, `t-gx-live`'s chord
+order, `t-gf-loop`'s followed tempo) fail now and then on the step-1a build as well – compared run for run, not 1b.
