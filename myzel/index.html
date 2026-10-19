@@ -9404,7 +9404,7 @@ function myzelDsp() {
       // Schichten of a loop share one rate. po.noSum / po.noDD: the step-1c paths (the tests' reference)
       this.gS = [0, 1, 2, 3].map(() => [[new Float32Array(this.CH), new Float32Array(this.CH)]]);
       this.gM = [0, 1, 2, 3].map(() => ({ n: 0, r: 0, p: 0, fr: 0, ch: [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], tot: new Float64Array(16), d: new Float64Array(16), g: new Float64Array(16) }));
-      this.noSum = !!po.noSum; this.noDD = !!po.noDD; this.ddPool = !!po.ddPool; this.dvF = 1; this.ddT = null; this.ddBlk = Math.max(16, po.ddBlk | 0 || 64);
+      this.noSum = !!po.noSum; this.noDD = !!po.noDD; this.ddPool = !!po.ddPool; this.gvQ = []; this.dvF = 1; this.ddT = null; this.ddBlk = Math.max(16, po.ddBlk | 0 || 64);
       this.wA = new Float32Array(S); this.wG = new Float32Array(S); this.sgA = new Float32Array(S); this.sndW = false;   // (step 1d: Schluss „welkend“, the sends to the loops' own webs)
       this.rep = 0; this.met = 0; this.nA = 0; this.late = 0;
       this.port.onmessage = (e) => this.msg(e.data);
@@ -9617,10 +9617,13 @@ function myzelDsp() {
       const S = this.sch(d.schicht), dst = d.dst;
       if (!S || S.pv !== d.pv || S.ddA || S.dying || S.dead || !S.dr || !dst || !dst.length) { this.ddBack(d.schicht, dst); return; }
       if (!this.ddT) this.ddT = rsTable(0.97, 160, 10);
-      const cap = dst.length * this.CH, pre = S.pre, K0 = Math.ceil(pre / 32), nK = K0 + Math.ceil(Math.max(0, cap - pre) / 32) + 2;
-      const J = { dd: 1, S, pv: S.pv, src: S.ch, stot: S.tot, D: S.dr, pre, dst, cap, map: { x: new Float64Array(nK), n: 0, i0: pre - K0 * 32 }, K0, k: K0, ph: 0, x: 0, n0: 0,
+      // (the knots: dd index i0 + 32 k; the anchor – the pass start, index pre – is a knot. A Schicht that enters mid-pass
+      // has pre < 0: its anchor lies before its buffer – the knots start at the buffer, integrated forward from the anchor)
+      const cap = dst.length * this.CH, pre = S.pre, K0 = Math.ceil(pre / 32), i0 = pre - K0 * 32, kA = Math.max(0, K0), nK = kA + Math.ceil(Math.max(0, cap - Math.max(0, pre)) / 32) + 2;
+      const J = { dd: 1, S, pv: S.pv, src: S.ch, stot: S.tot, D: S.dr, pre, dst, cap, map: { x: new Float64Array(nK), n: 0, i0: K0 < 0 ? i0 : pre - K0 * 32 }, K0, k: kA, ph: 0, x: 0, n0: 0,
         dr0: new Float32Array(Math.ceil(cap / 128) + 2), old: { ch: null, tot: 0, pre: 0, len: 0, ac: null, aoff: 0, aend: 0, xo: envNew(0), seam: true, out: 0, end: 0, ddA: false, ddMap: null } };
-      J.map.x[K0] = pre;
+      if (K0 >= 0) J.map.x[K0] = pre;
+      else { let x = pre; for (let k = K0; k < 0; k++) x += 32 * this.ddF(S.dr, x + 16 * this.ddF(S.dr, x)); J.map.x[0] = x; }   // (from the anchor forward to the buffer's first knot)
       this.jobs.push(J);
       this.port.postMessage({ ddRun: { schicht: S.id, on: 1 } });
     }
@@ -9635,6 +9638,7 @@ function myzelDsp() {
       if (S.pv !== J.pv || S.dead || S.dying) { J.ph = 9; return; }
       if (J.ph === 0) {
         for (let k = J.K0 - 1; k >= 0; k--) { const x1 = X[k + 1]; X[k] = x1 - 32 * this.ddF(D, x1 - 16 * this.ddF(D, x1)); }
+        for (let k = 0; k <= Math.max(0, J.K0); k++) if (!(X[k] === X[k] && Math.abs(X[k]) < 1e12)) { J.ph = 9; return; }   // (never a version that is not finite)
         J.ph = 1; return;
       }
       if (J.ph === 1) {
@@ -9660,6 +9664,7 @@ function myzelDsp() {
           const w = T[b0 + t] + a * (T[b0 + N + t] - T[b0 + t]), q = x & M;
           sl += w * s[0][q]; sr += w * s[1][q];
         }
+        if (sl !== sl || sr !== sr) { J.ph = 9; return; }
         c[0][k] = sl; c[1][k] = sr;
       }
       if (J.x >= J.n0) J.ph = 4;
@@ -9693,7 +9698,7 @@ function myzelDsp() {
       } else if (e.kind === 'replace') {
         const S = this.sch(d.schicht), B = e.S, L = S && this.loopOf(S);
         if (!S) { this.give({ schicht: d.schicht }, [B]); return; }
-        if (S.old) this.give({ schicht: S.id, old: 1 }, [S.old]);
+        if (S.old) { if (this.uses(S, S.old)) (S.park || (S.park = [])).push(S.old); else this.give({ schicht: S.id, old: 1 }, [S.old]); }   // (an Ausklang still reading it keeps it)
         const O = B.xo, seam = !!(L && L.k >= 0 && Math.abs(x - L.s1) <= 1);   // at its seam: the seam's own crossfade joins the versions
         B.xo = null;
         if (B.zoN != null) S.zoN = B.zoN;
@@ -9998,7 +10003,7 @@ function myzelDsp() {
         for (let i = 0; i < this.loops.length; i++) {
           const L = this.loops[i];
           this.loopSpan(L, F + s, F + e, s, outs);
-          if (L.dying && L.st.i >= L.st.N && L.st.v === 0) { this.give({ loop: L.id }, L.sch.filter((S) => !S.dead).concat(L.sch.filter((S) => S.old).map((S) => S.old))); this.loops.splice(i--, 1); }
+          if (L.dying && L.st.i >= L.st.N && L.st.v === 0) { this.give({ loop: L.id }, L.sch.filter((S) => !S.dead).concat(L.sch.filter((S) => S.old).map((S) => S.old), ...L.sch.map((S) => S.park || []), L.sch.filter((S) => S.ddN).map((S) => ({ ch: S.ddN.dst })))); this.loops.splice(i--, 1); }
         }
       }
     }
@@ -10126,10 +10131,13 @@ function myzelDsp() {
           S.tq[t] += m * rt;
           if (S.tb[t] + S.tq[t] >= lim + RS_T || (N && S.tfI[t] >= N)) { const e = S.tn - 1; S.tq[t] = S.tq[e]; S.tb[t] = S.tb[e]; S.tc[t] = S.tc[e]; S.tl[t] = S.tl[e]; S.tfr[t] = S.tfr[e]; S.tfN[t] = S.tfN[e]; S.tfI[t] = S.tfI[e]; S.tsrc[t] = S.tsrc[e]; S.tout[t] = S.tout[e]; S.tsd[t] = S.tsd[e]; S.tc[e] = null; S.tn--; t--; }
         }
-        if (S.old && (S.old.seam ? Y >= S.old.end : S.old.xo.i >= S.old.xo.N) && !this.uses(S, S.old)) { const O = S.old; S.old = null; this.give({ schicht: S.id, old: 1 }, [O]); }   // (the old version done: back to the page)
-        if (S.dying && S.e.i >= S.e.N && S.e.v === 0) { S.dead = true; S.tn = 0; this.give({ schicht: S.id }, S.old ? [S, S.old] : [S]); S.old = null; L.sch.splice(si--, 1); }
+        // (what goes back to the page goes once this span's summed reads are done – a read of it may be waiting in a group)
+        if (S.old && (S.old.seam ? Y >= S.old.end : S.old.xo.i >= S.old.xo.N) && !this.uses(S, S.old)) { const O = S.old; S.old = null; this.gvQ.push([{ schicht: S.id, old: 1 }, [O]]); }   // (the old version done: back to the page)
+        if (S.park) for (let i = 0; i < S.park.length; i++) if (!this.uses(S, S.park[i])) { this.gvQ.push([{ schicht: S.id, old: 1 }, [S.park[i]]]); S.park.splice(i--, 1); }   // (versions kept for their Ausklänge)
+        if (S.dying && S.e.i >= S.e.N && S.e.v === 0) { S.dead = true; S.tn = 0; this.gvQ.push([{ schicht: S.id }, (S.old ? [S, S.old] : [S]).concat(S.park || [], S.ddN ? [{ ch: S.ddN.dst }] : [])]); S.old = null; S.park = null; S.ddN = null; L.sch.splice(si--, 1); }
       }
       if (sum) for (let k = 0; k < 4; k++) if (this.gM[k].n) { const Vg = V[k >> 1]; this.grpRun(k, n, o, (k & 1) ? Vg[2] : Vg[0], (k & 1) ? Vg[3] : Vg[1]); }
+      if (this.gvQ.length) { for (let i = 0; i < this.gvQ.length; i++) this.give(this.gvQ[i][0], this.gvQ[i][1]); this.gvQ.length = 0; }
       L.q = q0 + n * L.r;
       if (L.wk && X >= L.wk.f1) this.wilted(L);
       if (!any && L.st.i >= L.st.N && L.lv.i >= L.lv.N) return;

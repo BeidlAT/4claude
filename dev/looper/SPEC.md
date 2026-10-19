@@ -399,6 +399,12 @@ count-in number only when `hx.ein` is not „aus“.
   pass of a long overdub becomes its own Schicht in a group.
 - Guard: no Eigensinn/Gärtner change in a loop during the three passes after a Schicht was added.
 
+**As built (step 1d).** The guard: `hxGuardSet(L, k)` when a Schicht joins a loop that has one (`hxSchNew`, not for a
+rebuilt one) – `L.guardK` = its entry pass + 3; `hxEigSet` holds a change asked meanwhile (`L.eigWant`) and `hxGuardTick`
+applies it once the loop's pass reaches `guardK` (the Gärtner, Etappe 3, takes the same hook). „Eine Runde“ (`hx.runde`,
+off by default, in the card's settings): a punch in „dieselbe Schleife“ ends by itself one pass after its press
+(`P0.end`, the processor told 30 ms ahead) – its Schichten a group as any punch's.
+
 ### 6.5 States and clearing
 `stumm` (phase runs) vs `angehalten` (re-enter from its start on the next 1) exactly as KONZEPT §2.5. Stille
 (`panic`): all Schleifen `angehalten`, buffers kept, toast "N Schleifen angehalten · Weiter · Leeren". Löschen: one loop
@@ -612,6 +618,39 @@ preset loads: identical (0 difference); folgt: the filter's 400 Hz → 6 kHz mov
 swap out 1 → out 0 at a seam: third difference 0.97–0.99× mid-pass, RMS −0.42 … +0.89 dB; Taumeln on: a held A4 against
 the same live note beats 0.001 Hz (drift ±8 ct at 2.5 Hz); off: up to 1.7 Hz.
 
+**As built (step 1d): one resampling per loop.** (a) **Summed reads.** `span()` groups the reads of a loop that have the
+same rate and the same fractional phase, per output pair and class (under the state's gain / free): their sources are
+summed sample by sample into a scratch chunk (`grp`/`grpRun`) and resampled once – the resampler is linear, so this is
+their sum read one by one (t-hx-taumeln: four Schichten at a loop rate of 17 ct, −143 dB from step 1c's way). A read
+whose gain moves within the span (a fade, a seam's crossfade, a version crossing), one that enters mid-span or reads at
+rate 1 (bit-exact copy) reads on its own as before. The loop's own rate (MIDI clock nachführen) is shared at once.
+(b) **De-drifted Schichten.** Taumeln gave every Schicht a rate of its own (the drift now against the drift *it* was
+played with), so none could share. Each complete version of a Schicht is therefore de-drifted once, offline, in the
+processor: `ddAsk` (a fill complete, or the page's audio; a dry version that will be baked waits for its baked one –
+`dd: 0`) → the page lends the chunks (`{ddReq}` → `{ddGo}`) → `ddJob` after every other job (φ' = 2^(−d(φ)/1200),
+anchored at the pass start `pre`; knots every 32 frames by midpoint steps, backward through `pre` and forward to the
+source's end; the 160-tap kernel of the restore conversion at 0.97 of Nyquist; 64 frames a quantum – 256 overloaded
+this machine's audio thread until scheduled notes stayed silent) → `S.ddN`, taken over at the Schicht's next pass start
+(`ddAdopt`: the old version goes on as that seam's continuation and in the Ausklänge already ringing, read as before,
+then back to the page). A de-drifted version reads at the live drift alone (`dvF`), so a loop's Schichten share one rate
+and (a) sums them; its own drift re-indexed (`dr0`) serves Taumeln off and the reads of versions it replaced (`rX`). A
+new version (a bake, a re-cut, ↶) reads as played until its own de-drifted one comes. The page keeps the original audio
+– storage, undo, bake, re-cuts are unchanged; the de-drifted version is the processor's alone, made again after a
+reload. **The sound.** Measured against the exact path (analytic tones, the drift as the processor reads it): the
+de-drifted read −69 dB; step 1c's read, which took the drift at each span's start, lagged it by up to ½ frame (−30 dB at
+±8 ct, 2.5 Hz) – it now takes it at the span's middle (−59.6 dB; that is also what plays before a version is
+de-drifted); no click where it takes over (the largest step around each pass start 1.00× step 1c's). Two places differ
+from step 1c by design and are more right, not less: the Ausklänge and a seam's continuation after the pass end are
+de-drifted along their own time (step 1c read them at the drift of the new pass's start), and the span reads the drift
+at its middle. A Schicht that enters mid-pass (an Auftakt: `pre` < 0, its anchor before its buffer) is integrated forward
+from the anchor to its first knot; a job whose knots or frames are not finite is dropped, never taken over (t-hx-fuzz
+found that case: the Auftakt's de-drifted version came out NaN). A version replaced while an Ausklang still reads it is
+kept (`S.park`) until none does (step 1c gave it back at once – a detached buffer reads as NaN), and what a span gives
+back to the page goes only after its summed reads (`gvQ`: an Ausklang ending in the span had its last read waiting in
+a group when its version went back – the fuzz's second NaN). (c) **Cost**
+(§21): a loop counts one resampling per output once its Schichten are de-drifted (before: one per Schicht); a de-drift
+job counts `HX_COST.dd` while it works (one at a time).
+
 ---
 
 ## 10. Wuchs
@@ -631,6 +670,9 @@ in the Werk-Rahmen with `Q = QP[n]` (no `A.lite`, budget ∞).
   streamed ≈ 1 s ahead; each Schicht its own stream (so undo/mute are instant) or, if streams > 4 per loop, a summed
   stream plus each Schicht's Abdruck kept to bridge an undo until the next re-render.
 - **Wurf/✓:** a rendered pass's `{seed, notes}` can become the anchor (exact); a live pass is kept as its Abdruck.
+- **Note (step 1d, for 2a/3):** ✓ (Lob) keeps a rendered pass by storing its **audio** as the anchor – the pass as it
+  sounded, an Abdruck – not its `{seed, notes}` for a re-render: Schwarm and Tropfen do not render bit-identically from the
+  same seed (§8 As built 1c), so only the audio is what was praised.
 - **Tails:** each pass renders `dur + tail` (tail = until −90 dB or 12 s max); overlapping passes are summed by the
   processor (k streams).
 - **Late blocks:** if a block misses its frame, the processor plays the loop's last complete pass at that position –
@@ -718,6 +760,20 @@ short free phrases (2–6 notes, every IOI free 0.12–1.2 s, the tap 0.3–1.5 
 times (11.6 %). By notes: 2 – never (fewer than 3 onsets), 3 – 30 %, 4 – 16 %, 5 – 8 %, 6 – 5 %. Three notes stay the
 hardest: a bar of three quarters must still read as one.
 
+**As built (step 1d): c) Auslese, Etappe 1.** `hxAuslese(cycles)` (k ≥ 3, each a list of `{t, d, v}`): the medoid
+cycle by summed DTW cost (`hxDtw`: onset distance in 50-ms units, capped at 2, + 1 for another degree; gap 1.5) is the
+reference; every other cycle is aligned to it, matched pairs (cost < 1) form clusters; clusters present in ≥ ⌈k/2⌉
+cycles survive with median time and velocity – the consensus; p = the mean F-measure of each cycle against it; `best` =
+the real cycle closest to it (DTW cost, the later one on a tie). `hxAusleseFor(L, rep)` once the harvest's window has
+sounded (its repetition `L.rep` from the Korb's plan; the cycles stepped back by the period while the repetition and the
+Humus reach): from p ≥ `HX_AUSL_P` (80) and when the best is not the harvest itself, `L.ausl = {k, p, w0, w1}` – the chip
+„Auslese aus k · p %“ in the harvest's row and a button in the card; never by itself. `hxAusleseDo`: that repetition's
+window from the Humus becomes the Schicht at the next seam (`hxSchSwap`, ↶ goes back). Measured (t-hx-ohr): synthetic –
+a wrong note and a sloppy cycle among 4 → the consensus is the figure (median timing within 3 ms), p 97 %, a clean cycle
+chosen; a missing note stays in the consensus; unrelated cycles p ≤ 25 %; k = 2 none. Live – four bars, the last sloppy
+(every second note 30 ms late): the Korb takes the last bar, „Auslese aus 4 · 100 %“ offers bar 3; tapped, its audio;
+↶ back; a line that never repeats offers nothing. (The consensus itself as Wuchs: 2b.)
+
 ### 12.2 Eigensinn (Etappe 2a: Treu/Lebendig; Etappe 3: Variieren/Wandern)
 - Lebendig: new seed per pass; timing breath: offsets from the loop's groove spread × ⅓ with 1/f-like noise (pink by
   Voss-McCartney), seeded per pass.
@@ -782,6 +838,34 @@ Vergessen; export/import JSON.
   strips), with "Puls danach stumm?".
 - **Klang aufs Feld** (2b): card action – sets `v.eng` (and Ebene 2 if the loop has it) to the loop's source.
 
+**As built (step 1d).** `HX.lich`: `{id, name, loops: {key: {on, g, e}}, rule: 'takt'|'ende', mix, puls, kern}` – kept by
+the Schleifen's keys, stored with the session record (`'_s'` in IndexedDB, with `lichCur`) and back after a reload.
+`hxLichMerken` takes what sounds now (and, with `hx.lichMix`, the mixer scene – `mxSnapTake`; with `hx.lichPuls`, the
+Puls on/off); `hx.regel` is a new one's rule. `hxLichGo(Li)`: the moment from the rule (`hxLichT`: the next bar line ≥
+`HX_LEAD`, or the next seam of the longest Schleife; no Takt and only free loops: at once), every state and level sent
+for that moment's frames (`hxState`/`hxGain` with `at`; an angehalten one re-enters from its start), Eigensinn through
+the guard, the Puls started just ahead so it joins on that bar line (or `SEQ.stopB`), the scene's values at the moment
+(`hxFormTick`); a pending entry `licht` (its cancel puts back what it changed). The form button `#hxForm` at the rail's
+right end: tap = the next Lichtung, cyclic (`hxFormTap`; tapped while one waits: cancelled; none yet: the row); held
+0.5 s = the row in the rail where the rings are (`HX.chips.kind 'form'`: the Lichtungen as `n · Takt|Ende (· Kern)`,
+merken, Kern / Kern ↩, Lücke, Takt-Lücke, Schluss · welkend · abbauend or Schluss ✕); its glyph is the clearing with
+the current Lichtung's number (dashed while one waits), its word `ab T n` / Schluss / `L n` / Form, its label says
+what a tap does. Kern: a Lichtung flagged in the card; `hxKern` goes there on the next 1 and remembers where from
+(`HX.kernBack`), the same gesture goes back. Lücke (`hxLuecke(1|4)`): every playing loop's state to 0 for the last beat
+or bar before the next 1 and back on it, fades of `round(0.003·SR)` frames (t-hx-form reads the processor's messages:
+out and back exactly there, silent between). Schluss (`hxSchluss`, `hx.schluss`): `ende` – each loop angehalten at its
+own next seam (its Ausklang rings); `welkend` over `hx.welk` bars (4–16, default 8) from the next bar line – the
+processor's `wilt` per loop: gain on the cos law, a one-pole low pass falling exponentially 16 kHz → 250 Hz, slices of a
+sixteenth dropped by a seeded hash with probability 0.7·x^1.3 (3-ms ramps; the same seed renders the same, checked
+offline), angehalten at the end (`{wilted}`); `abbauend` – one loop less per pass of the longest, the youngest first;
+tapped again: cancelled; Stille cancels it. Mixer scenes A/B carry the current Lichtung (`MX.snap.lch`, stored and
+swapped with the scene): both carrying one, the morph fades only the loops' levels (equal power, off = silent) and sets
+states and Eigensinn at its ends; one carrying one, crossing half way switches there. Schlafen/Wenden
+(`hxSlpEnter`/`hxSlpWake` from `slpEnter`/`slpWake`, not for the art „Szene“, whose scene does it): the playing loops
+angehalten at the next bar line – the processor's `state` with `tail`: what sounds rings on, free of the state, fading,
+with the Ausklänge still ringing, into the frozen echo; awake: „3 · 2 · 1“ in the field (`HX.wake`) and back on the
+next 1; after `SLP_LONG` they stay angehalten. Folge, Puls ernten, Klang aufs Feld: 2b.
+
 ---
 
 ## 14. Tools (Etappe 2b)
@@ -827,6 +911,19 @@ Vergessen; export/import JSON.
   80 ms refuses overdub); **Gesang als Noten:** monophonic YIN pitch tracking + onset segmentation in a Worker → notes
   with deg/oct relative to the scale (median pitch per note, glides as f curves) → Wuchs on any source.
 - **Live mode:** §10.6.
+
+**As built (step 1d): Nähren · Gespinst and Körner.** The processor has a third output: a pair per slot (`2 ·
+HX_SLOTS` channels), each loop's output post level, state and Schluss into its own pair while it feeds (`{send: {loop,
+ch, g, X}}`, 30-ms fades; zeroed only while a send sounds) – nothing taps it, so neither the Humus („Gespielt“) nor a
+recording hears it (t-hx-oeko: „Gespielt“ exactly silent while the Schleife and its web sound, and while it feeds the Körner). `hxNaehrGsp(L, on)`: a `myzel-web` of its own (`hxWebMake`, the live web's parameters and
+`gspFreqs`, `gspSet/gspRetune/gspClear` reach every loop's web, `gsp.halo` its out gain) fed from that pair through a
+splitter (`HXN.split`), its halo into `hxr`; off: the send fades, the web rings out for 3 s and goes. Its cost
+`GSP_COST[rich]` while it reports itself active (`hxWebsCost`, in `hxLoad` → `voiceLoad`). Stored with the loop
+(`naehrt`), back after a reload. `hxNaehrKor(L, on)`: the loop's steady pass – its audible Schichten summed over one pass
+(the baked versions where baked, ≤ `USER_MAX_S`), peak-normalised to 0.8 with 10-ms edges, its pitch reference the median
+of its notes (else `guessPitch`) – as `HXN.kor.tex`; the Körner's new source „Schleife“ (`kor.src`, a live source) reads
+it (`korSource`); one Schleife feeds them at a time; off: back to Glasharfe. The card's row „Nähren: Gespinst ·
+Körner“. Not yet (Etappe 4): rhz, rgn, glt, shn, Schleife → Schleife.
 
 ---
 
@@ -897,6 +994,17 @@ tightens the library's head rows a little (head 44 px, search and family row clo
 Effektkette (eingebrannt · folgt; without a Werk-Rahmen the note why), Taumeln an/aus, „Auftakt anfügen“ when offered,
 and in the settings Einzählen, Klick and „Klopf mit“ (with the measured Spielverzögerung).
 
+**As built (step 1d).** The form button `#hxForm` (40 px) at the rail's right end, hidden folded; on screens ≤ 400 px wide
+the rail's buttons narrow (Korb 48, Hauptknopf 38, ↶ ↷ 30, Form 36, page 32, rings ≥ 34) so all fit at 360 px. The
+auto-fold is computed from the layout, not the screen: with a panel open the rail folds only when the field would
+otherwise be shorter than 260 px (`hxRailAuto`: the stage's height with the rail open, `HX_FIELD_MIN`; re-checked a frame
+after it shows) – t-hx-ui: 360×740 and 390×844 fold (208, 256 px), iPad and the 1366×768 PC stay open (410, 545 px), a
+phone turned folds. The form row and the Auslese chip in the rail (§13, §12.1); the card: the form section (Lichtungen –
+Hin, Takt/Schleifenende, Kern, Überschreiben, ✕ – and Merken, Kern, Lücke, Takt-Lücke, Schluss), „Nähren“, „Auslese“,
+a Schleife of Bewegung's own card (what it moves, Verblassen, the lanes drawn on its ring), the settings' „Form“ grid
+(`hx.regel`, `hx.lichMix`, `hx.lichPuls`, `hx.lueckeT`, `hx.schluss`, `hx.welk`), `hx.runde`, Pedale, Bewegung (the trim,
+„Hinlegen erntet“).
+
 ---
 
 ## 17. Controls
@@ -920,6 +1028,32 @@ and in the settings Einzählen, Klick and „Klopf mit“ (with the measured Spi
 - **Gestik:** no new gesture. Wenden = Schlafen behaviour (§13). Ladung on loops only if enabled per loop
   (`loop.ladung`), effect: Lebendig+ loops vary more, Abdruck loops get grid-sliced drop-outs/stutters, decaying with the
   Entladung. Ruhe → harvest only as an opt-in (old "Hinlegen wird Schleife").
+
+**As built (step 1d).** Targets (`midiTarget`, group Hexenring): `hx.korb` (press: harvest; held ≥ ½ s: the Korb's
+layer – what is played meanwhile becomes Schichten of the Fokus, the harvest it began cancelled), `hx.haupt` (press and
+release: tap or push-to-talk), `hx.schicht` (retro Schicht, committed at release), `hx.zurueck`, `hx.wieder`,
+`hx.leeren`, `hx.form`, `hx.licht.prev/next`, `hx.kern`, `hx.luecke`, `hx.schluss`, `hx.alle.ende/an` (all end at
+the next bar line – on their seam, or ringing out with their Ausklang / all from their start on the next 1), `hx.lob`,
+`hx.nein`, `hx.anker` (hooks for Wuchs: „Nichts zu entscheiden“ until 2a), `hx.gaertner` (continuous, schaut · pflegt ·
+antwortet – a value only until Etappe 3), `hx.hin` (Ruhe's „Hinlegen erntet“), `hx.nkset`, `hx.ring.N` (state tap), `.rec`
+(record into it / close), `.solo`, `.pegel` and `.eigensinn` (continuous), and the pedals' own `hx.pedb`, `hx.pedd`
+(tap one thing, hold another). `learnDone` learns `HX_MOMENT` (korb, haupt, schicht, pedb, pedd) momentary.
+`mapClean` migrates old bindings (`FAE_TO_HX`: fae, fae.take → hx.korb; fae.rec → hx.haupt; fae.clear → hx.zurueck), and
+the device setting „Hinlegen wird Schleife“ became the binding of Ruhe to `hx.hin` (opt-in, off by default; its switch
+„Hinlegen erntet“ in the card where Gestik can be). Pedals (card, „Pedale“): profiles `HX_PEDP` – Korb · Aufnahme (one
+switch), zwei (A Korb, B Schicht / held: ↶), drei (+ C Hauptknopf), vier (+ D next Lichtung / held long: Schluss); the
+learn (`hxPedLearn`) asks for each switch's press, then a hold of ≥ 0.6 s that must arrive as down … up; a pedal that
+sends only one event (a tap) gets the offer „Nur tippen übernehmen“ with what is lost said in words; learned keys are a
+key map (`hxDev('ped')`), learned MIDI pedals ordinary bindings. Keys: one capture-phase `keydown`/`keyup` listener on
+`window` (`hxKeyDown`): learned pedal keys act and `preventDefault` before any focused control (not in text inputs) – a
+page turner's PageDown/arrows never step a focused mixer knob (t-hx-ctl presses them on a focused knob); Space =
+Hauptknopf (held: push-to-talk), E = Korb, 1–8 rings (only when no control has focus, or inside the rail), Ctrl+Z /
+Ctrl+Shift+Z (Ctrl+Y) – the note row keeps its notes. Rail buttons blur after pointerup. nanoKONTROL2: SET toggles its
+page (`hxNkPage`; profile `nk2` gained the bind `cc 60 → hx.nkset`, `HX_NK2`: faders levels, knobs Eigensinn, S solo,
+M ring tap (stumm at the bar), R rec/close/punch, CYCLE Korb momentary, ◀◀ ▶▶ ↶ ↷, MARKER ◀ ▶ Lichtung, ■ ▶ all end/start,
+TRACK ◀ ▶ ✕ ✓); the SET LED via MIDI out (`midiSend`, CC 60 127/0) when the device has an output; the field's tag
+`#hxTag` „nanoKONTROL2: Seite Hexenring“; its card says it. nanoKEY Studio: the chip „Pads: Spuren / Hexenring“ in its
+card (`hxPadsSet`, `HX_PADFN`: pads 1–4 rings, 5 Korb momentary, 6 ↶, 7 next Lichtung, 8 Stille).
 
 ---
 
@@ -946,6 +1080,53 @@ a playing loop, `rs` per Schicht of a resampled one. Keep-alive: a playing Schle
 
 **As built (step 1b).** `panic` → `hxStille()`: recordings and punches end, pending state changes are dropped, every
 Schleife angehalten; its toast becomes „N Schleifen angehalten – … · Weiter · Leeren“.
+
+**As built (step 1d): the Fährte's retirement.** Gone: `#btnFae`, `#faeTag`, the Gerät panel's section (`faeSecUI`),
+the Gestik card's Fährte button, every tap/hold/double-tap path (`faeTake/faeRec/faeClear/faePress/…`), their CSS. Kept:
+the clock inside the Taktgeber (`faeClock` mirrors the sounding segment; `faeB/faeT` are the continuous beat), the lanes
+in the Humus (`FA.lanes`, written by `faeIn/faeP/faeY/faeGk` as before, `faeShift` – output latency, for Gestik also the
+sensor's, ± the trim – and `faeReady`), the 16-bit save format (`faeEnc/faeDec/faeDecode`). **A Schleife of Bewegung**
+(`L.bew = {lanes, disp, n, g0, gs, fade, why, ev}`, engine name „Bewegung“) takes the Fährte loop's place: a Schleife in a
+slot, in beats (`lock 'takt'`), no audio, its lanes laid on the mod layer half a second ahead as sources
+`hxb<id>:<k>|<src>` (`hxBewLay` each scheduler tick; laid anew only when its state moved or the clock moved the points
+ahead by more than 0.5 ms – a device's clock nudges its tempo every pulse), its strength falling by its Verblassen per
+pass (under 4 %: angehalten), its states at their moments (`hxBewState`), silent in a Lücke, fading with a Schluss
+„welkend“; Gestik's lanes rest while Gestik is off. It comes (a) from the Korb when the Humus heard nothing but movement
+(`hxBewPlan` – the bars up to the bar line by the Korb's grid rule, 2 or the set length; `hxBewHarvest` fills its lanes
+once Gestik's delayed ones are in), (b) from the chip „nur Bewegung“ after any harvest whose window holds movement
+(`hxBewOnly`: that window as a Schleife of Bewegung in the sound's place, ↶ brings the sound back) – the way to loop a
+lean, a knob or the finger's height onto what is played live, as the Fährte did, (c) from a format-2 preset, a mixer
+scene or a file with a Fährte loop (`hxBewImport`, in the place of the one it replaces, on the current bar; `null`
+removes it; `presetExtra`/`faeSceneStore` export the newest). A lane counts as movement only when it changed at least
+twice in the window (a preset or a value set once is a jump, not a gesture – it would replay every pass). **Which lanes
+replay live:** only a Schleife of Bewegung's – moving the instrument is all it is. An audio Schleife never moves the live
+instrument: its Bewegung (`L.mv`) is in its sound already – voice lanes (height, Ausdruck, bends) drive its own notes when
+it grows (Wuchs, 2a), chain lanes are baked into it or it follows the live chain, echo, hall and the A/B morph act on the
+whole mix and stay the player's. A device's Start moves the origin as for audio Schleifen (§2 1a: loops keep their beats).
+Migration: old bindings (§17), „Hinlegen wird Schleife“ → the Ruhe binding, presets/scenes/files as above (the built-in
+„Sporenfährte“ is „Sporenregen + Bewegung“, its recipe and its Schleife). The Gestik card's line names the playing
+Schleife of Bewegung; its tilt (`disp`) still draws the ghost spore.
+
+**The Fährte's 137 checks (`t-gf-loop` 24, `t-gf-pc` 24, `t-gf-save` 28, `t-gf-gk` 14, `t-gf-funk` 30, `t-gf-parity` 9,
+`t-gf-cost` 8) – where they went.** Kept and adapted: `t-gf-funk` (unchanged), `t-gf-parity` (no Schleife, no
+`hxb` source wakes; the bar as before), `t-gf-cost` (a 4-bar Schleife of Bewegung of 8 lanes instead of the loop; its rows
+flake on this machine as on the step-1c build), and in other suites `t-gq-soak` (the Korb takes the bars three times,
+Leeren once; heap measured after ↶'s snapshots are dropped), `t-gs-regen`/`t-gs-rezept` (the demo's Schleife of
+Bewegung leans the rain), `t-gu-ui` (the buttons gone, Spielhilfe and hint texts), `t-gx-live` (a Schleife of
+Bewegung's Gestik lanes rest while Gestik is off, ↶ after deleting it, its ring instead of the tag). Ported into
+`t-hx-bew` (66 checks): the layer written by itself, the Korb's bar, playback where played (≤ 25 ms) and exact on the
+audio thread, Verblassen ×0.5, the patch never written, tempo 120 → 90, a 300-ms stall, the Puls starting (it joins the
+Schleife's grid), deleting it (the Filter back exactly), nothing moved → leer, an external clock (100 → 110 BPM, its bar
+lines, its beat), the X-Y pad (lane y in the audio Schleife; „nur Bewegung“: a key held later takes it), a knob
+(relative, on top, turned again), a pad on the Korb (Bewegung, no note), Gestik (latency shift 80 ms, Anlehnen's height
+and the tilt, „nur Bewegung“, live on top, a new note takes the lean, the card's line, ↶/↷, Tonhöhe as the lean toward
+the step and played back in key, „Hinlegen erntet“), the save format (format 2 small, loading on the current bar,
+format 1 and built-ins leave it, format 2 without one removes it, Rückgängig, the file v2/v1, scenes A/B store/go/morph/
+swap/stored, reload, broken data ignored). Deleted as obsolete (the gestures they tested are gone): `t-gf-loop`'s overdub
+pass (hold arms a pass, „old + new“) and its double-tap clear; `t-gf-pc`'s bar button on a PC, the Gerät panel's text,
+the pad's hold-to-record, letting go, hold-while-looping and double tap; `t-gf-save`'s „toast with Rückgängig“ for the
+Fährte's own clear (↶ covers it); `t-gf-gk`'s „Hinlegen wird Schleife is a switch“ (now a binding, off by default) – and
+the tools `gf-block.js`, `gf-ui.js`, `gf-smoke.js`, `shot-gf.js`.
 
 ---
 
@@ -1036,6 +1217,19 @@ Measured and entered, not traded: Taumeln off for a loop (or the drift at 0) giv
 renders are not voice budget (§10.5): at level 3 a phrase renders at 0.062 s per second of audio (median; max 0.134 s,
 Harz and Schwarm), a bake at ≈ 0.05 s per second – offline, on the browser's rendering thread, beside the live one.
 
+**As built (step 1d).** Re-measured together with `cost.js` (three runs, table units = raw × each run's scale 0.89 /
+1.02 / 0.82): capture 0.97 / 1.15 / 0.85, a playing Schicht 0.34 / 0.31 / 0.27, resampling +0.94 / +1.14 / +0.92, the
+chain's copy 2.35 / 2.11 / 1.88; new: `hxm` (a loop of four Schichten at one rate, summed and resampled once) 1.52 /
+1.63 / 1.46 against `hxp` (the same four resampled one by one, step 1c's way) 4.34 / 4.53 / 3.70 – about 65 % less;
+`hxd` − `hxr` (a de-drift job working, 64 frames × 160 taps a quantum) 2.88 / 3.04 / 2.68. Entered (higher + 15 %):
+`HX_COST = { capture: 1.33, schicht: 0.39, rs: 1.32, fx1: 2.71, dd: 3.5 }`. Counted (`hxCount`): every playing Schicht
+`schicht`; a loop's reads at one rate `rs` once per output (its Schichten de-drifted, or the loop's own rate); a Schicht
+still read against its own drift `rs` of its own; one working de-drift job `dd`. The model is above what was measured
+(four summed: 4 × 0.39 + 1.32 = 2.88 counted, ≤ 1.63 measured), so the count errs to the safe side. With Taumeln on (the
+default) a loop of four Schichten counts 2.88 instead of step 1c's 4 × 1.6 = 6.4 – on a phone at level 1 (budget 14) the
+capture and that loop take 4.2, no longer half the room for live voices. Nähren · Gespinst: `GSP_COST` per web while it
+rings (the live web's measured cost, §15).
+
 ---
 
 ## 22. Tests (new suite `dev/tests/hexenring/`, run by `run-all.sh`; Playwright on an instrumented slot `hx`)
@@ -1055,6 +1249,8 @@ Harz and Schwarm), a bake at ≈ 0.05 s per second – offline, on the browser's
 | `t-hx-ohr.js` | Takt finden on synthetic and recorded phrases (top-1/top-3 incl. octave errors), repetition detection, Auslese |
 | `t-hx-form.js` | Lichtungen, Folge, Kern, Lücke, Schluss variants, Schlafen/Wenden |
 | `t-hx-ctl.js` | MIDI targets, learn momentary, pedal profiles incl. hold test, key capture beats focused knobs, nanoKONTROL2 page |
+| `t-hx-bew.js` | (step 1d) the Fährte's checks ported to Schleifen of Bewegung: the layer, the Korb, playback, clock, latency shift, save format (§18) |
+| `t-hx-taumeln.js` | (step 1d) one resampling per loop: summed reads = separate ones; de-drifted Schichten nearer the exact path than step 1c's read; cost (§9, §21) |
 | `t-hx-persist.js` | reload mid-dub restores bit-exact; quota failure path; SR change resample |
 | `t-hx-fuzz.js` | 2000 random sequences of all actions + Stille/presets/scenes/tempo/Schlafen/hidden tab → no stuck notes (`A.voices.size === 0` after Stille), no NaN, no exceptions |
 | `t-hx-ki.js` | Eigensinn operators keep scale/strong beats, MaxOrder ≤ 6, roles, Platz machen, die anderen spielen, answers' constraints, Begleiten in scale, Wiederkehr rules, Puls lernt |
