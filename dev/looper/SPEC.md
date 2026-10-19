@@ -1119,4 +1119,11 @@ Nahtwahl, stop; `PARTS`, `KINDS`, `RUNS` to run a part). `t-hx-taps` +5 (the cli
 mit“, a harvest against the Puls with the Spielverzögerung: 17), `t-hx-ohr` +2 (the margin: 15), `t-hx-ui` +8 (the
 auto-fold at every size: 64), `t-hx-persist` reads the playing (baked) versions. `hx-h.js` gained the recorder
 `hx-recf` (the frame it began at). The klang `cost.js` gained `hxf`/`hxz` (the chain's copy, §21). Fixed on the way:
-a harvest of sound without notes against a fixed length (`hx.laenge` fest) took up to 4 bars instead of the set ones.
+a harvest of sound without notes against a fixed length (`hx.laenge` fest) took up to 4 bars instead of the set ones;
+the chain log's 180 s are trimmed in one cut per 20 s (before: a cut on every write – once a Gestik binding had written
+for three minutes, every frame would have copied the whole list). Regression (`reg.sh`, `klang/tests/run-all.sh`,
+`smoke-all`): green except rows that fail on step 1b's build as well, compared run for run on the same machine
+(`t-gm-stream`, `t-gm-cost`, `t-gl-schlafen`'s „woken“, `t-gf-loop`'s followed tempo, `t-gf-cost`, `t-gs-regen`,
+`t-gs-cost`, `v2/bars` G's onset, `klang/t-eng-native`'s 6-s hold – each passes or fails alike on both); `t-gs-raster`
+„held notes fill the voice budget“ now rounds the Hexenring's share up to a whole unit for that check (with the capture
+at 1.07 the whole notes left room the rain took). `klang/t-parity` and `midi-tests/t-parity` needed no change.

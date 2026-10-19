@@ -89,7 +89,11 @@ const EPS = 1e-9;
     M.A.budgetScale = 0.01; M.applyQuality();
     const [vb] = M.getVB();
     await window.__sleep(1500);
-    // (Hexenring: its processor counts in the budget too – the held notes fill what is left)
+    // (Hexenring: its processor counts in the budget too – the held notes fill what is left. Its share is a fraction
+    // and the notes whole ones: for this check the share is rounded up to a whole unit, so the notes fill the budget to
+    // the last fraction – a remainder would be room the rain may take)
+    const hc = M.HX_COST ? M.HX_COST.capture : 0;
+    if (M.HX_COST) M.HX_COST.capture += Math.ceil(M.hxLoad()) - M.hxLoad();
     const held = [], nH = Math.floor(vb - (M.hxLoad ? M.hxLoad() : 0) + 1e-9);
     for (let i = 0; i < nH; i++) { window.__key(0.1 + i * 0.12, 0.9, 'n' + i); held.push(M.touches.get('n' + i)); }
     await window.__sleep(100);
@@ -99,6 +103,7 @@ const EPS = 1e-9;
     await window.__sleep(3000);
     const o = { vb, load0, struck: M.RG.n - n0, alive: held.every((tt) => tt.voices.every((x) => x.v.alive && M.A.voices.has(x.v))), n: held.length };
     for (let i = 0; i < nH; i++) window.__up('n' + i);
+    if (M.HX_COST) M.HX_COST.capture = hc;
     M.A.budgetScale = 1; M.applyQuality();
     window.__tilt(0, 0);
     return o;
