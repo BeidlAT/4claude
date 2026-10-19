@@ -7,8 +7,14 @@
 //     theirs
 //  b) Wiederholung: a figure repeated (same degrees, or transposed: the same intervals), IOIs within ±15 %, at least 5
 //     events and 1 s; not for a figure whose rhythm changes by 25 %, a random line, or too few events; „the start“
+//  c) (step 1d) Auslese, Etappe 1: k ≥ 3 repetitions aligned by DTW on (onset, degree) – the consensus (clusters in
+//     ≥ ⌈k/2⌉ of them, median timing), the agreement p (mean F-measure), the REAL repetition closest to it; a wrong note
+//     or a sloppy cycle is not the one chosen, a missing note does not leave the consensus, unrelated cycles agree too
+//     little, two are too few. Live: four repetitions played, the last one sloppy – the Korb takes it, the chip
+//     „Auslese aus 4 · p %“ offers an earlier one (never by itself); tapped, that repetition's audio becomes the
+//     Schicht at the next seam; ↶ brings the harvest back. A line that never repeats: no chip.
 //   node t-hx-ohr.js
-const H = require('./hx-h');
+const H = require('./hx-h'), G = require('./hx-g');
 const { ok } = H;
 (async () => {
   const { page, errors } = await H.open({ start: false });
@@ -93,8 +99,75 @@ const { ok } = H;
   ok(!b.random, '  a line that never repeats – none');
   ok(!b.short || b.short.p >= 1, `  a figure under 1 s counts only as a multiple of ≥ 1 s (${b.short ? b.short.p.toFixed(2) + ' s' : 'none'})`);
   ok(b.start && Math.abs(b.start.p - 2) < 0.01, `  „the start“ (auto-close): the take's first events come again after ${b.start && b.start.p.toFixed(3)} s`);
+  // ---- c) Auslese (pure) ----
+  const c = await page.evaluate(() => {
+    const M = window.__M;
+    let seed = 11; const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+    const FIG = [0, 2, 4, 5, 7, 5, 4, 2], cyc = (o = {}) => FIG.map((d, i) => ({ t: i * 0.25 + (o.late && i % 2 ? o.late : 0) + (rnd() - 0.5) * 0.01, d: o.wrong === i ? d + 1 : d, v: 0.7 })).filter((_, i) => o.miss !== i);
+    const out = {};
+    const a = M.hxAuslese([cyc(), cyc(), cyc({ wrong: 3 }), cyc({ late: 0.03 })]);
+    out.a = a && { k: a.k, p: a.p, best: a.best, cons: a.cons.map((e) => e.d).join(','), dt: Math.max(...a.cons.map((e, i) => Math.abs(e.t - i * 0.25))) };
+    const b = M.hxAuslese([cyc(), cyc({ miss: 5 }), cyc(), cyc()]);
+    out.b = b && { k: b.k, p: b.p, best: b.best, n: b.cons.length };
+    const rl = () => Array.from({ length: 6 + Math.floor(rnd() * 4) }, (_, i) => ({ t: i * 0.2 + rnd() * 0.15, d: Math.floor(rnd() * 12), v: 0.7 }));
+    out.c = []; for (let i = 0; i < 20; i++) { const r = M.hxAuslese([rl(), rl(), rl(), rl()]); out.c.push(r ? r.p : 0); }
+    out.d = M.hxAuslese([cyc(), cyc()]);
+    const x = cyc(), y = M.hxDtw(x, x);
+    out.e = { cost: y.cost, n: y.pairs.length };
+    return out;
+  });
+  ok(c.e.cost === 0 && c.e.n === 8, `Auslese: DTW of a cycle with itself – cost 0, all 8 events paired`);
+  ok(c.a && c.a.k === 4 && c.a.p >= 80 && c.a.cons === '0,2,4,5,7,5,4,2' && c.a.dt < 0.01 && c.a.best <= 1, `  4 repetitions, one with a wrong note, one sloppy (+30 ms): the consensus is the figure (median timing within ${c.a && (c.a.dt * 1000).toFixed(1)} ms), p = ${c.a && c.a.p} %, the closest real one is a clean one (#${c.a && c.a.best + 1})`);
+  ok(c.b && c.b.n === 8 && c.b.best !== 1, `  a missing note: the consensus keeps it (${c.b && c.b.n} events), the one without it is not chosen (#${c.b && c.b.best + 1}, p = ${c.b && c.b.p} %)`);
+  ok(c.c.every((p) => p < 80), `  unrelated cycles agree too little: p ≤ ${Math.max(...c.c)} % in 20 sets (offered from 80 %)`);
+  ok(c.d === null, '  two repetitions are too few (k ≥ 3)');
   console.log('errors:', errors.length ? errors.join(' | ') : 'none');
   ok(!errors.length, 'no page errors');
   await H.close();
+  // ---- c) Auslese, live: four repetitions, the last one sloppy ----
+  {
+    const BPM = 120;
+    const { page, errors } = await G.open({ w: 1280, h: 800 });
+    await page.evaluate(async (BPM) => { await window.__reset(); window.__grid(BPM); await window.__sleep(400); }, BPM);
+    const play = (late, fig) => page.evaluate(async ([BPM, late, fig]) => {
+      const M = window.__M, A = M.A, beat = 60 / BPM;
+      M.setParam('hx.laenge', 'fest'); M.setParam('hx.festT', 1);
+      const B0 = Math.ceil(M.tgBeat(A.ctx.currentTime + 0.3) / 4) * 4, list = [];
+      for (let c = 0; c < 4; c++) for (let i = 0; i < 8; i++) list.push([M.tgTime(B0 + 4 * c) + i * beat / 2 + (c === 3 && i % 2 ? late : 0), fig[c][i], i ? 0.6 : 0.9, 0.18]);
+      window.__play(list, { eng: 'klb' });
+      await window.__until(M.tgTime(B0 + 16) + 0.06);
+      const n = M.hxLoopsLive().length;
+      M.hxKorb(null);
+      await window.__sleep(900);
+      const L = M.hxLoopsLive().length > n ? M.hxLoopsLive().sort((a, b) => b.made - a.made)[0] : null, S = L && M.HX.sch.get(L.sch[0]);
+      const chip = [...document.querySelectorAll('.hx-chip')].map((b) => b.textContent).find((t) => /^Auslese/.test(t)) || null;
+      return { slot: L ? L.slot : -1, ausl: L && L.ausl, rep: !!(L && (L.rep || L.ausl)), w0: S && M.hxT(S.cut.w0), bar0: M.tgTime(B0 + 12), bars: [0, 1, 2].map((c) => M.tgTime(B0 + 4 * c)), chip };
+    }, [BPM, late, fig]);
+    const F = [0, 2, 4, 5, 7, 5, 4, 2];
+    let r = await play(0.03, [F, F, F, F]);
+    const a = r.ausl;
+    ok(r.slot >= 0 && Math.abs(r.w0 - r.bar0) < 0.03, `Auslese live: four repetitions of a bar, the last one sloppy (every second note 30 ms late) – the Korb takes the last bar`);
+    ok(a && a.k === 4 && a.p >= 80 && r.bars.some((t) => Math.abs(a.w0 - t) < 0.03) && r.chip === 'Auslese aus ' + a.k + ' · ' + a.p + ' %', `  the chip „${r.chip}“ offers an earlier, clean repetition (bar ${a ? r.bars.findIndex((t) => Math.abs(a.w0 - t) < 0.03) + 1 : '–'} of 4)`);
+    ok(Math.abs(r.w0 - r.bar0) < 0.03, '  never by itself: the Schicht is still the harvested bar');
+    const slot = r.slot, w0h = r.w0;
+    r = await page.evaluate(async (slot) => {
+      const M = window.__M, L = M.HX.loops.get(M.HX.slot[slot]), w = L.ausl && L.ausl.w0;
+      const b = [...document.querySelectorAll('.hx-chip')].find((x) => /^Auslese/.test(x.textContent));
+      if (b) b.click();
+      await window.__sleep(2600);   // (swapped at the next seam)
+      const S = M.HX.sch.get(L.sch[0]), o = { w, now: M.hxT(S.cut.w0), gone: !L.ausl };
+      M.hxUndoStep(); await window.__sleep(2600);
+      o.back = M.hxT(M.HX.sch.get(L.sch[0]).cut.w0);
+      return o;
+    }, slot);
+    ok(r.w != null && Math.abs(r.now - r.w) < 0.005 && r.gone, `  tapped: that repetition's audio is the Schicht (from the Humus, at the next seam)`);
+    ok(Math.abs(r.back - w0h) < 0.002, '  ↶: the harvested bar is back');
+    // a line that never repeats: nothing to offer
+    await page.evaluate(async () => { const M = window.__M; for (const L of M.hxLoopsLive()) M.hxDelete(L); await window.__sleep(2500); });
+    r = await play(0, [[0, 3, 1, 4, 2, 6, 5, 7], [7, 2, 9, 1, 4, 4, 0, 3], [5, 1, 8, 2, 6, 0, 3, 9], [2, 7, 4, 9, 1, 5, 8, 0]]);
+    ok(r.slot >= 0 && !r.ausl && !r.chip, '  a line that never repeats: no Auslese offered');
+    ok(!errors.length, 'no page errors (live)' + (errors.length ? ': ' + errors.join(' | ') : ''));
+    await H.close();
+  }
   process.exit(H.summary() ? 1 : 0);
 })().catch(async (e) => { console.log('FAIL fatal ' + (e && e.stack || e)); await H.close(); process.exit(1); });

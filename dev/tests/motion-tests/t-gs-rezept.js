@@ -3,7 +3,7 @@
 // its recipe act; a preset without one, "Rezepte der Presets" off or Gestik off bring back exactly the player's own
 // settings (which are what is stored meanwhile); a setting changed by hand stays the player's; a learned binding of an
 // axis rests the recipe's route; "Rückgängig" brings the recipe back; a reload with Gestik on finds it again. User
-// presets keep Gestik's settings (Sporenregen's too). The demo "Sporenregen + Fährte" rains by itself.
+// presets keep Gestik's settings (Sporenregen's too). The demo "Sporenregen + Bewegung" (a Schleife of Bewegung) rains by itself.
 const { open, ok, close, rain, tools, gestikOn } = require('./gs-h');
 const load = (page, key) => page.evaluate((key) => { const M = window.__M; M.loadPreset(M.PRESETS.find((p) => p.key === key)); return { p: JSON.stringify(M.patchValues ? M.patchValues() : null) }; }, key);
 const st = (page) => page.evaluate(() => { const M = window.__M, p = M.GK.p; return { neigen: p.neigen, rgS: p.rgS, seit: p.seit, lad: p.lad, tank: p.tank, ras: p.ras, rasS: p.rasS, sw: p.sw, entl: p.entl, rzK: p.rzK, rz: M.GK.rz && M.GK.rz.key, stored: JSON.parse(localStorage.getItem('myzel.gestik.v1') || 'null'), routes: [...M.GKR.keys()].filter((k) => k.startsWith('rz.')), toast: (document.querySelector('.toast') || {}).textContent || '' }; });
@@ -114,15 +114,17 @@ const st = (page) => page.evaluate(() => { const M = window.__M, p = M.GK.p; ret
   ok(s.rz === 'tempel' && s.neigen === 'regen' && s.rgS === 'glo', 'reloaded, Gestik back on with the start tap: Tempelglocken\'s recipe acts again');
   ok(errors.length === 0, 'no errors in the page' + (errors.length ? ': ' + errors.slice(0, 3).join(' | ') : ''));
   await page.context().close();
-  // the demo: Gestik on (a computer: no sensor), load it, play a few notes – the Fährte leans the rain, it plays by itself
+  // the demo: Gestik on (a computer: no sensor), load it, play a few notes – its Schleife of Bewegung leans the rain, it plays by itself
   {
     const { page, errors } = await open({ cfg: { seed: 8 } });
     await gestikOn(page); await page.waitForTimeout(300); await tools(page);
     r = await page.evaluate(async () => {
       const M = window.__M;
       M.closePanel();
+      for (let i = 0; i < 100 && M.HX.state !== 'ok'; i++) await window.__sleep(50);
       M.loadPreset(M.PRESETS.find((p) => p.key === 'sporenfaehrte'));
-      const o = { rz: M.GK.rz && M.GK.rz.key, neigen: M.GK.p.neigen, rgS: M.GK.p.rgS, loop: !!M.FA.loop, lanes: M.FA.loop && M.FA.loop.lanes.map((l) => l.k).join(','), live: M.GK.live };
+      const B = M.hxLoopsLive().find((x) => x.bew);
+      const o = { rz: M.GK.rz && M.GK.rz.key, neigen: M.GK.p.neigen, rgS: M.GK.p.rgS, loop: !!B, lanes: B && B.bew.lanes.map((l) => l.k).join(','), live: M.GK.live };
       for (const x of [0.2, 0.4, 0.6, 0.8]) { window.__key(x, 0.5, 'd' + x); await window.__sleep(120); window.__up('d' + x); }
       window.__collect();
       await window.__sleep(5000);
@@ -130,7 +132,7 @@ const st = (page) => page.evaluate(() => { const M = window.__M, p = M.GK.p; ret
       o.n = h.length; o.keys = new Set(h.map((x) => x.key)).size; o.up = h.filter((x) => x.f > 0).length;
       return o;
     });
-    ok(r.rz === 'sporenfaehrte' && r.neigen === 'regen' && r.rgS === 'klb' && r.loop && r.lanes === 'rgx,rgy', 'the demo „Sporenregen + Fährte“: its recipe (Sporenregen with Kalimba) and a Fährte on the rain\'s slope');
+    ok(r.rz === 'sporenfaehrte' && r.neigen === 'regen' && r.rgS === 'klb' && r.loop && r.lanes === 'rgx,rgy', 'the demo „Sporenregen + Bewegung“: its recipe (Sporenregen with Kalimba) and a Schleife of Bewegung on the rain\'s slope');
     ok(!r.live && r.n >= 8 && r.keys >= 3, '   … no sensor, the hand still: four notes played, the rain plays them by itself (' + r.n + ' strikes on ' + r.keys + ' Keime in 5 s)');
     ok(errors.length === 0, 'no errors in the page (demo)' + (errors.length ? ': ' + errors.slice(0, 3).join(' | ') : ''));
   }

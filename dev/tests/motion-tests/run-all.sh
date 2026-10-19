@@ -17,7 +17,7 @@ sh "$D/../v2/mk.sh" /home/user/4claude/myzel gq >/dev/null   # final QA: the 3-m
 printf '<!doctype html><meta charset="utf-8"><iframe src="http://127.0.0.1:8790/gk-inst/index.html" style="width:780px;height:880px"></iframe>' > "$D/../v2/gkframe.html"
 cd "$D" || exit 1
 mkdir -p out
-SUITES="t-gk-pure t-gk-perm t-gk-clutch t-gk-learn t-gk-mess t-gk-parity t-gm-targets t-gm-stream t-gm-finger t-gm-learn t-gm-wheel t-gm-cost t-ga-ton t-ga-hoehe t-ga-bebung t-ga-tragen t-ga-cost t-gl-pure t-gl-ladung t-gl-rassel t-gl-tank t-gl-schwenken t-gl-schlafen t-gl-parity t-gl-cost t-gf-loop t-gf-pc t-gf-save t-gf-gk t-gf-funk t-gf-parity t-gf-cost t-gs-keime t-gs-regen t-gs-raster t-gs-strip t-gs-rezept t-gs-parity t-gs-cost t-gu-ui t-gx-pure t-gx-live t-gq-soak t-gq-rain"
+SUITES="t-gk-pure t-gk-perm t-gk-clutch t-gk-learn t-gk-mess t-gk-parity t-gm-targets t-gm-stream t-gm-finger t-gm-learn t-gm-wheel t-gm-cost t-ga-ton t-ga-hoehe t-ga-bebung t-ga-tragen t-ga-cost t-gl-pure t-gl-ladung t-gl-rassel t-gl-tank t-gl-schwenken t-gl-schlafen t-gl-parity t-gl-cost t-gf-funk t-gf-parity t-gf-cost t-gs-keime t-gs-regen t-gs-raster t-gs-strip t-gs-rezept t-gs-parity t-gs-cost t-gu-ui t-gx-pure t-gx-live t-gq-soak t-gq-rain"
 rc=0
 for t in $SUITES; do
   echo "== $t"

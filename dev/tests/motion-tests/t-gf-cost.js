@@ -1,6 +1,6 @@
-// What the Fährte and the Funkstrecke cost, on a CPU throttled 4× (slot gf; node t-gf-cost.js): writing down (one
-// value of a lane, as every live mod source and Gestik update does), the scheduler's part with nothing to play, the
-// same with a 4-bar loop of 8 lanes laid half a second ahead, the mod layer's flush with those points (the audio
+// What the Humus's Bewegung and the Funkstrecke cost, on a CPU throttled 4× (slot gf; node t-gf-cost.js): writing down
+// (one value of a lane, as every live mod source and Gestik update does), the scheduler's part with nothing to play, the
+// same with a 4-bar Schleife of Bewegung of 8 lanes laid half a second ahead (Hexenring; the Fährte's loop before), the mod layer's flush with those points (the audio
 // targets append), and the Funkstrecke's sender per Gestik update and its receiver per message.
 // Budget: writing < 0.02 ms, an idle tick < 0.02 ms, a tick with the loop < 0.4 ms, a flush < 0.3 ms, the sender
 // < 0.05 ms an update, the receiver < 0.05 ms a message.
@@ -18,11 +18,11 @@ const { ok } = H;
     M.faeIn('m|flt|map:cost:1', 0, 'm', 'flt', 'map:cost:1', false, 0);
     // an idle tick: the clock, the finger's height
     const idle = time(400, () => M.faeTick(A.ctx.currentTime + 0.12));
-    // a loop: 4 bars, 8 lanes on audio and other targets
+    // a Schleife of Bewegung: 4 bars, 8 lanes on audio and other targets
     const ks = ['flt', 'pha', 'pan', 'dly', 'rev', 'korD', 'pulsD', 'hoehe'], n = 16 * 48;
-    const cut = { lanes: ks.map((k, j) => ({ k, src: 'map:cost:' + j, v: Float32Array.from({ length: n }, (_, i) => 0.4 * Math.sin((2 * Math.PI * i * (j + 1)) / n)) })), disp: null };
-    const b = M.faeB(A.ctx.currentTime);
-    M.faeRun(cut, Math.round(b * 48), n, b, 1, 'cost');
+    const cut = { n, lanes: ks.map((k, j) => ({ k, src: 'map:cost:' + j, v: Float32Array.from({ length: n }, (_, i) => 0.4 * Math.sin((2 * Math.PI * i * (j + 1)) / n)) })), disp: null };
+    for (let i = 0; i < 100 && M.HX.state !== 'ok'; i++) await window.__sleep(50);
+    const L = M.hxBewMake(cut, { b0: Math.floor(M.tgBeat(A.ctx.currentTime) / 4) * 4, why: 'cost' });
     await window.__sleep(400);
     // ticks as they come (each lays ~25 ms of new points), and one that lays it all again (the clock moved)
     let tk = 0, tf = 0, k = 0;
@@ -31,13 +31,13 @@ const { ok } = H;
       let t0 = now(); M.faeTick(A.ctx.currentTime + 0.12); tk += now() - t0;
       t0 = now(); M.modFlush(true); M.modFlush(); tf += now() - t0; k++;
     }
-    const t0 = now(); M.FA.loop.re = true; M.faeTick(A.ctx.currentTime + 0.12); const relay = now() - t0;
-    M.faeClear(false);
+    const t0 = now(); L.bew.re = true; M.faeTick(A.ctx.currentTime + 0.12); const relay = now() - t0;
+    M.hxDrop(L);
     return { w, idle, tick: tk / k, flush: tf / k, relay };
   });
   ok(r.w < 0.02, 'writing a value down: ' + (r.w * 1000).toFixed(1) + ' µs (< 20 µs)');
   ok(r.idle < 0.02, 'the scheduler\'s part with nothing to play: ' + (r.idle * 1000).toFixed(1) + ' µs (< 20 µs)');
-  ok(r.tick < 0.4, 'with a 4-bar loop of 8 lanes: ' + r.tick.toFixed(3) + ' ms a tick (< 0.4 ms)');
+  ok(r.tick < 0.4, 'with a 4-bar Schleife of Bewegung of 8 lanes: ' + r.tick.toFixed(3) + ' ms a tick (< 0.4 ms)');
   ok(r.flush < 0.3, 'the mod layer\'s flush with the points (appended, not laid anew): ' + r.flush.toFixed(3) + ' ms (< 0.3 ms)');
   ok(r.relay < 2, 'laying half a second of all 8 lanes anew (a tempo change): ' + r.relay.toFixed(3) + ' ms');
   // the Funkstrecke: sender per Gestik update, receiver per message

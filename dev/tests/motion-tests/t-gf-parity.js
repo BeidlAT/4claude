@@ -58,7 +58,7 @@ async function run(url) {
     M.seqStop();
     return out.sort((x, y) => x[0] - y[0] || x[1] - y[1]);
   });
-  const fa = await page.evaluate(() => { const M = window.__M; return M.FA ? { loop: !!M.FA.loop, src: Object.values(M.MOD.t).some((T) => [...T.s.keys()].some((k) => k.startsWith('fae:'))), rem: !!M.GK.rem, gk: M.GK.on, gkr: [...M.MIDI.srcs.values()].some((s) => s.gkr) } : null; });
+  const fa = await page.evaluate(() => { const M = window.__M; return M.FA ? { loop: !!M.FA.loop || (M.hxLoopsLive ? M.hxLoopsLive().length > 0 : false), src: Object.values(M.MOD.t).some((T) => [...T.s.keys()].some((k) => k.startsWith('fae:') || k.startsWith('hxb'))), rem: !!M.GK.rem, gk: M.GK.on, gkr: [...M.MIDI.srcs.values()].some((s) => s.gkr) } : null; });
   await page.context().close();
   return { snaps, fing, hits, fa, errors };
 }
@@ -77,12 +77,12 @@ async function bar(url, width) {
   ok(same === SEQ.length, 'a keyboard\'s notes, wheels, pedals – and channel 16 (NRPN 42/3 learned, 42/127 without its data, notes 48–52, CC 7, pedal, all-off): ' + same + '/' + SEQ.length + ' steps identical' + (first >= 0 ? ' (first difference at ' + first + ': ' + JSON.stringify(a.snaps[first]) + ' vs ' + JSON.stringify(b.snaps[first]) + ')' : ''));
   ok(a.snaps.some((s) => s.rev !== a.snaps[0].rev) && a.snaps.some((s) => s.vol !== a.snaps[0].vol), '(the learned NRPN and CC 7 on channel 16 did act – in both)');
   ok(JSON.stringify(a.fing) === JSON.stringify(b.fing), 'a finger sliding on the field: the same notes, heights and columns');
-  ok(a.hits.length > 3 && JSON.stringify(a.hits) === JSON.stringify(b.hits), 'the Puls scheduled live with the Fährte in the tick: the same hits (' + a.hits.length + ')' + (JSON.stringify(a.hits) === JSON.stringify(b.hits) ? '' : ' ' + JSON.stringify(a.hits) + ' vs ' + JSON.stringify(b.hits)));
-  ok(b.fa && !b.fa.loop && !b.fa.src && !b.fa.rem && !b.fa.gk && !b.fa.gkr, 'nothing of the Fährte or the Funkstrecke woke up: no loop, no source on the mod layer, no phone recognised');
+  ok(a.hits.length > 3 && JSON.stringify(a.hits) === JSON.stringify(b.hits), 'the Puls scheduled live with the Bewegung\'s part in the tick: the same hits (' + a.hits.length + ')' + (JSON.stringify(a.hits) === JSON.stringify(b.hits) ? '' : ' ' + JSON.stringify(a.hits) + ' vs ' + JSON.stringify(b.hits)));
+  ok(b.fa && !b.fa.loop && !b.fa.src && !b.fa.rem && !b.fa.gk && !b.fa.gkr, 'nothing of the Bewegung (Hexenring) or the Funkstrecke woke up: no Schleife, no source on the mod layer, no phone recognised');
   ok(!a.errors.length && !b.errors.length, 'no errors ' + a.errors.concat(b.errors).join(' | '));
   for (const w of [320, 390, 1280]) {
     const b0 = await bar(OLD, w), b1 = await bar(NEW, w);
-    ok(b0 === b1, w + ' px: the top bar laid out exactly as before (the Fährte button hidden)');
+    ok(b0 === b1, w + ' px: the top bar laid out exactly as before (the Fährte button retired)');
   }
   await close();
 })().catch(async (e) => { console.log('FAIL ' + e.stack); process.exitCode = 1; await close(); });

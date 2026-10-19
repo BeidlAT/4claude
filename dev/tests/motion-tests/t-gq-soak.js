@@ -1,8 +1,9 @@
 // Final QA soak (Gestik): a phone (390×844, Android, sensor at 60 Hz through real DeviceMotionEvents) played for 3
 // minutes – tilting while notes sound, shaking (Ladung), face down and up again (Schlafen), a stretch replayed through
 // the app's own trace player (GK.play) – while a fake KORG microKEY over USB plays chords, joystick bends and the
-// sustain pedal, fingers slide on the field, the Puls runs (stopped and restarted once), the Fährte takes the last bars
-// as a loop three times (and is cleared once by a double tap), and the Sporenregen rains for a minute. Meanwhile the
+// sustain pedal, fingers slide on the field, the Puls runs (stopped and restarted once), the Korb (Hexenring – the
+// Fährte's button is retired) takes the last bars as a Schleife three times (all cleared once), and the Sporenregen
+// rains for a minute. Meanwhile the
 // panels and the mixer's views are switched and the Gestik card's Messen fold opened.
 // Checks: no console errors; no stuck note (a finger / MIDI note alive > 8 s while its generator holds ≤ 4 s); at the
 // end every note gone and the voices die out; heap after forced GC does not grow; DOM nodes and listeners stable; the
@@ -105,12 +106,12 @@ const DROID_UA = 'Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (K
       else if (t >= shakeAt + 1.6) shakeAt = t + 3;   // (it fell into a face-down stretch: soon after)
       S.p = { beta: base + 12 * Math.sin(t * 0.7) + 4 * Math.sin(t * 2.3), roll: 18 * Math.sin(t * 0.45) + (rnd() < 0.02 ? 10 : 0) };
     }, 30);
-    // ---- the timeline: Puls, Fährte, Sporenregen, the trace player ----
+    // ---- the timeline: Puls, the Korb, Sporenregen, the trace player ----
     const at = (s, fn) => setTimeout(() => { if (G.on) { try { fn(); } catch (e) { console.error('soak step ' + s + ': ' + e.message); } } }, s * 1000);
     at(1, () => M.seqStart());
-    const tapFae = () => { M.faePress(); setTimeout(() => M.faeRelease(false), 60); G.cnt.fae++; };
+    const tapFae = () => { M.hxKorb(null); G.cnt.fae++; };
     for (const s of [0.14, 0.42, 0.78].map((k) => Math.round(k * SECS))) at(s, tapFae);
-    at(Math.round(0.6 * SECS), () => { M.faePress(); setTimeout(() => M.faeRelease(false), 50); setTimeout(() => { M.faePress(); setTimeout(() => M.faeRelease(false), 50); }, 180); G.cnt.faeClr++; });   // double tap: cleared
+    at(Math.round(0.6 * SECS), () => { M.hxLeeren(); G.cnt.faeClr++; });   // all Schleifen cleared
     at(Math.round(0.31 * SECS), () => { M.gkSet('neigen', 'regen'); M.gkCardSync(); G.cnt.rgOn++; G.log.push('regen on'); });
     at(Math.round(0.65 * SECS), () => { M.gkSet('neigen', 'anl'); M.gkCardSync(); G.log.push('regen off'); });
     at(Math.round(0.5 * SECS), () => { M.seqStop(); G.log.push('puls stop'); });
@@ -135,14 +136,15 @@ const DROID_UA = 'Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (K
         if (age > G.maxHold) G.maxHold = age;
         if (age > 8000 && !tt.__rep && !tt.carry) { tt.__rep = 1; G.stuck.push(String(tt.id) + ' ' + Math.round(age) + 'ms'); }
       }
-      if (M.FA.loop && !G.hadLoop) { G.hadLoop = true; G.cnt.loops++; }
-      if (!M.FA.loop) G.hadLoop = false;
+      const nl = M.hxLoopsLive().length;
+      if (nl > (G.nl || 0)) G.cnt.loops += nl - (G.nl || 0);
+      G.nl = nl;
     }, 250);
     G.stop = () => { G.on = false; for (const k of ['iv1', 'iv2', 'iv5']) clearInterval(G[k]); clearTimeout(G.tf); };
   }, SECS);
   const st = () => page.evaluate(() => {
     const M = window.__M, G = window.__G;
-    return { touches: M.touches.size, notes: M.MIDI.notes.size, voices: M.A.voices.size, seq: M.SEQ.on, slp: M.SLP.on, rg: M.RG.on, keime: M.RG.k.length, strikes: M.RG.n - G.cnt.strikes0, loop: !!M.FA.loop, mode: M.GK.mode, lad: +M.GK.raw.ladung.toFixed(2), stuck: G.stuck.length, maxHold: Math.round(G.maxHold), panel: M.UI.panel };
+    return { touches: M.touches.size, notes: M.MIDI.notes.size, voices: M.A.voices.size, seq: M.SEQ.on, slp: M.SLP.on, rg: M.RG.on, keime: M.RG.k.length, strikes: M.RG.n - G.cnt.strikes0, loop: M.hxLoopsLive().length, mode: M.GK.mode, lad: +M.GK.raw.ladung.toFixed(2), stuck: G.stuck.length, maxHold: Math.round(G.maxHold), panel: M.UI.panel };
   });
   // ---------- the person meanwhile: panels, the mixer's views, the Gestik card ----------
   let s = 17; const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647), pick = (a) => a[Math.floor(rnd() * a.length)];
@@ -186,13 +188,13 @@ const DROID_UA = 'Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (K
     mk([0xb0, 64, 0]); mk([0xe0, 0, 64]); mk([0xb0, 1, 0]); mk([0xb0, 2, 0]);
     window.__S.p = { beta: 45, roll: 0 };
     await window.__sleep(1500);
-    return { notes: M.MIDI.notes.size, left: [...M.MIDI.notes.keys()], touches: [...M.touches.keys()].map(String), stuck: G.stuck, maxHold: Math.round(G.maxHold), slp: M.SLP.on, loop: !!M.FA.loop };
+    return { notes: M.MIDI.notes.size, left: [...M.MIDI.notes.keys()], touches: [...M.touches.keys()].map(String), stuck: G.stuck, maxHold: Math.round(G.maxHold), slp: M.SLP.on, loop: M.hxLoopsLive().length };
   });
   // the Puls, the rain, the loop and Gestik itself stopped: the voices die out, the mod layer is empty
   const fin0 = await page.evaluate(async () => {
     const M = window.__M;
     if (M.SEQ.on) M.seqStop();
-    M.faeClear(false);
+    M.hxLeeren(); M.HX.hist.length = 0; M.HX.redo.length = 0; M.hxGraveClear();   // (the Schleifen and what keeps them for ↶)
     M.gkDisable(); window.__sensor(false);
     if (M.A.frozen) M.setFreeze(false);
     await window.__sleep(6000);
@@ -209,12 +211,12 @@ const DROID_UA = 'Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (K
   ok(!errors.length, 'no console errors (' + errors.length + ')' + (errors.length ? ' ' + errors.slice(0, 5).join(' | ') : ''));
   ok(mid.G.chord > 20 && mid.G.touch > 40 && mid.G.shake >= 2 && mid.G.face >= 2 && mid.G.fae >= 3 && mid.G.play > 300 && mid.G.rgOn === 1, 'everything was played: ' + JSON.stringify(mid.G));
   ok(mid.G.slept === mid.G.face, 'face down on the table put Myzel to sleep every time (' + mid.G.slept + ' of ' + mid.G.face + ' times)');
-  ok(mid.G.loops >= 2, 'the Fährte took the last bars as a loop (' + mid.G.loops + ' loops started)');
+  ok(mid.G.loops >= 2, 'the Korb took the last bars as a Schleife (' + mid.G.loops + ' Schleifen made)');
   ok(Math.max(...snaps.map((x) => x.strikes || 0)) >= 10, 'the Sporenregen struck (Kalimbatraum\'s recipe, the Puls running): ' + JSON.stringify(snaps.map((x) => x.strikes)));
   ok(!end.stuck.length, 'no stuck note during the run (longest ' + end.maxHold + ' ms)' + (end.stuck.length ? ' ' + end.stuck.slice(0, 6).join(', ') : ''));
   ok(end.notes === 0 && !end.touches.length, 'every note ended at the end ' + JSON.stringify({ left: end.left, touches: end.touches }));
   ok(fin0.voices <= 4 && !fin0.touches, 'voices die out once all is stopped (' + fin0.voices + ' left)');
-  ok(!Object.keys(fin0.mod).length && !fin0.rg && !fin0.slp, 'Gestik off and the loop cleared: the mod layer is empty, no rain, awake ' + JSON.stringify(fin0));
+  ok(!Object.keys(fin0.mod).length && !fin0.rg && !fin0.slp, 'Gestik off and the Schleifen cleared: the mod layer is empty, no rain, awake ' + JSON.stringify(fin0));
   ok(mid.diff.length === 0, 'the patch was never written' + (mid.diff.length ? ' – changed: ' + mid.diff.slice(0, 8).join('; ') : ''));
   const bad = ['myzel.patch.v1', 'myzel.user.v1', 'myzel.mixsnap.v1'].filter((k) => mid.ls[k]);
   ok(!bad.length, 'no write of the patch, the user presets or the scenes: ' + JSON.stringify(mid.ls));
