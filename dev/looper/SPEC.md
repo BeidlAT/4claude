@@ -1239,6 +1239,27 @@ default) a loop of four Schichten counts 2.88 instead of step 1c's 4 × 1.6 = 6.
 capture and that loop take 4.2, no longer half the room for live voices. Nähren · Gespinst: `GSP_COST` per web while it
 rings (the live web's measured cost, §15).
 
+**As built (performance: Ruhe, 20.10.2026).** A worklet's output is never silent to Chromium, so the processor's zeros
+kept the strip „Hexenring“ and, behind it, the master running with nothing played (with the echo's loop, a cycle: the
+idle audio thread of `e341c1b` 23 % of a core on the desktop against 16 % before the Hexenring – `dev/tests/perf`). Its
+way to the master now runs through gates – gains at 1, a value read by the very quantum that plays a message, so no race
+with the port: `HX.g0`/`HX.g1` at outputs 0 and 1, closed from the processor's creation until the first Schleife
+(`hxPost` with `loop` opens them; nothing but a Schleife sounds from it) and again 20 s after the last Schleife and web
+(`IDLE.hxT`, also while other sound plays: the strip rests then); and `HX.gM` (`hxGateM`), where the strip (route dir)
+or the chain's copy (route fx) joins `A.masterIn`, closed whenever the graph sleeps (Ruhe, `idleEnter`). While the strip
+goes straight to the master and no loop has used out 1 the strip rests too; else the chain's copy and the strip run on
+behind the closed `HX.gM`, zeros through them – a copy's chorus is delays that move, which would come back with their
+rounding moved (−57 dB, as the echo's). The processor itself never stops: the Ruhe keeper (`IDLE.keeper.gain`) pulls it,
+so the Humus records the silence; while the graph sleeps its Gespielt input (`A.hxIn0`) is unplugged and both rings
+write their zeros at once (`capR`: `fill`, the same zeros); `myzel-ring-in` writes the Alles ring's zeros as before.
+Measured offline (the processor alone, no Schleife, `scratchpad/perfx/ring2.js`): 3–6 ms per second of audio (0.3–0.6 %
+of a core), the old and the new zero path alike within the noise. Since the DSP module loads at sound start, Chromium
+renders on the AudioWorklet thread and the device's thread hands over: 3 % of a core on the desktop, 1.3 % in the
+Android emulation – the price of any worklet at all (the Humus must record from the first note), not reduced. `HX_COST`
+unchanged: the capture's playing path is as measured in step 1d. Tests: `perf/t-idle-live.js` (a Schleife plays through
+the opened gates; after it the master rests behind `HX.gM`), `hexenring/t-hx-taps.js` (the strip reaches `A.masterIn`
+through its gate at 1). Idle and play figures: HANDOFF, „Leistung“.
+
 ---
 
 ## 22. Tests (new suite `dev/tests/hexenring/`, run by `run-all.sh`; Playwright on an instrumented slot `hx`)
