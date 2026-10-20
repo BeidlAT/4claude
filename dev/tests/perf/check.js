@@ -4,7 +4,8 @@
 //   node check.js [--runs 3] [--sc idle,after,play,tiefsee] [--vp d,a]      exit 1 on a regression
 //   node check.js --write [--runs 5]     measure the current build alone and store it in baseline.json (with its commit)
 // A figure fails when it rises above the reference by more than the noise: audio (the render threads plus the
-// convolver's background thread) by 8 % + 1 point of a core, the main thread by 15 % + 3 points.
+// convolver's background thread) by 10 % + 2 points of a core, the main thread by 15 % + 3 points (the same build
+// against itself, after a container restart: up to +3.9 points of 36, Tiefsee in the Android emulation).
 const fs = require('fs'), path = require('path');
 const { run, summary, table } = require('./perf');
 const { chromium } = require('/opt/node22/lib/node_modules/playwright');
@@ -57,7 +58,7 @@ async function sleeps(slot, vp) {
   for (const sc in S) for (const vp in S[sc]) {
     const c = S[sc][vp][CUR], r = S[sc][vp][REF]; if (!c || !r) continue;
     const ca = c.audio + c.conv, ra = r.audio + r.conv;
-    ok(ca <= ra * 1.08 + 1, `${sc}/${vp}: audio ${ca.toFixed(1)} against the reference's ${ra.toFixed(1)} (limit ${(ra * 1.08 + 1).toFixed(1)})`);
+    ok(ca <= ra * 1.1 + 2, `${sc}/${vp}: audio ${ca.toFixed(1)} against the reference's ${ra.toFixed(1)} (limit ${(ra * 1.1 + 2).toFixed(1)})`);
     ok(c.main <= r.main * 1.15 + 3, `${sc}/${vp}: main thread ${c.main.toFixed(1)} against ${r.main.toFixed(1)}`);
     const B = base && base.figures && base.figures[sc] && base.figures[sc][vp];
     if (B) console.log(`INFO ${sc}/${vp}: stored baseline (${base.ref}, ${base.date}) audio ${(B.audio + B.conv).toFixed(1)}, main ${B.main.toFixed(1)} – this session's reference ${ra.toFixed(1)} / ${r.main.toFixed(1)}`);
