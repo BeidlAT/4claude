@@ -686,7 +686,7 @@ body.mlearn #stage::after { content: ""; position: absolute; inset: 0; backgroun
 .hx-ch b { font: 600 14px/1.2 var(--font-ui); }
 .hx-ch .meta { font: 400 11px/1.3 var(--font-num); color: var(--dim); font-variant-numeric: tabular-nums; }
 .hx-row { display: grid; grid-template-columns: 86px minmax(0, 1fr); gap: 8px; align-items: center; }
-.hx-row.end { display: flex; justify-content: flex-end; gap: 8px; }
+.hx-row.end { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .hx-row .lab, .hx-sch .lab { font-size: 12px; color: var(--dim); }
 .hx-row .chips { padding: 0; }
 .hx-row .chip[aria-pressed="true"] { background: var(--spore); border-color: var(--spore); color: var(--ink); }
@@ -26593,6 +26593,7 @@ function hxSchSwap(S, c, o = {}) {
   hxPost(m, tr);
   Object.assign(S, { cut: c, len: c.len, pre: c.pre, n: c.n, aus: c.aus ? Object.assign({}, c.aus) : null, aud: o.aud || null, live: !o.aud, saved: 0, out, bak: o.aud ? o.bak || null : null, baked: !!bak, zo: o.zo || 0, kc: o.kc || null, kcB: o.kcB || null, dr: o.aud ? o.dr || S.dr : null, cutAus: !!o.cutAus, spliced: !!o.spliced });
   hxCount();
+  if (S.play && S.play !== 'ab') S.play = 'ab';   // Hexenring (step 2b): the version swapped in is an Abdruck – a Wuchs version is sent again by hxWUpdate, never assumed still playing
   if (L.sch[0] === S.id && !o.aud) { L.cut = c; L.notesDue = Math.max(hxT(c.w1), hxNowT()); }   // (its notes from the new window)
   if (o.join) Object.assign(S, { join: o.join, X: o.X, rho: o.rho });
   if (!o.aud) hxProbe(S, o.f != null ? hxT(o.f) + 0.012 : 0);
@@ -27479,7 +27480,7 @@ function hxCardForm(btn) {
     ...rows,
     h('div', { class: 'hx-acts' }, btn('Merken', () => { hxLichMerken(); hxCardDirty(); }, { cls: 'primary' }), btn(HX.kernBack ? 'Zurück vom Kern' : 'Kern', () => { hxKern(); hxCardDirty(); }),
       btn('Lücke', () => hxLuecke(1)), btn('Takt-Lücke', () => hxLuecke(4)), HX.schluss ? btn('Schluss abbrechen', () => { hxSchlussAb(); hxCardDirty(); }, { cls: 'ghost danger' }) : btn('Schluss · ' + { ende: 'am Ende', welkend: 'welkend', abbauend: 'abbauend' }[P['hx.schluss']], () => { hxSchluss(); hxCardDirty(); })),
-    hxCardFolge(btn));   // (step 2b)
+    hxCardFolge(btn) || '');   // (step 2b)
 }
 // (step 1d) a Schleife of Bewegung's card: what it moves, its state, Verblassen, Löschen
 function hxCardBewOne(L, btn, chip) {
@@ -30668,15 +30669,18 @@ function hxMidiOf(Ls) {
   const t0 = hxNowT(), b0 = Math.ceil(tgBeat(t0) / 4) * 4, bpm0 = tgBpm(t0);
   const tm = [0, 0xff, 0x51, 3, ...((u) => [(u >> 16) & 255, (u >> 8) & 255, u & 255])(Math.round(60000000 / bpm0)), 0, 0xff, 0x58, 4, (Ls[0] && Ls[0].bpb) || 4, 2, 24, 8];
   tracks.push(tm.concat([0, 0xff, 0x2f, 0]));
-  let ch = 0;
   for (const L of Ls) for (const id of L.sch) {
     const S = HX.sch.get(id), W = S && hxWNotesT(L, S); if (!W || !W.n.length) continue;
-    const toTick = (x) => Math.max(0, Math.round((W.u === 'b' ? x : (x * bpm0) / 60) * PPQ)), ev = [], c = ch++ % 15 + (ch > 9 ? 1 : 0);
-    for (const n of W.n) {
+    const toTick = (x) => Math.max(0, Math.round((W.u === 'b' ? x : (x * bpm0) / 60) * PPQ)), ev = [];
+    // (each sounding note its own channel – a just or free pitch is its key and its own bend, a chord's notes never share one)
+    const CH = [0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15], busy = new Map();
+    for (const n of W.n.slice().sort((a, b) => a.t - b.t)) {
       if (n.eng === 'bor' || !(n.f > 0)) continue;
       const m = 69 + 12 * Math.log2(n.f / 440), key = clamp(Math.round(m), 0, 127), bend = clamp(Math.round(8192 + ((m - key) / 2) * 8192), 0, 16383), v = clamp(Math.round((n.vel || 0.6) * 127), 1, 127);
-      const a = toTick(n.t), b = toTick(n.t + (n.d != null ? n.d : n.burst || !n.hold ? 0.25 : 1));
-      ev.push([a, 0, [0xe0 | c, bend & 127, bend >> 7]], [a, 1, [0x90 | c, key, v]], [Math.max(a + 1, b), 2, [0x80 | c, key, 0]]);
+      const a = toTick(n.t), b = Math.max(a + 1, toTick(n.t + (n.d != null ? n.d : n.burst || !n.hold ? 0.25 : 1)));
+      let c = CH.find((x) => !busy.has(x) || busy.get(x) <= a); if (c == null) c = CH.reduce((p, x) => (busy.get(x) < busy.get(p) ? x : p), CH[0]);
+      busy.set(c, b);
+      ev.push([a, 0, [0xe0 | c, bend & 127, bend >> 7]], [a, 1, [0x90 | c, key, v]], [b, 2, [0x80 | c, key, 0]]);
     }
     ev.sort((x, y) => x[0] - y[0] || (x[1] === 2 ? -1 : y[1] === 2 ? 1 : x[1] - y[1]));
     const name = [...new TextEncoder().encode(hxName(L) + ' · Schicht ' + (L.sch.indexOf(id) + 1) + ' · ' + (ENG_NAME[W.n[0].eng] || W.n[0].eng))];

@@ -77,6 +77,15 @@ const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) process
   a = await pg.evaluate(analyse); q = await pg.evaluate(parts);
   r = await pg.evaluate(() => ({ out1: window.__M.HX.out1, off: window.__M.IDLE.hxOff }));
   ok(!q.master && r.off, `…and the master rests behind the Hexenring's gate (out 1 used: ${r.out1}; its strip ${q.hxStrip ? 'runs on' : 'rests'}, chain copies busy ${q.chains}), busy ${a.nBusy} of ${a.nPulled} pulled`);
+  // 5c (step 2b) a take's preview – an exported Schleife, say – counts as sound: it wakes the graph and keeps it awake
+  r = await pg.evaluate(async () => {
+    const M = window.__M, SR = M.A.ctx.sampleRate, tk = { id: Date.now(), name: 'Probe', sr: SR, L: [new Float32Array(SR * 2).fill(0.01)], R: [new Float32Array(SR * 2).fill(0.01)], frames: SR * 2, peak: 0.01, date: new Date(), bars: 0 };
+    const was = M.IDLE.on; await M.playTake(tk); await new Promise((r) => setTimeout(r, 300));
+    const on = M.IDLE.on, src = M.idleSrc(); M.stopPreview(); return { was, on, src };
+  });
+  ok(r.was && !r.on && r.src, `a take's preview (an exported Schleife) wakes it and counts as sound (asleep before: ${r.was}, during: ${r.on})`);
+  t = await until('M.IDLE.on', 40);
+  ok(t > 0, `…and it sleeps again after the preview (${t} s)`);
   r = await pg.evaluate(() => ({ late: window.__M.IDLE.late, n: window.__M.IDLE.n }));
   ok(r.late === 0, `never woken late (${r.n} sleeps)`);
   ok(!errors.length, 'no page errors ' + errors.slice(0, 3).join(' | '));

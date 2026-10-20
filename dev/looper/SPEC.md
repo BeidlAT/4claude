@@ -780,6 +780,31 @@ Loops without notes (source Alles/Mikro, or a Gespielt loop whose notes were dro
 Acceptance: a recorded drum-like loop re-placed at ±10 % tempo stays on the grid (onset error ≤ 2 ms) with no slice
 pitch change; a pad keeps its exact samples.
 
+
+**As built (step 2b).** *Kind* (`hxArtOf`, at the first Schicht's fill – `hxBandFill`): the Schicht's audio onsets
+(`hxOnsetsAt`: the spectral flux's peaks refined to the attack – the first frame where the 1-ms envelope passes 30 % of
+its peak – and kept only where the 30 ms after are ≥ 6 dB over the 40 ms before: a pad's beating or swell is no onset),
+their pulse clarity (`hxClarity`: Gaussians of 10 ms per onset, weighted by its level, mean removed, autocorrelated
+circularly at lags 0.1–2 s; the best lag against lag 0), rhythmic („schlag“) from ≥ 4 onsets a bar and clarity ≥ 0.5
+(`HX_PULS_K`), else Fläche. Measured (t-hx-tempo): a drum loop of eighths 0.89, sixteenths rhythmic too, onsets within
+29 frames of where they are; a pad 0 onsets; random onsets (12 in 2 bars) 0 of 20 rhythmic. The card can override
+(„Tempowechsel: Schnitt · frei“, `L.tempoArt`). Loops whose Schichten can grow (notes) follow by Wuchs as in 2a; this
+is for loops without (Alles, notes dropped). *Schnitt* in the processor (`slSet/slPass/slSlot/slRd/slOver`): the page
+sends the onset phases once (`{slice: {loop, u, schnitt: 1}}`, a slice from 0 always added); at every pass start the
+processor decides – a pass that is not the Schicht's own length (> 2 frames off) plays in slices, else the tape as it
+is, bit for bit. Each slice i is placed at its beat in the new grid (`frameAt(b0 + (k + u_i)·beats)`), entering 3 ms
+before with the smooth law, read at the Schicht's own rate (never stretched: Taumeln's few cents only), ending where the
+next slice crosses in (8 ms, `X`) or at the next onset of its own recording (its decay as far as it is its own – the
+last one into its Ausklang); a slice still sounding at the seam rings on as a tail with its fade where it would have
+had it (`tail` with a delay), so no seam continuation reads past it. Measured offline (t-hx-tempo, 2 bars of eighths at
+120 BPM): at ±10 % every onset within 0.17 ms of its grid place (32 of 32), every burst's pitch within 0.002 %, the
+passes at its own tempo and after the return exactly the tape (max |d| 0). *Frei*: a Fläche at a deliberate tempo
+change (≥ 0.5 % off its own – the slider, a correction, a preset; a device's clock wobbling is not) gets
+`{geom: {lock: 'frei', L: its length}}` at once – the pass that sounds goes on to its own end, the next ones one own
+length apart; its ring says „frei“ (`hxTempoAudio`, from `hxWTempo`). Measured: passes 0, 192000, 384000 … while the
+tempo moved +15 %, its samples exactly outside its seams' crossfade. Live (t-hx-tempo): drum loop and pad at 120 →
+132 BPM – the pad frei at once, the drum loop in slices (the processor's report), back at 120 the tape.
+
 ---
 
 ## 12. Intelligence
@@ -836,6 +861,22 @@ a wrong note and a sloppy cycle among 4 → the consensus is the figure (median 
 chosen; a missing note stays in the consensus; unrelated cycles p ≤ 25 %; k = 2 none. Live – four bars, the last sloppy
 (every second note 30 ms late): the Korb takes the last bar, „Auslese aus 4 · 100 %“ offers bar 3; tapped, its audio;
 ↶ back; a line that never repeats offers nothing. (The consensus itself as Wuchs: 2b.)
+
+
+**As built (step 2b): c) the consensus as Wuchs, d) the groove.** `hxAuslese` also returns its surviving clusters;
+`hxAusleseFor` keeps each repetition's onsets with their full note records and builds the consensus as a Wuchs record
+(`hxAusleseCons` → `hxWNotesMk`, the record-making half of `hxWNotesOf`): each cluster from its most typical member
+(the one nearest the median time), moved to the cluster's median time with its velocity scaled to the median, its chord
+notes and curves with it, laid into the harvest's window. Offered („Gemeinte Fassung (Wuchs)“ in the card, „Gemeint ·
+Wuchs“ in the rail's chips) whenever p ≥ 80 % and the consensus is not the harvest as played – also when the harvest is
+itself the closest real repetition (then only this); never by itself. Tapped (`hxAusleseWuchs`): the Schicht's notes
+are the consensus, the loop grows from it (Treu), ↶ back. Measured (t-hx-tools, four bars, the last with every second
+note 30 ms late, the second with one note 12 ms late): eight notes at the median – 0 ms off the eighths, 6 ms where the
+four bars said 0, 12, 0, 30. The groove (`hxGrooveOf`): per sixteenth of the bar the mean offset, spread and velocity;
+per sixteenth of the beat (on, e, &, a) the feel pooled over every beat – the template straffen/lockern use (§14); the
+swing as the off-beats' delay. „Puls übernimmt“ (`hxGroovePuls`): `seq.swing` from the off-beat sixteenths where the
+loop plays them, else the eighths (measured: eighths 0.06 beats late → Swing 24 %). Quantise q is the tool's step
+(±0.5, default 0: as played).
 
 ### 12.2 Eigensinn (Etappe 2a: Treu/Lebendig; Etappe 3: Variieren/Wandern)
 - Lebendig: new seed per pass; timing breath: offsets from the loop's groove spread × ⅓ with 1/f-like noise (pink by
@@ -931,6 +972,22 @@ angehalten at the next bar line – the processor's `state` with `tail`: what so
 with the Ausklänge still ringing, into the frozen echo; awake: „3 · 2 · 1“ in the field (`HX.wake`) and back on the
 next 1; after `SLP_LONG` they stay angehalten. Folge, Puls ernten, Klang aufs Feld: 2b.
 
+
+**As built (step 2b).** *Folge* (`HX.fl = {items: [{lich, n}], loop}`, the form section of the card: „+ Lichtung …“,
+−/+ for the passes, ↺, „Folge starten · anhalten“, the target `hx.folge`; stored with the session record): each
+entry lasts n passes of the longest loop playing (in a Takt: n × its beats from where the entry began, so it lands on
+a bar line), and the next one is sent ahead with `hxLichGo(…, {at})` for that moment; at the end it stops, or begins
+again (↺). Measured (t-hx-tools): 1 ×1 → 2 ×2 ↺ switched at bars 1, 2, 4, 5. *Puls ernten* (`hxPulsErnten`, in the
+Puls panel – „Puls ernten: 1 Takt · 2 · 4 Takte“ and „danach stumm“ (`hx.pulsStumm`) – and `hx.puls.ernten`): the
+last N bars up to the bar line the press means, as a Takt Schleife – its notes from the Humus (the lanes' notes, src
+l0–l3, their throw: exactly these hits, walk and probability as they fell) and its audio from the Humus's **third
+ring**: the Puls's four strips summed (`A.hxIn2`, always, whatever „Puls mit“ says) into the processor's input 2
+(`rings: 3`; ring 2's level metered too). It grows like any Gespielt loop (`hxWCan`: rings 0 and 2). „danach stumm“:
+the Puls stops at that bar line (`SEQ.stopB`). Measured: a bar of a lane – its 16 notes and its audio (peak 0.35)
+from its own ring. The third ring costs memory (64 s stereo, counted in `hx.mem`) and its capture (§21). *Klang aufs
+Feld* (`hxKlangFeld`, the card): `v.eng` = the loop's source (its chosen one if it plays another, else the source most
+of its field notes had), `v.layer` = its Ebene-2 source if it has one; the app's own ↶ (`remember`) takes it back.
+
 ---
 
 ## 14. Tools (Etappe 2b)
@@ -947,6 +1004,67 @@ next 1; after `SLP_LONG` they stay angehalten. Folge, Puls ernten, Klang aufs Fe
   Schicht, tempo map from TG).
 - Bühnenansicht: switch in the card/panel: big rings, pedal legend, few toasts, sheet only on long press; Setliste
   (presets + tempo + Lichtungen; "nächstes Lied" archives loops to the Humus graveyard and loads the next).
+
+
+**As built (step 2b).** All in the card's new fold „Verwandeln“ per Schleife (its subtitle says what is on).
+*The tape, in the processor – under whatever version a Schicht plays (Abdruck, Treu, a living pass):*
+- **Speed** (`hxSpeed`, „Band ½ · ⅔ · ×1 · 1½ · ×2“; `{band: {loop, vs, T, f}}` with `{geom}` at the next seam): the
+  loop's length follows (a Takt loop beats × old/new – a fifth gives fractional beats, a polymeter; frei: its length),
+  pitch follows. The motor's inertia `hx.traeg` (0.2–2 s, default 0.5, at most 0.9 of the new pass) glides by a servo
+  law, g(x) = (1 − x)³(1 − 5x) around the target, whose integral is 0: after the glide the tape stands exactly where a
+  switch at once would have put it, so the pass ends at its seam with its last frame (measured: within 0.000 frames at
+  the glide's end and the pass's end). The price, for the ear: the pitch passes the target by ≈ 22 % of the step and
+  settles (½: 1 → 0.39 → 0.5) – a monotone glide would leave the tape off the grid by T·Δr/2 (≈ 0.125 s for ½ over
+  0.5 s). The speed is exact per span (`vsPos`, the glide's position integrated). Faster than its own rate the read
+  goes through kernels whose band ends below the output's Nyquist (`RSK`: to 1.6 – 56 taps, cut 0.97/1.6; to 2.4 – 80
+  taps, cut 0.97/2.4; below 1.03 the shared 32): a 15-kHz tone at ×2 folds to 18 kHz at −95.5 dB. While a loop is at
+  another speed it plays no slices. Persisted (`L.sp`), sent again after a reload.
+- **Bandstopp** (`hxBandstopp`, the card's „Stopp“, the target `hx.bandstopp` for all loops): the rate runs down by
+  r0·(e^−5x − e^−5)/(1 − e^−5) over `hx.stopp` (0.3–2 s, default 0.9) from the press, the last fifth faded by the
+  smooth law, then the loop is angehalten (`{bandstopp}`; ▶ / its ring brings it back at its speed). Measured: the
+  pitch on the law within 1 %, silence after, no step larger than the tone's own.
+- **Verblassen** per Schicht (`{vb: {schicht, fb}}`, „nie · langsam 0.97 · mittel 0.9 · schnell 0.75“ for the loop's
+  Schichten, each by its own age – a fresh one sounds over faded ones): its gain × fb^age from each seam it played
+  into; nie: back at once. Measured 0.8^k within 0.002. Its age is not stored: after a reload it starts again.
+- **Abrieb** per Schicht (`{abr}`, „aus · langsam · mittel · schnell · Auffrischen“): 24 seeded spots (place, width
+  0.6–3.6 % of the pass, susceptibility weighted toward a few), the wear 1 − e^(−rate·age) deepening every pass at the
+  same places; read into a pair of its own (`AB`), then a one-pole low pass falling toward 220 Hz with the wear (and a
+  little everywhere), the level sagging (≤ −3 dB overall, −5 dB on a spot), drop-outs with 3-ms edges where a spot is
+  worn through (W > 0.62); its Ausklang tails stay clean. Measured: the level 0.310 → 0.243 → 0.197 over passes 1/3/6,
+  the wear's profile pass 3 against 6 r 0.90, 11 of 64 places dropping out by pass 6, the same seed the same samples,
+  Auffrischen the tape exactly.
+- **Auslassen · Würfeln** (`{slice: {pd, pw, seed}}`, „aus · 15 · 30 · 50 %“, „neu“ a new seed): the slices of §11 at
+  the loop's own tempo – per pass a seeded hash leaves a slice out or plays another one in its place; the edges are
+  the slices' micro-fades. Measured (50 %, 2 bars of eighths, 6 passes): 42 of 96 onsets sounding; Würfeln: all 96
+  places sound, 41 thrown; the same seed the same samples, another seed another pattern; no step larger than the
+  material's own.
+*The tape's content changes – a new version at the next seam, ↶ back (`hxBandStep`, `hxGeo/hxGeoBack`):*
+- **rückwärts** (`hxRev`): every Schicht's audio (dry and baked) mirrored, its margins swapped – what came before the
+  window is the continuation after it now – joined warm; ↶ forward. A loop that grows renders Treu mirrored (`revW`);
+  Lebendig does not live mirrored (a stream arrives forward – it stays Treu).
+- **Trimmen** (`hxBandTrim`, „½ · ¼ · ◀ ▶ · ganz“): a loop in the loop – the window of the whole (kept in the
+  snapshot `tr0`) cut to ½ or ¼, shifted by its own length, joined warm (10 ms, ρ measured); its notes for Wuchs the
+  same window (`hxWnWin`); „ganz“ the whole again.
+- **Verdoppeln** (`hxDouble`): each Schicht rendered by the processor offline over two of its own passes – the seam
+  inside as it sounds, its margins as a loop has them (before: the pass before; after: the next pass, or for a cold
+  Schicht its Ausklang alone) – twice as long (beats × 2), so a longer Schicht fits over it; its notes doubled.
+  Measured: the two halves of a stationary loop alike to 0.
+*The notes' tools (Wuchs, `L.nt`, applied when a pass is made – `hxWNotesT` – on the notes as played; a tool makes the
+loop grow, Treu):* Stufe ±1 (every note a degree up or down in the key it was played in, its inflection kept), dünner
+(the weakest quarter by metric weight × velocity goes), dichter (passing tones in the widest leaps, a third or more,
+on the sixteenth between – the share by the step), straffen / lockern (toward the player's own feel – the mean offset
+per sixteenth of the beat, pooled over the loop – or the deviations from it doubled), Krebs (each note's end becomes
+its start), Umkehrung (around the middle note, in the scale), „wie gespielt“. Measured (t-hx-tools): Stufe +1 C → D
+×1.1225 (Lydisch, equal), the spread 0.0167 → 0.0134 beats straffer, 0.0241 lockerer; a played loop's pass a degree
+up and its Treu render playing. **Erstarren** (`hxErstarren`, also `hx.erstarren`): the pass that sounds – its audio
+exactly (the realm kept it, as ✓ does) – becomes the Schicht's Abdruck, the tools and the key baked into its notes,
+the loop plays it (↶ grows again). Measured: max |d| 0. Zusammenlegen as in 1b.
+*Export:* „Als Aufnahme“ (`hxExportTake`): the loop's steady pass rendered by the processor offline – its Schichten,
+seams, Ausklänge, speed and Verblassen as they sound – one pass, seamless (`bars`, `bpm`): a take in the Aufnahme
+panel (anhören as a loop, WAV, ZIP, „Als Körner-Quelle“), stored like a recording. „MIDI“ (`hxMidiOf`): a Standard
+MIDI File, format 1, 480 ticks a beat – track 0 the tempo and the meter, a track per Schicht named after its loop,
+layer and source; each sounding note its own channel (15, not 10) with its pitch bend before it (±2 semitones), so a
+just or free pitch is exact and a chord's notes never share a bend. A loop without notes exports as audio only.
 
 ---
 
@@ -1070,6 +1188,22 @@ a Schleife of Bewegung's own card (what it moves, Verblassen, the lanes drawn on
 (`hx.regel`, `hx.lichMix`, `hx.lichPuls`, `hx.lueckeT`, `hx.schluss`, `hx.welk`), `hx.runde`, Pedale, Bewegung (the trim,
 „Hinlegen erntet“).
 
+
+**As built (step 2b).** The card per Schleife: the fold „Verwandeln“ (Band, Trimmen/Verdoppeln, Auslassen, Würfeln,
+Verblassen, Abrieb, Tempowechsel for audio loops, Noten and Groove for loops with notes, Erstarren, Klang aufs Feld,
+Als Aufnahme, MIDI) – every row wraps at 360 px; the Auslese row with both offers; the form section with the Folge; the
+settings: „Band und Bühne“ (`hx.traeg`, `hx.stopp`, `hx.buehne`) and the Setliste. **Bühnenansicht** (`hx.buehne`, also
+`hx.buehne` as a target): the rail 84 px (`--hxr`; rings ≥ 52 px, words 12 px; the 260-px rule counts with it), the
+pedals' legend on its Taktlinie (from the learned profile – „A Korb · B Schicht …“ – or „Pedale: in der Karte
+zuweisen“), only toasts with an action or a long warning shown (the rest said in the live region), the sheet opened by
+the tabs only on a long press (0.5 s; the keyboard opens it at once). **Setliste** (`myzel.hx.set.v1` on the device:
+name, preset or patch, tempo, the Lichtungen' names, rules and Kern): „Dieses Lied hinzufügen“, „Laden“, „Nächstes
+Lied“ (and `hx.lied`): what plays goes to the graveyard tagged with its song (and its Lichtungen with it), the next
+one's preset and tempo load, its Lichtungen come back (those it had when it last played, else its names, empty); a song
+played again offers „Zurückholen“ for its loops (this session's graveyard). Measured (t-hx-tools): rail 84/56 px, a
+plain toast said not shown, a tap on a tab opens nothing, a hold opens it; „Nächstes Lied“: 2 Schleifen to the
+graveyard with their song, the next tempo (96).
+
 ---
 
 ## 17. Controls
@@ -1119,6 +1253,11 @@ M ring tap (stumm at the bar), R rec/close/punch, CYCLE Korb momentary, ◀◀ �
 TRACK ◀ ▶ ✕ ✓); the SET LED via MIDI out (`midiSend`, CC 60 127/0) when the device has an output; the field's tag
 `#hxTag` „nanoKONTROL2: Seite Hexenring“; its card says it. nanoKEY Studio: the chip „Pads: Spuren / Hexenring“ in its
 card (`hxPadsSet`, `HX_PADFN`: pads 1–4 rings, 5 Korb momentary, 6 ↶, 7 next Lichtung, 8 Stille).
+
+
+**As built (step 2b).** New targets (group Hexenring): `hx.bandstopp` (every playing loop runs down), `hx.erstarren`
+(the Fokus), `hx.folge` (start · stop), `hx.puls.ernten` (two bars, „danach stumm“ as set), `hx.lied` (Setliste: the
+next song), `hx.buehne` (the Bühnenansicht on/off). Neigen and Drehen reach them through Zuweisen as every target.
 
 ---
 
@@ -1236,6 +1375,14 @@ segment count), with the Schicht's `zo`, `kc` (dry and baked curves) and `dr`; a
 baked one; restored on another rate the baked version is dropped (re-baked from the converted dry) and `zo` scaled.
 The dry and baked counters are separate (a bake's save once reset the dry's – a reload mid-overdub lost a Schicht;
 t-hx-persist 15/15 again).
+
+
+**As built (step 2b).** A loop's record and snapshot carry its tools (`tb`: speed, rückwärts, Trimmen's window,
+Verdoppeln, Verblassen, Abrieb with its seed, Auslassen/Würfeln with their seed, its kind and audio onsets, the
+override for a tempo change, the notes' tools, frei after a tempo change, Puls); after a reload or a rebuild they are
+sent again (`hxTbSend`: the speed at once, the slices, Verblassen, Abrieb – their ages start again). Trimmen's whole
+(`tr0`, audio) lives in the snapshot only: after a reload „ganz“ is gone, ↶ within the session brings it back. The
+session record keeps the Folge; the Setliste is the device's (`localStorage`, `myzel.hx.set.v1`).
 
 ---
 
