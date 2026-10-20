@@ -17175,7 +17175,20 @@ function drawBg() {
   }
   for (const yy of [0.25, 0.5, 0.75]) { c.fillStyle = 'rgba(240,230,216,0.045)'; c.fillRect(0, Math.round(h * yy), w, 1); }
 }
+// Drawn about 60 times a second at most: a 90- or 120-Hz display calls frame() more often, and the field's motion is
+// counted per drawn frame (spores, hyphae, ripples, the fades – made at 60 Hz, they ran faster there) – half the
+// drawing for the same picture. What plays (the controllers' values, MPE bends, the mod layer) still runs on every call.
+const FR = { iv: 16.7, prev: 0, acc: 0 };
+function frameCtl() {
+  if (MIDI.mbDue) midiFrame();
+  if (MAP.due) mapFlush();   // controller values of this frame
+  if (MOD.due || MOD.n) modFlush();   // the mod layer: what Gestik and the Formen targets deflect
+}
 function frame(ts) {
+  if (FR.prev) { const d = ts - FR.prev; if (d > 2 && d < 40) FR.iv += (d - FR.iv) * 0.1; FR.acc = Math.min(FR.acc + d, 50); }
+  FR.prev = ts;
+  if (FR.iv < 12.5 && FR.acc < 15.5) { frameCtl(); requestAnimationFrame(frame); return; }   // (the display's frame interval, smoothed)
+  FR.acc = Math.max(0, FR.acc - 16.67);
   const dt = Math.min(0.05, (ts - (VIS.t || ts)) / 1000);
   VIS.t = ts;
   if (!REDUCED) VIS.hue = (VIS.hue + dt * 7) % 360;
@@ -17296,9 +17309,7 @@ function frame(ts) {
   const pan = UI.panel && panelOf(UI.panel);
   if (pan && pan.frame) pan.frame(dt, ts);
   if (midiDot) midiDot.classList.toggle('on', ts - MIDI.flash < 140);
-  if (MIDI.mbDue) midiFrame();
-  if (MAP.due) mapFlush();   // controller values of this frame
-  if (MOD.due || MOD.n) modFlush();   // the mod layer: what Gestik and the Formen targets deflect
+  frameCtl();
   if (UI.panel === 'dev' && ts - (VIS.devT || 0) > 400) { VIS.devT = ts; updDevLive(); }
   requestAnimationFrame(frame);
 }
