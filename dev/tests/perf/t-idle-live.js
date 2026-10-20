@@ -60,6 +60,16 @@ const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) process
   });
   const pl = await peak(1500);
   ok(r.n >= 1 && !r.on && pl > 0.005, `a Schleife (harvested: ${r.n}) plays while the graph is plugged in (peak ${pl.toFixed(3)})`);
+  // 5b (step 2a) the Schleife grows, living: its passes streamed from the Werk-Rahmen – the streams count, it never sleeps under them
+  r = await pg.evaluate(async () => {
+    const M = window.__M, L = M.hxLoopsLive()[0]; if (!L) return { none: true };
+    M.hxWSet(L, 'wahl', true); M.hxWSet(L, 'eig', 'lebendig');
+    let ws = 0; for (let i = 0; i < 150 && !ws; i++) { await new Promise((r) => setTimeout(r, 100)); M.hxCount(); ws = M.HX.ws; }
+    let slept = false; const t0 = performance.now(); while (performance.now() - t0 < 4000) { if (M.IDLE.on) slept = true; await new Promise((r) => setTimeout(r, 20)); }
+    return { ws, slept, late: M.IDLE.late };
+  });
+  const pw = await peak(1500);
+  ok(!r.none && r.ws >= 1 && !r.slept && pw > 0.005, `a living Wuchs Schleife (${r.ws} streams): the graph stays plugged in while its passes stream (asleep meanwhile: ${r.slept}), heard (peak ${pw.toFixed(3)})`);
   await pg.evaluate(async () => { const M = window.__M; for (const L of M.hxLoopsLive()) M.hxClear(L.id, null, 0.005); });
   t = await until('M.IDLE.on && !window.__M.HX.loops.size', 50);
   ok(t > 0, `the Schleife cleared: asleep again (${t} s)`);

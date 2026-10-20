@@ -707,6 +707,65 @@ work also for Körner, Saite, Schwarm, Gespinst, Jahresring, Tropfen (or documen
 untouched during renders (§8); key change: no pass in the old key after the announced bar; undo of a Schicht in a living
 loop is inaudible within 10 ms.
 
+**As built (step 2a).** *Notes.* `hxWNotesOf` takes a Schicht's notes from the Humus once its window is cut (beats from
+the window's start in a Takt loop, else seconds; the key the field played in, `HX.tonP`; the groove's spread `sd`; the
+Bewegung lanes of Körner and Tropfen as `prm` points). A note begun before the window sounds at the end of the pass
+before it (wrapped – it rings over the seam as the original did); one struck up to 30 ms early, or under zero by
+rounding, is the pass's first (`held` flag; before, a −1e-15 note was wrapped a whole pass late). A note held over the
+whole loop is struck anew each pass (documented limit). Pitches: `hxWF` – diatonisch the same degree in the new scale,
+transponieren moved with the root, fest as played; always the nearest way to the new root (±6 semitones, never an
+octave jump); a degree the key lacks moves with the root (never NaN). Bordun notes (`eng 'bor'`) start and stop the
+drone. *Jobs* (`hxWJob`): the patch (the loop's own, or the field's for `klang feld`/a chosen source) with `mov.drift`
+0, `t.root`/`t.scale` of the key followed, level `hxWQ` (`hx.stufe`; „gespielt“ = the loop's), the recorded chain
+unless the loop follows the live one, the mask, the Jahresring's age and season captured at the harvest (`L.jrg`).
+*Realms.* `HXW` plus a pool (`HX_WPOOL`: desktops and tablets `clamp(cores, 4, 8)`, phones by `deviceMemory` 2…4), each
+a hidden `?werk=1` iframe, jobs one after another per realm; warmed on demand (`hxwWarm`); a render's random is its own
+seeded xorshift, installed only inside its render blocks (`HXW_RND` between them – a realm timer drew from it before).
+*Treu* (`hxWRender`, `hxWRenderFor`): one render per signature `hxWSig` (pass length within 8 frames, folgt, key,
+sources, level, seed or anchor seed + breath, chain, field hash), trimmed at −90 dB, played with `replace … join 'ola'`
+(its Ausklang overlap-added at every seam). *Lebendig* (`hxWSlot`, `hxWTick`): every pass rendered from its own seed
+(`hxWSeedK`) with the pink breath (`hxWPink`, at most ⅔ of the groove's spread, ≤ 60 ms), started `hxWStartS` ≥ 2.4 s
+before its pass; the realm's sink `myzel-wsend` posts 8192-frame chunks over a transferred MessagePort into the ring's
+slot (`wst`); pacing by the ring's `{fr}` reports every 0.1 s (`hxwPace`, ≤ 1.25 s ahead). Each pass's tail ends at the
+first whole chunk −90 dB under its body (else at the render's end with a 30-ms fade); the render length is
+`hxWTailEst` (1.3 × the longest of the last six tails + 0.75 s, ≤ 12 s). Tails ring as Ausklang streams (`HX_TN` 16).
+*Late* (`wsCheck`): a pass not ready at its frame – the last complete pass plays on (`W.prev`) with a correlation-
+normalised crossfade (`corr`, `S.xrho`: a sine against itself in another phase dipped −50 dBFS before); after a follow
+change the slot is `must` – silence until it arrives, never the old key. *✓/✕/⚓* (`hxWLob/Nein/Anker`): ✓ keeps the
+sounding pass's audio exactly (the realm keeps its last ten renders, `keep` job) as `S.anc` with its seed and breath
+step; ✕ plays the anchor from the next bar line (mid-pass: replaced with the stream kept); twice within four bars →
+Treu for eight bars („Treu noch 8 Takte“); history steps for each. *Following* (`hxWTonHold/Slots/Go/Ab`): a key change
+while loops with notes play is held to the next bar line ≥ lead away (`HX.folge`, chip „Schleifen folgen ab Takt N ·
+✕“; ✕ takes the change back); every loop that follows gets that pass rendered in the new key (`must`). Tempo
+(`hxWTempo/Go`): a Takt loop whose pass no longer fits its audio grows in the new tempo – the pass holding the change
+rendered from its start through the new beat map and heard from where it is ready; back at its own tempo that pass
+still grows and the Abdruck returns at its seam (the stream not stopped). Sound: `klang eigen | feld | <source>`.
+*Taumeln*: renders have drift 0; the processor reads a Wuchs version at the live drift alone (as a de-drifted Abdruck):
+measured against the drift's own path 4 mrad rms of 1.6 rad. *Guard* (`hxWGuard`, `watchUnderruns`): an underrun while
+Wuchs works pauses Lebendig (`G.pause`, `G.max` streams, recovering one a minute) – never the live budget or `A.lite`;
+without Wuchs work the old rule. `hxWPredict` = CAL.unit · (Σ `HX_WRT[src][q]` · min(dur, held + 3 s) + `HX_WBASE[q].perS`
+· dur) + `perRender`; a living render predicted over its pass (`hxWCanLive`) is refused („lebt, sobald Rechenzeit frei
+ist“). *Live mode* (`hxWLm`, `hxWLiveTick`): without a Werk-Rahmen the notes play through real voices on the strip
+„Hexenring“ (`v.loop`; `playNote` never steals a live voice for a loop's note – it does not play then); the Abdruck
+rests; ✓✕ hidden. *Persistence*: `~w` (Treu) and `~x` (anchor) segments beside the Abdruck, meta `wn`, `wseed`, `play`,
+`anc.br`; ↶/↷ for every card choice (`hxWSet`). Ruhe: `idleSrc` counts `HX.ws`, posts of `wst/replace/schicht` wake it.
+*Processor fixes found here*: a version swapped at a seam gives its Ausklang and its seam continuation at that seam only
+(`tld`, `kS`) – one whose Ausklang outlasted a pass stayed `old` and gave its Ausklang at every later seam (a Treu
+render's own tail never sounded); the Abdruck's late seam character (`aus`) lands on the Abdruck (playing, or its swap
+waiting in the queue), never on a Wuchs version. *Identity* (t-hx-wuchs, level 3): 25 sources ≤ −104 dB (most −135);
+exceptions Schwarm, Tropfen (§8) and Elmsfeuer – about one render in six differs from the moment a note ends as the next
+begins (−99 … −13 dB) while every random draw of both renders is the same: Chromium's, not the seed (open).
+*Cost* (measured on the build machine, the higher of two runs +15 %): `HX_COST.stream` 0.1 per living Schicht beyond its
+`schicht` (cost.js `hxw − hxs` 0.084 / 0.064 – three summed streams, body and two tails; a living Wuchs version read
+at the loop's rate `hxx` costs no more than a resampled Abdruck `hxr`); the guard's model `HX_WRT[src][level]` (0.64 …
+5.14 CAL units per voice-second; Körner, Harz, Moder, Rhizom, Gespinst the dearest) and `HX_WBASE` (the empty graph
+5.5 … 8.8 units per second of audio, 24 ms per render at level 3, under the scatter at 1 and 2) from `wrt.js`. Ruhe:
+t-idle-live checks a living loop keeps the graph plugged in while its passes stream and sleeps once it is cleared
+(t-idle-parity is offline and cannot host the Werk-Rahmen's ports – not extended). Open: one fuzz run in ten saw
+NaN samples at the master or the ring (3 M samples, after the pitch fix; nine runs over five seeds clean since –
+not reproduced); Gong's random seam row (t-hx-seams) and the device-clock rows (t-hx-clock) fail the same on the
+build before 2a.
+
 ---
 
 ## 11. Audio loops on a tempo change (owner: "what makes most sense")
