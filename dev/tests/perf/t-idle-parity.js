@@ -9,8 +9,9 @@
 //  · exact cases (max |difference| 0 required): voices of one oscillator each, the echo without wow and ping-pong, the
 //    hall, the mixer's EQ, width, balance, saturation, the compressor driven hard, a frozen echo – everything the switch
 //    unplugs and plugs in again;
-//  · the presets with their own engines: after the wake the renders differ no more than before the switch engaged, or
-//    than the old build's two renders do (a step at the wake would be the switch's).
+//  · the presets with their own engines, and knobs turned or a slow ramp running in the silence (their sums turn
+//    order-dependent): after the wake the renders differ no more than before the switch engaged, or than the old
+//    build's two renders do (a step at the wake – a glide that waited for it – would be the switch's).
 process.env.NO_RAF = '1'; process.env.SEED_BLOBS = '1';
 const { chromium, openInst } = require('../v2/lib');
 const OLD = process.env.OLD || 'pe341c1b-inst', NEW = process.env.NEW || 'perfnew-inst';
@@ -33,6 +34,13 @@ const CASES = [
   // the owner's options (not the default): the hall, the echo asleep too – what moves, measured
   { name: 'option: the hall asleep too (IDLE.hall)', test: true, opt: 'hall', extra: Object.assign({}, EXACT, { 'dly.mix': 0 }), dur: 30, ph: [[0.1, 3], [21, 24]], idle: true, bound: 3.2e-5 },
   { name: 'option: the echo asleep too (IDLE.echo), its time moving (Leiern)', test: true, opt: 'echo', extra: Object.assign({}, EXACT, { 'dly.wow': 0.35, 'rev.mix': 0, 'xdly.rev': 0 }), dur: 42, ph: [[0.1, 3], [33, 36]], idle: true, bound: 3e-3 },
+  // knobs turned in the silence (a cutoff, a strip's level, the master's EQ): the graph wakes before their glides start
+  { name: 'knobs turned in the silence (the chain\'s cutoff, Klang\'s balance, the master\'s bass)', test: true, spread: true, extra: Object.assign({}, EXACT), dur: 40, ph: [[0.1, 3], [31, 34]], idle: true,
+    at: [[27, "js:M.setParam('flt.freq', 700); M.setParam('xfin.pan', -0.4); M.setParam('mst.low', 4);"]] },
+  // a slow move scheduled before the silence and running through it (a ramp of 20 s): the graph does not fall asleep before
+  // it has ended
+  { name: 'a ramp of 20 s through the silence (the chain\'s cutoff)', test: true, spread: true, extra: Object.assign({}, EXACT), dur: 40, ph: [[0.1, 3], [33, 36]], idle: true,
+    at: [[4, 'js:const p = M.A.chains[0].flt.frequency, t = ctx.currentTime; p.cancelScheduledValues(t); p.setValueAtTime(3000, t); p.linearRampToValueAtTime(400, t + 20);']] },
   { name: 'echo at 105 % (never silent: never idle)', test: true, extra: Object.assign({}, EXACT, { 'rev.mix': 0, 'xdly.rev': 0, 'dly.fb': 1.05 }), dur: 20, ph: [[0.1, 2], [15, 17]], idle: false },
   // the presets' own engines (sums of three or more: compared with the old build's own spread)
   { name: 'default patch (Nebel)', dur: 34, ph: [[0.1, 3], [24, 27]], idle: true },
@@ -74,15 +82,16 @@ async function render(url, cs, drive) {
           const v = M.playNote(M.P['v.eng'], ctx.currentTime, n.f, 0.3 + 0.5 * ((jj * 0.61) % 1), 0.75, { pan: ((jj % 5) - 2) * 0.2 }); if (v) vs.push([v, ctx.currentTime + 0.35]);
         });
       }
-      for (const [t, k] of cs.at || []) add(t, () => { if (k === 'bor') { M.P['bor.on'] = true; M.updBordun(); } if (k === 'freeze') M.setFreeze(true); if (k === 'thaw') M.setFreeze(false); });
+      for (const [t, k] of cs.at || []) add(t, () => { if (k === 'bor') { M.P['bor.on'] = true; M.updBordun(); } if (k === 'freeze') M.setFreeze(true); if (k === 'thaw') M.setFreeze(false); if (k.startsWith('js:')) (new Function('M', 'ctx', k.slice(3)))(M, ctx); });
       for (let t = 0.025; t < dur - 0.05; t += 0.025) add(t, () => {});
       for (const [t, fs] of ev) ctx.suspend(t).then(() => {
+        const was = I ? I.on : false;   // (before the moment's actions: a voice or a knob wakes the switch itself)
         for (const f of fs) f();
         for (const x of vs) if (x[1] != null && ctx.currentTime >= x[1]) { if (x[2]) M.A.voices.delete(x[0]); else if (x[0].release) x[0].release(); x[1] = null; }
         // (a voice's clean-up runs on a wall-clock timer, and this render runs many times faster than the clock: done here
         // on the render's clock, 150 ms after the voice's end as live – the same in every build and mode)
         for (const v of [...M.A.voices]) if (v.endAt < ctx.currentTime - 0.15) v.cleanup();
-        if (drive && I) { const was = I.on; M.idleTick(true); if (I.on !== was) log.push([+ctx.currentTime.toFixed(2), I.on ? 'idle' : 'wake']); }
+        if (drive && I) { M.idleTick(true); if (I.on !== was) log.push([+ctx.currentTime.toFixed(2), I.on ? 'idle' : 'wake']); }
         ctx.resume();
       });
       const buf = await ctx.startRendering();
@@ -101,7 +110,7 @@ const db = (x) => (x.md ? (20 * Math.log10(x.md)).toFixed(1) + ' dB at ' + (x.at
     if (process.env.ONLY && !cs.name.includes(process.env.ONLY)) continue;
     const o = await render(OLD, cs, false), d = await render(NEW, cs, true);
     const errs = o.errors.concat(d.errors);
-    if (cs.test && !cs.opt) {
+    if (cs.test && !cs.opt && !cs.spread) {
       const n = await render(NEW, cs, false), a = cmp(o, n), c = cmp(n, d), e = cmp(o, d);
       console.log(`INFO ${cs.name}: energy ${o.e.toFixed(1)}; the switch ${JSON.stringify(d.log)}; old↔new ${db(a)}, new↔new with Ruhe ${db(c)}, old↔Ruhe ${db(e)}`);
       ok(a.md === 0 && c.md === 0 && e.md === 0, `${cs.name}: every sample identical – the old build, the new one, the new one with the switch (max |d| ${a.md} / ${c.md} / ${e.md})`);
@@ -116,7 +125,7 @@ const db = (x) => (x.md ? (20 * Math.log10(x.md)).toFixed(1) + ' dB at ' + (x.at
       const before = Math.max(cmp(o, d, 0, tI).md, cmp(o2, d, 0, tI).md), after = Math.max(cmp(o, d, tW).md, cmp(o2, d, tW).md);
       const L = (x) => (20 * Math.log10(x || 1e-30)).toFixed(1);
       console.log(`INFO ${cs.name}: energy ${o.e.toFixed(1)}; the switch ${JSON.stringify(d.log)}; old↔old ${db(s)} (Chromium's summing order); old↔Ruhe before the switch ${L(before)} dB, after the wake ${L(after)} dB`);
-      ok(after <= Math.max(before, s.md) * 2 || after < 1e-6, `${cs.name}: after the wake the render differs from the old build no more than before the switch or than the old build from itself (${L(after)} against ${L(Math.max(before, s.md))} dB)`);
+      ok((tW < cs.dur || !cs.idle) && (after <= Math.max(before, s.md) * 2 || after < 1e-6), `${cs.name}: after the wake (at ${tW} s) the render differs from the old build no more than before the switch or than the old build from itself (${L(after)} against ${L(Math.max(before, s.md))} dB)`);
     }
     ok(cs.idle ? d.n >= 1 : d.n === 0, `${cs.name}: the switch ${cs.idle ? 'unplugged the graph in the silence' : 'never engaged'} (${d.n} times)`);
     ok(d.late === 0 && !errs.length, `${cs.name}: no late wake (${d.late}), no page errors ${errs.slice(0, 2).join(' | ')}`);

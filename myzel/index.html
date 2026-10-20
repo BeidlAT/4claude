@@ -3934,11 +3934,30 @@ function mixMeters(dt) {
 // phrase 1 ms later moves them the same way – but a render of the same notes could tell: so they sleep only if the
 // owner says so (IDLE.hall, IDLE.echo – measured at idle, of 26 % of a core on the desktop the hall's sleep would save
 // 13 points, the echo's 2 more; dev/tests/perf).
-const IDLE = { on: false, ctx: null, keeper: null, feed: null, taps: null, tapOn: false, tapT: 0, cut: [], qT: 0, z: null, pT: -1, auto: false, late: 0, n: 0, echo: false, hall: false };
+const IDLE = { on: false, ctx: null, keeper: null, feed: null, taps: null, tapOn: false, tapT: 0, autoT: 0, cut: [], qT: 0, z: null, pT: -1, auto: false, late: 0, n: 0, echo: false, hall: false };
 const IDLE_FFT = 4096;
+// A param keeps its time only where the render pulls it: Chromium moves a setTarget or a ramp one sample after the other
+// while its node is processed, and a node taken out of the render holds where it stood (measured: a knob turned in a
+// silence would only start to glide when the next note woke the graph). So every automation wakes the graph first,
+// and the graph falls asleep only after the last scheduled move has ended (IDLE.autoT; a setTarget reaches its target
+// exactly after 10 time constants, Chromium snaps it there). Any param's: it costs a comparison.
+(function idleHook() {
+  if (typeof AudioParam === 'undefined') return;
+  const P = AudioParam.prototype, end = (t) => { if (IDLE.on) idleWake(); if (t > IDLE.autoT) IDLE.autoT = t; };
+  const wrap = (k, t) => { const f = P[k]; if (typeof f !== 'function') return; P[k] = function (...a) { end(t(a)); return f.apply(this, a); }; };
+  wrap('setValueAtTime', (a) => +a[1] || 0);
+  wrap('linearRampToValueAtTime', (a) => +a[1] || 0);
+  wrap('exponentialRampToValueAtTime', (a) => +a[1] || 0);
+  wrap('setTargetAtTime', (a) => (+a[1] || 0) + 10 * (+a[2] || 0) + 0.02);
+  wrap('setValueCurveAtTime', (a) => (+a[1] || 0) + (+a[2] || 0));
+  wrap('cancelScheduledValues', (a) => +a[0] || 0);
+  wrap('cancelAndHoldAtTime', (a) => +a[0] || 0);
+  const d = Object.getOwnPropertyDescriptor(P, 'value');
+  if (d && d.set) Object.defineProperty(P, 'value', { configurable: true, enumerable: d.enumerable, get: d.get, set(v) { end(0); d.set.call(this, v); } });
+})();
 function idleBuild() {
   const ctx = A.ctx;
-  Object.assign(IDLE, { on: false, ctx, cut: [], qT: ctx.currentTime, z: null, pT: -1, auto: hxLive(), tapOn: false });
+  Object.assign(IDLE, { on: false, ctx, cut: [], qT: ctx.currentTime, z: null, pT: -1, auto: hxLive(), tapOn: false, autoT: 0 });
   IDLE.keeper = G(0); IDLE.keeper.connect(ctx.destination);
   for (const o of [A.rngOsc, A.fltLfo, A.phaLfo, A.choL1, A.choL2, A.panLfo, A.wowLfo, A.flutLfo]) o.connect(IDLE.keeper.gain);
   A.revRet.connect(IDLE.keeper.gain); A.dlyRet.connect(IDLE.keeper.gain);   // (the hall and the echo: pulled while the master sleeps)
@@ -3987,7 +4006,7 @@ function idleTick(force) {
   // its strip and its sends rest then even while other sound plays, where they may (whatever its strip's filters held
   // has died away; hxGates); a new Schleife opens it (hxPost)
   if (HX.g0 && HX.ctx === A.ctx) { if (HX.loops.size || HXN.webs.size || IDLE.hxT == null) IDLE.hxT = now; else if (!IDLE.hxOff && now - IDLE.hxT >= 20) hxGates(false); }
-  if (idleSrc()) { IDLE.qT = now; IDLE.z = null; idleTaps(false); if (IDLE.on) idleWake(!!(A.voices.size || A.bor || HX.loops.size)); return; }   // (those wake it themselves: late)
+  if (idleSrc() || now < IDLE.autoT) { IDLE.qT = now; IDLE.z = null; idleTaps(false); if (IDLE.on) idleWake(!!(A.voices.size || A.bor || HX.loops.size)); return; }   // (those wake it themselves: late)
   if (IDLE.on) return;
   idleTaps(true);
   if (now - IDLE.tapT < (IDLE_FFT + 256) / SR) return;

@@ -1,7 +1,7 @@
 // Ruhe, live: in a silence the switch unplugs the graph (what still runs: the LFOs, the echo's loop, the hall, the
 // Hexenring's processor and its drift, the compressor's detector – the master, the channel strips and the insert chains
-// rest); a finger, the Bordun, the mixer's meters and a Schleife each find it plugged in before they sound; it never
-// wakes late.   node t-idle-live.js   env URL=<inst page> (default perfnew-inst)
+// rest); a finger, the Bordun, the mixer's meters and a Schleife each find it plugged in before they sound; a knob
+// turned in the silence wakes it (its glide keeps its time); it never wakes late.   node t-idle-live.js   env URL=<inst page> (default perfnew-inst)
 const { chromium } = require('/opt/node22/lib/node_modules/playwright');
 const { hook, analyse, parts } = require('./inv');
 const URL = process.env.URL || 'http://127.0.0.1:8790/perfnew-inst/index.html';
@@ -35,13 +35,20 @@ const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) process
   t = await until('M.IDLE.on', 45);
   ok(t > 0, `the Bordun off: asleep again after its fade, echo and hall (${t} s)`);
   // 4 the mixer open: the meters read on, the switch still works
+  // (opening it makes the meters' filters – their params set wake the graph, which falls asleep again with it open)
   await pg.evaluate(() => window.__M.openPanel('mix'));
-  r = await pg.evaluate(async () => { const M = window.__M; await new Promise((r) => setTimeout(r, 1500)); return { meter: M.MIX.meter, on: M.IDLE.on, pk: M.A.mm ? M.A.mm.pk[0] : -1 }; });
-  ok(r.meter && r.on && r.pk === 0, `the mixer's meters on while it sleeps: they read silence (${r.pk}), the graph stays unplugged`);
+  t = await until('M.IDLE.on', 40);
+  r = await pg.evaluate(async () => { const M = window.__M; await new Promise((r) => setTimeout(r, 500)); return { meter: M.MIX.meter, on: M.IDLE.on, pk: M.A.mm ? M.A.mm.pk[0] : -1 }; });
+  ok(t > 0 && r.meter && r.on && r.pk === 0, `the mixer's meters on while it sleeps (asleep again after ${t} s): they read silence (${r.pk})`);
   r = await pg.evaluate(async () => { const M = window.__M; M.onDown({ pointerId: 'q', pt: { x: 0.6, y: 0.5, px: 500, py: 300 } }); await new Promise((r) => setTimeout(r, 500)); const pk = M.A.mm.pk[0]; M.onUp({ pointerId: 'q' }); return { pk, late: M.IDLE.late }; });
   ok(r.pk > 0.005 && r.late === 0, `a note with the mixer open: its meter moves (${r.pk.toFixed(3)})`);
   await pg.evaluate(() => window.__M.closePanel && window.__M.closePanel());
   t = await until('M.IDLE.on', 45);
+  // a knob turned in the silence: the graph wakes before the glide starts, and the glide keeps its time
+  r = await pg.evaluate(async () => { const M = window.__M, c = M.A.chains[0].flt.frequency, was = M.IDLE.on; M.setParam('flt.freq', M.P['flt.freq'] > 1000 ? 600 : 2400); const on = M.IDLE.on; await new Promise((r) => setTimeout(r, 600)); return { was, on, v: c.value, want: M.P['flt.freq'] }; });
+  ok(r.was && !r.on && Math.abs(r.v - r.want) / r.want < 0.02, `a knob turned while it sleeps wakes it first (asleep after: ${r.on}), the cutoff glides to its value in time (${r.v.toFixed(0)} of ${r.want} Hz after 0.6 s)`);
+  t = await until('M.IDLE.on', 45);
+  ok(t > 0, `…and it sleeps again once the glide has ended (${t} s)`);
   // 5 a Schleife: harvested, it plays from the processor through its strip
   r = await pg.evaluate(async () => {
     const M = window.__M, A = M.A, f = M.N.notes[4].f;
