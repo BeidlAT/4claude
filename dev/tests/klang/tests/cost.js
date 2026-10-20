@@ -16,7 +16,9 @@
 // HX_COST.fx1 = hxf − hxz; (step 1d) 'hxm1' a loop of four Schichten at the loop's own rate (17 ct) – summed, resampled
 // once – and 'hxp1' the same read one by one (po.noSum, step 1c's way): the summed loop costs 4 × schicht + one rs;
 // 'hxd1' one Schicht being de-drifted (Taumeln: drift 4 ct live, its own 8 ct at 2.5 Hz, the job running all along) –
-// HX_COST.dd = hxd − hxr
+// HX_COST.dd = hxd − hxr; (step 2a) 'hxw1' a Schicht fed by a Wuchs stream – a 1-s pass every second, each streamed
+// through a port of its own with 1.5 s of tail, so two passes' tails ring under each body (k = 3 streams) – and 'hxx1'
+// the same at the loop's own rate (17 ct: one resampling, as Taumeln reads a Wuchs version): HX_COST.stream = hxw − hxs
 process.env.SEED_BLOBS = '';
 const { chromium, openInst } = require('../../v2/lib');
 const ROUNDS = +process.argv[2] || 6, DUR = +process.env.DUR || 4, NV = +process.env.NV || 24, NW = +process.env.NW || 1, NH = +process.env.NH || 8;
@@ -57,6 +59,10 @@ const XP = JSON.parse(process.env.PARAMS || '{}');
           if (eng === 'hxn') { sum.connect(ctx.destination); continue; }
           const msgs = [], C = window.__hxCh;
           let po = {};
+          if (eng === 'hxw' || eng === 'hxx') {   // (step 2a: the stream's slots come through their ports, below)
+            msgs.push({ seg: [[0, 0, SR * 60 / 120]], reset: 1 }, { loop: { id: 1, lock: 'takt', b0: 0, beats: 2 } }, { schicht: { loop: 1, id: 1, chunks: C.ch.slice(0, 6), n: SR, pre: 0, len: SR, join: 'ola', X: 480, rho: 0, dd: 1, wu: 1 } });
+            if (eng === 'hxx') msgs.push({ rate: { loop: 1, cents: 17 } });
+          }
           if (eng === 'hxs' || eng === 'hxr' || eng === 'hxm' || eng === 'hxp') {
             msgs.push({ seg: [[0, 0, SR * 60 / 120]], reset: 1 }, { loop: { id: 1, lock: 'takt', b0: 0, beats: 8 } });
             for (let s = 0; s < (eng === 'hxm' || eng === 'hxp' ? 4 : 1); s++) msgs.push({ schicht: { loop: 1, id: s + 1, chunks: C.ch, n: C.n, pre: 0, len: C.len, join: 'xf', X: 480, rho: 0.2 } });
@@ -77,8 +83,18 @@ const XP = JSON.parse(process.env.PARAMS || '{}');
             z.gain.value = 0; srcs[0].connect(rin); rin.connect(z).connect(ctx.destination);
           }
           if (eng === 'hxd') { const cs = ctx.createConstantSource(); cs.offset.value = 4; cs.connect(nd, 0, 1); cs.start(); }   // (the live drift: 4 ct)
+          if (eng === 'hxw' || eng === 'hxx') {   // every pass of the render: its slot and its chunks (2.5 s: the body and its tail), all there before it plays
+            const n = Math.round(2.5 * SR), nc = Math.ceil(n / 8192);
+            for (let kk = 0; kk < Math.ceil(DUR) + 1; kk++) {
+              const mc = new MessageChannel();
+              nd.port.postMessage({ wst: { schicht: 1, k: kk, len: SR, cap: n + 8192, port: mc.port1 } }, [mc.port1]);
+              for (let i = 0; i < nc; i++) { const L = new Float32Array(8192), R = new Float32Array(8192); for (let j = 0; j < 8192; j++) { const x = i * 8192 + j; L[j] = x < n ? Math.sin(x * (0.03 + 0.001 * kk)) * 0.1 * Math.exp(-x / SR) : 0; R[j] = L[j] * 0.9; } mc.port2.postMessage({ i, L, R }, [L.buffer, R.buffer]); }
+              mc.port2.postMessage({ end: n });
+            }
+          }
           nd.connect(ctx.destination, 0);
         }
+        if (eng === 'hxw' || eng === 'hxx') ctx.suspend(128 / SR).then(() => ctx.resume());   // (offline: port messages arrive at a suspend)
         const t0 = performance.now(); await ctx.startRendering(); return performance.now() - t0;
       }
       ctx.suspend(19 / 375).then(() => {

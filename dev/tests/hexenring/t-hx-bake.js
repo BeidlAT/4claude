@@ -99,6 +99,7 @@ const { ok } = H;
     while (S.swapF != null && M.hxF(ctx.currentTime) < S.swapF + S.X + 128) await window.__sleep(20);
     M.hxTaumelnSet(L, false);   // (a preset may bring its own drift: a loop that taumelt follows it – on purpose)
     M.hxTempo(M.tgBpm(ctx.currentTime));   // (the loop gives the tempo: a preset leaves it – SPEC §2)
+    if (M.hxWSet) M.hxWSet(L, 'ton', 'fest');   // (step 2a: a loop with notes follows a preset's key – SPEC §10.4 –; fest: the chain alone is tested here)
     const p0 = await pass(), p3 = await pass(() => M.loadPreset(M.PRESETS[3]));
     out.preset = same(p0, p3);
     return out;

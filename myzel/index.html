@@ -657,6 +657,8 @@ body.mlearn #stage::after { content: ""; position: absolute; inset: 0; backgroun
 .hx-chip.pri { border-color: var(--lumen); color: var(--lumen); }
 .hx-chip.on { background: var(--spore); border-color: var(--spore); color: var(--ink); }
 .hx-sep { flex: none; color: var(--line); font-size: 14px; }
+.hx-cw { flex: none; padding: 0 4px 0 2px; color: var(--lumen); font: 600 12px/1 var(--font-ui); white-space: nowrap; }   /* (step 2a: „Schleifen folgen ab Takt 9“) */
+.hx-eng { min-height: 36px; max-width: 9.5em; padding: 2px 6px; border-radius: 999px; border: 1px solid var(--line); background: var(--bark-2); color: var(--hypha); font: 600 12px/1 var(--font-ui); }
 .hxr[data-fold="1"] .w, .hxr[data-fold="1"] .hx-chips { display: none; }
 .hxr[data-fold="1"] .hxb { padding: 0; }
 .hx-vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
@@ -2338,6 +2340,11 @@ SEL('hx.lueckeT', 'Lücke', [['schlag', 'Ein Schlag'], ['takt', 'Ein Takt']], 's
 SEL('hx.schluss', 'Schluss', [['ende', 'Am Ende'], ['welkend', 'Welkend'], ['abbauend', 'Abbauend']], 'ende', { chips: 1, small: 1, rec: 1 });
 NUM('hx.welk', 'Welkt über', 4, 16, 8, '', { step: 1, rec: 1, fmt: (v) => v + ' Takte' });
 BOOL('hx.runde', 'Überspielen: eine Runde', false, { rec: 1 });
+// (step 2a) Wuchs: how a new Schleife begins (exactly as played, or grown anew); the level loops are rendered at (owner: manual,
+// the best by default; „wie gespielt“ = the level the loop was played at); the field's key and the loops' on the same bar line
+SEL('hx.beginn', 'Neue Schleife', [['abdruck', 'Wie gespielt'], ['wuchs', 'Als Wuchs']], 'abdruck', { chips: 1, small: 1, rec: 1 });
+SEL('hx.stufe', 'Klangstufe der Schleifen', [['gespielt', 'Wie gespielt'], ['1', '1'], ['2', '2'], ['3', '3']], '3', { chips: 1, small: 1, rec: 1 });
+BOOL('hx.tonartAmTakt', 'Tonart wechselt mit den Schleifen am Takt', true, { rec: 1 });
 NUM('mix.pulsVol', 'Puls gesamt', -60, 6, 0, 'dB', { step: 0.1, fmt: fmtFader });
 BOOL('mix.pulsMute', 'Puls stumm', false);
 SEL('mix.duckSrc', 'Pumpen im Takt von', [['0', 'Spur 1'], ['1', 'Spur 2'], ['2', 'Spur 3'], ['3', 'Spur 4']], '0', { chips: 1, small: 1 });
@@ -2478,6 +2485,7 @@ function buildNotes() {
     notes.push({ f: base * Math.pow(2, range), name: sc.r ? '16' : NOTE_NAMES[root] + (Math.floor(topMidi / 12) - 1), root: true, semi: 12 * range });
   }
   N.notes = notes;
+  hxWKeyBuilt();   // Hexenring: (step 2a) the field's key applied – loops that follow, if it changed outside an announcement
 }
 function noteAt(x) {
   if (N.free) {
@@ -3976,7 +3984,7 @@ function idleBuild() {
   IDLE.taps = { links, g: [[e0, e1], [r0, r1], [m0, m1]], buf: new Float32Array(IDLE_FFT) };
 }
 // what can sound: a voice, a held finger, the Bordun, a frozen echo, the Puls, the rain, a Schleife, a web that rings
-const idleSrc = () => !!(A.voices.size || A.grainVoices.size || touches.size || A.bor || A.frozen || SEQ.on || rgSounds() || HX.loops.size || HXN.webs.size ||
+const idleSrc = () => !!(A.voices.size || A.grainVoices.size || touches.size || A.bor || A.frozen || SEQ.on || rgSounds() || HX.loops.size || HXN.webs.size || HX.ws ||
   (A.gsp && A.gsp.active) || RHZ.vs.size || RHZ.q.length || (A.revWant && !A.revActive));
 // the taps hear only the quiet after the last sound: while a source sounds nothing is counted, so they rest then (and
 // while the graph sleeps); plugged in, they are read once they hold a whole window of what came since
@@ -6457,12 +6465,14 @@ function spawnGrain(v, when) {
 // Steal the voice that has faded furthest: released voices by the share of their release already elapsed,
 // held voices only when nothing is releasing (oldest first). soft: faded out in ~25 ms (vFade) – kill() can cut a struck
 // voice's decay at once, a click (Gestik's rain and rattle make room this way).
-function steal(fadingOnly, soft) {
+function steal(fadingOnly, soft, loopOnly) {
   const now = A.ctx.currentTime;
   let best = null, bestScore = -Infinity;
   for (const v of A.voices) {
     let score;
-    if (v.released) {
+    if (loopOnly && !v.loop) continue;   // Hexenring: (step 2a) a loop's voice never takes a live one
+    if (v.loop) score = 3e6 + (now - v.t0);   // Hexenring: (step 2a, Live mode) the loops' voices give way before any live one
+    else if (v.released) {
       const from = v.relAt != null ? v.relAt : v.t0;
       score = 1e6 + (now - from) / Math.max(0.05, v.endAt - from);
     } else if (fadingOnly) continue;
@@ -6477,9 +6487,9 @@ function playNote(eng, t, f, y, vel, o = {}) {
   if (!A.ctx || !ENGINES[eng]) return null;
   const as = ENGINES[eng].needs ? wkPlays(eng) : eng;   // a worklet engine without its module: its stand-in
   const cost = Q.cost[as] || 1;
-  while (A.voices.size && (A.voices.size >= MAXV || voiceLoad() + cost > VBUDGET)) steal();
+  while (A.voices.size && (A.voices.size >= MAXV || voiceLoad() + cost > VBUDGET)) if (!steal(false, false, !!o.loop)) { if (o.loop) return null; break; }   // Hexenring: (step 2a) a loop's note that does not fit is not played
   const v = new Voice(eng);
-  v.cost = cost; v.bend = o.bend || false; v.as = as;
+  v.cost = cost; v.bend = o.bend || false; v.as = as; if (o.loop) v.loop = true;
   const pan = v.n(PAN(o.pan || 0));
   v.out.connect(pan); pan.connect(o.bus || stripIn('fin'));
   A.voices.add(v);
@@ -9496,6 +9506,7 @@ function myzelDsp() {
   // It counts its own frames (currentFrame can stall), reports {frame, t} every 0.25 s, plays on while the page hangs
   // and never allocates a buffer in process(): every buffer comes from the page, the scratch is made here once.
   const RS_T = 32, RS_N = 256, RS_C = RS_T / 2 - 1, HP = Math.PI / 2, RINGS = {};   // (RINGS: the Rings by rid, for myzel-ring-in)
+  const HX_TN = 16;   // tail streams a Schicht reads at once (step 2a: a Wuchs pass's tail rings under up to 15 passes after it)
   let RS = null;   // (RS_N + 1) × RS_T: phase p / RS_N of a frame, tap t at offset t − 15 − p / RS_N
   // (cut: the pass band as a share of the source's Nyquist; NT taps, Kaiser beta – the defaults are the live resampler's;
   // a sample-rate conversion uses a longer kernel of the same design, see rsJob)
@@ -9544,7 +9555,7 @@ function myzelDsp() {
       // (step 1c: a Schicht plays out of its own output – out 1 dry through the live chain until its baked version is
       // swapped in on out 0 – so each output has its pair under the state's gain and its free pair: V[out] = [bL, bR, tL, tR])
       this.S = S; this.V = [0, 1].map(() => [new Float32Array(S), new Float32Array(S), new Float32Array(S), new Float32Array(S)]); this.used = 0;
-      this.gA = new Float32Array(S); this.gB = new Float32Array(S); this.gC = new Float32Array(S); this.gD = new Float32Array(S); this.lA = new Float32Array(S); this.sA = new Float32Array(S);
+      this.gA = new Float32Array(S); this.gB = new Float32Array(S); this.gC = new Float32Array(S); this.gN = new Float32Array(S); this.gD = new Float32Array(S); this.lA = new Float32Array(S); this.sA = new Float32Array(S);
       // (step 1d) reads at one rate and one phase are summed first and resampled once (the resampler is linear: the same
       // sound): per output pair and class – under the state's gain or free – a scratch chunk of the summed source
       // (≤ S · 1.03 + taps frames) and its members; a Schicht de-drifted (Taumeln) reads at the live drift alone, so the
@@ -9553,7 +9564,7 @@ function myzelDsp() {
       this.gM = [0, 1, 2, 3].map(() => ({ n: 0, r: 0, p: 0, fr: 0, ch: [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], tot: new Float64Array(16), d: new Float64Array(16), g: new Float64Array(16) }));
       this.noSum = !!po.noSum; this.noDD = !!po.noDD; this.ddPool = !!po.ddPool; this.gvQ = []; this.dvF = 1; this.ddT = null; this.ddBlk = Math.max(16, po.ddBlk | 0 || 64);
       this.wA = new Float32Array(S); this.wG = new Float32Array(S); this.sgA = new Float32Array(S); this.sndW = false;   // (step 1d: Schluss „welkend“, the sends to the loops' own webs)
-      this.rep = 0; this.met = 0; this.nA = 0; this.late = 0;
+      this.rep = 0; this.met = 0; this.nA = 0; this.late = 0; this.wpt = []; this.wrep = 0;   // (step 2a: the Werk-Rahmen's ports – the live frame every 0.1 s)
       this.port.onmessage = (e) => this.msg(e.data);
       for (const m of po.msgs || []) this.msg(m);   // (offline renders: port messages arrive only at a suspend)
     }
@@ -9571,8 +9582,12 @@ function myzelDsp() {
       }
       if (m.gate) this.gateSet(m.gate);
       if (m.aus) {   // the seam's character once the page heard the window's end; the Ausklang cut at the first foreign onset
-        const a = m.aus, S = this.sch(a.schicht);
-        if (S) {
+        // (step 2a: it is the Abdruck's – a Wuchs version playing keeps its own Ausklang and join; an Abdruck swap still
+        // waiting in the queue takes it, so the Abdruck that comes back has it)
+        const a = m.aus, S0 = this.sch(a.schicht), Ts = [];
+        if (S0 && !S0.wu) Ts.push(S0);
+        if (S0) for (const e of this.q) if (e.kind === 'replace' && e.S && !e.S.wu && e.d.schicht === a.schicht) Ts.push(e.S);
+        for (const S of Ts) {
           if (a.len != null) {
             S.aend = S.ddA && S.ddMap ? this.ddInv(S.ddMap, S.pre, S.aoffS + Math.max(0, Math.round(a.len))) : S.aoff + Math.max(0, Math.round(a.len)); S.afd = Math.max(0, Math.round(a.fade || 0));
             const need = Math.max(S.aend, S.pre + S.len + Math.max(S.X, Math.round(0.05 * SR)));   // (a fill still running needs no more than that)
@@ -9588,7 +9603,9 @@ function myzelDsp() {
       // (±20 ct ≈ ±1.2 %; a straight glide to it over `ramp` frames, 50 ms unless told – Taumeln sends one ≥ 10 times a second)
       // ({schicht}: that Schicht's own rate on top of its loop's – Taumeln; {loop}: the loop's – MIDI clock nachführen)
       if (m.rate) for (const R of [].concat(m.rate)) { const T = R.schicht != null ? this.sch(R.schicht) : this.lp(R.loop); if (T) { T.rt = Math.pow(2, Math.max(-20, Math.min(20, +R.cents || 0)) / 1200); T.rv = (T.rt - T.r) / Math.max(1, Math.round(R.ramp != null ? R.ramp : 0.05 * SR)); } }
-      if (m.stream) this.streams[m.stream.loop] = m.stream.port || null;   // (Wuchs streams: step 2)
+      if (m.wst) this.wsMsg(m.wst, m.wst.port);   // (step 2a: a living Schicht's pass, streamed through its own port)
+      if (m.wstop) { const S = this.sch(m.wstop.schicht); if (S) this.wsStop(S); }
+      if (m.wport) this.wpt.push(m.wport);   // (step 2a: a Werk-Rahmen's own port – the live frame every 0.1 s, for its pacing)
       if (m.tau) for (const L of this.loops) if (L.id === m.tau.loop) for (const S of L.sch) { S.tau = !!m.tau.on; if (S.tau) this.ddAsk(S); }
       if (m.ddGo) this.ddStart(m.ddGo);   // (step 1d) the page's chunks for a de-drifted version
       // (step 1d) Nähren: a loop's output, post level and state, into its own pair of output 2 (ch: 0…7; −1 off) – the send
@@ -9641,13 +9658,14 @@ function myzelDsp() {
       if (kind === 'schicht' || kind === 'replace') {   // (objects are made here, in the message – process() only links them)
         const B = e.S = this.newBuf(d);
         if (kind === 'schicht') Object.assign(B, { id: d.id, f0: 0, e: envNew(0), g: d.gain != null ? +d.gain : 1, fd: d.fin === 0 ? 0 : this.xf(d.fin != null ? d.fin : d.X),
-          join: d.join || 'xf', X: this.xf(d.X), rho: Math.max(-1, Math.min(1, +d.rho || 0)), pp: false, dead: false, dying: false, stop: false, old: null, xin: envNew(1), tq: new Float64Array(8), tb: new Float64Array(8), tc: [null, null, null, null, null, null, null, null], tl: new Float64Array(8), tfr: new Uint8Array(8), tfN: new Int32Array(8), tfI: new Int32Array(8), tsrc: new Uint8Array(8), tout: new Uint8Array(8), tsd: new Uint8Array(8), tn: 0, pv: 0, ddA: false, dr0: null, ddMap: null, ddN: null, ddReq: -1, ddOk: d.dd !== 0, aoffS: 0,
+          join: d.join || 'xf', X: this.xf(d.X), rho: Math.max(-1, Math.min(1, +d.rho || 0)), pp: false, dead: false, dying: false, stop: false, old: null, xin: envNew(1), tq: new Float64Array(HX_TN), tb: new Float64Array(HX_TN), tc: new Array(HX_TN).fill(null), tl: new Float64Array(HX_TN), tfr: new Uint8Array(HX_TN), tfN: new Int32Array(HX_TN), tfI: new Int32Array(HX_TN), tsrc: new Uint8Array(HX_TN), tout: new Uint8Array(HX_TN), tsd: new Uint8Array(HX_TN), tn: 0, pv: 0, ddA: false, dr0: null, ddMap: null, ddN: null, ddReq: -1, ddOk: d.dd !== 0, aoffS: 0,
           zo: 0, zoN: null, kc: null, kcN: null,   // (the seam's place in the pass and its gain curve: Nahtwahl, the time-local level – adopted at a pass start)
           r: 1, rt: 1, rv: 0, q: 0, pe: 0,   // (its own read rate – Taumeln: each Schicht against the drift of its own recording – and position)
           k0: d.seamK != null ? Math.round(d.seamK) : null });   // k0: it enters at the start of that pass (a punch, a delayed harvest)
         else B.xo = envNew(1);
         B.out = d.out != null ? (d.out ? 1 : 0) : -1;   // (its output; −1: the loop's)
         B.dr = d.dr && d.dr.length ? d.dr : null; B.tau = d.tau !== false;   // (the drift it was played with; Taumeln on)
+        B.wu = !!d.wu; if (B.wu && kind === 'schicht') B.ddA = true;   // (step 2a: a Wuchs version – rendered without the drift: it reads at the live drift alone, as a de-drifted one)
         this.seamSet(B, d);
         if (kind === 'replace' && d.join) Object.assign(B, { join: d.join, X: this.xf(d.X), rho: Math.max(-1, Math.min(1, +d.rho || 0)) });
         // filled live from a Humus ring while it already plays (the window's end may still be sounding): its frames are
@@ -9731,7 +9749,17 @@ function myzelDsp() {
           if (S.aend > S.aoff) this.tail(S, true, 0, S.aoff, 0); else this.tail(S, true, 1, S.pre + S.pe, S.X);
         }
         L.stopAt = null;
-      } else if (L.st.v > 0 || L.st.i < L.st.N) for (let i = 0; i < L.sch.length; i++) { const S = L.sch[i]; if (S.pp && S.join === 'ola' && S.aend > S.aoff) this.tail(S, false, 0, S.aoff, 0); }
+      } else if (L.st.v > 0 || L.st.i < L.st.N) for (let i = 0; i < L.sch.length; i++) {
+        const S = L.sch[i]; if (!S.pp) continue;
+        const O = S.old && S.old.seam && !S.old.tld ? S.old : null, V = O || S;   // (a version swapped at this seam: its Ausklang)
+        if (S.join === 'ola' && V.aend > V.aoff) this.tail(S, false, 0, S.aoff, 0);
+        else if (O && O.join === 'xf' && S.join === 'ola') this.tail(S, false, 1, S.pre + S.pe, O.X || S.X);   // (step 2a: a warm Abdruck swapped for a cold Wuchs pass without an Ausklang – the pass that ended fades over its own crossfade)
+      }
+      for (let i = 0; i < L.sch.length; i++) if (L.sch[i].ws) this.wsSeam(L, L.sch[i], x);   // (step 2a: a living Schicht's next pass)
+      // (step 2a: the version swapped at this seam gave its Ausklang here, once – from the next seam on the one playing gives
+      // its own. Before, an old version whose Ausklang outlasted a pass stayed `old` (its tail still read it) and gave its
+      // Ausklang at every later seam too: a Treu render's tail never sounded, the Abdruck's did)
+      for (let i = 0; i < L.sch.length; i++) { const S = L.sch[i]; if (S.old && S.old.seam && !S.old.tld) { S.old.tld = true; S.old.kS = L.k; } }
       for (let i = 0; i < L.sch.length; i++) { const S = L.sch[i]; if (S.ddN && !S.old && !S.dead && !S.dying) { if (S.tau) this.ddAdopt(L, S); else { this.ddBack(S.id, S.ddN.dst); S.ddN = null; S.ddReq = -1; } } }   // (step 1d; Taumeln off meanwhile: its own audio stays, bit for bit)
       this.port.postMessage({ passStart: { loop: L.id, k: L.k, f: L.s0 } });
     }
@@ -9739,8 +9767,8 @@ function myzelDsp() {
     // the loop's state (a stop's); fade: frames of a fade-out (0: none)
     uses(S, O) { for (let t = 0; t < S.tn; t++) if (S.tc[t] === O.ch || S.tc[t] === O.ac) return true; return false; }
     tail(S, free, src, base, fade) {
-      const t = S.tn, V = S.old && S.old.seam ? S.old : S;   // (swapped at this seam: the old version's tail)
-      if (t >= 8) return;
+      const t = S.tn, V = S.old && S.old.seam && !S.old.tld ? S.old : S;   // (swapped at this seam: the old version's tail)
+      if (t >= HX_TN) return;
       S.tq[t] = 0; S.tb[t] = src ? V.pre + base - S.pre : base - S.aoff + V.aoff; S.tc[t] = src ? V.ch : V.ac; S.tl[t] = src ? V.tot : V.aend;
       S.tfr[t] = free ? 1 : 0; S.tfN[t] = fade; S.tfI[t] = 0; S.tsrc[t] = src; S.tout[t] = V === S ? S.out : V.out; S.tsd[t] = V.ddA ? 1 : 0; S.tn++;   // (tsd: read as de-drifted)
     }
@@ -9751,7 +9779,7 @@ function myzelDsp() {
     // when a version is complete (its fill done, or the page's audio), the chunks from the page; it takes over at the
     // Schicht's next pass start – the old version goes on as the seam's continuation and in its Ausklänge. ----
     ddAsk(S) {
-      if (this.noDD || !this.drIn || !S.tau || S.ddA || S.dying || S.dead || !S.ddOk || !S.dr || !S.ch || S.ac !== S.ch || S.ddReq === S.pv) return;
+      if (this.noDD || !this.drIn || !S.tau || S.ddA || S.wu || S.dying || S.dead || !S.ddOk || !S.dr || !S.ch || S.ac !== S.ch || S.ddReq === S.pv) return;
       for (let i = 0; i < this.jobs.length; i++) if (this.jobs[i].S === S) return;   // (still filling: once it is complete)
       S.ddReq = S.pv;
       let z = true; for (let i = 0; i < S.dr.length; i++) if (S.dr[i] !== 0) { z = false; break; }
@@ -9828,6 +9856,152 @@ function myzelDsp() {
       S.ddA = true; S.dr0 = J.dr0; S.ddMap = J.map;
       this.port.postMessage({ ddAdopt: { schicht: S.id } });
     }
+    // ---- (step 2a) Wuchs streams: a living Schicht's passes, each rendered in the Werk-Rahmen and streamed in blocks
+    // (one chunk each, transferred) through a port of its own – a slot {k, len, at, must, ch, got, n}. At its pass start
+    // (or from `at`: a follow change, a tempo change's pass rendered from its start and heard from that frame) the slot
+    // becomes the Schicht's version – read from its frame 0 (no margin), its tail past len overlap-added under the passes
+    // after it (the Ausklang streams). A slot not there in time: the last complete pass plays on at that position – except
+    // one that must come (a follow change): then the Schicht falls silent until it arrives, never the old key. ----
+    wsMsg(d, port) {
+      const S = this.sch(d.schicht);
+      if (!S || S.dying || S.dead) { if (port) port.close(); return; }
+      const W = S.ws || (S.ws = { slots: [], cur: null, prev: null, hold: false, n: 0 });
+      for (let i = 0; i < W.slots.length; i++) { const o = W.slots[i]; if (o.k === d.k && !o.on && o !== W.prev) { this.wsDrop(S, o); W.slots.splice(i--, 1); } }   // (a newer render of the same pass)
+      const nC = Math.max(1, Math.ceil((+d.cap || SR) / this.CH));
+      const c0 = Math.max(0, Math.min(nC - 1, Math.floor((+d.from || 0) / this.CH)));   // (a pass rendered from its start but heard from a later frame: only its chunks from there come)
+      const Z = { k: d.k | 0, len: Math.max(1, Math.round(d.len)), at: d.at != null ? Math.round(d.at) : -Infinity, must: !!d.must, ch: new Array(nC).fill(null), c0, hi: c0, n: Infinity, port: port || null, on: false, dead: false, ver: null };
+      W.slots.push(Z);
+      if (port) port.onmessage = (e) => this.wsBlock(S, Z, e.data);
+      if (Number.isFinite(Z.at)) { const e = { f: Z.at, kind: 'wsat', d: { S, Z }, S: null }, q = this.q; let i = q.length; while (i > 0 && q[i - 1].f > e.f) i--; q.splice(i, 0, e); }
+    }
+    wsBlock(S, Z, m) {
+      if (!m) return;
+      if (m.L) {   // chunk i of the pass (8192 frames; the last one padded)
+        if (Z.dead || !(m.i >= 0 && m.i < Z.ch.length)) { this.port.postMessage({ freed: { schicht: S.id, old: 1, ws: 1, chunks: [[m.L, m.R]] } }, [m.L.buffer, m.R.buffer]); return; }
+        Z.ch[m.i] = [m.L, m.R];
+        while (Z.hi < Z.ch.length && Z.ch[Z.hi]) Z.hi++;
+      }
+      if (m.end != null && !Z.dead) {   // its length, the tail ended (−90 dB): the reads of it stop there
+        Z.n = Math.max(1, Math.min(Z.ch.length * this.CH, Math.round(m.end)));
+        if (Z.port) { Z.port.close(); Z.port = null; }
+        if (S.ch === Z.ch) { S.tot = Z.n; S.aend = Z.n; }
+        if (Z.ver) { Z.ver.tot = Z.n; Z.ver.aend = Z.n; }
+        for (let t = 0; t < S.tn; t++) if (S.tc[t] === Z.ch) S.tl[t] = Z.n;
+      }
+    }
+    // the slot's frames from 0 are there up to p + need (plus the resampler's taps), or to its end
+    wsReady(Z, p, need) { return p - RS_T >= Z.c0 * this.CH - (Z.c0 ? 0 : Infinity) && Z.hi * this.CH >= Math.min(Z.n, Math.ceil(p + need) + RS_T + 2); }
+    // a version of the Schicht as it is now (to cross from, or to fall back on)
+    wsVer(S) { return { ch: S.ch, tot: S.tot, pre: S.pre, len: S.len, ac: S.ac, aoff: S.aoff, aend: S.aend, join: S.join, X: S.X, rho: S.rho, wu: S.wu, ddA: S.ddA, ddMap: S.ddMap, dr0: S.dr0, out: S.out, zo: S.zo, kc: S.kc, ws: S.ws && S.ws.cur && S.ch === S.ws.cur.ch ? S.ws.cur : null }; }
+    // a version becomes the Schicht's: at its seam (the pass that ended goes on in its tail, added by advance), or mid-pass
+    // at the same place, crossing over X frames
+    // the two versions' correlation over the next n frames from read positions pa, pb (stereo; a chunk not there is silence)
+    corr(A, ta, pa, B, tb, pb, n) {
+      let ab = 0, aa = 0, bb = 0;
+      const at = (ch, t, i) => { if (i < 0 || i >= t) return null; const c = ch[i >> this.SH]; return c && c[0].length ? c : null; };
+      for (let j = 0; j < n; j++) {
+        const i = Math.floor(pa) + j, k = Math.floor(pb) + j, ca = at(A, ta, i), cb = at(B, tb, k); if (!ca || !cb) continue;
+        const x0 = ca[0][i & this.M], x1 = ca[1][i & this.M], y0 = cb[0][k & this.M], y1 = cb[1][k & this.M];
+        ab += x0 * y0 + x1 * y1; aa += x0 * x0 + x1 * x1; bb += y0 * y0 + y1 * y1;
+      }
+      return aa > 1e-20 && bb > 1e-20 ? Math.max(-1, Math.min(1, ab / Math.sqrt(aa * bb))) : 0;
+    }
+    wsSet(S, V, seam, X) {
+      if (!seam) {
+        if (S.old) { if (S.old.ws || this.uses(S, S.old)) (S.park || (S.park = [])).push(S.old); else if (!(S.ws && S.ws.prev && S.ws.prev.ch === S.old.ch)) this.gvQ.push([{ schicht: S.id, old: 1 }, [S.old]]); }
+        const O = this.wsVer(S); O.xo = envNew(1); envGo(O.xo, 0, X); O.seam = false; O.end = 0;
+        S.old = O; S.xin.v = 0; envGo(S.xin, 1, X);
+        // (two throws crossing mid-pass – a late pass and its fallback, a pass and the anchor – are partly correlated: the
+        // smooth law normalised by it, as at a seam, so the level holds; a sine against itself in another phase dipped)
+        S.xrho = this.corr(O.ch, O.tot, O.pre + S.q, V.ch, V.tot, V.pre + S.q, X);
+      }
+      S.ch = V.ch; S.tot = V.tot; S.pre = V.pre; S.len = V.len; S.ac = V.ac; S.aoff = V.aoff; S.aend = V.aend; S.join = V.join; S.X = V.X || S.X; S.rho = V.rho || 0;
+      S.wu = !!V.wu; S.ddA = !!V.ddA; S.ddMap = V.ddMap || null; S.dr0 = V.dr0 || null; S.zo = V.zo || 0; S.kc = V.kc || null; S.zoN = null; S.kcN = null; S.pv++;
+      if (S.ddN) { this.ddBack(S.id, S.ddN.dst); S.ddN = null; }
+    }
+    wsVerOf(Z) { const n = Number.isFinite(Z.n) ? Z.n : Z.ch.length * this.CH; return (Z.ver = { ch: Z.ch, tot: n, pre: 0, len: Z.len, ac: Z.ch, aoff: Z.len, aend: n, join: 'ola', X: this.xf(), rho: 0, wu: true, ddA: true, ddMap: null, dr0: null, ws: Z }); }
+    wsTake(S, Z, seam, X) {
+      const W = S.ws, was = this.wsVer(S);
+      this.wsPrev(S, W.hold || Z.must ? null : was);   // (the last complete pass: the fallback while this one streams – none after a follow change)
+      this.wsSet(S, this.wsVerOf(Z), seam, X);
+      W.cur = Z; Z.on = true; W.hold = false;
+    }
+    // the fallback changes: a fixed version no read needs any more goes back to the page (a slot's goes with its slot)
+    wsPrev(S, V) {
+      const W = S.ws, o = W.prev; W.prev = V;
+      if (!o || o.ws || (V && V.ch === o.ch) || S.ch === o.ch || (S.old && S.old.ch === o.ch) || (S.park && S.park.some((p) => p.ch === o.ch))) return;
+      if (this.uses(S, o)) (S.park || (S.park = [])).push(o); else this.gvQ.push([{ schicht: S.id, old: 1 }, [o]]);
+    }
+    // silent from now (a pass that must come is not there): the version crosses to nothing, the tails ringing fade
+    wsHold(S, X, seam) {
+      const W = S.ws; if (W.hold) return;
+      this.wsSet(S, { ch: [], tot: 0, pre: 0, len: S.len, ac: [], aoff: 0, aend: 0, join: 'ola', X: S.X, wu: true, ddA: true }, !!seam, X);
+      for (let t = 0; t < S.tn; t++) if (!S.tfN[t]) { S.tfN[t] = X; S.tfI[t] = 0; }
+      W.hold = true; this.wsPrev(S, null); W.cur = null;
+    }
+    // at a pass start: its slot, if it is there; else the version plays on (late – the page hears of it), or, for a pass
+    // that must come, silence until it does
+    wsSeam(L, S, x) {
+      const W = S.ws, k = L.k;
+      let Z = null; for (const o of W.slots) if (o.k === k && !o.dead) Z = o;
+      if (W.cur && W.cur.hi * this.CH >= W.cur.n && W.prev) this.wsPrev(S, null);   // (complete: no fallback needed)
+      if (!Z) { if (W.hold) return; return; }
+      if (Z.at > L.s0 + 1) return;   // (its moment comes later in the pass: wsat)
+      const ok = this.wsReady(Z, 0, 4 * this.S);
+      // (a warm version – an Abdruck, joined by its crossfade – goes on in its Ausklang, or its own continuation fading over
+      // its X, under the cold Wuchs pass; a cold one's tail was added by advance)
+      if ((ok || Z.must) && S.join !== 'ola' && S.pp && !W.hold) { if (S.aend > S.aoff) this.tail(S, false, 0, S.aoff, 0); else this.tail(S, false, 1, S.pre + S.pe, S.X); }
+      if (ok) { this.wsTake(S, Z, !W.hold, this.xf()); return; }
+      this.port.postMessage({ late: { loop: L.id, schicht: S.id, k } });
+      if (Z.must) this.wsHold(S, this.xf(), true);
+    }
+    // a slot's own moment (a follow change at the announced bar, a pre-rolled pass at a tempo change)
+    wsAt(d, x) {
+      const S = d.S, Z = d.Z, L = this.loopOf(S);
+      if (!L || Z.dead || Z.on || !S.ws || S.dying || S.dead || L.k !== Z.k) return;
+      if (this.wsReady(Z, S.q, 4 * this.S)) { this.wsTake(S, Z, false, this.xf()); return; }   // (the slot's own position: a pass has no margin – S.pre is the version playing now's)
+      this.port.postMessage({ late: { loop: L.id, schicht: S.id, k: Z.k } });
+      if (Z.must) this.wsHold(S, this.xf());
+    }
+    // every span, before the reads: a slot of this pass that came late (or after a hold) is taken at the same place; the
+    // pass playing whose blocks are late falls back to the last complete pass there (or silence after a follow change)
+    wsCheck(L, S, n) {
+      const W = S.ws, k = L.k, X = this.xf();
+      for (const Z of W.slots) if (Z.k === k && !Z.on && !Z.dead && L.s0 + Math.max(0, S.q) >= Z.at - 1 && this.wsReady(Z, S.q, n * 1.05)) { this.wsTake(S, Z, false, X); return; }
+      if (W.cur && S.ch === W.cur.ch && !this.wsReady(W.cur, S.pre + S.q, n * 1.05)) {
+        this.port.postMessage({ late: { loop: L.id, schicht: S.id, k } });
+        const P2 = W.prev;
+        // (the version crossing out is the late slot's: wsSet must see it as the stream's current one, so the slot stays
+        // until the crossfade is over – cleared first, its chunks went back while still read: NaN, found by t-hx-wuchs)
+        if (P2) { W.prev = null; this.wsSet(S, P2, false, X); W.cur = null; }
+        else this.wsHold(S, X, false);
+      }
+    }
+    // slots no read needs any more go back to the page (their tails ended, their pass passed unheard)
+    wsGc(L, S) {
+      const W = S.ws;
+      for (let i = 0; i < W.slots.length; i++) {
+        const Z = W.slots[i];
+        if (Z === W.cur || (W.prev && W.prev.ws === Z) || (S.old && S.old.ws === Z) || (S.park && S.park.some((v) => v.ws === Z)) || S.ch === Z.ch) continue;
+        if (!Z.on && !Z.dead && Z.k >= L.k) continue;   // (still to come)
+        let used = false; for (let t = 0; t < S.tn; t++) if (S.tc[t] === Z.ch) { used = true; break; }
+        if (used) continue;
+        this.wsDrop(S, Z); W.slots.splice(i--, 1);
+      }
+      if (S.park) for (let i = 0; i < S.park.length; i++) if (S.park[i].ws && !this.uses(S, S.park[i])) S.park.splice(i--, 1);   // (a slot's version: its chunks go with the slot)
+    }
+    wsDrop(S, Z) {
+      Z.dead = true; if (Z.port) { try { Z.port.close(); } catch (e) {} Z.port = null; }
+      this.gvQ.push([{ schicht: S.id, old: 1, ws: 1 }, [{ ch: Z.ch }]]);
+    }
+    // every slot of a Schicht going back to the page (an undo, a clear)
+    wsAll(S) { if (!S.ws) return []; const a = []; for (const Z of S.ws.slots) { Z.dead = true; if (Z.port) { try { Z.port.close(); } catch (e) {} Z.port = null; } a.push({ ch: Z.ch }); } S.ws.slots.length = 0; S.ws.cur = S.ws.prev = null; return a; }
+    // the page stops a living Schicht's stream (its fixed version comes back): passes not yet heard are dropped
+    wsStop(S) {
+      const W = S.ws; if (!W) return;
+      for (let i = 0; i < W.slots.length; i++) { const Z = W.slots[i]; if (!Z.on && Z !== W.cur) { this.wsDrop(S, Z); W.slots.splice(i--, 1); } }
+      if (this.gvQ.length) { for (const g of this.gvQ) this.give(g[0], g[1]); this.gvQ.length = 0; }
+    }
     // ---- timed actions (the frame x they act at) ----
     xf(v) { return Math.max(1, Math.round(v != null ? v : 0.01 * SR)); }   // a fade's frames (10 ms unless told)
     act(e, x) {
@@ -9845,17 +10019,19 @@ function myzelDsp() {
       } else if (e.kind === 'replace') {
         const S = this.sch(d.schicht), B = e.S, L = S && this.loopOf(S);
         if (!S) { this.give({ schicht: d.schicht }, [B]); return; }
-        if (S.old) { if (this.uses(S, S.old)) (S.park || (S.park = [])).push(S.old); else this.give({ schicht: S.id, old: 1 }, [S.old]); }   // (an Ausklang still reading it keeps it)
+        if (S.old) { if (S.old.ws || this.uses(S, S.old)) (S.park || (S.park = [])).push(S.old); else this.give({ schicht: S.id, old: 1 }, [S.old]); }   // (an Ausklang still reading it keeps it; step 2a: a stream slot's version goes with its slot)
         const O = B.xo, seam = !!(L && L.k >= 0 && Math.abs(x - L.s1) <= 1);   // at its seam: the seam's own crossfade joins the versions
         B.xo = null;
         if (B.zoN != null) S.zoN = B.zoN;
         if (B.kcN != null) S.kcN = B.kcN;
         // (the old version plays out of its own output to its end: a baked one moves from out 1 to out 0 at this seam)
-        S.old = { ch: S.ch, tot: S.tot, pre: S.pre, len: S.len, ac: S.ac, aoff: S.aoff, aend: S.aend, xo: O, seam, out: S.out, end: seam ? L.s1 + Math.max(S.zo, S.zoN != null ? S.zoN : 0) + S.X : 0, ddA: S.ddA, ddMap: S.ddMap };
+        S.old = { ch: S.ch, tot: S.tot, pre: S.pre, len: S.len, ac: S.ac, aoff: S.aoff, aend: S.aend, xo: O, seam, out: S.out, end: seam ? L.s1 + Math.max(S.zo, S.zoN != null ? S.zoN : 0) + S.X : 0, ddA: S.ddA, ddMap: S.ddMap, join: S.join, X: S.X, ws: S.ws ? S.ws.cur : null };
         if (S.ddN) { this.ddBack(S.id, S.ddN.dst); S.ddN = null; }   // (step 1d: a new version reads as played; its own de-drifted version later)
         S.ddA = false; S.dr0 = null; S.ddMap = null; S.pv++; S.ddReq = -1; S.ddOk = d.dd !== 0;
+        S.wu = !!B.wu; if (S.wu) S.ddA = true;   // (step 2a: a Wuchs version reads at the live drift alone)
+        if (S.ws) { this.wsPrev(S, null); S.ws.cur = null; S.ws.hold = false; }   // (a fixed version now: the stream's passes, if any, take over again at their pass)
         if (B.out >= 0) S.out = B.out;
-        if (seam) { O.v = O.a = O.b = 0; O.i = O.N = 0; } else { O.v = 1; envGo(O, 0, this.xf(d.X)); S.xin.v = 0; envGo(S.xin, 1, this.xf(d.X)); }
+        if (seam) { O.v = O.a = O.b = 0; O.i = O.N = 0; } else { O.v = 1; envGo(O, 0, this.xf(d.X)); S.xin.v = 0; envGo(S.xin, 1, this.xf(d.X)); S.xrho = B.wu ? this.corr(S.old.ch, S.old.tot, S.old.pre + S.q, B.ch, B.tot, B.pre + S.q, this.xf(d.X)) : 0; }   // (step 2a: a Wuchs version, normalised as the streams' crossings)
         S.ch = B.ch; S.tot = B.tot; S.pre = B.pre; S.len = B.len; S.ac = B.ac; S.aoff = B.aoff; S.aend = B.aend; S.afd = B.afd || 0;
         if (B.dr) S.dr = B.dr;
         if (B.join) { S.join = B.join; S.X = B.X; S.rho = B.rho; }
@@ -9887,6 +10063,7 @@ function myzelDsp() {
       } else if (e.kind === 'gain') {
         if (d.schicht == null) { const L = this.lp(d.loop); if (L) { if (d.g != null) envGo(L.lv, +d.g, this.xf(d.ramp)); if (d.pan != null) L.pan = Math.max(-1, Math.min(1, +d.pan)); } }
         else { const S = this.sch(d.schicht); if (S && !S.dying) { S.g = +d.g; S.fd = 0; envGo(S.e, S.g, this.xf(d.ramp)); } }
+      } else if (e.kind === 'wsat') { this.wsAt(d, x);
       } else if (e.kind === 'undo') {
         const S = this.sch(d.schicht); if (S && !S.dead) { S.fd = 0; envGo(S.e, 0, this.xf(d.X)); S.dying = true; }
       } else if (e.kind === 'clear') {
@@ -9902,7 +10079,7 @@ function myzelDsp() {
     // hand buffers back to the page (undo, clear, a swapped version): transferred, so this thread keeps nothing
     give(what, bufs) {
       const ch = [], tr = [], seen = new Set();
-      for (const B of bufs) for (const list of [B.ch, B.ac]) for (const c of list || []) if (!seen.has(c[0])) { seen.add(c[0]); ch.push(c); tr.push(c[0].buffer, c[1].buffer); }
+      for (const B of bufs) for (const list of [B.ch, B.ac]) for (const c of list || []) if (c && c[0].buffer.byteLength && !seen.has(c[0])) { seen.add(c[0]); ch.push(c); tr.push(c[0].buffer, c[1].buffer); }   // (step 2a: a slot's chunks not yet streamed are null)
       this.port.postMessage({ freed: Object.assign(what, { chunks: ch }) }, tr);
     }
     // ---- reading: n frames of a chunk list (tot frames) from position p, step r per frame, × gain (g, or ga per frame) into (oL, oR) at o
@@ -9929,7 +10106,8 @@ function myzelDsp() {
         if (i0 + RS_T <= 0 || i0 >= tot) continue;
         let sl = 0, sr = 0;
         if (i0 >= 0 && i0 + RS_T <= tot && (i0 & M) + RS_T <= M + 1) {   // all 32 taps in one chunk
-          const c = ch[i0 >> SH], L = c[0], R = c[1], j0 = i0 & M;
+          const c = ch[i0 >> SH]; if (!c) continue;   // (step 2a: a Wuchs pass's chunk not streamed in yet reads as silence – never a throw)
+          const L = c[0], R = c[1], j0 = i0 & M;
           for (let t = 0; t < RS_T; t++) { const w = T[c0 + t] + a * (T[c0 + RS_T + t] - T[c0 + t]); sl += w * L[j0 + t]; sr += w * R[j0 + t]; }
         } else {
           for (let t = 0; t < RS_T; t++, i0++) {
@@ -10090,6 +10268,7 @@ function myzelDsp() {
       this.done += n;
       // reports: the clock pair, the meters
       if ((this.rep -= n) <= 0) { this.rep += Math.round(0.25 * SR); this.port.postMessage({ frame: F, t: currentTime }); }
+      if (this.wpt.length && (this.wrep -= n) <= 0) { this.wrep += Math.round(0.1 * SR); for (const p of this.wpt) p.postMessage({ fr: F + n }); }
       if ((this.loops.length || this.hOK) && (this.met -= n) <= 0) {   // (and the two rings' input level: what the Humus holds)
         this.met += Math.round(SR / 15);
         const lo = []; for (const L of this.loops) { lo.push([L.id, L.mn ? Math.sqrt(L.ms / L.mn) : 0, L.mp]); L.ms = L.mp = L.mn = 0; }
@@ -10151,7 +10330,7 @@ function myzelDsp() {
         for (let i = 0; i < this.loops.length; i++) {
           const L = this.loops[i];
           this.loopSpan(L, F + s, F + e, s, outs);
-          if (L.dying && (L.k < 0 || (L.st.i >= L.st.N && L.st.v === 0))) { this.give({ loop: L.id }, L.sch.filter((S) => !S.dead).concat(L.sch.filter((S) => S.old).map((S) => S.old), ...L.sch.map((S) => S.park || []), L.sch.filter((S) => S.ddN).map((S) => ({ ch: S.ddN.dst })))); this.loops.splice(i--, 1); }
+          if (L.dying && (L.k < 0 || (L.st.i >= L.st.N && L.st.v === 0))) { this.give({ loop: L.id }, L.sch.filter((S) => !S.dead).concat(L.sch.filter((S) => S.old).map((S) => S.old), ...L.sch.map((S) => S.park || []), L.sch.filter((S) => S.ddN).map((S) => ({ ch: S.ddN.dst })), ...L.sch.map((S) => this.wsAll(S)))); this.loops.splice(i--, 1); }
         }
       }
     }
@@ -10190,6 +10369,7 @@ function myzelDsp() {
         const S = L.sch[si];
         if (S.dead) continue;
         any = true;
+        if (S.ws && !S.dying) this.wsCheck(L, S, n);   // (step 2a: a living Schicht's pass – late, arrived, its moment)
         if (S.r !== S.rt) { S.r += S.rv * n; if (!(S.rv > 0 ? S.r < S.rt : S.r > S.rt)) S.r = S.rt; }
         // Taumeln: read faster or slower by the drift now against the drift there when it was played (step 1c) – or, a
         // de-drifted version (step 1d: its own drift taken out once, offline), by the drift now alone; rX: the other
@@ -10228,6 +10408,10 @@ function myzelDsp() {
         // rho, so the level holds through the fade whatever the phases (the gain at most ×2)
         const zA = S.zo, jz = j0 + so, zx = S.join === 'xf' && S.pp && L.k > 0 && jz < zA + S.X ? Math.min(m, zA + S.X - jz) : 0;
         const xr = !this.env(S.xin, this.gC, ko, m) ? null : this.gC;
+        // (step 2a) a mid-pass crossing between Wuchs versions: the equal-power pair normalised by their correlation
+        const xn = xr && S.xrho && S.old && !S.old.seam ? this.gN : null;
+        if (xn) for (let k = ko; k < ko + m; k++) { const a = xr[k], b = Math.sqrt(Math.max(0, 1 - a * a)); xn[k] = Math.min(2, 1 / Math.sqrt(Math.max(0.25, 1 + 2 * S.xrho * a * b))); xr[k] = a * xn[k]; }
+        else if (!xr) S.xrho = 0;
         if (zx || xr) {
           const gB = this.gB, gI = this.gD;
           for (let k = ko; k < ko + m; k++) gB[k] = (gc ? g : gA[k]) * (xr ? xr[k] : 1);
@@ -10243,7 +10427,7 @@ function myzelDsp() {
               else nk = Math.min(2, 1 / Math.sqrt(Math.max(0.25, 1 + 2 * rho * a * b)));
               gI[k] = w * b * nk; gB[k] *= a * nk;
             }
-            const C = S.old && S.old.seam ? S.old : S, co = C === S ? S.out : C.out, Vc = V[co];   // (the pass that ended: the version swapped out at this seam, out of its own output)
+            const C = S.old && S.old.seam && (!S.old.tld || S.old.kS === L.k) ? S.old : S, co = C === S ? S.out : C.out, Vc = V[co];   // (the pass that ended: the version swapped out at this seam, out of its own output – at that seam only, step 2a)
             used |= 1 << co;
             this.rd(C.ch, C.tot, C.pre + S.pe + qs, !!C.ddA === !!S.ddA ? r : rX, zx, ko, 0, gI, Vc[0], Vc[1]);
           }
@@ -10254,8 +10438,9 @@ function myzelDsp() {
           used |= 1 << O.out;
           if (oc) for (let k = ko; k < ko + m; k++) gO[k] = O.xo.v;
           for (let k = ko; k < ko + m; k++) gO[k] *= gc ? g : gA[k];
+          if (xn) for (let k = ko; k < ko + m; k++) gO[k] *= xn[k];
           const same = !!O.ddA === !!S.ddA;   // (a de-drifted version crossing a new one mid-pass: at the same place of the music)
-          this.rd(O.ch, O.tot, same ? O.pre + qs : O.ddA ? this.ddInv(O.ddMap, O.pre, S.pre + qs) : S.pre + qs, same ? r : rX, m, ko, 0, gO, Vx[0], Vx[1]);
+          this.rd(O.ch, O.tot, same ? O.pre + qs : O.ddA ? this.ddInv(O.ddMap, O.pre, O.pre + qs) : O.pre + qs, same ? r : rX, m, ko, 0, gO, Vx[0], Vx[1]);   // (step 2a: each version from its own start – a Wuchs one has no margin)
         }
         // the Ausklang streams of earlier passes (free ones – a stop's – are not under the loop's state)
         for (let t = 0; t < S.tn; t++) {
@@ -10280,9 +10465,10 @@ function myzelDsp() {
           if (S.tb[t] + S.tq[t] >= lim + RS_T || (N && S.tfI[t] >= N)) { const e = S.tn - 1; S.tq[t] = S.tq[e]; S.tb[t] = S.tb[e]; S.tc[t] = S.tc[e]; S.tl[t] = S.tl[e]; S.tfr[t] = S.tfr[e]; S.tfN[t] = S.tfN[e]; S.tfI[t] = S.tfI[e]; S.tsrc[t] = S.tsrc[e]; S.tout[t] = S.tout[e]; S.tsd[t] = S.tsd[e]; S.tc[e] = null; S.tn--; t--; }
         }
         // (what goes back to the page goes once this span's summed reads are done – a read of it may be waiting in a group)
-        if (S.old && (S.old.seam ? Y >= S.old.end : S.old.xo.i >= S.old.xo.N) && !this.uses(S, S.old)) { const O = S.old; S.old = null; this.gvQ.push([{ schicht: S.id, old: 1 }, [O]]); }   // (the old version done: back to the page)
-        if (S.park) for (let i = 0; i < S.park.length; i++) if (!this.uses(S, S.park[i])) { this.gvQ.push([{ schicht: S.id, old: 1 }, [S.park[i]]]); S.park.splice(i--, 1); }   // (versions kept for their Ausklänge)
-        if (S.dying && S.e.i >= S.e.N && S.e.v === 0) { S.dead = true; S.tn = 0; this.gvQ.push([{ schicht: S.id }, (S.old ? [S, S.old] : [S]).concat(S.park || [], S.ddN ? [{ ch: S.ddN.dst }] : [])]); S.old = null; S.park = null; S.ddN = null; L.sch.splice(si--, 1); }
+        if (S.old && (S.old.seam ? Y >= S.old.end : S.old.xo.i >= S.old.xo.N) && !this.uses(S, S.old)) { const O = S.old; S.old = null; if (!O.ws && !(S.ws && S.ws.prev && S.ws.prev.ch === O.ch)) this.gvQ.push([{ schicht: S.id, old: 1 }, [O]]); }   // (the old version done: back to the page – a stream slot's goes with its slot, the fallback stays)
+        if (S.park) for (let i = 0; i < S.park.length; i++) if (!this.uses(S, S.park[i])) { if (!S.park[i].ws && !(S.ws && S.ws.prev && S.ws.prev.ch === S.park[i].ch)) this.gvQ.push([{ schicht: S.id, old: 1 }, [S.park[i]]]); S.park.splice(i--, 1); }   // (versions kept for their Ausklänge)
+        if (S.ws) this.wsGc(L, S);
+        if (S.dying && S.e.i >= S.e.N && S.e.v === 0) { S.dead = true; S.tn = 0; this.gvQ.push([{ schicht: S.id }, (S.old ? [S, S.old] : [S]).concat(S.park || [], S.ddN ? [{ ch: S.ddN.dst }] : [], this.wsAll(S))]); S.old = null; S.park = null; S.ddN = null; L.sch.splice(si--, 1); }
       }
       if (sum) for (let k = 0; k < 4; k++) if (this.gM[k].n) { const Vg = V[k >> 1]; this.grpRun(k, n, o, (k & 1) ? Vg[2] : Vg[0], (k & 1) ? Vg[3] : Vg[1]); }
       if (this.gvQ.length) { for (let i = 0; i < this.gvQ.length; i++) this.give(this.gvQ[i][0], this.gvQ[i][1]); this.gvQ.length = 0; }
@@ -10338,12 +10524,60 @@ function myzelDsp() {
     }
     stat() {
       let sc = 0, sn = 0; const seen = new Set();
-      for (const L of this.loops) for (const S of L.sch) { sn++; for (const c of S.ch) if (!seen.has(c[0])) { seen.add(c[0]); sc++; } }
+      for (const L of this.loops) for (const S of L.sch) { sn++; for (const c of S.ch) if (c && !seen.has(c[0])) { seen.add(c[0]); sc++; } }   // (step 2a: a stream's chunk not there yet is null)
       return { F: this.F, hN: this.hN, hum: this.hum[0].length + this.hum[1].length, free: this.free.length, schChunks: sc, schichten: sn, loops: this.loops.length,
-        jobs: this.jobs.length, q: this.q.length, segs: this.nS, h0: this.h0, alloc: this.nA, capF: this.capF, jx: this.jobs.map((J) => [J.dd ? 'dd' : J.rs ? 'rs' : J.S ? 'fill' : 'grab', J.x - (J.f0 || 0), (J.f1 || 0) - (J.f0 || 0)]), dd: this.loops.map((L) => L.sch.map((S) => (S.ddA ? 1 : S.ddN ? 0.5 : 0))) };   // (step 1d: the jobs' progress, de-drifted Schichten)
+        jobs: this.jobs.length, q: this.q.length, segs: this.nS, h0: this.h0, alloc: this.nA, capF: this.capF, jx: this.jobs.map((J) => [J.dd ? 'dd' : J.rs ? 'rs' : J.S ? 'fill' : 'grab', J.x - (J.f0 || 0), (J.f1 || 0) - (J.f0 || 0)]), dd: this.loops.map((L) => L.sch.map((S) => (S.ddA ? 1 : S.ddN ? 0.5 : 0))),
+        ws: this.loops.map((L) => L.sch.map((S) => (S.ws ? { n: S.ws.slots.length, cur: S.ws.cur ? S.ws.cur.k : null, hold: S.ws.hold ? 1 : 0, ks: S.ws.slots.map((Z) => [Z.k, Z.c0, Z.hi, Number.isFinite(Z.n) ? Z.n : -1, Z.on ? 1 : 0]) } : { wu: S.wu ? 1 : 0, tn: S.tn }))), wpt: this.wpt.length };   // (step 2a: the streams)   // (step 1d: the jobs' progress, de-drifted Schichten)
     }
   }
 
+  // (step 2a) the Werk-Rahmen's sink: a Wuchs pass rendered offline goes to myzel-ring in chunks of 8192 frames, through a
+  // port of its own (transferred: the live thread never allocates them) – from the chunk that holds `from` on (a pass
+  // rendered from its start, heard from a later frame); past the pass body the tail is watched, and the stream ends at the
+  // first whole chunk 90 dB under the body's peak. A render whose tail is still sounding at its end (its length is the
+  // page's estimate of the tail) fades over its last 30 ms – never an edge (the realm measures the tail on its render)
+  class WSend extends AudioWorkletProcessor {
+    constructor(o) {
+      super();
+      const po = (o && o.processorOptions) || {};
+      this.CH = po.chunk || 8192; this.n = Math.max(1, po.n | 0); this.body = po.body | 0; this.from = Math.floor(Math.max(0, po.from | 0) / this.CH) * this.CH;
+      this.F = 0; this.L = null; this.R = null; this.out = null; this.q = []; this.pk = 0; this.cpk = 0; this.done = false;
+      this.fN = Math.min(Math.max(1, this.n - this.body), Math.round(0.03 * SR));   // (the last frames: the fade if it gets there)
+      this.port.onmessage = (e) => { const d = e.data; if (d && d.port) { this.out = d.port; for (const [m, tr] of this.q) this.out.postMessage(m, tr); this.q = []; } };
+    }
+    send(m, tr) { if (this.out) this.out.postMessage(m, tr || []); else this.q.push([m, tr || []]); }
+    process(inputs) {
+      if (this.done) return true;
+      const a = inputs[0], l = a && a[0], r = a && (a[1] || a[0]), n = l ? l.length : 128, CH = this.CH;
+      let k = 0;
+      while (k < n && this.F < this.n && !this.done) {
+        const F = this.F, j = F % CH, m = Math.min(n - k, CH - j, this.n - F);
+        if (F >= this.from) {
+          if (!this.L) { this.L = new Float32Array(CH); this.R = new Float32Array(CH); this.cpk = 0; }
+          if (l) {
+            const L = this.L, R = this.R, f0 = this.n - this.fN; let p = this.cpk;
+            for (let z = 0; z < m; z++) {
+              let x = l[k + z], y = r[k + z];
+              if (F + z >= f0) { const w = Math.cos(1.5707963267948966 * (0.5 - 0.5 * Math.cos(Math.PI * (F + z - f0 + 0.5) / this.fN))); x *= w; y *= w; }
+              L[j + z] = x; R[j + z] = y; const ax = x < 0 ? -x : x, ay = y < 0 ? -y : y; if (ax > p) p = ax; if (ay > p) p = ay;
+            }
+            this.cpk = p;
+          }
+        }
+        k += m; this.F += m;
+        if (this.F % CH === 0 || this.F >= this.n) {
+          const ci = Math.floor((this.F - 1) / CH), st = ci * CH;
+          if (this.L) {
+            if (st < this.body) this.pk = Math.max(this.pk, this.cpk);
+            if (st >= this.body && this.cpk <= this.pk * 3.2e-5) { this.send({ end: st }); this.done = true; this.L = this.R = null; break; }   // (−90 dB)
+            this.send({ i: ci, L: this.L, R: this.R }, [this.L.buffer, this.R.buffer]); this.L = this.R = null;
+          }
+          if (this.F >= this.n) { this.send({ end: this.n }); this.done = true; }
+        }
+      }
+      return true;
+    }
+  }
   // „Alles“ into its Ring's ring 1, at that Ring's frame count (both see the same render quantum)
   class RingIn extends AudioWorkletProcessor {
     constructor(o) { super(); this.rid = (o && o.processorOptions && o.processorOptions.rid) || 0; }
@@ -10355,7 +10589,7 @@ function myzelDsp() {
   }
   // an empty voice: the per-node price of the contract (SPEC §8 step 1 gate, ≈ 0.06 + 0.03 per param)
   class Null extends MyzelProc { render(L, R, a, b) { for (let i = a; i < b; i++) L[i] = 0; } }
-  for (const [k, C] of [['myzel-blow', Blow], ['myzel-scan', Scan], ['myzel-bow', Bow], ['myzel-rot', Rot], ['myzel-aeol', Aeol], ['myzel-gendy', Gendy], ['myzel-web', Web], ['myzel-string', Strg], ['myzel-syrinx', Syrinx], ['myzel-scrape', Scrape], ['myzel-ember', Ember], ['myzel-null', Null], ['myzel-ring', Ring], ['myzel-ring-in', RingIn]]) registerProcessor(k, C);
+  for (const [k, C] of [['myzel-blow', Blow], ['myzel-scan', Scan], ['myzel-bow', Bow], ['myzel-rot', Rot], ['myzel-aeol', Aeol], ['myzel-gendy', Gendy], ['myzel-web', Web], ['myzel-string', Strg], ['myzel-syrinx', Syrinx], ['myzel-scrape', Scrape], ['myzel-ember', Ember], ['myzel-null', Null], ['myzel-ring', Ring], ['myzel-ring-in', RingIn], ['myzel-wsend', WSend]]) registerProcessor(k, C);
   return { SIN, NOISE, Reso, Biquad, Allpass1, OnePole, DcBlock, FracDelay, PRNG };   // (for later processors; unused here)
 }
 // end myzelDsp
@@ -17464,7 +17698,9 @@ function updInactive() {
   for (const el of document.querySelectorAll('#p-dly-div')) el.parentNode.classList.toggle('inactive', !P['dly.sync']);
 }
 function onParamChanged(id) {
+  if ((id === 't.root' || id === 't.scale') && hxWTonHold(id)) return;   // Hexenring: (step 2a) the field and the loops change key on the announced bar line
   const pre = id.slice(0, id.indexOf('.'));
+  if (HX.wFeld && A.ctx && (ENGINES[pre] || id === 'v.eng' || id === 'v.layer')) HX.wKlang = performance.now() + 400;   // Hexenring: (step 2a) loops that sound as the field: anew, once the knob rests
   if (id === 'v.eng' || id === 'v.layer') { refreshEngineUI(); }
   if (KQ_PIDS.includes(id) && !UI.loading) kqUsed(P[id]);
   if ((id === 'v.eng' || id === 'v.layer' || /^l\d\.eng$/.test(id)) && WORKLET_ENGINES.has(P[id])) dspMaybe();
@@ -17499,7 +17735,7 @@ function onParamChanged(id) {
     case 'mst': updMaster(); break;
     case 'bor': updBordun(); break;
     case 'mix': if (id === 'mix.pulsVol' || id === 'mix.pulsMute') for (const st of MIX.list) if (st.lane != null) updStrip(st); break;
-    case 'seq': if (id === 'seq.bpm') { TG.hxOn = false; seqRetempo(); updDelay(); } break;   // (Hexenring: the slider takes the tempo back from a Schleife)
+    case 'seq': if (id === 'seq.bpm') { TG.hxOn = false; seqRetempo(); updDelay(); hxWTempo(); } break;   // (Hexenring: the slider takes the tempo back from a Schleife; step 2a: loops with notes follow it)
     case 'neb':
       if (id === 'neb.cut' || id === 'neb.ymod' || id === 'neb.res') for (const t of touches.values()) for (const { v } of t.voices) if (v.alive && v.eng === 'neb') { v.setY(modY(t)); setP(v.filt.Q, P['neb.res']); }
       break;
@@ -24898,6 +25134,7 @@ function hxTempo(bpm) {
   if (!SEQ.ext) tgRetempo(TG.hx);
   for (const fn of CTL['seq.bpm'] || []) fn(P['seq.bpm'], null);
   updDelay();
+  if (typeof hxWTempo === 'function') hxWTempo();   // (step 2a: loops with notes follow)
 }
 function hxTempoFree() {
   if (!TG.hxOn || TG.keep) return;
@@ -24911,7 +25148,7 @@ const HX_CH = 8192;
 // SPEC §21): the processor with both rings recording, its Gespielt taps and (step 1b) the node myzel-ring-in that writes
 // the Alles ring, with both rings' input level, 0.71–0.81 (step 1a, without that node: 0.55–0.59); per playing Schicht, its
 // seams included, 0.19–0.27; extra per Schicht while its loop is resampled 0.75–0.84
-const HX_COST = { capture: 1.33, schicht: 0.39, rs: 1.32, fx1: 2.71, dd: 3.5 };   // (klang/tests/cost.js, re-measured in step 1d: SPEC §21)
+const HX_COST = { capture: 1.33, schicht: 0.39, rs: 1.32, fx1: 2.71, dd: 3.5, stream: 0.6 };   // (klang/tests/cost.js, re-measured in step 1d: SPEC §21; stream: step 2a)
 const HX = { node: null, ctx: null, state: '', fR: 0, tR: 0, loops: new Map(), sch: new Map(), lid: 0, sid: 0, gid: 0, wait: new Map(), meter: [], back: [], ddRun: new Set(), dd: 0,
   mask: new Set(['fin', 'eb2', 'rgn', 'gsp']), fx: null, fx1: null, play: 0, rs: 0, ev: [], evI: 0, evId: 0 };
 const hxF = (t) => HX.fR + (t - HX.tR) * SR;   // audio time → the processor's frame (its own count, mapped by its reports)
@@ -24920,6 +25157,7 @@ const hxLive = () => !!(A.ctx && !(typeof OfflineAudioContext !== 'undefined' &&
 function hxPost(m, tr) {
   if (!HX.node || HX.ctx !== A.ctx) return false;
   if (m.loop) { if (IDLE.on) idleWake(); if (IDLE.hxOff) hxGates(true); IDLE.hxT = null; }   // Ruhe: a Schleife will sound
+  else if ((m.wst || m.replace || m.schicht) && (IDLE.on || IDLE.hxOff)) { if (IDLE.on) idleWake(); if (IDLE.hxOff) hxGates(true); IDLE.hxT = null; }   // (step 2a: a Wuchs pass, a version – it sounds through the same way)
   if (HX.batch) {   // (hxBatch: one message – a key twice sends what is there first)
     const B = HX.batch;
     if (Object.keys(m).some((k) => k in B.m)) { const o = B.m, t = B.tr; B.m = {}; B.tr = []; try { HX.node.port.postMessage(o, t); } catch (e) { console.warn(e); } }
@@ -24973,12 +25211,14 @@ function hxNode() {
   hxSeg(tgIdx(ctx.currentTime), true);
   hxMaskSync();
   hxRailShow();
+  hxwWportAll(); HX.tonP = { root: P['t.root'], scale: P['t.scale'] };   // (step 2a: the realms' pacing; the key the field plays in)
   if (HX.restore) setTimeout(hxRestoreApply, 300);   // Hexenring: the Schleifen of the last session come back, angehalten
 }
 // which strips „Gespielt“ hears: the sources always, the Puls and the Bordun when asked
 function hxMaskSync() { hxMask(['fin', 'eb2', 'rgn', 'gsp'].concat(P['hx.pulsMit'] ? ['l0', 'l1', 'l2', 'l3'] : [], P['hx.borMit'] ? ['bor'] : [])); }
 function hxParam(id) {
   if (id === 'hx.rail') hxRailShow();
+  if (id === 'hx.stufe') for (const L of hxLoopsLive()) if (hxWAktiv(L)) hxWUpdate(L);   // (step 2a)
   if ((id === 'hx.pulsMit' || id === 'hx.borMit') && A.ctx) hxMaskSync();
   if (id === 'hx.laenge') for (const w of CTLWRAP['hx.festT'] || []) w.classList.toggle('inactive', P['hx.laenge'] !== 'fest');
   hxRailDirty(); hxCardDirty();
@@ -24996,7 +25236,7 @@ function hxMsg(m) {
       for (const [id, S] of HX.sch) if (S.loop === d.loop) { HX.sch.delete(id); const ws = HX.wait.get('s' + id); if (ws) { HX.wait.delete('s' + id); ws(null); } }   // Hexenring: (step 1d) one taken back while it faded came back with its loop
       HX.loops.delete(d.loop); hxCount(); hxStripSync();
     }
-    if (w) { HX.wait.delete(key); w(d.chunks); } else HX.back.push(d.chunks);   // (kept for a redo; dropped once the next step's history knows better)
+    if (w) { HX.wait.delete(key); w(d.chunks); } else if (!d.ws) HX.back.push(d.chunks);   // (kept for a redo; dropped once the next step's history knows better – step 2a: a stream's chunks never)
     if (HX.back.length > 64) HX.back.shift();
   }
   if (m.meter) HX.meter = m.meter.loops;
@@ -25120,6 +25360,7 @@ function hxGain(target, g, at, ramp, pan) {
 // a Schicht out (its seam fade), a loop or all out; → Promise of the chunks the processor hands back
 function hxUndo(schicht, at, X) {
   const S = HX.sch.get(schicht); if (!S) return Promise.resolve(null);
+  if (S.wRe) hxWStop(S, true);   // (step 2a: its living passes no longer render)
   const L = HX.loops.get(S.loop); if (L) L.sch = L.sch.filter((id) => id !== schicht);
   hxCount();
   return new Promise((res) => { HX.wait.set('s' + schicht, res); if (!hxPost({ undo: { schicht, f: hxAt(at), X: X != null ? Math.round(X * SR) : undefined } })) { HX.wait.delete('s' + schicht); res(null); } });
@@ -25127,7 +25368,7 @@ function hxUndo(schicht, at, X) {
 function hxClear(loop, at, X) {
   const all = loop === 'all', ids = all ? [...HX.loops.keys()] : [loop];
   const ps = ids.map((id) => new Promise((res) => HX.wait.set('l' + id, res)));
-  for (const id of ids) { const L = HX.loops.get(id); if (L) L.state = 'weg'; }
+  for (const id of ids) { const L = HX.loops.get(id); if (L) { L.state = 'weg'; for (const sid of L.sch) { const S = HX.sch.get(sid); if (S && S.wRe) hxWStop(S, true); } } }   // (step 2a: its living passes no longer render)
   hxCount();
   if (!hxPost({ clear: { loop: all ? null : loop, all, f: hxAt(at), X: X != null ? Math.round(X * SR) : undefined } })) { for (const id of ids) { HX.wait.delete('l' + id); HX.loops.delete(id); } return Promise.resolve([]); }
   if (all || [...HX.loops.values()].every((L) => L.state === 'weg')) hxTempoFree();   // the last Schleife gone: the tempo goes back to the slider
@@ -25151,9 +25392,10 @@ function hxCount() {
     }
     r += (g & 1) + (g >> 1);
   }
-  HX.play = p; HX.rs = r; HX.o1 = o1; HX.dd = HX.ddRun.size ? 1 : 0;   // (one de-drift job works at a time, the others wait)
+  let ws = 0; for (const L of HX.loops.values()) if (L.state === 'spielt' && L.eig === 'lebendig') for (const id of L.sch) { const S = HX.sch.get(id); if (S && S.wLive) ws++; }   // (step 2a: the living Schichten's streams)
+  HX.play = p; HX.rs = r; HX.o1 = o1; HX.dd = HX.ddRun.size ? 1 : 0; HX.ws = ws;   // (one de-drift job works at a time, the others wait)
 }
-const hxLoad = () => (HX.node ? (hxCount(), 0) + HX_COST.capture + HX.play * HX_COST.schicht + HX.rs * HX_COST.rs + HX.dd * HX_COST.dd + (HX.o1 ? HX_COST.fx1 : 0) + hxWebsCost() : 0);   // (step 1d: each loop's own web, GSP_COST, while it rings)   // (fx1: the live chain's copy while a dry Schicht plays through it)
+const hxLoad = () => (HX.node ? (hxCount(), 0) + HX_COST.capture + HX.play * HX_COST.schicht + HX.rs * HX_COST.rs + HX.dd * HX_COST.dd + (HX.o1 ? HX_COST.fx1 : 0) + (HX.ws || 0) * HX_COST.stream + hxWebsCost() : 0);   // (step 1d: each loop's own web, GSP_COST, while it rings)   // (fx1: the live chain's copy while a dry Schicht plays through it)
 const hxBusy = () => [...HX.loops.values()].some((L) => L.state === 'spielt');
 // Stille: every Schleife halts (its buffers stay); the grammar's toast and „Weiter“ come with the Ringleiste
 function hxPanic() { return hxStille(); }
@@ -25523,7 +25765,9 @@ function hxLoopMake(o) {
   const id = hxLoopNew(o.lock === 'frei' ? { lock: 'frei', len: o.Lf, f0: o.ph0, gain: o.gain, out: o.out, state: o.state } : { lock: 'takt', b0: o.b0, beats: o.beats, gain: o.gain, out: o.out, state: o.state });
   const L = HX.loops.get(id);
   Object.assign(L, { slot: o.slot, key: o.key || hxKey('l'), bpb: o.bpb || 4, notes: o.notes || [], mv: o.mv || null, cut: o.cut || null, eng: o.eng || 'neb', setTG: !!o.setTG,
-    gain: o.gain != null ? o.gain : 1, made: Date.now(), ps: [], src: o.src || 0, bpm: o.bpm || tgBpm(hxNowT()), lv: [0, 0], taumeln: o.taumeln !== false, folgt: !!o.folgt, eig: HX_EIG.includes(o.eig) ? o.eig : 'treu' });
+    gain: o.gain != null ? o.gain : 1, made: Date.now(), ps: [], src: o.src || 0, bpm: o.bpm || tgBpm(hxNowT()), lv: [0, 0], taumeln: o.taumeln !== false, folgt: !!o.folgt, eig: HX_EIG.includes(o.eig) ? o.eig : 'treu',
+    // (step 2a) Wuchs: why it grows (wahl: hx.beginn for a new one), how it follows, the level it was played at, the patch
+    wwhy: o.wwhy ? Object.assign({}, o.wwhy) : { wahl: !o.key && o.eng !== 'bew' && P['hx.beginn'] === 'wuchs' }, ton: o.ton || 'diatonisch', klang: o.klang || 'eigen', stufe: o.stufe || null, q: o.q || P['dev.q'], P: o.P || (o.key ? null : Object.assign({}, P)), mask: o.mask || [...HX.mask], chainRec: o.chainRec || null, jrg: o.jrg || { age: A.jrgAge || 0, season: A.season || 0 } });   // (jrg: the Jahresring's year as it was played – a Wuchs pass hits that bar, not today's)
   HX.slot[o.slot] = id;
   if (o.eng !== 'bew' && (!HX.fokus || !HX.loops.has(HX.fokus) || HX.loops.get(HX.fokus).bew)) HX.fokus = id;   // Hexenring: (step 1d) never a Schleife of Bewegung
   if (o.fokus !== false && o.eng !== 'bew') HX.fokus = id;
@@ -25887,6 +26131,7 @@ function hxPunchPass(k, first) {
   const c = { in: 0, w0: a, w1: b, f0: a, pre: 0, len: b - a, post: 0, n: b - a, aus: null };
   const sid = hxSchNew(L.id, c, { seamK: k + 1, fin: 0, join: 'cut', kind: 'punch', group: P0.group, gate: { a: first ? P0.a : a - X, X }, probe: false });
   P0.k = k; P0.cur = sid; P0.sks.push(HX.sch.get(sid).key); P0.b = b;
+  const S0 = HX.sch.get(sid); if (S0) S0.gate = { a: first ? P0.a : a, b: null };   // (step 2a: what it lets through – its notes for Wuchs)
 }
 function hxPunchTick() {
   const P0 = HX.punch; if (!P0) return;
@@ -25903,7 +26148,7 @@ function hxPunchEnd(T) {
   for (const k of P0.sks.slice()) {
     const S = hxSchByKey(k); if (!S) continue;
     if (S.cut.w0 >= f) { hxUndo(S.id); P0.sks = P0.sks.filter((x) => x !== k); continue; }
-    if (S.cut.w1 > f) hxPost({ gate: { schicht: S.id, b: f } });
+    if (S.cut.w1 > f) { hxPost({ gate: { schicht: S.id, b: f } }); if (S.gate) S.gate.b = f; }
   }
   if (L && P0.sks.length) { hxHist(hxSchStep(L.key, P0.sks.slice(), (P0.sks.length > 1 ? P0.sks.length + ' Schichten' : 'Schicht') + ' in ' + hxName(L))); HX.fokus = L.id; }
   hxSay('Überspielen beendet'); hxRailDirty(); hxCardDirty();
@@ -25959,10 +26204,11 @@ function hxStille() {
 }
 // ---- deleting: one loop (its card) into the session's graveyard; all of them (↶ held 1.5 s) – both undoable ----
 function hxSnapS(S) { return S && { key: S.key, len: S.len, pre: S.pre, n: S.n, cut: S.cut, aus: S.aus ? Object.assign({}, S.aus) : null, join: S.join, X: S.X, rho: S.rho, gain: S.gain, mute: S.mute, kind: S.kind, group: S.group, sr: S.sr, aud: S.aud,
-  bak: S.bak, chain: S.chain, zo: S.zo, kc: S.kc, kcB: S.kcB, dr: S.dr, cold: S.cold, cutAus: S.cutAus, spliced: S.spliced }; }
+  bak: S.bak, chain: S.chain, zo: S.zo, kc: S.kc, kcB: S.kcB, dr: S.dr, cold: S.cold, cutAus: S.cutAus, spliced: S.spliced, wn: S.wn || null, wseed: S.wseed || 0, wu: S.wu || null, anc: S.anc || null, gate: S.gate || null }; }   // (step 2a: its Wuchs)
 function hxSnap(L) {
   return { key: L.key, slot: L.slot, d: Object.assign({}, L.d), bpb: L.bpb, notes: L.notes, mv: L.mv, cut: L.cut, eng: L.eng, setTG: L.setTG, gain: L.gain, src: L.src, bpm: L.bpm, state: L.state, tk: L.tk,
     folgt: !!L.folgt, taumeln: L.taumeln !== false, nudge: L.nudge || 0, eig: L.eig, sch: L.sch.map((id) => hxSnapS(HX.sch.get(id))).filter(Boolean),
+    wwhy: Object.assign({}, L.wwhy || {}), ton: L.ton, klang: L.klang, stufe: L.stufe, q: L.q, P: L.P, mask: L.mask, chainRec: L.chainRec, jrg: L.jrg,   // (step 2a)
     bew: L.bew ? { lanes: L.bew.lanes.map((ln) => ({ k: ln.k, src: ln.src, v: ln.v })), disp: L.bew.disp, n: L.bew.n, g0: L.bew.g0, gs: L.bew.gs, fade: L.bew.fade, why: L.bew.why } : null, naehrt: L.naehrt || null };
 }
 function hxSchRebuild(loop, s, o = {}) {
@@ -25971,18 +26217,21 @@ function hxSchRebuild(loop, s, o = {}) {
   const id = hxSchNew(loop, s.aud ? c : s.cut, { aud: s.aud, bak: s.bak, chain: s.chain, zo: s.zo, kc: s.kc, kcB: s.kcB, dr: s.dr, cold: s.cold, cutAus: s.cutAus, spliced: s.spliced, key: s.key, gain: s.gain, mute: s.mute, join: s.join, X: s.X / SR, rho: s.rho, kind: s.kind, group: s.group, sr: s.sr, fin: o.fin != null ? o.fin : 0.01, seamK: o.seamK, probe: false });
   const S = HX.sch.get(id);
   if (S && S.aud && S.chain && !S.bak && !(HX.loops.get(loop) || {}).folgt) hxAfterFill(S);   // (a dry one: baked again)
+  if (S) { S.wn = s.wn || null; S.wseed = s.wseed || 0; S.wu = s.wu || null; S.anc = s.anc || null; S.gate = s.gate || null; }   // (step 2a: its Wuchs – played once the loop is made: hxRebuild)
   return id;
 }
 // a loop back from a snapshot: phase-correct where it would be (its geometry is its own beat or frame), fading in
 function hxRebuild(sn, o = {}) {
   const slot = sn.slot != null && !HX.slot[sn.slot] ? sn.slot : hxZiel();
   if (slot < 0) { toast('Kein freier Platz für ' + 'Schleife ' + ((sn.slot || 0) + 1) + '.'); return null; }
-  const L = hxLoopMake({ slot, key: sn.key, lock: sn.d.lock, b0: sn.d.b0 - TG.o, beats: sn.d.beats, Lf: sn.d.L, ph0: sn.d.ph0, gain: sn.gain, bpb: sn.bpb, notes: sn.notes, mv: sn.mv, cut: sn.cut, eng: sn.eng, setTG: sn.setTG, src: sn.src, bpm: sn.bpm, state: o.state || (sn.state === 'stumm' ? 'stumm' : 'spielt'), fokus: o.fokus, eig: sn.eig });
+  const L = hxLoopMake({ slot, key: sn.key, lock: sn.d.lock, b0: sn.d.b0 - TG.o, beats: sn.d.beats, Lf: sn.d.L, ph0: sn.d.ph0, gain: sn.gain, bpb: sn.bpb, notes: sn.notes, mv: sn.mv, cut: sn.cut, eng: sn.eng, setTG: sn.setTG, src: sn.src, bpm: sn.bpm, state: o.state || (sn.state === 'stumm' ? 'stumm' : 'spielt'), fokus: o.fokus, eig: sn.eig,
+    wwhy: sn.wwhy || {}, ton: sn.ton, klang: sn.klang, stufe: sn.stufe, q: sn.q, P: sn.P, mask: sn.mask, chainRec: sn.chainRec, jrg: sn.jrg });   // (step 2a: its Wuchs)
   L.tk = sn.tk; L.folgt = !!sn.folgt; L.taumeln = sn.taumeln !== false; if (sn.nudge) L.nudge = sn.nudge;
   if (sn.bew) { const B = sn.bew; L.bew = { lanes: B.lanes.map((x) => ({ k: x.k, src: x.src, v: x.v, o: Object.assign({ at: 0 }, faeOpts(x.src)) })), disp: B.disp || null, n: B.n, g0: B.g0, gs: B.gs, fade: B.fade, why: B.why, next: null, re: true, on0: L.state === 'spielt', ev: [] }; HX.bewKey = L.key; }
   if (sn.setTG && !TG.hxOn && !SEQ.ext) { TG.hxOn = true; TG.hx = sn.bpm; tgRetempo(sn.bpm); for (const fn of CTL['seq.bpm'] || []) fn(P['seq.bpm'], null); }
   for (const s of sn.sch) hxSchRebuild(L.id, s, o);
   if (sn.naehrt && sn.naehrt.gsp && !L.bew) setTimeout(() => { if (hxByKey(L.key) === L) hxNaehrGsp(L, true); }, 0);   // (step 1d: its web again)
+  if (hxWAktiv(L)) hxWUpdate(L, { f: Math.round(hxF(hxNowT() + 0.06)) });   // (step 2a: it grew – its Wuchs again, at once)
   hxStripSync(); hxCardDirty(); if (!o.noSave) hxSaveLoop(L);
   return L;
 }
@@ -26241,7 +26490,7 @@ function hxLevel(L, g) { L.gain = clamp(g, 0, 2); hxGain(L.id, L.gain, null, 0.0
 function hxSchLevel(S, g, mute) {
   if (g != null) S.gain = clamp(g, 0, 2);
   if (mute != null) S.mute = !!mute;
-  hxGain({ schicht: S.id }, S.mute ? 0 : S.gain, null, 0.02);
+  hxGain({ schicht: S.id }, S.mute || S.lm ? 0 : S.gain, null, 0.02);   // (step 2a: in Live mode its Abdruck rests)
   hxSaveMeta(S.loop);
 }
 function hxSchDel(S) {
@@ -26293,9 +26542,10 @@ function hxMemUsed() {
   const seen = new Set();
   let b = 0;
   const one = (aud, n) => { if (aud && !seen.has(aud)) { seen.add(aud); b += hxBytes(n); } };
-  for (const S of HX.sch.values()) { b += hxBytes(S.n); if (S.aud) one(S.aud, S.n); else if (S.live) b += hxBytes(S.n); one(S.bak, S.n); }   // (step 1c: a baked version beside the dry one)
-  for (const g of HX.grave) for (const s of g.snap.sch) { one(s.aud, s.n); one(s.bak, s.n); }
-  for (const st of HX.hist.concat(HX.redo)) for (const sn of st.snaps || []) for (const s of sn.sch || [sn]) if (s) { one(s.aud, s.n); one(s.bak, s.n); }
+  const wv = (s) => { if (s.wu) one(s.wu.aud, s.wu.n); if (s.anc) one(s.anc.aud, s.anc.n); };   // (step 2a: its Treu render and its anchor)
+  for (const S of HX.sch.values()) { b += hxBytes(S.n); if (S.aud) one(S.aud, S.n); else if (S.live) b += hxBytes(S.n); one(S.bak, S.n); wv(S); if (S.wLive) b += 3 * hxBytes(Math.round((hxWTailEst(S) + 4) * SR)); }   // (step 1c: a baked version beside the dry one; step 2a: a living Schicht's passes in the processor, about three at a time)
+  for (const g of HX.grave) for (const s of g.snap.sch) { one(s.aud, s.n); one(s.bak, s.n); wv(s); }
+  for (const st of HX.hist.concat(HX.redo)) for (const sn of st.snaps || []) for (const s of sn.sch || [sn]) if (s) { one(s.aud, s.n); one(s.bak, s.n); wv(s); }
   for (const tk of takes) if (tk.L) b += tk.frames * 8;
   if (HX.node) b += 2 * Math.ceil((P['hx.humus'] * SR) / HX_CH) * HX_CH * 8;
   return b;
@@ -26306,7 +26556,7 @@ function hxMemOk(n) {
   for (const st of HX.hist) {   // (the oldest states: a step whose audio is gone is gone)
     if (hxMemUsed() + need <= cap) break;
     if (st.snaps && st.snaps.some((sn) => (sn.sch || [sn]).some((s) => s && s.aud))) st.dead = true;
-    if (st.dead) for (const sn of st.snaps) for (const s of sn.sch || [sn]) if (s) { s.aud = null; s.bak = null; }
+    if (st.dead) for (const sn of st.snaps) for (const s of sn.sch || [sn]) if (s) { s.aud = null; s.bak = null; s.wu = null; s.anc = null; }
   }
   HX.hist = HX.hist.filter((st) => !st.dead);
   if (hxMemUsed() + need <= cap) return true;
@@ -26341,9 +26591,12 @@ function hxMsg2(m) {
       S.bak = null; S.baked = false;
       hxSaveSch(S);
       hxAfterFill(S);   // (step 1c: the Ausklang's rendered rest, the bake, the drift it was played with)
+      const L2 = HX.loops.get(S.loop);   // (step 2a: its notes for Wuchs – its window has sounded)
+      if (L2 && !L2.bew) { if (!S.wn) S.wn = hxWNotesOf(S, L2); if (S.wn && hxWAktiv(L2)) hxWUpdate(L2); }
     }
   }
   if (m.rsd) { const w = HX.wait.get('rs' + m.rsd.id); if (w) { HX.wait.delete('rs' + m.rsd.id); w(m.rsd.chunks); } }
+  if (m.late) { HX.wLate++; const S = HX.sch.get(m.late.schicht); if (S) S.wLate = (S.wLate || 0) + 1; }   // (step 2a: a pass not there in time)
   if (m.wilted) { const L = HX.loops.get(m.wilted.loop); if (L && L.state !== 'weg') { L.state = 'angehalten'; L.pendTo = null; hxCount(); hxRailDirty(); hxCardDirty(); hxSaveMeta(L.id); } }   // (step 1d: a Schluss „welkend“ ended)
   if (m.meter && m.meter.inp) {   // the rings' input level, 15 per second, two minutes
     HX.lvl[HX.lvlI] = [hxT(m.meter.F), m.meter.inp[0], m.meter.inp[1]];
@@ -26359,6 +26612,9 @@ function hxNotesRefresh(L) {
   L.notes = hxLoopNotes(evs, w0, w1 - w0); if (evs.length) L.eng = hxMainEng(evs);
   L.mv = hxMv(w0, w1); L.notesDue = 0;
   if (L.rep) hxAusleseFor(L, L.rep);   // (step 1d)
+  if (!L.chainRec && L.sch.length && hxChainFor(c.in, evs)) L.chainRec = hxChainRec(w0, w1);   // (step 2a: the chain as played – a Wuchs pass is burnt in with it)
+  for (const id of L.sch) { const S = HX.sch.get(id); if (S && S.cut === c) S.wn = hxWNotesOf(S, L); }
+  hxWUpdate(L);
   hxRailDirty(); hxSaveMeta(L.id);
 }
 // ---- every scheduler tick: what waits for its moment, the Ohr (4 per second), the field's fairy rings ahead ----
@@ -26376,6 +26632,7 @@ function hxTick(horizon) {
   for (const L of HX.loops.values()) if (L.notesDue && now > L.notesDue + 0.05) hxNotesRefresh(L);
   hxTempoTick(now);
   hxFormTick(now);   // (step 1d)
+  hxWTick(now, horizon);   // (step 2a: Wuchs – the living passes, the key's bar line, the tempo)
   if (HX.chips && pnow > HX.chips.until) { HX.chips = null; hxRailDirty(); }
   if (HX.redoT && pnow > HX.redoT) { HX.redoT = 0; hxRailDirty(); }
   if (pnow - HX.earT > 250) {   // the Korb's word and light: what a tap would take now
@@ -26666,13 +26923,19 @@ function hxRailState() {
   HXU.undo.setAttribute('aria-label', HX.pend.length ? 'Abbrechen: ' + HX.pend[HX.pend.length - 1].label : 'Zurück' + (HX.hist.length ? ': ' + HX.hist[HX.hist.length - 1].label : '') + ' (halten: alle leeren)');
 }
 function hxChipsRender() {
-  const C = HX.chips, sig = JSON.stringify([C.kind, C.key, C.to, C.kor, HX.rec && HX.rec.mult, TG.hx, !!C.auf, C.kind === 'form' ? [HX.lich.map((x) => x.id + x.rule + x.kern), HX.lichCur, HX.pend.filter((p) => p.lich).map((p) => p.lich), !!HX.schluss, !!HX.kernBack] : 0, C.ausl || 0]);
+  const C = HX.chips, sig = JSON.stringify([C.kind, C.key, C.to, C.kor, HX.rec && HX.rec.mult, TG.hx, !!C.auf, C.kind === 'form' ? [HX.lich.map((x) => x.id + x.rule + x.kern), HX.lichCur, HX.pend.filter((p) => p.lich).map((p) => p.lich), !!HX.schluss, !!HX.kernBack] : 0, C.ausl || 0, C.kind === 'folge' && HX.folge ? HX.folge.b : 0]);
   if (HXU.sig === sig) return;
   HXU.sig = sig;
   const box = HXU.chips; box.replaceChildren();
   const chip = (t, fn, o = {}) => { const b = h('button', { type: 'button', class: 'hx-chip' + (o.cls ? ' ' + o.cls : ''), 'aria-label': o.aria || t }, t); b.addEventListener('click', (e) => { e.preventDefault(); if (HX.chips) HX.chips.until = performance.now() + HX_CHIP_S * 1000; fn(); }); box.append(b); return b; };
   const sep = () => box.append(h('span', { class: 'hx-sep', 'aria-hidden': 'true' }, '│'));
   if (C.kind === 'tempo') chip('Tempo behalten · ' + dec(Math.round(TG.hx * 10) / 10), hxTempoKeep, { cls: 'pri' });
+  if (C.kind === 'folge' && HX.folge) {   // (step 2a) the key change announced: its bar line, ✕ takes it back
+    const F = HX.folge;
+    box.append(h('span', { class: 'hx-cw' }, 'Schleifen folgen ' + (F.b != null ? 'ab Takt ' + hxBarNo(F.b) : 'gleich')));
+    chip('✕', () => { hxWTonAb(); HXU.sig = ''; hxRailDirty(); }, { cls: 'pri', aria: 'Tonartwechsel abbrechen' });
+    return;
+  }
   if (C.kind === 'mult') for (const m of [1, 2, 4]) chip('×' + m, () => { if (HX.rec) { HX.rec.mult = m; hxRecAuto(); hxRailDirty(); } }, { cls: HX.rec && HX.rec.mult === m ? 'on' : '' });
   if (C.kind === 'form') {   // (step 1d) the row: the Lichtungen (their rule on the chip), merken, Kern, Lücke, Schluss
     const wait = HX.pend.find((p) => p.kind === 'licht');
@@ -26809,9 +27072,17 @@ function hxDrawRing(c, i, r, y, fold, ts) {
       for (let j = 0; j <= N; j++) { const p = j / N, x0 = v[Math.min(v.length - 1, Math.floor(p * v.length))] / mx, rr = R0 * (0.62 + 0.28 * x0), a = ang(p); if (j) c.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); else c.moveTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
       c.stroke();
     }
+    // (step 2a) Wuchs: fine hyphae from each spore to the centre; a living loop breathes (slowly, never with reduced motion)
+    const wu = hxWAktiv(L) && L.sch.some((sid) => hxWCan(HX.sch.get(sid))), lebt = wu && hxWLebt(L) && st === 'spielt';
+    const br = lebt && !REDUCED ? 1 + 0.06 * Math.sin((ts || 0) / 640) : 1;
+    if (wu) {
+      c.strokeStyle = 'rgba(134,240,208,' + (0.38 * dimA).toFixed(2) + ')'; c.lineWidth = 0.6;
+      for (const n of L.notes) { const a = ang(n.ph), rr = R0 * (0.38 + 0.52 * n.r) * br; c.beginPath(); c.moveTo(x + Math.cos(a) * rr * 0.35, y + Math.sin(a) * rr * 0.35); c.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); c.stroke(); }
+    }
+    if (L.treuBis != null && A.ctx) { const left = clamp((L.treuBis - tgBeat(hxNowT())) / 32, 0, 1); c.strokeStyle = HXC.lumen; c.lineWidth = 1.6; c.beginPath(); c.arc(x, y, R0 + 2.5, -Math.PI / 2, -Math.PI / 2 + left * Math.PI * 2); c.stroke(); }
     // the notes as spores: angle = phase, radius = pitch within the loop's range
     for (const n of L.notes) {
-      const a = ang(n.ph), rr = R0 * (0.38 + 0.52 * n.r), sx = x + Math.cos(a) * rr, sy = y + Math.sin(a) * rr, sz = 1 + 1.3 * clamp(n.v, 0, 1);
+      const a = ang(n.ph), rr = R0 * (0.38 + 0.52 * n.r) * br, sx = x + Math.cos(a) * rr, sy = y + Math.sin(a) * rr, sz = 1 + 1.3 * clamp(n.v, 0, 1);
       c.beginPath(); c.arc(sx, sy, sz, 0, Math.PI * 2);
       if (st === 'stumm') { c.strokeStyle = 'rgba(168,152,138,0.9)'; c.lineWidth = 0.8; c.stroke(); } else { c.fillStyle = st === 'angehalten' ? 'rgba(168,152,138,0.6)' : HXC.hypha; c.fill(); }
     }
@@ -26862,6 +27133,7 @@ function hxCardSec() {
   HXK.form = h('div', { class: 'hx-form-sec' });   // (step 1d: Lichtungen, Kern, Lücke, Schluss)
   const set = foldSec('hxset', 'Einstellungen', [
     grid(ctl('hx.modus'), ctl('hx.start'), ctl('hx.ein'), ctl('hx.klick'), ctl('hx.laenge'), ctl('hx.festT'), ctl('hx.pulsMit'), ctl('hx.borMit'), ctl('hx.autoclose'), ctl('hx.runde'), ctl('hx.rail'), ctl('hx.humus'), ctl('hx.mem')),
+    h('div', { class: 'lab hx-sub' }, 'Wuchs'), grid(ctl('hx.beginn'), ctl('hx.stufe'), ctl('hx.tonartAmTakt')),   // (step 2a)
     h('div', { class: 'lab hx-sub' }, 'Form'), grid(ctl('hx.regel'), ctl('hx.lichMix'), ctl('hx.lichPuls'), ctl('hx.lueckeT'), ctl('hx.schluss'), ctl('hx.welk')),
     (HXK.klopf = h('div', { class: 'hx-klopf' })),
     (HXK.ped = h('div', { class: 'hx-ped' })),
@@ -26981,6 +27253,29 @@ function hxCardBewOne(L, btn, chip) {
     row('Verblassen', ...[[0.6, '× 0,6'], [0.75, '× 0,75'], [0.85, '× 0,85'], [0.95, '× 0,95'], [1, 'nie']].map(([v, t]) => chip(t, Math.abs(B.fade - v) < 1e-6, () => { const b = A.ctx ? faeB(A.ctx.currentTime) : B.gs; B.g0 = hxBewGain(L, b); B.gs = b; B.fade = v; B.re = true; hxSaveMeta(L.id); hxCardDirty(); }, 'Verblassen ' + t)), h('span', { class: 'hx-ms' }, Math.round(g * 100) + ' %')),
     h('div', { class: 'hx-row end' }, btn('Löschen', () => hxDelete(L), { cls: 'ghost danger' })));
 }
+// (step 2a) the card's Wuchs: how it plays (Abdruck · Wuchs, and why it grows), Eigensinn, Stufe, Folgen, Klang, the throw
+// and ✓ ✕ ⚓ – only for a loop with notes it can play anew (Gespielt)
+function hxCardWuchs(L, sch, chip, row, btn) {
+  if (!sch.some(hxWCan)) return [h('div', { class: 'hx-row' }, h('span', { class: 'lab' }, 'Wuchs'), h('span', { class: 'hx-ms' }, L.src ? 'aus „Alles“: bleibt ein Abdruck' : 'ohne Noten: bleibt ein Abdruck'))];
+  const st = hxWQ(L), stufe = L.stufe || null, klang = L.klang || 'eigen';
+  const on = hxWAktiv(L), w = L.wwhy || {}, word = hxWWord(L), why = [hxWTonOff(L) && 'folgt der Tonart', w.tempo && 'folgt dem Tempo', klang !== 'eigen' && 'anderer Klang'].filter(Boolean).join(', ');
+  const no = !hxwOk(), forced = !!(hxWTonOff(L) || w.tempo || klang !== 'eigen' || L.eig === 'lebendig');
+  const sel = h('select', { class: 'hx-eng', 'aria-label': 'Klang: eine Quelle wählen' }, h('option', { value: '' }, 'Quelle …'), ...ENG_OPTS.map(([k, n]) => h('option', { value: k, selected: klang === k ? '' : null }, n)));
+  sel.addEventListener('change', () => { if (sel.value) hxWSet(L, 'klang', sel.value); });
+  const lebt = L.eig === 'lebendig' && on;
+  return [
+    row('Wiedergabe', chip('Abdruck', !on, () => { if (forced) { hxHint(why ? 'Sie ' + why + ' – bleibt Wuchs' : 'Lebendig wächst immer'); return; } hxWSet(L, 'wahl', false); }, 'Wiedergabe: Abdruck – genau wie gespielt'),
+      chip('Wuchs', on, () => hxWSet(L, 'wahl', true), 'Wiedergabe: Wuchs – Myzel spielt die Noten neu' + (no ? ' (ohne Werk-Rahmen: mit echten Stimmen)' : '')),
+      h('span', { class: 'hx-ms' }, (no && on ? 'ohne Werk-Rahmen: ' : '') + word + (why && on ? (word ? ' · ' : '') + why : ''))),
+    row('Eigensinn', ...HX_EIG.map((e) => chip(HX_EIGW[e], (L.eigWant || L.eig || 'treu') === e, () => hxWSet(L, 'eig', e), 'Eigensinn ' + HX_EIGW[e] + (e === 'treu' ? ': gleiche Noten, gleicher Wurf' : ': neuer Wurf in jedem Durchgang'))), L.eigWant ? h('span', { class: 'hx-ms' }, 'nach drei Runden') : null),
+    row('Stufe', ...[['gespielt', 'wie gespielt'], ['1', '1'], ['2', '2'], ['3', '3']].map(([k, t]) => chip(t, (stufe || P['hx.stufe']) === k, () => hxWSet(L, 'stufe', k === P['hx.stufe'] ? null : k), 'Klangstufe ' + t + (k === 'gespielt' ? ' (' + (L.q || '?') + ')' : ''))), h('span', { class: 'hx-ms' }, on ? 'Stufe ' + st : '')),
+    row('Folgen', ...[['diatonisch', 'diatonisch'], ['transponieren', 'transp.'], ['fest', 'fest']].map(([k, t]) => chip(t, (L.ton || 'diatonisch') === k, () => hxWSet(L, 'ton', k), 'Tonart: ' + k))),
+    row('Klang', chip('eigener', klang === 'eigen', () => hxWSet(L, 'klang', 'eigen'), 'Klang: der eigene'), chip('Spielfeld', klang === 'feld', () => hxWSet(L, 'klang', 'feld'), 'Klang: folgt dem Spielfeld'), sel),
+    h('div', { class: 'hx-row end' }, btn('Neuer Wurf', () => hxWSet(L, 'wurf'), { aria: 'Neuer Wurf: die Noten mit neuem Zufall' }),
+      lebt && !no ? btn('✓', () => hxWLob(L), { aria: 'Behalten: dieser Durchgang wird der Anker' }) : null, lebt && !no ? btn('✕', () => hxWNein(L), { aria: 'Ablehnen: zurück zum Anker' }) : null,
+      on ? btn('⚓', () => hxWAnker(L), { aria: 'Anker: zurück zum Original' }) : null),
+  ];
+}
 // the loop's chain: burnt in (the bake) or following the live chain – and where its Schichten are
 function hxCardChain(L, sch, chip, row) {
   const ch = sch.filter((S) => S.chain);
@@ -27029,6 +27324,7 @@ function hxCardOne(L, btn) {
     row('Quelle', chip('Gespielt', !L.src, () => hxKorr(L, 'in0'), 'Quelle: was du gespielt hast'), chip('Alles', !!L.src, () => hxKorr(L, 'in1'), 'Quelle: alles, was klingt (auch die Schleifen)')),
     hxCardChain(L, sch, chip, row),
     row('Taumeln', chip('mit', L.taumeln !== false, () => hxTaumelnSet(L, true), 'Taumeln: die Schleife taumelt mit dem Live-Spiel'), chip('eigene Stimmung', L.taumeln === false, () => hxTaumelnSet(L, false), 'Taumeln aus: sie bleibt in ihrer Stimmung')),
+    ...hxCardWuchs(L, sch, chip, row, btn),
     row('Nähren', chip('Gespinst', !!(L.naehrt && L.naehrt.gsp), () => hxNaehrGsp(L, !(L.naehrt && L.naehrt.gsp)), 'Nähren: ein eigenes Saitennetz schwingt mit der Schleife'), chip('Körner', !!(L.naehrt && L.naehrt.kor), () => hxNaehrKor(L, !(L.naehrt && L.naehrt.kor)), 'Nähren: die Schleife wird Kornmaterial (Körner-Quelle „Schleife“)')),
     L.ausl ? h('div', { class: 'hx-row end' }, btn('Auslese aus ' + L.ausl.k + ' · ' + L.ausl.p + ' %', () => hxAusleseDo(L))) : null,
     L.auf ? h('div', { class: 'hx-row end' }, btn('Auftakt anfügen', () => { const ap = L.auf; L.auf = null; hxAuftakt(L, ap); })) : null,
@@ -27051,7 +27347,12 @@ function hxRecOf(L) {
   return { id: L.key, v: 1, slot: L.slot, lock: L.d.lock, b0: L.d.b0 - TG.o, beats: L.d.beats, L: L.d.L, ph0: L.d.ph0, bpb: L.bpb, notes: L.notes, mv, cut: L.cut, eng: L.eng, setTG: L.setTG, gain: L.gain, src: L.src,
     bpm: hxTakt(L) ? tgBpm(hxNowT()) : L.bpm, state: L.state, made: L.made, nudge: L.nudge || 0, sr: SR, tk: L.tk || null, plan: L.plan, folgt: !!L.folgt, taumeln: L.taumeln !== false, eig: L.eig || 'treu', naehrt: L.naehrt ? { gsp: !!L.naehrt.gsp } : null,
     sch: L.sch.map((id) => HX.sch.get(id)).filter(Boolean).map((S) => ({ key: S.key, len: S.len, pre: S.pre, n: S.n, cut: S.cut, aus: S.aus, join: S.join, X: S.X, rho: S.rho, gain: S.gain, mute: S.mute, kind: S.kind, group: S.group, sr: S.sr, segs: hxSegs(S), saved: S.saved >= hxSegs(S),
-      chain: !!S.chain, bakd: !!S.bak && (S.savedB || 0) >= hxSegs(S), zo: S.zo || 0, kc: S.kc ? Array.from(S.kc) : null, kcB: S.kcB ? Array.from(S.kcB) : null, dr: S.dr ? Array.from(S.dr) : null, cold: !!S.cold, cutAus: !!S.cutAus, spliced: !!S.spliced })),
+      chain: !!S.chain, bakd: !!S.bak && (S.savedB || 0) >= hxSegs(S), zo: S.zo || 0, kc: S.kc ? Array.from(S.kc) : null, kcB: S.kcB ? Array.from(S.kcB) : null, dr: S.dr ? Array.from(S.dr) : null, cold: !!S.cold, cutAus: !!S.cutAus, spliced: !!S.spliced,
+      // (step 2a) its notes for Wuchs, its throw, its Treu render and its anchor (audio beside, ~w and ~x), what it played
+      wn: S.wn || null, wseed: S.wseed || 0, gate: S.gate || null, play: S.play || 'ab',
+      wu: S.wu && (S.savedW || 0) >= hxSegsV(S, 'w') ? { n: S.wu.n, len: S.wu.len, sig: S.wu.sig, seed: S.wu.seed } : null,
+      anc: S.anc && (S.savedX || 0) >= hxSegsV(S, 'x') ? { n: S.anc.n, len: S.anc.len, sig: S.anc.sig, seed: S.anc.seed, br: S.anc.br != null ? S.anc.br : null } : null })),
+    wwhy: L.wwhy || {}, ton: L.ton || 'diatonisch', klang: L.klang || 'eigen', stufe: L.stufe || null, q: L.q || null, P: L.P || null, mask: L.mask || null, chainRec: L.chainRec || null, jrg: L.jrg || null,
     bew: L.bew ? { n: L.bew.n, g0: L.bew.g0, gs: L.bew.gs - L.d.b0, fade: L.bew.fade, why: L.bew.why, lanes: L.bew.lanes.map((ln) => ({ k: ln.k, src: ln.src, d: faeEnc(ln.v) })), disp: L.bew.disp ? Object.fromEntries(Object.entries(L.bew.disp).map(([k, v]) => [k, faeEnc(v)])) : null } : null };   // (step 1d: a Schleife of Bewegung, its lanes as the Fährte kept them)
 }
 function hxSaveMeta(loopId) {
@@ -27064,21 +27365,24 @@ function hxSaveMeta(loopId) {
 const hxSessRec = () => ({ id: '_s', hx: TG.hx, hxOn: TG.hxOn, keep: TG.keep, bpm: tgBpm(hxNowT()), fokus: (hxFok() || {}).key || null, lich: HX.lich, lichCur: HX.lichCur });
 function hxSaveLoop(L) {
   if (!L) return; hxSaveMeta(L.id);
-  for (const id of L.sch) { const S = HX.sch.get(id); if (!S) continue; if (S.aud && !S.saved) { hxSaveSch(S); if (S.bak) hxSaveSch(S, 'b'); } else if (S.bak && !((S.savedB || 0) >= hxSegs(S))) hxSaveSch(S, 'b'); }
+  for (const id of L.sch) { const S = HX.sch.get(id); if (!S) continue; if (S.aud && !S.saved) { hxSaveSch(S); if (S.bak) hxSaveSch(S, 'b'); } else if (S.bak && !((S.savedB || 0) >= hxSegs(S))) hxSaveSch(S, 'b'); if (S.wu && !((S.savedW || 0) >= hxSegsV(S, 'w'))) hxSaveSch(S, 'w'); if (S.anc && !((S.savedX || 0) >= hxSegsV(S, 'x'))) hxSaveSch(S, 'x'); }
 }
 function hxSaveAll() { for (const L of hxLoopsLive()) hxSaveMeta(L.id); }
 // a Schicht's audio, segment by segment, when the page is idle (never all at once: the playing must not stutter)
 const hxSegs = (S) => Math.ceil(S.n / (HX_SEG * S.sr));
+const hxSegsV = (S, w) => { const V = w === 'w' ? S.wu : w === 'x' ? S.anc : null; return V ? Math.ceil(V.n / (HX_SEG * S.sr)) : hxSegs(S); };   // (step 2a)
 // (step 1c: the dry Abdruck – w 'a' – and its baked version beside it under the key …~b – w 'b' –, each counted on its
 // own, so a bake that comes later never makes a stored Schicht unstored meanwhile)
+const HX_SV = { a: ['saving', 'saved'], b: ['savingB', 'savedB'], w: ['savingW', 'savedW'], x: ['savingX', 'savedX'] };
+const hxSrcOf = (S, w) => (w === 'b' ? S.bak : w === 'w' ? S.wu && S.wu.aud : w === 'x' ? S.anc && S.anc.aud : S.aud);
 function hxSaveSch(S, w = 'a') {
   const L = HX.loops.get(S.loop);
-  if (!L || !(w === 'b' ? S.bak : S.aud) || !IDB.ok || !hxLive()) return;
-  const seg = HX_SEG * S.sr, nseg = hxSegs(S), k = w === 'b' ? 'savingB' : 'saving';
-  if (w === 'b') S.savedB = 0; else { S.saved = 0; S.savedB = 0; }
+  if (!L || !hxSrcOf(S, w) || !IDB.ok || !hxLive()) return;
+  const seg = HX_SEG * S.sr, nseg = hxSegsV(S, w), k = HX_SV[w][0], n = w === 'w' ? S.wu.n : w === 'x' ? S.anc.n : S.n;
+  if (w === 'a') { S.saved = 0; S.savedB = 0; } else S[HX_SV[w][1]] = 0;
   S[k] = (S[k] || 0) + 1;
   const ver = S[k];
-  for (let i = 0; i < nseg; i++) HX.saveQ.push({ S, ver, ring: L.key, i, a: i * seg, b: Math.min(S.n, (i + 1) * seg), w });
+  for (let i = 0; i < nseg; i++) HX.saveQ.push({ S, ver, ring: L.key, i, a: i * seg, b: Math.min(n, (i + 1) * seg), w, src: hxSrcOf(S, w) });
   hxSaveMeta(L.id);
   hxSaveNext();
 }
@@ -27088,14 +27392,14 @@ function hxSaveNext() {
   const go = () => {
     const j = HX.saveQ.shift();
     if (!j) { HX.saveBusy = false; return; }
-    const S = j.S, src = j.w === 'b' ? S.bak : S.aud, vk = j.w === 'b' ? 'savingB' : 'saving';
-    if (!HX.sch.has(S.id) || S[vk] !== j.ver || !src) { HX.saveBusy = false; hxSaveNext(); return; }
+    const S = j.S, src = hxSrcOf(S, j.w), vk = HX_SV[j.w][0];
+    if (!HX.sch.has(S.id) || S[vk] !== j.ver || !src || src !== j.src) { HX.saveBusy = false; hxSaveNext(); return; }
     const n = j.b - j.a, Lb = new Float32Array(n), Rb = new Float32Array(n);
     for (let i = 0; i < n; i++) { const x = j.a + i, c = src[Math.floor(x / HX_CH)], k = x % HX_CH; if (c) { Lb[i] = c[0][k]; Rb[i] = c[1][k]; } }
-    hxDbPut('ringsegs', { ring: j.ring, schicht: j.w === 'b' ? S.key + '~b' : S.key, i: j.i, L: Lb.buffer, R: Rb.buffer, sr: S.sr }).then((ok) => {
+    hxDbPut('ringsegs', { ring: j.ring, schicht: j.w === 'a' ? S.key : S.key + '~' + j.w, i: j.i, L: Lb.buffer, R: Rb.buffer, sr: S.sr }).then((ok) => {
       HX.saveBusy = false;
       if (!ok) { hxSaveFailed(); HX.saveQ = HX.saveQ.filter((x) => x.S !== S); return; }
-      if (S[vk] === j.ver) { if (j.w === 'b') { S.savedB = (S.savedB || 0) + 1; if (S.savedB >= hxSegs(S)) hxSaveMeta(S.loop); } else { S.saved++; if (S.saved >= hxSegs(S)) hxSaveMeta(S.loop); } }
+      if (S[vk] === j.ver) { const sk = HX_SV[j.w][1]; S[sk] = (S[sk] || 0) + 1; if (S[sk] >= hxSegsV(S, j.w)) hxSaveMeta(S.loop); }
       hxSaveNext();
     });
   };
@@ -27153,19 +27457,23 @@ async function hxRestoreApply() {
     const sch = [];
     for (const s of r.sch) {
       if (!s.saved) continue;
-      const read = async (key) => {
+      const read = async (key, nn, ns) => {
+        const n = nn || s.n, segN = ns || s.segs;
         const segs = ((await idbDo('ringsegs', 'readonly', (st) => st.getAll(IDBKeyRange.bound([r.id, key, 0], [r.id, key, Number.MAX_SAFE_INTEGER])))) || []).sort((a, b) => a.i - b.i);
-        if (segs.length < s.segs) return null;
-        const [aud] = hxChunks(s.n);
+        if (segs.length < segN) return null;
+        const [aud] = hxChunks(n);
         let o = 0;
-        for (const g of segs) { const L = new Float32Array(g.L), R = new Float32Array(g.R); for (let i = 0; i < L.length && o < s.n; i++, o++) { const c = aud[Math.floor(o / HX_CH)]; c[0][o % HX_CH] = L[i]; c[1][o % HX_CH] = R[i]; } }
+        for (const g of segs) { const L = new Float32Array(g.L), R = new Float32Array(g.R); for (let i = 0; i < L.length && o < n; i++, o++) { const c = aud[Math.floor(o / HX_CH)]; c[0][o % HX_CH] = L[i]; c[1][o % HX_CH] = R[i]; } }
         return aud;
       };
       const aud = await read(s.key);
       if (!aud) continue;
       const bak = s.bakd ? await read(s.key + '~b') : null;   // (the baked version beside it: it plays as baked, exact)
-      const f32 = (a) => (a ? Float32Array.from(a) : null);
-      sch.push(Object.assign({}, s, { aud, bak, kc: f32(s.kc), kcB: f32(s.kcB), dr: f32(s.dr), sr: s.sr || r.sr, cut: s.cut ? Object.assign({}, s.cut, { stale: true }) : null }));
+      const f32 = (a) => (a ? Float32Array.from(a) : null), sr = s.sr || r.sr;
+      // (step 2a) its Treu render and its anchor, as they were (at another rate: rendered again from the notes)
+      const ver = async (V, w) => { if (!V || sr !== SR) return null; const a = await read(s.key + '~' + w, V.n, Math.ceil(V.n / (HX_SEG * sr))); return a ? Object.assign({}, V, { aud: a }) : null; };
+      const wu = await ver(s.wu, 'w'), anc = await ver(s.anc, 'x');
+      sch.push(Object.assign({}, s, { aud, bak, kc: f32(s.kc), kcB: f32(s.kcB), dr: f32(s.dr), sr, cut: s.cut ? Object.assign({}, s.cut, { stale: true }) : null, wu, anc }));
     }
     if (!sch.length) continue;
     // another sample rate: the processor's resampler, then every frame count scaled (one it could not convert stays out
@@ -27175,10 +27483,11 @@ async function hxRestoreApply() {
     for (let i = sch.length - 1; i >= 0; i--) if (sch[i].sr !== SR) { sch.splice(i, 1); rsLost++; }
     if (!sch.length) continue;
     const k = r.sr && r.sr !== SR ? SR / r.sr : 1;
-    const sn = { key: r.id, slot: r.slot, d: { lock: r.lock, b0: r.b0 + TG.o, beats: r.beats, L: r.L ? Math.round(r.L * k) : r.L, ph0: 0 }, bpb: r.bpb, notes: r.notes || [], mv: r.mv, cut: r.cut ? Object.assign({}, r.cut, { stale: true }) : null, eng: r.eng, setTG: r.setTG, gain: r.gain, src: r.src, bpm: r.bpm, state: 'angehalten', tk: r.tk, folgt: r.folgt, taumeln: r.taumeln, eig: r.eig, naehrt: r.naehrt || null, sch };
+    const sn = { key: r.id, slot: r.slot, d: { lock: r.lock, b0: r.b0 + TG.o, beats: r.beats, L: r.L ? Math.round(r.L * k) : r.L, ph0: 0 }, bpb: r.bpb, notes: r.notes || [], mv: r.mv, cut: r.cut ? Object.assign({}, r.cut, { stale: true }) : null, eng: r.eng, setTG: r.setTG, gain: r.gain, src: r.src, bpm: r.bpm, state: 'angehalten', tk: r.tk, folgt: r.folgt, taumeln: r.taumeln, eig: r.eig, naehrt: r.naehrt || null, sch,
+      wwhy: r.wwhy || {}, ton: r.ton, klang: r.klang, stufe: r.stufe, q: r.q, P: r.P, mask: r.mask, chainRec: r.chainRec, jrg: r.jrg };   // (step 2a)
     if (HX.slot[r.slot]) continue;
     const L = hxRebuild(sn, { state: 'angehalten', fokus: false, noSave: true });
-    if (L) { L.nudge = r.nudge || 0; L.plan = r.plan; L.made = r.made || Date.now(); n++; for (const id of L.sch) { const S = HX.sch.get(id); if (S) { S.saved = hxSegs(S); if (S.bak) S.savedB = hxSegs(S); } } hxSaveMeta(L.id); }
+    if (L) { L.nudge = r.nudge || 0; L.plan = r.plan; L.made = r.made || Date.now(); n++; for (const id of L.sch) { const S = HX.sch.get(id); if (S) { S.saved = hxSegs(S); if (S.bak) S.savedB = hxSegs(S); if (S.wu) S.savedW = hxSegsV(S, 'w'); if (S.anc) S.savedX = hxSegsV(S, 'x'); } } hxSaveMeta(L.id); }
   }
   if (!n) return;
   if (HX.restoreS && HX.restoreS.fokus) { const F = hxByKey(HX.restoreS.fokus); if (F) HX.fokus = F.id; }
@@ -27291,18 +27600,19 @@ function hxChainRec(ta, tb) {
 // MessagePort (postMessage only – on file:// the frame is an origin of its own); booted at the first need. When it
 // cannot boot (a sandbox without frames, a blocked URL) the bake is off: loops follow the live chain, the card says so.
 Object.assign(HXW, { frame: null, port: null, st: '', p: null, wait: new Map(), id: 0, why: '', ver: 1, ms: [] });
-function hxWerk() {
+function hxWerk(R0) {
+  const R = R0 || HXW;   // (step 2a: one of the realms – HXW, the first, or one of its pool)
   if (HXW.on) return Promise.resolve(false);
-  if (HXW.p) return HXW.p;
-  HXW.st = 'laden';
-  HXW.p = new Promise((res) => {
+  if (R.p) return R.p;
+  R.st = 'laden';
+  R.p = new Promise((res) => {
     let done = false, tA = 0;
     const fail = (why) => {
-      if (done) return; done = true; clearTimeout(tA); HXW.st = 'kein'; HXW.why = why;
-      try { if (HXW.frame) HXW.frame.remove(); } catch (e) {}
-      HXW.frame = null; HXW.port = null;
-      for (const w of HXW.wait.values()) w(null);
-      HXW.wait.clear(); res(false); hxCardDirty();
+      if (done) return; done = true; clearTimeout(tA); R.st = 'kein'; R.why = why;
+      try { if (R.frame) R.frame.remove(); } catch (e) {}
+      R.frame = null; R.port = null;
+      for (const w of R.wait.values()) w(null);
+      R.wait.clear(); res(false); hxCardDirty();
     };
     let url = '';
     try { if (!/^(https?|file):$/.test(location.protocol)) throw new Error('ort'); const u = new URL(location.href); u.hash = ''; u.searchParams.set('werk', '1'); url = u.href; } catch (e) { fail('ort'); return; }
@@ -27317,9 +27627,9 @@ function hxWerk() {
       const ch = new MessageChannel();
       ch.port1.onmessage = (e) => {
         const m = e.data;
-        if (m && m.ready) { if (done) return; done = true; clearTimeout(tA); HXW.port = ch.port1; HXW.st = 'ok'; res(true); hxCardDirty(); return; }
-        const w = m && HXW.wait.get(m.id);
-        if (w) { HXW.wait.delete(m.id); if (m.ms) { HXW.ms.push([m.job, m.ms, m.dur || 0]); if (HXW.ms.length > 50) HXW.ms.shift(); } w(m); }
+        if (m && m.ready) { if (done) return; done = true; clearTimeout(tA); R.port = ch.port1; R.st = 'ok'; res(true); hxwWport(R); hxCardDirty(); return; }
+        const w = m && R.wait.get(m.id);
+        if (w) { R.wait.delete(m.id); if (m.ms) { R.ms.push([m.job, m.ms, m.dur || 0]); if (R.ms.length > 50) R.ms.shift(); } w(m); }
       };
       // (the frame's script has run once it loaded: its answer comes at once – a frame that does not answer is no Werk-Rahmen)
       try { f.contentWindow.postMessage({ hxWerk: 1 }, '*', [ch.port2]); } catch (e) { fail('post'); return; }
@@ -27328,18 +27638,20 @@ function hxWerk() {
     f.addEventListener('error', () => fail('laden'));
     f.src = url;
     try { document.body.appendChild(f); } catch (e) { fail('rahmen'); return; }
-    HXW.frame = f;
+    R.frame = f;
   });
-  return HXW.p;
+  return R.p;
 }
 const hxwOk = () => HXW.st !== 'kein';
-// a job → Promise of its reply (null when there is no Werk-Rahmen); tr: buffers handed over (the caller keeps none)
-function hxwCall(job, d, tr) {
-  return hxWerk().then((ok) => new Promise((res) => {
-    if (!ok || !HXW.port) { res(null); return; }
-    const id = ++HXW.id;
-    HXW.wait.set(id, res);
-    try { HXW.port.postMessage(Object.assign({ job, id }, d), tr || []); } catch (e) { HXW.wait.delete(id); res(null); }
+// a job → Promise of its reply (null when there is no Werk-Rahmen); tr: buffers handed over (the caller keeps none);
+// R: the realm (step 2a; the first one unless told)
+function hxwCall(job, d, tr, R0) {
+  const R = R0 || HXW;
+  return hxWerk(R).then((ok) => new Promise((res) => {
+    if (!ok || !R.port) { res(null); return; }
+    const id = ++R.id;
+    R.wait.set(id, res);
+    try { R.port.postMessage(Object.assign({ job, id }, d), tr || []); } catch (e) { R.wait.delete(id); res(null); }
   }));
 }
 
@@ -27350,18 +27662,34 @@ function hxwCall(job, d, tr) {
 // neighbour retuned); the Jahresring's age and season come with the job and count hits in render time; every render
 // builds its own graph, its own Gespinst web (before it renders) and its own Rhizom net.
 const HXW_FIX = 0x5eed1c;
-function hxwSeed(s) { let x = (s | 0) || 1; Math.random = () => { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; return (x >>> 0) / 4294967296; }; }
+function hxwSeed(s) { let x = (s | 0) || 1; const R = () => { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; return (x >>> 0) / 4294967296; }; Math.random = R; return R; }
+// (step 2a: the browser's own – what runs in the realm between a render's blocks draws from it, never from the render's)
+const HXW_RND = Math.random;
 function hxwBoot() {
   DSPW.broken = true;   // (heavy buffers on this thread, from this realm's seeded random – never a worker's)
   Object.assign(HXW, { jobs: [], busy: false, port: null, sr: 0 });
   window.addEventListener('message', (e) => {
     if (e.source !== window.parent || !e.data || !e.data.hxWerk || !e.ports || !e.ports[0]) return;
     HXW.port = e.ports[0];
-    HXW.port.onmessage = (ev) => { HXW.jobs.push(ev.data); hxwNext(); };
+    HXW.port.onmessage = (ev) => {
+      const d = ev.data;
+      if (d && d.job === 'wport') { hxwPort(d.port); return; }   // (step 2a: the live frame, straight from myzel-ring)
+      if (d && d.job === 'feld') { HXW.feld = d.P || null; return; }   // (a loop that follows the field: its sound's knobs, at the next suspend)
+      if (d && d.job === 'stop') { if (HXW.cur && HXW.cur.key === d.keep) HXW.cur.stop = true; HXW.jobs = HXW.jobs.filter((j) => j.keep !== d.keep || (HXW.port.postMessage({ id: j.id, job: j.job, stopped: 1 }), false)); return; }   // (step 2a: a stream no longer wanted)
+      HXW.jobs.push(d); hxwNext();
+    };
     HXW.port.postMessage({ ready: 1, ver: HXW.ver });
   });
 }
-const HXW_JOB = { ping: async () => ({ pong: 1 }), bake: (d) => hxwBake(d), tail: (d) => hxwNotes(d), wuchs: (d) => hxwNotes(d) };
+// (step 2a) myzel-ring reports its frame here every 0.1 s – a streamed pass is paced by it (≤ 1.25 s ahead of what plays)
+function hxwPort(port) {
+  if (HXW.fp) try { HXW.fp.close(); } catch (e) {}
+  HXW.fp = port; HXW.fr = null;
+  port.onmessage = (e) => { const d = e.data; if (d && d.fr != null) { HXW.fr = { F: d.fr, at: performance.now() }; if (HXW.paceW) { const w = HXW.paceW; HXW.paceW = null; w(); } } };
+}
+const hxwLive = () => (HXW.fr ? HXW.fr.F + ((performance.now() - HXW.fr.at) * SR) / 1000 : null);
+const HXW_JOB = { ping: async () => ({ pong: 1 }), warm: async (d) => { SR = d.sr || SR; await hxwShared(['glas']); return { warm: 1 }; }, bake: (d) => hxwBake(d), tail: (d) => hxwNotes(d), wuchs: (d) => hxwNotes(d),
+  keep: async (d) => { const k = HXW.keep && HXW.keep.get(d.key); if (!k) return { none: 1 }; const L = k.L.slice(), R = k.R.slice(); return { L, R, n: k.n, tr: [L.buffer, R.buffer] }; } };
 async function hxwNext() {
   if (HXW.busy) return;
   HXW.busy = true;
@@ -27393,8 +27721,13 @@ async function hxwShared(kinds) {
 }
 // a note list rendered as the Gespielt tap heard it: the app's whole graph in an offline context with the patch d.P,
 // level d.q and the mask's strips; the notes (times from the render's start) from the pass seed d.seed; the voices
-// that end are cleaned after the render. → {L, R} from d.from (s) on, and the render's own time
+// that end are cleaned after the render. → {L, R} from d.from (s) on, and the render's own time.
+// (step 2a, Wuchs) d.chain: the insert chain as recorded with the loop, burnt in (hxwChain); d.port: streamed – the
+// blocks go straight to myzel-ring through that port (the sink myzel-wsend: from d.from on, the tail ending at −90 dB),
+// paced by the live frame the ring reports (render time t is ring frame d.F0 + t·SR; ≤ d.lead s ahead) while the pass
+// body (d.body s) renders – the tail after it renders at once; d.feld: the field's knobs, as they move, at each suspend
 async function hxwNotes(d) {
+  const T0 = performance.now();
   SR = d.sr || SR;
   for (const id in PD) if (!PD[id].dev) P[id] = PD[id].d;
   Object.assign(P, d.P || {});
@@ -27411,18 +27744,31 @@ async function hxwNotes(d) {
   HXW.ctx = ctx;
   try { initAudio(); } finally { HXW.ctx = null; }
   try { A.out.disconnect(); } catch (e) {}
-  A.hxIn0.connect(ctx.destination);
-  if (notes.some((n) => ENGINES[n.eng] && ENGINES[n.eng].needs) || notes.some((n) => n.eng === 'gsp')) await ensureDSP(ctx);
+  const strm = !!d.port;
+  if (strm || d.chain || notes.some((n) => ENGINES[n.eng] && ENGINES[n.eng].needs) || notes.some((n) => n.eng === 'gsp')) await ensureDSP(ctx);
+  let tap = A.hxIn0, chainEv = [], snk = null;
+  if (d.chain) { const k = hxwChain(d.chain); A.hxIn0.connect(k.c.in); tap = k.c.out; chainEv = k.ev; }
+  if (strm) {
+    snk = new AudioWorkletNode(ctx, 'myzel-wsend', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1], channelCount: 2, channelCountMode: 'explicit', channelInterpretation: 'speakers',
+      processorOptions: { n: len, body: Math.round((+d.body || dur) * SR), from: Math.round((+d.from || 0) * SR), chunk: HX_CH } });
+    tap.connect(snk); snk.connect(ctx.destination); tap.connect(ctx.destination); snk.port.postMessage({ port: d.port }, [d.port]);   // (the render's own buffer holds the pass too: ✓ keeps it, its tail is measured on it)
+    if (d.keep) HXW.cur = { key: d.keep, stop: false };   // (the page may stop it: hxwStop)
+  } else tap.connect(ctx.destination);
   if (d.jrg) { A.jrgAge = +d.jrg.age || 0; A.season = +d.jrg.season || 0; A.jrgSec = -1; A.jrgN = 0; }
   if (notes.some((n) => n.eng === 'gsp')) gspWeb();   // (its own web, built before the render)
-  hxwSeed(d.seed || 1);
+  const RND = hxwSeed(d.seed || 1);
   HXW.dead = [];
   // the work per render block (one suspend each): starts at their exact time, curves, releases, and what tick() does
   // live – the grains' and Rhizom's scheduling – every 25 ms ahead of the render
   const work = new Map(), add = (t, fn) => { const b = Math.max(0, Math.floor(t * SR / 128)); if (b * 128 >= len) return; if (!work.has(b)) work.set(b, []); work.get(b).push(fn); };
   notes.forEach((n, i) => {
+    if (n.eng === 'bor') {   // (step 2a: the Bordun – a drone, no voice: its start and stop)
+      add(n.t0, () => { if (!A.bor) startBordun(); });
+      if (n.t1 != null) add(n.t1, () => { if (A.bor) stopBordun(); });
+      return;
+    }
     add(n.t0, () => {
-      const E = ENGINES[n.eng]; if (!E) return;
+      const E = ENGINES[n.eng]; if (!E || !(n.f > 0 && Number.isFinite(n.f))) return;   // (never a note without a pitch)
       const o = { pan: n.pan || 0, bus: stripIn(n.src && MIX.s[n.src] ? n.src : 'fin') };
       const v = n.burst ? hit(n.eng, n.t0, n.f, n.y0 != null ? n.y0 : 0.5, n.vel, Object.assign(o, { burst: true, gate: n.gate != null ? n.gate : 0.22 })) : E.sustain || n.hold ? playNote(n.eng, n.t0, n.f, n.y0 != null ? n.y0 : 0.5, n.vel, o) : hit(n.eng, n.t0, n.f, n.y0 != null ? n.y0 : 0.5, n.vel, o);
       n._v = v;
@@ -27432,17 +27778,100 @@ async function hxwNotes(d) {
     if (n.t1 != null && !n.burst) add(n.t1, () => { if (n._v && n._v.alive && n._v.release && !n._v.released) n._v.release(); });
   });
   if (notes.some((n) => n.eng === 'kor' || n.eng === 'rhz')) for (let t = 0; t < dur; t += 0.025) add(t, () => { const h = ctx.currentTime + 0.12; grainTick(h); if (RHZ.vs.size || RHZ.q.length) rhzRun(h); });
-  for (const [b, fns] of work) ctx.suspend(b * 128 / SR).then(() => { for (const fn of fns) { try { fn(); } catch (e) { console.warn(e); } } ctx.resume(); });
+  for (const [t, fn] of chainEv) add(t, fn);
+  for (const [t, id, v] of d.prm || []) add(t, () => { if (PD[id]) P[id] = v; });   // (step 2a: the engines' Bewegung lanes, as they were turned)
+  // the pacing: a suspend every 0.25 s of the body from where it is heard (d.from) – each waits until its frame is at
+  // most d.lead s ahead of the live one; the field's knobs (d.feld) are taken there too
+  const pace = new Set();
+  if (strm) { add(0, () => {}); for (let t = Math.max(0, +d.from || 0); t < (+d.body || dur); t += 0.25) { const b = Math.max(0, Math.floor(t * SR / 128)); if (b * 128 < len) { pace.add(b); add(t, () => {}); } } }
+  const lead = Math.round((+d.lead || 1.25) * SR), F0 = d.F0 != null ? +d.F0 : null;
+  const C0 = HXW.cur;
+  for (const [b, fns] of work) ctx.suspend(b * 128 / SR).then(async () => {
+    // (stopped by the page – the Schicht went, the loop rests, a newer render took its pass: nothing more is streamed,
+    // played or waited for; the rest renders silent at once – an offline render cannot end early)
+    if (C0 && C0.stop) { if (snk) { try { snk.disconnect(); tap.disconnect(); } catch (e) {} } for (const v of A.voices) try { v.cleanup(); } catch (e) {} ctx.resume(); return; }
+    if (d.feld && HXW.feld) { Object.assign(P, HXW.feld); HXW.feld = null; }
+    // (the render's throw is its own: drawn only here, in its blocks – a timer of the realm between two blocks drew from
+    // it before, and a source's noise phases or a grain's place came out another way now and then: Elmsfeuer)
+    Math.random = RND;
+    for (const fn of fns) { try { fn(); } catch (e) { console.warn(e); } }
+    Math.random = HXW_RND;
+    if (pace.has(b) && F0 != null) await hxwPace(F0 + b * 128, lead, C0);
+    ctx.resume();
+  });
+  Math.random = HXW_RND;
+  const setup = (performance.now() - T0) / 1000;   // (graph, module, the notes scheduled: before a sample renders)
   const t0 = performance.now(), buf = await ctx.startRendering(), ms = performance.now() - t0;
   const dead = HXW.dead; HXW.dead = null;
   for (const v of dead) v.cleanup();
   for (const v of A.voices) v.cleanup();
   gspDrop(); A.started = false;
+  if (strm) {   // (its blocks went to the ring; the realm keeps its last passes whole – ✓ makes one of them the anchor)
+    if (HXW.cur === C0) HXW.cur = null;
+    if (C0 && C0.stop) return { n: len, dur, rms: ms, stopped: 1 };
+    // (what the sink streamed, by its own rule on the render's buffer: chunk by chunk from `from`, the body's peak, the end
+    // at the first whole chunk after the body 90 dB under it – else the render's end, its last 30 ms faded. ✓ keeps exactly
+    // that; the tail's length teaches the next render's)
+    const bL = buf.getChannelData(0), bR = buf.getChannelData(1), body = Math.round((+d.body || dur) * SR), f0 = Math.floor(Math.round((+d.from || 0) * SR) / HX_CH) * HX_CH;
+    let pk = 0, e = len;
+    for (let st = f0; st < len; st += HX_CH) {
+      let cp = 0; for (let i = st; i < Math.min(len, st + HX_CH); i++) { const x = Math.abs(bL[i]), y = Math.abs(bR[i]); if (x > cp) cp = x; if (y > cp) cp = y; }
+      if (st < body) pk = Math.max(pk, cp);
+      if (st >= body && cp <= pk * 3.2e-5) { e = st; break; }
+    }
+    const cut = e >= len && len > body;
+    if (cut) { const N = Math.min(Math.max(1, len - body), Math.round(0.03 * SR)), a0 = len - N; for (let i = a0; i < len; i++) { const w = Math.cos(Math.PI / 2 * (0.5 - 0.5 * Math.cos(Math.PI * (i - a0 + 0.5) / N))); bL[i] *= w; bR[i] *= w; } }
+    if (d.keep) { const K = HXW.keep || (HXW.keep = new Map()); K.set(d.keep, { L: bL.subarray(0, e), R: bR.subarray(0, e), n: e }); while (K.size > 10) K.delete(K.keys().next().value); }
+    return { n: len, dur, rms: ms, tail: Math.max(0, e - body) / SR, cut, setup };
+  }
   const a = Math.max(0, Math.min(len, Math.round((+d.from || 0) * SR))), L = buf.getChannelData(0).slice(a), R = buf.getChannelData(1).slice(a);
   return { L, R, dur, rms: ms, tr: [L.buffer, R.buffer] };
 }
+// a streamed pass's suspend waits here until its frame is no more than `lead` frames ahead of the ring's (its reports
+// extrapolated by the clock between them; none yet: no wait – at most 30 s, then on)
+async function hxwPace(F, lead, C0) {
+  const t0 = performance.now();
+  for (;;) {
+    const live = hxwLive();
+    if (live == null || F - live <= lead || performance.now() - t0 > 30000 || (C0 && C0.stop)) return;
+    await new Promise((res) => { HXW.paceW = res; setTimeout(res, Math.min(100, Math.max(4, ((F - live - lead) / SR) * 1000))); });
+  }
+}
 // the bake: a Schicht's dry audio through a copy of the insert chain with the settings, changes, LFO phases and
 // deflections recorded while it was played (d.chain, hxChainRec) – what the live chain did to it then
+// (step 2a: shared by the bake and the Wuchs renders) the insert chain as it was recorded, built into A.ctx: its settings,
+// its modulators at their recorded phase and rate, the mod layer's lines; its changes come back as [time, fn] for the
+// render's suspends. Its own drive oversampling and lightness only while its parts are set – never the voices'.
+function hxwChain(C) {
+  const ctx = A.ctx, keepQ = Q, keepLite = A.lite, ws = (fn) => { const q = Q, l = A.lite; Q = Object.assign({}, q, { os: C.os }); A.lite = !!C.lite; try { fn(); } finally { Q = q; A.lite = l; } };
+  C.ids.forEach((id, i) => { P[id] = C.snap[i]; });
+  const osc = (k) => { const L = C.lfo[k], ph = 2 * Math.PI * ((L[0] % 1) + 1), o = ctx.createOscillator(); o.setPeriodicWave(ctx.createPeriodicWave(new Float32Array([0, Math.sin(ph)]), new Float32Array([0, Math.cos(ph)]), { disableNormalization: true })); o.frequency.value = L[1]; KR(o.detune); o.start(0); return o; };
+  A.rngOsc = osc('rng');
+  A.fltLfo = osc('flt'); A.fltLfoG = G(0); A.fltLfo.connect(A.fltLfoG);
+  A.phaLfo = osc('pha'); A.phaLfoG = G(0); A.phaLfo.connect(A.phaLfoG);
+  A.choL1 = osc('cho1'); A.choL2 = osc('cho2'); A.choG1 = G(0); A.choG2 = G(0); A.choL1.connect(A.choG1); A.choL2.connect(A.choG2);
+  A.panLfo = osc('pan'); A.panLfoG = G(0); A.panLfo.connect(A.panLfoG);
+  let c; ws(() => { c = makeChain(); });
+  const pan = () => { setP(A.panLfo.frequency, P['mov.panRate']); setP(A.panLfoG.gain, P['mov.pan']); };
+  const all = (os, lite) => { const q = Q, l = A.lite; Q = Object.assign({}, q, { os }); A.lite = !!lite; A.drvKey = null; try { updDrive(); updRing(); updFilter(); updPhaser(); updChorus(); pan(); } finally { Q = q; A.lite = l; } };   // (as the bake: every chain of this render – the graph's own is not heard)
+  HXW.now = true; A.drvKey = null;
+  try { all(C.os, C.lite); } finally { HXW.now = false; }
+  for (const [k, nm] of Object.entries(HX_LFO)) { const L = C.lfo[k], p = A[nm].frequency; setNow(p, L[1]); if (L[2] != null && Math.abs(L[2] - L[1]) > 1e-9) p.setTargetAtTime(L[2], 0, L[3]); }
+  for (const k in C.mod) {
+    const pts = C.mod[k], cs = ctx.createConstantSource(), o = cs.offset;
+    o.value = pts[0][1]; o.setValueAtTime(pts[0][1], 0);
+    for (const [t, v] of pts.slice(1)) o.linearRampToValueAtTime(v, t);
+    cs.start(0);
+    if (k === 'rng') cs.connect(A.rngOsc.detune);
+    else if (k === 'flt') cs.connect(c.flt.detune);
+    else if (k === 'pha') for (const ap of c.phaAps) cs.connect(ap.detune);
+    else if (k === 'pan') { if (c.apan.pan) cs.connect(c.apan.pan); }
+    else if (k === 'cho') { const w = G(0.7), dr = G(-0.4); cs.connect(w).connect(c.choWet.gain); cs.connect(dr).connect(c.choDry.gain); }
+  }
+  const ev = C.ev.map((e) => [e[0], () => { C.ids.forEach((id, i) => { P[id] = e[1][i]; }); HXW.t = e[0]; try { all(e[2], e[3]); } finally { HXW.t = null; } }]);
+  Q = keepQ; A.lite = keepLite;
+  return { c, ev };
+}
 async function hxwBake(d) {
   SR = d.sr || SR;
   const C = d.chain, n = d.n, ctx = new OfflineAudioContext(2, n, SR), keepQ = Q;
@@ -27928,13 +28357,15 @@ function hxVibTick(now) {
 
 // ---- the guard (SPEC §6.4): no Eigensinn or Gärtner change in a loop during the three passes after a Schicht was
 // added – the hook (Eigensinn above Treu comes with Wuchs, Etappe 2a; a change asked meanwhile waits for the guard) ----
-const HX_EIG = ['treu', 'lebendig', 'variieren', 'wandern'], HX_EIGW = { treu: 'Treu', lebendig: 'Lebendig', variieren: 'Variieren', wandern: 'Wandern' };
+const HX_EIG = ['treu', 'lebendig'], HX_EIGW = { treu: 'Treu', lebendig: 'Lebendig', variieren: 'Variieren', wandern: 'Wandern' };   // (step 2a: Treu, Lebendig; Variieren and Wandern with Etappe 3)
 const hxGuardOk = (L) => !(L.guardK != null && !(L.k >= L.guardK));
 function hxGuardSet(L, k) { if (Number.isFinite(k)) L.guardK = Math.max(L.guardK != null ? L.guardK : -Infinity, k + 3); }
 function hxEigSet(L, e) {
   if (!HX_EIG.includes(e) || e === (L.eig || 'treu')) { L.eigWant = null; return true; }
   if (!hxGuardOk(L)) { L.eigWant = e; return false; }
   L.eig = e; L.eigWant = null; hxSaveMeta(L.id); hxCardDirty();
+  if (e === 'lebendig' && !hxWCanLive(L)) { L.wRefused = true; L.wRetry = performance.now() + 4000; }   // (step 2a: the device cannot keep it living now)
+  hxWUpdate(L);   // (step 2a: above Treu it grows)
   return true;
 }
 function hxGuardTick() { for (const L of hxLoopsLive()) if (L.eigWant && hxGuardOk(L)) hxEigSet(L, L.eigWant); }
@@ -28287,9 +28718,9 @@ const hxHint = (t) => { hxSay(t); toast(t, 2000); };
   midiTarget('hx.alle.ende', 'Alle Schleifen enden am Takt', btn(hxAlleEnde), { group: G, button: true });
   midiTarget('hx.alle.an', 'Alle Schleifen beginnen am Takt (Weiter)', btn(hxWeiter), { group: G, button: true });
   // ✓ ✕ ⚓ answer what the machine plans (Knospen, Etappe 3); until then there is nothing to decide
-  midiTarget('hx.lob', 'Behalten (✓)', btn(() => hxHint('Nichts zu entscheiden')), { group: G, button: true });
-  midiTarget('hx.nein', 'Ablehnen (✕)', btn(() => hxHint('Nichts zu entscheiden')), { group: G, button: true });
-  midiTarget('hx.anker', 'Zurück zum Anker (⚓)', btn(() => hxHint('Nichts zu entscheiden')), { group: G, button: true });
+  midiTarget('hx.lob', 'Behalten (✓)', btn(() => hxWLob()), { group: G, button: true });   // (step 2a: a living loop's pass)
+  midiTarget('hx.nein', 'Ablehnen (✕)', btn(() => (HX.folge ? hxWTonAb() : hxWNein())), { group: G, button: true });
+  midiTarget('hx.anker', 'Zurück zum Anker (⚓)', btn(() => hxWAnker()), { group: G, button: true });
   midiTarget('hx.gaertner', 'Gärtner (schaut zu · pflegt · antwortet)', null, { group: G, cont: true, get: () => ['schaut', 'pflegt', 'antwortet'].indexOf(HX.gaertner || 'schaut') / 2, set: (n) => { const g = ['schaut', 'pflegt', 'antwortet'][Math.min(2, Math.floor(clamp(n, 0, 1) * 3))]; if (g !== (HX.gaertner || 'schaut')) { HX.gaertner = g; hxSay('Gärtner: ' + { schaut: 'schaut zu', pflegt: 'pflegt', antwortet: 'antwortet' }[g]); } } });
   midiTarget('hx.hin', 'Hinlegen erntet (Gestik: Ruhe)', btn(() => { hxKorb(hxEvOf(null, 'hin')); }), { group: G, button: true });
   midiTarget('hx.nkset', 'nanoKONTROL2: Seite Hexenring', null, { group: G, button: true, press: (v, cx) => { if (cx && cx.src) hxNkPage(cx.src, !cx.src.nkHx); } });
@@ -28299,7 +28730,7 @@ const hxHint = (t) => { hxSay(t); toast(t, 2000); };
     midiTarget('hx.ring.' + n + '.rec', 'Schleife ' + n + ': aufnehmen, schließen, überspielen', null, { group: G, button: true, press: (v, cx) => { if (A.started && HX.node) hxRingRec(i, hxEvOf(cx, 'R' + n)); } });
     midiTarget('hx.ring.' + n + '.solo', 'Schleife ' + n + ': Solo', null, { group: G, button: true, press: (v, cx) => { if (A.started && HX.node) hxRingSolo(i, hxEvOf(cx, 'S' + n)); } });
     midiTarget('hx.ring.' + n + '.pegel', 'Schleife ' + n + ': Pegel', null, { group: G, cont: true, get: () => { const L = hxRingL(i); return L ? hxLvlN(L.gain) : null; }, set: (n2) => { const L = hxRingL(i); if (L) { hxLevel(L, hxLvlG(n2)); L.lvT = performance.now(); hxRailDirty(); } } });
-    midiTarget('hx.ring.' + n + '.eigensinn', 'Schleife ' + n + ': Eigensinn', null, { group: G, cont: true, get: () => { const L = hxRingL(i); return L ? HX_EIG.indexOf(L.eig || 'treu') / 3 : null; }, set: (n2) => { const L = hxRingL(i); if (L) { const e = HX_EIG[Math.min(3, Math.floor(clamp(n2, 0, 1) * 4))]; if (e !== (L.eigWant || L.eig || 'treu')) { hxEigSet(L, e); hxSay(hxName(L) + ': Eigensinn ' + HX_EIGW[e] + (L.eigWant ? ' (nach drei Runden)' : '')); } } } });
+    midiTarget('hx.ring.' + n + '.eigensinn', 'Schleife ' + n + ': Eigensinn', null, { group: G, cont: true, get: () => { const L = hxRingL(i); return L ? Math.max(0, HX_EIG.indexOf(L.eig || 'treu')) / (HX_EIG.length - 1) : null; }, set: (n2) => { const L = hxRingL(i); if (L) { const e = HX_EIG[Math.min(HX_EIG.length - 1, Math.floor(clamp(n2, 0, 1) * HX_EIG.length))]; if (e !== (L.eigWant || L.eig || 'treu')) { hxEigSet(L, e); hxSay(hxName(L) + ': Eigensinn ' + HX_EIGW[e] + (L.eigWant ? ' (nach drei Runden)' : '')); } } } });
   }
 }
 // the targets that need a control's release (learnDone's momentary exception, SPEC §17)
@@ -28836,6 +29267,604 @@ function hxTagSync() {
 // the session's form, with the Schleifen (IndexedDB '_s')
 function hxFormSave() { if (IDB.ok && hxLive()) { clearTimeout(HX.formTm); HX.formTm = setTimeout(() => hxDbPut('rings', hxSessRec()), 250); } }
 
+/* ---- Step 2a: Wuchs (SPEC §10; KONZEPT §3.4, §3.5, §5.2) – a Schleife with notes, played anew by Myzel's own sources in
+   the Werk-Rahmen. Treu: rendered once per change (one throw, its seed fixed) and played as an Abdruck. Lebendig: a new
+   throw every pass and the timing breathing a little around the groove, each pass streamed into myzel-ring. It follows
+   the key (diatonisch · transponieren · fest – the field and the loops change on the same bar line), the tempo (from the
+   change, a pass rendered from its start in the new tempo) and the sound (eigen · Spielfeld · any source). ✓ keeps the
+   pass that sounds – its audio is the anchor; ✕ plays the anchor for the next pass (twice in four bars: Treu for eight);
+   ⚓ goes back to the original. The live instrument comes first: the Werk-Rahmen's work is no voice budget, and an
+   underrun pauses the living passes before it touches anything live (§10.5). ---- */
+const HX_WTAIL = 12, HX_WLEAD = 1.25, HX_WSTART = 2.4;   // s: a pass's tail at most (until −90 dB); a streamed pass ahead of what plays; a living pass's render starts this long before it
+// the Werk-Rahmen beside the first one for the living passes: one renders one pass at a time, so passes overlap (a tail
+// rendering while the next pass starts) and loops live side by side – strong devices use their cores
+// A paced render waits most of the time (it may run only HX_WLEAD ahead of what plays), so a realm is busy about as long as
+// its pass lasts plus its tail's render: a living Schicht keeps one or two realms busy whatever the cores – the cap is the
+// memory each realm holds (a second copy of the app). Desktops and tablets up to 8, phones by their memory (2 … 4).
+const HX_TABLET = MOBILE && Math.min(screen.width || 0, screen.height || 0) >= 700;
+const HX_WPOOL = !MOBILE || HX_TABLET ? clamp(navigator.hardwareConcurrency || 4, 4, 8) : clamp(Math.floor((navigator.deviceMemory || 4) / 2), 2, 4);
+// measured render time of the Werk-Rahmen (SPEC §21, step 2a): seconds of rendering per second of one voice, in units of
+// this machine's CAL.unit (one level-1 Nebel voice offline) – per source, levels 1, 2, 3; and the graph's own share per
+// second of audio and per render (ms). The guard's prediction scales them by the device's own CAL.unit.
+const HX_WRT = { def: [1.2, 1.6, 2.6] };
+const HX_WBASE = { 1: { perS: 0.9, perRender: 40 }, 2: { perS: 0.9, perRender: 40 }, 3: { perS: 0.9, perRender: 40 } };
+Object.assign(HX, { wLast: 0, wGuard: { pause: 0, max: Infinity, n: 0, t: 0 }, folge: null, tonK: null, wJobs: 0, wLate: 0, wRen: 0 });
+HXW.pool = [];
+
+// ---- the realms ----
+function hxwRealm(i) { if (!i) return HXW; return HXW.pool[i - 1] || (HXW.pool[i - 1] = { i, st: '', p: null, frame: null, port: null, wait: new Map(), id: 0, ms: [], n: 0, why: '' }); }
+// a realm for a living pass: an idle one of the pool, else one more booted while the pool has room, else the least busy
+function hxwPick() {
+  let idle = null, fresh = null, least = null;
+  for (let i = 1; i <= HX_WPOOL; i++) {
+    const R = hxwRealm(i);
+    if (R.st === 'kein') continue;
+    if (R.st === 'ok' && !R.n) { idle = R; break; }
+    if (!R.st && !fresh) fresh = R;
+    if (!least || R.n < least.n) least = R;
+  }
+  return idle || fresh || least || HXW;
+}
+// myzel-ring's frame for a realm's pacing: a port of its own, from the ring (every 0.1 s)
+function hxwWport(R) {
+  if (!HX.node || !R.port || R.st !== 'ok') return;
+  const ch = new MessageChannel();
+  hxPost({ wport: ch.port1 }, [ch.port1]);
+  try { R.port.postMessage({ job: 'wport', port: ch.port2 }, [ch.port2]); } catch (e) {}
+}
+function hxwWportAll() { for (const R of [HXW, ...HXW.pool]) if (R.st === 'ok') hxwWport(R); }
+// realms booted before they are needed (a realm loads a second copy of the app and builds its shared state – seconds a
+// pass cannot wait): as many as the living Schichten keep busy, two each, within the pool
+function hxwWarm(n) { for (let i = 1; i <= Math.min(HX_WPOOL, n); i++) { const R = hxwRealm(i); if (!R.st) hxwCall('warm', { sr: SR }, [], R); } }
+
+// ---- a Schicht's notes for Wuchs (once its window has sounded, from the Humus): the notes begun in its window, and the
+// ones held into it from before; times in beats from its start (a Takt loop: the tempo can change) or seconds (frei);
+// the key they were played in, the spread of the timing around the grid (the breath of Lebendig) ----
+// a key: its root, its degrees' ratios within the octave (the tuning as the field plays it: ratio tables, or the semitones
+// equal or just), how many degrees an octave has
+function hxWScale(root, scale) {
+  const sc = SCALES[scale] || SCALES.mpent, rat = sc.free ? null : sc.r ? sc.r.slice() : sc.s.map((x) => ratioForSemi(x));
+  return { root: Number(root) || 0, rat, per: sc.free ? 12 : rat.length, free: !!sc.free, id: String(root), scale: SCALES[scale] ? scale : 'mpent' };
+}
+// (step 2a) the engines' own movement in a window (the Bewegung lanes of a source's knobs – Körner's density and scatter,
+// Tropfen's rain): what the player turned while playing drives the notes when they grow again. Points where a lane
+// changes, in the Schicht's units (beats from its start, or seconds); a lane that changed fewer than twice is no gesture
+const HX_WLANE = (id) => /^(kor|trp)\./.test(id);
+function hxWLanes(w0, w1, u) {
+  const mv = hxMv(w0, w1), out = [];
+  for (const ln of mv.lanes) {
+    if (ln.kind !== 'p' || !HX_WLANE(ln.src)) continue;
+    const pts = []; let last = null, ch = 0;
+    for (let i = 0; i < ln.v.length; i++) { const v = ln.v[i]; if (last === null || Math.abs(v - last) > 1e-6 * Math.max(1, Math.abs(v))) { if (last !== null) ch++; pts.push([u(faeT((mv.a + i) / FA_R)), v]); last = v; } }
+    if (ch >= 2) out.push({ id: ln.src, pts });
+  }
+  return out;
+}
+function hxWNotesOf(S, L) {
+  const c = S.cut; if (!c || c.stale || !hxReach(c) || c.in !== 0) return null;
+  const w0 = hxT(c.w0), w1 = hxT(c.w1), takt = hxTakt(L), b0 = takt ? tgBeat(w0) : 0, g = S.gate;
+  const ga = g ? hxT(g.a) : -Infinity, gb = g && g.b != null ? hxT(g.b) : Infinity;
+  const evs = hxNotes(w0 - Math.min(4, (w1 - w0) / 2), w1, c.in, true).filter((e) => (ENGINES[e.eng] || e.eng === 'bor') && !e.probe &&
+    (e.t0 >= w0 - 0.03 ? e.t0 < w1 - 0.01 : e.hold && (e.t1 == null || e.t1 > w0 + 0.01)) && e.t0 >= ga - 0.01 && e.t0 < gb);
+  const u = (t) => (takt ? tgBeat(t) - b0 : t - w0);
+  const kp = HX.tonP || { root: P['t.root'], scale: P['t.scale'] }, k = { base: N.base, ...hxWScale(kp.root, kp.scale) };   // (the key the field played in: an announced one is not yet)
+  // the timing's spread around the grid (sixteenths of the Takt): ⅓ of it is how far Lebendig breathes
+  let sd = 0;
+  if (takt && evs.length > 2) { const spb = 60 / tgBpm(w0), dv = evs.filter((e) => e.t0 >= w0 - 0.03).map((e) => { const x = u(e.t0) * 4; return (x - Math.round(x)) * spb / 4; }); const m = dv.reduce((a, b) => a + b, 0) / dv.length; sd = Math.sqrt(dv.reduce((a, b) => a + (b - m) * (b - m), 0) / dv.length); }
+  return { u: takt ? 'b' : 's', len: takt ? L.d.beats : c.len / SR, key: k, sd, lanes: hxWLanes(w0, w1, u), n: evs.map((e) => {
+    const t = u(e.t0), rel = (p) => p.map(([tt, v]) => [u(tt) - t, v]);
+    return { t, held: e.t0 < w0 - 0.03, d: e.t1 != null ? u(e.t1) - t : null, eng: e.eng, f: e.f, deg: e.deg, oct: e.oct, alt: e.alt, y0: e.y0, vel: e.vel, pan: e.pan, src: e.src === 'ras' ? 'fin' : e.src, burst: e.burst, gate: e.gate, hold: e.hold, cy: rel(e.curves.y), cf: rel(e.curves.f) };
+  }) };
+}
+// which Schichten can grow: Gespielt, with notes (Alles holds the loops and the echo – it stays an Abdruck)
+const hxWCan = (S) => !!(S && S.wn && S.wn.n.length && S.kind !== 'auftakt' && (!S.cut || S.cut.in === 0));
+function hxWNotesAll(L) { let any = false; for (const id of L.sch) { const S = HX.sch.get(id); if (S && !S.wn && S.aud) { const w = hxWNotesOf(S, L); if (w) { S.wn = w; any = true; } } } return any; }
+
+// ---- the key, the sound, the level a pass is rendered in ----
+// a note's pitch in the key the loop follows now (diatonisch: the same degree in the new scale; transponieren: moved with
+// the root; fest: as played) – the nearest way to the new root, never an octave jump; its register stays where it was
+function hxWF(L, W, n, key) {
+  const t = L.ton || 'diatonisch', k0 = W.key;
+  if (t === 'fest' || !key) return n.f;
+  const sh = ((((key.root - k0.root) % 12) + 18) % 12) - 6;
+  if (t === 'transponieren' || key.free || k0.free || n.deg == null) return n.f * Math.pow(2, sh / 12);
+  const d = clamp(key.per === k0.per ? n.deg : Math.round((n.deg * key.per) / k0.per), 0, key.per - 1);
+  const f = n.f * Math.pow(2, sh / 12) * key.rat[d] / k0.rat[clamp(n.deg, 0, k0.per - 1)];
+  return Number.isFinite(f) && f > 0 ? f : n.f * Math.pow(2, sh / 12);   // (a degree the scale does not have – played in another one: moved with the root)
+}
+// the source a note sounds with: its own, the field's (Spielfeld: the layer it was played on), or one chosen
+function hxWEng(L, n) {
+  const k = L.klang || 'eigen';
+  if (k === 'eigen' || (n.src !== 'fin' && n.src !== 'eb2')) return n.eng;
+  if (k === 'feld') return n.src === 'eb2' && P['v.layer'] !== 'off' ? P['v.layer'] : P['v.eng'];
+  return ENGINES[k] ? k : n.eng;
+}
+const hxWQ = (L) => { const s = L.stufe || P['hx.stufe'] || '3'; return s === 'gespielt' ? L.q || P['dev.q'] : s; };
+const hxWKeyNow = () => { const sig = P['t.root'] + '|' + P['t.scale'] + '|' + P['t.just']; if (HX.wKeyS !== sig) { HX.wKeyS = sig; HX.wKeyV = hxWScale(P['t.root'], P['t.scale']); } return HX.wKeyV; };   // (cached: the rail asks every frame)
+// the patch a pass is rendered with: the loop's own (as it was played), or the field's now – never a drift (Taumeln is the
+// processor's: a Wuchs version reads at the live drift), never an echo or a hall (they stay live)
+function hxWPat(L) { const p = Object.assign({}, (L.klang || 'eigen') === 'eigen' && L.P ? L.P : P); p['mov.drift'] = 0; return p; }
+// a throw: the Schicht's own seed (Treu, the anchor's when it has one), a pass's (Lebendig)
+const hxWSeedK = (S, k) => { let h = ((S.wseed | 0) ^ Math.imul(k + 7, 0x9e3779b1)) | 0; h ^= h >>> 16; h = Math.imul(h, 0x7feb352d); h ^= h >>> 15; return (h >>> 0) % 2147483646 + 1; };
+// Voss–McCartney pink noise, seeded: the breath of Lebendig wanders slowly from pass to pass (step n of the loop's notes)
+function hxWPink(seed, n) { let s = 0; for (let r = 0; r < 8; r++) { let h = ((seed | 0) ^ Math.imul(r + 1, 0x85ebca6b) ^ Math.imul(Math.floor(n / (1 << r)) + 1, 0xc2b2ae35)) | 0; h ^= h >>> 15; h = Math.imul(h, 0x2c1b3c6d); h ^= h >>> 12; s += (h >>> 0) / 4294967296 - 0.5; } return s / 2.31; }   // (≈ unit spread)
+
+// pass k of a Schicht as the Werk-Rahmen renders it: times in seconds from the pass's start through the beat map as it is
+// (a tempo change inside it included), the key and the sound as the loop follows them; a note begun before the window
+// sounds at the end of the pass before it (it rings over the seam – as the original did), one held over the whole loop is
+// struck anew each pass (documented limit); Lebendig: each note a little early or late, by the breath
+function hxWPass(L, S, k, o = {}) {
+  const W = S.wn; if (!W || !W.n.length) return null;
+  const a = hxPassF(L, k), b = hxPassF(L, k + 1), lenF = Math.max(1, b - a), len = lenF / SR, takt = W.u === 'b' && hxTakt(L);
+  const B0 = takt ? L.d.b0 + k * L.d.beats : 0, U = W.len;
+  const sec = takt ? (x) => (hxFrameAt(B0 + x) - a) / SR : (x) => x * (len / U);
+  // (the breath: a living pass's own; o.br – a kept pass's, so its anchor re-rendered in another key breathes as it did)
+  const key = o.key || hxWKeyNow(), live = !!o.live || o.br != null, sd = live ? Math.min(0.03, (W.sd || 0) / 3) : 0, kb = o.br != null ? o.br : k;
+  const notes = [];
+  W.n.forEach((n, i) => {
+    let t = n.t;
+    // (held into the window: at the end of the pass before it – here, its own last part; a note struck a hair before the
+    // seam – the 30 ms the window takes early, or a rounding under zero – is the pass's first, never a pass late)
+    const held = n.held != null ? n.held : t < -0.035 * (U / len);
+    if (t < 0) t = held && t + U >= 0 ? t + U : 0;
+    let d = n.d != null ? n.d : U - Math.max(0, n.t);
+    d = Math.max(0, Math.min(d, U));
+    const t0 = sec(t), t1 = n.burst || (n.d == null && !n.hold) ? null : sec(t + d);
+    const br = sd ? clamp(sd * hxWPink(S.wseed, kb * W.n.length + i), -2 * sd, 2 * sd) : 0;
+    const f = hxWF(L, W, n, key), rf = f / n.f, eng = hxWEng(L, n), tt = Math.max(0, t0 + br);
+    const cv = (p, map) => p.map(([dt, v]) => [Math.max(tt, sec(t + dt) + br), map(v)]).filter(([x]) => x < len + HX_WTAIL);
+    notes.push({ t0: tt, t1: t1 != null ? Math.max(tt + 0.005, t1 + br) : null, eng, f, y0: n.y0, vel: n.vel, pan: n.pan, src: n.src, burst: n.burst, gate: n.gate, hold: n.hold,
+      curves: { y: cv(n.cy || [], (v) => v), f: cv(n.cf || [], (v) => v * rf) } });
+  });
+  const prm = []; for (const ln of W.lanes || []) for (const [x, v] of ln.pts) { const t = x <= 0 ? 0 : sec(x); if (t < len) prm.push([t, ln.id, v]); }
+  return { notes, prm, key, lenF, len, dur: len + (o.tail != null ? o.tail : HX_WTAIL), body: len };
+}
+// how long a pass's tail rings (until −90 dB under its body): the longest of this Schicht's last renders, with room – a
+// render is that much longer than its pass (an offline render cannot end early; 12 s for every pass of a short loop was
+// most of the Werk-Rahmen's work). Unknown yet: the 12 s. A tail that still sounded at a render's end (cut – faded over
+// 30 ms, never an edge) counts double, so the next render is longer.
+function hxWTailEst(S) {
+  const a = S.wTails || [];
+  if (!a.length) return HX_WTAIL;
+  return clamp(1.3 * Math.max(...a) + 0.75, 1, HX_WTAIL);
+}
+function hxWTailAdd(S, sec, cut) { const a = S.wTails || (S.wTails = []); a.push(cut ? Math.min(HX_WTAIL, 2 * sec + 1) : sec); if (a.length > 6) a.shift(); }
+// a render's parameters: the patch, the level, the chain (burnt in unless the loop follows the live chain), the mask
+function hxWJob(L, S, job, seed) {
+  // (the key it sounds in: the sources tuned by the scale – Gespinst's strings, Rhizom's avalanches, the Bordun – follow it
+  // as the notes do; transponieren keeps the scale it was played in, fest the key)
+  const p = hxWPat(L), t = L.ton || 'diatonisch', k = job.key;
+  if (t !== 'fest' && k && k.id != null) { p['t.root'] = k.id; if (t === 'diatonisch') p['t.scale'] = k.scale; }
+  return { sr: SR, dur: job.dur, body: job.body, notes: job.notes, prm: job.prm, P: p, q: hxWQ(L), seed, chain: L.folgt || !L.chainRec ? null : L.chainRec, mask: L.mask || [...HX.mask], jrg: L.jrg || { age: A.jrgAge || 0, season: A.season || 0 } };
+}
+// what a Treu version is made for: the pass's frames (the tempo), the key it follows, the sources, the level, the
+// throw, the chain – a version made for something else is made again (Treu: once per change)
+function hxWSig(L, S, key) {
+  const W = S.wn, k = key || hxWKeyNow(), f = hxNextSeam(L), lenF = hxPassF(L, f.k + 1) - hxPassF(L, f.k);
+  const keyS = (L.ton || 'diatonisch') === 'fest' ? '-' : (L.ton === 'transponieren' ? k.root : k.root + ':' + (k.rat || []).map((x) => x.toFixed(6)).join(','));
+  const engs = [...new Set(W.n.map((n) => hxWEng(L, n)))].join(',');
+  return [Math.round(lenF / 8), L.ton || 'diatonisch', keyS, engs, hxWQ(L), S.anc ? S.anc.seed + ':' + (S.anc.br != null ? S.anc.br : '') : S.wseed, L.folgt ? 1 : 0, (L.klang || 'eigen') === 'eigen' ? 'e' : hxWPHash()].join('|');   // (a pass's length within 8 frames is the same: a fractional tempo alternates ±1 frame)
+}
+function hxWPHash() { let h = 7; for (const id in P) if (PD[id] && !PD[id].rec && !PD[id].dev && !id.startsWith('x') && !/^(rev|dly|mst|seq|l\d|rec|hx|mix)\./.test(id)) { const v = String(P[id]); for (let i = 0; i < v.length; i++) h = (Math.imul(h, 31) + v.charCodeAt(i)) | 0; } return h; }
+
+// a version whose tail was still sounding at the render's end (12 s, or a living pass's estimate) ends with a 30-ms fade
+function hxWFadeEnd(aud, n, len) {
+  const N = Math.min(Math.round(0.03 * SR), Math.max(1, n - len));
+  for (let i = n - N; i < n; i++) { const w = Math.cos(HP_ * (0.5 - 0.5 * Math.cos(Math.PI * (i - n + N + 0.5) / N))), c = aud[Math.floor(i / HX_CH)], j = i % HX_CH; c[0][j] *= w; c[1][j] *= w; }
+}
+const HP_ = Math.PI / 2;
+// ---- the throw rendered once (Treu, the fallback of Lebendig): a whole pass and its tail, trimmed at −90 dB ----
+function hxWTrim(L, R, len) {
+  let pk = 0; for (let i = 0; i < Math.min(len, L.length); i++) pk = Math.max(pk, Math.abs(L[i]), Math.abs(R[i]));
+  const thr = pk * Math.pow(10, -90 / 20);
+  let end = L.length; for (let i = L.length - 1; i > len; i--) if (Math.abs(L[i]) > thr || Math.abs(R[i]) > thr) { end = Math.min(L.length, i + Math.round(0.05 * SR)); break; } else if (i === len + 1) end = len;
+  return Math.max(len, end);
+}
+async function hxWRender(L, S, sig, key) {
+  const k = hxNextSeam(L).k, job = hxWPass(L, S, k, { key, br: S.anc && S.anc.br != null ? S.anc.br : null });
+  if (!job) return null;
+  if (!S.wseed) S.wseed = ((Math.random() * 2147483646) | 0) + 1;   // (never a render without its own throw)
+  const seed = S.anc ? S.anc.seed : S.wseed;
+  HX.wRen++; HX.wLast = performance.now(); hxCount();
+  const m = await hxwCall('wuchs', hxWJob(L, S, job, seed));
+  HX.wRen--; HX.wLast = performance.now(); hxCount();
+  if (!m || m.err || !m.L) { if (m && m.err) console.warn('Hexenring: Wuchs', m.err); return null; }
+  const n = hxWTrim(m.L, m.R, job.lenF), [aud] = hxChunks(n);
+  hxWTailAdd(S, (n - job.lenF) / SR, n >= m.L.length);
+  for (let i = 0; i < n; i++) { const ch = aud[Math.floor(i / HX_CH)], j = i % HX_CH; ch[0][j] = m.L[i]; ch[1][j] = m.R[i]; }
+  if (n >= m.L.length) hxWFadeEnd(aud, n, job.lenF);
+  return { aud, n, len: job.lenF, sig, seed, ms: m.rms || m.ms || 0, dur: job.dur };
+}
+// a Schicht's version to the processor at frame f: the Abdruck (dry or baked), its Treu render, or its anchor
+function hxWPlay(S, which, f, keepStream) {
+  const L = HX.loops.get(S.loop); if (!L || !HX.node) return false;
+  if (which === 'ab') { S.play = 'ab'; hxWStop(S); return hxSchPlay(S, !!(S.bak && S.chain && !L.folgt), f); }
+  const V = which === 'anc' ? S.anc : S.wu; if (!V || !V.aud) return false;
+  const [cp, tr] = hxCopy(V.aud), out = L.folgt ? 1 : 0;
+  if (out) hxOut1();
+  hxPost({ replace: { loop: S.loop, schicht: S.id, chunks: cp, n: V.n, pre: 0, len: V.len, ausklang: { off: V.len, len: Math.max(0, V.n - V.len) }, f, join: 'ola', X: Math.round(0.01 * SR), rho: 0, zo: 0, kc: 0, out, dd: 1, wu: 1 } }, tr);
+  S.play = which; S.out = out; S.swapF = f; S.ddOn = true; hxCount();
+  if (!keepStream && S.wLive) S.wk = Math.max(S.wk == null ? -1 : S.wk, hxPassK(L, f));   // (that pass is this version's)
+  return true;
+}
+// what a loop grows for: chosen (the card, or hx.beginn), the key, the tempo, the sound – or Eigensinn above Treu
+function hxWAktiv(L) { const w = L.wwhy || {}; return !L.bew && !!(w.wahl || w.tempo || L.eig === 'lebendig' || (L.klang || 'eigen') !== 'eigen' || hxWTonOff(L)); }
+// it follows the key and the key is not the one it was played in (the parameters' key – an announced one included)
+const hxWKeyEq = (a, b) => !!a && !!b && a.root === b.root && !!a.free === !!b.free && (a.rat || []).map((x) => x.toFixed(6)).join() === (b.rat || []).map((x) => x.toFixed(6)).join();
+const hxWTonOff = (L) => { const t = L.ton || 'diatonisch'; if (t === 'fest') return false; const k = hxWKeyNow(); return L.sch.some((id) => { const S = HX.sch.get(id); return hxWCan(S) && (t === 'transponieren' ? S.wn.key.root !== k.root : !hxWKeyEq(S.wn.key, k)); }); };
+const hxWLebt = (L) => L.eig === 'lebendig' && hxWAktiv(L) && !(L.treuBis != null && tgBeat(hxNowT()) < L.treuBis) && !(HX.wGuard.pause > performance.now()) && !L.wRefused;
+// the reconciler: what every Schicht of a loop should play now – the Abdruck, the anchor, or a Treu render made for
+// what it follows (rendered first when there is none; swapped at the next seam, or at o.f)
+function hxWUpdate(L, o = {}) {
+  if (!L || L.bew || L.state === 'weg' || !HX.node) return;
+  hxWNotesAll(L);
+  if (HXW.st === 'kein') { hxWLiveSync(L); hxCardDirty(); hxRailDirty(); return; }   // (no Werk-Rahmen: Live mode)
+  HX.wFeld = hxLoopsLive().some((X) => (X.klang || 'eigen') === 'feld' && hxWAktiv(X));
+  const on = hxWAktiv(L), F = HX.folge && HX.folge.loops.includes(L.key) ? HX.folge : null;
+  // (while a key change is announced, nothing of this loop changes before its bar line)
+  const at = () => (o.f != null ? o.f : F ? Math.max(Math.round(hxF(F.t)), hxNextSeam(L).f) : hxNextSeam(L).f);
+  if (F && !o.key) o = Object.assign({}, o, { key: F.key });
+  for (const id of L.sch) {
+    const S = HX.sch.get(id);
+    if (!hxWCan(S)) continue;
+    if (!S.wseed) S.wseed = ((Math.random() * 2147483646) | 0) + 1;
+    if (!on) { if (S.play && S.play !== 'ab') hxWPlay(S, 'ab', at()); continue; }
+    const sig = hxWSig(L, S, o.key);
+    if (S.anc && S.anc.sig === sig) { if (S.play !== 'anc') hxWPlay(S, 'anc', at()); continue; }
+    if (S.wu && S.wu.sig === sig) { if (S.play !== 'wu' || o.re) hxWPlay(S, 'wu', at()); continue; }
+    hxWRenderFor(L, S, sig, Object.assign({}, o, { f: o.f != null ? o.f : F ? Math.round(hxF(F.t)) : null }));
+  }
+  hxCardDirty(); hxRailDirty();
+}
+// one Treu render a Schicht at a time; a newer wish waits for it and renders again
+function hxWRenderFor(L, S, sig, o = {}) {
+  if (S.wBusy) { S.wAgain = o; return; }
+  S.wBusy = sig; S.wAgain = null;
+  const ver = S.ver || 0, key = L.key;
+  hxWRender(L, S, sig, o.key).then((V) => {
+    S.wBusy = null;
+    const X = hxByKey(key);
+    if (!X || !HX.sch.has(S.id) || (S.ver || 0) !== ver) return;
+    if (V && V.sig === hxWSig(X, S, o.key)) {
+      S.wu = V; S.wuSaved = 0;
+      if (hxWAktiv(X) && !(S.anc && S.anc.sig === V.sig)) hxWPlay(S, 'wu', o.f != null && o.f > hxF(hxNowT() + 0.05) ? o.f : hxNextSeam(X).f);
+      hxSaveSch(S, 'w');
+    }
+    if (S.wAgain || (V && V.sig !== hxWSig(X, S, o.key))) hxWUpdate(X, S.wAgain || {});
+    hxCardDirty(); hxRailDirty();
+  });
+}
+
+// ---- Lebendig: every pass a new throw, streamed – the page posts the pass's slot to the processor (its port) and the
+// render to a realm of the pool (the other end); ✕ makes a pass the anchor's; the guard pauses it ----
+function hxWSlot(L, S, k, o = {}) {
+  const job = hxWPass(L, S, k, { live: !o.treu, key: o.key, tail: hxWTailEst(S) });
+  if (!job) return false;
+  const a = hxPassF(L, k), from = o.at != null ? Math.max(0, o.at - a) : 0, ch = new MessageChannel(), R = hxwPick();
+  hxPost({ wst: { schicht: S.id, k, len: job.lenF, cap: Math.ceil(job.dur * SR) + HX_CH, at: o.at, must: !!o.must, from, port: ch.port1 } }, [ch.port1]);
+  const seed = o.treu ? (S.anc ? S.anc.seed : S.wseed) : hxWSeedK(S, k);
+  const d = Object.assign(hxWJob(L, S, job, seed), { port: ch.port2, F0: a, lead: HX_WLEAD, from: from / SR, keep: S.key + ':' + k, feld: (L.klang || 'eigen') === 'feld' });
+  R.n++; HX.wJobs++; HX.wLast = performance.now(); hxCount();
+  const re = S.wRe || (S.wRe = {}); re[k] = R; for (const x in re) if (+x < k - 12) delete re[x];   // (✓ asks the realm that rendered a pass; it keeps its last ten)
+  const t0 = performance.now();
+  hxwCall('wuchs', d, [ch.port2], R).then((m) => {
+    R.n = Math.max(0, R.n - 1); HX.wJobs = Math.max(0, HX.wJobs - 1); HX.wLast = performance.now(); hxCount();
+    if (!m || m.stopped) return;
+    if (m.rms) { S.wMs = m.rms; S.wDur = m.dur; }
+    if (m.tail != null) hxWTailAdd(S, m.tail, m.cut);
+    if (m.setup != null) HX.wSetup = HX.wSetup ? 0.7 * HX.wSetup + 0.3 * m.setup : m.setup;
+    S.wDone = Math.max(S.wDone || -1, k); hxWKeepT(S, k, performance.now() - t0);
+  });
+  S.wSeeds = Object.assign(S.wSeeds || {}, { [k]: seed });
+  return true;
+}
+// a living Schicht's stream stops (its fixed version comes back, or it is gone): the processor drops the passes not yet
+// heard, and the realms rendering them stop streaming (all: the pass playing too – an undo, a clear)
+function hxWStop(S, all) {
+  if (!all) hxPost({ wstop: { schicht: S.id } });
+  const L = HX.loops.get(S.loop), kNow = L && !all ? hxPassK(L, Math.round(hxF(hxNowT()))) : -Infinity;
+  for (const k in S.wRe || {}) if (+k > kNow) { const R = S.wRe[k]; try { if (R && R.port) R.port.postMessage({ job: 'stop', keep: S.key + ':' + k }); } catch (e) {} delete S.wRe[k]; }
+}
+// how long before its pass a living pass's render starts: the realms' measured setup (graph, module) with room, ≥ 2.4 s
+const hxWStartS = () => Math.max(HX_WSTART, HX_WLEAD + 0.6 + 1.5 * (HX.wSetup || 0));
+function hxWKeepT(S, k, ms) { const a = S.wT || (S.wT = []); a.push([k, ms]); if (a.length > 8) a.shift(); }
+// every scheduler tick: the next pass of each living Schicht, started HX_WSTART s before it (one job per pass)
+function hxWTick(now, horizon) {
+  if (!HX.node || HX.ctx !== A.ctx) return;
+  if (HXW.st === 'kein') hxWLiveTick(now, horizon);   // (Live mode: no Werk-Rahmen)
+  if (HX.folge && horizon + 0.04 >= HX.folge.t) hxWTonGo();
+  if (HX.wTempo && now >= HX.wTempo.due) hxWTempoGo();
+  if (HX.wKlang && performance.now() >= HX.wKlang) { HX.wKlang = 0; for (const L of hxLoopsLive()) if ((L.klang || 'eigen') === 'feld' && hxWAktiv(L)) hxWUpdate(L); }
+  const fNow = hxF(now), pnow = performance.now(), G = HX.wGuard;
+  if (G.max < Infinity && pnow - G.t > 60000) { G.t = pnow; G.max = G.max + 1 >= HX_WPOOL ? Infinity : G.max + 1; }   // (a minute without an underrun: one more at once again)
+  for (const L of hxLoopsLive()) {
+    if (L.bew || L.state === 'weg') continue;
+    if (L.treuBis != null && tgBeat(now) >= L.treuBis) { L.treuBis = null; hxRailDirty(); hxCardDirty(); }
+    if (L.wRefused && pnow > (L.wRetry || 0)) { L.wRetry = pnow + 4000; if (hxWCanLive(L)) { L.wRefused = false; hxCardDirty(); } }
+    const lebt = hxWLebt(L) && L.state === 'spielt';
+    const k = hxPassK(L, Math.round(fNow)), k1 = k + 1, a1 = hxPassF(L, k1);
+    for (const id of L.sch) {
+      const S = HX.sch.get(id);
+      if (!hxWCan(S)) continue;
+      if (!lebt) { if (S.wLive) { S.wLive = false; hxWStop(S); hxWUpdate(L, { re: true }); } continue; }
+      if (!S.wLive) { S.wLive = true; S.wk = k; hxwWarm(2 * [...HX.sch.values()].filter((x) => x.wLive).length); }
+      if ((S.wk == null ? -1 : S.wk) >= k1 || a1 - fNow > hxWStartS() * SR) continue;
+      if (L.nein && L.nein.k === k1 && S.anc) { S.wk = k1; hxWPlay(S, 'anc', a1); continue; }   // (✕: the anchor plays that pass)
+      if (HX.wGuard.max < Infinity && HX.wJobs >= HX.wGuard.max) continue;   // (the guard: fewer at once)
+      S.wk = k1;
+      const key = HX.folge ? (a1 >= Math.round(hxF(HX.folge.t)) ? HX.folge.key : hxWScale(HX.folge.old['t.root'], HX.folge.old['t.scale'])) : null;   // (an announced key: from its bar line on)
+      hxWSlot(L, S, k1, { key });
+    }
+  }
+}
+
+// ---- following the key (SPEC §10.4): a scale or root change while loops with notes play is an announced action –
+// „Schleifen folgen ab Takt 9 · ✕“: the field and the loops change on the same bar line (hx.tonartAmTakt; off: the field
+// at once, the loops fall silent until their new pass is there). Every loop that follows gets that pass rendered in the
+// new key from its start and heard from the bar line – it must come: if it is late the loop is silent there, never in
+// the old key. ----
+const hxWFolgt = (L) => !L.bew && L.state !== 'weg' && (L.ton || 'diatonisch') !== 'fest' && L.sch.some((id) => hxWCan(HX.sch.get(id)));   // (hxWTonOff: whether its key is another now)
+// the time a pass takes to render here (the guard's prediction: the sources' measured cost × CAL.unit × duration)
+function hxWPredict(L, S, dur) {
+  const W = S.wn; if (!W) return 0;
+  const q = Number(hxWQ(L)) || 3, u = CAL.unit || 0.0012;
+  let vs = 0; for (const n of W.n) { const e = hxWEng(L, n), c = (HX_WRT[e] || HX_WRT.def)[q - 1] || 2; vs += c * Math.min(dur, (n.d != null ? n.d : 1) * (W.u === 'b' ? 60 / tgBpm(hxNowT()) : 1) + 3); }
+  const B = HX_WBASE[q] || HX_WBASE[3];
+  return u * vs + (B.perS * u * dur) + B.perRender / 1000;
+}
+// (the key the field plays in: HX.tonP – set when buildNotes applies it; the parameters may already say another)
+const hxWKeySame = (o) => !!o && String(o.root) === String(P['t.root']) && o.scale === P['t.scale'];
+function hxWTonHold(id) {
+  if (HX.tonGo || !A.ctx || !HX.node || !P['hx.tonartAmTakt'] || !HX.tonP) return false;
+  const key = hxWKeyNow();
+  if (HX.folge) {   // another change before the bar: the same bar line, the newest key (or none, changed back)
+    if (hxWKeySame(HX.tonP)) { hxWTonAb(true, true); return true; }
+    HX.folge.key = key; hxWTonSlots(HX.folge); for (const k of HX.folge.loops) { const L = hxByKey(k); if (L) hxWUpdate(L, { key, f: Math.round(hxF(HX.folge.t)) }); }
+    hxRailDirty(); return true;
+  }
+  if (hxWKeySame(HX.tonP)) return false;
+  const list = hxLoopsLive().filter(hxWFolgt);
+  if (!list.length) return false;
+  const now = hxNowT();
+  let lead = 0.6;
+  for (const L of list) for (const sid of L.sch) { const S = HX.sch.get(sid); if (hxWCan(S)) lead = Math.max(lead, 1.6 * hxWPredict(L, S, hxLen(L) + 2) + 0.35); }
+  const t = hxGrid() ? tgBar(now + lead) : now + lead, b = hxGrid() ? Math.round(tgBeat(t)) : null;
+  HX.folge = { t, b, key, old: { 't.root': HX.tonP.root, 't.scale': HX.tonP.scale }, loops: list.map((L) => L.key) };
+  hxWTonSlots(HX.folge);
+  for (const L of list) hxWUpdate(L, { key, f: Math.round(hxF(t)) });
+  const lab = b != null ? 'ab Takt ' + hxBarNo(b) : 'gleich';
+  HX.folge.p = hxPendAdd({ kind: 'folge', t: t + 0.01, b, label: 'Schleifen folgen ' + lab, cancel: () => hxWTonAb(true), done: () => {} });
+  HX.chips = { kind: 'folge', until: performance.now() + Math.max(HX_CHIP_S, (t - now + 1) * 1000) };
+  hxSay('Schleifen folgen ' + lab); hxRailDirty(); hxCardDirty();
+  return true;
+}
+// the pass of each following Schicht that holds the bar line, in the new key, from its start, heard from the bar line
+function hxWTonSlots(F) {
+  const f = Math.round(hxF(F.t));
+  for (const k of F.loops) {
+    const L = hxByKey(k); if (!L) continue;
+    const kk = hxPassK(L, f);
+    for (const id of L.sch) { const S = HX.sch.get(id); if (!hxWCan(S)) continue; hxWSlot(L, S, kk, { at: f, must: true, key: F.key, treu: !hxWLebt(L) }); S.wk = Math.max(S.wk == null ? -1 : S.wk, kk); }
+  }
+}
+function hxWKeyBuilt() {
+  const o = HX.tonP, k = { root: P['t.root'], scale: P['t.scale'] };
+  HX.tonP = k;
+  if (!o || HX.tonGo || !A.ctx || !HX.node || (String(o.root) === String(k.root) && o.scale === k.scale)) return;
+  const list = hxLoopsLive().filter(hxWFolgt); if (!list.length) return;
+  const F = { t: hxNowT() + 0.03, key: hxWKeyNow(), loops: list.map((L) => L.key) };
+  hxWTonSlots(F); for (const L of list) hxWUpdate(L);
+}
+// at the bar line (a little before it: the Puls's notes after it are scheduled in the new key) the field changes
+function hxWTonGo() {
+  const F = HX.folge; if (!F) return;
+  HX.folge = null; if (F.p) hxPendDrop(F.p);
+  HX.tonGo = true;
+  try { onParamChanged('t.root'); } finally { HX.tonGo = false; }
+  if (HX.chips && HX.chips.kind === 'folge') HX.chips = null;
+  hxSay('Tonart gewechselt'); hxRailDirty(); hxCardDirty();
+}
+// ✕ on the announcement: the change does not happen – the field keeps its key, the loops theirs (back: the parameters
+// already say it – a change made back before the bar)
+function hxWTonAb(quiet, back) {
+  const F = HX.folge; if (!F) return;
+  HX.folge = null; if (F.p) hxPendDrop(F.p);
+  for (const k of F.loops) { const L = hxByKey(k); if (L) for (const id of L.sch) { const S = HX.sch.get(id); if (S) { hxWStop(S); S.wk = null; } } }
+  if (!back) { HX.tonGo = true; try { for (const id of ['t.root', 't.scale']) if (String(P[id]) !== String(F.old[id])) setParam(id, F.old[id]); } finally { HX.tonGo = false; } }
+  for (const k of F.loops) { const L = hxByKey(k); if (L) hxWUpdate(L, { re: true, f: Math.round(hxF(hxNowT() + 0.06)) }); }
+  if (HX.chips && HX.chips.kind === 'folge') HX.chips = null;
+  if (!quiet) hxSay('Tonartwechsel abgebrochen');
+  hxRailDirty(); hxCardDirty();
+}
+
+// ---- following the tempo: a Takt loop with notes whose pass no longer fits its audio grows in the new tempo – the pass
+// that holds the change rendered from its start through the new beat map and heard from where it is ready (pre-rolled),
+// the passes after it Treu (or living); back at its own tempo it plays its Abdruck again ----
+function hxWTempo() { if (!HX.node || !A.ctx) return; HX.wTempo = { due: hxNowT() + 0.12, t: hxNowT() }; }
+function hxWTempoGo() {
+  const T = HX.wTempo; HX.wTempo = null;
+  const now = hxNowT(), f = Math.round(hxF(now));
+  for (const L of hxLoopsLive()) {
+    if (L.bew || !hxTakt(L) || L.state === 'weg') continue;
+    const sch = L.sch.map((id) => HX.sch.get(id)).filter(hxWCan); if (!sch.length) continue;
+    // (the pass that holds the change, and the one after it – the loop's tempo from now on: back at its own, the pass
+    // with the change still grows, the Abdruck from the next seam)
+    const k = hxPassK(L, f), lenF = hxPassF(L, k + 1) - hxPassF(L, k), lenN = hxPassF(L, k + 2) - hxPassF(L, k + 1);
+    const offK = sch.some((S) => Math.abs(lenF - S.len) > Math.max(2, 0.0015 * S.len)), off = sch.some((S) => Math.abs(lenN - S.len) > Math.max(2, 0.0015 * S.len));
+    const was = !!(L.wwhy && L.wwhy.tempo);
+    if (offK && !off) L.wwhy = Object.assign(L.wwhy || {}, { tempo: true });   // (aktiv for the pass with the change)
+    if (!off && !offK && !was) continue;
+    let slot = false;
+    if (offK && hxWAktiv(L) && L.state === 'spielt' && (hxPassF(L, k + 1) - f) / SR > 0.8) {
+      const at = Math.round(hxF(now + 0.25)) + Math.round(0.3 * hxWPredict(L, sch[0], (hxPassF(L, k + 1) - hxPassF(L, k)) / SR) * SR);
+      for (const S of sch) { hxWSlot(L, S, k, { at, treu: !hxWLebt(L) }); S.wk = Math.max(S.wk == null ? -1 : S.wk, k); }
+      slot = true;
+    }
+    L.wwhy = Object.assign(L.wwhy || {}, { tempo: off });
+    if (slot && !off && !hxWAktiv(L)) {   // (back at its own tempo: the pass with the change grown, the Abdruck from its seam on – its stream not stopped)
+      const fN = hxPassF(L, k + 1);
+      for (const S of sch) if (S.play && S.play !== 'ab') { S.play = 'ab'; hxSchPlay(S, !!(S.bak && S.chain && !L.folgt), fN); }
+      hxCardDirty(); hxRailDirty();
+      continue;
+    }
+    hxWUpdate(L);
+  }
+}
+
+// ---- ✓ ✕ ⚓ (KONZEPT §5.2/§5.4): for a living loop – the Fokus, else the newest that lives ----
+function hxWTarget() { const F = hxFok(); if (F && hxWLebt(F)) return F; return hxLoopsLive().filter((L) => hxWLebt(L) || (L.eig === 'lebendig' && hxWAktiv(L))).sort((a, b) => b.made - a.made)[0] || (F && hxWAktiv(F) ? F : null); }
+// ✓: the pass that sounds now becomes the anchor – its audio (the realm that rendered it kept it), as it sounded
+async function hxWLob(L) {
+  L = L || hxWTarget();
+  if (!L || !hxWAktiv(L)) { hxHint('Nichts zu entscheiden'); return; }
+  const k = hxPassK(L, Math.round(hxF(hxHeard()))), sig0 = {};
+  let n = 0;
+  const before = L.sch.map((id) => { const S = HX.sch.get(id); return S ? [S.key, S.anc] : null; }).filter(Boolean);
+  for (const id of L.sch) {
+    const S = HX.sch.get(id); if (!hxWCan(S)) continue;
+    const seed = S.wSeeds && S.wSeeds[k];
+    let V = null;
+    if (seed != null && S.wRe && S.wRe[k]) {
+      const m = await hxwCall('keep', { key: S.key + ':' + k }, [], S.wRe[k]);   // (queued after its render: it waits for the pass to be whole)
+      if (m && m.L) { const len = hxPassF(L, k + 1) - hxPassF(L, k), nn = Math.max(len, Math.min(m.L.length, m.n || m.L.length)), [aud] = hxChunks(nn); for (let i = 0; i < nn; i++) { const c = aud[Math.floor(i / HX_CH)], j = i % HX_CH; c[0][j] = m.L[i] || 0; c[1][j] = m.R[i] || 0; } V = { aud, n: nn, len, seed, br: k }; }   // (exactly what was streamed: its end and fade as the sink made them)
+    }
+    if (!V && S.play === 'wu' && S.wu) V = Object.assign({}, S.wu);
+    if (!V) continue;
+    V.sig = null; S.anc = V; V.sig = hxWSig(L, S); S.ancSaved = 0; hxSaveSch(S, 'x'); n++; sig0[S.key] = V.sig;
+  }
+  if (!n) { hxHint('Dieser Durchgang ist schon vorbei'); return; }
+  const lk = L.key, after = L.sch.map((id) => { const S = HX.sch.get(id); return S ? [S.key, S.anc] : null; }).filter(Boolean);
+  hxHist({ kind: 'wuchs', label: 'Durchgang behalten (' + hxName(L) + ')', undo() { for (const [sk, a] of before) { const S = hxSchByKey(sk); if (S) S.anc = a; } const X = hxByKey(lk); if (X) hxWUpdate(X); }, redo() { for (const [sk, a] of after) { const S = hxSchByKey(sk); if (S) S.anc = a; } const X = hxByKey(lk); if (X) hxWUpdate(X); } });
+  hxSay(hxName(L) + ': Durchgang behalten – neuer Anker'); toast(hxName(L) + ': dieser Durchgang ist der Anker.', 2200);
+  hxSaveMeta(L.id); hxCardDirty(); hxRailDirty();
+}
+// ✕: the next pass plays the anchor (or the Treu throw); twice within four bars: Treu for eight bars
+function hxWNein(L) {
+  L = L || hxWTarget();
+  if (!L || !hxWLebt(L)) { hxHint('Nichts zu entscheiden'); return; }
+  // (at the next bar line: inside the pass the anchor takes over there, at the same place – the next pass lives again;
+  // a bar line that is the seam: the anchor plays that pass)
+  const now = hxNowT(), b = tgBeat(now), sw = hxNextSeam(L), nk = sw.k, fb = hxGrid() ? Math.round(hxF(tgBar(now + 0.06))) : sw.f, mid = fb < sw.f - 1;
+  L.nein = { k: mid ? nk - 1 : nk };
+  for (const id of L.sch) {
+    const S = HX.sch.get(id); if (!hxWCan(S)) continue;
+    if (!S.anc && S.wu) S.anc = Object.assign({}, S.wu);
+    if (!S.anc) continue;
+    if (mid) hxWPlay(S, 'anc', fb, true);
+    else if (S.wk != null && S.wk >= nk) { hxWStop(S); S.wk = nk; hxWPlay(S, 'anc', sw.f); }
+  }
+  const t = (L.neinT || []).filter((x) => b - x < 16); t.push(b); L.neinT = t;
+  if (t.length >= 2) { L.treuBis = Math.ceil(b / 4) * 4 + 32; L.neinT = []; hxSay(hxName(L) + ': acht Takte Treu'); toast(hxName(L) + ': acht Takte Treu.', 2200); }
+  else hxSay(hxName(L) + ': zurück zum Anker');
+  hxRailDirty(); hxCardDirty();
+}
+// ⚓: back to the original at once – the anchor forgotten, Treu, the Abdruck where it may (else its own throw, in the key)
+function hxWAnker(L) {
+  L = L || hxFok();
+  if (!L || !hxWAktiv(L)) { hxHint('Nichts zu entscheiden'); return; }
+  const lk = L.key, was = { eig: L.eig, wwhy: Object.assign({}, L.wwhy), anc: L.sch.map((id) => { const S = HX.sch.get(id); return S ? [S.key, S.anc] : null; }).filter(Boolean) };
+  const go = (X, w) => { X.eig = w.eig; X.wwhy = Object.assign({}, w.wwhy); for (const [sk, a] of w.anc) { const S = hxSchByKey(sk); if (S) S.anc = a; } const f = Math.round(hxF(hxNowT() + 0.06)); hxWUpdate(X, { f, re: true }); hxSaveMeta(X.id); hxCardDirty(); };
+  const to = { eig: 'treu', wwhy: Object.assign({}, L.wwhy, { wahl: false }), anc: was.anc.map(([k]) => [k, null]) };
+  go(L, to);
+  hxHist({ kind: 'wuchs', label: 'Anker (' + hxName(L) + ')', undo() { const X = hxByKey(lk); if (X) go(X, was); }, redo() { const X = hxByKey(lk); if (X) go(X, to); } });
+  hxSay(hxName(L) + ': zurück zum Original');
+}
+
+// ---- the card's choices, each a history step: Wiedergabe, Eigensinn, Folgen, Klang, Stufe, Neuer Wurf ----
+function hxWSet(L, what, v) {
+  const lk = L.key, snap = (X) => ({ wahl: !!(X.wwhy && X.wwhy.wahl), eig: X.eig || 'treu', ton: X.ton || 'diatonisch', klang: X.klang || 'eigen', stufe: X.stufe || null, seeds: X.sch.map((id) => { const S = HX.sch.get(id); return S ? [S.key, S.wseed] : null; }).filter(Boolean) });
+  const was = snap(L);
+  const put = (X, s) => {
+    X.wwhy = Object.assign(X.wwhy || {}, { wahl: s.wahl }); X.ton = s.ton; X.klang = s.klang; X.stufe = s.stufe;
+    for (const [sk, sd] of s.seeds) { const S = hxSchByKey(sk); if (S && S.wseed !== sd) { S.wseed = sd; S.anc = null; } }
+    if (X.eig !== s.eig) { if (!hxEigSet(X, s.eig)) hxSay(hxName(X) + ': Eigensinn nach drei Runden'); }
+    hxWUpdate(X); hxSaveMeta(X.id); hxCardDirty(); hxRailDirty();
+  };
+  const to = Object.assign({}, was);
+  if (what === 'wahl') to.wahl = !!v;
+  else if (what === 'eig') to.eig = v;
+  else if (what === 'ton') to.ton = v;
+  else if (what === 'klang') to.klang = v;
+  else if (what === 'stufe') to.stufe = v;
+  else if (what === 'wurf') { to.seeds = was.seeds.map(([k]) => [k, ((Math.random() * 2147483646) | 0) + 1]); to.wahl = to.wahl || !hxWAktiv(L); }
+  if (what === 'klang' && v !== 'eigen' && !L.P) L.P = Object.assign({}, P);
+  put(L, to);
+  const W = { wahl: ['Wiedergabe', to.wahl ? 'Wuchs' : 'Abdruck'], eig: ['Eigensinn', HX_EIGW[to.eig]], ton: ['Folgen', to.ton], klang: ['Klang', to.klang === 'eigen' ? 'eigener' : to.klang === 'feld' ? 'Spielfeld' : ENG_NAME[to.klang]], stufe: ['Stufe', to.stufe || 'wie eingestellt'], wurf: ['Neuer Wurf', ''] }[what];
+  hxHist({ kind: 'wuchs', label: W[0] + (W[1] ? ' ' + W[1] : '') + ' (' + hxName(L) + ')', undo() { const X = hxByKey(lk); if (X) put(X, was); }, redo() { const X = hxByKey(lk); if (X) put(X, to); } });
+  hxSay(hxName(L) + ': ' + W[0] + (W[1] ? ' ' + W[1] : ''));
+}
+// the loop's word for the card and the rail: what it does now
+function hxWWord(L) {
+  if (L.bew || !L.sch.some((id) => hxWCan(HX.sch.get(id)))) return '';
+  if (!hxWAktiv(L)) return '';
+  if (HXW.st === 'kein') return 'live gespielt';   // (Live mode: no Werk-Rahmen)
+  const S = L.sch.map((id) => HX.sch.get(id)).filter(hxWCan), busy = S.some((s) => s.wBusy), ready = S.every((s) => s.play === 'wu' || s.play === 'anc');
+  if (L.eig === 'lebendig') { if (HX.wGuard.pause > performance.now() || L.wRefused) return 'lebt, sobald Rechenzeit frei ist'; if (L.treuBis != null) { const n = Math.max(1, Math.min(8, Math.floor((L.treuBis - tgBeat(hxNowT())) / 4 + 0.01))); return 'Treu noch ' + n + (n === 1 ? ' Takt' : ' Takte'); } return 'lebt'; }
+  return busy ? 'wächst …' : ready ? 'Wuchs' : 'wächst …';
+}
+// can the device keep this loop living? its passes' predicted render time against what the pool can spend
+function hxWCanLive(L) {
+  const len = Math.max(0.25, hxLen(L));
+  let need = 0; for (const id of L.sch) { const S = HX.sch.get(id); if (hxWCan(S)) need += hxWPredict(L, S, len + 4) / len; }
+  for (const X of hxLoopsLive()) if (X !== L && hxWLebt(X)) { const lx = Math.max(0.25, hxLen(X)); for (const id of X.sch) { const S = HX.sch.get(id); if (hxWCan(S)) need += hxWPredict(X, S, lx + 4) / lx; } }
+  return need <= 0.6 * Math.max(1, HX_WPOOL);
+}
+
+// ---- the CPU guard (SPEC §10.5, owner rule): an underrun while Wuchs works first pauses the living passes (the loops
+// play their Treu or Abdruck), then lets fewer render at once – the live budget and A.lite are never touched for it.
+// → true when the Wuchs took the blame ----
+function hxWGuard() {
+  const now = performance.now(), ran = HX.wJobs > 0 || HX.wRen > 0 || now - HX.wLast < 8000;
+  if (!ran) return false;
+  const G = HX.wGuard, lebt = hxLoopsLive().some((L) => L.eig === 'lebendig' && hxWAktiv(L));
+  if (lebt && !(G.pause > now)) { G.pause = now + 30000; G.n++; hxSay('Schleifen leben gleich weiter – das Gerät ist gerade ausgelastet'); for (const L of hxLoopsLive()) hxCardDirty(); }
+  else G.max = Math.max(1, Math.min(G.max === Infinity ? HX_WPOOL : G.max, HX.wJobs || 1) - 1 || 1);
+  G.t = now;
+  return true;
+}
+
+// ---- (step 2a) Live mode (SPEC §10.6) – only where there is no Werk-Rahmen (a sandbox without frames): a loop that must
+// grow plays its notes through real voices, scheduled ahead in the scheduler's tick as the Puls's are, into the live
+// chain's copy and the strip „Hexenring“ (no tap hears them). Its Abdruck rests meanwhile. They cost what voices cost and
+// give way before any live note – a loop's note that does not fit the budget is not played (owner: never the live ones).
+// Lebendig: every pass its own randomness (the voices' own) and its breath; ✓ ✕ ⚓ need rendered passes (Werk-Rahmen). ----
+const hxWLm = (L) => !L.bew && L.state !== 'weg' && HXW.st === 'kein' && hxWAktiv(L);
+function hxWLiveSync(L) {
+  const on = hxWLm(L) && L.state === 'spielt', sw = hxNextSeam(L);
+  for (const id of L.sch) {
+    const S = HX.sch.get(id); if (!hxWCan(S)) continue;
+    if (on && !S.lm) { S.lm = true; S.lk = sw.k - 1; hxGain({ schicht: S.id }, 0, hxT(sw.f), 0.01); }
+    else if (!on && S.lm) { S.lm = false; hxGain({ schicht: S.id }, S.mute ? 0 : S.gain, hxT(sw.f), 0.01); }
+  }
+}
+function hxWLiveTick(now, horizon) {
+  const fA = hxF(now + 0.005), fB = hxF(horizon), out = () => (hxOut1(), hxChain('fx1').in);
+  for (const L of hxLoopsLive()) {
+    if (L.bew) continue;
+    if (!!hxWLm(L) !== L.sch.some((id) => { const S = HX.sch.get(id); return S && S.lm; })) hxWLiveSync(L);
+    for (const id of L.sch) {
+      const S = HX.sch.get(id); if (!S || !S.lm || L.state !== 'spielt') continue;
+      if (S.mute) { S.lk = Math.max(S.lk, hxPassK(L, Math.round(fB))); continue; }
+      for (let k = Math.max(S.lk + 1, hxPassK(L, Math.round(fA))); hxPassF(L, k) < fB; k++) {
+        const job = hxWPass(L, S, k, { live: L.eig === 'lebendig', tail: 0 }); S.lk = k;
+        if (!job) break;
+        const t0 = hxT(hxPassF(L, k));
+        for (const n of job.notes) {
+          const t = t0 + n.t0; if (t < now || n.eng === 'bor') continue;
+          const o = { pan: n.pan || 0, bus: out(), loop: true }, E = ENGINES[n.eng]; if (!E) continue;
+          // (a held note's length as the engine's own gate – it lets go on time; struck ones ring)
+          const g = n.t1 != null ? n.t1 - n.t0 : null, v = n.burst || (E.sustain && g != null) ? playNote(n.eng, t, n.f, n.y0 != null ? n.y0 : 0.5, n.vel, Object.assign(o, { burst: true, gate: n.burst ? n.gate || 0.22 : g })) : E.sustain ? playNote(n.eng, t, n.f, n.y0 != null ? n.y0 : 0.5, n.vel, o) : hit(n.eng, t, n.f, n.y0 != null ? n.y0 : 0.5, n.vel, o);
+          if (!v) continue;
+          for (const [tc, y] of n.curves.y) HX.wLq.push([t0 + tc, () => v.alive && v.setY && v.setY(y)]);
+          for (const [tc, f] of n.curves.f) HX.wLq.push([t0 + tc, () => v.alive && v.setF && v.setF(f, P['v.glide'])]);
+        }
+      }
+    }
+  }
+  if (HX.wLq.length) { const due = HX.wLq.filter((x) => x[0] <= now + 0.012); if (due.length) { HX.wLq = HX.wLq.filter((x) => x[0] > now + 0.012); for (const [, fn] of due) try { fn(); } catch (e) {} } }
+}
+HX.wLq = [];
+
 function showResume(show) { $('#resume').hidden = !show; if (show) $('#btnResume').focus({ preventScroll: true }); }
 function start() {
   if (A.started) return;
@@ -28886,6 +29915,7 @@ function watchUnderruns() {
     if (document.visibilityState !== 'visible' || !A.ctx || A.ctx.state !== 'running') return;
     const u = count();
     A.underruns = u;
+    if (u > last && hxWGuard()) { last = u; return; }   // Hexenring: (step 2a) the Wuchs gives way first – never the live budget, never A.lite for it
     if (u > last && VBUDGET > 6) {
       A.budgetScale = (A.budgetScale || 1) * 0.8;
       A.lite = true; applyQuality(); updDevUI();

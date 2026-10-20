@@ -83,9 +83,12 @@ const BPM = 120;
     W.node.port.postMessage = (m, t) => { got.push(m); return pm(m, t); };
     const sc = M.P['t.scale'], alt = Object.keys(M.SCALES).find((k) => k !== sc);
     M.setParam('t.scale', alt);
+    // (step 2a: while a Schleife with notes plays, the field's scale and the loops' change on the announced bar line)
+    for (let i = 0; i < 200 && M.HX.folge; i++) await window.__sleep(50);
     await window.__sleep(100);
     const tune = got.find((m) => m && m.tune), want = M.gspFreqs();
     M.setParam('t.scale', sc);
+    for (let i = 0; i < 200 && M.HX.folge; i++) await window.__sleep(50);
     W.node.port.postMessage = pm;
     return { tune: !!tune, same: tune && JSON.stringify(tune.tune.map((f) => +f.toFixed(3))) === JSON.stringify(want.map((f) => +f.toFixed(3))), n: want.length };
   }, slot);
