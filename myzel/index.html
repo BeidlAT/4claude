@@ -3932,7 +3932,8 @@ function mixMeters(dt) {
 // blocks). Both are pulled by the keeper; the hall is fed the zeros it was fed before (the echo's return used to send
 // them). Live, these grids already fall wherever the session's start and the notes' moments put them – playing a
 // phrase 1 ms later moves them the same way – but a render of the same notes could tell: so they sleep only if the
-// owner says so (IDLE.echo, IDLE.hall: each about a quarter of what sleeping saves at idle; dev/tests/perf).
+// owner says so (IDLE.hall, IDLE.echo – measured at idle, of 26 % of a core on the desktop the hall's sleep would save
+// 13 points, the echo's 2 more; dev/tests/perf).
 const IDLE = { on: false, ctx: null, keeper: null, feed: null, taps: null, tapOn: false, tapT: 0, cut: [], qT: 0, z: null, pT: -1, auto: false, late: 0, n: 0, echo: false, hall: false };
 const IDLE_FFT = 4096;
 function idleBuild() {
