@@ -94,6 +94,9 @@ const { ok } = H;
     M.hxFolgt(L, false);
     for (let i = 0; i < 100 && S.out !== 0; i++) await window.__sleep(50);
     out.back = S.out;
+    // (the swap back to the baked version sounds at a seam with its crossfade: the passes compared below come after it –
+    // „folgt“ switched off just before a seam put the swap on the first one's start, its first X frames the crossfade)
+    while (S.swapF != null && M.hxF(ctx.currentTime) < S.swapF + S.X + 128) await window.__sleep(20);
     M.hxTaumelnSet(L, false);   // (a preset may bring its own drift: a loop that taumelt follows it – on purpose)
     M.hxTempo(M.tgBpm(ctx.currentTime));   // (the loop gives the tempo: a preset leaves it – SPEC §2)
     const p0 = await pass(), p3 = await pass(() => M.loadPreset(M.PRESETS[3]));
@@ -153,17 +156,19 @@ const { ok } = H;
     await window.__sleep(M.hxLen(L) * 1000 * 2.5);
     for (const v of vs) if (v && v.release) v.release();
     const g = await window.__recGet(rec); M.HX.node.disconnect(rec);
-    const at = (ch, i) => window.__read(ch, i)[0], y = g.L, X = S.X, z = S.zo || 0, W = Math.round(0.01 * SR);
+    // (both channels: the seam law holds the stereo short-term power – SPEC §7 –, one channel alone dips or bulges with the
+    // material's inter-channel correlation; measured: the output equals the law sample for sample, 3e-8)
+    const at = (ch, i) => window.__read(ch, i), y = [g.L, g.R], X = S.X, z = S.zo || 0, W = Math.round(0.01 * SR);
     const out = { join: S.join, X, zo: z, baked: !!S.baked, seams: [] };
     const seen = new Set();
     for (const [k, f] of L.ps) {
       if (k < 1 || seen.has(k)) continue; seen.add(k);
       const s = f - g.f0, prev = M.hxPassF(L, k - 1), pe = f - prev;   // (the pass that ended: its read position at its end)
-      if (s < 3 * W || s + z + X + 3 * W > y.length) continue;
+      if (s < 3 * W || s + z + X + 3 * W > y[0].length) continue;
       const swap = S.swapF != null && Math.abs(f - S.swapF) <= 1, before = S.swapF != null && f < S.swapF - 1;
       const vA = swap || before ? S.aud : S.bak, vB = before ? S.aud : S.bak;   // (the side going on, the side coming in)
       const A2 = (j) => at(vA, S.pre + pe + j), B2 = (j) => at(vB, S.pre + j);
-      const w = (i, fn) => { let q = 0; for (let j = i; j < i + W; j++) { const x = fn ? fn(j) : y[s + j]; q += x * x; } return Math.sqrt(q / W); };
+      const w = (i, fn) => { let q = 0; for (let j = i; j < i + W; j++) { const x = fn ? fn(j) : [y[0][s + j], y[1][s + j]]; q += x[0] * x[0] + x[1] * x[1]; } return Math.sqrt(q / (2 * W)); };
       let lo = 0, hi = 0;
       for (let i = z - W; i < z + X + W; i += 120) { const o = w(i), ra = w(i, A2), rb = w(i, B2); if (Math.max(ra, rb) < 1e-5) continue; lo = Math.min(lo, 20 * Math.log10(o / Math.min(ra, rb))); hi = Math.max(hi, 20 * Math.log10(o / Math.max(ra, rb))); }
       out.seams.push({ k, swap, lo: +lo.toFixed(2), hi: +hi.toFixed(2) });
