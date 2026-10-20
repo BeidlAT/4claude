@@ -11587,6 +11587,7 @@ function onDown(e) {
   if (!A.started) return;
   if (e.preventDefault) e.preventDefault();
   if (e.pointerType && SLP.down) return;   // Gestik: the screen lies on the table – no phantom touches
+  if (NA.q.length) noteAfterRun();   // (the last note's own work first: in order)
   ensureRunning();
   if (touches.has(e.pointerId)) onUp({ pointerId: e.pointerId });   // never leave a note hanging on a reused pointer id
   if (e.pointerType) { try { cvFx.setPointerCapture(e.pointerId); } catch (err) {} }
@@ -11605,10 +11606,23 @@ function onDown(e) {
   touches.set(e.pointerId, tt);
   if (GK.on) gkNote(tt, true, e);
   modTouch();
-  noteEvent();
-  VIS.touchStart(tt);
+  // what does not play comes after the note: the recorder's start (its moment taken now) and the screen's burst, in a
+  // task of their own – the browser starts a voice once the task that made it has ended; a release or the next press
+  // runs them first
+  const at = A.ctx.currentTime;
+  noteAfter(() => { noteEvent(at); VIS.touchStart(tt); });
 }
+// the work after a note, in a task of its own (a message: the next task, before any timer)
+const NA = { q: [], ch: null };
+function noteAfter(fn) {
+  NA.q.push(fn);
+  if (NA.q.length > 1) return;
+  if (!NA.ch) { NA.ch = new MessageChannel(); NA.ch.port1.onmessage = noteAfterRun; }
+  NA.ch.port2.postMessage(0);
+}
+function noteAfterRun() { if (!NA.q.length) return; const q = NA.q; NA.q = []; for (const fn of q) { try { fn(); } catch (e) { console.error(e); } } }
 function onMove(e) {
+  if (NA.q.length) noteAfterRun();
   const tt = touches.get(e.pointerId);
   if (!tt) return;
   e.preventDefault();
@@ -11632,6 +11646,7 @@ function moveTouch(tt, pt) {
   }
 }
 function onUp(e) {
+  if (NA.q.length) noteAfterRun();   // (the press's own work before its release)
   const tt = touches.get(e.pointerId);
   if (!tt) return;
   if (GK.on && GK.p.tragen && gaCarry(tt, e)) return;   // Tragen: the lean carries the note on
@@ -28802,6 +28817,7 @@ function start() {
   for (const id of ['bar', 'main', 'quick', 'tabs']) document.getElementById(id).inert = false;
   try { cvFx.focus({ preventScroll: true }); } catch (e) {}
   startClock();
+  setTimeout(oscWarm, 0);
   setTimeout(preloadTextures, 0);   // after the reverb's job, which initAudio queued first
   warmKS();
   if (USERTEX.pending) setUserTex(USERTEX.pending);
@@ -28816,6 +28832,9 @@ function start() {
   keepAwake();
   renderRecInfo();
 }
+// the browser builds an oscillator type's wave tables at its first use in a context (≈ 1–3 ms each): at sound start,
+// not inside the first note (whose sound waits for the task that makes it)
+function oscWarm() { if (!A.ctx) return; try { for (const t of ['sine', 'sawtooth', 'square', 'triangle']) { const o = A.ctx.createOscillator(); o.type = t; } } catch (e) {} }
 // Chrome 146+ reports output underruns. If the device drops audio, play fewer voices at once and lighten the drive.
 function watchUnderruns() {
   const ps = A.ctx.playbackStats || A.ctx.playoutStats;
