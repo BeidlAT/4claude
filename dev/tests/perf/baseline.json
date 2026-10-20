@@ -1,0 +1,178 @@
+{
+ "about": "Myzel CPU per thread group (% of one core), medians of runs (the method: dev/tests/perf/check.js and perf.js)",
+ "ref": "7f226e7",
+ "date": "2026-10-20",
+ "cpu": "Intel(R) Xeon(R) Processor @ 2.80GHz",
+ "cores": 4,
+ "runs": 5,
+ "graph": {
+  "d": {
+   "nPulled": 89,
+   "busy": {
+    "BufferSource": 2,
+    "Oscillator": 8,
+    "ChannelMerger": 1,
+    "Gain": 21,
+    "Delay": 3,
+    "BiquadFilter": 6,
+    "WaveShaper": 5,
+    "ConstantSource": 1,
+    "Worklet:myzel-ring": 1,
+    "Worklet:myzel-ring-in": 1,
+    "IIRFilter": 1,
+    "Convolver": 1
+   }
+  },
+  "a": {
+   "nPulled": 89,
+   "busy": {
+    "BufferSource": 2,
+    "Oscillator": 8,
+    "ChannelMerger": 1,
+    "Gain": 21,
+    "Delay": 3,
+    "BiquadFilter": 6,
+    "WaveShaper": 5,
+    "ConstantSource": 1,
+    "Worklet:myzel-ring": 1,
+    "Worklet:myzel-ring-in": 1,
+    "IIRFilter": 1,
+    "Convolver": 1
+   }
+  }
+ },
+ "figures": {
+  "idle": {
+   "d": {
+    "audio": 19.79,
+    "conv": 6,
+    "main": 24.19,
+    "comp": 5.2,
+    "gpu": 29.29,
+    "total": 88.26,
+    "fps": 60.1,
+    "rafMs": 0.34
+   },
+   "a": {
+    "audio": 15.2,
+    "conv": 5.6,
+    "main": 34.18,
+    "comp": 4.8,
+    "gpu": 29.88,
+    "total": 91.65,
+    "fps": 60.1,
+    "rafMs": 0.34
+   }
+  },
+  "tiefsee": {
+   "d": {
+    "audio": 25.57,
+    "conv": 8.4,
+    "main": 32.89,
+    "comp": 6.2,
+    "gpu": 28.77,
+    "total": 109.18,
+    "fps": 60.1,
+    "rafMs": 0.49
+   },
+   "a": {
+    "audio": 23.29,
+    "conv": 9.9,
+    "main": 43.88,
+    "comp": 5.7,
+    "gpu": 29.59,
+    "total": 115.44,
+    "fps": 60.1,
+    "rafMs": 0.38
+   }
+  },
+  "regenwald": {
+   "d": {
+    "audio": 31.18,
+    "conv": 5,
+    "main": 40.08,
+    "comp": 6.2,
+    "gpu": 29.18,
+    "total": 118.8,
+    "fps": 60.1,
+    "rafMs": 0.72
+   },
+   "a": {
+    "audio": 29.48,
+    "conv": 4.8,
+    "main": 60.57,
+    "comp": 5.7,
+    "gpu": 30.29,
+    "total": 136.49,
+    "fps": 60.1,
+    "rafMs": 0.6
+   }
+  },
+  "kompost": {
+   "d": {
+    "audio": 32.39,
+    "conv": 5.9,
+    "main": 39.28,
+    "comp": 6,
+    "gpu": 28.28,
+    "total": 119.15,
+    "fps": 60.1,
+    "rafMs": 0.68
+   },
+   "a": {
+    "audio": 31.69,
+    "conv": 6,
+    "main": 62.85,
+    "comp": 5.8,
+    "gpu": 30.28,
+    "total": 143.29,
+    "fps": 60.1,
+    "rafMs": 0.57
+   }
+  },
+  "play": {
+   "d": {
+    "audio": 28.31,
+    "conv": 6.18,
+    "main": 56.9,
+    "comp": 6.27,
+    "gpu": 29.34,
+    "total": 135.28,
+    "fps": 60.1,
+    "rafMs": 0.92
+   },
+   "a": {
+    "audio": 25.04,
+    "conv": 5.71,
+    "main": 87.35,
+    "comp": 5.21,
+    "gpu": 29.09,
+    "total": 157.35,
+    "fps": 58,
+    "rafMs": 0.77
+   }
+  },
+  "after": {
+   "d": {
+    "audio": 17.69,
+    "conv": 5.9,
+    "main": 23.29,
+    "comp": 5.1,
+    "gpu": 27.69,
+    "total": 83.26,
+    "fps": 60.1,
+    "rafMs": 0.32
+   },
+   "a": {
+    "audio": 14.99,
+    "conv": 5.8,
+    "main": 34.38,
+    "comp": 4.5,
+    "gpu": 29.29,
+    "total": 91.95,
+    "fps": 59.4,
+    "rafMs": 0.34
+   }
+  }
+ }
+}

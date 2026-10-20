@@ -45,7 +45,7 @@ async function sleeps(slot, vp) {
     const { execSync } = require('child_process');
     const commit = execSync('git -C /home/user/4claude rev-parse --short HEAD').toString().trim();
     const cpu = (fs.readFileSync('/proc/cpuinfo', 'utf8').match(/model name\s*:\s*(.*)/) || [])[1];
-    const out = { about: 'Myzel CPU per thread group (% of one core), medians – dev/tests/perf/README in check.js and perf.js', ref: commit, date: new Date().toISOString().slice(0, 10), cpu, cores: require('os').cpus().length, runs, graph, figures: {} };
+    const out = { about: 'Myzel CPU per thread group (% of one core), medians of runs (the method: dev/tests/perf/check.js and perf.js)', ref: commit, date: new Date().toISOString().slice(0, 10), cpu, cores: require('os').cpus().length, runs, graph, figures: {} };
     for (const sc in S) for (const vp in S[sc]) { const s = S[sc][vp][CUR]; (out.figures[sc] = out.figures[sc] || {})[vp] = { audio: s.audio, conv: s.conv, main: s.main, comp: s.comp, gpu: s.gpu, total: s.total, fps: s.fps, rafMs: s.rafMs }; }
     fs.writeFileSync(BASE, JSON.stringify(out, null, 1) + '\n');
     console.log('baseline written: ' + BASE + ' (ref ' + commit + ')');
