@@ -1,4 +1,4 @@
-// Ruhe, live: in a silence the switch unplugs the graph (what still runs: the LFOs, the echo's loop, the hall, the
+// Ruhe, live: in a silence the switch unplugs the graph (what still runs: the LFOs, the echo's loop (the hall sleeps), the
 // Hexenring's processor and its drift, the compressor's detector – the master, the channel strips and the insert chains
 // rest); a finger, the Bordun, the mixer's meters and a Schleife each find it plugged in before they sound; a knob
 // turned in the silence wakes it (its glide keeps its time); it never wakes late.   node t-idle-live.js   env URL=<inst page> (default perfnew-inst)
@@ -20,7 +20,7 @@ const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) process
   let t = await until('M.IDLE.on', 30);
   ok(t > 0, `the switch unplugs the graph in a silence (after ${t} s; the hall ${await pg.evaluate(() => window.__M.P['rev.size'])} s needs its whole response of zeros)`);
   let a = await pg.evaluate(analyse), q = await pg.evaluate(parts);
-  ok(!q.master && !q.strips.length && !q.chains && !q.chainsPulled && q.echo && q.hall && !q.hxStrip, `while it sleeps the master, the strips (${q.strips.join(' ') || 'none'} busy, ${q.stripsPulled.join(' ') || 'none'} pulled) and the chains (${q.chainsPulled} pulled) rest, the echo's loop and the hall run on (${q.echo}/${q.hall}): busy ${JSON.stringify(a.busy)}, pulled ${a.nPulled} of ${Object.values(a.made).reduce((x, y) => x + y, 0)} nodes`);
+  ok(!q.master && !q.strips.length && !q.chains && !q.chainsPulled && q.echo && !q.hall && !q.hxStrip, `while it sleeps the master, the strips (${q.strips.join(' ') || 'none'} busy, ${q.stripsPulled.join(' ') || 'none'} pulled) and the chains (${q.chainsPulled} pulled) rest, the echo's loop runs on, the hall sleeps (${q.echo}/${q.hall}): busy ${JSON.stringify(a.busy)}, pulled ${a.nPulled} of ${Object.values(a.made).reduce((x, y) => x + y, 0)} nodes`);
   // 2 a finger: plugged in at once, heard
   let r = await pg.evaluate(async () => { const M = window.__M; M.onDown({ pointerId: 'p', pt: { x: 0.4, y: 0.5, px: 300, py: 300 } }); const on = M.IDLE.on; await new Promise((r) => setTimeout(r, 400)); M.onUp({ pointerId: 'p' }); return { on, late: M.IDLE.late }; });
   const pk = await peak(400);

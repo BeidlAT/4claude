@@ -3931,10 +3931,11 @@ function mixMeters(dt) {
 // in blocks of up to 16384 frames, their borders where its own count puts them (−99 dB; exactly 0 after a pause of whole
 // blocks). Both are pulled by the keeper; the hall is fed the zeros it was fed before (the echo's return used to send
 // them). Live, these grids already fall wherever the session's start and the notes' moments put them – playing a
-// phrase 1 ms later moves them the same way – but a render of the same notes could tell: so they sleep only if the
-// owner says so (IDLE.hall, IDLE.echo – measured at idle, of 26 % of a core on the desktop the hall's sleep would save
-// 13 points, the echo's 2 more; dev/tests/perf).
-const IDLE = { on: false, ctx: null, keeper: null, feed: null, taps: null, tapOn: false, tapT: 0, autoT: 0, cut: [], qT: 0, z: null, pT: -1, auto: false, late: 0, n: 0, echo: false, hall: false };
+// phrase 1 ms later moves them the same way – but a render of the same notes could tell: so they sleep only as the
+// owner says (20.10.2026): the hall sleeps (IDLE.hall – of 26 % of a core at idle on the desktop it saves 13 points,
+// in the Android emulation 21 → 8 %; after a pause its tail differs by −99 … −103 dB), the echo runs on (IDLE.echo –
+// 2 points more, but up to −57 dB with Leiern; dev/tests/perf).
+const IDLE = { on: false, ctx: null, keeper: null, feed: null, taps: null, tapOn: false, tapT: 0, autoT: 0, cut: [], qT: 0, z: null, pT: -1, auto: false, late: 0, n: 0, echo: false, hall: true };
 const IDLE_FFT = 4096;
 // A param keeps its time only where the render pulls it: Chromium moves a setTarget or a ramp one sample after the other
 // while its node is processed, and a node taken out of the render holds where it stood (measured: a knob turned in a

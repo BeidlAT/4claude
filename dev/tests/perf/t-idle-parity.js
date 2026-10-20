@@ -31,8 +31,8 @@ const CASES = [
   { name: 'mixer: the hall return EQ\'d, Klang straight to the sum, its echo send apart (the chain copy)', test: true, dur: 30, ph: [[0.1, 3], [21, 24]], idle: true,
     extra: Object.assign({}, EXACT, { 'dly.mix': 0, 'xrev.mid': 5, 'xrev.lc': 120, 'xrev.hc': 6000, 'xfin.route': 'dir', 'xfin.rev': 0.5 }) },
   { name: 'a frozen echo, thawed later', test: true, extra: Object.assign({}, EXACT, { 'rev.mix': 0, 'xdly.rev': 0 }), dur: 34, ph: [[0.1, 3], [25, 28]], at: [[2.5, 'freeze'], [8, 'thaw']], idle: true },
-  // the owner's options (not the default): the hall, the echo asleep too – what moves, measured
-  { name: 'option: the hall asleep too (IDLE.hall)', test: true, opt: 'hall', extra: Object.assign({}, EXACT, { 'dly.mix': 0 }), dur: 30, ph: [[0.1, 3], [21, 24]], idle: true, bound: 3.2e-5 },
+  // the owner's choices (20.10.2026): the hall asleep (the default), the echo running on (its sleep: an option) – what moves, measured
+  { name: 'the hall asleep (IDLE.hall, the default)', test: true, opt: 'hall', extra: Object.assign({}, EXACT, { 'dly.mix': 0 }), dur: 30, ph: [[0.1, 3], [21, 24]], idle: true, bound: 3.2e-5 },
   { name: 'option: the echo asleep too (IDLE.echo), its time moving (Leiern)', test: true, opt: 'echo', extra: Object.assign({}, EXACT, { 'dly.wow': 0.35, 'rev.mix': 0, 'xdly.rev': 0 }), dur: 42, ph: [[0.1, 3], [33, 36]], idle: true, bound: 3e-3 },
   // knobs turned in the silence (a cutoff, a strip's level, the master's EQ): the graph wakes before their glides start
   { name: 'knobs turned in the silence (the chain\'s cutoff, Klang\'s balance, the master\'s bass)', test: true, spread: true, extra: Object.assign({}, EXACT), dur: 40, ph: [[0.1, 3], [31, 34]], idle: true,
@@ -61,7 +61,9 @@ async function render(url, cs, drive) {
       seed(777);
       if (cs.tap) (new Function('M', 'A', 'ctx', cs.tap))(M, M.A, ctx);
       const I = M.IDLE, log = [], q = (t) => Math.round(t * sr / 128) * 128 / sr;
-      if (I && cs.opt) I[cs.opt] = true;
+      // the hall asleep is the default (the owner, 20.10.2026): the cases that prove the rest exact keep it running;
+      // its own case measures what its sleep moves
+      if (I) { I.hall = cs.opt === 'hall'; I.echo = cs.opt === 'echo'; }
       const ev = new Map(), add = (t, f) => { const k = q(t); if (!ev.has(k)) ev.set(k, []); ev.get(k).push(f); };
       const vs = [];
       // a note: the patch's engine (playNote), or one sawtooth with a short envelope – a Voice all the same (its start
@@ -115,7 +117,7 @@ const db = (x) => (x.md ? (20 * Math.log10(x.md)).toFixed(1) + ' dB at ' + (x.at
       console.log(`INFO ${cs.name}: energy ${o.e.toFixed(1)}; the switch ${JSON.stringify(d.log)}; old↔new ${db(a)}, new↔new with Ruhe ${db(c)}, old↔Ruhe ${db(e)}`);
       ok(a.md === 0 && c.md === 0 && e.md === 0, `${cs.name}: every sample identical – the old build, the new one, the new one with the switch (max |d| ${a.md} / ${c.md} / ${e.md})`);
       errs.push(...n.errors);
-    } else if (cs.opt) {   // (not the default: what the owner would choose – the rounding grid moved by the pause)
+    } else if (cs.opt) {   // (the hall's sleep, the default since the owner chose it, and the echo's, an option: the rounding grid moved by the pause)
       const x = cmp(o, d);
       console.log(`INFO ${cs.name}: the switch ${JSON.stringify(d.log)}; old↔Ruhe ${db(x)}`);
       ok(x.md < cs.bound, `${cs.name}: its own grid moved by the pause – a difference of rounding only (${db(x)}, under ${(20 * Math.log10(cs.bound)).toFixed(0)} dB)`);
