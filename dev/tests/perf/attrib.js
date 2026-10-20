@@ -20,7 +20,7 @@ const PARTS = [
   ['Hexenring processor + its input node (removed)', 'if (M.HX.node) { M.HX.node.disconnect(); for (const n of [M.A.hxIn0, M.A.driftG]) try { n.disconnect(M.HX.node); } catch (e) {} } if (M.HX.rin) { M.HX.rin.disconnect(); A.masterIn.disconnect(M.HX.rin); }'],
   ['Hexenring strip path (processor out gated off)', 'if (M.HX.g0) { M.HX.g0.gain.value = 0; } else if (M.HX.node) M.HX.node.disconnect(M.stripIn("hxr"))'],
   ['Ruhe engaged (the graph asleep: idleEnter)', 'if (M.idleEnter) M.idleEnter()'],
-  ['Ruhe taps (6 analysers)', 'if (M.IDLE && M.IDLE.taps) for (const [a, b] of M.IDLE.taps.links) a.disconnect(b)'],
+  ['Ruhe taps plugged in (6 analysers – only in the quiet after a sound: a negative share is their cost)', 'if (M.idleTaps) M.idleTaps(true)'],
 ];
 (async () => {
   const b = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });

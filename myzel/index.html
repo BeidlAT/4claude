@@ -3933,11 +3933,11 @@ function mixMeters(dt) {
 // them). Live, these grids already fall wherever the session's start and the notes' moments put them – playing a
 // phrase 1 ms later moves them the same way – but a render of the same notes could tell: so they sleep only if the
 // owner says so (IDLE.echo, IDLE.hall: each about a quarter of what sleeping saves at idle; dev/tests/perf).
-const IDLE = { on: false, ctx: null, keeper: null, feed: null, taps: null, cut: [], qT: 0, z: null, pT: -1, auto: false, late: 0, n: 0, echo: false, hall: false };
+const IDLE = { on: false, ctx: null, keeper: null, feed: null, taps: null, tapOn: false, tapT: 0, cut: [], qT: 0, z: null, pT: -1, auto: false, late: 0, n: 0, echo: false, hall: false };
 const IDLE_FFT = 4096;
 function idleBuild() {
   const ctx = A.ctx;
-  Object.assign(IDLE, { on: false, ctx, cut: [], qT: ctx.currentTime, z: null, pT: -1, auto: hxLive() });
+  Object.assign(IDLE, { on: false, ctx, cut: [], qT: ctx.currentTime, z: null, pT: -1, auto: hxLive(), tapOn: false });
   IDLE.keeper = G(0); IDLE.keeper.connect(ctx.destination);
   for (const o of [A.rngOsc, A.fltLfo, A.phaLfo, A.choL1, A.choL2, A.panLfo, A.wowLfo, A.flutLfo]) o.connect(IDLE.keeper.gain);
   A.revRet.connect(IDLE.keeper.gain); A.dlyRet.connect(IDLE.keeper.gain);   // (the hall and the echo: pulled while the master sleeps)
@@ -3947,17 +3947,24 @@ function idleBuild() {
   const cs = (IDLE.cs = ctx.createConstantSource()); cs.offset.value = 0; IDLE.csIn = G(0); IDLE.csIn.connect(cs.offset); cs.start();
   IDLE.feed = G(1); IDLE.feed.channelCount = 2; IDLE.feed.channelCountMode = 'explicit'; IDLE.feed.channelInterpretation = 'speakers'; cs.connect(IDLE.feed);
   // the taps: the echo's loop (both delay inputs: everything it holds passes them), the hall's input, the master's input –
-  // each channel apart (a downmix could cancel to zero)
+  // each channel apart (a downmix could cancel to zero); plugged in only for the quiet after the last sound (idleTaps)
   const an = () => { const a = ctx.createAnalyser(); a.fftSize = IDLE_FFT; return a; };
   const two = (src) => { const s = ctx.createChannelSplitter(2), L = an(), R = an(); s.connect(L, 0); s.connect(R, 1); return [s, L, R]; };
   const e0 = an(), e1 = an(), [sR, r0, r1] = two(A.revIn), [sM, m0, m1] = two(A.masterIn);
   const links = [[A.dSumL, e0], [A.dSumR, e1], [A.revIn, sR], [A.masterIn, sM]];
-  for (const [a, b] of links) a.connect(b);
   IDLE.taps = { links, g: [[e0, e1], [r0, r1], [m0, m1]], buf: new Float32Array(IDLE_FFT) };
 }
 // what can sound: a voice, a held finger, the Bordun, a frozen echo, the Puls, the rain, a Schleife, a web that rings
 const idleSrc = () => !!(A.voices.size || A.grainVoices.size || touches.size || A.bor || A.frozen || SEQ.on || rgSounds() || HX.loops.size || HXN.webs.size ||
   (A.gsp && A.gsp.active) || RHZ.vs.size || RHZ.q.length || (A.revWant && !A.revActive));
+// the taps hear only the quiet after the last sound: while a source sounds nothing is counted, so they rest then (and
+// while the graph sleeps); plugged in, they are read once they hold a whole window of what came since
+function idleTaps(on) {
+  if (!IDLE.taps || IDLE.tapOn === on) return;
+  IDLE.tapOn = on;
+  for (const [a, b] of IDLE.taps.links) { try { if (on) a.connect(b); else a.disconnect(b); } catch (e) {} }
+  if (on) { IDLE.tapT = A.ctx.currentTime; IDLE.z = null; }
+}
 // since when each tap group has been exactly zero (null: it is not); a gap between two reads longer than a read's
 // window starts the count again
 function idlePoll(now) {
@@ -3979,8 +3986,10 @@ function idleTick(force) {
   // its strip and its sends rest then even while other sound plays, where they may (whatever its strip's filters held
   // has died away; hxGates); a new Schleife opens it (hxPost)
   if (HX.g0 && HX.ctx === A.ctx) { if (HX.loops.size || HXN.webs.size || IDLE.hxT == null) IDLE.hxT = now; else if (!IDLE.hxOff && now - IDLE.hxT >= 20) hxGates(false); }
-  if (idleSrc()) { IDLE.qT = now; IDLE.z = null; if (IDLE.on) idleWake(!!(A.voices.size || A.bor || HX.loops.size)); return; }   // (those wake it themselves: late)
+  if (idleSrc()) { IDLE.qT = now; IDLE.z = null; idleTaps(false); if (IDLE.on) idleWake(!!(A.voices.size || A.bor || HX.loops.size)); return; }   // (those wake it themselves: late)
   if (IDLE.on) return;
+  idleTaps(true);
+  if (now - IDLE.tapT < (IDLE_FFT + 256) / SR) return;
   idlePoll(now);
   // the loop's delays hold 4 s; the hall's input its whole impulse response (and its pre-delay) back, so that the strip
   // after it has had zeros; the master's filters and the detector's fast path decay within a second or two (a muted
@@ -4004,7 +4013,7 @@ function idleEnter() {
     off(A.hxIn0, HX.node, 0, 0);
     hxGates(false);
   }
-  for (const [a, b] of IDLE.taps.links) off(a, b);
+  idleTaps(false);
   IDLE.cut = cut; IDLE.on = true; IDLE.n++;
 }
 // the gates on the Hexenring's way (zeros while no Schleife exists): values, read by the very quantum that plays. At
