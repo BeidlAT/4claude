@@ -1467,6 +1467,16 @@ unchanged: the capture's playing path is as measured in step 1d. Tests: `perf/t-
 the opened gates; after it the master rests behind `HX.gM`), `hexenring/t-hx-taps.js` (the strip reaches `A.masterIn`
 through its gate at 1). Idle and play figures: HANDOFF, „Leistung“.
 
+**As built (step 2b).** Measured with `cost.js` (two runs, scale 0.958 / 0.912; new candidates `hxu`, `hxv`, `hxh`,
+`hxl`, `hxa`, and `hxc` as the app now builds it – three rings, the Puls's lanes into input 2): capture 1.20 / 1.07,
+a playing Schicht 0.33 / 0.33, resampling 0.96 / 1.01; a loop at speed 1½ (the 56-tap kernel) 1.79 / 1.56 over its
+Schicht, at ×2 (80 taps) 2.34 / 2.22, at ½ (the shared kernel) 0.99 / 0.92 (= rs); a Schicht in slices (Schnitt, every
+slice through the resampler with its fades) 0.67 / 0.65; a worn one (Abrieb) 0.18 / 0.17. Entered (higher + 15 %):
+`HX_COST = { capture: 1.38, …, k16: 2.06, k24: 2.69, slice: 0.77, abr: 0.21 }`. Counted (`hxCount`): a playing loop at
+another speed once (`k24` above 1.6, `k16` above 1.03, else `rs`), each Schicht of a loop in slices (Auslassen,
+Würfeln, or a rhythmic audio loop off its tempo) `slice`, each worn Schicht `abr`. The Werk-Rahmen's and the offline
+renders (Verdoppeln, Export) are no voice budget.
+
 ---
 
 ## 22. Tests (new suite `dev/tests/hexenring/`, run by `run-all.sh`; Playwright on an instrumented slot `hx`)
