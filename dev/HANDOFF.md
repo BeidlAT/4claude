@@ -34,6 +34,15 @@ So geht es in einer neuen Sitzung weiter: Öffne eine neue Claude-Code-Sitzung a
 
 **Step 1b (grammar, Ringleiste, persistence, built):** SPEC §6 grammar (`hxKorb`/`hxKorbPlan`, `hxHaupt`, `hxRingTap`, punch, retro rule, Stille, history), §12.1 a/b (`hxTaktFinden`, `hxWiederholung`), §16 UI (`#hxRail` in the new column `.stcol` with `#stage`; the card in `buildRec`), §19 IndexedDB v2 (`rings`, `ringsegs`), MIDI clock follow (t-clock 5/5), „Alles“ via its own node `myzel-ring-in` downstream of `A.masterIn`. Suites `t-hx-ernten/grammar/ohr/persist/ui` (+ `hx-g.js` helpers); all in SPEC's „As built (step 1b)“ notes. Costs re-measured: `HX_COST = { capture: 0.93, schicht: 0.31, rs: 0.96 }`. Open points for the owner: t-hx-proc's Gong seam row scatters with the random Gong material (RMS dip up to −1.7 dB vs ±1 dB, the 1a seam law; a time-local ρ would fix it); a short rubato phrase can find a chance grid (clarity near the 0.55 line); on a 360 × 740 phone the field (118 px) + the Ringleiste + the sound library don't all fit – the library list scrolls (Dunst 3 of 4 tiles in view; `klang/tests/t-lib-shots` fails that one check) – hide/fold the rail there, or accept? (SPEC §16 As built 1b). Test machine note: after a container restart the machine stalls audio several times a second; some Gestik timing/cost rows then flake on the step-1a build too (SPEC §22 As built 1b). Next (SPEC §23): step 2 (Werk-Rahmen, bake, Taumeln, the Ausklang tail render); not yet built from 1b's list: `HX.lat`/„Klopf mit“, `hx.ein`/`hx.klick`, the Eigensinn guard, „eine Runde“ for punches, pedals/controls, Lichtungen, the Fährte's retirement.
 
+## Leistung – Ruhe und Bildrate (Stand 20.10.2026)
+
+**Für den Besitzer:** Myzel rechnet jetzt weniger, ohne dass sich ein einziges Sample ändert – offline nachgerechnet: jeder Testfall Sample für Sample gleich wie vorher.
+- **Ruhe:** Klingt nichts mehr, steckt Myzel Master, Kanalzüge und Effektketten ab – erst wenn Echo, Hall und Master exakt auf null ausgeklungen sind. Jeder Ton, der Bordun und jede Schleife stecken sie wieder ein, bevor sie erklingen. Der Humus des Hexenrings nimmt weiter auf. Im Leerlauf sinkt die Last der Audio-Threads auf dem Desktop von 21,5 auf 18,5 % eines Kerns, in der Android-Nachbildung von 20 auf 14,8 % – so viel wie vor dem Hexenring (veröffentlichte Version: 15,3 / 14,6 %; der Rest auf dem Desktop ist der Preis des Audio-Worklets, das der Hexenring braucht).
+- **Hexenring:** Sein Kanal läuft erst mit, wenn es eine Schleife gibt, und 20 s nach der letzten wieder nicht – auch beim Spielen.
+- **Erster Ton:** Was nicht klingt (Aufnahmestart, das Aufblühen auf dem Feld), kommt jetzt nach dem Ton, und die Wellentabellen werden beim Klangstart gebaut: der erste Fingerdruck braucht 2,2 statt 4,1 ms.
+- **Bildrate (sichtbar, nicht hörbar):** Auf 90-/120-Hz-Bildschirmen wie deinem Motorola Edge 50 Neo zeichnet das Feld höchstens etwa 60 Bilder pro Sekunde. Seine Bewegung war für 60 Hz gebaut und lief dort bis zu doppelt so schnell, mit kürzeren Spuren – jetzt läuft sie überall gleich, mit halb so viel Zeichenarbeit (nachgebildet: Hauptthread im Leerlauf 46 → 36 % eines Kerns, beim Spielen 98 → 90 %). Wenn dir das schnellere Feld lieber war, sag es.
+- **Zum Entscheiden:** Echo und Hall laufen im Leerlauf weiter, weil ein Anhalten ihre Rundung verschiebt (nach dem Aufwachen klingt der Hall um −103 dB anders, ein Echo mit Leiern um −64 dB – unhörbar, aber nicht bitgleich). Schliefe der Hall mit, spart das im Leerlauf noch einmal die Hälfte: Desktop 26 → 13 % eines Kerns, Android-Nachbildung 21 → 8 %; das Echo brächte 1–2 Punkte dazu. Sollen sie mitschlafen?
+
 ## For the next session (English working notes)
 
 **Branch:** the one named in the session (stage 1 was on `ccr-c7c5d0a6-cus3ip`, stages 2 and 3 on `ccr-d21a93b2-oncy3v` – after the owner merged stage 2 (PR #1) into the default branch `ccr-c7c5d0a6-cus3ip`, the branch was restarted from it for stage 3) – develop, commit and push only there; no PR unless asked. The Pages app updates when the owner merges a stage into the default branch (a PR they open or ask for).
@@ -172,7 +181,22 @@ Then use these:
 - **Pausing moves rounding** in two places, so they do not sleep by default: a convolver's block phase (blocks of up to 16384 frames: −99 dB after an arbitrary pause, 0 after whole blocks) and a delay whose time moves (its float read position depends on its write count: −57 … −64 dB).
 - **Results** (`dev/tests/perf/perf.js`, medians of 3, builds alternating; % of one core of this machine – audio = the render threads, conv = the convolver's thread, main = the page's main thread):
 
-TABLE
+| scenario | view | `4b6bfb2` (published) | `e341c1b` (before) | now |
+|---|---|---|---|---|
+| idle (default patch) | desktop | 15.3 / 6.0 / 24.4 | 21.5 / 6.0 / 23.6 | **18.5** / 6.0 / 23.9 |
+| idle | Android | 14.6 / 5.7 / 34.5 | 20.0 / 6.0 / 33.6 | **14.8** / 5.7 / 33.8 |
+| after (18 s after playing) | desktop | 16.0 / 6.1 / 24.8 | 21.6 / 5.9 / 23.9 | **18.8** / 6.0 / 24.0 |
+| after | Android | 15.3 / 5.8 / 35.2 | 18.9 / 5.9 / 35.0 | **15.1** / 5.7 / 34.1 |
+| play (a phrase) | desktop | 22.2 / 6.2 / 55.3 | 30.6 / 6.1 / 56.0 | 28.5 / 6.1 / 56.0 |
+| play | Android | 21.8 / 6.0 / 89.6 | 25.4 / 5.8 / 88.9 | 25.3 / 5.9 / 88.9 |
+| Tiefsee (Bordun sounds) | desktop | 18.6 / 8.7 / 32.2 | 26.1 / 8.6 / 32.1 | 26.5 / 8.3 / 32.8 |
+| Tiefsee | Android | 19.3 / 8.1 / 45.0 | 23.4 / 10.0 / 45.1 | 22.8 / 8.1 / 42.9 |
+| Regenwald (Puls) | desktop | 25.6 / 5.1 / 40.3 | 31.6 / 4.8 / 41.2 | 33.5 / 5.1 / 41.1 |
+| Regenwald | Android | 23.9 / 4.7 / 61.4 | 28.6 / 4.7 / 59.9 | 26.6 / 4.6 / 59.7 |
+| Kompostgarten (Puls) | desktop | 30.8 / 3.9 / 39.3 | 34.7 / 6.1 / 40.7 | 32.8 / 5.9 / 39.3 |
+| Kompostgarten | Android | 28.3 / 5.8 / 61.1 | 30.3 / 6.0 / 61.5 | 28.0 / 5.7 / 60.9 |
+
+  Figures are audio / conv / main. While sound plays the runs scatter by ±2–4 points; there the new build equals the one before within that (Ruhe does not apply; only the Hexenring's resting strip and the taps' rest save, ≈ 1 point). At idle the audio threads are back at the published build's level, except the device thread's hand-over to the worklet thread (3 points on the desktop, 1.3 in the Android emulation – any worklet costs it; the Hexenring's processor must record from the first note). The compositor and the GPU process are unchanged (≈ 5 and 28–31). With a 120-Hz display emulated (`--hz120`, Android, idle / play): main thread 46.3 → 35.9 and 97.5 → 89.7 (the old build managed 76 of 120 frames while playing, the new one draws its 60). The owner's options at idle (live, medians of 3; audio + conv): desktop 26.1 default → echo asleep 23.8, hall asleep 12.8, both 11.3; Android 20.9 → 19.6 / 8.3 / 7.0.
 
 ### Owner's calls (open)
 - **Ruhe – the hall and the echo at idle (performance pass, 20.10.2026):** they keep running while the rest of the graph sleeps, because a pause moves where their rounding falls (after a sleep the hall's tail differs by −103 dB, an echo with Leiern by −64 dB from one that never paused – inaudible, not bit-exact). Letting them sleep (`IDLE.hall`, `IDLE.echo`, no UI yet) would save at idle: the hall 13 points of a core (desktop 26 → 13 %, Android emulation 21 → 8 %), the echo 1–2 more. Off unless the owner says so.

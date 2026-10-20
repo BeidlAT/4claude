@@ -1241,7 +1241,8 @@ rings (the live web's measured cost, §15).
 
 **As built (performance: Ruhe, 20.10.2026).** A worklet's output is never silent to Chromium, so the processor's zeros
 kept the strip „Hexenring“ and, behind it, the master running with nothing played (with the echo's loop, a cycle: the
-idle audio thread of `e341c1b` 23 % of a core on the desktop against 16 % before the Hexenring – `dev/tests/perf`). Its
+idle audio threads of `e341c1b` 21.5 % of a core on the desktop against 15.3 % before the Hexenring; now 18.5 % –
+`dev/tests/perf`, HANDOFF). Its
 way to the master now runs through gates – gains at 1, a value read by the very quantum that plays a message, so no race
 with the port: `HX.g0`/`HX.g1` at outputs 0 and 1, closed from the processor's creation until the first Schleife
 (`hxPost` with `loop` opens them; nothing but a Schleife sounds from it) and again 20 s after the last Schleife and web
