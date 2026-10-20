@@ -56,6 +56,15 @@ const RAF_HOOK = () => {
   const raf = window.requestAnimationFrame.bind(window);
   window.requestAnimationFrame = (cb) => raf((ts) => { const t0 = performance.now(); try { cb(ts); } finally { if (R.on) { const d = performance.now() - t0; R.n++; R.ms += d; if (d > R.max) R.max = d; } } });
 };
+// a 120-Hz display, emulated (this headless browser draws at 60): every real frame runs the page's frame callbacks twice,
+// 8.3 ms apart in their timestamps – the page's own drawing work as on a 120-Hz phone (the compositing itself not doubled)
+const RAF120 = () => {
+  const raf = window.requestAnimationFrame.bind(window); let q = [], id = 0; const dead = new Set();
+  const tick = (ts) => { for (const t of [ts - 8.333, ts]) { const c = q; q = []; for (const [i, f] of c) if (!dead.delete(i)) f(t); } raf(tick); };
+  window.requestAnimationFrame = (cb) => { q.push([++id, cb]); return id; };
+  window.cancelAnimationFrame = (i) => { dead.add(i); };
+  raf(tick);
+};
 // the scenarios: what is set up after the sound starts, how long it settles, whether notes are played while measuring
 const SC = {
   idle: { settle: 16, about: 'default patch, nothing played' },
@@ -81,6 +90,7 @@ async function measure(slot, sc, vp, secs = 10, o = {}) {
   const b = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
   try {
     const ctx = await b.newContext(VPS[vp]);
+    if (o.hz120) await ctx.addInitScript(RAF120);
     await ctx.addInitScript(RAF_HOOK);
     if (o.init) await ctx.addInitScript(o.init);
     const pg = await ctx.newPage();
@@ -104,4 +114,4 @@ async function measure(slot, sc, vp, secs = 10, o = {}) {
   } finally { await b.close(); }
 }
 const median = (a) => { const s = a.filter((x) => x != null).sort((x, y) => x - y); return s.length ? (s.length % 2 ? s[s.length >> 1] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2) : null; };
-module.exports = { HOST, VPS, SC, snap, groups, threads, measure, median, phrase, RAF_HOOK };
+module.exports = { HOST, VPS, SC, snap, groups, threads, measure, median, phrase, RAF_HOOK, RAF120 };

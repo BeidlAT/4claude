@@ -17,9 +17,9 @@ const { ok } = H;
   // the graph
   let r = await ev(() => {
     const M = window.__M, A = M.A, st = M.MIX.s.hxr;
-    return { route: M.P['xhxr.route'], to: st.dTo === A.masterIn, mask: [...M.HX.mask].join(' '), taps: M.MIX.src.filter((s) => s.hxT).map((s) => s.k).join(' '), rec: !!M.PD['xhxr.vol'].rec, inPatch: 'xhxr.vol' in M.patchValues() };
+    return { route: M.P['xhxr.route'], to: st.dTo === A.masterIn || (!!M.HX.gM && st.dTo === M.HX.gM && M.HX.gM.gain.value === 1), mask: [...M.HX.mask].join(' '), taps: M.MIX.src.filter((s) => s.hxT).map((s) => s.k).join(' '), rec: !!M.PD['xhxr.vol'].rec, inPatch: 'xhxr.vol' in M.patchValues() };
   });
-  ok(r.route === 'dir' && r.to, 'the strip „Hexenring“ goes straight to A.masterIn (route dir), where „Alles“ listens (myzel-ring-in)');
+  ok(r.route === 'dir' && r.to, 'the strip „Hexenring“ goes straight to A.masterIn (route dir; through its gate at 1 – Ruhe), where „Alles“ listens (myzel-ring-in)');
   ok(r.taps === 'fin eb2 rgn gsp' && r.mask === 'fin eb2 rgn gsp', `„Gespielt“ taps the strips ${r.taps} (after their mute/solo gate); the Puls and the Bordun only by the mask`);
   ok(r.rec && !r.inPatch, 'the strip\'s settings stay out of the patch (a preset never changes the loops)');
 

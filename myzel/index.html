@@ -3395,6 +3395,7 @@ function initAudio() {
   A.analyser = ctx.createAnalyser(); A.analyser.fftSize = 2048; A.analyser.smoothingTimeConstant = 0.6;
   A.out.connect(A.analyser);
   A.scopeBuf = new Float32Array(A.analyser.fftSize);
+  idleBuild();   // Ruhe: the keeper and the taps
 
   // start free-running modulators – live a moment ahead, at a known time (Hexenring: the chain's LFOs and the drift are
   // followed from it, so a loop's bake and its Taumeln know their phase at any moment; offline at 0, as ever)
@@ -3655,6 +3656,7 @@ function gates(st, set) {
 function wireStrip(st) {
   const want = () => (st.k === 'hxr' ? hxRoute() : !st.ret && P['x' + st.k + '.route'] !== 'dir' ? A.voiceBus : A.masterSum);   // Hexenring: never into A.masterSum
   if (st.dTo === want()) return;
+  if (st.k === 'hxr' && IDLE.hxOff) hxGates(true);   // Ruhe: through the chain's copy, the processor's zeros run as before
   if (!st.dTo) { st.dTo = want(); st.dry.connect(st.dTo); return; }
   if (st.switching) return;
   st.switching = true;
@@ -3911,11 +3913,125 @@ function mixMeters(dt) {
   loudRead(now);
 }
 
+/* ---------- Ruhe: the graph unplugged while nothing sounds ---------- */
+// Chromium skips the work of a node whose inputs are silent – but a cycle (the echo's ping-pong) and a worklet's output
+// (the Hexenring's processor) never are, so everything after them ran on at idle: the echo, its strip, the hall, the
+// master, and the shared LFOs' work on every filter and delay they move – most of the audio thread's load with nothing
+// playing (measured: dev/tests/perf). Once no source has sounded for a while and the echo's loop, the hall's input and
+// the master's input have been exactly zero long enough for every state after them to be exactly zero, their links are
+// taken out: the parts after them stop, frozen at zero, as Chromium freezes any node whose input stays silent. Every
+// sound plugs them in again before it starts (idleWake: a voice, the Bordun, a new Schleife), so the next note meets the
+// zero states it would have met anyway – the same samples. What must not stop keeps running: the shared LFOs (their
+// phases – the Hexenring's bake follows them), the Gespinst's web and the Hexenring's processor are pulled by a keeper
+// (a silent gain whose gain they feed); the processor records the silence; the compressor's detector decays as before
+// (its mono mix is never silent).
+// Two parts keep running, because a pause would move where their rounding falls: the echo – a delay whose time moves
+// (Leiern) reads between its samples at a position Chromium computes in single precision from its own write count,
+// so after a pause the same echo comes out up to −57 dB different, sample for sample – and the hall – a convolver works
+// in blocks of up to 16384 frames, their borders where its own count puts them (−99 dB; exactly 0 after a pause of whole
+// blocks). Both are pulled by the keeper; the hall is fed the zeros it was fed before (the echo's return used to send
+// them). Live, these grids already fall wherever the session's start and the notes' moments put them – playing a
+// phrase 1 ms later moves them the same way – but a render of the same notes could tell: so they sleep only if the
+// owner says so (IDLE.echo, IDLE.hall: each about a quarter of what sleeping saves at idle; dev/tests/perf).
+const IDLE = { on: false, ctx: null, keeper: null, feed: null, taps: null, cut: [], qT: 0, z: null, pT: -1, auto: false, late: 0, n: 0, echo: false, hall: false };
+const IDLE_FFT = 4096;
+function idleBuild() {
+  const ctx = A.ctx;
+  Object.assign(IDLE, { on: false, ctx, cut: [], qT: ctx.currentTime, z: null, pT: -1, auto: hxLive() });
+  IDLE.keeper = G(0); IDLE.keeper.connect(ctx.destination);
+  for (const o of [A.rngOsc, A.fltLfo, A.phaLfo, A.choL1, A.choL2, A.panLfo, A.wowLfo, A.flutLfo]) o.connect(IDLE.keeper.gain);
+  A.revRet.connect(IDLE.keeper.gain); A.dlyRet.connect(IDLE.keeper.gain);   // (the hall and the echo: pulled while the master sleeps)
+  // zeros that are not silence: a constant source at 0 whose offset has an input computes them every quantum – in two
+  // channels, as the hall's input always had (a convolver fed one channel works another way)
+  // (each node held: one that nothing references and nothing feeds is switched off by the browser)
+  const cs = (IDLE.cs = ctx.createConstantSource()); cs.offset.value = 0; IDLE.csIn = G(0); IDLE.csIn.connect(cs.offset); cs.start();
+  IDLE.feed = G(1); IDLE.feed.channelCount = 2; IDLE.feed.channelCountMode = 'explicit'; IDLE.feed.channelInterpretation = 'speakers'; cs.connect(IDLE.feed);
+  // the taps: the echo's loop (both delay inputs: everything it holds passes them), the hall's input, the master's input –
+  // each channel apart (a downmix could cancel to zero)
+  const an = () => { const a = ctx.createAnalyser(); a.fftSize = IDLE_FFT; return a; };
+  const two = (src) => { const s = ctx.createChannelSplitter(2), L = an(), R = an(); s.connect(L, 0); s.connect(R, 1); return [s, L, R]; };
+  const e0 = an(), e1 = an(), [sR, r0, r1] = two(A.revIn), [sM, m0, m1] = two(A.masterIn);
+  const links = [[A.dSumL, e0], [A.dSumR, e1], [A.revIn, sR], [A.masterIn, sM]];
+  for (const [a, b] of links) a.connect(b);
+  IDLE.taps = { links, g: [[e0, e1], [r0, r1], [m0, m1]], buf: new Float32Array(IDLE_FFT) };
+}
+// what can sound: a voice, a held finger, the Bordun, a frozen echo, the Puls, the rain, a Schleife, a web that rings
+const idleSrc = () => !!(A.voices.size || A.grainVoices.size || touches.size || A.bor || A.frozen || SEQ.on || rgSounds() || HX.loops.size || HXN.webs.size ||
+  (A.gsp && A.gsp.active) || RHZ.vs.size || RHZ.q.length || (A.revWant && !A.revActive));
+// since when each tap group has been exactly zero (null: it is not); a gap between two reads longer than a read's
+// window starts the count again
+function idlePoll(now) {
+  const T = IDLE.taps, b = T.buf, gap = now - IDLE.pT > (IDLE_FFT - 256) / SR;
+  IDLE.pT = now;
+  if (!IDLE.z) IDLE.z = [null, null, null];
+  for (let i = 0; i < 3; i++) {
+    let zero = true;
+    for (const a of T.g[i]) { a.getFloatTimeDomainData(b); for (let k = 0; k < b.length; k++) if (b[k] !== 0) { zero = false; break; } if (!zero) break; }
+    if (!zero) IDLE.z[i] = null;
+    else if (IDLE.z[i] == null || gap) IDLE.z[i] = now - IDLE_FFT / SR;
+  }
+}
+// (in tick(), live only; an offline render's test drives it at its suspends: force)
+function idleTick(force) {
+  if (!IDLE.taps || IDLE.ctx !== A.ctx || !(IDLE.auto || force)) return;
+  const now = A.ctx.currentTime;
+  // the Hexenring's processor without a Schleife (or a web of one) for 20 s: its way to the master, zeros, is closed –
+  // its strip and its sends rest then even while other sound plays, where they may (whatever its strip's filters held
+  // has died away; hxGates); a new Schleife opens it (hxPost)
+  if (HX.g0 && HX.ctx === A.ctx) { if (HX.loops.size || HXN.webs.size || IDLE.hxT == null) IDLE.hxT = now; else if (!IDLE.hxOff && now - IDLE.hxT >= 20) hxGates(false); }
+  if (idleSrc()) { IDLE.qT = now; IDLE.z = null; if (IDLE.on) idleWake(!!(A.voices.size || A.bor || HX.loops.size)); return; }   // (those wake it themselves: late)
+  if (IDLE.on) return;
+  idlePoll(now);
+  // the loop's delays hold 4 s; the hall's input its whole impulse response (and its pre-delay) back, so that the strip
+  // after it has had zeros; the master's filters and the detector's fast path decay within a second or two (a muted
+  // strip's own filters, which the master never hears: 3 s since the last source)
+  const z = IDLE.z, ok = (i, s) => z[i] != null && now - z[i] >= s, ir = A.revActive && A.revActive.conv.buffer ? A.revActive.conv.buffer.duration : 0;
+  if (now - IDLE.qT >= 3 && ok(0, 6) && ok(1, ir + 3) && ok(2, 3)) idleEnter();
+}
+// the links taken out carry only what a voice or the Bordun plays – each made after its wake, in the same order, so
+// the render meets them back no later than the sound (the echo's return even has its delay to spare); the Hexenring's
+// processor plays on a message of its own, which the render may act on before it meets a link put back: its way is
+// closed by gates (gains: a value, no link), its links stay
+function idleEnter() {
+  const cut = [], off = (a, b, ...x) => { try { a.disconnect(b, ...x); cut.push([a, b, ...x]); } catch (e) {} };
+  off(A.masterSum, A.masterIn);   // the master's input: everything but the Hexenring's strip
+  off(A.dlyRet, MIX.s.dly.in);   // the echo's return: its strip rests (the keeper pulls the loop – IDLE.echo: not even that)
+  if (IDLE.echo) off(A.dlyRet, IDLE.keeper.gain);
+  off(A.dlySend, A.dlyIn);   // and its input: the loop running on pulls nothing before it (the chain, the strips)
+  off(A.revSend, A.revIn); off(MIX.s.dly.hS, A.revIn);   // the hall's input: from the feed (IDLE.hall: from nothing)
+  if (!IDLE.hall) { IDLE.feed.connect(A.revIn); cut.push([IDLE.feed, A.revIn, 'feed']); } else off(A.revRet, IDLE.keeper.gain);
+  if (HX.node && HX.ctx === A.ctx) {   // the processor (no Schleife): its way closed, its Gespielt ring records zeros
+    off(A.hxIn0, HX.node, 0, 0);
+    hxGates(false);
+  }
+  for (const [a, b] of IDLE.taps.links) off(a, b);
+  IDLE.cut = cut; IDLE.on = true; IDLE.n++;
+}
+// the gates on the Hexenring's way (zeros while no Schleife exists): values, read by the very quantum that plays. At
+// the processor's outputs while its strip goes straight to the master and no loop has used out 1 (the strip rests too);
+// else at the master's input only (hxGateM): a copy of the chain runs on behind it – its chorus, delays that move,
+// would come back with their rounding moved, as the echo's
+function hxGates(on) {
+  IDLE.hxOff = !on;
+  const deep = P['xhxr.route'] === 'dir' && !HX.out1;
+  for (const g of [HX.g0, HX.g1]) if (g && HX.ctx === A.ctx) g.gain.value = on || !deep ? 1 : 0;
+  if (HX.gM && HX.gM.context === A.ctx) HX.gM.gain.value = on ? 1 : 0;
+}
+// before anything sounds (and before the graph around the cut links changes): every link back, in the order taken
+function idleWake(late) {
+  if (!IDLE.on) return;
+  IDLE.on = false;
+  for (const [a, b, ...x] of IDLE.cut) { try { if (x[0] === 'feed') a.disconnect(b); else a.connect(b, ...x); } catch (e) {} }
+  IDLE.cut = []; IDLE.z = null; IDLE.qT = A.ctx ? A.ctx.currentTime : 0;
+  if (late) { IDLE.late++; console.warn('Ruhe: zu spät geweckt'); }
+}
+
 /* =====================================================================
    Voices
    ===================================================================== */
 class Voice {
   constructor(eng) {
+    if (IDLE.on && A.ctx === IDLE.ctx) idleWake();   // Ruhe: the graph plugged in before the voice exists
     this.eng = eng; this.nodes = []; this.srcs = []; this.mods = [];
     this.out = A.ctx.createGain(); this.out.gain.value = 0;
     this.alive = true; this.released = false; this.t0 = A.ctx.currentTime; this.endAt = Infinity; this.relAt = null;
@@ -6415,6 +6531,7 @@ function updBordun() {
   else if (A.bor) stopBordun();
 }
 function startBordun() {
+  if (IDLE.on) idleWake();   // Ruhe
   const t = A.ctx.currentTime;
   const g = G(0), filt = BQ('lowpass', P['bor.cut'], 2.5);
   filt.connect(g).connect(stripIn('bor'));
@@ -9822,7 +9939,7 @@ function myzelDsp() {
       while (k < n) {
         const c = Math.floor(x / CH), ch = H[((c % this.hN) + this.hN) % this.hN], j = x - c * CH, m = Math.min(n - k, CH - j), L = ch[0], R = ch[1];
         if (a) for (let z = 0; z < m; z++) { const l = a[k + z], q = b[k + z]; L[j + z] = l; R[j + z] = q; e += l * l + q * q; }
-        else for (let z = 0; z < m; z++) { L[j + z] = 0; R[j + z] = 0; }
+        else { L.fill(0, j, j + m); R.fill(0, j, j + m); }   // (no input – silence, a sleeping graph: the same zeros, written at once)
         k += m; x += m;
       }
       this.lv[r] += e;
@@ -10335,6 +10452,7 @@ function gspWeb() {
       processorOptions: { rich: !!Q.rich, lite: A.lite ? 1 : 0, prm: gspPrm(), freqs: gspFreqs(), seed: wkSeed() } });
     const inp = G(1), out = G(dbToGain(P['gsp.halo']));
     inp.connect(node); node.connect(out).connect(stripIn('gsp'));
+    if (IDLE.keeper && IDLE.ctx === A.ctx) node.connect(IDLE.keeper.gain);   // Ruhe: the web keeps its time while the rest sleeps
     const W = A.gsp = { node, inp, out, ctx: A.ctx, rich: !!Q.rich, active: false, cost: GSP_COST[Q.rich ? 1 : 0], kop: gspKop() };
     node.port.onmessage = (e) => { const m = e.data; if (!m || A.gsp !== W) return; if (m.active) W.active = true; if (m.idle) W.active = false; };
     node.onprocessorerror = () => { A.workletBroken.add('gsp'); console.warn('Klangquelle gsp: Prozessorfehler'); gspDrop(); dspState(DSP.state); };
@@ -11417,7 +11535,7 @@ function tick() {
   if (!A.ctx || A.ctx.state !== 'running') return;
   const horizon = A.ctx.currentTime + clamp(0.07 + 2 * (A.jitter || 0.025), 0.12, 0.35);
   // (Hexenring: after a stall the Taktgeber follows the device before the Puls schedules)
-  try { ctxSync(); if (A.ctxJump) { A.ctxJump = false; if (SEQ.ext && CLK.run && CLK.n > 2) clkFollow(); } jrgClock(); seqTick(horizon); clkOutTick(horizon); rollTick(horizon); grainTick(horizon); previewTick(horizon); faeTick(horizon); if (GK.on || RG.on) rgTick(horizon); if (MOD.tm) modFlush(true); if (A.gsp) gspTick(); if (RHZ.vs.size || RHZ.q.length) rhzRun(horizon); hxTick(horizon); } catch (e) { console.error(e); }   // (Hexenring: its waits, the Ohr, the field's rings)
+  try { ctxSync(); if (A.ctxJump) { A.ctxJump = false; if (SEQ.ext && CLK.run && CLK.n > 2) clkFollow(); } jrgClock(); seqTick(horizon); clkOutTick(horizon); rollTick(horizon); grainTick(horizon); previewTick(horizon); faeTick(horizon); if (GK.on || RG.on) rgTick(horizon); if (MOD.tm) modFlush(true); if (A.gsp) gspTick(); if (RHZ.vs.size || RHZ.q.length) rhzRun(horizon); hxTick(horizon); idleTick(); } catch (e) { console.error(e); }   // (Hexenring: its waits, the Ohr, the field's rings)
 }
 function startClock() {
   const fallback = () => { if (!A.clockId) A.clockId = setInterval(tick, 25); };
@@ -24745,6 +24863,7 @@ const hxT = (f) => HX.tR + (f - HX.fR) / SR;
 const hxLive = () => !!(A.ctx && !(typeof OfflineAudioContext !== 'undefined' && A.ctx instanceof OfflineAudioContext));
 function hxPost(m, tr) {
   if (!HX.node || HX.ctx !== A.ctx) return false;
+  if (m.loop) { if (IDLE.on) idleWake(); if (IDLE.hxOff) hxGates(true); IDLE.hxT = null; }   // Ruhe: a Schleife will sound
   if (HX.batch) {   // (hxBatch: one message – a key twice sends what is there first)
     const B = HX.batch;
     if (Object.keys(m).some((k) => k in B.m)) { const o = B.m, t = B.tr; B.m = {}; B.tr = []; try { HX.node.port.postMessage(o, t); } catch (e) { console.warn(e); } }
@@ -24765,6 +24884,7 @@ function hxStart() {
   ensureDSP(A.ctx, true).then((ok) => { if (ok && A.ctx && A.started) hxNode(); else HX.state = 'kein'; });
 }
 function hxNode() {
+  if (IDLE.on) idleWake();   // Ruhe
   const ctx = A.ctx, hum = P['hx.humus'];
   let node;
   try {
@@ -24779,10 +24899,16 @@ function hxNode() {
     const rin = new AudioWorkletNode(ctx, 'myzel-ring-in', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1], channelCount: 2, channelCountMode: 'explicit', channelInterpretation: 'speakers', processorOptions: { rid: HX.rid } });
     const z = G(0); A.masterIn.connect(rin); rin.connect(z).connect(ctx.destination); HX.rin = rin;   // (pulled through a silent path)
   } catch (e) { console.warn(e); }
-  node.connect(stripIn('hxr'), 0);   // out 0: what is burnt in → the strip „Hexenring“ → A.masterIn
+  // out 0: what is burnt in → the strip „Hexenring“ → A.masterIn (Ruhe: through a gate – a worklet's output is never
+  // silent, the gate's is; closed from the start, as no Schleife exists yet (nothing but a Schleife sounds from the
+  // processor), opened by the first (hxPost) and closed again 20 s after the last (idleTick); a gain, not a link taken
+  // out, so a Schleife that sounds at once finds it open – its value is read by the very quantum that plays the message)
+  HX.g0 = G(1); node.connect(HX.g0, 0).connect(stripIn('hxr')); HX.g1 = null; IDLE.hxT = null;
+  if (IDLE.keeper && IDLE.ctx === ctx) node.connect(IDLE.keeper.gain, 0);   // Ruhe: it records while the rest sleeps
   node.port.onmessage = (e) => hxMsg(e.data);
   node.onprocessorerror = () => { console.warn('Hexenring: Prozessorfehler'); HX.state = 'kein'; HX.node = null; };
   HX.node = node; HX.ctx = ctx; HX.state = 'ok'; HX.fR = Math.round(ctx.currentTime * SR); HX.tR = ctx.currentTime; HXN.split = null; HXN.webs.clear();
+  hxGates(false);   // (Ruhe: closed until the first Schleife)
   // the Humus's chunks, made here and moved over (the audio thread never allocates): two rings of hx.humus seconds
   const n = 2 * Math.ceil((hum * SR) / HX_CH), pool = [], tr = [];
   for (let i = 0; i < n; i++) { const L = new Float32Array(HX_CH), R = new Float32Array(HX_CH); pool.push([L, R]); tr.push(L.buffer, R.buffer); }
@@ -24827,7 +24953,7 @@ const hxReport = () => new Promise((res) => { HX.wait.set('r', res); if (!hxPost
 // by the mask), „Alles“ = A.masterSum. The strip „Hexenring“ plays into A.masterIn behind both: no tap hears a Schleife.
 // (A masked-out strip has no tap at all – a tap is a node the browser runs.)
 function hxGraph() {
-  HX.node = null; HX.ctx = null; HX.fx = HX.fx1 = null; HX.out1 = false;
+  HX.node = null; HX.ctx = null; HX.fx = HX.fx1 = null; HX.out1 = false; HX.g0 = HX.g1 = HX.gM = null;
   A.hxIn0 = G(1); A.hxIn0.channelCount = 2; A.hxIn0.channelCountMode = 'explicit'; A.hxIn0.channelInterpretation = 'speakers';
   for (const st of MIX.src) { st.hxT = null; if (st.k !== 'hxr' && HX.mask.has(st.k)) hxTap(st, true, true); }
 }
@@ -24848,16 +24974,19 @@ function hxMask(keys) {
 }
 // the strip „Hexenring“: straight to the master (its chain is burnt in) – or, set to the chain, through a copy of it
 // (the same settings and modulators) that ends at the master as well, never in A.masterSum where „Alles“ listens
-function hxRoute() { return P['xhxr.route'] !== 'dir' ? hxChain('fx').in : A.masterIn; }
+function hxRoute() { return P['xhxr.route'] !== 'dir' ? hxChain('fx').in : hxGateM(); }
+// the Hexenring's way into the master's input, straight or through the chain's copy: a gate at 1 (Ruhe: at 0 while the
+// graph sleeps, so the master rests while what is before it runs on – hxGates)
+function hxGateM() { if (!HX.gM || HX.gM.context !== A.ctx) { HX.gM = G(1); HX.gM.connect(A.masterIn); } return HX.gM; }
 function hxChain(k) {
   if (HX[k] && HX[k].ctx === A.ctx) return HX[k];
   const c = makeChain(); c.ctx = A.ctx;
   updDrive(c); updRing(c); updFilter(c); updPhaser(c); updChorus(c);
-  c.out.connect(k === 'fx' ? A.masterIn : stripIn('hxr'));
+  c.out.connect(k === 'fx' ? hxGateM() : stripIn('hxr'));
   return (HX[k] = c);
 }
 // out 1: the loops that follow the live chain go through their own copy of it, then the strip (nothing taps either)
-function hxOut1() { if (HX.node && !HX.out1) { HX.node.connect(hxChain('fx1').in, 1); HX.out1 = true; } }
+function hxOut1() { if (HX.node && !HX.out1) { if (IDLE.on) idleWake(); HX.g1 = G(1); HX.node.connect(HX.g1, 1).connect(hxChain('fx1').in); HX.out1 = true; } }   // (Ruhe: its gate as out 0's)
 const hxSrcText = () => { const n = HX.loops.size; return n ? n + (n === 1 ? ' Schleife' : ' Schleifen') : 'aus'; };
 // the mixer shows the strip from the first Schleife on (or once something of it was set)
 function hxStripSync() { if (MX.root) { mxRgnSync(); mxSrcAll(); } }

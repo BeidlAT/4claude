@@ -8,7 +8,7 @@
 const { SC, measure, median } = require('./lib');
 const fs = require('fs');
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : d; };
-const flags = new Set(['--runs', '--secs', '--vp', '--sc', '--json']);
+const flags = new Set(['--runs', '--secs', '--vp', '--sc', '--json']);   // (and --hz120: a 120-Hz display, emulated)
 const slots = process.argv.slice(2).filter((x, i, a) => !x.startsWith('--') && !flags.has(a[i - 1]));
 const RUNS = +arg('runs', 3), SECS = +arg('secs', 10), VPS = arg('vp', 'd,a').split(','), SCS = arg('sc', Object.keys(SC).join(',')).split(',');
 const COLS = ['audio', 'conv', 'main', 'comp', 'gpu', 'total', 'fps', 'rafMs'];
@@ -16,9 +16,10 @@ async function run(slots, o = {}) {
   const R = {};   // R[sc][vp][slot] = [results]
   for (let r = 0; r < (o.runs || RUNS); r++) for (const sc of o.scs || SCS) for (const vp of o.vps || VPS) for (const slot of (r % 2 ? slots.slice().reverse() : slots)) {
     let m = null;
-    for (let tries = 0; tries < 2 && !m; tries++) try { m = await measure(slot, sc, vp, o.secs || SECS); } catch (e) { console.error('retry', slot, sc, vp, String(e).slice(0, 200)); }
+    for (let tries = 0; tries < 2 && !m; tries++) try { m = await measure(slot, sc, vp, o.secs || SECS, { hz120: o.hz120 || process.argv.includes('--hz120') }); } catch (e) { console.error('retry', slot, sc, vp, String(e).slice(0, 200)); }
     if (!m) continue;
     ((R[sc] = R[sc] || {})[vp] = R[sc][vp] || {})[slot] = (R[sc][vp][slot] || []).concat([m]);
+    if (o.json || arg('json')) fs.writeFileSync(o.json || arg('json'), JSON.stringify({ date: new Date().toISOString(), slots, partial: true, summary: summary(R), raw: R }, null, 1));   // (as it goes: a run cut short keeps what it measured)
     if (o.verbose !== false) console.error(`run ${r + 1} ${sc}/${vp} ${slot}: audio ${m.audio} conv ${m.conv} main ${m.main} gpu ${m.gpu} total ${m.total} fps ${m.fps}${m.st && m.st.idle != null ? ' idle ' + m.st.idle : ''}${m.errs.length ? ' ERR ' + m.errs[0] : ''}`);
   }
   return R;

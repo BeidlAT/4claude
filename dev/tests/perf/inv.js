@@ -106,9 +106,24 @@ const analyse = () => {
   const all = new Set([...N.keys()].filter((id) => alive(N.get(id))));
   const by = {};
   for (const id of busy) { const x = N.get(id); const k = x.type + ' @ ' + x.at; by[k] = (by[k] || 0) + 1; }
+  G.busy = busy; G.pulled = pulled;   // (for checks in the page: G.busy.has(node.__id))
   return { t: +now.toFixed(2), made: cnt(all), pulled: cnt(pulled), busy: cnt(busy), nPulled: pulled.size - 1, nBusy: busy.size, busyAt: by };
 };
-module.exports = { hook, analyse };
+// which of Myzel's parts the render keeps busy (after analyse): the master, the channel strips, the insert chains, the
+// echo's loop, the hall, the Hexenring's strip
+const parts = () => {
+  const G = window.__G, M = window.__M, A = M.A, B = G.busy, P = G.pulled, b = (n) => !!(n && B.has(n.__id)), p = (n) => !!(n && P.has(n.__id));
+  return {
+    master: [A.masterIn, A.lowSh, A.highSh, A.masterVol, A.cmpVca, A.clip, A.out].filter(b).length,
+    strips: M.MIX.list.filter((st) => b(st.in) || b(st.dry)).map((st) => st.k),
+    stripsPulled: M.MIX.list.filter((st) => p(st.in)).map((st) => st.k),
+    chains: (A.chains || []).filter((c) => b(c.flt) || b(c.choD1)).length,
+    chainsPulled: (A.chains || []).filter((c) => p(c.flt)).length,
+    echo: b(A.dL) && b(A.dR), hall: !!(A.revActive && b(A.revActive.conv)),
+    hxStrip: b(M.MIX.s.hxr && M.MIX.s.hxr.in),
+  };
+};
+module.exports = { hook, analyse, parts };
 if (require.main === module) (async () => {
   const { chromium } = require('/opt/node22/lib/node_modules/playwright');
   const slot = process.argv[2], VP = process.argv[3] || 'd';
