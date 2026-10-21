@@ -206,7 +206,7 @@ const PARTS = (process.env.PARTS || 'A,B').split(',');
         await window.__sleep(2500);
         o[kind].hof = await window.__rmsOf(F.out, 2000); o[kind].loop = await window.__rmsOf(M.HX.node, 2000, 0);
         o[kind].idx = F.vs.map((v) => v.I); o[kind].want = M.hxFeedIdx(L, kind);
-        o[kind].cost = F.cost; o[kind].vc = M.getQ().cost[kind];
+        o[kind].cost = F.cost; o[kind].vc = M.HX_COST.hof[kind][M.getQ().rich ? 1 : 0];
       }
       o.load = M.hxFeedCost();
       o.gesp = await window.__gespielt(2.5);
@@ -223,7 +223,7 @@ const PARTS = (process.env.PARTS || 'A,B').split(',');
     for (const [k, nm] of [['shn', 'Sehne'], ['glt', 'Glut']]) {
       const d = r[k] && 20 * Math.log10(r[k].hof / r[k].loop);
       ok(r[k] && r[k].made && r[k].hof > 1e-4 && d > -24 && d < -3, `Nähren · ${nm}: a Hof of ${r[k].n} held voices fed by the Schleife, ${d.toFixed(1)} dB under it (the loop ${(20 * Math.log10(r[k].loop)).toFixed(1)} dBFS)`);
-      ok(r[k] && JSON.stringify(r[k].idx) === JSON.stringify(r[k].want) && Math.abs(r[k].cost - r[k].n * r[k].vc) < 1e-9, `  tuned to the loop's most played degrees (${r[k].idx.join(', ')}); priced as ${r[k].n} voices (${r[k].cost.toFixed(2)} Einheiten)`);
+      ok(r[k] && JSON.stringify(r[k].idx) === JSON.stringify(r[k].want) && Math.abs(r[k].cost - r[k].n * r[k].vc) < 1e-9, `  tuned to the loop's most played degrees (${r[k].idx.join(', ')}); priced as ${r[k].n} Hof voices measured (HX_COST.hof: ${r[k].cost.toFixed(2)} Einheiten)`);
     }
     ok(Math.abs(r.load - r.shn.cost - r.glt.cost) < 1e-9 && r.loadOff === 0, `  counted in voiceLoad() while they ring (${r.load.toFixed(2)}), nothing once off`);
     ok(r.gesp >= 0 && r.gesp < 1e-5, `  never re-captured: „Gespielt“ silent while the Höfe sound (RMS ${r.gesp.toExponential(1)})`);
@@ -310,13 +310,13 @@ const PARTS = (process.env.PARTS || 'A,B').split(',');
       M.hxAccSet(B, 'on', false); await window.__sleep(800);
       rep = await M.hxReport(); o.accOff = rep.acc.length; const S = M.HX.sch.get(B.sch[0]); o.saved = !!(S && S.aud);
       let e = 0; if (S && S.aud) for (const c of S.aud) for (const x of c[0]) e += x * x; o.tape = Math.sqrt(e / (S.aud.length * 8192));
-      o.cost = M.hxLoad(); M.hxAccSet(B, 'on', true); o.cost2 = M.hxLoad(); M.hxAccSet(B, 'on', false);
+      o.cost = M.hxLoad(); M.hxAccSet(B, 'on', true); o.cost2 = M.hxLoad(); o.accC = M.HX_COST.acc; M.hxAccSet(B, 'on', false);
       o.key = B.key;
       return o;
     });
-    ok(r.B && r.acc.length === 1 && Math.abs(r.acc[0][2] - 0.7) < 1e-9 && Math.abs(r.len - 1.5) < 0.01, `Schleife in Schleife: a new Sammelschleife, 1½ the length (${r.len}), records its source with feedback 0,7 (the processor's acc)`);
+    ok(r.B && r.acc.length === 1 && Math.abs(r.acc[0][2] - 0.7) < 1e-9 && Math.abs(r.len - 1.5) < 0.01, `Schleife in Schleife: a new Sammelschleife, 1½ the length (${r.len}), records its source with feedback 0,7 (the processor's acc: ${JSON.stringify(r.acc)})`);
     ok(r.meter > 1e-4 && r.saved && r.tape > 1e-4 && r.accOff === 0, `  it plays what it gathered (meter ${r.meter.toExponential(1)}); Festhalten stops the recording and its tape comes to the page to be kept (RMS ${r.tape.toExponential(1)})`);
-    ok(Math.abs(r.cost2 - r.cost - 0.3) < 0.31, `  recording counts in voiceLoad() (${r.cost.toFixed(2)} → ${r.cost2.toFixed(2)})`);
+    ok(Math.abs(r.cost2 - r.cost - r.accC) < 1e-9, `  recording counts in voiceLoad(): HX_COST.acc ${r.accC} (${r.cost.toFixed(2)} → ${r.cost2.toFixed(2)})`);
     await page.waitForTimeout(1500);
     await page.reload(); await page.waitForFunction(() => !!window.__M);
     await H.tools(page); await G.gtools(page);

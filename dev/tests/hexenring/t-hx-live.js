@@ -189,7 +189,8 @@ const has = (p) => PARTS.includes(p);
       o.less = ops.length ? ops.every((op) => (M.HX.vw[op] || 1) < (vw0[op] != null ? vw0[op] : 1)) : true; o.ops = ops;
       // in the card: the list with ✕, one refused there
       M.hxCardOpen(L.slot); await window.__sleep(500);
-      const box = document.querySelector('.hx-card .hx-veto'); o.card = !!box; const bs = box ? [...box.querySelectorAll('button')] : []; o.cardN = bs.length;
+      let box = null; for (let i = 0; i < 40 && !(box && box.querySelector('button')); i++) { M.hxCardRender(); await window.__sleep(100); box = document.querySelector('.hx-card .hx-veto'); }   // (a pass between two plans may have none)
+      o.card = !!box; const bs = box ? [...box.querySelectorAll('button')] : []; o.cardN = bs.length;
       if (bs.length) { const lab = bs[0].getAttribute('aria-label'); bs[0].click(); await window.__sleep(400); M.hxCardRender(); await window.__sleep(200); const b2 = document.querySelector('.hx-card .hx-veto'); o.cardGone = !b2 || ![...b2.querySelectorAll('button')].some((b) => b.getAttribute('aria-label') === lab) || M.hxVetoList(L).length < bs.length; }
       return o;
     }, MOTIF);
