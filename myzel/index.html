@@ -6725,7 +6725,7 @@ function myzelDsp() {
       this.po = (o && o.processorOptions) || {};
       this.q = []; this.act = false; this.off = false; this.silent = 0; this.dead = false; this.lite = this.po.lite ? 1 : 0;   // lite: after underruns, level 3's second bore/head is left out
       this.f = 220; this.y = 0.5; this.gN = 0; this.gS = 0; this.g = 1;
-      this.inj = 0; this.ix = null;   // (Hexenring step 4: Nähren – a Schleife's audio into Sehne's and Glut's loops, × inj; numberOfInputs 1)
+      this.inj = Math.max(0, +this.po.inj || 0); this.ix = null;   // (Hexenring step 4: Nähren – a Schleife's audio into Sehne's and Glut's loops, × inj; numberOfInputs 1)
       this.port.onmessage = (e) => { const m = e.data; if (!m) return; if (m.kill) this.dead = true; else this.q.push(m); };
       if (this.po.on) this.q.push(this.po.on);   // the note itself comes with the node: no port latency (offline renders deliver port messages only at the next suspend)
     }
@@ -10851,6 +10851,7 @@ function myzelDsp() {
       return { F: this.F, hN: this.hN, hum: this.hum.reduce((a, x) => a + x.length, 0), free: this.free.length, schChunks: sc, schichten: sn, loops: this.loops.length,
         jobs: this.jobs.length, q: this.q.length, segs: this.nS, h0: this.h0, alloc: this.nA, capF: this.capF, jx: this.jobs.map((J) => [J.dd ? 'dd' : J.rs ? 'rs' : J.S ? 'fill' : 'grab', J.x - (J.f0 || 0), (J.f1 || 0) - (J.f0 || 0)]), dd: this.loops.map((L) => L.sch.map((S) => (S.ddA ? 1 : S.ddN ? 0.5 : 0))),
         sl: this.loops.map((L) => [L.id, L.slA ? 1 : 0, L.vs, L.takt ? 1 : 0]),   // (step 2b: in slices, the tape's speed)
+        acc: this.loops.filter((L) => L.acc).map((L) => [L.id, L.acc.src.join(','), L.acc.fb]), gap: this.loops.filter((L) => L.gap).map((L) => [L.id, L.Lf, L.ph0]), mic: this.micOn ? 1 : 0, rings: this.hum.map((x) => x.length),   // (step 4)
         ws: this.loops.map((L) => L.sch.map((S) => (S.ws ? { n: S.ws.slots.length, cur: S.ws.cur ? S.ws.cur.k : null, hold: S.ws.hold ? 1 : 0, ks: S.ws.slots.map((Z) => [Z.k, Z.c0, Z.hi, Number.isFinite(Z.n) ? Z.n : -1, Z.on ? 1 : 0]) } : { wu: S.wu ? 1 : 0, tn: S.tn }))), wpt: this.wpt.length };   // (step 2a: the streams)   // (step 1d: the jobs' progress, de-drifted Schichten)
     }
   }
@@ -32067,7 +32068,11 @@ function hxMidiSet(L, on) { L.midi = !!on; if (L.fd) L.fd.midi = 0; hxSaveMeta(L
 // (its avalanches and its exhaustion are the net's, as the field's notes are – a Wuchs render's own net is not used: the
 // strikes are live, so the loop and the player play one net). Regen – each loop note plants a Keim (rgSeed) while the
 // Sporenregen runs; a spore striking it sounds on the Hexenring's way too ----
-function hxNaehrRhz(n, t) { const E = ENGINES.rhz; if (!E) return; hit('rhz', t, n.f, n.y, n.vel, { pan: n.pan || 0, bus: hxFeedBus(), loop: true, hxSrc: 'hxr' }); HX.rhzN = (HX.rhzN || 0) + 1; }
+function hxNaehrRhz(n, t) {
+  if (!ENGINES.rhz) return;
+  const o = { pan: n.pan || 0, bus: hxFeedBus(), loop: true, hxSrc: 'hxr' }, v = hit('rhz', t, n.f, n.y, n.vel, o);
+  HX.rhzN = (HX.rhzN || 0) + 1; const lg = HX.rhzLog || (HX.rhzLog = []); lg.push({ t, v: !!v, loop: !!(v && v.loop), bus: o.bus }); if (lg.length > 64) lg.shift();   // (the last strikes, for the card's tests)
+}
 function hxNaehrRgn(L, n, t) {
   if (!RG.on) return;
   const n0 = RG.kn, k = rgSeed({ tt: null, u: clamp(n.x, 0, 1), v: clamp(n.y, 0.04, 0.96), f: n.f, t0: t, end: beatAt(t) + 4 * GK.p.rgK, hue: VIS.hueAt(n.x), w: n.vel });
@@ -32083,8 +32088,8 @@ function hxNaehrRgn(L, n, t) {
 // strip „Hexenring“; each voice costs what its source's voice costs, counted in voiceLoad() while it rings ----
 HXN.feed = new Map();   // loop id + ':' + kind → { kind, key, vs: [{ node, pf, I }], mg, out, ctx, cost, sig }
 const HX_FEED = {
-  shn: { proc: 'myzel-string', n: 4, y: 0.5, inj: 0.06, lvl: 0.7, name: 'Sehne' },   // (measured: t-hx-oeko2 – the Hof ≈ 10–14 dB under the loop)
-  glt: { proc: 'myzel-ember', n: 2, y: 0.22, inj: 0.012, lvl: 0.55, name: 'Glut' },
+  shn: { proc: 'myzel-string', n: 4, y: 0.5, inj: 0.06, lvl: 0.7, name: 'Sehne' },   // (inj: a sine on the string's note comes out as loud as it went in, 6 % off it 32 dB less – t-hx-oeko2)
+  glt: { proc: 'myzel-ember', n: 2, y: 0.22, inj: 0.1, lvl: 0.8, name: 'Glut' },   // (y 0.22: below the threshold, the loop is its tinder; on its note a sine comes out as loud as it went in, 6 % off ≈ 28 dB less)
 };
 // the degrees a Hof is tuned to (scale indices of the field): the loop's most played ones, else root, third, fifth (+ octave)
 function hxFeedIdx(L, kind) {
@@ -32107,9 +32112,8 @@ function hxFeedMake(L, kind) {
     I.forEach((ix, j) => {
       const f = clamp(hxIdxF(ix), 30, 4000), prm = wkPrm(kind);
       const node = new AudioWorkletNode(A.ctx, F.proc, { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [rich ? 2 : 1], channelCount: 2, channelCountMode: 'explicit', channelInterpretation: 'speakers',
-        processorOptions: { rich, lite: A.lite ? 1 : 0, prm, seed: wkSeed(), on: { on: t, f, y: F.y, vel: kind === 'glt' ? 0 : 0.5, silent: 1, seed: wkSeed() } } });
+        processorOptions: { rich, lite: A.lite ? 1 : 0, prm, seed: wkSeed(), inj: F.inj, on: { on: t, f, y: F.y, vel: kind === 'glt' ? 0 : 0.5, silent: 1, seed: wkSeed() } } });
       const pf = node.parameters.get('freq'); pf.value = f; node.parameters.get('hoehe').value = F.y;
-      node.port.postMessage({ inj: F.inj });
       const pan = PAN(clamp((j / Math.max(1, I.length - 1) - 0.5) * 0.8, -1, 1));
       mg.connect(node); node.connect(pan).connect(out);
       node.onprocessorerror = () => { console.warn('Hexenring: ' + F.name + ' einer Schleife – Prozessorfehler'); hxFeedDrop(L.id, kind); };
@@ -32118,7 +32122,7 @@ function hxFeedMake(L, kind) {
     return { kind, key: L.key, vs, mg, out, ctx: A.ctx, cost: vs.length * (Q.cost[kind] || 1), sig: hxFeedSig() };
   } catch (e) { console.warn(e); return null; }
 }
-const hxFeedSig = () => P['t.root'] + '|' + P['t.scale'] + '|' + P['t.just'] + '|' + P['t.range'];
+const hxFeedSig = () => N.notes.map((x) => x.f.toFixed(2)).join(',');   // (the field's notes as built – an announced key changes them at its bar line)
 function hxFeedDrop(id, kind, later) {
   const k = id + ':' + kind, F = HXN.feed.get(k); if (!F) return;
   HXN.feed.delete(k);
@@ -32516,11 +32520,16 @@ async function hxZersBase(L, S) {
   return { L: Lb, R: Rb, Lf, ver: S.ver || 0, rms: hxRms2(Lb, Rb), src };
 }
 const hxRms2 = (a, b) => { let s = 0; for (let i = 0; i < a.length; i++) s += a[i] * a[i] + b[i] * b[i]; return Math.sqrt(s / Math.max(1, 2 * a.length)); };
-// one generation of Einwurzeln: the pass looped through a web of its own until it answers steadily, its last pass
-async function hxEinwPass(V, d) {
+// one generation of Einwurzeln: the pass looped through a web of its own until it answers steadily, its last pass. As in
+// Lucier's room, every re-recording carries a little noise (−45 dB under the pass, seeded by the generation): the web
+// rings it at its own tones – that is where new roots grow from after a scale change (a tone the loop does not hold at
+// all would otherwise never come); the noise itself is never mixed in, only the web's answer to it
+async function hxEinwPass(V, d, gen) {
   const Lf = V.L.length, warm = Math.max(2, Math.ceil((4 + 2 * P['gsp.nachklang']) * SR / Lf)), ctx = new OfflineAudioContext(2, Lf * (warm + 1), SR);
   if (!(await ensureDSP(ctx))) return null;
-  const ab = ctx.createBuffer(2, Lf, SR); ab.getChannelData(0).set(V.L); ab.getChannelData(1).set(V.R);
+  const ab = ctx.createBuffer(2, Lf, SR), aL = ab.getChannelData(0), aR = ab.getChannelData(1), nz = hxRms2(V.L, V.R) * Math.pow(10, -45 / 20) * Math.sqrt(3);
+  let h = ((gen | 0) * 2654435761 + 12345) >>> 0; const rnd = () => { h = (Math.imul(h, 1103515245) + 12345) >>> 0; return h / 2147483648 - 1; };
+  for (let i = 0; i < Lf; i++) { aL[i] = V.L[i] + nz * rnd(); aR[i] = V.R[i] + nz * rnd(); }
   const src = ctx.createBufferSource(); src.buffer = ab; src.loop = true;
   const web = new AudioWorkletNode(ctx, 'myzel-web', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit', processorOptions: { rich: true, lite: 0, prm: gspPrm(), freqs: gspFreqs(), seed: 7 } });
   src.connect(web).connect(ctx.destination); src.start(0);
@@ -32558,7 +32567,7 @@ async function hxZersJob(L, S, Z, k) {
   if (!Z.base || Z.base.ver !== (S.ver || 0) || Math.abs(Z.base.Lf - Lf) > 8 || Z.base.src !== hxZersSrc(L, S)) { Z.base = await hxZersBase(L, S); Z.cur = null; Z.gen = 0; if (!Z.base) return; }
   const X = hxByKey(lk); if (!X || !HX.sch.has(S.id) || !hxZersOn(X)) return;
   let V = Z.cur || { L: Z.base.L, R: Z.base.R, rms0: Z.base.rms };
-  if ((X.einw || 0) > 0) { const nV = await hxEinwPass(V, X.einw); if (nV) { V = nV; Z.cur = nV; Z.gen++; } }
+  if ((X.einw || 0) > 0) { const nV = await hxEinwPass(V, X.einw, Z.gen + 1); if (nV) { V = nV; Z.cur = nV; Z.gen++; } }
   let out = V;
   if (X.moder && X.moder.rate > 0) { Z.age++; const m = await hxWk('moder', { L: V.L, R: V.R, age: Z.age, rate: X.moder.rate, seed: X.moder.seed, sr: SR }); if (m) out = { L: m.L, R: m.R }; }
   if (!hxByKey(lk) || !HX.sch.has(S.id) || !hxZersOn(X) || hxWAktiv(X) || X.live) return;
@@ -32574,7 +32583,7 @@ async function hxZersJob(L, S, Z, k) {
 // ---- the Hexenring's Worker (off the main thread; the functions copied by toString – no outside closures): Abrieb nach
 // Moder (STFT) and the pitch of a voice (YIN) ----
 function hxModerPass(L, R, age, rate, seed, sr) {
-  const n = L.length, N = 2048, H = 512, half = N / 2, w = new Float64Array(N);
+  const n = L.length, N = 1024, H = 256, half = N / 2, w = new Float64Array(N);
   for (let i = 0; i < N; i++) w[i] = 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / N);
   const fft = (re, im, inv) => {
     for (let i = 1, j = 0; i < N; i++) { let b = N >> 1; for (; j & b; b >>= 1) j ^= b; j ^= b; if (i < j) { let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; } }
@@ -32582,9 +32591,12 @@ function hxModerPass(L, R, age, rate, seed, sr) {
     if (inv) for (let i = 0; i < N; i++) { re[i] /= N; im[i] /= N; }
   };
   const hash = (a, b, c) => { let h = (seed ^ Math.imul(a + 1, 0x9e3779b1) ^ Math.imul(b + 1, 0x85ebca6b) ^ Math.imul(c + 7, 0xc2b2ae35)) | 0; h ^= h >>> 16; h = Math.imul(h, 0x7feb352d); h ^= h >>> 15; h = Math.imul(h, 0x846ca68b); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
-  // the age: the wear x in [0, 1); the cutoff falls 12 kHz → 300 Hz with it; the crumbling bins keep a share p of their
-  // frames (sparser with age), each kept one louder by 1/√p (its energy), a random phase; below 300 Hz up to +4 dB
-  const x = 1 - Math.exp(-rate * age), fc = 12000 * Math.pow(300 / 12000, x), p = Math.max(0.06, 0.5 - 0.42 * x), boost = 1 + 0.585 * x, kc = 1 / Math.sqrt(p);
+  // the age: the wear x in [0, 1); the cutoff falls 12 kHz → 300 Hz with it. Above it the partials crumble: per frame
+  // (5 ms apart) and per third of an octave a grain is kept with a chance p – sparser with age – its bins at their own
+  // magnitude × 1/√p (the energy stays), each with a random phase: short bursts at the partials' own pitches, crackle;
+  // a frame without a grain is silent there. Half an octave above the cutoff it fades from intact to crumbled. Below
+  // 300 Hz a low shelf warms, up to +4 dB
+  const x = 1 - Math.exp(-rate * age), fc = 12000 * Math.pow(300 / 12000, x), p = Math.max(0.05, 0.35 - 0.3 * x), boost = 1 + 0.585 * x, kc = (1 - 0.3 * x) / Math.sqrt(p);
   const out = [new Float32Array(n), new Float32Array(n)], re = new Float64Array(N), im = new Float64Array(N), wsum = new Float64Array(n);
   const frames = Math.ceil(n / H);
   for (let c = 0; c < 2; c++) {
@@ -32594,12 +32606,10 @@ function hxModerPass(L, R, age, rate, seed, sr) {
       for (let i = 0; i < N; i++) { const j = (s + i) % n; re[i] = X[j] * w[i]; im[i] = 0; }
       fft(re, im, false);
       for (let b = 1; b < half; b++) {
-        const hz = (b * sr) / N, lo = hz < 300 ? boost : hz < 450 ? 1 + (boost - 1) * (450 - hz) / 150 : 1;
-        const g = lo;
+        const hz = (b * sr) / N, g = hz < 300 ? boost : hz < 450 ? 1 + ((boost - 1) * (450 - hz)) / 150 : 1;
         if (hz > fc) {
-          const sh = Math.min(1, Math.log2(hz / fc) * 2);   // (half an octave from intact to crumbled)
-          const keep = hash(f, b, c) < p;
-          const mag = Math.hypot(re[b], im[b]) * (keep ? kc * (1 - 0.3 * x) : 0), ph = 2 * Math.PI * hash(f, b, 9 + c);
+          const sh = Math.min(1, Math.log2(hz / fc) * 2), band = Math.floor(3 * Math.log2(hz / fc)), keep = hash(f, band, 1) < p;   // (the same grain decision for both sides: the crackle stands where it falls)
+          const mag = keep ? Math.hypot(re[b], im[b]) * kc : 0, ph = 2 * Math.PI * hash(f, b, 9 + c);
           const ir = re[b] * (1 - sh), ii = im[b] * (1 - sh);
           re[b] = (ir + sh * mag * Math.cos(ph)) * g; im[b] = (ii + sh * mag * Math.sin(ph)) * g;
         } else { re[b] *= g; im[b] *= g; }
