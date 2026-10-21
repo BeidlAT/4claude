@@ -25982,38 +25982,6 @@ function hxSchNew(loop, c, o = {}) {
   if (L.sch.length > 1 && !o.key) hxGuardSet(L, o.seamK != null ? o.seamK : hxPassK(L, Math.round(hxF(hxNowT()))));   // (step 1d: §6.4's guard – three passes)
   return id;
 }
-// the seam's character, once the window's end has sounded: a cold start (no ring-in, ≥ 10 dB under what followed the
-// end) takes the Ausklang overlap-added; a warm one the smooth crossfade, 40 ms for sustained sound, measured ρ. The
-// Ausklang ends at the first foreign onset (a note of a captured source after the window) with a 30-ms fade.
-function hxProbe(S, after) {
-  const c = S.cut, w1t = hxT(c.w1), X40 = Math.round(0.04 * SR), ver = S.ver || 0;
-  S.wait = { probe: true, ausT: c.aus ? hxT(c.w1) + c.aus.len / SR : 0 };
-  const go = async () => {
-    const [a, b] = await Promise.all([hxGrab({ in: c.in, f0: c.w0, f1: c.w0 + X40 }), hxGrab({ in: c.in, f0: c.w1, f1: c.w1 + X40 })]);
-    if (!HX.sch.has(S.id) || !a || !b || (S.ver || 0) !== ver) return;
-    const rms = (g, n) => { let s = 0; for (let i = 0; i < n; i++) { const ch = g.chunks[Math.floor(i / HX_CH)], j = i % HX_CH; s += ch[0][j] * ch[0][j] + ch[1][j] * ch[1][j]; } return Math.sqrt(s / (2 * n)); };
-    const st = rms(a, X40), co = rms(b, X40);
-    const gap = hxForeign(S, w1t);
-    const cold = co > 1e-5 && st < co * 0.316;
-    const X = cold ? 0.01 : st > 0.02 && gap > 0.045 ? 0.04 : Math.max(0.004, Math.min(0.01, gap - 0.005));
-    const Xf = Math.round(X * SR);
-    // ρ: what followed the end against the start, over the fade (the seam law's normalisation)
-    let ab = 0, aa = 0, bb = 0;
-    for (let j = 0; j < Xf; j++) { const ca = b.chunks[Math.floor(j / HX_CH)], cb = a.chunks[Math.floor(j / HX_CH)], i = j % HX_CH; ab += ca[0][i] * cb[0][i] + ca[1][i] * cb[1][i]; aa += ca[0][i] * ca[0][i] + ca[1][i] * ca[1][i]; bb += cb[0][i] * cb[0][i] + cb[1][i] * cb[1][i]; }
-    const rho = aa > 1e-20 && bb > 1e-20 ? clamp(ab / Math.sqrt(aa * bb), -1, 1) : 0;
-    if (S.aus) { const len = isFinite(gap) ? Math.max(0, Math.round((gap - 0.005) * SR)) : S.aus.len; if (len < S.aus.len) { S.aus.len = len; S.wait.ausT = 0; } }
-    // (cold, but the player went straight on: too little Ausklang to fade – the crossfade, short, ends before the onset)
-    S.join = cold && S.aus && S.aus.len >= 0.03 * SR ? 'ola' : 'xf'; S.X = Xf; S.rho = rho; S.cold = cold;
-    const m = { schicht: S.id, join: S.join, X: Xf, rho };
-    if (S.aus) { m.len = S.aus.len; m.fade = Math.min(Math.round(0.03 * SR), S.aus.len); }
-    hxPost({ aus: m });
-    S.wait.probe = false;
-    if (!S.wait.ausT || hxNowT() > S.wait.ausT) S.wait = null;
-    hxSaveMeta(S.loop);
-  };
-  const due = Math.max(w1t + 0.045, after || 0) - hxNowT();   // (a swap: after it acted, so the reply meets the new version)
-  if (due <= 0) go(); else setTimeout(go, due * 1000);
-}
 // ---- Schleifen: a new one in a slot, with its notes, its Bewegung and how it was cut ----
 function hxLoopMake(o) {
   const id = hxLoopNew(o.lock === 'frei' ? { lock: 'frei', len: o.Lf, f0: o.ph0, gain: o.gain, out: o.out, state: o.state } : { lock: 'takt', b0: o.b0, beats: o.beats, gain: o.gain, out: o.out, state: o.state });
