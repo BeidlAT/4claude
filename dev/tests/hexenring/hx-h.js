@@ -99,7 +99,7 @@ async function open(o = {}) {
   if (!browser) browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
   const ctx = await browser.newContext({ viewport: { width: o.w || 1280, height: o.h || 800 } });
   const page = await ctx.newPage(), errors = [];
-  page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => { if (m.type() === 'error' || /^Hexenring: (non-finite|a render held non-finite)/.test(m.text())) errors.push(m.text()); });   // (step 2b: a tripwire's or the guard's report counts as an error)
   if (o.init) await page.addInitScript(o.init);
   await page.goto(o.url || URL_HX); await page.waitForFunction(() => !!window.__M);
   await tools(page);

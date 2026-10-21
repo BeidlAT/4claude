@@ -1602,3 +1602,29 @@ first note“, < 256 samples) lands at about 60 samples or one or two render qua
 and 270 on step 1d's first commit, 186–279 on the later ones (alternating builds on the same machine; the main thread
 spends 3–4 ms in `onDown`, the note's start meets the next render callback or the one after). `klang/t-lib-shots` „p360“ passed this time. `smoke-all`: 28 sources, none
 silent.
+
+### As built (step 2b): suites and the robustness hunt
+`t-hx-tempo` (18: a loop's kind from its first Schicht – rhythmic, Fläche, unclear –; Schnitt at ±10 % with every onset
+on its grid place (≤ 0.17 ms), no pitch change, back at its tempo the tape bit-exact; frei at its own length; live on the
+page), `t-hx-tools` (47: speed with inertia and its servo law, Bandstopp, Verblassen, Abrieb and Auffrischen, Auslassen
+and Würfeln, rückwärts / Trimmen / Verdoppeln with their undo and after a reload, the notes' tools, Wuchs's Stufe,
+Erstarren, the consensus, export, Klang aufs Feld, Puls ernten, Folge, Bühnenansicht, Setliste, Ruhe with a take's
+preview), both in `run-all.sh`. `t-hx-fuzz` carries Wuchs's and the tools' actions (60 kinds; `FUZZ_W=0`: step 2a's
+bag), a row for the tripwires (`HX.nan` must stay empty) and `FUZZ_DBG` (the processor's report, the actions before the
+first trip). `t-idle-live` 5c: a take's preview wakes the graph and it sleeps again.
+**Tripwires:** `nanTrip` (one compare per span on the ring's output: a non-finite sample is zeroed, the loop's state
+reset, a report once a second – the loop, every Schicht's versions, tails and slots, which chunks are detached and who
+gave them back, `gW`), `WSend` in the realms (scrubs, reports by chunk), `hxwScrub` on every render result; the page
+keeps the reports in `HX.nan` and warns in the console. **Guard:** `give`/`ddBack` never transfer a chunk a read still
+holds (`held`: every living Schicht's version, old one, parked ones, its stream's fallback, its tails – the loop given
+as a whole by its object, never by its id) and report it (`{nan: {held}}`).
+**The hunt** (2000 actions per run, each run alone on the machine): before step 2b's code 4 runs clean; on 2b's build,
+seed 101 tripped once (25 runs in all): a Schicht whose whole version (69 chunks) was detached while it played, after
+Bandstopp, a delete, ↶/↷ and a speed change – the tripwire zeroed it (the master stayed clean). Reruns of that seed with
+the giver's bookkeeping (`gW`, 5 runs) and with the guard (14 runs: seeds 101–110 with the full bag, 201–204 with
+step 2a's) did not see it again, and the guard reported nothing – not reproduced, its giving path not identified; the
+guard now keeps such a version and says who gave it. **Found by the guard and fixed:** a Lebendig stream's fallback
+after a late pass (`wsCheck` → `wsSet(S, prev)`, `W.cur` null) was taken by `wsVer` without its slot (`ws` only from
+`W.cur`), so at the next pass the slot went back to the page while that version, now `W.prev`, could still be read –
+detached chunks, NaN (`t-hx-wuchs` showed it in both runs before the fix, none after; most likely step 2a's one NaN in ten). `wsOwn` finds the slot
+whose chunks the Schicht reads.
