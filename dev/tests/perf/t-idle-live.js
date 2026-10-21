@@ -101,6 +101,33 @@ const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) process
   ok(r.was && !r.on && !r.off && r.n > 0 && r.pk > 0.005, `an answer of the Gärtner (${r.n} notes, no Schleife) wakes it and opens the Hexenring's gates before it sounds (asleep before: ${r.was}, gates closed: ${r.hxOff}), heard (peak ${r.pk.toFixed(3)})`);
   t = await until('M.IDLE.on', 40);
   ok(t > 0, `…and it sleeps again after the answer (${t} s)`);
+  // 5e (Etappe 4) the microphone: it sounds nothing, so it does not keep the graph awake – asleep, its ring records on
+  // (its way into the processor is never cut); a Korb from it makes a Schleife that wakes the graph before it sounds
+  r = await pg.evaluate(async () => {
+    const M = window.__M, A = M.A, ctx = A.ctx, g = ctx.createGain();   // (the „microphone“: what is started into it later)
+    const was = M.IDLE.on, on = await M.hxMicOn({ src: g });
+    return { was, on, src: M.idleSrc() };
+  });
+  ok(r.on && !r.src, `the microphone switched on (asleep before: ${r.was}) – it is no source of sound`);
+  t = await until('M.IDLE.on', 45);
+  ok(t > 0, `…the graph sleeps with the microphone on (${t} s)`);
+  r = await pg.evaluate(async () => {
+    const M = window.__M, A = M.A, g = M.HX.mic.src;
+    // (a sung tone started into it – no automation: an AudioParam's change wakes the graph by itself)
+    const t0 = A.ctx.currentTime, SR = A.ctx.sampleRate, b = A.ctx.createBuffer(1, 2 * SR, SR), x = b.getChannelData(0); for (let i = 0; i < x.length; i++) x[i] = 0.3 * Math.sin(2 * Math.PI * 220 * i / SR);
+    const s = A.ctx.createBufferSource(); s.buffer = b; s.connect(g); s.start(t0 + 0.05);
+    await new Promise((r) => setTimeout(r, 2300));
+    const asleep = M.IDLE.on, lvl = M.hxLvlAt(t0, t0 + 2.1, 3);
+    M.hxKorb(null); await new Promise((r) => setTimeout(r, 300));
+    const L = M.hxLoopsLive()[0];
+    return { asleep, lvl, n: M.HX.loops.size, src: L ? L.src : null, on: M.IDLE.on, late: M.IDLE.late };
+  });
+  const pm = await peak(2500);
+  ok(r.asleep && r.lvl > 0.05, `asleep, the Mikro's ring records what it hears (level ${r.lvl.toFixed(3)})`);
+  ok(r.n >= 1 && r.src === 3 && !r.on && r.late === 0 && pm > 0.005, `a Korb from it: a Mikro-Schleife wakes the graph before it sounds, heard (peak ${pm.toFixed(3)})`);
+  await pg.evaluate(async () => { const M = window.__M; for (const L of M.hxLoopsLive()) M.hxClear(L.id, null, 0.005); M.hxMicOff(); });
+  t = await until('M.IDLE.on', 45);
+  ok(t > 0, `…and it sleeps again after the Mikro-Schleife is gone (${t} s)`);
   r = await pg.evaluate(() => ({ late: window.__M.IDLE.late, n: window.__M.IDLE.n }));
   ok(r.late === 0, `never woken late (${r.n} sleeps)`);
   ok(!errors.length, 'no page errors ' + errors.slice(0, 3).join(' | '));
