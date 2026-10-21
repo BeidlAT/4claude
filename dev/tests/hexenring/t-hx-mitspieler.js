@@ -87,6 +87,9 @@ const has = (p) => PARTS.includes(p);
         }
         out['l' + lvl] = { bad, sk, dmax, dmean: dsum / ch.length, minN, maxN, perBeat, changed };
       }
+      // the main thread's time per pass (SPEC: ≤ 20 ms per decision, never in the audio path): Wandern over a long loop
+      const Wl = window.__W(Array.from({ length: 64 }, (_, i) => [0, 2, 4, 1, 3, 2, 0, 4][i % 8] + (i % 3)), { len: 32 }), t0 = performance.now();
+      window.__chain(Wl, 9, 3, 100); out.ms = (performance.now() - t0) / 100;
       // the guard: nothing changes
       out.guard = window.__chain(W, 5, 3, 20, { guard: true }).every((x) => x.n === W.n && !x.ops.length);
       // a Platz-machen density: thinner on average than the plain chain
@@ -109,6 +112,7 @@ const has = (p) => PARTS.includes(p);
     }
     ok(r.l2.dmean < 0.45 && r.l2.dmean < r.l3.dmean + 0.02 && r.l3.dmean < 0.6, `the elastic pull: mean distance to the anchor Variieren ${r.l2.dmean.toFixed(2)}, Wandern ${r.l3.dmean.toFixed(2)} (max ${r.l2.dmax.toFixed(2)} / ${r.l3.dmax.toFixed(2)}; 0 = the anchor, 1 = nothing alike)`);
     ok(r.guard, `the guard (§6.4): no pass changes during it`);
+    ok(r.ms < 20, `time: a Wandern pass of a 64-note loop takes ${r.ms.toFixed(2)} ms on the main thread (≤ 20 ms per decision)`);
     ok(r.thin < r.full - 1, `the Gärtner's density: making room ${r.thin.toFixed(1)} notes per pass, filling ${r.full.toFixed(1)}`);
     ok(Array.isArray(r.nein) && r.vw.nb === 0.5 && r.vw.fi === 0.5 && r.vw.th == null, `✕: the operators of the refused pass count half (${JSON.stringify(r.vw)})`);
   }
@@ -141,9 +145,9 @@ const has = (p) => PARTS.includes(p);
       // every pitch one of the field's scale (any octave)
       const pcs = M.N.notes.map((n) => n.f); out.offScale = seq.flat().filter(([, f]) => !pcs.some((g) => Math.abs(1200 * Math.log2(f / g)) % 1200 < 1 || Math.abs(1200 * Math.log2(f / g)) % 1200 > 1199)).length;
       // Knospen: changed notes shown before they sound
-      let kn = 0, lead = Infinity;
-      for (let i = 0; i < 40; i++) { for (const b of M.HX.kn.values()) if (b.kind === 'var' && !b.__seen) { b.__seen = true; kn++; lead = Math.min(lead, b.t - Math.max(b.t0, A.ctx.currentTime)); } await window.__sleep(100); }
-      out.kn = kn; out.knLead = lead;
+      let kn = 0; const leads = [];
+      for (let i = 0; i < 40; i++) { for (const b of M.HX.kn.values()) if (b.kind === 'var' && !b.__seen) { b.__seen = true; kn++; leads.push(b.t - b.t0); } await window.__sleep(100); }
+      leads.sort((a, b) => a - b); out.kn = kn; out.knLead = leads[leads.length >> 1]; out.knMin = leads[0];
       // ✓: the sounding varied pass becomes the anchor – its notes
       const vcK = () => { const C = S.vc; return C ? [...C.m.keys()] : []; };
       out.vc = vcK().length;
@@ -172,7 +176,7 @@ const has = (p) => PARTS.includes(p);
     ok(r.distinct >= 3, `…the passes differ (${r.distinct} different of ${r.jobs})`);
     ok(r.strong.every((s) => s === r.strong[0]) && r.strong[0].length > 0, `…the notes on the 1 and the middle of each bar are the same in every rendered pass`);
     ok(r.offScale === 0, `…every rendered pitch is one of the field's scale (${r.offScale} not)`);
-    ok(r.kn > 0 && r.knLead > 0.5, `Knospen: ${r.kn} changed notes shown before they sound (the shortest at least ${r.knLead.toFixed(2)} s ahead – a bar is 2 s)`);
+    ok(r.kn > 0 && r.knLead > 1.5 && r.knMin > 0, `Knospen: ${r.kn} changed notes shown before they sound – a bar ahead (median ${r.knLead.toFixed(2)} s, the shortest ${r.knMin.toFixed(2)} s; a bar is 2 s)`);
     ok(r.vn > 0 && r.sigV, `✓: the varied pass that sounded is the anchor – its ${r.vn} notes, the anchor's version made for them`);
     ok(r.reset && r.neinK != null, `✕: back to the anchor at the next bar line, the chain of passes begins at the anchor`);
     ok(r.ops.length === 0 || Object.keys(r.vw).length > 0, `…the operators of the refused pass (${r.ops.join('+') || 'none – the pass had stayed'}) count half: ${JSON.stringify(r.vw)}`);

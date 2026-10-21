@@ -6,6 +6,7 @@
 // never a NaN or an infinity at the master or out of the processor; no exception; the books match (every Schicht with
 // its Schleife, every cleared Schleife given back); memory bounded – the Hexenring's own count within its Speichergrenze,
 // the page's heap after a collection not growing past it.
+// (Etappe 3) the Mitspieler's actions join the bag (the Gärtner at every step, answers, Begleiten, Puls lernt, …).
 // (step 2b) Wuchs's own actions (the key, the card's choices, ✓ ✕ ⚓) and every tool of step 2b join the bag; the
 // processor's and the realms' tripwires (non-finite samples scrubbed and reported) must never fire; FUZZ_DBG=1 puts a
 // detector on every strip too and prints the first non-finite sample's place and the actions before it.
@@ -21,6 +22,10 @@ const ACTS = { notes: 14, move: 4, korb: 9, korbHold: 3, haupt: 7, ring: 7, undo
 // (step 2b) Wuchs's own actions – the key, the card's choices, ✓ ✕ ⚓ – and the tools: the tape, the slices, the ageing,
 // the notes, Erstarren, the consensus, export, Puls ernten, Folge, Klang aufs Feld, Bühnenansicht, Setliste
 Object.assign(ACTS, { key: 3, wuchs: 4, lob: 2, nein: 2, anker: 1, beginn: 1, speed: 3, stopp: 2, rev: 1, trim: 2, dbl: 1, vb: 2, abr: 2, slc: 2, nt: 3, erst: 1, auslW: 1, export: 1, pulsE: 1, folge: 1, feld: 1, buehne: 1, lied: 1 });
+// (Etappe 3) the Mitspieler: the Gärtner's step and behaviours, its ✕ ✓, a ring's veto, roles, Wiederkehr marks,
+// Begleiten, Puls lernt, an answer started at once, the Handschrift's switch and its take; FUZZ_M=0: step 2b's bag
+Object.assign(ACTS, { gst: 3, gbeh: 1, gnein: 2, glob: 1, rolle: 1, wkMark: 1, begl: 1, pulsL: 1, antw: 2, hand: 1 });
+if (process.env.FUZZ_M === '0') for (const k of ['gst', 'gbeh', 'gnein', 'glob', 'rolle', 'wkMark', 'begl', 'pulsL', 'antw', 'hand']) delete ACTS[k];
 if (process.env.FUZZ_W === '0') for (const k of ['key', 'wuchs', 'lob', 'nein', 'anker', 'beginn', 'speed', 'stopp', 'rev', 'trim', 'dbl', 'vb', 'abr', 'slc', 'nt', 'erst', 'auslW', 'export', 'pulsE', 'folge', 'feld', 'buehne', 'lied']) delete ACTS[k];   // (the sequences of step 2a's fuzz)
 const BAG = Object.entries(ACTS).flatMap(([k, w]) => Array(w).fill(k));
 async function install(page) {
@@ -101,6 +106,16 @@ async function install(page) {
       feld: (a) => { const L = pickL(a); if (L && !L.bew) M.hxKlangFeld(L); },
       buehne: () => M.setParam('hx.buehne', !M.P['hx.buehne']),
       lied: (a) => { const S = M.hxSetGet(); if (a < 0.4 || S.list.length < 2) M.hxSetAdd(); else M.hxSetNext(); },
+      gst: (a) => M.setParam('hx.gaertner', ['schaut', 'pflegt', 'antwortet'][Math.floor(a * 3)]),
+      gbeh: (a, b) => M.setParam(['hx.gPlatz', 'hx.gRollen', 'hx.gAntw', 'hx.gBegl', 'hx.gWk'][Math.floor(a * 5)], b < 0.7),
+      gnein: (a) => { if (a < 0.5) M.hxMachNein(); else { const L = pickL(a); if (L && !L.bew) M.hxGdNein(L); } },
+      glob: () => M.hxMachLob(),
+      rolle: (a, b) => { const L = pickL(a); if (L && !L.bew) { M.hxMi(L).rolle = b < 0.3 ? null : ['bass', 'akkorde', 'melodie', 'flaeche', 'schlag'][Math.floor(b * 5)]; M.hxMi(L).rc = null; } },
+      wkMark: (a) => { const L = pickL(a); if (L && !L.bew) M.hxMi(L).wk = !M.hxMi(L).wk; },
+      begl: async (a) => { const L = pickL(a); if (L && !L.bew) await M.hxBegleiten(L, { quiet: true }); },
+      pulsL: (a, b) => { const L = pickL(a); if (L && !L.bew) M.hxPulsLernt(L, Math.floor(b * 4)); },
+      antw: (a) => { const ns = M.HXA.notes.slice(-6); if (ns.length >= 3) M.hxAntStart({ notes: ns.map((x) => Object.assign({}, x, { tok: x.tok || '1:1:0' })), id: 1e6 + Math.floor(a * 1e5), mi: 0.3 }, M.A.ctx.currentTime); },
+      hand: async (a) => { if (a < 0.4) M.setParam('hx.hand', M.P['hx.hand'] === 'an' ? 'aus' : 'an'); else if (M.P['hx.hand'] === 'an') await M.hxHandTake(null); },
       param: (a, b) => { const [k, v] = [['hx.modus', ['neu', 'dieselbe']], ['hx.start', ['takt', 'ton', 'sofort']], ['hx.laenge', ['auto', 'wie1', 'fest']]][Math.floor(a * 3)]; M.setParam(k, v[Math.floor(b * v.length)]); },
     };
     window.__act = async (name, a, b, c) => {

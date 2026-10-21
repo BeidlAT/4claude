@@ -26426,6 +26426,7 @@ function hxReenter(list) {
 function hxWeiter() { HX.ruht = false; const l = hxLoopsLive().filter((L) => L.state === 'angehalten'); if (l.length) hxReenter(l); hxRailDirty(); }
 // Stille: every Schleife angehalten, recordings and pending actions end; a toast offers Weiter or Leeren
 function hxStille() {
+  hxAntStop('Stille'); if (HXA.ph) HXA.ph.done = true; if (HXW_K.wk) hxWkNein(); HXG.plan = null;   // (Etappe 3: the Gärtner's answer, Wiederkehr and plan end too)
   if (HX.rec) hxRecCancel(true);
   if (HX.punch) hxPunchEnd(hxHeard());
   if (HX.schluss) hxSchlussAb();   // (step 1d: the form's waits end too)
@@ -27452,11 +27453,11 @@ function hxCardRender() {
   const btn = (t, fn, o = {}) => { const b = h('button', { type: 'button', class: 'btn' + (o.cls ? ' ' + o.cls : ''), 'aria-label': o.aria || null, disabled: o.dis || null }, t); b.addEventListener('click', fn); return b; };
   // tap paths for every hold
   const ang = hxLoopsLive().some((L) => L.state === 'angehalten');
-  HXK.acts.replaceChildren(
+  HXK.acts.replaceChildren(...[   // (Etappe 3: null filtered – replaceChildren wrote it as the text „null“ when nothing was angehalten)
     ang ? btn('▶ Weiter', hxWeiter, { cls: 'primary', aria: 'Weiter: angehaltene Schleifen beginnen auf der nächsten Eins' }) : null,
     btn('↶ Zurück', hxUndoStep, { dis: !HX.hist.length && !HX.pend.length }),
     btn('↷ Wiederholen', hxRedoStep, { dis: !HX.redo.length }),
-    btn('Alle leeren', () => hxLeeren(), { cls: 'ghost danger', dis: !hxLoopsLive().length }));
+    btn('Alle leeren', () => hxLeeren(), { cls: 'ghost danger', dis: !hxLoopsLive().length })].filter(Boolean));
   hxKlopfRender(); hxCardPed(); hxCardBew();
   const loops = hxLoopsLive().sort((a, b) => a.slot - b.slot);
   HXK.list.replaceChildren();
@@ -28821,6 +28822,7 @@ function hxSlpTail(L, f) {
   return clamp(dt - 0.005, 0.15, 2.5);
 }
 function hxSlpEnter(art) {
+  hxAntStop('Schlafen'); if (HXA.ph) HXA.ph.done = true;   // (Etappe 3: no answer into the sleep)
   if (art === 'szene' || !HX.node) return 0;
   const live = hxLoopsLive().filter((L) => L.state === 'spielt' || L.state === 'stumm');
   if (!live.length) return 0;
@@ -31258,17 +31260,25 @@ function hxAntIngest(now) {
     if (HXA.cur && !HXA.cur.stop && e.t0 >= HXA.cur.t0 - 0.05) hxAntStop('du spielst');
   }
 }
-// the next tokens after a context: the longest order that knows it, its counts as probabilities
+// the next tokens after a context: every order that knows it, mixed – the longer the more weight (a player who repeats
+// himself leaves one continuation at order 4; the shorter orders keep other ways open, and MaxOrder needs them)
+const HX_AW = [0.04, 0.08, 0.16, 0.3, 0.42];
 function hxAntDist(ctx) {
-  for (let o = Math.min(4, ctx.length); o >= 0; o--) { const m = HXA.c.get(ctx.slice(ctx.length - o).join('|')); if (m && m.size) { let s = 0; for (const v of m.values()) s += v; return [...m.entries()].map(([k, v]) => [k, v / s, o]); } }
-  return [];
+  const p = new Map(); let wt = 0, top = -1;
+  for (let o = Math.min(4, ctx.length); o >= 0; o--) {
+    const m = HXA.c.get(ctx.slice(ctx.length - o).join('|')); if (!m || !m.size) continue;
+    let s = 0; for (const v of m.values()) s += v;
+    wt += HX_AW[o]; if (top < 0) top = o;
+    for (const [k, v] of m) p.set(k, (p.get(k) || 0) + (HX_AW[o] * v) / s);
+  }
+  return wt ? [...p.entries()].map(([k, v]) => [k, v / wt, top]) : [];
 }
 // the answer: notes {b (beats from its start), I, d, vel} – o: {call (the phrase's notes), seed, lenB, b0 (the start's beat,
 // a musical beat or a pseudo one), strong(b)}
 function hxAntGen(o) {
   const R = hxRng(o.seed), call = o.call, per = hxScPer(), ids = call.map((x) => x.I), lo = Math.min(...ids) - Math.ceil(per / 2), hi = Math.max(...ids) + Math.ceil(per / 2);
   const ctx0 = call.map((x) => x.tok).filter(Boolean).slice(-4), lenB = Math.max(1, o.lenB), W = 8;
-  let beams = [{ toks: ctx0.slice(), all: HXA.tok.slice(-6), gen: [], I: ids[ids.length - 1], b: 0, lp: 0 }];
+  let beams = [{ toks: ctx0.slice(), all: ctx0.slice(-6), gen: [], I: ids[ids.length - 1], b: 0, lp: 0 }];
   const done = [];
   for (let step = 0; step < 48 && beams.length; step++) {
     const next = [];
@@ -31283,7 +31293,7 @@ function hxAntGen(o) {
         const all = B.all.concat([tok]);
         if (all.length >= 7 && HXA.g7.has(all.slice(-7).join('|'))) continue;   // (MaxOrder: never seven tokens as they were played)
         const C = { toks: B.toks.concat([tok]).slice(-4), all: all.slice(-7), gen: B.gen.concat([{ b: nb, I }]), I, b: nb, lp: B.lp + Math.log(Math.max(1e-6, p)) };
-        if (nb >= lenB - 4 - 1e-6 && C.gen.length >= 2 && hxStable(I) && o.strong(o.b0 + nb)) done.push(Object.assign(C, { sc: C.lp / C.gen.length + 2 - 0.25 * Math.abs(nb - lenB) / 4 }));
+        if (nb >= lenB - 4 - 1e-6 && C.gen.length >= 2 && hxStable(I) && o.strong(o.b0 + nb)) done.push(Object.assign(C, { sc: C.lp / C.gen.length + 2 - 0.25 * Math.abs(nb - lenB) / 4 - 0.6 * Math.abs(C.gen.length - call.length) / call.length }));   // (about as many notes as the call)
         else next.push(C);
       }
     }
@@ -31366,7 +31376,7 @@ function hxWakeRing() { if (IDLE.on) idleWake(); if (IDLE.hxOff) hxGates(true); 
 // ---- Klangverwandtschaft (SPEC §12.3): Sethares's roughness over the partials of the sources really playing. HX_PART:
 // each source's ten strongest partials (ratio to the fundamental, amplitude re the strongest), measured once from the
 // Werk-Rahmen's level-3 render of a 220-Hz note (dev/tests/hexenring/part.js) ----
-const HX_PART = {};   // (filled below from the measured table)
+const HX_PART = {"hau":[[3.2,0.639],[3.365,0.712],[3.493,0.807],[3.602,0.958],[3.697,0.917],[3.87,1],[4.029,0.775],[4.193,0.841],[4.292,0.621],[4.449,0.734]],"obt":[[1,0.307],[1.989,0.62],[2.991,0.579],[3.988,0.581],[4.961,0.509],[5.982,0.381],[6.945,0.282],[7.937,0.207],[9.921,1],[14.956,0.496]],"stm":[[0.999,0.281],[1.994,0.636],[2.994,0.994],[3.362,0.112],[3.697,0.117],[3.85,0.125],[3.99,1],[4.987,0.852],[5.986,0.284],[6.983,0.215]],"hlm":[[1,0.99],[2.99,1],[4.96,0.681],[6.944,0.379],[8.969,0.208],[10.912,0.116],[12.956,0.067],[14.88,0.037],[14.949,0.042],[16.942,0.025]],"boe":[[4.013,0.161],[4.606,0.138],[4.783,0.145],[4.857,0.195],[4.931,0.219],[5.015,1],[5.085,0.162],[5.185,0.235],[5.266,0.15],[5.34,0.179]],"elm":[[0.5,1],[1,0.84],[1.5,0.116],[2,0.442],[3,0.193],[4,0.23],[4.999,0.107],[6,0.11],[8.001,0.159],[11.982,0.107]],"khl":[[0.854,0.003],[0.929,0.009],[1.001,1],[1.076,0.009],[2.003,0.013],[3.004,0.037],[4.006,0.007],[5.009,0.007]],"neb":[[0.501,1],[0.999,0.433],[2,0.222],[2.991,0.17],[4.018,0.142],[5.029,0.133],[6.034,0.108],[7.034,0.069],[9.057,0.06],[10.061,0.059]],"kor":[[0.908,0.01],[1,1],[1.106,0.011],[1.499,0.194],[1.98,0.214],[2.491,0.069],[3.004,0.3],[4.018,0.099],[5.009,0.018],[6.001,0.019]],"swm":[[0.999,1],[1.971,0.215],[2.067,0.143],[2.955,0.343],[3.063,0.092],[3.175,0.047],[3.884,0.069],[3.955,0.22],[4.04,0.071],[4.945,0.056]],"amo":[[1.001,1],[2.009,0.835],[3.006,0.416],[4.005,0.182],[5.024,0.099],[6.007,0.114],[7.033,0.123],[8.009,0.078],[9.01,0.067],[11.012,0.041]],"hrz":[[1,1],[1.997,0.018],[2.318,0.01],[2.998,0.032],[3.997,0.029],[4.253,0.005],[4.997,0.014],[6.996,0.006],[7.994,0.008],[8.995,0.005]],"shn":[[1,0.932],[2,0.938],[2.996,1],[4.01,0.755],[4.997,0.219],[7.029,0.117],[8.012,0.219],[9.052,0.148],[10.032,0.154],[11.046,0.065]],"zpf":[[0.426,0.091],[0.501,1],[0.626,0.121],[0.925,0.149],[1.001,0.637],[1.092,0.137],[1.175,0.112],[2.514,0.139],[2.639,0.17],[4.644,0.15]],"rnk":[[1.949,1],[2.051,0.997],[3.904,0.327],[4,0.133],[4.096,0.331],[5.862,0.034],[6,0.054],[6.139,0.037],[7.818,0.022],[8.182,0.022]],"sai":[[1,1],[2,0.811],[2.994,0.426],[4.006,0.264],[4.991,0.238],[6.009,0.172],[6.987,0.087],[8.012,0.396],[8.983,0.036],[10.016,0.103]],"jrg":[[1,0.464],[3.291,1],[7.165,0.6],[12.186,0.141],[18.375,0.067],[25.781,0.047],[25.871,0.046]],"glo":[[1.001,0.55],[2.489,0.853],[4.489,1],[5.976,0.414],[7.959,0.294],[9.485,0.095],[11.443,0.092],[12.979,0.023],[14.972,0.024],[18.467,0.005]],"sch":[[1,1],[2.709,0.337],[5.156,0.115],[8.437,0.043],[12.287,0.017],[16.909,0.007]],"gng":[[0.999,1],[1.506,0.064],[1.755,0.252],[2.379,0.106],[2.755,0.073],[3.255,0.05],[3.936,0.037],[4.008,0.022],[4.127,0.023],[4.525,0.023]],"klb":[[1,1],[2,0.078],[2.999,0.024]],"gsp":[[1,0.985],[1.998,1],[2.994,0.503],[3.992,0.356],[4.991,0.235],[5.988,0.189],[6.987,0.093],[7.985,0.508],[8.983,0.04],[9.981,0.118]],"tie":[[0.5,1],[0.75,0.288],[1,0.77],[1.25,0.19],[1.5,0.25],[1.75,0.22],[2,0.118],[2.25,0.112],[2.499,0.088],[2.749,0.06]],"glt":[[1.001,1],[2.99,0.05],[4.98,0.004]],"mem":[[1,1]],"trp":[[0.86,0.029],[1,1],[1.066,0.056],[1.134,0.067],[1.202,0.079],[1.268,0.09],[1.345,0.096],[1.425,0.097],[1.554,0.265],[1.787,0.026]],"mdr":[[1,1],[1.794,0.998],[2.52,0.677],[2.99,0.557],[3.785,0.442],[4.499,0.397],[5.399,0.339],[6.799,0.276],[8.098,0.221],[9.598,0.186]],"rhz":[[0.891,0.777],[1,0.688],[1.337,0.03],[1.501,0.016],[1.781,0.817],[2,0.573],[2.378,1],[2.673,0.044],[3,0.022],[3.567,0.098]]};   // (part.js, measured once on the build machine)
 const HX_PARTH = [[1, 1], [2, 0.5], [3, 0.33], [4, 0.25], [5, 0.2], [6, 0.17], [7, 0.14], [8, 0.12]];   // (a harmonic tone: for what was not measured)
 const hxPart = (k) => HX_PART[k] || HX_PARTH;
 function hxRough(f1, p1, f2, p2) {
@@ -31769,7 +31779,7 @@ function hxHandUse(hs) {
 function hxTempoPrior() {
   const hs = HX.hs; if (!hs || P['hx.hand'] !== 'an' || !hs.tempi) return 100;
   const list = []; for (const b in hs.tempi) for (let i = 0; i < Math.min(50, hs.tempi[b]); i++) list.push(+b);
-  if (list.length < 3) return 100;
+  if (!list.length) return 100;
   list.sort((a, b) => a - b); return clamp(list[list.length >> 1], 40, 220);
 }
 async function hxHandLoad() {
@@ -31814,10 +31824,10 @@ function hxCardGd(btn) {
   if (!hxLoopsLive().length && hxGdStep() === 0) { box.replaceChildren(); return; }
   const st = P['hx.gaertner'], E = Math.round(HXG.Es * 100), lr = HXG.want && HXG.want !== 'still' ? HX_ROLEW[HXG.want] : 'still';
   const plan = HXG.plan ? HXG.plan.items.map((x) => { const L = hxByKey(x.key); return L ? hxName(L) + ' ' + (x.gt === 0 ? 'pausiert' : x.word || 'wie gespielt') : ''; }).filter(Boolean).join(', ') : '';
-  box.replaceChildren(h('div', { class: 'hx-gh' }, h('b', null, 'Gärtner'), h('span', null, ' – wie sehr die Schleifen auf dich hören')),
+  box.replaceChildren(...[h('div', { class: 'hx-gh' }, h('b', null, 'Gärtner'), h('span', null, ' – wie sehr die Schleifen auf dich hören')),
     h('div', { class: 'hx-row' }, h('span', { class: 'lab' }, 'Stufe'), h('div', { class: 'chips small' }, ...HX_GST.map((k) => chip(HX_GSTW[k], st === k, () => setParam('hx.gaertner', k), 'Gärtner ' + HX_GSTW[k])))),
     st !== 'schaut' ? h('p', { class: 'note' }, 'Du spielst: ' + lr + ' · Energie ' + E + ' %' + (plan ? ' · geplant: ' + plan : '') + (HXA.n + HXA.hsN < 40 && st === 'antwortet' ? ' · zum Antworten noch ' + (40 - HXA.n - HXA.hsN) + ' Töne' : '')) : null,
-    HXG.plan || HXW_K.wk || hxAntOn() ? h('div', { class: 'hx-row end' }, btn('✕ ablehnen', () => { hxMachNein(); hxCardDirty(); }, { aria: 'Was der Gärtner plant, ablehnen' }), btn('✓ behalten', () => { hxMachLob(); hxCardDirty(); })) : null);
+    HXG.plan || HXW_K.wk || hxAntOn() ? h('div', { class: 'hx-row end' }, btn('✕ ablehnen', () => { hxMachNein(); hxCardDirty(); }, { aria: 'Was der Gärtner plant, ablehnen' }), btn('✓ behalten', () => { hxMachLob(); hxCardDirty(); })) : null].filter(Boolean));
 }
 function hxCardMit(L, chip, row, btn) {
   if (L.bew) return [];
