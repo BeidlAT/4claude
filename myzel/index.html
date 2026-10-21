@@ -31245,7 +31245,12 @@ function hxAntLearn(tok) {
 }
 // the Ohr's side: new notes of the player into the corpus (a chord's top note is the line), the phrase, the yielding
 function hxAntIngest(now) {
-  const g = hxGrid(), evs = hxNotes(now - 4, now + 1, 0, false).filter((e) => e.id > HXA.lastId && e.src !== 'bor' && e.t0 <= now + 0.5);
+  // (the ring's new slots only, from where the last look stopped – never a scan of the whole Humus: this runs ten times
+  // a second beside the live playing)
+  if (HXA.evI == null) HXA.evI = HX.evI;
+  const evs = [];
+  while (HXA.evI !== HX.evI) { const e = HX.ev[HXA.evI]; HXA.evI = (HXA.evI + 1) % HX_EV; if (e && e.t0 != null && e.id > HXA.lastId && !e.probe && e.src !== 'bor' && hxSrcIn(e.src, 0)) evs.push(e); }
+  const g = hxGrid();
   for (const e of evs) {
     HXA.lastId = Math.max(HXA.lastId, e.id);
     if (e.deg == null) continue;
