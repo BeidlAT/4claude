@@ -44,8 +44,11 @@ Fixed on the way: the card's „null“ (since 1b), glide curves of transposed n
 (coordinator, own commit). Costs: no new processor cost (`HX_COST` unchanged): answers are voices (VCOST), suggestions
 are loops (`schicht`), varied passes render in the Werk-Rahmen like living ones (`hxWPredict` ×1.75 at Variieren/
 Wandern – a pass may hold 1.75 × the notes); main thread: a Wandern pass of 64 notes 4.2 ms, an answer 1.5 ms,
-Begleiten 5.5–10.7 ms per source (split between tasks), a bar's decision 0.4 ms. Not built: Ladung on loops (§17),
-per-note vetoes in the card, a Gärtner without a Takt for Wiederkehr. Next: SPEC §23 – Etappe 4 (Ökologie).
+Begleiten 5.5–10.7 ms per source (split between tasks), a bar's decision 0.4 ms. Regression: SPEC §23 „Regression (step 3)“ – every red row is red
+on 2491e14 too (compared run for run), except `t-ga-cost`, which step 3's first build broke and f922619 fixed (the Ohr
+reads only new ring slots); the performance guard's tiefsee/d row fails against the stored reference, but HEAD equals
+2491e14 there (33.4 / 34.7). Not built: Ladung on loops (§17), per-note vetoes in the card, Wiederkehr without a Takt.
+Next: SPEC §23 – Etappe 4 (Ökologie).
 
 **Step 2b (Werkzeug, built):** SPEC §11, §12.1 c/d, §13, §14, §16, §17, §19, §21 „As built (step 2b)“. Processor: the
 tape's speed `{band}` (servo glide `vsPos/vsRate/vsEnd`, kernels `RSK` k16/k24 in `rd`/`grpRun`), Bandstopp, slices
