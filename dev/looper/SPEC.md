@@ -1914,3 +1914,35 @@ t-idle-parity 47/48 – the 20-s ramp row (−100.0 against −116.2 dB) fails i
 check.js: every scenario within its limit except tiefsee/d (audio 53.4 against the stored reference 7f226e7's 46.6, limit
 53.2) – measured alternately against 2491e14 (perf.js, five runs): HEAD 33.4 / 2491e14 34.7 (idle 15.4 / 15.3), the same.
 
+
+### As built (step 4): suites
+`t-hx-oeko2` (49: offline – the gap mode's pass, its ring-out and silence, a shorter pass ringing on over the seam;
+a fractional free length's passes at round(ph0 + k·L); the Sammelschleife y = A(x − L_B) + fb·y(x − L_B) to float
+rounding either loop first, the soft ceiling, Festhalten, the copy; the stutter; Sehne and Glut fed – on their note
+against 6 % off, bit for bit the voice they were without an input; live – Nähren Rhizom and Regen (the Hexenring's way,
+never in the Humus), the Höfe (fed, tuned, retuned, priced `HX_COST.hof`, never re-captured), Treffen (5/7/8 bars every
+280, free loops, pairs), Treffen setzen (exactly once at T, no pair before, only the silence changed, Fruchten), the
+Sammelschleife live and after a reload, Einwurzeln (a played loop's energy off the web's tones 12 → 5 % in 8 passes;
+Moll- → Dur-Pentatonik 57 → 98 % at the new tones, 38 → 1.5 % at the old-only ones in 20; RMS ×1.000; 1.5 s in ≈ 0.4 s),
+Moder, Zersetzung live), `t-hx-mikro` (24: YIN on sines, saws, a missing fundamental, noise; a recorded-like voice – its
+notes 8 of 8 within 0.02 semitones and 15 ms, frames 120 ms into a note 95 % within 15 cents; a whistle 587 Hz – 2.35 kHz
+8 of 8; off until switched on – no getUserMedia before; refused; on/off with its sign and tracks; the loopback round trip
+to ±1 ms; Korb, overdub and Dieselbe from the Mikro on the beat ±1 ms; Bluetooth; Gesang als Noten live → Wuchs heard;
+360 px), `t-hx-live` (22: Live chosen, the voices' way and their giving way, MIDI out – every note, its exact pitch by its
+bend, its own channel never 10 –, Ladung on loops, vetoes, Wiederkehr without a Takt), all in `run-all.sh`. `t-hx-fuzz`:
+ten more kinds (`FUZZ_E=0` Etappe 3's bag) – 2000 actions, 80 kinds, green. `perf/t-idle-live` 5e (the microphone).
+`cost.js`: `hxi/hxj/hxk/fglt/fshn`. One cause found by the voice test and fixed in the design: at a note's start the room
+still ringing with the note before made the pair periodic an octave low (YIN's own reading) – the note now takes its
+octave from all its frames.
+**Regression (step 4)**, each alone, red rows compared with eeaaf2c (slots built from it): Hexenring run-all – 26
+suites: proc 33, taps 17, clock 20, humus 11, ohr 27, ernten 32 + 1 (the „sounds 125 ms after the tap“ row, green alone
+33/33), grammar 30, persist 15, ui 69, werk 15, bake 13, seams 16 + the known Gong row, form 30, ctl 23, bew 66, oeko 13,
+fuzz 8, taumeln 14, wuchs 37 + 1 (Stimme's identity −21.5 dB once; three further runs 38/38, eeaaf2c 38/38), tempo 18,
+tools 47, mitspieler 33, gaertner 58, oeko2 49, mikro 24, live 22. `reg.sh`: v2 41/5/20/9/4/3/7/7/17, mixfunc and mixui
+green, MIDI all green (t-clock 29), Gestik's known reds only (`t-gm-stream`, `t-gm-cost`, `t-gl-schlafen`, `t-gf-cost`,
+`t-gs-cost`, `t-gs-regen`, `t-gx-live`; `t-ga-cost` green). `klang/tests/run-all.sh` (SKIP_BENCH=1): only t-eng-live's
+known khl Puls row; smoke-all 28 sources, none silent. `bench.js shn` 34/34; `bench.js glt`: the worklet's VCOST row
+scatters (0.84–0.91 against 0.86, eeaaf2c the same), the native loop's VCOST row (1.22–1.29 against the table's 1.12) fails
+on both builds – its code is untouched; its threshold row once. Performance guard (alone, last): t-idle-parity 47/48 –
+„default patch after the wake“ (−81.8 against −89.7 dB) failed once; the same row fails on eeaaf2c once in two and
+passed on HEAD in a rerun; t-idle-live 25/25; check.js every scenario within its limit.
