@@ -106,6 +106,7 @@ async function install(page) {
     window.__act = async (name, a, b, c) => {
       F.acts[name] = (F.acts[name] || 0) + 1; F.last.push(name + ' ' + [a, b, c].map((x) => x.toFixed(2)).join(' ') + ' @' + M.A.ctx.currentTime.toFixed(3)); if (F.last.length > 16) F.last.shift();
       try { await window.__A[name](a, b, c); } catch (e) { F.exc.push(name + ': ' + (e && e.message)); }
+      if (M.HX.nan && M.HX.nan.length && !F.trip0) F.trip0 = { acts: F.last.slice(), t: M.A.ctx.currentTime, first: M.HX.nan[0] };   // (the actions just before the first tripwire's report)
     };
     // Stille and the end of a sequence: every hand off, awake, visible – then no note may stay
     window.__settle = async () => {
@@ -149,7 +150,7 @@ async function install(page) {
     if (seqs % 25 === 0 || seqs === 5) { const hp = await heap(); heaps.push([seqs, hp, Math.round(s.mem / 1048576), s.loops]); if (seqs === 5) h0 = hp; }
     // a reload now and then: the Schleifen come back from storage, the fuzz goes on with them
     if (seqs % 30 === 0 && done < N) {
-      const f = await page.evaluate(() => window.__fz); if ((f.nan || f.nanX || (f.trip && f.trip.length)) && !global.__shown) { global.__shown = 1; console.log('NANDUMP seq', seqs, 'nan', f.nan, 'nanX', f.nanX, 'firsts', JSON.stringify((f.firsts || []).sort((x, y) => x[1] - y[1]).slice(0, 12)), 'at', JSON.stringify(f.at)); console.log('TRIP', JSON.stringify((f.trip || []).slice(0, 4)), 'tripAt', JSON.stringify(f.tripAt)); } trips += (f.trip || []).length; nan += f.nan; exc = exc.concat(f.exc); for (const k in f.acts) acts[k] = (acts[k] || 0) + f.acts[k];
+      const f = await page.evaluate(() => window.__fz); if ((f.nan || f.nanX || (f.trip && f.trip.length)) && !global.__shown) { global.__shown = 1; console.log('NANDUMP seq', seqs, 'nan', f.nan, 'nanX', f.nanX, 'firsts', JSON.stringify((f.firsts || []).sort((x, y) => x[1] - y[1]).slice(0, 12)), 'at', JSON.stringify(f.at)); console.log('TRIP', JSON.stringify((f.trip || []).slice(0, 4)), 'tripAt', JSON.stringify(f.tripAt)); console.log('TRIP0', JSON.stringify(f.trip0 || null)); } trips += (f.trip || []).length; nan += f.nan; exc = exc.concat(f.exc); for (const k in f.acts) acts[k] = (acts[k] || 0) + f.acts[k];
       await page.reload(); await page.waitForFunction(() => !!window.__M);
       await H.tools(page); await G.gtools(page);
       await page.click('#btnStart'); await page.waitForFunction(() => window.__M.HX.state === 'ok', null, { timeout: 10000 });
@@ -160,7 +161,7 @@ async function install(page) {
       reloads++;
     }
   }
-  const f = await page.evaluate(() => window.__fz); if ((f.nan || f.nanX || (f.trip && f.trip.length)) && !global.__shown) { global.__shown = 1; console.log('NANDUMP seq', seqs, 'nan', f.nan, 'nanX', f.nanX, 'firsts', JSON.stringify((f.firsts || []).sort((x, y) => x[1] - y[1]).slice(0, 12)), 'at', JSON.stringify(f.at)); console.log('TRIP', JSON.stringify((f.trip || []).slice(0, 4)), 'tripAt', JSON.stringify(f.tripAt)); } trips += (f.trip || []).length; nan += f.nan; exc = exc.concat(f.exc); for (const k in f.acts) acts[k] = (acts[k] || 0) + f.acts[k];
+  const f = await page.evaluate(() => window.__fz); if ((f.nan || f.nanX || (f.trip && f.trip.length)) && !global.__shown) { global.__shown = 1; console.log('NANDUMP seq', seqs, 'nan', f.nan, 'nanX', f.nanX, 'firsts', JSON.stringify((f.firsts || []).sort((x, y) => x[1] - y[1]).slice(0, 12)), 'at', JSON.stringify(f.at)); console.log('TRIP', JSON.stringify((f.trip || []).slice(0, 4)), 'tripAt', JSON.stringify(f.tripAt)); console.log('TRIP0', JSON.stringify(f.trip0 || null)); } trips += (f.trip || []).length; nan += f.nan; exc = exc.concat(f.exc); for (const k in f.acts) acts[k] = (acts[k] || 0) + f.acts[k];
   const hEnd = await heap();
   console.log('INFO ' + done + ' actions in ' + seqs + ' sequences, ' + reloads + ' reloads, ' + Math.round((Date.now() - t0) / 1000) + ' s; actions: ' + JSON.stringify(acts));
   console.log('INFO heap after GC [sequence, MB, Hexenring MB, Schleifen]: ' + JSON.stringify(heaps) + ' → end ' + hEnd + ' MB');

@@ -9584,6 +9584,7 @@ function myzelDsp() {
       this.wA = new Float32Array(S); this.wG = new Float32Array(S); this.sgA = new Float32Array(S); this.sndW = false;
       this.bG = new Float32Array(S); this.gSl = new Float32Array(S); this.slQ = new Float64Array(3); this.AB = [new Float32Array(S), new Float32Array(S)];   // (step 2b: a stop's fade, a slice's gains, a worn Schicht's own sum)   // (step 1d: Schluss „welkend“, the sends to the loops' own webs)
       this.rep = 0; this.met = 0; this.nA = 0; this.late = 0; this.wpt = []; this.wrep = 0;   // (step 2a: the Werk-Rahmen's ports – the live frame every 0.1 s)
+      this.gW = new WeakMap();   // (step 2b: a chunk given back – by what, at which frame – for the tripwire's report)
       this.port.onmessage = (e) => this.msg(e.data);
       for (const m of po.msgs || []) this.msg(m);   // (offline renders: port messages arrive only at a suspend)
     }
@@ -9824,7 +9825,7 @@ function myzelDsp() {
       const n = Math.ceil((S.tot * 1.012 + 1024) / this.CH), dst = this.ddPool ? this.take(n) : null;
       if (dst) this.ddStart({ schicht: S.id, pv: S.pv, dst }); else this.port.postMessage({ ddReq: { schicht: S.id, pv: S.pv, n } });
     }
-    ddBack(id, dst) { if (!dst) return; const tr = []; for (const c of dst) tr.push(c[0].buffer, c[1].buffer); this.port.postMessage({ freed: { schicht: id, old: 1, chunks: dst } }, tr); }
+    ddBack(id, dst) { if (!dst) return; const tr = [], H = this.held([]); dst = dst.filter((c) => !H.has(c[0]) || (this.heldBad({ schicht: id, dd: 1 }, c, H.get(c[0])), false)); for (const c of dst) { tr.push(c[0].buffer, c[1].buffer); this.gW.set(c[0], ['ddBack', id, this.F]); } this.port.postMessage({ freed: { schicht: id, old: 1, chunks: dst } }, tr); }
     ddStart(d) {   // (in a message: everything it needs is made here)
       const S = this.sch(d.schicht), dst = d.dst;
       if (!S || S.pv !== d.pv || S.ddA || S.dying || S.dead || !S.dr || !dst || !dst.length) { this.ddBack(d.schicht, dst); return; }
@@ -9930,7 +9931,10 @@ function myzelDsp() {
     // the slot's frames from 0 are there up to p + need (plus the resampler's taps), or to its end
     wsReady(Z, p, need) { return p - RS_T >= Z.c0 * this.CH - (Z.c0 ? 0 : Infinity) && Z.hi * this.CH >= Math.min(Z.n, Math.ceil(p + need) + RS_T + 2); }
     // a version of the Schicht as it is now (to cross from, or to fall back on)
-    wsVer(S) { return { ch: S.ch, tot: S.tot, pre: S.pre, len: S.len, ac: S.ac, aoff: S.aoff, aend: S.aend, join: S.join, X: S.X, rho: S.rho, wu: S.wu, ddA: S.ddA, ddMap: S.ddMap, dr0: S.dr0, out: S.out, zo: S.zo, kc: S.kc, ws: S.ws && S.ws.cur && S.ch === S.ws.cur.ch ? S.ws.cur : null }; }
+    wsVer(S) { return { ch: S.ch, tot: S.tot, pre: S.pre, len: S.len, ac: S.ac, aoff: S.aoff, aend: S.aend, join: S.join, X: S.X, rho: S.rho, wu: S.wu, ddA: S.ddA, ddMap: S.ddMap, dr0: S.dr0, out: S.out, zo: S.zo, kc: S.kc, ws: this.wsOwn(S) }; }
+    // (step 2b) the slot whose chunks the Schicht reads now – the current one, or a fallback's after a late pass (W.cur is
+    // null then): a version taken from it goes with its slot, never given back on its own while the slot is still read
+    wsOwn(S) { const W = S.ws; if (!W || !S.ch) return null; if (W.cur && W.cur.ch === S.ch) return W.cur; for (const Z of W.slots) if (Z.ch === S.ch) return Z; return null; }
     // a version becomes the Schicht's: at its seam (the pass that ended goes on in its tail, added by advance), or mid-pass
     // at the same place, crossing over X frames
     // the two versions' correlation over the next n frames from read positions pa, pb (stereo; a chunk not there is silence)
@@ -10124,10 +10128,30 @@ function myzelDsp() {
     schQ(id) { for (const e of this.q) if (e.kind === 'schicht' && e.S && e.S.id === id) return e.S; return null; }   // (step 2b: one still waiting for its frame – its settings go with it)
     loopOf(S) { for (const L of this.loops) if (L.sch.includes(S)) return L; return null; }
     // hand buffers back to the page (undo, clear, a swapped version): transferred, so this thread keeps nothing
-    give(what, bufs) {
-      const ch = [], tr = [], seen = new Set();
-      for (const B of bufs) for (const list of [B.ch, B.ac]) for (const c of list || []) if (c && c[0].buffer.byteLength && !seen.has(c[0])) { seen.add(c[0]); ch.push(c); tr.push(c[0].buffer, c[1].buffer); }   // (step 2a: a slot's chunks not yet streamed are null)
+    give(what, bufs, Lx) {
+      const ch = [], tr = [], seen = new Set(), H = this.held(bufs, Lx);
+      for (const B of bufs) for (const list of [B.ch, B.ac]) for (const c of list || []) if (c && c[0].buffer.byteLength && !seen.has(c[0])) { if (H.has(c[0])) { this.heldBad(what, c, H.get(c[0])); continue; } seen.add(c[0]); ch.push(c); tr.push(c[0].buffer, c[1].buffer); this.gW.set(c[0], [what, this.F]); }   // (step 2a: a slot's chunks not yet streamed are null; step 2b: who gave it back, for the tripwire)
       this.port.postMessage({ freed: Object.assign(what, { chunks: ch }) }, tr);
+    }
+    // (step 2b) the chunks a read still holds – a living Schicht's version, its old one, the parked ones, its stream's
+    // fallback, its tails: never transferred (a detached chunk reads as nothing – NaN); what is being given is left out
+    held(bufs, Lx) {
+      const H = new Map(), add = (V, w) => { if (V && !bufs.includes(V)) for (const list of [V.ch, V.ac]) if (list) for (const c of list) if (c) H.set(c[0], w); };
+      for (const L of this.loops) {
+        if (L === Lx) continue;   // (a loop going as a whole – by itself, not by its id: a cleared one and its undo share it)
+        for (const S of L.sch) {
+          if (S.dead) continue;
+          add(S, 'ver ' + S.id); add(S.old, 'old ' + S.id); for (const P of S.park || []) add(P, 'park ' + S.id); if (S.ws) add(S.ws.prev, 'prev ' + S.id);
+          for (let t = 0; t < S.tn; t++) if (S.tc[t]) for (const c of S.tc[t]) if (c) H.set(c[0], 'tail ' + S.id + ':' + t + (S.tc[t] === S.ch ? '=ver' : S.old && S.tc[t] === S.old.ch ? '=old' : ''));
+        }
+      }
+      return H;
+    }
+    heldBad(what, c, h) {
+      this.heldN = (this.heldN || 0) + 1;
+      if (this.F < (this.heldT || 0)) return;
+      this.heldT = this.F + SR;
+      this.port.postMessage({ nan: { held: this.heldN, what: JSON.stringify(what), h, F: this.F, by: this.gW.get(c[0]) || null, at: String(new Error().stack || '').split('\n').slice(1, 6).join(' | ') } });
     }
     // ---- reading: n frames of a chunk list (tot frames) from position p, step r per frame, × gain (g, or ga per frame) into (oL, oR) at o
     rd(ch, tot, p, r, n, o, g, ga, oL, oR) {
@@ -10264,13 +10288,13 @@ function myzelDsp() {
       if (J.dr || J.drc) this.drFill(J);
       if (J.rs) { const tr = []; for (const L of [J.dst, J.ch]) for (const c of L) tr.push(c[0].buffer, c[1].buffer); this.port.postMessage({ rsd: { id: J.id, chunks: J.dst, src: J.ch } }, tr); return; }
       if (J.S) {   // a live fill: the Schicht keeps its chunks, the page gets the copy
-        const tr = []; if (J.cp) for (const c of J.cp) tr.push(c[0].buffer, c[1].buffer);
+        const tr = []; if (J.cp) for (const c of J.cp) { tr.push(c[0].buffer, c[1].buffer); this.gW.set(c[0], ['filled', J.id, this.F]); }
         if (J.drc) tr.push(J.drc.buffer);
         this.port.postMessage({ filled: { schicht: J.id, v: J.v, chunks: J.cp, f0: J.f0, n: J.f1 - J.f0, lost: J.lost, dr: J.drc || null } }, tr);
         if (J.S.id != null && J.lost >= 0) this.ddAsk(J.S);   // (step 1d: complete – its de-drifted version)
         return;
       }
-      const tr = []; for (const c of J.dst) tr.push(c[0].buffer, c[1].buffer);
+      const tr = []; for (const c of J.dst) { tr.push(c[0].buffer, c[1].buffer); this.gW.set(c[0], ['grabbed', J.id, this.F]); }
       if (J.drc) tr.push(J.drc.buffer);
       this.port.postMessage({ grabbed: { id: J.id, chunks: J.dst, f0: J.f0, n: J.f1 - J.f0, lost: J.lost, dr: J.drc || null } }, tr);
     }
@@ -10381,7 +10405,7 @@ function myzelDsp() {
         for (let i = 0; i < this.loops.length; i++) {
           const L = this.loops[i];
           this.loopSpan(L, F + s, F + e, s, outs);
-          if (L.dying && (L.k < 0 || (L.st.i >= L.st.N && L.st.v === 0))) { this.give({ loop: L.id }, L.sch.filter((S) => !S.dead).concat(L.sch.filter((S) => S.old).map((S) => S.old), ...L.sch.map((S) => S.park || []), L.sch.filter((S) => S.ddN).map((S) => ({ ch: S.ddN.dst })), ...L.sch.map((S) => this.wsAll(S)))); this.loops.splice(i--, 1); }
+          if (L.dying && (L.k < 0 || (L.st.i >= L.st.N && L.st.v === 0))) { this.give({ loop: L.id }, L.sch.filter((S) => !S.dead).concat(L.sch.filter((S) => S.old).map((S) => S.old), ...L.sch.map((S) => S.park || []), L.sch.filter((S) => S.ddN).map((S) => ({ ch: S.ddN.dst })), ...L.sch.map((S) => this.wsAll(S))), L); this.loops.splice(i--, 1); }
         }
       }
     }
@@ -10576,7 +10600,7 @@ function myzelDsp() {
       L.ms = L.mp = 0; this.nanN = (this.nanN || 0) + bad;
       if (this.F < (this.nanT || 0)) return;
       this.nanT = this.F + SR;
-      const scan = (ch, tot) => { let nan = 0, det = 0, nul = 0; if (ch) for (const c of ch) { if (!c) { nul++; continue; } if (!c[0].length || !c[1].length) { det++; continue; } for (const a of c) for (let j = 0; j < a.length; j++) if (!(a[j] - a[j] === 0)) nan++; } return [nan, det, nul, ch ? ch.length : -1, tot]; };
+      const scan = (ch, tot) => { let nan = 0, det = 0, nul = 0, who = null; if (ch) for (const c of ch) { if (!c) { nul++; continue; } if (!c[0].length || !c[1].length) { det++; if (!who) who = this.gW.get(c[0]) || 'page'; continue; } for (const a of c) for (let j = 0; j < a.length; j++) if (!(a[j] - a[j] === 0)) nan++; } return [nan, det, nul, ch ? ch.length : -1, tot, who]; };
       const fin = (x) => (x - x === 0 ? x : String(x));
       const one = (S) => S && { id: S.id, wu: S.wu ? 1 : 0, ws: S.ws ? S.ws.slots.length : 0, out: S.out, r: fin(S.r), q: fin(S.q), pe: fin(S.pe), pre: fin(S.pre), len: fin(S.len), f0: fin(S.f0), ev: S.e ? fin(S.e.v) : null, g: fin(S.g), xin: S.xin ? fin(S.xin.v) : null, xo: S.xo ? fin(S.xo.v) : null, rho: fin(S.rho), xrho: fin(S.xrho || 0),
         kc: S.kc ? S.kc.some((v) => !(v - v === 0)) : null, zo: S.zo, X: S.X, join: S.join, ddA: S.ddA, dr0: S.dr0 ? S.dr0.some((v) => !(v - v === 0)) : null, dr: S.dr ? S.dr.some((v) => !(v - v === 0)) : null, aoff: fin(S.aoff), aend: fin(S.aend),
