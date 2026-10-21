@@ -90,10 +90,12 @@ const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) process
   // Hexenring's gates before its first note, is heard, and the graph sleeps again after it
   r = await pg.evaluate(async () => {
     const M = window.__M, A = M.A, was = M.IDLE.on, hxOff = M.IDLE.hxOff, t = A.ctx.currentTime;
+    M.P['hx.gaertner'] = 'antwortet';   // (it answers only at „antwortet“; set without setParam – nothing else should move)
     const notes = [0, 2, 4, 2, 0].map((d, i) => ({ t: t + i * 0.2, I: 5 + d, b: i * 0.4, vel: 0.7, y: 0.5, tok: '1:1:0', f: M.N.notes[5 + d].f }));
     const C = M.hxAntStart({ notes, id: 4242, mi: 0.2 }, t);
     const on = M.IDLE.on, off = M.IDLE.hxOff;
     let pk = 0; const b = new Float32Array(2048), t0 = performance.now(); while (C && performance.now() - t0 < 2500) { A.analyser.getFloatTimeDomainData(b); for (const x of b) pk = Math.max(pk, Math.abs(x)); await new Promise((r) => setTimeout(r, 20)); }
+    M.P['hx.gaertner'] = 'schaut';
     return { was, hxOff, on, off, n: C ? C.n : 0, pk, src: M.idleSrc() || !!M.HXA.cur };
   });
   ok(r.was && !r.on && !r.off && r.n > 0 && r.pk > 0.005, `an answer of the Gärtner (${r.n} notes, no Schleife) wakes it and opens the Hexenring's gates before it sounds (asleep before: ${r.was}, gates closed: ${r.hxOff}), heard (peak ${r.pk.toFixed(3)})`);
