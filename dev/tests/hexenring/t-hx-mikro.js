@@ -2,7 +2,7 @@
 //  A in the page, no audio graph: YIN on synthetic tones (sines, a band-limited saw, a voice without its fundamental,
 //    noise at −20 dB) and on a recorded-like voice (glottal pulses through vowel formants, vibrato, jitter, shimmer,
 //    breath, a room) – frame by frame against the pitch it was made with; Gesang als Noten's segmentation of that voice
-//    (its notes, their degrees and onsets: legato steps split, a repeated pitch re-attacked)
+//    (its notes, their degrees and onsets: legato steps split, a repeated pitch re-attacked), and of a whistle
 //  B live: the microphone is off until the player switches it on – no getUserMedia before (a faked one counts the
 //    calls), no sign, no Mikro source; switched on in the card: the constraints (no echo cancellation, noise
 //    suppression, gain control), the sign in the Ringleiste, the card; refused: a word, stays off; off: its tracks end,
@@ -73,7 +73,7 @@ const VOICE = () => {
       const cents = (a, b) => Math.abs(1200 * Math.log2(a / b));
       const run = (name, f0, gen) => {
         const n = Math.round(0.6 * sr), x = new Float32Array(n); for (let i = 0; i < n; i++) x[i] = gen(i / sr);
-        const Y = M.hxYin(x, sr, 70, 1100), e = Y.f.slice(4).map((f) => (f > 0 ? cents(f, f0) : 1e4)).sort((a, b) => a - b);
+        const Y = M.hxYin(x, sr, 70, 2800), e = Y.f.slice(4).map((f) => (f > 0 ? cents(f, f0) : 1e4)).sort((a, b) => a - b);
         out[name] = { med: e[e.length >> 1], gross: e.filter((c) => c > 50).length / e.length };
       };
       let s = 3; const rnd = () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296 - 0.5);
@@ -90,7 +90,7 @@ const VOICE = () => {
     // ---------- A2 · YIN and Gesang als Noten on a recorded-like voice ----------
     r = await ev((MEL) => {
       const M = window.__M, sr = 48000, fOf = (d) => [146.83, 174.61, 196, 220, 261.63, 293.66, 349.23, 392, 440, 523.25, 587.33][d];   // (D-Moll-Pentatonik, as the field's notes)
-      const notes = MEL.map(([d, t0, dur, leg]) => [t0, dur, fOf(d), leg]), V = window.__voice(notes, sr), Y = M.hxYin(V.x, sr, 70, 1100);
+      const notes = MEL.map(([d, t0, dur, leg]) => [t0, dur, fOf(d), leg]), V = window.__voice(notes, sr), Y = M.hxYin(V.x, sr, 70, 2800);
       const e = [], es = []; for (let i = 0; i < Y.f.length; i++) { const c = Math.round(i * Y.hop + 0.015 * sr), ft = V.f[c], fa = V.f[Math.max(0, c - 700)], fb = V.f[Math.min(V.f.length - 1, c + 700)], f0 = V.f[Math.max(0, c - Math.round(0.12 * sr))]; if (ft > 0 && fa > 0 && fb > 0 && Y.f[i] > 0) { const x = Math.abs(1200 * Math.log2(Y.f[i] / ft)); e.push(x); if (f0 > 0 && Math.abs(1200 * Math.log2(f0 / ft)) < 100) es.push(x); } }
       e.sort((a, b) => a - b); es.sort((a, b) => a - b);
       const seg = M.hxGesangSeg(Y);
@@ -101,6 +101,26 @@ const VOICE = () => {
     const pair = r.want.map((w, i) => r.seg[i] ? { dt: Math.abs(r.seg[i].t0 - w.t0), dst: Math.abs(r.seg[i].st - w.st) } : null);
     ok(r.seg.length === r.want.length && pair.every((p) => p && p.dst < 0.3 && p.dt < 0.05), `Gesang als Noten: ${r.seg.length} notes from the ${r.want.length} sung (a legato step split, a repeated pitch re-attacked) – each within ${Math.max(...pair.map((p) => (p ? p.dst : 9))).toFixed(2)} semitones, its onset within ${(1000 * Math.max(...pair.map((p) => (p ? p.dt : 9)))).toFixed(0)} ms`);
     ok(r.seg.some((s) => s.cf > 0), `  the scoops and glides kept as each note's curve (${r.seg.filter((s) => s.cf > 0).length} notes with one)`);
+    // ---------- A3 · whistled ----------
+    r = await ev((MEL) => {
+      const M = window.__M, sr = 48000, F = [146.83, 174.61, 196, 220, 261.63, 293.66, 349.23, 392, 440, 523.25, 587.33].map((f) => f * 4);   // (two octaves up: 587 Hz – 2.35 kHz)
+      let s = 11; const rnd = () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296 - 0.5);
+      const notes = MEL.map(([d, t0, dur, leg]) => [t0, dur, F[d], leg]), n = Math.round(4.4 * sr), x = new Float32Array(n);
+      let ph = 0, lp = 0;
+      for (const [t0, dur, f, leg] of notes) {
+        const i0 = Math.round(t0 * sr), i1 = Math.round((t0 + dur) * sr), prev = leg ? notes.find((q) => Math.abs(q[0] + q[1] - t0) < 0.06 && q[0] < t0) : null;
+        for (let i = i0; i < i1 + Math.round(0.02 * sr); i++) {
+          const t = (i - i0) / sr, env = Math.min(1, t / (leg ? 0.005 : 0.02)) * (i >= i1 ? 1 - (i - i1) / (0.02 * sr) : 1);
+          let c = leg && prev ? 1200 * Math.log2(prev[2] / f) * Math.max(0, 1 - t / 0.03) : -30 * Math.exp(-t / 0.02); c += 12 * Math.sin(2 * Math.PI * 6 * t);
+          ph += f * Math.pow(2, c / 1200) / sr; lp = 0.7 * lp + 0.3 * rnd();
+          x[i] += 0.3 * env * (Math.sin(2 * Math.PI * ph) + 0.03 * Math.sin(4 * Math.PI * ph)) + 0.02 * env * lp;
+        }
+      }
+      const Y = M.hxYin(x, sr, 70, 2800), seg = M.hxGesangSeg(Y);
+      return { seg: seg.map((q) => ({ t0: q.t0, st: q.st })), want: notes.map((q) => ({ t0: q[0], st: 12 * Math.log2(q[2] / 440) + 69 })) };
+    }, MEL);
+    const wp = r.want.map((w, i) => r.seg[i] ? { dt: Math.abs(r.seg[i].t0 - w.t0), dst: Math.abs(r.seg[i].st - w.st) } : null);
+    ok(r.seg.length === r.want.length && wp.every((p) => p && p.dst < 0.3 && p.dt < 0.05), `whistled (587 Hz – 2.35 kHz, breath, vibrato): ${r.seg.length} notes of ${r.want.length}, each within ${Math.max(...wp.map((p) => (p ? p.dst : 9))).toFixed(2)} semitones, onsets within ${(1000 * Math.max(...wp.map((p) => (p ? p.dt : 9)))).toFixed(0)} ms`);
   }
   if (PARTS.includes('B')) {
     await ev(async () => { await window.__reset(); window.__grid(120); await window.__sleep(300); });

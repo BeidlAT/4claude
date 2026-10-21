@@ -768,6 +768,20 @@ build before 2a.
 
 ---
 
+**As built (step 4): Live mode in full.** „Wiedergabe“ in the card is Abdruck · Wuchs · Live; Live (`L.live`, stored
+with the loop's ecology record `eco`) is chosen even while the Werk-Rahmen works (before: only its fallback, `HXW.st
+'kein'`). `hxWLm(L)` covers both; `hxWLiveSync` takes the Schicht's gain to 0 at the next seam (`S.lm`) and back when
+Live ends; `hxWLiveTick` (every scheduler tick, ahead to its horizon) plays each pass's notes from `hxWPass` – the
+variation, the breath, Ladung, the key – as real voices on the chain's copy into the strip „Hexenring“ (`hxOut1`,
+`bus: hxChain('fx1').in`), `loop: true` (they give way before any live note; a loop note that does not fit is not
+played) and `hxSrc: 'hxr'` (never in the notes Humus – before step 4 they counted as the field's notes there). ✓ ✕
+need rendered passes and are hidden in Live; a Live loop is not „lebendig“ for the Werk-Rahmen (`hxWLebt`). MIDI out
+per loop (`L.midi`, the card's row „MIDI · Noten hinaus“): `hxPassNotes(L, k)` – a pass's notes as it plays them
+(Live/Wuchs: `hxWPass`'s; an Abdruck: its harvested notes) – scheduled ahead by `hxFeedAhead` (a cursor per purpose,
+each note once) and sent by `hxMidiNote` to every connected output: each note on a channel of its own in turn (1–16
+without 10) with its pitch bend before it (±2 semitones: a just or free pitch exact), note-off at its end, stamped
+`perfAt` (the Puls's MIDI clock's mapping).
+
 ## 11. Audio loops on a tempo change (owner: "what makes most sense")
 
 Loops without notes (source Alles/Mikro, or a Gespielt loop whose notes were dropped):
@@ -1231,6 +1245,84 @@ Körner“. Not yet (Etappe 4): rhz, rgn, glt, shn, Schleife → Schleife.
 
 ---
 
+**As built (step 4): the ecology.** One section `/* ---------- Hexenring: Ökologie (Etappe 4) ---------- */`, its
+heartbeat `hxEcoTick` in `hxTick`; per loop `naehrt` and the record `eco` (`hxEcoOf/hxEcoSet`: live, midi, ladung,
+einw, moder, gesang) in snapshot, record and rebuild.
+- *Nähren Rhizom / Regen.* `hxPassNotes` → `hxFeedAhead` → each loop note strikes the live Rhizom net (`hxNaehrRhz`,
+  `hit('rhz')` on `hxFeedBus()`, the strip „Hexenring“'s chain copy; it shares the live net – its avalanches and
+  exhaustion are the net's, so loop and player play one net; documented, as allowed) / plants a Keim (`hxNaehrRgn`,
+  `rgSeed` with `hx` – a spore striking it sounds on the Hexenring's way too). Never in the notes Humus.
+- *Nähren Glut / Sehne (Höfe).* `HX_FEED`: Sehne 4 voices (inj 0.06, level 0.7), Glut 2 (inj 0.1, level 0.8, Höhe
+  0.22 – below its threshold, the loop is its tinder). `myzel-ember` and `myzel-string` (`MyzelProc`) take an input
+  when `po.inj > 0` (or `{inj}`): Sehne injects near the bridge (`SHN_FEED` 0.17; `start({silent})` – no pluck, the
+  strings start still), Glut adds it into its loop. Without an input both are bit for bit the voice they were
+  (t-hx-oeko2). Each Hof voice is a processor fed from the loop's send pair (output 2 → `hxSplit` → merger), tuned to
+  the loop's most played degrees (an audio loop: root, third, fifth), retuned with the scale (`hxFeedRetune`, the
+  field's notes as signature), into `hxr`; off: it fades and goes after 3 s. Measured: on its note a sine comes out as loud as it
+  went in, 6 % off it 28 (Glut) / 32 (Sehne) dB less. Counted `HX_COST.hof` per voice (§21), in `idleSrc` and
+  `IDLE.hxT`.
+- *Schleife in Schleife* (Riley's accumulator). `hxAccMake(A, ratio, fb)`: a new free loop B of ⅔ · 1¼ · 1½ · 1¾ · ×2
+  A's length (`HX_ACC_R`), a Schicht with its own tape (`kind 'sammel'`), `{acc: {loop, src, fb, gi}}`: the processor
+  reads B's tape before it writes A's output (summed over A's Schichten as heard, after its level) plus fb · B into
+  it – y(x) = A(x − L_B) + fb · y(x − L_B) to float rounding (t-hx-oeko2), through a soft ceiling (linear to 0.6,
+  tanh above). Rückführung 0.5 · 0.7 · 0.85 · 0.95, Festhalten (stops writing, keeps the tape), Leeren; the tape copied
+  out every 30 s while it records and at Festhalten (`{accCopy}` → `hxSaveSch`), back after a reload with its link
+  (`hxAccRelink`).
+- *Treffen.* `hxTreffenOf`: Takt loops by the Chinese remainder theorem on 1/48 beat (`hxCrt`; 5, 7 and 8 bars meet
+  every 280), free loops by frames within 30 ms (searched two hours ahead); all and each pair, in the form section
+  (`hxCardTreffen`, `hxClock`). *Treffen setzen* (`hxTreffenSetzen(T, {anker, bluehen, ton})`, 2/5/10/19/30 min): the
+  free loops get L_i = (T − s_i)/k_i with distinct primes k_i (`HX_PRIMES`, `hxTrefPlan`), checked by enumeration that
+  no pair meets within 30 ms before T; a free loop's length is fractional now (`d.fr`, the pass at round(ph0 + k·L)
+  exactly); only the silence after the phrase changes – the *gap* mode (`d.gap`): a pass plays its window once, then
+  its own ring-out (`gapTail`), then silence; never shorter than its phrase (`hxPhraseEnd`, −40 dB of the peak: „zu
+  früh“). Takt loops keep their bars: T falls on their next common downbeat. Fruchten at T: every living loop plays its
+  anchor that pass (`L.frucht`), the webs bloom (`hxBluehen`), a chosen key lands with T as its bar line (`HX.tonAt`).
+  ↶ restores the lengths.
+- *Zersetzung* (Verwandeln: „Einwurzeln“ aus · sanft 0.03 · mittel 0.08 · tief 0.2, „Moder“ aus · langsam 0.04 ·
+  mittel 0.1 · schnell 0.25, Auffrischen). The clean Schicht is always kept; each pass gets a version of its own
+  (`hxZersJob`, `{replace}` at its seam, `S.zrV`) from the Schicht's steady pass (`hxZersBase`, rendered once). Einwurzeln
+  (`hxEinwPass`, Lucier): the pass looped through a web of its own in an OfflineAudioContext (the live web's settings,
+  level 3, `gspFreqs` now) until it answers steadily; v' = norm((1 − d)·v + d·web(v)), the RMS kept; each re-recording
+  carries −45 dB of seeded noise into the web (never mixed in – the web's answer to it is where new roots grow after a
+  scale change). Measured: a played loop's energy off the web's tones 12 → 5 % in 8 passes at mittel; Moll- → Dur-
+  Pentatonik: at the new scale's tones 57 → 98 % in 20 passes, at tones only the old one had 38 → 1.5 %; 1.5 s render
+  in ≈ 0.3 s off the audio thread – no voice budget (the SPEC's „cost ≈ one web“ is not spent live). Moder
+  (`hxModerPass`, in the Worker `hxWk`): STFT 1024/256, the cutoff falls 12 kHz → 300 Hz with the age; above it per
+  frame and third of an octave a grain is kept by chance (sparser with age, energy kept by 1/√p) with random phases –
+  crackle at the partials' own pitches; half an octave of crossfade; a low shelf up to +4 dB; seeded per pass. A Wuchs or
+  Live loop: „nur im Abdruck“.
+- *Mikro-Schleifen.* Off until the player switches it on (settings: „Mikrofon an“; nothing asks for it before – t-hx-
+  mikro counts the calls), with its sign `#hxMic` („● Mikro“, red, bottom left in the field) while open. Its own stream
+  (not `MIC`, the Körner's): mono, echo cancellation, noise suppression and gain control off, `audioSession`
+  play-and-record; into the processor's **fourth** input (input 2 is the Puls's since step 2b) and ring 3 (`po.mic`: its
+  chunks moved over at the first switch-on, `{pool, ring: 3}`; `{mic: {on}}` – recorded only while on). Nothing of it is
+  heard. The round trip: until measured the browser's latencies + 10 ms („geschätzt“); „Verzögerung messen“ – eight
+  clicks, each found in ring 3 by a matched filter, the median (≥ 5 within 2 ms), kept per output device (`hxDev('mrt')`).
+  „Korb nimmt: Mikro · Gespielt“: `hxInp()` → 3 for the Korb's plan (level only, no notes: no auto-close), the retro rule
+  and the overdub; every cut from ring 3 shifted by the round trip (`hxCut`, `hxPunchPass`, `hxLvlAt`). Bluetooth
+  (outputLatency > 80 ms): an overdub with the microphone refused with a word, a new Mikro-Schleife still goes. The card's
+  Quelle offers „Mikro“ once the ring exists. Ruhe: not a source of sound (the graph sleeps with it on, its input is never
+  cut, the ring records asleep); a new processor turns it off. *Gesang als Noten* (`hxGesang`, the card's button on a
+  Mikro-Schleife): YIN (`hxYin`, threshold 0.12, parabolic; a much deeper dip at 2–4 × the lag is the period; every
+  dip under 0.4 kept as a candidate) in the Worker; `hxGesangSeg`: a 7-frame median, a new note where the pitch steps
+  ≥ 0.7 semitone and stays 40 ms or the level rises again after a dip; a piece under 150 ms an octave from the note it
+  touches is folded into it; each note's octave the highest one a few of its frames hold clearly (under 0.05: at a
+  note's start the room still rings with the note before and the two together are periodic an octave low); the median
+  pitch set on its degree (`hxDeg`), glides kept as its f curve, velocity from its level. A Wuchs record (`gesang`),
+  Wuchs on, ↶.
+- *Ladung on loops* (§17; per loop, the card's row „Ladung an · aus“, needs Gestik's Ladung): `hxLadQ` reads the
+  charge five times a second in steps of 0.05. An Abdruck boils – the processor's slices on a grid (`hxLadU`: sixteenths
+  of a Takt loop, sixteen of a free one), Auslassen 0.3 · q and the new stutter (`ps`: a slice repeats the one before)
+  0.45 · q, seeded; at 0 the tape exactly. A living loop varies more: Lebendig breathes wider, Variieren/Wandern stay
+  less (×(1 − 0.85 q)), take up to two more operators, a hotter choice. Treu stays Treu (the card says so).
+- *Per-note vetoes* (§12.4, KONZEPT §5.4): the card lists the changes planned for the next two passes of a varied loop
+  (`hxVetoList`, ≤ 12, „Knospen – geplant“, name and place) with ✕: `hxVeto` – the note goes back to what the pass before
+  had there (or leaves), the passes after it grow from the corrected one, its operator counts ×0.85 for the session, a
+  pass rendering already is rendered again.
+- *Wiederkehr without a Takt* (§12.3): a free loop – or no grid – by its motif as steps and durations (`hxWkTokD`,
+  `hxWkSeqD`); a stumm loop comes back on its own next pass at least a „bar“ (2 s, or the grid's bar) ahead, an
+  angehaltener from its start (`hxReenterAt`).
+
 ## 16. UI
 
 - **Ringleiste** `#hxRail` (role toolbar) inside `.main` between `#stage` and `#sheet` (portrait), in the stage column in
@@ -1607,6 +1699,17 @@ pass renders in the Werk-Rahmen as a living one does (no voice budget, §10.5) �
 behind. Main thread (t-hx-mitspieler, t-hx-gaertner; SPEC's ≤ 20 ms per decision): a Wandern pass of a 64-note loop
 4.2 ms, an answer 1.5 ms, Begleiten 5.5 … 10.7 ms per candidate source (one per task, nine in all), a bar's decision
 (three loops) 0.4 ms. `HX_PART`'s measurement (part.js) is a one-time offline job, not shipped work.
+
+**As built (step 4).** Measured with `cost.js` (new candidates `hxi`, `hxj`, `hxk`, `fglt`, `fshn`; three runs for the
+processor's, scale 0.88 / 0.94 / 0.87, two for the Höfe; table units = raw × the run's scale): the Mikro's ring (`hxi`
+− `hxc`: the fourth ring recording, its input fed) 0.13 / 0.41 / 0.33; a Sammelschleife recording (`hxk` − `hxj`: B's
+read-before-write of A's output with feedback) 0.19 / 0.17 / 0.28; a Hof's voice as built (the processor fed through
+its input, its pan, no voice wrapper) Glut 0.65 / 0.70 at level 1, 0.91 / 0.92 at level 3, Sehne 0.65 / 0.67, 0.94 /
+1.01. Entered (higher + 15 %): `HX_COST.mic` 0.47 while the microphone is on, `acc` 0.33 per recording Sammelschleife,
+`hof: {glt: [0.8, 1.05], shn: [0.77, 1.16]}` per Hof voice (level 1 / 3) – the Höfe were first priced at their engine's
+played voice (VCOST, 0.86 / 1.58 and 0.78 / 1.49): measured, they cost less. Live mode's and Nähren Rhizom's voices are
+real voices (VCOST, `voiceLoad`); Einwurzeln renders offline and Moder in the Worker (no voice budget); MIDI out costs
+nothing on the audio thread. `bench.js shn` after its input: 34/34; `bench.js glt`: see §23 (step 4).
 
 ---
 

@@ -24,6 +24,11 @@
 // HX_COST.k16 = hxu − hxs, k24 = hxv − hxs; 'hxl1' in slices (Schnitt: a 2-bar loop of 16 onsets at 108 BPM, every slice
 // read through the resampler with its micro-fades) – HX_COST.slice = hxl − hxs; 'hxa1' worn (Abrieb: its own pair, the
 // low pass and the gate per frame) – HX_COST.abr = hxa − hxs
+// (step 4) 'hxi1' the app's node with the Mikro's ring (po.mic, four rings, its pool, the microphone on and a source into
+// input 3) – HX_COST.mic = hxi − hxc; 'hxk1' two loops, the second a Sammelschleife recording the first every pass
+// (fb 0.7, its tape playing) and 'hxj1' the same without the recording – HX_COST.acc = hxk − hxj; 'fglt1' / 'fshn1'
+// NV Höfe voices as hxFeedMake builds them (the engine's processor alone with its pan, fed through its input by a noise
+// source, inj as HX_FEED) – the Hof's price per voice, against the engine's VCOST of a played voice
 process.env.SEED_BLOBS = '';
 const { chromium, openInst } = require('../../v2/lib');
 const ROUNDS = +process.argv[2] || 6, DUR = +process.env.DUR || 4, NV = +process.env.NV || 24, NW = +process.env.NW || 1, NH = +process.env.NH || 8;
@@ -53,8 +58,20 @@ const XP = JSON.parse(process.env.PARAMS || '{}');
         for (let k = 0; k < NV; k++) { const sr = ctx.createBufferSource(); sr.buffer = nb; sr.loop = true; sr.connect(ctx.destination); sr.start(); }
         const t0 = performance.now(); await ctx.startRendering(); return performance.now() - t0;
       }
+      if (eng === 'fglt' || eng === 'fshn') {   // (step 4) the Höfe: NV fed voices, each with its pan, one noise source into their inputs
+        const kind = eng.slice(1), F = M.HX_FEED[kind], SR = 48000, nb = ctx.createBuffer(2, SR, SR), rich = !!M.Q.rich;
+        for (let c = 0; c < 2; c++) { const d = nb.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * 0.1; }
+        const sr = ctx.createBufferSource(); sr.buffer = nb; sr.loop = true; sr.start();
+        for (let k = 0; k < NV; k++) {
+          const f = M.noteAt((k * 0.37) % 1).f, node = new AudioWorkletNode(ctx, F.proc, { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [rich ? 2 : 1], channelCount: 2, channelCountMode: 'explicit', channelInterpretation: 'speakers',
+            processorOptions: { rich, lite: 0, prm: M.wkPrm(kind), seed: k + 1, inj: F.inj, on: { on: 0, f, y: F.y, vel: kind === 'glt' ? 0 : 0.5, silent: 1, seed: k + 7 } } });
+          node.parameters.get('freq').value = f; node.parameters.get('hoehe').value = F.y;
+          const pan = ctx.createStereoPanner(); pan.pan.value = ((k % 5) / 4 - 0.5) * 0.8; sr.connect(node); node.connect(pan).connect(ctx.destination);
+        }
+        const t0 = performance.now(); await ctx.startRendering(); return performance.now() - t0;
+      }
       if (eng.startsWith('hx')) {   // (built before the render starts: making and cloning the buffers is not the render's time)
-        const SR = 48000, cap = /^hx[qnc]$/.test(eng), N = cap ? Math.min(NV, NH) : NV;
+        const SR = 48000, cap = /^hx[qnci]$/.test(eng), N = cap ? Math.min(NV, NH) : NV;
         if (!window.__hxCh) { const len = 4 * SR, nn = len + SR, ch = []; for (let c = 0; c * 8192 < nn; c++) { const L = new Float32Array(8192), R = new Float32Array(8192); for (let j = 0; j < 8192; j++) { L[j] = Math.sin((c * 8192 + j) * 0.031) * 0.1; R[j] = Math.sin((c * 8192 + j) * 0.029) * 0.1; } ch.push([L, R]); } window.__hxCh = { ch, len, n: nn }; }
         const srcs = cap ? [0, 1, 2, 3].map(() => { const nb = ctx.createBuffer(2, SR, SR); for (let c = 0; c < 2; c++) { const d = nb.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * 0.1; } const sr = ctx.createBufferSource(); sr.buffer = nb; sr.loop = true; sr.start(); return sr; }) : [];
         if (eng === 'hxq') for (const sr of srcs) sr.connect(ctx.destination);
@@ -75,6 +92,12 @@ const XP = JSON.parse(process.env.PARAMS || '{}');
             if (eng === 'hxl') msgs.push({ slice: { loop: 1, u: Array.from({ length: 16 }, (_, i) => i / 16), schnitt: 1 } });
             if (eng === 'hxa') msgs.push({ abr: { schicht: 1, rate: 0.1, seed: 3, age: 4 } });
           }
+          if (eng === 'hxk' || eng === 'hxj') {   // (step 4) A plays a Schicht; B (1½ its length) plays its tape – and, hxk, records A into it every pass
+            msgs.push({ seg: [[0, 0, SR * 60 / 120]], reset: 1 }, { loop: { id: 1, lock: 'takt', b0: 0, beats: 8 } }, { schicht: { loop: 1, id: 1, chunks: C.ch, n: C.n, pre: 0, len: C.len, join: 'xf', X: 480, rho: 0.2 } });
+            const Lf = Math.round(C.len * 1.5), nB = Lf + 960, chB = []; for (let c = 0; c * 8192 < nB; c++) chB.push([new Float32Array(8192), new Float32Array(8192)]);
+            msgs.push({ loop: { id: 2, lock: 'frei', Lf, ph0: 0 } }, { schicht: { loop: 2, id: 2, chunks: chB, n: nB, pre: 0, len: Lf, join: 'cut', X: 240, rho: 0 } });
+            if (eng === 'hxk') msgs.push({ acc: { loop: 2, src: [1], fb: 0.7, gi: 1 } });
+          }
           if (eng === 'hxs' || eng === 'hxr' || eng === 'hxm' || eng === 'hxp') {
             msgs.push({ seg: [[0, 0, SR * 60 / 120]], reset: 1 }, { loop: { id: 1, lock: 'takt', b0: 0, beats: 8 } });
             for (let s = 0; s < (eng === 'hxm' || eng === 'hxp' ? 4 : 1); s++) msgs.push({ schicht: { loop: 1, id: s + 1, chunks: C.ch, n: C.n, pre: 0, len: C.len, join: 'xf', X: 480, rho: 0.2 } });
@@ -87,8 +110,10 @@ const XP = JSON.parse(process.env.PARAMS || '{}');
             msgs.push({ seg: [[0, 0, SR * 60 / 120]], reset: 1 }, { loop: { id: 1, lock: 'takt', b0: 0, beats: 24 } }, { schicht: { loop: 1, id: 1, chunks: D.ch, n: D.n, pre: SR, len: 12 * SR, join: 'xf', X: 480, rho: 0.2, tau: true, dd: 1, dr: D.dr } }, { pool });
             po = { rid: 5000 + k, drift: 1, ddPool: 1, humusS: 1 };
           }
-          if (eng === 'hxc') { const hN = Math.ceil(16 * SR / 8192), pool = []; for (let i = 0; i < 3 * hN; i++) pool.push([new Float32Array(8192), new Float32Array(8192)]); msgs.push({ pool }); }   // (step 2b: three rings)
-          const nd = new AudioWorkletNode(ctx, 'myzel-ring', { numberOfInputs: 3, numberOfOutputs: 2, outputChannelCount: [2, 2], channelCount: 2, channelCountMode: 'explicit', processorOptions: Object.assign({ humusS: 16, msgs }, cap ? { rid: k + 1, rings: 3 } : {}, po) });
+          if (eng === 'hxc' || eng === 'hxi') { const hN = Math.ceil(16 * SR / 8192), pool = []; for (let i = 0; i < 3 * hN; i++) pool.push([new Float32Array(8192), new Float32Array(8192)]); msgs.push({ pool }); }   // (step 2b: three rings)
+          if (eng === 'hxi') { const hN = Math.ceil(16 * SR / 8192), pool = []; for (let i = 0; i < hN; i++) pool.push([new Float32Array(8192), new Float32Array(8192)]); msgs.push({ pool, ring: 3 }, { mic: { on: 1 } }); po = { mic: 1 }; }   // (step 4: the Mikro's ring, the microphone on)
+          const nd = new AudioWorkletNode(ctx, 'myzel-ring', { numberOfInputs: eng === 'hxi' ? 4 : 3, numberOfOutputs: 2, outputChannelCount: [2, 2], channelCount: 2, channelCountMode: 'explicit', processorOptions: Object.assign({ humusS: 16, msgs }, cap ? { rid: k + 1, rings: eng === 'hxi' ? 4 : 3 } : {}, po) });
+          if (eng === 'hxi') srcs[1].connect(nd, 0, 3);   // (what the microphone hears)
           if (cap) {   // (as the app: Gespielt into input 0; „Alles“ through its own node myzel-ring-in, silent into the output; step 2b: the Puls's lanes into input 2)
             sum.connect(nd, 0, 0);
             const ps = ctx.createGain(); srcs[2].connect(ps); srcs[3].connect(ps); ps.connect(nd, 0, 2);
@@ -133,10 +158,10 @@ const XP = JSON.parse(process.env.PARAMS || '{}');
       for (const eq of ENGS) keep(eq, await run(eq.slice(0, -1), eq.slice(-1), NV));
     }
     const unit = best.neb1 - best.base, out = { nebMs: +unit.toFixed(1), rounds: ROUNDS, nv: NV, nw: NW };
-    for (const eq of ENGS) out[eq] = +((best[eq] - (eq === 'web3' ? best.base3 : best.base)) / unit * (eq.startsWith('web') ? NV / NW : /^hx[qnc]/.test(eq) ? NV / Math.min(NV, NH) : 1)).toFixed(3);
+    for (const eq of ENGS) out[eq] = +((best[eq] - (eq === 'web3' ? best.base3 : best.base)) / unit * (eq.startsWith('web') ? NV / NW : /^hx[qnci]/.test(eq) ? NV / Math.min(NV, NH) : 1)).toFixed(3);
     const tab = (k, q) => (q === '3' ? M.VCOST3 : M.VCOST1)[k];
     // the scale: table / measured, over the held native engines measured here
-    const refs = ENGS.filter((eq) => !/^(hlm|rnk|null|web|elm|jrg|hrz|glt|boe|amo|shn|zpf|mdr|gsp|khl|rhz|hx)/.test(eq)), sc = refs.map((eq) => tab(eq.slice(0, -1), eq.slice(-1)) / out[eq]);
+    const refs = ENGS.filter((eq) => !/^(hlm|rnk|null|web|elm|jrg|hrz|glt|boe|amo|shn|zpf|mdr|gsp|khl|rhz|hx|fglt|fshn)/.test(eq)), sc = refs.map((eq) => tab(eq.slice(0, -1), eq.slice(-1)) / out[eq]);
     const med = sc.slice().sort((a, b) => a - b), mid = med.length >> 1;   // the median: one disturbed reference moves it least
     out.scale = +(med.length % 2 ? med[mid] : (med[mid - 1] + med[mid]) / 2).toFixed(3); out.scaleEach = Object.fromEntries(refs.map((eq, i) => [eq, +sc[i].toFixed(2)]));
     M.P['dev.q'] = '1';

@@ -25479,7 +25479,7 @@ const HX_CH = 8192;
 // SPEC §21): the processor with both rings recording, its Gespielt taps and (step 1b) the node myzel-ring-in that writes
 // the Alles ring, with both rings' input level, 0.71–0.81 (step 1a, without that node: 0.55–0.59); per playing Schicht, its
 // seams included, 0.19–0.27; extra per Schicht while its loop is resampled 0.75–0.84
-const HX_COST = { capture: 1.38, schicht: 0.39, rs: 1.32, fx1: 2.71, dd: 3.5, stream: 0.1, k16: 2.06, k24: 2.69, slice: 0.77, abr: 0.21, acc: 0.3, mic: 0.3 };   // (step 2b, cost.js two runs, the higher + 15 %: capture with the Puls's ring 1.20 / 1.07; a loop's speed through the 56-tap kernel hxu − hxs 1.79 / 1.56, the 80-tap 2.34 / 2.22 (½: the shared one, as rs); a Schicht in slices 0.67 / 0.65; worn 0.18 / 0.17)   // (klang/tests/cost.js, re-measured in step 1d: SPEC §21; stream: step 2a – a living Schicht's streams beyond its schicht, hxw − hxs 0.084 / 0.064, +15 %)
+const HX_COST = { capture: 1.38, schicht: 0.39, rs: 1.32, fx1: 2.71, dd: 3.5, stream: 0.1, k16: 2.06, k24: 2.69, slice: 0.77, abr: 0.21, acc: 0.33, mic: 0.47, hof: { glt: [0.8, 1.05], shn: [0.77, 1.16] } };   // (step 4, cost.js three runs, table units, the higher + 15 %: the Mikro's ring hxi − hxc 0.13 / 0.41 / 0.33; a Sammelschleife recording hxk − hxj 0.19 / 0.17 / 0.28; a Hof's voice as built – its processor fed, its pan – Glut 0.65 / 0.70 at level 1, 0.91 / 0.92 at 3, Sehne 0.65 / 0.67, 0.94 / 1.01)   // (step 2b, cost.js two runs, the higher + 15 %: capture with the Puls's ring 1.20 / 1.07; a loop's speed through the 56-tap kernel hxu − hxs 1.79 / 1.56, the 80-tap 2.34 / 2.22 (½: the shared one, as rs); a Schicht in slices 0.67 / 0.65; worn 0.18 / 0.17)   // (klang/tests/cost.js, re-measured in step 1d: SPEC §21; stream: step 2a – a living Schicht's streams beyond its schicht, hxw − hxs 0.084 / 0.064, +15 %)
 const HX = { node: null, ctx: null, state: '', fR: 0, tR: 0, loops: new Map(), sch: new Map(), lid: 0, sid: 0, gid: 0, wait: new Map(), meter: [], back: [], ddRun: new Set(), dd: 0,
   mask: new Set(['fin', 'eb2', 'rgn', 'gsp']), fx: null, fx1: null, play: 0, rs: 0, ev: [], evI: 0, evId: 0 };
 const hxF = (t) => HX.fR + (t - HX.tR) * SR;   // audio time → the processor's frame (its own count, mapped by its reports)
@@ -32085,7 +32085,7 @@ function hxNaehrRgn(L, n, t) {
 // ring in sympathy with what of the loop falls on their modes (no pluck: they start silent), Glut's tuned feedback
 // catches the loop's partials near its mode and glows on (below its threshold: the loop is the tinder). Tuned to the
 // loop's most played degrees (an audio loop: root, third and fifth of the scale) and retuned with the scale; into the
-// strip „Hexenring“; each voice costs what its source's voice costs, counted in voiceLoad() while it rings ----
+// strip „Hexenring“; each voice costs its measured price (HX_COST.hof), counted in voiceLoad() while it rings ----
 HXN.feed = new Map();   // loop id + ':' + kind → { kind, key, vs: [{ node, pf, I }], mg, out, ctx, cost, sig }
 const HX_FEED = {
   shn: { proc: 'myzel-string', n: 4, y: 0.5, inj: 0.06, lvl: 0.7, name: 'Sehne' },   // (inj: a sine on the string's note comes out as loud as it went in, 6 % off it 32 dB less – t-hx-oeko2)
@@ -32119,7 +32119,7 @@ function hxFeedMake(L, kind) {
       node.onprocessorerror = () => { console.warn('Hexenring: ' + F.name + ' einer Schleife – Prozessorfehler'); hxFeedDrop(L.id, kind); };
       vs.push({ node, pf, I: ix, pan });
     });
-    return { kind, key: L.key, vs, mg, out, ctx: A.ctx, cost: vs.length * (Q.cost[kind] || 1), sig: hxFeedSig() };
+    return { kind, key: L.key, vs, mg, out, ctx: A.ctx, cost: vs.length * HX_COST.hof[kind][rich ? 1 : 0], sig: hxFeedSig() };   // (measured as built: HX_COST.hof)
   } catch (e) { console.warn(e); return null; }
 }
 const hxFeedSig = () => N.notes.map((x) => x.f.toFixed(2)).join(',');   // (the field's notes as built – an announced key changes them at its bar line)
@@ -32472,9 +32472,9 @@ function hxAccRelink() { for (const B of hxLoopsLive()) if (B.acc) hxAccLink(B);
 //   live web's settings, level 3), the web's steady answer mixed in by the depth d and the loudness kept –
 //   v' = norm((1 − d)·v + d·web(v)); after 10–30 passes what is left is what the scale makes ring, and a new scale
 //   draws the roots after it slowly. Rendered offline (an OfflineAudioContext, its own thread): no live voice budget.
-//   Abrieb nach Moder: from the clean pass and its age, in a Worker: STFT (2048, hop 512), the partials above a cutoff
-//   falling with the age crumble – each bin there gated sparsely with a randomised phase (seeded: the same pass the
-//   same crackle), crackle at their own pitches – and a low shelf warms. ----
+//   Abrieb nach Moder: from the clean pass and its age, in a Worker: STFT (1024, hop 256), the partials above a cutoff
+//   falling with the age crumble – per frame and third of an octave a grain kept by chance, its bins with a random
+//   phase (seeded: the same pass the same crackle), crackle at their own pitches – and a low shelf warms. ----
 const HX_EINW = [[0, 'aus'], [0.03, 'sanft'], [0.08, 'mittel'], [0.2, 'tief']];
 const HX_MODER = [[0, 'aus'], [0.04, 'langsam'], [0.1, 'mittel'], [0.25, 'schnell']];
 const hxZersOn = (L) => !!(L && !L.bew && !L.acc && ((L.einw || 0) > 0 || (L.moder && L.moder.rate > 0)));
@@ -32767,7 +32767,7 @@ async function hxMicMessen() {
 // kept as an f curve around it (a vibrato under 20 cents smoothed); velocity from its level. The loop then grows (Wuchs)
 // on the field's source – any source by the card's Klang ----
 function hxGesangNotes(mono, sr) {
-  return hxWk('yin', { x: mono, sr, fmin: 70, fmax: 1100, hop: Math.round(sr * 0.005) }).then((Y) => hxGesangSeg(Y));
+  return hxWk('yin', { x: mono, sr, fmin: 70, fmax: 2800, hop: Math.round(sr * 0.005) }).then((Y) => hxGesangSeg(Y));   // (a bass voice's 70 Hz to a whistle's 2.8 kHz)
 }
 function hxGesangSeg(Y) {
   if (!Y || !Y.f.length) return [];
