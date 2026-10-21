@@ -1792,3 +1792,22 @@ step and behaviours, ✕ ✓, a ring's veto, roles, Wiederkehr marks, Begleiten,
 answer and close the phrase). `perf/t-idle-live` 5d: an answer without a Schleife wakes the graph and opens the
 Hexenring's gates before it sounds, and the graph sleeps again after it. `dev/tests/hexenring/part.js` measures
 `HX_PART`.
+**Regression (step 3)**, each alone on the machine, red rows compared run for run with 2491e14 (slots built from it):
+Hexenring run-all – 23 suites, proc 33, taps 17, clock 20, humus 11, ohr 27, ernten 33, grammar 30, persist 15, ui 69,
+werk 15, bake 13, seams 17, form 30, ctl 23, bew 66, oeko 13, fuzz 8 (seeds 1 and 7, 70 kinds), taumeln 14, wuchs 38,
+tempo 18, tools 47, mitspieler 33, gaertner 58. Rows that scatter alike on both builds: t-hx-seams' Gong row (new 1 of
+2, old 0 of 2 at −0.99 dB against ±1 – the random Gong material, §23 step 1b), t-hx-bew's external clock rows (new 1 of
+2, old 1 of 2), t-hx-form's Lücke row (new 2 of 10, old 1 of 10: its recording missed the window – `inside` NaN) and its
+„deleted just before a Lichtung's switch“ row (both once in 10). Once in t-hx-run-all t-hx-form reported the step-2b
+guard (`held`, a Schicht's old version kept from being given back while read – no NaN, the guard did its job; not seen
+in 20 further runs on either build). `reg.sh`: v2 41/5/20/9/4/3/7/7/17, mixfunc and mixui green; MIDI: t-clock's two
+timing rows fail now and then on both builds (new 1 of 3 runs, old 1 of 2); Gestik: `t-gm-stream`, `t-gm-cost`,
+`t-gl-schlafen`, `t-gf-cost`, `t-gs-cost`, `t-gs-regen`, `t-gx-live` fail the same on 2491e14 (two alternating rounds);
+`t-ga-cost` (a sensor value to sound, CPU 4× slower) failed 2 of 2 on step 3's first build (Anlehnen +0.12 / +0.17 ms
+against +0.06 / +0.08) – the Ohr scanned the whole notes ring ten times a second; it walks from where it stopped now:
+3 of 3 green, alternating with 2491e14. `klang/tests/run-all.sh` (SKIP_BENCH=1): t-eng-live's hlm/khl Puls row (a
+voice left) fails on both builds now and then; smoke-all: 28 sources, none silent. Performance guard (alone, last):
+t-idle-parity 47/48 – the 20-s ramp row (−100.0 against −116.2 dB) fails identically on 2491e14; t-idle-live 20/20;
+check.js: every scenario within its limit except tiefsee/d (audio 53.4 against the stored reference 7f226e7's 46.6, limit
+53.2) – measured alternately against 2491e14 (perf.js, five runs): HEAD 33.4 / 2491e14 34.7 (idle 15.4 / 15.3), the same.
+
