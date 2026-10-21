@@ -29905,7 +29905,7 @@ function hxWPredict(L, S, dur) {
   const q = Number(hxWQ(L)) || 3, u = CAL.unit || 0.0012;
   let vs = 0; for (const n of W.n) { const e = hxWEng(L, n), c = (HX_WRT[e] || HX_WRT.def)[q - 1] || 2; vs += c * Math.min(dur, (n.d != null ? n.d : 1) * (W.u === 'b' ? 60 / tgBpm(hxNowT()) : 1) + 3); }
   const B = HX_WBASE[q] || HX_WBASE[3];
-  return u * vs + (B.perS * u * dur) + B.perRender / 1000;
+  return (u * vs + (B.perS * u * dur) + B.perRender / 1000) * (hxEigN(L) >= 2 ? 1.75 : 1);   // (Etappe 3: a varied pass may hold up to 1.75 × the notes – hxVOk)
 }
 // (the key the field plays in: HX.tonP – set when buildNotes applies it; the parameters may already say another)
 const hxWKeySame = (o) => !!o && String(o.root) === String(P['t.root']) && o.scale === P['t.scale'];
@@ -31414,9 +31414,9 @@ function hxBeglPlan(W, o = {}) {
   const mel = W.n.map((x) => ({ t: ((x.t % W.len) + W.len) % W.len, d: x.d != null ? x.d : 0.5, pc: (((x.deg || 0) % per) + per) % per, f: x.f, eng: x.eng }));
   const mEng = (() => { const c = {}; for (const x of mel) c[x.eng] = (c[x.eng] || 0) + 1; return Object.keys(c).sort((a, b) => c[b] - c[a])[0]; })();
   const chE = o.chEng ? [o.chEng] : HX_BEGL_CH.filter((k) => ENGINES[k] && k !== mEng);
-  const voice = (fl, near) => fl.pcs.map((pc) => hxKeyF(K, pc, near || 262));
+  const vc = new Map(), voice = (fl) => { let v = vc.get(fl); if (!v) vc.set(fl, (v = fl.pcs.map((pc) => hxKeyF(K, pc, 262)))); return v; };
   // roughness of a field (voiced around 262 Hz) against the bar's melody notes, by the sources' partials
-  const rough = (fl, b, eng) => { let s = 0; const vs = voice(fl); for (const x of mel) if (x.t >= b * bpb && x.t < (b + 1) * bpb) for (const f of vs) s += Math.min(2, x.d) * hxRough(x.f, hxPart(x.eng), f, hxPart(eng)); return s; };
+  const rough = (fl, b, eng) => { let s = 0; const vs = voice(fl), pe = hxPart(eng); for (const x of mel) if (x.t >= b * bpb && x.t < (b + 1) * bpb) { const px = hxPart(x.eng); for (const f of vs) s += Math.min(2, x.d) * hxRough(x.f, px, f, pe); } return s; };
   const hp = o.prog || {};
   const best = { tot: Infinity };
   for (const ce of chE) {
@@ -31428,8 +31428,9 @@ function hxBeglPlan(W, o = {}) {
       return (w ? s / w : 0) - 0.6 * (rs[b][j] / rmax) + (fl.n === 3 ? 0.05 : 0);
     }));
     const semi = (pc) => (K.free || !K.rat ? pc : 12 * Math.log2(K.rat[pc]));
-    const tr = (a, c) => {
-      const va = voice(a), vc = voice(c); let mv = 0; for (const f of vc) mv += Math.min(...va.map((g) => Math.abs(12 * Math.log2(f / g))));
+    const trC = new Map(), tr = (a, c) => { const k = F.indexOf(a) * 64 + F.indexOf(c); let v = trC.get(k); if (v == null) trC.set(k, (v = tr0(a, c))); return v; };
+    const tr0 = (a, c) => {
+      const va = voice(a), vc2 = voice(c); let mv = 0; for (const f of vc2) mv += Math.min(...va.map((g) => Math.abs(12 * Math.log2(f / g))));
       const dr = ((Math.round(semi(c.r) - semi(a.r)) % 12) + 12) % 12, common = c.pcs.filter((p) => a.pcs.includes(p)).length;
       const hs = hp[a.r + '>' + c.r] || 0, ht = Object.values(hp).reduce((x, y) => x + y, 0);
       return -0.06 * mv + 0.15 * common + (dr === 5 || dr === 7 ? 0.4 : dr === 0 ? 0.1 : dr === 2 || dr === 10 ? 0.15 : 0) + (ht ? 0.3 * Math.log((hs + 1) / (ht + per)) : 0);
@@ -31449,6 +31450,14 @@ function hxBeglPlan(W, o = {}) {
     if (key < best.tot) Object.assign(best, { tot: key, fields: path.map((jj) => F[jj]), chEng: ce, rough: totR });
   }
   return Object.assign(best, { per, bars, bpb, mEng });
+}
+// the plan over the candidate sources, one at a time between tasks (each a few ms; together they would hold the main
+// thread longer than a decision may)
+async function hxBeglBest(W, o) {
+  if (o.chEng) return hxBeglPlan(W, o);
+  let best = null;
+  for (const ce of HX_BEGL_CH) { if (!ENGINES[ce]) continue; const p = hxBeglPlan(W, Object.assign({}, o, { chEng: ce })); if (p.chEng !== p.mEng && (!best || p.tot < best.tot)) best = p; await new Promise((r) => setTimeout(r, 0)); }
+  return best || hxBeglPlan(W, o);
 }
 // the parts: bass notes and chord notes in beats (W's own records: deg/oct in its key, f)
 function hxBeglNotes(W, plan) {
@@ -31492,7 +31501,8 @@ async function hxBegleiten(Lm, o = {}) {
   try {
     const bassL = hxLoopsLive().find((X) => X !== Lm && (hxRoleOf(X) || {}).role === 'bass' && ENGINES[X.eng]);
     const chL = hxLoopsLive().find((X) => X !== Lm && ['akkorde', 'flaeche'].includes((hxRoleOf(X) || {}).role) && ENGINES[X.eng]);
-    const plan = hxBeglPlan(W, { bpb: Lm.bpb || 4, chEng: o.chEng || (chL ? chL.eng : null), prog: HX.hs && P['hx.hand'] === 'an' ? HX.hs.prog : null });
+    const plan = await hxBeglBest(W, { bpb: Lm.bpb || 4, chEng: o.chEng || (chL ? chL.eng : null), prog: HX.hs && P['hx.hand'] === 'an' ? HX.hs.prog : null });
+    if (hxByKey(Lm.key) !== Lm) return null;
     plan.bassEng = o.bassEng || (bassL ? bassL.eng : ENGINES.amo ? 'amo' : P['v.eng']);
     const parts = hxBeglNotes(W, plan), seed = ((Math.random() * 2147483646) | 0) + 1, lenB = Lm.d.beats;
     hxSay('Gärtner schreibt eine Begleitung …');

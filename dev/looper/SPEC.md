@@ -923,6 +923,127 @@ IndexedDB store `handschrift` (≤ 1 MB): token counts (pruned VOM), groove temp
 sources histograms, progressions, operator weights from ✓/✕. Off by default (`hx.hand = aus`); session-end prompt;
 Vergessen; export/import JSON.
 
+
+**As built (step 3): §12.2 Variieren and Wandern.** `HX_EIG` = Treu · Lebendig · Variieren · Wandern (`hxEigN`); every
+„lebendig“ test of step 2a reads `hxEigN ≥ 1` (streams, the guard, ✓ ✕ ⚓, Live mode, the cost count). A pass at
+Variieren/Wandern grows from the pass before it (`hxVarW`, a chain cached per Schicht in `S.vc`, grown from the nearest
+known pass or from the anchor; `hxWPass` asks it for living passes only – Treu renders, the key's and the tempo's passes
+play the anchor's notes). `hxVarStep(W, anchor, prev, {seed, lvl, wts, gd, guard, segs})`: the pass's own seed
+(`hxWSeedK` ^ a constant, mulberry32 `hxRng`) draws everything – the same anchor, seed and weights give the same pass
+(t-hx-mitspieler: 60 passes identical twice). Operators (`hxVOp`) only on weak positions – the 1, the middle of a 4/4
+bar, a note held in from before and every chord note stay: `nb` a neighbour degree ±1/±2 keeping the contour sign to
+both neighbours, `eu` the weak onsets of one bar redistributed by `euclid` (count kept, onto 8ths or 16ths, never onto
+the strong places), `th` the weakest (metric × velocity) out, `fi` a passing tone (gaps ≥ a third and ≥ two 16ths, on
+the 16th grid, half way in scale steps), `ok` an octave inside the loop's range widened to an octave around its middle
+(30 Hz … 4.2 kHz), `orn` a grace note a 32nd before (upper or lower neighbour) or a Wirbel (three strokes, 1 / 0.7 /
+0.55), `sw` (Wandern) a half bar replaced by another of this loop or of the session's other loops in the same scale
+size (`hxVSegs`) whose first and last degrees match (octave-shifted onto it). 16 candidates of 1–2 (Wandern 1–3)
+operators by weight (`HX_VW` × the session's `HX.vw` × the Gärtner's density), each within the hard limits (`hxVOk`:
+60–150 % of the anchor's notes, 40 % while making room, 175 % while filling; ≤ 4 in a beat); score α·consistency +
+(1 − α)·novelty (against the last four passes) + 0.5·fit (`hxVFit`: leaps over an octave + a step, density) − repeat;
+softmax with T 0.08 / 0.15, α 0.65 / 0.45; a pass stays unchanged with 30 % / 15 % (it breathes, it does not chatter);
+the elastic pull: with p = distance × (1 − s) × 1.6 (s 0.5 / 0.75, ≤ 0.85) one half bar goes back to the anchor's (or
+the whole pass). Every pitch through `hxNtPitch` (the key's own ratios) – in the scale by construction; a glide curve
+moves with its note (`hxVPitch`; the step-2b Stufen/Umkehrung left the curve at the old pitch – fixed in
+`hxWNotesT`). The guard (§6.4) makes the three passes after a new Schicht unchanged. ✓ (`hxWLob`): the sounding varied
+pass's audio as before and its notes as `S.anc.vn` – the next passes vary from them (`hxWBase`), the anchor's
+signature carries them; its operators ×1.15 for the session. ✕ (`hxWNein` → `hxVarNein`): the anchor plays as in 2a,
+the chain restarts at the anchor from that pass, the refused pass's operators ×0.5 for the session (`HX.vw`, kept in
+the Handschrift). ⚓ unchanged (Treu, the anchor forgotten). Measured (t-hx-mitspieler, 16 eighths, 400 passes each):
+Variieren 305 passes changed, 14–23 notes, mean distance to the anchor 0.19 (max 0.61); Wandern 349, 11–23 notes,
+0.41 (max 0.77) – distance = 1 − the share of notes alike; the Gärtner's density −1 / +1: 13.3 / 20.1 notes; a Wandern
+pass of a 64-note loop 4.2 ms on the main thread. Live (Werk-Rahmen): every rendered pass keeps its strong notes, every
+pitch in the field's scale, passes differ.
+
+**As built (step 3): §12.3 Gärtner.** `hx.gaertner` is a parameter now (SEL schaut · pflegt · antwortet, default
+schaut; the MIDI target `hx.gaertner` sets it), each behaviour its own switch (`hx.gPlatz`, `hx.gRollen`, `hx.gAntw`,
+`hx.gBegl`, `hx.gWk`, all on) – „schaut zu“ or a switch off takes everything back at once (`hxGdParam` → `hxGdReset`).
+*Roles* (`hxRoleOf`, cached per loop; `hxRoleFeat`/`hxRoleScore`): median MIDI pitch, polyphony, duration and density
+per beat, the share on beats, range, the sources' art; hand-tuned logistic terms; confidence = the margin; the card's
+tap (`L.mi.rolle`) overrides. The live role (`hxGdLiveRole`) from the Gespielt notes of the last bar (two seconds
+without a Takt), „still“ when no note began or sounds. *Decisions* only at bar lines (`hxGdBar`, ten checks a second):
+the live role must hold a whole bar (hysteresis), the energy (`hxGdEnergy`: notes per second, velocity, register,
+polyphony, Ladung; smoothed per bar); the plan (`HXG.plan`) is for the next bar line – shown a bar ahead: the rail's
+chips „Gärtner ab Takt N · ✕ n · ✓“ (`hxChipsMach`), the ring's word (`hxStance`: „pausiert gleich“, „macht Platz“,
+„füllt“), said in the live region. At its bar line (`hxGdApply`) each loop's factor `L.gg` (applied inside `hxGain`
+– the player's level `L.gain` stays his own; a 40-ms ramp) and density `L.gdv` (the passes not yet rendered). Rules
+(`hxGdTarget`, `hxGdMay`): never a loop the player muted, excluded („Gärtner: nicht“), a suggestion, one in its
+§6.4 guard or one under a ✕ of the last eight bars; Treu and Lebendig loops only lower (Platz machen −2/−4 dB, more
+in the player's register), −6 dB (a melody loop while he plays melody) or pause (the bass loop while he plays bass);
+Variieren/Wandern thin or fill instead (density −1 … +1), never paused for melody. „still“: everything as it was. A
+tap on a loop's ring while the Gärtner changed it (or plans to) takes it back at once (`hxGdNein`, eight bars left
+alone); ✕/✓ in the rail, the card, MIDI `hx.nein`/`hx.lob` (`hxMachNein`/`hxMachLob` act on what the machine plans
+first – a Wiederkehr, the Gärtner's plan, an answer – else on a living loop as in 2a). Measured (t-hx-gaertner): the
+player's bass line → the bass loop's pause planned 1.95 s ahead, at the bar line its level 0.089 → 0, still its
+Abdruck; the muted loop untouched; a tap: back at once (0.065), no new plan while he stays in the bass.
+*Antworten* (`HXA`): the Ohr takes every Gespielt note (`hxAntIngest`, a chord's top note the line) as a token
+(degree step ±7, duration class of the IOI, metric class) into a variable-order model (orders 0–4, `HXA.c`; the
+session's own counts `HXA.sc`; every 7-gram in `HXA.g7`). Every order that knows a context is mixed (weights
+0.04 … 0.42 – a player who repeats himself leaves a single continuation at order 4, and MaxOrder then needs the
+others). A phrase ends (`hxAntMaybe`) after a rest > max(0.3 s, 2 × its median IOI) with an LBDM-style rest score ≥ 0.6,
+no note held, ≥ 3 notes; silent below 40 notes heard (the Handschrift's count with them); not while recording.
+`hxAntGen`: beam search (width 8, ≤ 48 steps): length as the call ±1 bar, the first note on the next beat, the last on
+a stable degree (root, third, fifth of the field's scale) on a strong beat, never seven tokens in a row as played
+(the call's tail included), within the call's range ± half an octave, about as many notes as the call; no ending found
+→ the best line closed on the nearest stable degree. Played (`hxAntPlay`) by real voices (`v.loop`: they give way
+before any live note; `hxSrc 'hxr'`: never in the Humus) through the chain's copy into the strip „Hexenring“ – the
+field's source, its layer 2 or the newest melody loop's (`hx.gStimme`); it yields when the player plays (no new note
+starts), ends with ✕, Stille and Schlafen. Ruhe: `hxWakeRing` opens the graph and the Hexenring's gates before its
+first note; `idleTick` keeps the gates open while it plays. Answers are rendered as Live (SPEC: „via Wuchs (or Live)“)
+– their sound is the live voices' at the device's level, the way they yield is a voice's own release. Measured: 120
+seeds all within the rules, five seeds five answers, 1.5 ms per answer.
+*Begleiten* (`hxBegleiten`, card button for a melody loop in Takt; at „antwortet“ offered once by itself per melody loop
+after two passes when two places are free, `hxBeglAuto`): Klangfelder `hxBeglFields` (triad-like 0·2·4, open 0·4,
+0·2·4·6 in scale steps); emission per bar = melody tones in the field (strong beats ×2, a strong one outside −0.7)
+− 0.6 × the normalised roughness; transition = voice leading (−0.06 per semitone), common tones, fifth/fourth root
+moves, the Handschrift's progressions; the root first and last. `HX_PART` (`dev/tests/hexenring/part.js`, measured
+once: ten partials per source from a level-3 render of 220 Hz) and `hxRough` (Sethares). The chords' source is chosen
+too: of nine sustained/plucked candidates (`HX_BEGL_CH`) the one whose path is least rough against the melody's
+partials (one source per task, `hxBeglBest`: ≤ 3 ms each). Bass on 1 and 3 (an approach note before a change),
+chords voice-led and held; rendered in the Werk-Rahmen at the loops' level (`hxBeglRender`), made as two loops
+(`hxRebuild`: state stumm, `mi.sugg`, follow the live chain, Treu, key-following as any Wuchs record) – dashed lumen
+rings, the word „Vorschlag“; one tap plays one (`hxSuggTake`), „Verwerfen“ in the card or the toast, ↶ removes both.
+Measured: a Kalimba melody – the chords on the Böe (roughness 0.40 against 0.51 the next best), every note in the
+scale, the melody's strong notes in their bar's field 8 of 8.
+*Wiederkehr* (`hxWkBar`, needs a Takt): marked loops (`mi.wk`, card „darf wiederkehren“) at rest gather activation
+from the longest common run of live tokens (step, metric class) against their cyclic motif (≥ 3: +(run − 2)/2), halving
+every eight bars; ≥ 1 → back on the next four-bar line at least a bar away, announced (a ring forming at the field's
+right edge, the rail's chips ✕ ✓); never one the player muted in the last eight bars (`mi.uMute`, set by `hxState`
+unless the Gärtner acts, `HX.gdAct`); ✕ eight bars left alone.
+*Puls lernt* (`hxPulsFit`/`hxPulsLernt`, card chips „Spur 1–4“ for a bass or percussion loop): steps 8/12/16 per bar
+(Raster 1/8, 1/8 T, 1/16), the most frequent bar's pattern, every pulse count and rotation by Hamming distance (+ the
+grid's own fit), the most frequent field index (octave into `oct`), the loop's source; written with `remember()` (the
+patch's ↶). Not built: Ladung on loops (§17; nothing applies Ladung to a loop, so the rule „only if enabled“ holds).
+
+**As built (step 3): §12.4 Knospen.** `HX.kn` (≤ 160): `hxKnTick` grows the varied passes of the next bar + 0.6 s ahead
+(the same cached chain the renders read) and adds a bud per note that is new against the pass before, at its field
+column (`hxDeg(f).x` of the pitch it will sound at), from one bar before it; answers add a chain (threads between
+consecutive buds), Wiederkehr a ring forming at the right edge with the loop's number. `hxKnFrame` (in `hxVisFrame`, no
+pointer events): a lumen bud swells, bursts into six dots when its note sounds. Measured: median lead 2.00 s at 120 BPM
+(a bar). The ring's word shows the stance; while a plan waits the rail's chips „✕ n · ✓“; MIDI ✓ ✕ ⚓ as above.
+Per-note vetoes in the card are not built.
+
+**As built (step 3): §12.5 Handschrift.** Its own database (`myzel-hand`, store `handschrift`; the app's `myzel` stays at
+version 2), records `main` and `pend`. `hx.hand` aus | an (default aus: nothing is written). On: the session's material
+(`hxHandSess`: the session's token counts, its loops' tempi, scales, sources, grooves per 20-BPM band, the Begleiten
+progressions, `HX.vw`) is written as `pend` every minute and when the page is hidden; at the next start (or the card's
+„Sitzung übernehmen“) „Die letzte Sitzung in die Handschrift übernehmen? · Übernehmen · Nein“; `hxHandMerge` adds
+counts, `hxHandPrune` drops the rarest contexts until the JSON is < 1 MB. Used (`hxHandUse`): its counts join the model
+(answers from the first minute), its weights seed `HX.vw`, its tempi the Takt finder's prior (`hxTempoPrior`, the
+median, instead of 100), its progressions Begleiten. Vergessen, Export (JSON file), Import (only after „Ersetzen“).
+
+**As built (step 3): UI, controls, persistence, parameters (§16, §17, §19, §20).** The card: a „Gärtner“ section under
+the loops (its step as chips, what it hears – the live role, the energy, the plan –, ✕ ablehnen · ✓ behalten while it
+plans); per loop „Rolle“ (auto with the reading, or one of five), „Gärtner: darf · nicht · darf wiederkehren“ (its
+stance, ✕), „Begleiten“ for a melody, „Puls lernt: Spur 1–4“ for bass or percussion, and for a suggestion „Einschalten ·
+Verwerfen“; Eigensinn's four chips. The settings: „Mitspieler“ (the five behaviours, „Antwort mit“, Handschrift) and the
+Handschrift's row (Sitzung übernehmen, Vergessen, Export, Import). The rail: the stance word in lumen under a ring (a tap
+on it takes the Gärtner's change back), a suggestion's dashed lumen ring, a loop paused by the Gärtner ‖ in lumen, the
+chips while the machine plans. Fits 360 px (scroll width 360). MIDI: `hx.gaertner` sets the parameter; `hx.lob`/
+`hx.nein` answer the machine's plan first. Persistence: a loop's `mi` (rolle, wk, gOff, sugg, from, begl) in its record
+and snapshot, the anchor's notes `anc.vn`. Parameters (`rec: 1`): `hx.gaertner`, `hx.gPlatz`, `hx.gRollen`, `hx.gAntw`,
+`hx.gBegl`, `hx.gWk` (BOOL, on), `hx.gStimme` (feld | ebene | schleife), `hx.hand` (aus | an).
+
 ---
 
 ## 13. Form (Etappe 1; Folge and Klang aufs Feld in 2b)
@@ -1477,6 +1598,16 @@ another speed once (`k24` above 1.6, `k16` above 1.03, else `rs`), each Schicht 
 Würfeln, or a rhythmic audio loop off its tempo) `slice`, each worn Schicht `abr`. The Werk-Rahmen's and the offline
 renders (Verdoppeln, Export) are no voice budget.
 
+
+**As built (step 3).** No new processor work, so `HX_COST` is unchanged; what the Mitspieler adds is counted where it
+runs: an answer's notes are real voices (`v.loop`, VCOST of their source, `voiceLoad`; they give way before any live
+note), a Begleiten suggestion is a loop like any other (`schicht` while it plays; silent it costs nothing), a varied
+pass renders in the Werk-Rahmen as a living one does (no voice budget, §10.5) – the guard's prediction `hxWPredict` is
+×1.75 at Variieren/Wandern (a pass may hold 1.75 × the anchor's notes), so the device refuses rather than falls
+behind. Main thread (t-hx-mitspieler, t-hx-gaertner; SPEC's ≤ 20 ms per decision): a Wandern pass of a 64-note loop
+4.2 ms, an answer 1.5 ms, Begleiten 5.5 … 10.7 ms per candidate source (one per task, nine in all), a bar's decision
+(three loops) 0.4 ms. `HX_PART`'s measurement (part.js) is a one-time offline job, not shipped work.
+
 ---
 
 ## 22. Tests (new suite `dev/tests/hexenring/`, run by `run-all.sh`; Playwright on an instrumented slot `hx`)
@@ -1639,3 +1770,25 @@ reference green (idle desktop audio 15–18 % against 23–24 %, playing within 
 asleep, baseline 89), Ruhe's live tests green; `t-idle-parity`'s Nebel row („after the wake … −81.9 against −89.7 dB“)
 failed once and passed in two reruns on this build and on 45e33b2 alike (both at −81.9 dB in one rerun: the reference's
 own scatter).
+
+### As built (step 3): suites
+`t-hx-mitspieler` (33: the operators one by one – the neighbour's contour, passing tones between their neighbours and in
+the scale, thinning to 60 %, filling to 150 %, Euclid's count and strong notes, octaves, Wandern's equal edges –;
+determinism per seed; 400 passes at Variieren and at Wandern: every note in the scale, the 1 and the middle unchanged,
+density within its limits, how many change, the elastic pull's distance; the guard; the Gärtner's density; ✕'s weights;
+time per pass; live in the Werk-Rahmen: the rendered passes' strong notes and scale, the Knospen a bar ahead, ✓ with
+the varied notes, ✕ back to the anchor, the density reaching unrendered passes, ⚓; the record and ↶ keep role and
+marks) and `t-hx-gaertner` (58: five roles from synthetic parts and two from loops played, the override; the Gärtner's
+rules on one loop at every step; live „pflegt“ – the bass loop's pause planned a bar ahead with its chips, done at the bar
+line, its notes untouched, the muted loop never touched, the ring's tap, eight bars alone, „schaut zu“, the decision's
+time; answers over 120 seeds (length, start, ending, scale, never seven tokens as played, variety, time), live – silent
+below 40 notes, an answer after a phrase with its Knospen chain, real voices not in the Humus, yielding, Ruhe, ✕;
+Begleiten – two silent suggestions, the scale, the strong notes in the fields, the least rough source, the plan's time,
+a tap takes one, ↶; Wiederkehr – back on the four-bar line, announced, never a loop muted just now, ✕; Puls lernt –
+E(5,16) rotated found exactly, written, ↶; the Handschrift – off stores nothing, on: pend, merge, ≤ 1 MB, export, after
+a reload the counts and the tempo prior, Vergessen), both in `run-all.sh`. `t-hx-fuzz`: ten more actions (the Gärtner's
+step and behaviours, ✕ ✓, a ring's veto, roles, Wiederkehr marks, Begleiten, Puls lernt, an answer, the Handschrift;
+`FUZZ_M=0` step 2b's bag) – green; it found answers that played on after Stille and into Schlafen (fixed: both end an
+answer and close the phrase). `perf/t-idle-live` 5d: an answer without a Schleife wakes the graph and opens the
+Hexenring's gates before it sounds, and the graph sleeps again after it. `dev/tests/hexenring/part.js` measures
+`HX_PART`.

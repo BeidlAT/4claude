@@ -143,6 +143,8 @@ async function ktools(page) {
       const b1 = await window.__untilBar(1); const line2 = []; for (let i = 0; i < 8; i++) line2.push([M.tgTime(b1 + i), [49, 55, 61.7, 55][i % 4], 0.8, 0.45]); window.__playF(line2, { eng: 'amo' });
       let again = false; for (let i = 0; i < 90; i++) { if (M.HXG.plan && M.HXG.plan.items.some((x) => x.key === Lb.key)) again = true; await window.__sleep(50); }
       out.again = again;
+      // the time of a bar's decision on the main thread (three loops)
+      { const now = A.ctx.currentTime, B = M.hxGdBarAt(now), t0 = performance.now(); for (let i = 0; i < 10; i++) M.hxGdBar(B, now); out.ms = (performance.now() - t0) / 10; M.HXG.plan = null; }
       // „schaut zu“: everything back
       Lm.gg = 0.5; M.setParam('hx.gaertner', 'schaut'); out.reset = Lm.gg === 1 && !M.HXG.plan;
       await window.__reset();
@@ -157,6 +159,7 @@ async function ktools(page) {
     ok(r.tap === 1 && r.hold && r.lvl2 > r.lvl0 * 0.5, `a tap on its ring takes it back at once (level ${r.lvl2.toFixed(4)}) and the Gärtner leaves it alone for eight bars`);
     ok(!r.again, `…while the player stays in the bass, no new plan for that loop`);
     ok(r.reset, `„schaut zu“: every change taken back at once`);
+    ok(r.ms < 20, `a bar's decision takes ${r.ms.toFixed(2)} ms on the main thread (≤ 20 ms)`);
   }
 
   // ---------- antw ----------
@@ -246,7 +249,7 @@ async function ktools(page) {
         // the strong melody notes inside the bar's field
         let st = 0, inF = 0; for (const x of W.n) { if (M.hxVMet(x.t, 4) < 0.7) continue; st++; if (P0.fields[Math.floor(x.t / 4)].pcs.includes(((x.deg % per) + per) % per)) inF++; } out.strongIn = [inF, st];
         // the chords' source: the least rough of the candidates
-        { const t0 = performance.now(); M.hxBeglPlan(W, { bpb: 4 }); out.ms = performance.now() - t0; }
+        { let mx = 0; for (const k of ['boe', 'neb', 'stm', 'hrz', 'obt', 'glt', 'hlm', 'sai', 'klb']) { const t0 = performance.now(); M.hxBeglPlan(W, { bpb: 4, chEng: k }); mx = Math.max(mx, performance.now() - t0); } out.ms = mx; }
         const others = ['boe', 'neb', 'stm', 'hrz', 'obt', 'glt', 'hlm', 'sai'].filter((k) => k !== P0.chEng).map((k) => M.hxBeglPlan(W, { bpb: 4, chEng: k }).rough);
         out.rough = P0.rough; out.minOther = Math.min(...others);
         const Ls = res.made.map((k) => M.hxByKey(k));
@@ -270,7 +273,7 @@ async function ktools(page) {
     ok(r.off === 0 && r.aud, `…every note of bass and chords in the scale (${r.off} not), both rendered in the Werk-Rahmen`);
     ok(r.strongIn && r.strongIn[0] >= 0.7 * r.strongIn[1], `…the melody's strong notes lie in the bar's Klangfeld (${r.strongIn})`);
     ok(r.rough <= r.minOther + 1e-9, `Klangverwandtschaft: the chords on ${r.chEng} stand least rough against the Kalimba's partials (${r.rough.toFixed(3)} against ${r.minOther.toFixed(3)} the next best)`);
-    ok(r.ms < 60, `…the plan over nine sources takes ${r.ms && r.ms.toFixed(1)} ms (once, on a tap – not in the audio path)`);
+    ok(r.ms < 20, `…its plan, one source at a time between tasks: at most ${r.ms && r.ms.toFixed(1)} ms each (≤ 20 ms per decision)`);
     ok(/^spielt:$/.test(r.tap), `a tap on a suggestion's ring plays it – taken (${r.tap})`);
     ok(r.undo === 0, `↶ takes the suggestions away (${r.undo} left)`);
   }
