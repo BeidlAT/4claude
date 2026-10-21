@@ -1628,3 +1628,14 @@ after a late pass (`wsCheck` → `wsSet(S, prev)`, `W.cur` null) was taken by `w
 `W.cur`), so at the next pass the slot went back to the page while that version, now `W.prev`, could still be read –
 detached chunks, NaN (`t-hx-wuchs` showed it in both runs before the fix, none after; most likely step 2a's one NaN in ten). `wsOwn` finds the slot
 whose chunks the Schicht reads.
+**Regression (step 2b)**, each alone on the machine: `reg.sh` (v2 41/5/20/9/4/3/7/7/17, mixfunc, mixui, MIDI 41/23/29/37/2)
+green; Gestik: `t-gm-stream`'s „the sound moved all the time“, `t-gl-schlafen`'s „woken“, `t-gf-cost`'s rows fail on
+45e33b2 the same in every run, `t-gx-live`'s chord order, `t-gm-cost`'s and `t-gs-cost`'s timing rows once or twice in
+four alternating runs on either build (the mod layer per frame 0.17–0.45 ms on both). `klang/tests/run-all.sh`
+(`SKIP_BENCH=1`) green, `smoke-all` 28 sources, none silent. Hexenring: all 21 suites green (proc 33, taps 17, clock 20,
+humus 11, ohr 27, ernten 33, grammar 30, persist 15, ui 69, werk 15, bake 13, seams 17, form 30, ctl 23, bew 66, oeko 13,
+fuzz 8, taumeln 14, wuchs 38, tempo 18, tools 47). The performance guard (last, alone): the CPU check against its
+reference green (idle desktop audio 15–18 % against 23–24 %, playing within the reference's spread; 81 nodes visited
+asleep, baseline 89), Ruhe's live tests green; `t-idle-parity`'s Nebel row („after the wake … −81.9 against −89.7 dB“)
+failed once and passed in two reruns on this build and on 45e33b2 alike (both at −81.9 dB in one rerun: the reference's
+own scatter).
