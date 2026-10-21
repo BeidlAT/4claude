@@ -645,6 +645,7 @@ body.mlearn #stage::after { content: ""; position: absolute; inset: 0; backgroun
 .hx-mid { flex: 1 1 auto; min-width: 0; display: flex; }
 .hx-rings { flex: 1 1 auto; min-width: 0; display: flex; gap: 2px; }
 .hx-ring { flex: 0 1 66px; min-width: 38px; }
+.hx-ring.g .w { color: #86f0d0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .hx-ring .w, .hx-haupt .w, .hx-pg { font: 500 10px/1.05 var(--font-ui); }
 @media (max-width: 400px) { .hx-ring .w { font-size: 9.5px; letter-spacing: -0.02em; } }
 .hx-pg { width: 36px; justify-content: center; gap: 2px; padding: 0 0 4px; color: var(--lumen); }
@@ -2355,6 +2356,15 @@ NUM('hx.traeg', 'Trägheit des Bands', 0.2, 2, 0.5, 's', { step: 0.05, rec: 1, f
 NUM('hx.stopp', 'Bandstopp', 0.3, 2, 0.9, 's', { step: 0.05, rec: 1, fmt: (v) => dec(v.toFixed(2)) + ' s' });
 BOOL('hx.buehne', 'Bühnenansicht', false, { rec: 1 });
 BOOL('hx.pulsStumm', 'Puls danach stumm', false, { rec: 1 });
+// (Etappe 3) the Gärtner – „schaut zu“ by default, every behaviour can be switched off – and the Handschrift (off by default)
+SEL('hx.gaertner', 'Gärtner', [['schaut', 'Schaut zu'], ['pflegt', 'Pflegt'], ['antwortet', 'Antwortet']], 'schaut', { chips: 1, small: 1, rec: 1 });
+BOOL('hx.gPlatz', 'Platz machen', true, { rec: 1 });
+BOOL('hx.gRollen', 'Die anderen spielen', true, { rec: 1 });
+BOOL('hx.gAntw', 'Antworten', true, { rec: 1 });
+BOOL('hx.gBegl', 'Begleiten vorschlagen', true, { rec: 1 });
+BOOL('hx.gWk', 'Wiederkehr', true, { rec: 1 });
+SEL('hx.gStimme', 'Antwort mit', [['feld', 'Spielfeld'], ['ebene', 'Ebene 2'], ['schleife', 'Melodie-Schleife']], 'feld', { chips: 1, small: 1, rec: 1 });
+SEL('hx.hand', 'Handschrift', [['aus', 'Aus'], ['an', 'An']], 'aus', { chips: 1, small: 1, rec: 1 });
 NUM('mix.pulsVol', 'Puls gesamt', -60, 6, 0, 'dB', { step: 0.1, fmt: fmtFader });
 BOOL('mix.pulsMute', 'Puls stumm', false);
 SEL('mix.duckSrc', 'Pumpen im Takt von', [['0', 'Spur 1'], ['1', 'Spur 2'], ['2', 'Spur 3'], ['3', 'Spur 4']], '0', { chips: 1, small: 1 });
@@ -4024,7 +4034,7 @@ function idleTick(force) {
   // the Hexenring's processor without a Schleife (or a web of one) for 20 s: its way to the master, zeros, is closed –
   // its strip and its sends rest then even while other sound plays, where they may (whatever its strip's filters held
   // has died away; hxGates); a new Schleife opens it (hxPost)
-  if (HX.g0 && HX.ctx === A.ctx) { if (HX.loops.size || HXN.webs.size || IDLE.hxT == null) IDLE.hxT = now; else if (!IDLE.hxOff && now - IDLE.hxT >= 20) hxGates(false); }
+  if (HX.g0 && HX.ctx === A.ctx) { if (HX.loops.size || HXN.webs.size || hxAntOn() || IDLE.hxT == null) IDLE.hxT = now; else if (!IDLE.hxOff && now - IDLE.hxT >= 20) hxGates(false); }
   if (idleSrc() || now < IDLE.autoT) { IDLE.qT = now; IDLE.z = null; idleTaps(false); if (IDLE.on) idleWake(!!(A.voices.size || A.bor || HX.loops.size)); return; }   // (those wake it themselves: late)
   if (IDLE.on) return;
   idleTaps(true);
@@ -25449,13 +25459,15 @@ function hxNode() {
   hxSeg(tgIdx(ctx.currentTime), true);
   hxMaskSync();
   hxRailShow();
-  hxwWportAll(); HX.tonP = { root: P['t.root'], scale: P['t.scale'] };   // (step 2a: the realms' pacing; the key the field plays in)
+  hxwWportAll(); HX.tonP = { root: P['t.root'], scale: P['t.scale'] };
+  hxHandLoad();   // (Etappe 3: the Handschrift, when it is on)   // (step 2a: the realms' pacing; the key the field plays in)
   if (HX.restore) setTimeout(hxRestoreApply, 300);   // Hexenring: the Schleifen of the last session come back, angehalten
 }
 // which strips „Gespielt“ hears: the sources always, the Puls and the Bordun when asked
 function hxMaskSync() { hxMask(['fin', 'eb2', 'rgn', 'gsp'].concat(P['hx.pulsMit'] ? ['l0', 'l1', 'l2', 'l3'] : [], P['hx.borMit'] ? ['bor'] : [])); }
 function hxParam(id) {
   if (id === 'hx.rail' || id === 'hx.buehne') hxRailShow();
+  if (/^hx\.(gaertner|gPlatz|gRollen|gAntw|gBegl|gWk|hand)$/.test(id)) hxGdParam(id);   // (Etappe 3)
   if (id === 'hx.stufe') for (const L of hxLoopsLive()) if (hxWAktiv(L)) hxWUpdate(L);   // (step 2a)
   if ((id === 'hx.pulsMit' || id === 'hx.borMit') && A.ctx) hxMaskSync();
   if (id === 'hx.laenge') for (const w of CTLWRAP['hx.festT'] || []) w.classList.toggle('inactive', P['hx.laenge'] !== 'fest');
@@ -25591,12 +25603,14 @@ const hxAt = (at) => (at != null ? Math.round(hxF(at)) : undefined);
 function hxState(loop, to, at, o = {}) {
   const L = HX.loops.get(loop); if (!L) return false;
   L.state = to; hxCount();
+  if (!L.bew && typeof hxMi === 'function') { if (to !== 'spielt' && !HX.gdAct) hxMi(L).uMute = A.ctx ? tgBeat(hxNowT()) : 0; if (to === 'spielt' && L.mi && L.mi.sugg && !HX.gdAct) hxSuggTake(L); }   // (Etappe 3: Wiederkehr never brings back what the player muted; a suggestion played is taken)
   if (L.bew) hxBewState(L, to, at);   // (step 1d: a Schleife of Bewegung follows on the mod layer)
   return hxPost({ state: { loop, to, f: hxAt(at), X: o.X != null ? Math.round(o.X * SR) : undefined, b0: o.b0 != null ? o.b0 + TG.o : undefined } });
 }
 // a level (a loop's, or a Schicht's: {schicht: id}), with a smooth ramp (s); pan for a loop
 function hxGain(target, g, at, ramp, pan) {
   const t = typeof target === 'object' ? target : { loop: target };
+  if (t.schicht == null && g != null) { const L = HX.loops.get(t.loop); if (L && L.gg != null) g *= L.gg; }   // (Etappe 3: under the Gärtner's factor – the player's level stays his own)
   return hxPost({ gain: Object.assign({}, t, { g, f: hxAt(at), ramp: ramp != null ? Math.round(ramp * SR) : undefined, pan }) });
 }
 // a Schicht out (its seam fade), a loop or all out; → Promise of the chunks the processor hands back
@@ -25634,7 +25648,7 @@ function hxCount() {
     }
     r += (g & 1) + (g >> 1);
   }
-  let ws = 0; for (const L of HX.loops.values()) if (L.state === 'spielt' && L.eig === 'lebendig') for (const id of L.sch) { const S = HX.sch.get(id); if (S && S.wLive) ws++; }   // (step 2a: the living Schichten's streams)
+  let ws = 0; for (const L of HX.loops.values()) if (L.state === 'spielt' && hxEigN(L) >= 1) for (const id of L.sch) { const S = HX.sch.get(id); if (S && S.wLive) ws++; }   // (step 2a: the living Schichten's streams)
   // (step 2b) the tape: a loop at another speed reads through the wider kernel (once per output, as its rate's resampling);
   // a Schicht in slices (Schnitt at another tempo, Auslassen, Würfeln) reads each slice on its own; a worn one is filtered
   let bd = 0, sl = 0, ab = 0;
@@ -25836,7 +25850,7 @@ const HX_LVL_ON = 0.0018;   // ≈ −55 dBFS RMS: something sounds
 function hxTaktFinden(ons, L) {
   const pts = ons.filter((o) => o.t >= -0.03 && o.t < L - 0.02);
   if (pts.length < 3 || L < 0.6) return { cands: [], clarity: 0 };
-  const sig = 0.025, w = pts.map((o) => 0.4 + 0.6 * clamp(o.v, 0, 1)), W = w.reduce((a, b) => a + b, 0);
+  const sig = 0.025, w = pts.map((o) => 0.4 + 0.6 * clamp(o.v, 0, 1)), W = w.reduce((a, b) => a + b, 0), TP0 = hxTempoPrior();
   const lowF = pts.map((o) => o.f).sort((a, b) => a - b)[Math.floor(pts.length / 2)];
   const acc = pts.map((o, i) => w[i] + (o.f < lowF ? 0.15 : 0));
   const accMean = acc.reduce((a, b) => a + b, 0) / acc.length;
@@ -25864,7 +25878,7 @@ function hxTaktFinden(ons, L) {
     let ad = 0, an = 0;
     pts.forEach((o, i) => { const e = near(o.t, m * T); if (Math.abs(e) < 0.06) { ad += acc[i]; an++; } });
     const accent = an ? ad / an - accMean : -0.2;
-    const tp = -Math.pow(Math.log(bpm / 100), 2) / (2 * 0.45 * 0.45);
+    const tp = -Math.pow(Math.log(bpm / TP0), 2) / (2 * 0.45 * 0.45);   // (Etappe 3: the Handschrift's tempo, else 100)
     const bp = ([1, 2, 4, 8].includes(bars) ? 0 : [3, 6, 16].includes(bars) ? -0.7 : -1.5) + (m === 3 ? -0.4 : 0);
     const S = 3 * fit + 0.6 * fitB + 1.5 * ia + 4 * accent + 0.3 * tp + 0.6 * bp;   // (accents decide most octave doubts; the tempo prior only leans – weights fitted on t-hx-ohr's phrases)
     out.push({ n, m, bars, bpm, S, fit, fitB });
@@ -26384,6 +26398,7 @@ function hxRingTap(slot, e) {
   if (!L) { if (HX.rec) hxRecCancel(true); hxRecStart(T, slot, null); return 'neu'; }
   const pend = HX.pend.find((p) => p.loop === L.id);
   if (pend) { hxPendDrop(pend); pend.cancel(); hxSay(hxName(L) + ': abgebrochen'); return 'ab'; }
+  if (L.state === 'spielt' && ((L.gg != null && L.gg !== 1) || L.gdv || (HXG.plan && HXG.plan.items.some((x) => x.key === L.key)))) { hxGdNein(L); return 'gd'; }   // (Etappe 3: a tap takes the Gärtner's change back – at once)
   if (L.state === 'angehalten') { hxReenter([L]); return 'an'; }
   const to = L.state === 'spielt' ? 'stumm' : 'spielt';
   if (!hxTakt(L) && !hxGrid()) { hxState(L.id, to, null, { X: 0.04 }); hxSay(hxName(L) + (to === 'stumm' ? ' stumm' : ' spielt')); return to; }
@@ -26431,8 +26446,9 @@ function hxSnap(L) {
   return { key: L.key, slot: L.slot, d: Object.assign({}, L.d), bpb: L.bpb, notes: L.notes, mv: L.mv, cut: L.cut, eng: L.eng, setTG: L.setTG, gain: L.gain, src: L.src, bpm: L.bpm, state: L.state, tk: L.tk,
     folgt: !!L.folgt, taumeln: L.taumeln !== false, nudge: L.nudge || 0, eig: L.eig, sch: L.sch.map((id) => hxSnapS(HX.sch.get(id))).filter(Boolean),
     wwhy: Object.assign({}, L.wwhy || {}), ton: L.ton, klang: L.klang, stufe: L.stufe, q: L.q, P: L.P, mask: L.mask, chainRec: L.chainRec, jrg: L.jrg, tb: hxTbOf(L), tr0: L.tr0 || null,   // (step 2a; step 2b: its tools)
-    bew: L.bew ? { lanes: L.bew.lanes.map((ln) => ({ k: ln.k, src: ln.src, v: ln.v })), disp: L.bew.disp, n: L.bew.n, g0: L.bew.g0, gs: L.bew.gs, fade: L.bew.fade, why: L.bew.why } : null, naehrt: L.naehrt || null };
+    bew: L.bew ? { lanes: L.bew.lanes.map((ln) => ({ k: ln.k, src: ln.src, v: ln.v })), disp: L.bew.disp, n: L.bew.n, g0: L.bew.g0, gs: L.bew.gs, fade: L.bew.fade, why: L.bew.why } : null, naehrt: L.naehrt || null, mi: hxMiSave(L) };
 }
+const hxMiSave = (L) => { const m = L.mi; if (!m) return null; const o = {}; for (const k of ['rolle', 'wk', 'gOff', 'sugg', 'from', 'begl']) if (m[k] != null && m[k] !== false) o[k] = m[k]; return Object.keys(o).length ? o : null; };   // (Etappe 3: role, Gärtner, Wiederkehr, a suggestion)
 function hxSchRebuild(loop, s, o = {}) {
   const c = { in: s.cut ? s.cut.in : 0, w0: s.cut ? s.cut.w0 : 0, w1: s.cut ? s.cut.w1 : 0, f0: s.cut ? s.cut.f0 : 0, pre: s.pre, len: s.len, post: s.cut ? s.cut.post : 0, n: s.n, aus: s.aus };
   if (!s.aud && !(s.cut && hxReach(s.cut))) return 0;
@@ -26449,6 +26465,7 @@ function hxRebuild(sn, o = {}) {
   const L = hxLoopMake({ slot, key: sn.key, lock: sn.d.lock, b0: sn.d.b0 - TG.o, beats: sn.d.beats, Lf: sn.d.L, ph0: sn.d.ph0, gain: sn.gain, bpb: sn.bpb, notes: sn.notes, mv: sn.mv, cut: sn.cut, eng: sn.eng, setTG: sn.setTG, src: sn.src, bpm: sn.bpm, state: o.state || (sn.state === 'stumm' ? 'stumm' : 'spielt'), fokus: o.fokus, eig: sn.eig,
     wwhy: sn.wwhy || {}, ton: sn.ton, klang: sn.klang, stufe: sn.stufe, q: sn.q, P: sn.P, mask: sn.mask, chainRec: sn.chainRec, jrg: sn.jrg });   // (step 2a: its Wuchs)
   L.tk = sn.tk; L.folgt = !!sn.folgt; L.taumeln = sn.taumeln !== false; if (sn.nudge) L.nudge = sn.nudge;
+  if (sn.mi) L.mi = Object.assign({}, sn.mi);   // (Etappe 3)
   if (sn.tb) { Object.assign(L, sn.tb); if (sn.tr0) L.tr0 = sn.tr0; }   // (step 2b: its tools – sent once its Schichten are there)
   if (sn.bew) { const B = sn.bew; L.bew = { lanes: B.lanes.map((x) => ({ k: x.k, src: x.src, v: x.v, o: Object.assign({ at: 0 }, faeOpts(x.src)) })), disp: B.disp || null, n: B.n, g0: B.g0, gs: B.gs, fade: B.fade, why: B.why, next: null, re: true, on0: L.state === 'spielt', ev: [] }; HX.bewKey = L.key; }
   if (sn.setTG && !TG.hxOn && !SEQ.ext) { TG.hxOn = true; TG.hx = sn.bpm; tgRetempo(sn.bpm); for (const fn of CTL['seq.bpm'] || []) fn(P['seq.bpm'], null); }
@@ -26860,6 +26877,7 @@ function hxTick(horizon) {
   hxTempoTick(now);
   hxFormTick(now);   // (step 1d)
   hxWTick(now, horizon);   // (step 2a: Wuchs – the living passes, the key's bar line, the tempo)
+  hxGdTick(now, horizon);   // (Etappe 3: the Gärtner, answers, Wiederkehr, Knospen)
   if (HX.chips && pnow > HX.chips.until) { HX.chips = null; hxRailDirty(); }
   if (HX.redoT && pnow > HX.redoT) { HX.redoT = 0; hxRailDirty(); }
   if (pnow - HX.earT > 250) {   // the Korb's word and light: what a tap would take now
@@ -26909,6 +26927,7 @@ function hxVisFrame(c, w, h) {
     }
     HXV.rings = keep;
   }
+  if (A.ctx) hxKnFrame(c, w, h, heardT());   // (Etappe 3: the Knospen)
   const R = HX.rec, Wk = HX.wake;
   if (Wk && A.ctx) {   // (step 1d) waking: „3 · 2 · 1“ on the three beats before the 1 the Schleifen come back on
     const left = Math.ceil((Wk.t - heardT()) * tgBpm(hxNowT()) / 60 - 1e-6);
@@ -27124,7 +27143,8 @@ function hxRailState() {
     else if (!L) { word = 'aufnehmen'; aria = 'Schleife ' + (i + 1) + ', leer' + (hxZiel() === i ? ', Ziel' : '') + ' – aufnehmen'; }
     else {
       word = pend ? 'abbrechen' : L.state === 'spielt' ? 'stumm' : L.state === 'stumm' ? 'an' : 'weiter';
-      aria = hxName(L) + ', ' + hxEngName(L) + ', ' + hxLenText(L) + ', ' + (L.state === 'spielt' ? 'spielt' : L.state) + (pend ? ', ' + pend.label : '') + (HX.fokus === L.id ? ', Fokus' : '') + ' – ' + word;
+      const sw = pend ? '' : hxStance(L); b.classList.toggle('g', !!sw); if (sw) word = sw;   // (Etappe 3: the stance – a tap on it takes the Gärtner's change back)
+      aria = hxName(L) + ', ' + hxEngName(L) + ', ' + hxLenText(L) + ', ' + (L.state === 'spielt' ? 'spielt' : L.state) + (pend ? ', ' + pend.label : '') + (HX.fokus === L.id ? ', Fokus' : '') + ' – ' + (hxStance(L) && !pend ? hxStance(L) + ', tippen: ' + (L.mi && L.mi.sugg ? 'einschalten' : 'zurücknehmen') : word);
     }
     if (w.textContent !== word) w.textContent = word;
     if (b.getAttribute('aria-label') !== aria) b.setAttribute('aria-label', aria);
@@ -27151,12 +27171,13 @@ function hxRailState() {
   HXU.undo.setAttribute('aria-label', HX.pend.length ? 'Abbrechen: ' + HX.pend[HX.pend.length - 1].label : 'Zurück' + (HX.hist.length ? ': ' + HX.hist[HX.hist.length - 1].label : '') + ' (halten: alle leeren)');
 }
 function hxChipsRender() {
-  const C = HX.chips, sig = JSON.stringify([C.kind, C.key, C.to, C.kor, HX.rec && HX.rec.mult, TG.hx, !!C.auf, C.kind === 'form' ? [HX.lich.map((x) => x.id + x.rule + x.kern), HX.lichCur, HX.pend.filter((p) => p.lich).map((p) => p.lich), !!HX.schluss, !!HX.kernBack] : 0, C.ausl || 0, C.kind === 'folge' && HX.folge ? HX.folge.b : 0]);
+  const C = HX.chips, sig = JSON.stringify([C.kind, C.key, C.to, C.kor, HX.rec && HX.rec.mult, TG.hx, !!C.auf, C.kind === 'form' ? [HX.lich.map((x) => x.id + x.rule + x.kern), HX.lichCur, HX.pend.filter((p) => p.lich).map((p) => p.lich), !!HX.schluss, !!HX.kernBack] : 0, C.ausl || 0, C.kind === 'folge' && HX.folge ? HX.folge.b : 0, HXG.plan ? HXG.plan.items.map((x) => x.key) : 0, HXW_K.wk ? HXW_K.wk.key : 0, hxAntOn()]);
   if (HXU.sig === sig) return;
   HXU.sig = sig;
   const box = HXU.chips; box.replaceChildren();
   const chip = (t, fn, o = {}) => { const b = h('button', { type: 'button', class: 'hx-chip' + (o.cls ? ' ' + o.cls : ''), 'aria-label': o.aria || t }, t); b.addEventListener('click', (e) => { e.preventDefault(); if (HX.chips) HX.chips.until = performance.now() + HX_CHIP_S * 1000; fn(); }); box.append(b); return b; };
   const sep = () => box.append(h('span', { class: 'hx-sep', 'aria-hidden': 'true' }, '│'));
+  if (hxChipsMach(chip, box)) return;   // (Etappe 3: what the Gärtner plans – ✕ per loop · ✓)
   if (C.kind === 'tempo') chip('Tempo behalten · ' + dec(Math.round(TG.hx * 10) / 10), hxTempoKeep, { cls: 'pri' });
   if (C.kind === 'folge' && HX.folge) {   // (step 2a) the key change announced: its bar line, ✕ takes it back
     const F = HX.folge;
@@ -27285,6 +27306,8 @@ function hxDrawRing(c, i, r, y, fold, ts) {
     return;
   }
   const st = L.state, pend = HX.pend.find((p) => p.loop === L.id), dimA = st === 'angehalten' ? 0.45 : 1;
+  if (L.mi && L.mi.sugg && !fold) { c.strokeStyle = HXC.lumen; c.lineWidth = 1.2; c.setLineDash([2, 3]); c.beginPath(); c.arc(x, y, R0 + 3, 0, Math.PI * 2); c.stroke(); c.setLineDash([]); c.lineWidth = 1.4; }   // (Etappe 3: a suggestion – dashed lumen)
+  if (L.gg === 0 && !fold) { c.strokeStyle = HXC.lumen; c.lineWidth = 1.2; c.beginPath(); c.moveTo(x - R0 * 0.35, y - R0 * 0.3); c.lineTo(x - R0 * 0.35, y + R0 * 0.3); c.moveTo(x + R0 * 0.35, y - R0 * 0.3); c.lineTo(x + R0 * 0.35, y + R0 * 0.3); c.stroke(); c.lineWidth = 1.4; }   // (paused by the Gärtner: ‖ in lumen)
   const ph = hxPhase(L, REDUCED ? hxBeatStep(L, now) : now), ang = (p) => -Math.PI / 2 + p * Math.PI * 2;
   // track, bar ticks outside, one thin ring per Schicht inside
   c.strokeStyle = 'rgba(168,152,138,' + (0.55 * dimA).toFixed(2) + ')'; c.beginPath(); c.arc(x, y, R0, 0, Math.PI * 2); c.stroke();
@@ -27360,10 +27383,12 @@ function hxCardSec() {
   HXK.grave = h('div', { class: 'hx-grave' });
   HXK.mem = h('p', { class: 'note' });
   HXK.form = h('div', { class: 'hx-form-sec' });   // (step 1d: Lichtungen, Kern, Lücke, Schluss)
+  HXK.gd = h('div', { class: 'hx-form-sec hx-gd' });   // (Etappe 3: the Gärtner)
   const set = foldSec('hxset', 'Einstellungen', [
     grid(ctl('hx.modus'), ctl('hx.start'), ctl('hx.ein'), ctl('hx.klick'), ctl('hx.laenge'), ctl('hx.festT'), ctl('hx.pulsMit'), ctl('hx.borMit'), ctl('hx.autoclose'), ctl('hx.runde'), ctl('hx.rail'), ctl('hx.humus'), ctl('hx.mem')),
     h('div', { class: 'lab hx-sub' }, 'Wuchs'), grid(ctl('hx.beginn'), ctl('hx.stufe'), ctl('hx.tonartAmTakt')),   // (step 2a)
     h('div', { class: 'lab hx-sub' }, 'Form'), grid(ctl('hx.regel'), ctl('hx.lichMix'), ctl('hx.lichPuls'), ctl('hx.lueckeT'), ctl('hx.schluss'), ctl('hx.welk')),
+    h('div', { class: 'lab hx-sub' }, 'Mitspieler'), grid(ctl('hx.gPlatz'), ctl('hx.gRollen'), ctl('hx.gAntw'), ctl('hx.gBegl'), ctl('hx.gWk'), ctl('hx.gStimme'), ctl('hx.hand')), (HXK.hand = h('div', { class: 'hx-klopf' })),   // (Etappe 3)
     h('div', { class: 'lab hx-sub' }, 'Band und Bühne'), grid(ctl('hx.traeg'), ctl('hx.stopp'), ctl('hx.buehne')),   // (step 2b)
     (HXK.setl = h('div', { class: 'hx-setw' })),
     (HXK.klopf = h('div', { class: 'hx-klopf' })),
@@ -27372,7 +27397,7 @@ function hxCardSec() {
     HXK.mem,
     h('p', { class: 'note' }, 'Der Korb erntet, was du gespielt hast („Gespielt“: deine Klangquellen nach Stumm und Solo, ohne Echo und Hall); „Alles“ wählst du pro Schleife – es hört auch die Schleifen mit, wie ein Zusammenmischen. Die Humus-Länge gilt ab dem nächsten Klangstart.'),
   ]);
-  HXK.sec = h('div', { class: 'sec hx-sec', id: 'hxSec' }, h('div', { class: 'sec-h' }, h('h3', null, 'Hexenring'), HXK.sub), HXK.acts, HXK.list, HXK.form, HXK.grave, set);
+  HXK.sec = h('div', { class: 'sec hx-sec', id: 'hxSec' }, h('div', { class: 'sec-h' }, h('h3', null, 'Hexenring'), HXK.sub), HXK.acts, HXK.list, HXK.gd, HXK.form, HXK.grave, set);
   HXK.dirty = true; hxCardRender();
   return HXK.sec;
 }
@@ -27438,6 +27463,7 @@ function hxCardRender() {
   if (!loops.length) HXK.list.append(h('div', { class: 'empty' }, 'Noch keine Schleife. Spiel etwas und tippe den Korb unter dem Spielfeld – oder tippe den runden Knopf daneben, spiel und tippe noch einmal.'));
   for (const L of loops) HXK.list.append(hxCardOne(L, btn));
   hxCardForm(btn);   // (step 1d)
+  hxCardGd(btn); hxCardHand(btn);   // (Etappe 3)
   if (HXK.setl) HXK.setl.replaceChildren(hxCardSet(btn));   // (step 2b)
   // the graveyard (this session)
   HXK.grave.replaceChildren();
@@ -27492,15 +27518,15 @@ function hxCardWuchs(L, sch, chip, row, btn) {
   if (!sch.some(hxWCan)) return [h('div', { class: 'hx-row' }, h('span', { class: 'lab' }, 'Wuchs'), h('span', { class: 'hx-ms' }, L.src ? 'aus „Alles“: bleibt ein Abdruck' : 'ohne Noten: bleibt ein Abdruck'))];
   const st = hxWQ(L), stufe = L.stufe || null, klang = L.klang || 'eigen';
   const on = hxWAktiv(L), w = L.wwhy || {}, word = hxWWord(L), why = [hxWTonOff(L) && 'folgt der Tonart', w.tempo && 'folgt dem Tempo', klang !== 'eigen' && 'anderer Klang'].filter(Boolean).join(', ');
-  const no = !hxwOk(), forced = !!(hxWTonOff(L) || w.tempo || klang !== 'eigen' || L.eig === 'lebendig');
+  const no = !hxwOk(), forced = !!(hxWTonOff(L) || w.tempo || klang !== 'eigen' || hxEigN(L) >= 1);
   const sel = h('select', { class: 'hx-eng', 'aria-label': 'Klang: eine Quelle wählen' }, h('option', { value: '' }, 'Quelle …'), ...ENG_OPTS.map(([k, n]) => h('option', { value: k, selected: klang === k ? '' : null }, n)));
   sel.addEventListener('change', () => { if (sel.value) hxWSet(L, 'klang', sel.value); });
-  const lebt = L.eig === 'lebendig' && on;
+  const lebt = hxEigN(L) >= 1 && on;
   return [
     row('Wiedergabe', chip('Abdruck', !on, () => { if (forced) { hxHint(why ? 'Sie ' + why + ' – bleibt Wuchs' : 'Lebendig wächst immer'); return; } hxWSet(L, 'wahl', false); }, 'Wiedergabe: Abdruck – genau wie gespielt'),
       chip('Wuchs', on, () => hxWSet(L, 'wahl', true), 'Wiedergabe: Wuchs – Myzel spielt die Noten neu' + (no ? ' (ohne Werk-Rahmen: mit echten Stimmen)' : '')),
       h('span', { class: 'hx-ms' }, (no && on ? 'ohne Werk-Rahmen: ' : '') + word + (why && on ? (word ? ' · ' : '') + why : ''))),
-    row('Eigensinn', ...HX_EIG.map((e) => chip(HX_EIGW[e], (L.eigWant || L.eig || 'treu') === e, () => hxWSet(L, 'eig', e), 'Eigensinn ' + HX_EIGW[e] + (e === 'treu' ? ': gleiche Noten, gleicher Wurf' : ': neuer Wurf in jedem Durchgang'))), L.eigWant ? h('span', { class: 'hx-ms' }, 'nach drei Runden') : null),
+    row('Eigensinn', ...HX_EIG.map((e) => chip(HX_EIGW[e], (L.eigWant || L.eig || 'treu') === e, () => hxWSet(L, 'eig', e), 'Eigensinn ' + HX_EIGW[e] + { treu: ': gleiche Noten, gleicher Wurf', lebendig: ': neuer Wurf in jedem Durchgang', variieren: ': Noten auf leichten Zeiten ändern sich', wandern: ': Halbtakte tauschen, immer zurück zum Anker' }[e])), L.eigWant ? h('span', { class: 'hx-ms' }, 'nach drei Runden') : null),
     row('Stufe', ...[['gespielt', 'wie gespielt'], ['1', '1'], ['2', '2'], ['3', '3']].map(([k, t]) => chip(t, (stufe || P['hx.stufe']) === k, () => hxWSet(L, 'stufe', k === P['hx.stufe'] ? null : k), 'Klangstufe ' + t + (k === 'gespielt' ? ' (' + (L.q || '?') + ')' : ''))), h('span', { class: 'hx-ms' }, on ? 'Stufe ' + st : '')),
     row('Folgen', ...[['diatonisch', 'diatonisch'], ['transponieren', 'transp.'], ['fest', 'fest']].map(([k, t]) => chip(t, (L.ton || 'diatonisch') === k, () => hxWSet(L, 'ton', k), 'Tonart: ' + k))),
     row('Klang', chip('eigener', klang === 'eigen', () => hxWSet(L, 'klang', 'eigen'), 'Klang: der eigene'), chip('Spielfeld', klang === 'feld', () => hxWSet(L, 'klang', 'feld'), 'Klang: folgt dem Spielfeld'), sel),
@@ -27558,6 +27584,7 @@ function hxCardOne(L, btn) {
     hxCardChain(L, sch, chip, row),
     row('Taumeln', chip('mit', L.taumeln !== false, () => hxTaumelnSet(L, true), 'Taumeln: die Schleife taumelt mit dem Live-Spiel'), chip('eigene Stimmung', L.taumeln === false, () => hxTaumelnSet(L, false), 'Taumeln aus: sie bleibt in ihrer Stimmung')),
     ...hxCardWuchs(L, sch, chip, row, btn),
+    ...hxCardMit(L, chip, row, btn),   // (Etappe 3: role, Gärtner, Wiederkehr, Begleiten, Puls lernt)
     hxCardTools(L, sch, chip, row, btn),   // (step 2b)
     row('Nähren', chip('Gespinst', !!(L.naehrt && L.naehrt.gsp), () => hxNaehrGsp(L, !(L.naehrt && L.naehrt.gsp)), 'Nähren: ein eigenes Saitennetz schwingt mit der Schleife'), chip('Körner', !!(L.naehrt && L.naehrt.kor), () => hxNaehrKor(L, !(L.naehrt && L.naehrt.kor)), 'Nähren: die Schleife wird Kornmaterial (Körner-Quelle „Schleife“)')),
     L.ausl ? h('div', { class: 'hx-row end' }, L.ausl.w0 != null ? btn('Auslese aus ' + L.ausl.k + ' · ' + L.ausl.p + ' %', () => hxAusleseDo(L)) : null, L.ausl.cons ? btn('Gemeinte Fassung (Wuchs)', () => hxAusleseWuchs(L), { aria: 'Auslese aus ' + L.ausl.k + ': was alle Versuche gemeinsam haben, neu gespielt' }) : null) : null,
@@ -27579,13 +27606,13 @@ function hxEstimate() { try { if (navigator.storage && navigator.storage.estimat
 function hxRecOf(L) {
   const mv = L.mv ? { a: L.mv.a, b: L.mv.b, lanes: L.mv.lanes.map((x) => Object.assign({}, x, { v: Array.from(x.v) })) } : null;
   return { id: L.key, v: 1, slot: L.slot, lock: L.d.lock, b0: L.d.b0 - TG.o, beats: L.d.beats, L: L.d.L, ph0: L.d.ph0, bpb: L.bpb, notes: L.notes, mv, cut: L.cut, eng: L.eng, setTG: L.setTG, gain: L.gain, src: L.src,
-    bpm: hxTakt(L) ? tgBpm(hxNowT()) : L.bpm, state: L.state, made: L.made, nudge: L.nudge || 0, sr: SR, tk: L.tk || null, plan: L.plan, folgt: !!L.folgt, taumeln: L.taumeln !== false, eig: L.eig || 'treu', naehrt: L.naehrt ? { gsp: !!L.naehrt.gsp } : null,
+    bpm: hxTakt(L) ? tgBpm(hxNowT()) : L.bpm, state: L.state, made: L.made, nudge: L.nudge || 0, sr: SR, tk: L.tk || null, plan: L.plan, folgt: !!L.folgt, taumeln: L.taumeln !== false, eig: L.eig || 'treu', naehrt: L.naehrt ? { gsp: !!L.naehrt.gsp } : null, mi: hxMiSave(L),
     sch: L.sch.map((id) => HX.sch.get(id)).filter(Boolean).map((S) => ({ key: S.key, len: S.len, pre: S.pre, n: S.n, cut: S.cut, aus: S.aus, join: S.join, X: S.X, rho: S.rho, gain: S.gain, mute: S.mute, kind: S.kind, group: S.group, sr: S.sr, segs: hxSegs(S), saved: S.saved >= hxSegs(S),
       chain: !!S.chain, bakd: !!S.bak && (S.savedB || 0) >= hxSegs(S), zo: S.zo || 0, kc: S.kc ? Array.from(S.kc) : null, kcB: S.kcB ? Array.from(S.kcB) : null, dr: S.dr ? Array.from(S.dr) : null, cold: !!S.cold, cutAus: !!S.cutAus, spliced: !!S.spliced,
       // (step 2a) its notes for Wuchs, its throw, its Treu render and its anchor (audio beside, ~w and ~x), what it played
       wn: S.wn || null, wseed: S.wseed || 0, gate: S.gate || null, play: S.play || 'ab',
       wu: S.wu && (S.savedW || 0) >= hxSegsV(S, 'w') ? { n: S.wu.n, len: S.wu.len, sig: S.wu.sig, seed: S.wu.seed } : null,
-      anc: S.anc && (S.savedX || 0) >= hxSegsV(S, 'x') ? { n: S.anc.n, len: S.anc.len, sig: S.anc.sig, seed: S.anc.seed, br: S.anc.br != null ? S.anc.br : null } : null })),
+      anc: S.anc && (S.savedX || 0) >= hxSegsV(S, 'x') ? { n: S.anc.n, len: S.anc.len, sig: S.anc.sig, seed: S.anc.seed, br: S.anc.br != null ? S.anc.br : null, vn: S.anc.vn || null } : null })),
     wwhy: L.wwhy || {}, ton: L.ton || 'diatonisch', klang: L.klang || 'eigen', stufe: L.stufe || null, q: L.q || null, P: L.P || null, mask: L.mask || null, chainRec: L.chainRec || null, jrg: L.jrg || null, tb: hxTbOf(L),
     bew: L.bew ? { n: L.bew.n, g0: L.bew.g0, gs: L.bew.gs - L.d.b0, fade: L.bew.fade, why: L.bew.why, lanes: L.bew.lanes.map((ln) => ({ k: ln.k, src: ln.src, d: faeEnc(ln.v) })), disp: L.bew.disp ? Object.fromEntries(Object.entries(L.bew.disp).map(([k, v]) => [k, faeEnc(v)])) : null } : null };   // (step 1d: a Schleife of Bewegung, its lanes as the Fährte kept them)
 }
@@ -27719,7 +27746,7 @@ async function hxRestoreApply() {
     if (!sch.length) continue;
     const k = r.sr && r.sr !== SR ? SR / r.sr : 1;
     const sn = { key: r.id, slot: r.slot, d: { lock: r.lock, b0: r.b0 + TG.o, beats: r.beats, L: r.L ? Math.round(r.L * k) : r.L, ph0: 0 }, bpb: r.bpb, notes: r.notes || [], mv: r.mv, cut: r.cut ? Object.assign({}, r.cut, { stale: true }) : null, eng: r.eng, setTG: r.setTG, gain: r.gain, src: r.src, bpm: r.bpm, state: 'angehalten', tk: r.tk, folgt: r.folgt, taumeln: r.taumeln, eig: r.eig, naehrt: r.naehrt || null, sch,
-      wwhy: r.wwhy || {}, ton: r.ton, klang: r.klang, stufe: r.stufe, q: r.q, P: r.P, mask: r.mask, chainRec: r.chainRec, jrg: r.jrg, tb: r.tb || null };   // (step 2a; step 2b: its tools)
+      wwhy: r.wwhy || {}, ton: r.ton, klang: r.klang, stufe: r.stufe, q: r.q, P: r.P, mask: r.mask, chainRec: r.chainRec, jrg: r.jrg, tb: r.tb || null, mi: r.mi || null };   // (step 2a; step 2b: its tools; Etappe 3: role, Gärtner, Wiederkehr)
     if (HX.slot[r.slot]) continue;
     const L = hxRebuild(sn, { state: 'angehalten', fokus: false, noSave: true });
     if (L) { L.nudge = r.nudge || 0; L.plan = r.plan; L.made = r.made || Date.now(); n++; for (const id of L.sch) { const S = HX.sch.get(id); if (S) { S.saved = hxSegs(S); if (S.bak) S.savedB = hxSegs(S); if (S.wu) S.savedW = hxSegsV(S, 'w'); if (S.anc) S.savedX = hxSegsV(S, 'x'); } } hxSaveMeta(L.id); }
@@ -28596,14 +28623,14 @@ function hxVibTick(now) {
 
 // ---- the guard (SPEC §6.4): no Eigensinn or Gärtner change in a loop during the three passes after a Schicht was
 // added – the hook (Eigensinn above Treu comes with Wuchs, Etappe 2a; a change asked meanwhile waits for the guard) ----
-const HX_EIG = ['treu', 'lebendig'], HX_EIGW = { treu: 'Treu', lebendig: 'Lebendig', variieren: 'Variieren', wandern: 'Wandern' };   // (step 2a: Treu, Lebendig; Variieren and Wandern with Etappe 3)
+const HX_EIG = ['treu', 'lebendig', 'variieren', 'wandern'], HX_EIGW = { treu: 'Treu', lebendig: 'Lebendig', variieren: 'Variieren', wandern: 'Wandern' };   // (step 2a: Treu, Lebendig; Etappe 3: Variieren and Wandern – their notes change, §12.2)
 const hxGuardOk = (L) => !(L.guardK != null && !(L.k >= L.guardK));
 function hxGuardSet(L, k) { if (Number.isFinite(k)) L.guardK = Math.max(L.guardK != null ? L.guardK : -Infinity, k + 3); }
 function hxEigSet(L, e) {
   if (!HX_EIG.includes(e) || e === (L.eig || 'treu')) { L.eigWant = null; return true; }
   if (!hxGuardOk(L)) { L.eigWant = e; return false; }
   L.eig = e; L.eigWant = null; hxSaveMeta(L.id); hxCardDirty();
-  if (e === 'lebendig' && !hxWCanLive(L)) { L.wRefused = true; L.wRetry = performance.now() + 4000; }   // (step 2a: the device cannot keep it living now)
+  if (HX_EIG.indexOf(e) >= 1 && !hxWCanLive(L)) { L.wRefused = true; L.wRetry = performance.now() + 4000; }   // (step 2a: the device cannot keep it living now)
   hxWUpdate(L);   // (step 2a: above Treu it grows)
   return true;
 }
@@ -28958,8 +28985,8 @@ const hxHint = (t) => { hxSay(t); toast(t, 2000); };
   midiTarget('hx.alle.ende', 'Alle Schleifen enden am Takt', btn(hxAlleEnde), { group: G, button: true });
   midiTarget('hx.alle.an', 'Alle Schleifen beginnen am Takt (Weiter)', btn(hxWeiter), { group: G, button: true });
   // ✓ ✕ ⚓ answer what the machine plans (Knospen, Etappe 3); until then there is nothing to decide
-  midiTarget('hx.lob', 'Behalten (✓)', btn(() => hxWLob()), { group: G, button: true });   // (step 2a: a living loop's pass)
-  midiTarget('hx.nein', 'Ablehnen (✕)', btn(() => (HX.folge ? hxWTonAb() : hxWNein())), { group: G, button: true });
+  midiTarget('hx.lob', 'Behalten (✓)', btn(() => { if (!hxMachLob()) hxWLob(); }), { group: G, button: true });   // (step 2a: a living loop's pass; Etappe 3: first what the Gärtner plans)
+  midiTarget('hx.nein', 'Ablehnen (✕)', btn(() => (HX.folge ? hxWTonAb() : hxMachNein() || hxWNein())), { group: G, button: true });
   midiTarget('hx.anker', 'Zurück zum Anker (⚓)', btn(() => hxWAnker()), { group: G, button: true });
   // (step 2b) the tape and the stage
   midiTarget('hx.bandstopp', 'Bandstopp (alle Schleifen laufen aus)', btn(() => hxBandstopp()), { group: G, button: true });
@@ -28968,7 +28995,7 @@ const hxHint = (t) => { hxSay(t); toast(t, 2000); };
   midiTarget('hx.puls.ernten', 'Puls ernten (zwei Takte)', btn(() => hxPulsErnten(2, P['hx.pulsStumm'])), { group: G, button: true });
   midiTarget('hx.lied', 'Setliste: nächstes Lied', btn(hxSetNext), { group: G, button: true });
   midiTarget('hx.buehne', 'Bühnenansicht an / aus', btn(() => setParam('hx.buehne', !P['hx.buehne'])), { group: G, button: true });
-  midiTarget('hx.gaertner', 'Gärtner (schaut zu · pflegt · antwortet)', null, { group: G, cont: true, get: () => ['schaut', 'pflegt', 'antwortet'].indexOf(HX.gaertner || 'schaut') / 2, set: (n) => { const g = ['schaut', 'pflegt', 'antwortet'][Math.min(2, Math.floor(clamp(n, 0, 1) * 3))]; if (g !== (HX.gaertner || 'schaut')) { HX.gaertner = g; hxSay('Gärtner: ' + { schaut: 'schaut zu', pflegt: 'pflegt', antwortet: 'antwortet' }[g]); } } });
+  midiTarget('hx.gaertner', 'Gärtner (schaut zu · pflegt · antwortet)', null, { group: G, cont: true, get: () => hxGdStep() / 2, set: (n) => { const g = HX_GST[Math.min(2, Math.floor(clamp(n, 0, 1) * 3))]; if (g !== P['hx.gaertner']) setParam('hx.gaertner', g); } });   // (Etappe 3: the parameter itself)
   midiTarget('hx.hin', 'Hinlegen erntet (Gestik: Ruhe)', btn(() => { hxKorb(hxEvOf(null, 'hin')); }), { group: G, button: true });
   midiTarget('hx.nkset', 'nanoKONTROL2: Seite Hexenring', null, { group: G, button: true, press: (v, cx) => { if (cx && cx.src) hxNkPage(cx.src, !cx.src.nkHx); } });
   for (let i = 0; i < HX_SLOTS; i++) {
@@ -29656,7 +29683,8 @@ function hxWPink(seed, n) { let s = 0; for (let r = 0; r < 8; r++) { let h = ((s
 // sounds at the end of the pass before it (it rings over the seam – as the original did), one held over the whole loop is
 // struck anew each pass (documented limit); Lebendig: each note a little early or late, by the breath
 function hxWPass(L, S, k, o = {}) {
-  const W = hxWNotesT(L, S); if (!W || !W.n.length) return null;   // (step 2b: the notes' tools applied)
+  const W0 = hxWBase(L, S); if (!W0 || !W0.n.length) return null;   // (step 2b: the notes' tools applied; Etappe 3: a kept varied pass's notes)
+  const W = (o.live && o.br == null && hxEigN(L) >= 2) ? hxVarW(L, S, k, W0) : W0;   // (Etappe 3: Variieren, Wandern – this pass's own notes)
   // (step 2b: a tape at another speed reads the version at that speed – it is rendered as long as it reads)
   const sp = L.sp || 1, a = hxPassF(L, k), b = hxPassF(L, k + 1), lenF = Math.max(1, Math.round((b - a) * sp)), len = lenF / SR, takt = W.u === 'b' && hxTakt(L) && sp === 1;
   const B0 = takt ? L.d.b0 + k * L.d.beats : 0, U = W.len;
@@ -29706,7 +29734,7 @@ function hxWSig(L, S, key) {
   const W = S.wn, k = key || hxWKeyNow(), f = hxNextSeam(L), lenF = hxPassF(L, f.k + 1) - hxPassF(L, f.k);
   const keyS = (L.ton || 'diatonisch') === 'fest' ? '-' : (L.ton === 'transponieren' ? k.root : k.root + ':' + (k.rat || []).map((x) => x.toFixed(6)).join(','));
   const engs = [...new Set(W.n.map((n) => hxWEng(L, n)))].join(',');
-  return [Math.round((lenF * (L.sp || 1)) / 8), L.ton || 'diatonisch', keyS, engs, hxWQ(L), S.anc ? S.anc.seed + ':' + (S.anc.br != null ? S.anc.br : '') : S.wseed, L.folgt ? 1 : 0, (L.klang || 'eigen') === 'eigen' ? 'e' : hxWPHash(),
+  return [Math.round((lenF * (L.sp || 1)) / 8), L.ton || 'diatonisch', keyS, engs, hxWQ(L), S.anc ? S.anc.seed + ':' + (S.anc.br != null ? S.anc.br : '') + (S.anc.vn ? ':v' + S.anc.vn.length + ':' + Math.round(S.anc.vn.reduce((a, x) => a + x.t * 97 + x.f, 0)) : '') : S.wseed, L.folgt ? 1 : 0, (L.klang || 'eigen') === 'eigen' ? 'e' : hxWPHash(),
     hxNtOn(L) ? JSON.stringify(L.nt) : '', L.revW ? 'r' : '', S.wn.n.length + ':' + Math.round(S.wn.len * 1000)].join('|');   // (step 2b: the notes' tools, mirrored, a record trimmed, doubled or the Auslese's)   // (a pass's length within 8 frames is the same: a fractional tempo alternates ±1 frame)
 }
 function hxWPHash() { let h = 7; for (const id in P) if (PD[id] && !PD[id].rec && !PD[id].dev && !id.startsWith('x') && !/^(rev|dly|mst|seq|l\d|rec|hx|mix)\./.test(id)) { const v = String(P[id]); for (let i = 0; i < v.length; i++) h = (Math.imul(h, 31) + v.charCodeAt(i)) | 0; } return h; }
@@ -29753,11 +29781,11 @@ function hxWPlay(S, which, f, keepStream) {
   return true;
 }
 // what a loop grows for: chosen (the card, or hx.beginn), the key, the tempo, the sound – or Eigensinn above Treu
-function hxWAktiv(L) { const w = L.wwhy || {}; return !L.bew && !!(w.wahl || w.tempo || w.ausl || L.eig === 'lebendig' || (L.klang || 'eigen') !== 'eigen' || hxNtOn(L) || hxWTonOff(L)); }   // (step 2b: the notes' tools, the Auslese's consensus)
+function hxWAktiv(L) { const w = L.wwhy || {}; return !L.bew && !!(w.wahl || w.tempo || w.ausl || hxEigN(L) >= 1 || (L.klang || 'eigen') !== 'eigen' || hxNtOn(L) || hxWTonOff(L)); }   // (step 2b: the notes' tools, the Auslese's consensus)
 // it follows the key and the key is not the one it was played in (the parameters' key – an announced one included)
 const hxWKeyEq = (a, b) => !!a && !!b && a.root === b.root && !!a.free === !!b.free && (a.rat || []).map((x) => x.toFixed(6)).join() === (b.rat || []).map((x) => x.toFixed(6)).join();
 const hxWTonOff = (L) => { const t = L.ton || 'diatonisch'; if (t === 'fest') return false; const k = hxWKeyNow(); return L.sch.some((id) => { const S = HX.sch.get(id); return hxWCan(S) && (t === 'transponieren' ? S.wn.key.root !== k.root : !hxWKeyEq(S.wn.key, k)); }); };
-const hxWLebt = (L) => L.eig === 'lebendig' && !L.revW && hxWAktiv(L) && !(L.treuBis != null && tgBeat(hxNowT()) < L.treuBis) && !(HX.wGuard.pause > performance.now()) && !L.wRefused;
+const hxWLebt = (L) => hxEigN(L) >= 1 && !L.revW && hxWAktiv(L) && !(L.treuBis != null && tgBeat(hxNowT()) < L.treuBis) && !(HX.wGuard.pause > performance.now()) && !L.wRefused;
 // the reconciler: what every Schicht of a loop should play now – the Abdruck, the anchor, or a Treu render made for
 // what it follows (rendered first when there is none; swapped at the next seam, or at o.f)
 function hxWUpdate(L, o = {}) {
@@ -29977,12 +30005,12 @@ function hxWTempoGo() {
 }
 
 // ---- ✓ ✕ ⚓ (KONZEPT §5.2/§5.4): for a living loop – the Fokus, else the newest that lives ----
-function hxWTarget() { const F = hxFok(); if (F && hxWLebt(F)) return F; return hxLoopsLive().filter((L) => hxWLebt(L) || (L.eig === 'lebendig' && hxWAktiv(L))).sort((a, b) => b.made - a.made)[0] || (F && hxWAktiv(F) ? F : null); }
+function hxWTarget() { const F = hxFok(); if (F && hxWLebt(F)) return F; return hxLoopsLive().filter((L) => hxWLebt(L) || (hxEigN(L) >= 1 && hxWAktiv(L))).sort((a, b) => b.made - a.made)[0] || (F && hxWAktiv(F) ? F : null); }
 // ✓: the pass that sounds now becomes the anchor – its audio (the realm that rendered it kept it), as it sounded
 async function hxWLob(L) {
   L = L || hxWTarget();
   if (!L || !hxWAktiv(L)) { hxHint('Nichts zu entscheiden'); return; }
-  const k = hxPassK(L, Math.round(hxF(hxHeard()))), sig0 = {};
+  const k = hxPassK(L, Math.round(hxF(hxHeard()))), sig0 = {}, lobOps = new Set();
   let n = 0;
   const before = L.sch.map((id) => { const S = HX.sch.get(id); return S ? [S.key, S.anc] : null; }).filter(Boolean);
   for (const id of L.sch) {
@@ -29995,9 +30023,12 @@ async function hxWLob(L) {
     }
     if (!V && S.play === 'wu' && S.wu) V = Object.assign({}, S.wu);
     if (!V) continue;
+    const vr = hxEigN(L) >= 2 && S.vc && S.vc.m.get(k);   // (Etappe 3: a varied pass kept – its notes are the anchor's, the next passes vary from them)
+    if (vr && vr.n && !(vr.ops.length === 1 && vr.ops[0] === 'nein')) { V.vn = vr.n.map((x) => Object.assign({}, x)); for (const op of vr.ops) if (HX_VW[op]) lobOps.add(op); }
     V.sig = null; S.anc = V; V.sig = hxWSig(L, S); S.ancSaved = 0; hxSaveSch(S, 'x'); n++; sig0[S.key] = V.sig;
   }
   if (!n) { hxHint('Dieser Durchgang ist schon vorbei'); return; }
+  for (const op of lobOps) HX.vw[op] = clamp((HX.vw[op] != null ? HX.vw[op] : 1) * 1.15, 0.05, 2);   // (✓ raises the operators it kept, for the session)
   const lk = L.key, after = L.sch.map((id) => { const S = HX.sch.get(id); return S ? [S.key, S.anc] : null; }).filter(Boolean);
   hxHist({ kind: 'wuchs', label: 'Durchgang behalten (' + hxName(L) + ')', undo() { for (const [sk, a] of before) { const S = hxSchByKey(sk); if (S) S.anc = a; } const X = hxByKey(lk); if (X) hxWUpdate(X); }, redo() { for (const [sk, a] of after) { const S = hxSchByKey(sk); if (S) S.anc = a; } const X = hxByKey(lk); if (X) hxWUpdate(X); } });
   hxSay(hxName(L) + ': Durchgang behalten – neuer Anker'); toast(hxName(L) + ': dieser Durchgang ist der Anker.', 2200);
@@ -30011,6 +30042,7 @@ function hxWNein(L) {
   // a bar line that is the seam: the anchor plays that pass)
   const now = hxNowT(), b = tgBeat(now), sw = hxNextSeam(L), nk = sw.k, fb = hxGrid() ? Math.round(hxF(tgBar(now + 0.06))) : sw.f, mid = fb < sw.f - 1;
   L.nein = { k: mid ? nk - 1 : nk };
+  if (hxEigN(L) >= 2) L.neinOps = hxVarNein(L, hxPassK(L, Math.round(hxF(hxHeard()))), mid ? nk : nk + 1);   // (Etappe 3: the operators refused count half; the chain begins at the anchor)
   for (const id of L.sch) {
     const S = HX.sch.get(id); if (!hxWCan(S)) continue;
     if (!S.anc && S.wu) S.anc = Object.assign({}, S.wu);
@@ -30064,7 +30096,7 @@ function hxWWord(L) {
   if (!hxWAktiv(L)) return '';
   if (HXW.st === 'kein') return 'live gespielt';   // (Live mode: no Werk-Rahmen)
   const S = L.sch.map((id) => HX.sch.get(id)).filter(hxWCan), busy = S.some((s) => s.wBusy), ready = S.every((s) => s.play === 'wu' || s.play === 'anc');
-  if (L.eig === 'lebendig') { if (HX.wGuard.pause > performance.now() || L.wRefused) return 'lebt, sobald Rechenzeit frei ist'; if (L.treuBis != null) { const n = Math.max(1, Math.min(8, Math.floor((L.treuBis - tgBeat(hxNowT())) / 4 + 0.01))); return 'Treu noch ' + n + (n === 1 ? ' Takt' : ' Takte'); } return 'lebt'; }
+  if (hxEigN(L) >= 1) { if (HX.wGuard.pause > performance.now() || L.wRefused) return 'lebt, sobald Rechenzeit frei ist'; if (L.treuBis != null) { const n = Math.max(1, Math.min(8, Math.floor((L.treuBis - tgBeat(hxNowT())) / 4 + 0.01))); return 'Treu noch ' + n + (n === 1 ? ' Takt' : ' Takte'); } return ['', 'lebt', 'variiert', 'wandert'][hxEigN(L)]; }
   return busy ? 'wächst …' : ready ? 'Wuchs' : 'wächst …';
 }
 // can the device keep this loop living? its passes' predicted render time against what the pool can spend
@@ -30081,7 +30113,7 @@ function hxWCanLive(L) {
 function hxWGuard() {
   const now = performance.now(), ran = HX.wJobs > 0 || HX.wRen > 0 || now - HX.wLast < 8000;
   if (!ran) return false;
-  const G = HX.wGuard, lebt = hxLoopsLive().some((L) => L.eig === 'lebendig' && hxWAktiv(L));
+  const G = HX.wGuard, lebt = hxLoopsLive().some((L) => hxEigN(L) >= 1 && hxWAktiv(L));
   if (lebt && !(G.pause > now)) { G.pause = now + 30000; G.n++; hxSay('Schleifen leben gleich weiter – das Gerät ist gerade ausgelastet'); for (const L of hxLoopsLive()) hxCardDirty(); }
   else G.max = Math.max(1, Math.min(G.max === Infinity ? HX_WPOOL : G.max, HX.wJobs || 1) - 1 || 1);
   G.t = now;
@@ -30111,7 +30143,7 @@ function hxWLiveTick(now, horizon) {
       const S = HX.sch.get(id); if (!S || !S.lm || L.state !== 'spielt') continue;
       if (S.mute) { S.lk = Math.max(S.lk, hxPassK(L, Math.round(fB))); continue; }
       for (let k = Math.max(S.lk + 1, hxPassK(L, Math.round(fA))); hxPassF(L, k) < fB; k++) {
-        const job = hxWPass(L, S, k, { live: L.eig === 'lebendig', tail: 0 }); S.lk = k;
+        const job = hxWPass(L, S, k, { live: hxEigN(L) >= 1, tail: 0 }); S.lk = k;
         if (!job) break;
         const t0 = hxT(hxPassF(L, k));
         for (const n of job.notes) {
@@ -30529,8 +30561,9 @@ function hxWNotesT(L, S) {
     }
     n = n.concat(add);
   }
-  if (T.tr) for (const x of n) hxNtPitch(W, x, idx(x) + T.tr);
-  if (T.umk && n.length) { const I = n.map(idx).sort((a, b) => a - b), pv = I[I.length >> 1]; for (const x of n) hxNtPitch(W, x, 2 * pv - idx(x)); }
+  const mv = (x, J) => { const f0 = x.f; hxNtPitch(W, x, J); const r = x.f / f0; if (r !== 1 && x.cf && x.cf.length) x.cf = x.cf.map(([dt, v]) => [dt, v * r]); };   // (Etappe 3: a glide curve holds Hz – it moves with its note)
+  if (T.tr) for (const x of n) mv(x, idx(x) + T.tr);
+  if (T.umk && n.length) { const I = n.map(idx).sort((a, b) => a - b), pv = I[I.length >> 1]; for (const x of n) mv(x, 2 * pv - idx(x)); }
   if (T.krebs) for (const x of n) {   // the end of each note is where its mirror starts (a struck one: its onset mirrored)
     const d = x.d != null ? x.d : 0, t = U - x.t - d;
     x.t = ((t % U) + U) % U; x.held = false;
@@ -30793,6 +30826,1039 @@ function hxSetGo(i) {
   return true;
 }
 function hxSetNext() { const S = hxSetGet(); if (!S.list.length) { toast('Die Setliste ist leer – füge in der Karte Lieder hinzu.', 3000); return false; } return hxSetGo((S.cur + 1) % S.list.length); }
+
+/* ---- Etappe 3 · Mitspieler (SPEC §12.2–§12.5, KONZEPT §5): Variieren and Wandern (a living loop's notes change on weak
+   positions, drawn back to its anchor), the roles, the Gärtner (schaut zu · pflegt · antwortet: Platz machen, die anderen
+   spielen, Antworten, Begleiten with Klangverwandtschaft, Wiederkehr), Puls lernt, the Knospen and the Handschrift.
+   The rules (owner): the player stays in charge – everything the machine wants to change is shown before it sounds and can
+   be refused at once (✕, ⚓, ↶, a tap on the ring); Eigensinn is the ceiling – a Treu or Lebendig loop's notes never
+   change, the Gärtner only lowers, raises or pauses it; every note made is in the scale; nothing here touches a source's
+   sound or level of quality – what sounds anew is rendered (Wuchs) or played by real voices, as the player's own. ---- */
+
+// ---- shared: a seeded random (mulberry32), a note's scale index, the metre ----
+const hxRng = (s) => { let h = (s | 0) || 1; return () => { h = (h + 0x6d2b79f5) | 0; let t = Math.imul(h ^ (h >>> 15), 1 | h); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
+const hxEigN = (L) => Math.max(0, HX_EIG.indexOf((L && L.eig) || 'treu'));   // 0 Treu · 1 Lebendig · 2 Variieren · 3 Wandern
+const hxVPer = (W) => (W.key.free ? 12 : W.key.per);
+const hxVIdx = (W, x) => (x.oct || 0) * hxVPer(W) + (x.deg || 0);
+// a position's weight in the bar (sixteenths): the 1, the middle of a 4/4 bar, the beats, the eighths, the rest
+function hxVMet(t, bpb) { const b = bpb || 4, n = 4 * b, p = ((Math.round(t * 4) % n) + n) % n; return p === 0 ? 1 : b === 4 && p === 8 ? 0.9 : p % 4 === 0 ? 0.7 : p % 2 === 0 ? 0.5 : 0.3; }
+// a pitch moved to scale index J – its glide curve moves with it (a curve holds Hz)
+function hxVPitch(W, x, J) { const f0 = x.f, y = hxNtPitch(W, Object.assign({}, x), J), r = y.f / f0; y.cf = (x.cf || []).map(([dt, v]) => [dt, v * r]); return y; }
+const hxVSort = (n) => n.sort((a, b) => a.t - b.t || hxVIdxRaw(a) - hxVIdxRaw(b));
+const hxVIdxRaw = (x) => (x.oct || 0) * 64 + (x.deg || 0);
+// a note's identity for comparing two passes: its place (an eighth of a 32nd) and its scale index
+const hxVKey = (W, x) => Math.round(x.t * (W.u === 'b' ? 8 : 20)) + ':' + hxVIdx(W, x);
+// how far two note lists are apart: 1 − the share of notes they have in common (0 the same, 1 nothing alike)
+function hxVDist(W, a, b) {
+  if (!a.length && !b.length) return 0;
+  const s = new Map(); for (const x of a) { const k = hxVKey(W, x); s.set(k, (s.get(k) || 0) + 1); }
+  let c = 0; for (const x of b) { const k = hxVKey(W, x), v = s.get(k); if (v) { c++; s.set(k, v - 1); } }
+  return 1 - (2 * c) / (a.length + b.length);
+}
+
+// ---- Variieren and Wandern (SPEC §12.2): operators on the weak positions – the strong ones (the 1, the middle of the
+// bar, a note held in from before, a chord) stay. Per pass 16 candidates of one to three operators, scored by
+// consistency with the anchor, novelty against the last passes, fit (leaps, density) and a penalty for repeating;
+// picked by a softmax whose temperature rises with the step; an elastic pull back to the anchor grows with the distance.
+// Every draw is the pass's own seed: the same anchor, seed and weights give the same pass. ----
+const HX_VOPS = ['nb', 'eu', 'th', 'fi', 'ok', 'orn', 'sw'];   // Nachbarstufe, euklidisch, dünner, Füllung, Oktave, Verzierung, Halbtakt-Tausch
+const HX_VOPW = { nb: 'Nachbarstufen', eu: 'Rhythmus', th: 'dünner', fi: 'Durchgänge', ok: 'Oktaven', orn: 'Verzierungen', sw: 'Halbtakte', ret: 'zurück zum Anker' };
+const HX_VW = { nb: 1, eu: 0.55, th: 0.65, fi: 0.7, ok: 0.45, orn: 0.5, sw: 1.1 };
+HX.vw = {};   // (the session's operator weights: ✕ halves the ones it refused, ✓ raises the ones it kept; the Handschrift seeds them)
+// the step's own character: α (consistency against novelty), temperature, the chance a pass stays as it was, the pull back
+const HX_VLV = { 2: { a: 0.65, T: 0.08, stay: 0.3, s: 0.5, ops: 2 }, 3: { a: 0.45, T: 0.15, stay: 0.15, s: 0.75, ops: 3 } };
+function hxVOp(op, W, n, o, R) {
+  const per = hxVPer(W), I = (x) => hxVIdx(W, x), eps = W.u === 'b' ? 0.02 : 0.02, bpb = o.bpb || 4;
+  const chord = (i) => n.some((y, j) => j !== i && Math.abs(y.t - n[i].t) < eps);
+  const strong = (x) => x.held || (W.u === 'b' ? hxVMet(x.t, bpb) >= 0.9 : x.t <= o.t0 + 1e-6);
+  const free = n.map((x, i) => i).filter((i) => !strong(n[i]) && !chord(i));
+  const pick = (a) => a[Math.floor(R() * a.length)];
+  const single = (i) => !chord(i);
+  if (op === 'nb') {   // a neighbour degree, ±1 or ±2, its contour to both neighbours kept
+    if (!free.length) return null;
+    const i = pick(free), x = n[i], Ix = I(x);
+    let pv = null, nx = null;
+    for (let j = i - 1; j >= 0; j--) if (n[j].t < x.t - eps && single(j)) { pv = n[j]; break; }
+    for (let j = i + 1; j < n.length; j++) if (n[j].t > x.t + eps && single(j)) { nx = n[j]; break; }
+    for (const s of R() < 0.5 ? [1, -1, 2, -2] : [-1, 1, -2, 2]) {
+      const J = Ix + s;
+      if (pv && Math.sign(J - I(pv)) !== Math.sign(Ix - I(pv))) continue;
+      if (nx && Math.sign(I(nx) - J) !== Math.sign(I(nx) - Ix)) continue;
+      if (J < o.lo - 2 || J > o.hi + 2) continue;
+      const m = n.slice(); m[i] = hxVPitch(W, x, J); return m;
+    }
+    return null;
+  }
+  if (op === 'eu') {   // the weak onsets of one bar redistributed evenly (Toussaint), their count and pitches kept
+    if (W.u !== 'b') return null;
+    const bars = Math.max(1, Math.round(o.U / bpb)), b = Math.floor(R() * bars), a0 = b * bpb, a1 = a0 + bpb;
+    const ins = free.filter((i) => n[i].t >= a0 - 1e-6 && n[i].t < a1 - 1e-6).sort((p, q) => n[p].t - n[q].t);
+    if (ins.length < 2) return null;
+    const res = ins.every((i) => Math.abs(n[i].t * 2 - Math.round(n[i].t * 2)) < 0.05) ? 2 : 4, slots = bpb * res;
+    const busy = new Set(n.filter((x, i) => !ins.includes(i) && x.t >= a0 - 1e-6 && x.t < a1 - 1e-6).map((x) => Math.round((x.t - a0) * res)));
+    const av = []; for (let s = 1; s < slots; s++) if (!busy.has(s) && !(bpb === 4 && s === bpb * res / 2)) av.push(s);   // (the 1 and the middle stay the strong notes' own)
+    if (av.length <= ins.length) return null;
+    const pat = euclid(av.length, ins.length, Math.floor(R() * av.length)), pos = av.filter((_, j) => pat[j]);
+    const m = n.slice(); let moved = false;
+    ins.forEach((i, q) => { const x = n[i], off = x.t - Math.round(x.t * res) / res, t = a0 + pos[q] / res + off; if (Math.abs(t - x.t) > 1e-6) moved = true; m[i] = Object.assign({}, x, { t, d: x.d != null ? Math.min(x.d, Math.max(0.05, a1 - t)) : null }); });
+    return moved ? m : null;
+  }
+  if (op === 'th') {   // thinner: the weakest (metric weight × velocity) goes – never below 60 % of the anchor (40 % while making room)
+    const minN = Math.max(2, Math.ceil(o.A * (o.gd < -0.3 ? 0.4 : 0.6)));
+    if (n.length <= minN || !free.length) return null;
+    const w = free.map((i) => [(W.u === 'b' ? hxVMet(n[i].t, bpb) : 0.5) * (0.3 + (n[i].vel || 0.5)) + 0.04 * R(), i]).sort((p, q) => p[0] - q[0]);
+    const m = n.slice(); m.splice(w[0][1], 1); return m;
+  }
+  if (op === 'fi') {   // a passing tone in a gap between notes a third or more apart, on the grid, in the scale
+    const maxN = Math.ceil(o.A * (o.gd > 0.3 ? 1.75 : 1.5));
+    if (n.length >= maxN) return null;
+    const q = W.u === 'b' ? 0.25 : o.U / 16, s = n.map((x, i) => i).filter((i) => single(i) && !n[i].held), gaps = [];
+    for (let j = 0; j + 1 < s.length; j++) { const a = n[s[j]], b = n[s[j + 1]]; if (b.t - a.t >= 2 * q - 1e-6 && Math.abs(I(b) - I(a)) >= 2) gaps.push([a, b]); }
+    if (!gaps.length) return null;
+    const [a, b] = pick(gaps), t = Math.round((a.t + (b.t - a.t) / 2) / q) * q;
+    if (t <= a.t + 1e-6 || t >= b.t - 1e-6) return null;
+    if (W.u === 'b' && n.filter((x) => Math.floor(x.t) === Math.floor(t)).length >= 4) return null;   // (never more than four in a beat)
+    const D = I(b) - I(a), J = I(a) + Math.sign(D) * Math.ceil(Math.abs(D) / 2);
+    const x = hxVPitch(W, Object.assign({}, a, { t, held: false, d: a.d != null ? Math.min(a.d, (b.t - t) * 0.9) : null, vel: 0.75 * Math.min(a.vel || 0.6, b.vel || 0.6), cy: [], cf: [] }), J);
+    return n.concat([x]);
+  }
+  if (op === 'ok') {   // an octave up or down, inside the loop's range widened to an octave around its middle
+    if (!free.length) return null;
+    const i = pick(free), x = n[i], J = I(x) + (R() < 0.5 ? per : -per), mid = (o.lo + o.hi) / 2;
+    if (J < Math.min(o.lo, mid - per) || J > Math.max(o.hi, mid + per)) return null;
+    const y = hxVPitch(W, x, J); if (!(y.f >= 30 && y.f <= 4200)) return null;
+    const m = n.slice(); m[i] = y; return m;
+  }
+  if (op === 'orn') {   // a grace note (the upper or lower neighbour, a 32nd before) or a Wirbel (three strokes) on a weak note
+    const g = W.u === 'b' ? 0.125 : 0.06, cand = n.map((x, i) => i).filter((i) => single(i) && !n[i].held);
+    if (!cand.length) return null;
+    const i = pick(cand), x = n[i];
+    if (R() < 0.6 || !free.includes(i)) {
+      const t = x.t - g; if (t < 0 || n.some((y) => y.t > t - g && y.t < x.t - 1e-6)) return null;
+      return n.concat([hxVPitch(W, Object.assign({}, x, { t, held: false, d: x.d != null ? g * 0.8 : null, vel: (x.vel || 0.6) * 0.55, cy: [], cf: [] }), I(x) + (R() < 0.7 ? 1 : -1))]);
+    }
+    const nx = n.find((y) => y.t > x.t + eps), q = Math.min(nx ? nx.t - x.t : o.U - x.t, W.u === 'b' ? 0.5 : 0.3);
+    if (q < (W.u === 'b' ? 0.25 : 0.15)) return null;
+    const m = n.slice(); m.splice(i, 1, ...[0, 1, 2].map((k) => Object.assign({}, x, { t: x.t + (k * q) / 3, d: x.d != null || k ? (q / 3) * 0.85 : null, vel: (x.vel || 0.6) * [1, 0.7, 0.55][k], cy: k ? [] : x.cy, cf: k ? [] : x.cf })));
+    return m;
+  }
+  if (op === 'sw') {   // Wandern: a half bar swapped for another (this loop's, or the session's) with the same first and last degree
+    if (W.u !== 'b') return null;
+    const half = bpb === 4 ? 2 : bpb, H = Math.floor(o.U / half + 1e-6);
+    const seg = (list, a, b) => { const s = list.filter((x) => !x.held && x.t >= a - 1e-6 && x.t < b - 1e-6).sort((p, q) => p.t - q.t); return s.length ? { s, f: I(s[0]), l: I(s[s.length - 1]) } : null; };
+    const own = []; for (let h = 0; h < H; h++) { const s = seg(n, h * half, (h + 1) * half); if (s) own.push(Object.assign(s, { h })); }
+    if (!own.length) return null;
+    const tg = pick(own), mod = (v) => ((v % per) + per) % per;
+    const src = own.filter((s) => s.h !== tg.h).map((s) => ({ f: s.f, l: s.l, ns: s.s.map((x) => Object.assign({}, x, { t: x.t - s.h * half })) })).concat(o.segs || []);
+    const ok = src.filter((s) => mod(s.f) === mod(tg.f) && mod(s.l) === mod(tg.l) && (s.ns.length !== tg.s.length || s.ns.some((x, j) => Math.abs(x.t - (tg.s[j].t - tg.h * half)) > 1e-6 || hxVIdx(W, x) - s.f !== I(tg.s[j]) - tg.f)));
+    if (!ok.length) return null;
+    const s = pick(ok), sh = tg.f - s.f, a = tg.h * half;
+    const keep = n.filter((x) => x.held || x.t < a - 1e-6 || x.t >= a + half - 1e-6);
+    return keep.concat(s.ns.map((x) => hxVPitch(W, Object.assign({}, x, { t: a + x.t, held: false }), hxVIdx(W, x) + sh)));
+  }
+  return null;
+}
+// the hard limits of a pass: between 40 % (60 % unless making room) and 150 % (175 % when filling) of the anchor's notes,
+// never more than four in a beat
+function hxVOk(W, n, A, gd) {
+  if (n.length < Math.max(Math.min(2, A), Math.ceil(A * (gd < -0.3 ? 0.4 : 0.6))) || n.length > Math.ceil(A * (gd > 0.3 ? 1.75 : 1.5))) return false;
+  if (W.u === 'b') { const c = {}; for (const x of n) { const b = Math.floor(x.t + 1e-6); if ((c[b] = (c[b] || 0) + 1) > 4) return false; } }
+  return true;
+}
+// how well a candidate sits: no leaps beyond an octave and a step, never more than four notes in a beat, its count near
+// the anchor's
+function hxVFit(W, n, A) {
+  let f = 1; const per = hxVPer(W), s = n.slice().sort((a, b) => a.t - b.t);
+  for (let i = 1; i < s.length; i++) if (s[i].t - s[i - 1].t > 0.02 && Math.abs(hxVIdx(W, s[i]) - hxVIdx(W, s[i - 1])) > per + 1) f -= 0.2;
+  if (W.u === 'b') { const c = {}; for (const x of n) { const b = Math.floor(x.t + 1e-6); c[b] = (c[b] || 0) + 1; } if (Object.values(c).some((v) => v > 4)) f -= 0.4; }
+  if (n.length < 0.5 * A || n.length > 1.75 * A) f -= 0.5;
+  return f;
+}
+// one pass from the one before: o = {seed, lvl 2|3, wts, gd (the Gärtner's density: −1 thinner … +1 fuller), guard,
+// segs (Wandern: the session's half bars), bpb}. → {n, ops, chg (the notes that are new against the pass before), d}
+function hxVarStep(W, A, prev, o) {
+  const R = hxRng(o.seed), lv = HX_VLV[o.lvl >= 3 ? 3 : 2], hist = prev.hist || [];
+  const keep = (ops) => ({ n: prev.n, ops, chg: [], d: hxVDist(W, A, prev.n), hist: [prev.n].concat(hist).slice(0, 4) });
+  if (o.guard) return keep([]);   // (§6.4: three passes after a new Schicht nothing changes)
+  const ids = A.map((x) => hxVIdx(W, x)), lo = Math.min(...ids), hi = Math.max(...ids), t0 = Math.min(...A.map((x) => x.t));
+  const ctx = { A: A.length, lo, hi, t0, U: W.len, bpb: o.bpb || 4, gd: o.gd || 0, segs: o.lvl >= 3 ? o.segs || [] : [] };
+  const fin = (n, ops) => { hxVSort(n); const pk = new Set(prev.n.map((x) => hxVKey(W, x))); return { n, ops, chg: n.filter((x) => !pk.has(hxVKey(W, x))), d: hxVDist(W, A, n), hist: [prev.n].concat(hist).slice(0, 4) }; };
+  // the elastic pull: back toward the anchor with a chance that grows with the distance (less with Wandern)
+  const dPrev = hxVDist(W, A, prev.n);
+  if (dPrev > 0 && R() < clamp(dPrev * (1 - lv.s) * 1.6, 0, 0.85)) {
+    const half = W.u === 'b' ? ((o.bpb || 4) === 4 ? 2 : o.bpb || 4) : W.len, H = Math.max(1, Math.floor(W.len / half + 1e-6)), h = Math.floor(R() * H), a = h * half, b = a + half;
+    const inW = (x) => x.held || (x.t >= a - 1e-6 && x.t < b - 1e-6);
+    const n = prev.n.filter((x) => !inW(x)).concat(A.filter(inW).map((x) => Object.assign({}, x)));
+    if (hxVDist(W, A, n) < dPrev) return fin(n, ['ret']);
+    return fin(A.map((x) => Object.assign({}, x)), ['ret']);
+  }
+  if (R() < lv.stay) return keep([]);   // (a pass that stays: the loop breathes, it does not chatter)
+  const ops = HX_VOPS.filter((k) => (k !== 'sw' || o.lvl >= 3) && (k !== 'eu' || W.u === 'b'));
+  const dens = (k) => (k === 'th' ? (ctx.gd < 0 ? 1 + 2 * -ctx.gd : 1 - 0.8 * ctx.gd) : k === 'fi' ? (ctx.gd > 0 ? 1 + 2 * ctx.gd : 1 + 0.8 * ctx.gd) : 1);
+  const w = ops.map((k) => Math.max(0, HX_VW[k] * (o.wts && o.wts[k] != null ? o.wts[k] : 1) * dens(k))), tw = w.reduce((a, b) => a + b, 0);
+  if (!(tw > 0)) return keep([]);
+  const draw = () => { let r = R() * tw; for (let i = 0; i < ops.length; i++) { r -= w[i]; if (r <= 0) return ops[i]; } return ops[ops.length - 1]; };
+  const cands = [];
+  for (let c = 0; c < 16; c++) {
+    let m = prev.n.map((x) => Object.assign({}, x)); hxVSort(m);
+    const used = [], k = 1 + Math.floor(R() * lv.ops);
+    for (let j = 0; j < k; j++) { const op = draw(), r = hxVOp(op, W, m, ctx, R); if (r) { m = hxVSort(r); used.push(op); } }
+    if (used.length && hxVOk(W, m, A.length, ctx.gd)) cands.push({ n: m, ops: used });
+  }
+  if (!cands.length) return keep([]);
+  const past = [prev.n].concat(hist).slice(0, 4);
+  const sc = cands.map((c) => {
+    const cons = 1 - hxVDist(W, A, c.n), nov = past.reduce((a, p) => a + hxVDist(W, p, c.n), 0) / past.length, rep = past.some((p) => hxVDist(W, p, c.n) < 1e-9) ? 1 : 0;
+    return lv.a * cons + (1 - lv.a) * nov + 0.5 * hxVFit(W, c.n, A.length) - rep;
+  });
+  const mx = Math.max(...sc), ex = sc.map((s) => Math.exp((s - mx) / lv.T)), es = ex.reduce((a, b) => a + b, 0);
+  let r = R() * es, pi = 0; for (; pi < ex.length - 1; pi++) { r -= ex[pi]; if (r <= 0) break; }
+  return fin(cands[pi].n, cands[pi].ops);
+}
+// the session's half bars for Wandern: the other loops' notes in the same scale size (degrees, as they were played)
+function hxVSegs(L, W) {
+  const per = hxVPer(W), out = [], half = (L.bpb || 4) === 4 ? 2 : L.bpb || 4;
+  for (const X of hxLoopsLive()) {
+    if (X === L || X.bew) continue;
+    for (const id of X.sch) {
+      const S = HX.sch.get(id), V = S && S.wn; if (!V || V.u !== 'b' || hxVPer(V) !== per) continue;
+      for (let h = 0; h * half < V.len - 1e-6 && out.length < 64; h++) { const s = V.n.filter((x) => !x.held && x.t >= h * half - 1e-6 && x.t < (h + 1) * half - 1e-6).sort((a, b) => a.t - b.t); if (s.length) out.push({ f: hxVIdx(V, s[0]), l: hxVIdx(V, s[s.length - 1]), ns: s.map((x) => Object.assign({}, x, { t: x.t - h * half })) }); }
+    }
+  }
+  return out;
+}
+// a Schicht's notes as pass k plays them at Variieren or Wandern: the chain of passes from its anchor (each from the one
+// before, cached; one not known is grown from the nearest known before it, or from the anchor)
+function hxVarW(L, S, k, W0) {
+  let C = S.vc; if (!C || C.src !== W0.n) C = S.vc = { src: W0.n, m: new Map() };
+  const hit = C.m.get(k); if (hit) return hit.W;
+  let j = k - 1; while (j >= k - 32 && !C.m.has(j)) j--;
+  let prev = j >= k - 32 ? C.m.get(j) : null;
+  if (!prev) { j = k - 1; prev = { n: W0.n, hist: [] }; }
+  for (let q = j + 1; q <= k; q++) {
+    const r = hxVarStep(W0, W0.n, prev, { seed: hxWSeedK(S, q) ^ 0x51ed27, lvl: hxEigN(L), wts: HX.vw, gd: L.gdv || 0, guard: L.guardK != null && q < L.guardK, segs: hxEigN(L) >= 3 ? hxVSegs(L, W0) : [], bpb: L.bpb || 4 });
+    r.W = Object.assign({}, W0, { n: r.n }); C.m.set(q, r); prev = r;
+  }
+  for (const x of C.m.keys()) if (x < k - 40) C.m.delete(x);
+  return C.m.get(k).W;
+}
+// the notes a pass grows from: the Schicht's (its tools applied) – or the anchor's, when ✓ kept a varied pass
+function hxWBase(L, S) { const W = hxWNotesT(L, S); if (!W) return W; const a = S.anc; return a && a.vn && a.vn.length ? Object.assign({}, W, { n: a.vn }) : W; }
+// ✕ on a varied pass: the operators that made it count half for the rest of the session, the chain begins at the anchor
+function hxVarNein(L, kHeard, kFrom) {
+  const ops = new Set();
+  for (const id of L.sch) { const S = HX.sch.get(id), C = S && S.vc; if (!C) continue; const r = C.m.get(kHeard); if (r) for (const op of r.ops) if (op !== 'ret') ops.add(op); for (const x of [...C.m.keys()]) if (x >= kFrom) C.m.delete(x); C.m.set(kFrom, { n: C.src, ops: ['nein'], chg: [], d: 0, hist: [], W: null }); C.m.get(kFrom).W = null; }
+  for (const op of ops) HX.vw[op] = clamp((HX.vw[op] != null ? HX.vw[op] : 1) * 0.5, 0.05, 2);
+  for (const id of L.sch) { const S = HX.sch.get(id), C = S && S.vc, r = C && C.m.get(kFrom); if (r) { const W0 = hxWBase(L, S); r.W = W0 ? Object.assign({}, W0, { n: C.src }) : null; if (!r.W) C.m.delete(kFrom); } }
+  return [...ops];
+}
+
+// ---- roles (SPEC §12.3): a hand-tuned score per role from the notes – register, polyphony, length, density, the share on
+// the beats, range, how the source plays – with a confidence; the player's tap in the card overrides it. The same over the
+// last bars of live playing is the live role ----
+const HX_ROLES = ['bass', 'akkorde', 'melodie', 'flaeche', 'schlag'], HX_ROLEW = { bass: 'Bass', akkorde: 'Akkorde', melodie: 'Melodie', flaeche: 'Fläche', schlag: 'Schlag' };
+const hxSig = (x) => 1 / (1 + Math.exp(-x));
+const hxMidi = (f) => 69 + 12 * Math.log2(Math.max(1, f) / 440);
+// notes {t (beats), d (beats or null), f, vel, eng} over `len` beats
+function hxRoleFeat(ns, len) {
+  if (!ns.length) return null;
+  const m = ns.map((x) => hxMidi(x.f)).sort((a, b) => a - b), med = m[m.length >> 1], range = m[m.length - 1] - m[0];
+  const dur = ns.reduce((a, x) => a + (x.d != null ? Math.min(x.d, 8) : 0.4), 0) / ns.length;
+  let poly = 0; for (const x of ns) poly += ns.filter((y) => y.t <= x.t + 0.03 && (y.d != null ? y.t + y.d : y.t + 0.4) > x.t + 0.01).length; poly /= ns.length;
+  const dens = ns.length / Math.max(0.5, len), strong = ns.filter((x) => Math.abs(x.t - Math.round(x.t)) < 0.06).length / ns.length;
+  const c = {}; for (const x of ns) { const a = (ENG_META[x.eng] || {}).art || 'haelt'; c[a] = (c[a] || 0) + 1; }
+  const art = (c.schlaegt || 0) > (c.haelt || 0) ? 'schlaegt' : 'haelt';
+  return { med, range, dur, poly, dens, strong, art, vel: ns.reduce((a, x) => a + (x.vel || 0.6), 0) / ns.length };
+}
+function hxRoleScore(F) {
+  const s = {
+    bass: 2.4 * hxSig((50 - F.med) / 4) + 0.5 * hxSig((1.4 - F.poly) / 0.2) + 0.3 * F.strong - 0.6 * hxSig((F.poly - 1.8) / 0.2),
+    akkorde: 2.4 * hxSig((F.poly - 1.8) / 0.25) + 0.4 * hxSig((F.med - 48) / 5),
+    melodie: 1.1 * hxSig((1.4 - F.poly) / 0.2) + 1.1 * hxSig((F.med - 57) / 4) + 0.6 * hxSig((F.range - 5) / 2) + 0.4 * hxSig((F.dens - 0.6) / 0.3) - 0.9 * hxSig((F.dur - 2.5) / 0.6),
+    flaeche: 2 * hxSig((F.dur - 2) / 0.5) + (F.art === 'haelt' ? 0.5 : 0) + 0.4 * hxSig((0.7 - F.dens) / 0.25),
+    schlag: (F.art === 'schlaegt' ? 1.1 : 0) + 1.2 * hxSig((0.35 - F.dur) / 0.1) + 0.7 * hxSig((3 - F.range) / 1.5) + 0.5 * hxSig((F.dens - 1.2) / 0.4),
+  };
+  const r = HX_ROLES.slice().sort((a, b) => s[b] - s[a]);
+  return { role: r[0], conf: clamp((s[r[0]] - s[r[1]]) / Math.max(0.5, s[r[0]]), 0, 1), s };
+}
+// a loop's notes in beats (its first Schicht's for Wuchs, else what the ring shows)
+function hxRoleNotes(L) {
+  const out = []; let len = 0;
+  for (const id of L.sch) { const S = HX.sch.get(id), W = S && S.wn; if (!W || !W.n.length) continue; const k = W.u === 'b' ? 1 : tgBpm(hxNowT()) / 60; len = Math.max(len, W.len * k); for (const x of W.n) out.push({ t: x.t * k, d: x.d != null ? x.d * k : null, f: x.f, vel: x.vel, eng: x.eng }); }
+  if (!out.length && L.notes && L.notes.length) { const lb = hxTakt(L) ? L.d.beats : hxLen(L) * tgBpm(hxNowT()) / 60; len = lb; for (const x of L.notes) out.push({ t: x.ph * lb, d: x.d != null ? (x.d * tgBpm(hxNowT())) / 60 : null, f: x.f, vel: x.v, eng: x.eng }); }
+  return { ns: out, len };
+}
+function hxRoleOf(L) {
+  if (!L || L.bew) return null;
+  const mi = hxMi(L);
+  if (mi.rolle) return { role: mi.rolle, conf: 1, user: true };
+  const sig = L.sch.join(',') + '|' + (L.notes || []).length;
+  if (mi.rc && mi.rc.sig === sig) return mi.rc.r;
+  const { ns, len } = hxRoleNotes(L), F = hxRoleFeat(ns, len), r = F ? Object.assign(hxRoleScore(F), { F }) : null;
+  mi.rc = { sig, r }; return r;
+}
+const hxMi = (L) => L.mi || (L.mi = {});
+// the player's notes now (Gespielt – never a loop's, an answer's or the Bordun), in beats from t0
+function hxLiveNotes(t0, t1) {
+  const g = hxGrid(), b0 = g ? tgBeat(t0) : t0 * 2;
+  return hxNotes(t0, t1, 0, true).filter((e) => e.src !== 'bor' && e.t0 >= t0).map((e) => ({ t: (g ? tgBeat(e.t0) : e.t0 * 2) - b0, d: e.t1 != null ? (g ? tgBeat(e.t1) - tgBeat(e.t0) : (e.t1 - e.t0) * 2) : e.hold ? 1 : null, f: e.f, vel: e.vel, eng: e.eng, y: e.y0 }));
+}
+
+// ---- the Gärtner (SPEC §12.3): decisions at bar lines only, one bar of hysteresis, shown a bar ahead; Treu and Lebendig
+// loops only lower, rise or pause (never their notes), Variieren and Wandern also thin or fill. Never a loop the player
+// muted, never one he excluded, never the live sound ----
+const HX_GST = ['schaut', 'pflegt', 'antwortet'], HX_GSTW = { schaut: 'schaut zu', pflegt: 'pflegt', antwortet: 'antwortet' };
+const HXG = { E: 0, Es: 0, r0: null, want: 'still', bar: null, plan: null, tE: 0, live: null, liveF: null };
+const hxGdStep = () => Math.max(0, HX_GST.indexOf(P['hx.gaertner']));
+// the bar the Gärtner thinks in: the Takt's, else two seconds
+const hxGdBarLen = () => (hxGrid() ? (4 * 60) / tgBpm(hxNowT()) : 2);
+function hxGdBarAt(t) { if (hxGrid()) { const b = Math.floor(tgBeat(t) / 4 + 1e-9); return { i: b, t: tgTime(b * 4), next: tgTime((b + 1) * 4) }; } const i = Math.floor(t / 2); return { i, t: i * 2, next: (i + 1) * 2 }; }
+// the energy of the playing (SPEC §12.3): notes per second, velocity, register, polyphony, Ladung – over the last two bars
+function hxGdEnergy(now) {
+  const B = hxGdBarLen(), ns = hxLiveNotes(now - 2 * B, now + 0.01), F = hxRoleFeat(ns, (2 * B * (hxGrid() ? tgBpm(now) / 60 : 2)));
+  const lad = typeof LAD !== 'undefined' ? LAD.lvl || 0 : 0;
+  if (!F) return { E: 0.1 * lad, F: null, n: 0 };
+  const nps = ns.length / (2 * B);
+  return { E: clamp(0.4 * Math.min(1, nps / 5) + 0.25 * F.vel + 0.15 * clamp((F.med - 40) / 48, 0, 1) + 0.1 * Math.min(1, (F.poly - 1) / 2) + 0.1 * lad, 0, 1), F, n: ns.length };
+}
+// what the player does over the last bar: a role, or „still“ (no note began and none sounds)
+function hxGdLiveRole(t0, t1) {
+  const ns = hxLiveNotes(t0, t1), held = hxNotes(t0, t1, 0, true).some((e) => e.src !== 'bor' && e.t0 < t1 && (e.t1 == null ? e.hold : e.t1 > t1 - 0.05));
+  if (!ns.length && !held) return 'still';
+  if (ns.length < 2) return HXG.r0 && HXG.r0 !== 'still' ? HXG.r0 : 'melodie';
+  const F = hxRoleFeat(ns, (t1 - t0) * (hxGrid() ? tgBpm(t1) / 60 : 2));
+  return F ? hxRoleScore(F).role : 'still';
+}
+// may the Gärtner touch this loop now? (playing, not excluded, not a suggestion, not muted by the player, not right after a
+// new Schicht – §6.4 –, not under a ✕ of the last eight bars)
+function hxGdMay(L, b) {
+  if (!L || L.bew || L.state === 'weg' || L.slot == null) return false;
+  const mi = hxMi(L);
+  if (mi.gOff || mi.sugg || L.state !== 'spielt' || L.pendTo) return false;
+  if (!hxGuardOk(L)) return false;
+  if (mi.gHold != null && b < mi.gHold) return false;
+  return true;
+}
+// what each loop should do for the coming bar: {gt (its level × gt), gd (Variieren/Wandern: −1 thinner … +1 fuller), word}
+function hxGdTarget(L, want, E, F) {
+  const st = hxGdStep(), role = (hxRoleOf(L) || {}).role, eig = hxEigN(L);
+  let gt = 1, gd = 0, word = '';
+  if (st >= 1 && P['hx.gRollen']) {   // die anderen spielen
+    if (want === 'melodie' && role === 'melodie') { if (eig >= 2) { gd = -1; word = 'macht Platz'; } else { gt = dbToGain(-6); word = 'macht Platz'; } }
+    else if (want === 'bass' && role === 'bass') { gt = 0; word = 'macht Platz'; }
+    else if (want === 'akkorde' && role === 'akkorde') { if (eig >= 2) gd = -0.6; else gt = dbToGain(-4); word = 'macht Platz'; }
+  }
+  if (st >= 1 && P['hx.gPlatz'] && gt > 0) {   // Platz machen: dense playing thins (or lowers, in your register most), sparse lets fills in
+    if (eig >= 2) gd = clamp(gd + clamp((0.35 - E) * 2.5, -1, 1), -1, 1);
+    else if (E > 0.35) { const ov = F && role ? 1 - clamp(Math.abs(((hxRoleOf(L) || {}).F || {}).med - F.med) / 24 || 0, 0, 0.7) : 0.6, db = -4 * clamp((E - 0.35) / 0.45, 0, 1) * ov, q = Math.round(db / 2) * 2; if (q < 0) { gt *= dbToGain(q); word = word || 'macht Platz'; } }
+    if (eig >= 2 && Math.abs(gd) >= 0.3 && !word) word = gd > 0 ? 'füllt' : 'macht Platz';
+  }
+  return { gt: gt < 1e-3 ? 0 : gt, gd: Math.round(gd * 10) / 10, word };
+}
+// every bar line: the live role (held a bar), the energy, and a plan for the next bar line when anything changes
+function hxGdBar(B, now) {
+  const len = B.next - B.t, prevB = { t: B.t - len, next: B.t };
+  const r1 = hxGdLiveRole(prevB.t, prevB.next), held = HXG.r0 != null && r1 === HXG.r0;
+  HXG.r0 = r1;
+  if (held || HXG.want == null) HXG.want = r1;
+  const en = hxGdEnergy(B.t); HXG.Es = 0.55 * HXG.Es + 0.45 * en.E; HXG.E = en.E; HXG.liveF = en.F;
+  if (hxGdStep() >= 2) { hxWkBar(B, now); hxBeglAuto(); }
+  if (hxGdStep() < 1) { if (hxLoopsLive().some((L) => (L.gg != null && L.gg !== 1) || L.gdv)) hxGdReset(); return; }
+  const tB = B.next, bt = hxGrid() ? tgBeat(now) : now, items = [];
+  for (const L of hxLoopsLive()) {
+    if (!hxGdMay(L, bt)) continue;
+    const T = hxGdTarget(L, HXG.want, HXG.Es, en.F), g0 = L.gg != null ? L.gg : 1, d0 = L.gdv || 0;
+    if (Math.abs(gainToDb(Math.max(T.gt, 1e-4)) - gainToDb(Math.max(g0, 1e-4))) > 0.5 || Math.abs(T.gd - d0) >= 0.3) items.push({ key: L.key, gt: T.gt, gd: T.gd, word: T.word, g0, d0 });
+  }
+  if (!items.length) return;
+  HXG.plan = { t: tB, b: hxGrid() ? Math.round(tgBeat(tB)) : null, items };
+  if (!HX.chips || HX.chips.kind === 'gd') HX.chips = { kind: 'gd', until: performance.now() + Math.max(2500, (tB - now + 1.5) * 1000) };
+  hxSay('Gärtner: ' + items.map((x) => { const L = hxByKey(x.key); return L ? hxName(L) + ' ' + (x.gt === 0 ? 'pausiert' : x.word || 'wie gespielt') : ''; }).filter(Boolean).join(', ') + (HXG.plan.b != null ? ' ab Takt ' + hxBarNo(HXG.plan.b) : ''));
+  hxRailDirty(); hxCardDirty();
+}
+// the plan at its bar line: each level a 40-ms ramp (equal power is a gain ramp of one loop), the density for its next passes
+function hxGdApply(now) {
+  const G = HXG.plan; if (!G || now < G.t - 0.06) return;
+  HXG.plan = null;
+  for (const x of G.items) {
+    const L = hxByKey(x.key); if (!L || !hxGdMay(L, hxGrid() ? tgBeat(now) : now)) continue;
+    L.gg = x.gt; L.gdv = x.gd; L.stance = x.word || '';
+    hxGain(L.id, L.gain, Math.max(now + 0.005, G.t - 0.02), 0.04);
+    if (x.gd !== x.d0) for (const id of L.sch) { const S = HX.sch.get(id); if (S && S.vc) { const kN = hxPassK(L, Math.round(hxF(now))) + 2; for (const k of [...S.vc.m.keys()]) if (k >= kN) S.vc.m.delete(k); } }   // (passes not yet rendered grow with the new density)
+  }
+  if (HX.chips && HX.chips.kind === 'gd') HX.chips = null;
+  hxRailDirty(); hxCardDirty();
+}
+// ✕: the Gärtner's change of this loop – planned, or made – is taken back at once; for eight bars he leaves it alone
+function hxGdNein(L, quiet) {
+  const b = hxGrid() ? tgBeat(hxNowT()) : hxNowT(), mi = hxMi(L);
+  if (HXG.plan) { HXG.plan.items = HXG.plan.items.filter((x) => x.key !== L.key); if (!HXG.plan.items.length) { HXG.plan = null; if (HX.chips && HX.chips.kind === 'gd') HX.chips = null; } }
+  mi.gHold = b + (hxGrid() ? 32 : 16);
+  if ((L.gg != null && L.gg !== 1) || L.gdv) { L.gg = 1; L.gdv = 0; hxGain(L.id, L.gain, null, 0.03); for (const id of L.sch) { const S = HX.sch.get(id); if (S && S.vc) { const kN = hxPassK(L, Math.round(hxF(hxNowT()))) + 2; for (const k of [...S.vc.m.keys()]) if (k >= kN) S.vc.m.delete(k); } } }
+  L.stance = '';
+  if (!quiet) hxSay(hxName(L) + ': Gärtner zurückgenommen – acht Takte nicht');
+  hxRailDirty(); hxCardDirty();
+}
+// all of it back (the Gärtner set to „schaut zu“, a behaviour switched off): at once, the levels as the player left them
+function hxGdReset() {
+  HXG.plan = null; if (HX.chips && HX.chips.kind === 'gd') HX.chips = null;
+  for (const L of hxLoopsLive()) { if ((L.gg != null && L.gg !== 1) || L.gdv) { L.gg = 1; L.gdv = 0; hxGain(L.id, L.gain, null, 0.03); } L.stance = ''; }
+  hxRailDirty(); hxCardDirty();
+}
+// ✓ on the plan: keep it (the chips go; it happens at its bar line)
+function hxGdLob() { if (!HXG.plan) return false; if (HX.chips && HX.chips.kind === 'gd') HX.chips = null; hxSay('Gärtner: behalten'); hxRailDirty(); return true; }
+// the word under a ring: its stance (the Gärtner's, a suggestion, a Wiederkehr, an answer in its voice)
+function hxStance(L) {
+  const mi = L.mi || {};
+  if (mi.sugg) return 'Vorschlag';
+  if (HXW_K.wk && HXW_K.wk.key === L.key) return 'kehrt wieder';
+  if (HXA.cur && !HXA.cur.stop && HXA.cur.loop === L.key) return 'antwortet';
+  if (HXG.plan && HXG.plan.items.some((x) => x.key === L.key)) { const x = HXG.plan.items.find((y) => y.key === L.key); return x.gt === 0 ? 'pausiert gleich' : x.word || 'folgt'; }
+  if (L.gg === 0) return 'pausiert';
+  return L.stance || '';
+}
+
+// ---- Antworten (SPEC §12.3): the Ohr learns tokens (degree step, duration class, metric class) from everything the
+// player plays this session; a variable-order Markov model (orders 1–4, a contour fallback) and beam search write an answer
+// as long as the call (±1 bar), from the next beat, ending on a stable degree on a strong beat, never more than six
+// tokens copied in a row. Silent below 40 notes (or with the Handschrift's). It yields when the player plays again: the
+// sounding note rings out, no new one starts. Real voices (the field's sound, layer 2 or a melody loop's), into the
+// Hexenring's strip through the chain's copy – no tap hears them ----
+const HXA = { notes: [], tok: [], c: new Map(), sc: new Map(), g7: new Set(), lastId: 0, ph: null, cur: null, n: 0, hsN: 0, t: 0 };
+const HX_DC = [0.25, 0.5, 1, 2, 3];   // (a duration class's beats)
+const hxDcOf = (ioi) => (ioi <= 0.35 ? 0 : ioi <= 0.7 ? 1 : ioi <= 1.4 ? 2 : ioi <= 2.5 ? 3 : 4);
+const hxMcOf = (b) => { const m = hxVMet(b, 4); return m >= 0.9 ? 0 : m >= 0.7 ? 1 : m >= 0.5 ? 2 : 3; };
+const hxScPer = () => (N.free ? 12 : Math.max(1, Math.round((N.notes.length - 1) / Math.max(1, P['t.range']))));
+// a scale index of the field → its pitch (beyond the field's notes by octaves)
+function hxIdxF(I) { const per = hxScPer(); if (N.free) return N.base * ratioForSemi(I); if (I >= 0 && I < N.notes.length) return N.notes[I].f; const d = ((I % per) + per) % per, o = Math.floor(I / per); return N.notes[d].f * Math.pow(2, o); }
+// stable degrees: the root, the fifth and the third where the scale has them
+function hxStable(I) { const per = hxScPer(), d = ((I % per) + per) % per; if (N.free) return [0, 3, 4, 7].includes(d); if (d === 0) return true; const s = N.notes[d] ? N.notes[d].semi : null; return s != null && [3, 4, 7].some((x) => Math.abs(s - x) < 0.3); }
+function hxAntCount(map, ctx, tok, k) { let m = map.get(ctx); if (!m) map.set(ctx, (m = new Map())); m.set(tok, (m.get(tok) || 0) + (k || 1)); }
+function hxAntLearn(tok) {
+  const T = HXA.tok; T.push(tok);
+  for (let o = 0; o <= 4 && o < T.length; o++) { const ctx = T.slice(T.length - 1 - o, T.length - 1).join('|'); hxAntCount(HXA.c, ctx, tok); hxAntCount(HXA.sc, ctx, tok); }
+  if (T.length >= 7) HXA.g7.add(T.slice(-7).join('|'));
+  if (T.length > 6000) T.splice(0, 1000);
+  HXA.n++;
+}
+// the Ohr's side: new notes of the player into the corpus (a chord's top note is the line), the phrase, the yielding
+function hxAntIngest(now) {
+  const g = hxGrid(), evs = hxNotes(now - 4, now + 1, 0, false).filter((e) => e.id > HXA.lastId && e.src !== 'bor' && e.t0 <= now + 0.5);
+  for (const e of evs) {
+    HXA.lastId = Math.max(HXA.lastId, e.id);
+    if (e.deg == null) continue;
+    const per = hxScPer(), I = e.oct * per + e.deg, b = g ? tgBeat(e.t0) : e.t0 * 2, prv = HXA.notes[HXA.notes.length - 1];
+    if (prv && Math.abs(e.t0 - prv.t) < 0.03) { if (I > prv.I) { prv.I = I; prv.f = e.f; } prv.poly = (prv.poly || 1) + 1; continue; }
+    const x = { t: e.t0, b, I, f: e.f, vel: e.vel, y: e.y0, eng: e.eng, g };
+    if (prv && e.t0 - prv.t < 8) { const ioi = g && prv.g ? b - prv.b : (e.t0 - prv.t) * 2; hxAntLearn(clamp(I - prv.I, -7, 7) + ':' + hxDcOf(ioi) + ':' + (g ? hxMcOf(b) : 0)); x.tok = HXA.tok[HXA.tok.length - 1]; }
+    HXA.notes.push(x); if (HXA.notes.length > 2000) HXA.notes.splice(0, 500);
+    // the phrase: a new one after a rest; a note while an answer plays – it yields
+    if (!HXA.ph || e.t0 - HXA.ph.last > Math.max(0.3, 2 * (HXA.ph.mi || 0.5)) + 0.25) HXA.ph = { t0: e.t0, notes: [], last: e.t0, mi: 0.5, id: e.id, done: false };
+    const P0 = HXA.ph; P0.notes.push(x); P0.last = e.t0; if (P0.notes.length > 1) { const io = []; for (let i = 1; i < P0.notes.length; i++) io.push(P0.notes[i].t - P0.notes[i - 1].t); io.sort((a, b) => a - b); P0.mi = io[io.length >> 1]; }
+    if (HXA.cur && !HXA.cur.stop && e.t0 >= HXA.cur.t0 - 0.05) hxAntStop('du spielst');
+  }
+}
+// the next tokens after a context: the longest order that knows it, its counts as probabilities
+function hxAntDist(ctx) {
+  for (let o = Math.min(4, ctx.length); o >= 0; o--) { const m = HXA.c.get(ctx.slice(ctx.length - o).join('|')); if (m && m.size) { let s = 0; for (const v of m.values()) s += v; return [...m.entries()].map(([k, v]) => [k, v / s, o]); } }
+  return [];
+}
+// the answer: notes {b (beats from its start), I, d, vel} – o: {call (the phrase's notes), seed, lenB, b0 (the start's beat,
+// a musical beat or a pseudo one), strong(b)}
+function hxAntGen(o) {
+  const R = hxRng(o.seed), call = o.call, per = hxScPer(), ids = call.map((x) => x.I), lo = Math.min(...ids) - Math.ceil(per / 2), hi = Math.max(...ids) + Math.ceil(per / 2);
+  const ctx0 = call.map((x) => x.tok).filter(Boolean).slice(-4), lenB = Math.max(1, o.lenB), W = 8;
+  let beams = [{ toks: ctx0.slice(), all: HXA.tok.slice(-6), gen: [], I: ids[ids.length - 1], b: 0, lp: 0 }];
+  const done = [];
+  for (let step = 0; step < 48 && beams.length; step++) {
+    const next = [];
+    for (const B of beams) {
+      const dist = hxAntDist(B.toks).map(([k, p, ord]) => [k, p, ord, R()]).sort((a, b) => b[1] * (0.75 + 0.5 * b[3]) - a[1] * (0.75 + 0.5 * a[3])).slice(0, 6);
+      for (const [tok, p] of dist) {
+        const [iv, dc, mc] = tok.split(':').map(Number), first = !B.gen.length;
+        let ioi = first ? 0 : HX_DC[dc];
+        if (!first) for (const c of [ioi, ioi / 2, ioi * 2]) if (hxMcOf(o.b0 + B.b + c) === mc) { ioi = c; break; }
+        const nb = B.b + ioi, I = B.I + iv;
+        if (I < lo || I > hi || nb > lenB + 4 + 1e-6) continue;
+        const all = B.all.concat([tok]);
+        if (all.length >= 7 && HXA.g7.has(all.slice(-7).join('|'))) continue;   // (MaxOrder: never seven tokens as they were played)
+        const C = { toks: B.toks.concat([tok]).slice(-4), all: all.slice(-7), gen: B.gen.concat([{ b: nb, I }]), I, b: nb, lp: B.lp + Math.log(Math.max(1e-6, p)) };
+        if (nb >= lenB - 4 - 1e-6 && C.gen.length >= 2 && hxStable(I) && o.strong(o.b0 + nb)) done.push(Object.assign(C, { sc: C.lp / C.gen.length + 2 - 0.25 * Math.abs(nb - lenB) / 4 }));
+        else next.push(C);
+      }
+    }
+    beams = next.map((C) => [C, C.lp / C.gen.length + 0.05 * R()]).sort((a, b) => b[1] - a[1]).slice(0, W).map((x) => x[0]);
+    if (done.length >= W) break;
+  }
+  let best = done.sort((a, b) => b.sc - a.sc)[0];
+  if (!best) {   // (no ending found: the best line, closed on the nearest stable degree at the next strong beat)
+    const B = beams[0] || { gen: [], I: ids[ids.length - 1], b: -1 };
+    let b = Math.max(0, Math.ceil(B.b + 0.5)); while (!o.strong(o.b0 + b) && b < B.b + 8) b++;
+    let I = B.I; for (let s = 0; s <= per && !hxStable(I); s++) { if (hxStable(B.I - s)) { I = B.I - s; break; } if (hxStable(B.I + s)) { I = B.I + s; break; } }
+    best = { gen: B.gen.concat([{ b, I }]) };
+  }
+  const g = best.gen, vel = call.reduce((a, x) => a + (x.vel || 0.6), 0) / call.length;
+  return g.map((x, i) => ({ b: x.b, I: x.I, d: i + 1 < g.length ? clamp((g[i + 1].b - x.b) * 0.9, 0.2, 2) : 1.5, vel: clamp(vel * (i === g.length - 1 ? 0.9 : 0.8 + 0.2 * R()), 0.15, 1) }));
+}
+// the voice of an answer: the field's sound, its layer 2, or the newest melody loop's
+function hxAntVoice() {
+  const s = P['hx.gStimme'];
+  if (s === 'ebene' && P['v.layer'] && P['v.layer'] !== 'off' && ENGINES[P['v.layer']]) return { eng: P['v.layer'] };
+  if (s === 'schleife') { const L = hxLoopsLive().filter((X) => !X.bew && (hxRoleOf(X) || {}).role === 'melodie').sort((a, b) => b.made - a.made)[0]; if (L && ENGINES[L.eng]) return { eng: L.eng, loop: L.key }; }
+  return { eng: P['v.eng'] };
+}
+const hxAntOn = () => !!(HXA.cur && !HXA.cur.stop);
+// after a phrase: is it time to answer?
+function hxAntMaybe(now) {
+  const F = HXA.ph;
+  if (!F || F.done || HXA.cur || hxGdStep() < 2 || !P['hx.gAntw'] || HX.rec || HX.punch) return;
+  const gap = now - F.last;
+  if (gap < Math.max(0.3, 2 * F.mi)) return;
+  // LBDM-style: the rest after the last note against the phrase's own pace, a held or louder end
+  const s = gap / (gap + F.mi);
+  if (s < 0.6 || F.notes.length < 3) { if (gap > 6) F.done = true; return; }
+  if (hxNotes(now - 8, now + 0.01, 0, true).some((e) => e.src !== 'bor' && e.hold && e.t1 == null)) return;   // (a note still held: the phrase has not ended)
+  F.done = true;
+  if (HXA.n + HXA.hsN < 40) { hxSay('Gärtner hört zu – noch zu wenig Material zum Antworten'); return; }
+  hxAntStart(F, now);
+}
+function hxAntStart(F, now) {
+  const g = hxGrid(), call = F.notes.filter((x) => x.I != null);
+  if (call.length < 3) return null;
+  const beatS = g ? 60 / tgBpm(now) : clamp(F.mi, 0.2, 1), callB = g ? call[call.length - 1].b - call[0].b + 1 : (call[call.length - 1].t - call[0].t) / beatS + 1;
+  const tS = g ? tgTime(Math.ceil(tgBeat(now + 0.15) - 1e-9)) : now + 0.3, b0 = g ? Math.round(tgBeat(tS)) : 0;
+  const strong = (b) => hxVMet(b, 4) >= 0.7, seed = (F.id * 2654435761) >>> 0;
+  const gen = hxAntGen({ call: call.map((x) => Object.assign({}, x)), seed, lenB: Math.round(callB), b0, strong });
+  if (!gen.length) return null;
+  const V = hxAntVoice(), y = call.reduce((a, x) => a + (x.y != null ? x.y : 0.5), 0) / call.length;
+  const at = (b) => (g ? tgTime(b0 + b) : tS + b * beatS);
+  const notes = gen.map((x) => ({ t: at(x.b), t1: at(x.b + x.d), f: hxIdxF(x.I), I: x.I, vel: x.vel, y, eng: V.eng, done: false }));
+  HXA.cur = { notes, i: 0, t0: tS, end: notes[notes.length - 1].t1 + 0.5, stop: false, loop: V.loop || null, eng: V.eng, n: notes.length, call: call.length };
+  HXA.last = HXA.cur;
+  hxWakeRing();
+  for (const [i, x] of notes.entries()) hxKnAdd('ant:' + F.id + ':' + i, x.f, x.t, Math.max(now, x.t - hxGdBarLen()), 'ant', i ? 'ant:' + F.id + ':' + (i - 1) : null);
+  if (!HX.chips) HX.chips = { kind: 'ant', until: performance.now() + (HXA.cur.end - now + 1) * 1000 };
+  hxSay('Gärtner antwortet: ' + notes.length + ' Töne'); hxRailDirty();
+  return HXA.cur;
+}
+function hxAntStop(why) {
+  const C = HXA.cur; if (!C || C.stop) return;
+  C.stop = true; for (const [k, b] of HX.kn) if (b.kind === 'ant' && b.t > hxNowT()) HX.kn.delete(k);
+  if (HX.chips && HX.chips.kind === 'ant') HX.chips = null;
+  if (why) hxSay('Antwort endet – ' + why);
+  hxRailDirty();
+}
+// the answer's notes, scheduled ahead as the Puls's are (real voices, a loop's: they give way before any live note)
+function hxAntPlay(now, horizon) {
+  const C = HXA.cur; if (!C) return;
+  if (C.stop || now > C.end) { if (now > C.end) { HXA.cur = null; if (HX.chips && HX.chips.kind === 'ant') HX.chips = null; hxRailDirty(); } else if (C.stop) HXA.cur = null; return; }
+  while (C.i < C.notes.length && C.notes[C.i].t < horizon) {
+    const n = C.notes[C.i++]; if (n.t < now - 0.01) continue;
+    const E = ENGINES[n.eng]; if (!E) continue;
+    hxOut1();
+    const o = { pan: 0, bus: hxChain('fx1').in, loop: true, hxSrc: 'hxr' }, gate = Math.max(0.05, n.t1 - n.t);
+    n.v = E.sustain ? playNote(n.eng, n.t, n.f, n.y, n.vel, Object.assign(o, { burst: true, gate })) : hit(n.eng, n.t, n.f, n.y, n.vel, o);
+  }
+}
+// Ruhe: the Hexenring's way to the master open before an answer sounds (no Schleife may exist)
+function hxWakeRing() { if (IDLE.on) idleWake(); if (IDLE.hxOff) hxGates(true); IDLE.hxT = null; }
+
+// ---- Klangverwandtschaft (SPEC §12.3): Sethares's roughness over the partials of the sources really playing. HX_PART:
+// each source's ten strongest partials (ratio to the fundamental, amplitude re the strongest), measured once from the
+// Werk-Rahmen's level-3 render of a 220-Hz note (dev/tests/hexenring/part.js) ----
+const HX_PART = {};   // (filled below from the measured table)
+const HX_PARTH = [[1, 1], [2, 0.5], [3, 0.33], [4, 0.25], [5, 0.2], [6, 0.17], [7, 0.14], [8, 0.12]];   // (a harmonic tone: for what was not measured)
+const hxPart = (k) => HX_PART[k] || HX_PARTH;
+function hxRough(f1, p1, f2, p2) {
+  let d = 0;
+  for (const [ra, aa] of p1) for (const [rb, ab] of p2) {
+    const fa = f1 * ra, fb = f2 * rb, lo = Math.min(fa, fb), df = Math.abs(fa - fb), s = 0.24 / (0.0207 * lo + 18.96);
+    d += Math.min(aa, ab) * (Math.exp(-3.5 * s * df) - Math.exp(-5.75 * s * df));
+  }
+  return d;
+}
+
+// ---- Begleiten (SPEC §12.3): from a melody loop, a Viterbi path over „Klangfelder“ (2–4 tones of the scale) per bar –
+// melody tones in the field on strong beats, little roughness against the melody's own partials, smooth voice leading,
+// fifths and the player's own progressions (Handschrift), the root at the end. Bass (roots on 1 and 3, an approach note
+// before a change) and chords (voice-led, held), rendered in the Werk-Rahmen, offered as dashed, silent suggestions ----
+const HX_BEGL_CH = ['boe', 'neb', 'stm', 'hrz', 'obt', 'glt', 'hlm', 'sai', 'klb'];
+function hxBeglFields(per) {
+  const F = [], seen = new Set();
+  for (let r = 0; r < per; r++) for (const sh of [[0, 2, 4], [0, 4], [0, 2, 4, 6]]) {
+    const pcs = [...new Set(sh.map((x) => (r + x) % per))]; if (pcs.length < 2) continue;
+    const k = r + ':' + pcs.slice().sort((a, b) => a - b).join(','); if (seen.has(k)) continue; seen.add(k);
+    F.push({ r, pcs, n: sh.length });
+  }
+  return F;
+}
+// a pitch of degree d of key K (its own ratios) in the octave nearest f
+function hxKeyF(K, d, near) {
+  const per = K.free ? 12 : K.per, dd = ((d % per) + per) % per, base = 261.63 * Math.pow(2, (K.root || 0) / 12) / 2;
+  const r = K.free || !K.rat ? Math.pow(2, dd / 12) : K.rat[dd], f0 = base * r, o = Math.round(Math.log2(near / f0));
+  return f0 * Math.pow(2, o);
+}
+// the plan: W the melody's notes (beats), its key; → {fields per bar, chEng, bassEng}
+function hxBeglPlan(W, o = {}) {
+  const K = W.key, per = K.free ? 12 : K.per, bpb = o.bpb || 4, bars = Math.max(1, Math.round(W.len / bpb)), F = hxBeglFields(per);
+  const mel = W.n.map((x) => ({ t: ((x.t % W.len) + W.len) % W.len, d: x.d != null ? x.d : 0.5, pc: (((x.deg || 0) % per) + per) % per, f: x.f, eng: x.eng }));
+  const mEng = (() => { const c = {}; for (const x of mel) c[x.eng] = (c[x.eng] || 0) + 1; return Object.keys(c).sort((a, b) => c[b] - c[a])[0]; })();
+  const chE = o.chEng ? [o.chEng] : HX_BEGL_CH.filter((k) => ENGINES[k] && k !== mEng);
+  const voice = (fl, near) => fl.pcs.map((pc) => hxKeyF(K, pc, near || 262));
+  // roughness of a field (voiced around 262 Hz) against the bar's melody notes, by the sources' partials
+  const rough = (fl, b, eng) => { let s = 0; const vs = voice(fl); for (const x of mel) if (x.t >= b * bpb && x.t < (b + 1) * bpb) for (const f of vs) s += Math.min(2, x.d) * hxRough(x.f, hxPart(x.eng), f, hxPart(eng)); return s; };
+  const hp = o.prog || {};
+  const best = { tot: Infinity };
+  for (const ce of chE) {
+    // emission per bar and field
+    const em = []; let rmax = 1e-9; const rs = [];
+    for (let b = 0; b < bars; b++) { rs.push(F.map((fl) => rough(fl, b, ce))); rmax = Math.max(rmax, ...rs[b]); }
+    for (let b = 0; b < bars; b++) em.push(F.map((fl, j) => {
+      let s = 0, w = 0; for (const x of mel) if (x.t >= b * bpb - 1e-6 && x.t < (b + 1) * bpb - 1e-6) { const st = hxVMet(x.t, bpb) >= 0.7, ww = Math.min(2, x.d) * (st ? 2 : 1); w += ww; s += fl.pcs.includes(x.pc) ? ww : st ? -0.7 * ww : -0.1 * ww; }
+      return (w ? s / w : 0) - 0.6 * (rs[b][j] / rmax) + (fl.n === 3 ? 0.05 : 0);
+    }));
+    const semi = (pc) => (K.free || !K.rat ? pc : 12 * Math.log2(K.rat[pc]));
+    const tr = (a, c) => {
+      const va = voice(a), vc = voice(c); let mv = 0; for (const f of vc) mv += Math.min(...va.map((g) => Math.abs(12 * Math.log2(f / g))));
+      const dr = ((Math.round(semi(c.r) - semi(a.r)) % 12) + 12) % 12, common = c.pcs.filter((p) => a.pcs.includes(p)).length;
+      const hs = hp[a.r + '>' + c.r] || 0, ht = Object.values(hp).reduce((x, y) => x + y, 0);
+      return -0.06 * mv + 0.15 * common + (dr === 5 || dr === 7 ? 0.4 : dr === 0 ? 0.1 : dr === 2 || dr === 10 ? 0.15 : 0) + (ht ? 0.3 * Math.log((hs + 1) / (ht + per)) : 0);
+    };
+    // Viterbi
+    let V = F.map((fl, j) => em[0][j] + (fl.r === 0 ? 0.3 : 0)), bp = [];
+    for (let b = 1; b < bars; b++) {
+      const nV = [], nb = [];
+      for (let j = 0; j < F.length; j++) { let bv = -Infinity, bi = 0; for (let i = 0; i < F.length; i++) { const v = V[i] + tr(F[i], F[j]); if (v > bv) { bv = v; bi = i; } } nV.push(bv + em[b][j] + (b === bars - 1 && F[j].r === 0 ? 0.8 : 0)); nb.push(bi); }
+      V = nV; bp.push(nb);
+    }
+    if (bars === 1) V = V.map((v, j) => v + (F[j].r === 0 ? 0.5 : 0));
+    let j = V.indexOf(Math.max(...V)); const path = [j]; for (let b = bars - 2; b >= 0; b--) { j = bp[b][j]; path.unshift(j); }
+    const totR = path.reduce((a, jj, b) => a + rs[b][jj], 0), score = Math.max(...V);
+    // (the source: the one whose chords stand quietest against the melody – a roughness of the whole path, the score's own)
+    const key = totR - 0.02 * score;
+    if (key < best.tot) Object.assign(best, { tot: key, fields: path.map((jj) => F[jj]), chEng: ce, rough: totR });
+  }
+  return Object.assign(best, { per, bars, bpb, mEng });
+}
+// the parts: bass notes and chord notes in beats (W's own records: deg/oct in its key, f)
+function hxBeglNotes(W, plan) {
+  const K = W.key, per = plan.per, bpb = plan.bpb, mk = (t, d, pc, near, vel, eng) => { const f = hxKeyF(K, pc, near); return { t, d, eng, f, deg: pc, oct: Math.round(Math.log2(f / hxKeyF(K, pc, 262))), alt: 0, y0: 0.45, vel, pan: 0, src: 'fin', burst: false, gate: null, hold: !!(ENGINES[eng] && ENGINES[eng].sustain), cy: [], cf: [], held: false }; };
+  const bass = [], ch = []; let prevV = null;
+  plan.fields.forEach((fl, b) => {
+    const a = b * bpb, nx = plan.fields[(b + 1) % plan.fields.length];
+    bass.push(mk(a, bpb === 4 ? 1.8 : bpb - 0.2, fl.r, 70, 0.75, plan.bassEng));
+    if (bpb === 4) bass.push(mk(a + 2, nx.r !== fl.r ? 1.3 : 1.8, fl.r, 70, 0.6, plan.bassEng));
+    if (bpb === 4 && nx.r !== fl.r) { const up = ((nx.r - fl.r + per) % per) <= per / 2, pc = (nx.r + (up ? -1 : 1) + per) % per; bass.push(mk(a + 3.5, 0.45, pc, 70, 0.55, plan.bassEng)); }
+    // chords: each tone placed nearest the voice it follows (the first chord around middle C)
+    const fs = fl.pcs.map((pc, i) => { const near = prevV ? prevV[Math.min(i, prevV.length - 1)] : 262 * Math.pow(2, i * 0.25); return [pc, hxKeyF(K, pc, near)]; });
+    prevV = fs.map(([, f]) => f).sort((x, y) => x - y);
+    for (const [pc, f] of fs) ch.push(Object.assign(mk(a, bpb - 0.08, pc, f, 0.5, plan.chEng), { pan: 0 }));
+  });
+  return { bass, ch };
+}
+// render a note list (beats over the loop's pass) in the Werk-Rahmen, as a Wuchs pass is – the loop's tempo and key
+async function hxBeglRender(Lm, notes, lenB, seed) {
+  const k = hxPassK(Lm, Math.round(hxF(hxNowT()))), lenF = hxPassF(Lm, k + 1) - hxPassF(Lm, k), sec = (b) => (b / lenB) * (lenF / SR);
+  const p = Object.assign({}, P, { 'mov.drift': 0 }), q = hxWQ(Lm);
+  const ns = notes.map((n) => ({ t0: sec(n.t), t1: n.d != null ? sec(n.t + n.d) : null, eng: n.eng, f: n.f, y0: n.y0, vel: n.vel, pan: n.pan || 0, src: 'fin', burst: false, gate: null, hold: n.hold, curves: { y: [], f: [] } }));
+  const m = await hxwCall('wuchs', { sr: SR, dur: lenF / SR + HX_WTAIL, body: lenF / SR, notes: ns, prm: [], P: p, q, seed, chain: null, mask: ['fin', 'eb2', 'rgn', 'gsp'], jrg: { age: A.jrgAge || 0, season: A.season || 0 } });
+  if (!m || m.err || !m.L) return null;
+  const n = hxWTrim(m.L, m.R, lenF), [aud] = hxChunks(n);
+  for (let i = 0; i < n; i++) { const c = aud[Math.floor(i / HX_CH)], j = i % HX_CH; c[0][j] = m.L[i]; c[1][j] = m.R[i]; }
+  if (n >= m.L.length) hxWFadeEnd(aud, n, lenF);
+  return { aud, n, len: lenF };
+}
+// offer the accompaniment of a melody loop: two silent, dashed suggestions (bass, chords) in free places – one tap on a
+// ring plays it; „Verwerfen“ in its card or ↶ takes it away
+async function hxBegleiten(Lm, o = {}) {
+  if (!Lm || Lm.bew || !hxTakt(Lm)) { if (!o.quiet) toast('Begleiten braucht eine Schleife im Takt mit Noten.'); return null; }
+  const S = Lm.sch.map((id) => HX.sch.get(id)).find((x) => hxWCan(x));
+  const W = S && hxWBase(Lm, S);
+  if (!W || W.u !== 'b' || W.n.length < 2) { if (!o.quiet) toast('Diese Schleife hat keine Melodie, zu der der Gärtner begleiten kann.'); return null; }
+  if (!hxwOk()) { if (!o.quiet) toast('Begleiten braucht den Werk-Rahmen – in dieser Ansicht gibt es ihn nicht.'); return null; }
+  const free = []; for (let i = 0; i < HX_SLOTS && free.length < 2; i++) if (!HX.slot[i] && !(HX.rec && HX.rec.slot === i)) free.push(i);
+  if (free.length < 2) { if (!o.quiet) toast('Für die Begleitung braucht es zwei freie Plätze.'); return null; }
+  const mi = hxMi(Lm); if (mi.beglBusy) return null; mi.beglBusy = true;
+  try {
+    const bassL = hxLoopsLive().find((X) => X !== Lm && (hxRoleOf(X) || {}).role === 'bass' && ENGINES[X.eng]);
+    const chL = hxLoopsLive().find((X) => X !== Lm && ['akkorde', 'flaeche'].includes((hxRoleOf(X) || {}).role) && ENGINES[X.eng]);
+    const plan = hxBeglPlan(W, { bpb: Lm.bpb || 4, chEng: o.chEng || (chL ? chL.eng : null), prog: HX.hs && P['hx.hand'] === 'an' ? HX.hs.prog : null });
+    plan.bassEng = o.bassEng || (bassL ? bassL.eng : ENGINES.amo ? 'amo' : P['v.eng']);
+    const parts = hxBeglNotes(W, plan), seed = ((Math.random() * 2147483646) | 0) + 1, lenB = Lm.d.beats;
+    hxSay('Gärtner schreibt eine Begleitung …');
+    const [rb, rc] = await Promise.all([hxBeglRender(Lm, parts.bass, lenB, seed), hxBeglRender(Lm, parts.ch, lenB, seed + 1)]);
+    if (!rb || !rc || hxByKey(Lm.key) !== Lm) { if (!o.quiet) toast('Die Begleitung ließ sich nicht spielen.'); return null; }
+    for (const p of [rb, rc]) if (!hxMemOk(p.n)) return null;
+    const made = [];
+    for (const [i, part, r, kind, eng] of [[0, parts.bass, rb, 'bass', plan.bassEng], [1, parts.ch, rc, 'akkorde', plan.chEng]]) {
+      const slot = free[i]; if (HX.slot[slot]) continue;
+      const fs = part.map((x) => Math.log2(x.f)), lo = Math.min(...fs), hi = Math.max(...fs);
+      const notesR = part.map((x) => ({ ph: clamp(x.t / lenB, 0, 0.9999), x: (hxDeg(x.f).x != null ? hxDeg(x.f).x : 0.5), y: 0.45, r: hi > lo ? (Math.log2(x.f) - lo) / (hi - lo) : 0.5, v: x.vel, d: x.d, deg: x.deg, oct: x.oct, src: 'fin', eng: x.eng, f: x.f }));
+      const wn = { u: 'b', len: lenB, key: W.key, sd: 0, lanes: [], n: part };
+      const sn = { key: hxKey('l'), slot, d: { lock: 'takt', b0: Lm.d.b0, beats: Lm.d.beats, L: r.len, ph0: 0 }, bpb: Lm.bpb || 4, notes: notesR, eng, gain: kind === 'bass' ? 0.9 : 0.7, src: 0, bpm: Lm.bpm, state: 'stumm', folgt: true, taumeln: true, eig: 'treu',
+        sch: [{ key: hxKey('s'), len: r.len, pre: 0, n: r.n, cut: null, aus: { off: r.len, len: Math.max(0, r.n - r.len) }, join: 'ola', X: Math.round(0.01 * SR), rho: 0, gain: 1, mute: false, kind: 'begleit', group: 0, sr: SR, aud: r.aud, chain: false, wn, wseed: seed + i }],
+        wwhy: {}, ton: 'diatonisch', klang: 'eigen', mi: { sugg: kind, from: Lm.key, rolle: kind } };
+      const L = hxRebuild(sn, { state: 'stumm', fokus: false });
+      if (L) made.push(L.key);
+    }
+    if (!made.length) return null;
+    mi.begl = true;
+    hxHist({ kind: 'neu', label: 'Begleitung zu ' + hxName(Lm), snaps: [], undo() { this.snaps = []; for (const k of made) { const X = hxByKey(k); if (X) { this.snaps.push(hxSnap(X)); hxDrop(X); } } }, redo() { for (const s of this.snaps) hxRebuild(s, { state: 'stumm', fokus: false }); } });
+    if (P['hx.hand'] === 'an') for (let b = 1; b < plan.fields.length; b++) { const k = plan.fields[b - 1].r + '>' + plan.fields[b].r; HXH.prog[k] = (HXH.prog[k] || 0) + 1; }
+    hxSay('Begleitung vorgeschlagen: ' + made.length + ' Schleifen, stumm – tippe ihren Ring');
+    toast('Begleitung zu ' + hxName(Lm) + ': Bass (' + (ENG_NAME[plan.bassEng] || plan.bassEng) + ') und Akkorde (' + (ENG_NAME[plan.chEng] || plan.chEng) + '), stumm. Ein Tipp auf einen Ring spielt ihn.', 4500, { label: 'Verwerfen', fn: () => { for (const k of made) { const X = hxByKey(k); if (X && hxMi(X).sugg) hxDrop(X); } } });
+    hxCardDirty(); hxRailDirty();
+    return { made, plan };
+  } finally { mi.beglBusy = false; }
+}
+// at „antwortet“: a melody loop that has played two passes gets its accompaniment offered once (free places permitting)
+function hxBeglAuto() {
+  if (!P['hx.gBegl'] || !hxwOk()) return;
+  for (const L of hxLoopsLive()) {
+    const mi = hxMi(L);
+    if (mi.begl || mi.sugg || mi.beglBusy || L.bew || L.state !== 'spielt' || !hxTakt(L) || L.k < 2) continue;
+    const r = hxRoleOf(L); if (!r || r.role !== 'melodie') continue;
+    if (HX.slot.filter((x) => !x).length < 2) return;
+    mi.begl = true; hxBegleiten(L, { quiet: true });
+    return;
+  }
+}
+// a suggestion taken: it is a loop like any other from now on
+function hxSuggTake(L) { const mi = hxMi(L); if (!mi.sugg) return; mi.sugg = null; hxSaveMeta(L.id); hxSay(hxName(L) + ': Vorschlag übernommen'); hxRailDirty(); hxCardDirty(); }
+
+// ---- Wiederkehr (SPEC §12.3): a loop marked „darf wiederkehren“ that rests gathers activation when live phrases match its
+// motif (steps and metric places, the longest common run); it halves every eight bars; over the threshold it comes back at
+// the next four-bar line, announced a bar ahead (a ring forms at the field's edge; ✕ refuses). Never a loop the player
+// muted in the last eight bars ----
+const HXW_K = { wk: null };
+function hxWkTok(I0, I1, b1) { return clamp(I1 - I0, -7, 7) + ':' + hxMcOf(b1); }
+function hxWkSeq(L) {
+  const mi = hxMi(L); if (mi.wkSeq && mi.wkSeq.src === L.sch.join(',')) return mi.wkSeq.s;
+  const S = L.sch.map((id) => HX.sch.get(id)).find((x) => x && x.wn && x.wn.u === 'b'); if (!S) return null;
+  const W = S.wn, ns = W.n.filter((x) => !x.held).sort((a, b) => a.t - b.t), top = [];
+  for (const x of ns) { const p = top[top.length - 1]; if (p && Math.abs(p.t - x.t) < 0.03) { if (hxVIdx(W, x) > p.I) p.I = hxVIdx(W, x); } else top.push({ t: x.t, I: hxVIdx(W, x) }); }
+  const s = []; for (let i = 0; i < top.length * 2; i++) { const a = top[i % top.length], b = top[(i + 1) % top.length]; s.push(hxWkTok(a.I, b.I, b.t)); }   // (cyclic: twice round)
+  mi.wkSeq = { src: L.sch.join(','), s }; return s;
+}
+function hxWkMatch(live, seq) { let best = 0; for (let i = 0; i < live.length; i++) for (let j = 0; j < seq.length; j++) { let k = 0; while (i + k < live.length && j + k < seq.length && live[i + k] === seq[j + k]) k++; if (k > best) best = k; } return best; }
+function hxWkBar(B, now) {
+  if (!P['hx.gWk'] || !hxGrid()) return;
+  const b = tgBeat(now), lv = HXA.notes.filter((x) => x.g && x.t > now - 4 * hxGdBarLen()), live = [];
+  for (let i = 1; i < lv.length; i++) live.push(hxWkTok(lv[i - 1].I, lv[i].I, lv[i].b));
+  for (const L of hxLoopsLive()) {
+    const mi = hxMi(L); if (!mi.wk || L.bew || !hxTakt(L)) continue;
+    mi.act = (mi.act || 0) * Math.pow(0.5, 1 / 8);
+    if (L.state === 'spielt' || (mi.uMute != null && b - mi.uMute < 32) || (mi.wkHold != null && b < mi.wkHold)) { if (L.state === 'spielt') mi.act = 0; continue; }
+    const seq = hxWkSeq(L); if (!seq || live.length < 3) continue;
+    const m = hxWkMatch(live.slice(-12), seq); if (m >= 3) mi.act += (m - 2) * 0.5;
+    if (mi.act >= 1 && !HXW_K.wk) {
+      const b4 = Math.ceil((b + 4) / 16 - 1e-9) * 16, t4 = tgTime(b4);   // (the next four-bar line at least a bar away)
+      HXW_K.wk = { key: L.key, t: t4, b: b4, tA: t4 - hxGdBarLen() };
+      mi.act = 0;
+      hxKnAdd('wk:' + L.key + ':' + b4, null, t4, Math.max(now, t4 - hxGdBarLen()), 'wk', null, L.slot);
+      if (!HX.chips || HX.chips.kind === 'gd') HX.chips = { kind: 'wk', until: performance.now() + (t4 - now + 1) * 1000 };
+      hxSay(hxName(L) + ' kehrt wieder ab Takt ' + hxBarNo(b4)); hxRailDirty();
+    }
+  }
+}
+function hxWkTick(now) {
+  const K = HXW_K.wk; if (!K) return;
+  const L = hxByKey(K.key);
+  if (!L || L.state === 'spielt') { HXW_K.wk = null; hxRailDirty(); return; }
+  if (now < K.t - 0.08) return;
+  HXW_K.wk = null; HX.gdAct = true;
+  try {
+    if (L.state === 'angehalten') { hxState(L.id, 'spielt', K.t, { b0: K.b, X: 0.01 }); L.d.b0 = K.b + TG.o; }
+    else hxState(L.id, 'spielt', K.t, { X: 0.03 });
+  } finally { HX.gdAct = false; }
+  L.stance = 'kehrt wieder'; setTimeout(() => { if (L.stance === 'kehrt wieder') { L.stance = ''; hxRailDirty(); } }, 4000);
+  if (HX.chips && HX.chips.kind === 'wk') HX.chips = null;
+  hxSay(hxName(L) + ' ist wieder da'); hxRailDirty(); hxCardDirty();
+}
+function hxWkNein() { const K = HXW_K.wk; if (!K) return false; HXW_K.wk = null; const L = hxByKey(K.key); if (L) hxMi(L).wkHold = tgBeat(hxNowT()) + 32; for (const [k, b] of HX.kn) if (b.kind === 'wk') HX.kn.delete(k); if (HX.chips && HX.chips.kind === 'wk') HX.chips = null; hxSay('Wiederkehr abgelehnt'); hxRailDirty(); return true; }
+
+// ---- Puls lernt (SPEC §12.3): the Euclidean rhythm (8, 12 or 16 steps a bar; pulses, rotation) nearest a bass or
+// percussion loop's onsets (Hamming distance over its most frequent bar), its most frequent note – written into a lane
+// of the Puls on request (↶ in the patch's history) ----
+function hxPulsFit(L) {
+  const S = L && L.sch.map((id) => HX.sch.get(id)).find((x) => x && x.wn && x.wn.u === 'b');
+  if (!S) return null;
+  const W = S.wn, bpb = L.bpb || 4, bars = Math.max(1, Math.round(W.len / bpb)), ons = W.n.filter((x) => !x.held).map((x) => x.t);
+  if (ons.length < 2) return null;
+  let best = null;
+  for (const [steps, div] of [[8, '0.5'], [12, '0.3333'], [16, '0.25']]) {
+    const st = bpb / steps, pats = {};
+    for (let b = 0; b < bars; b++) { const p = new Array(steps).fill(0); for (const t of ons) if (t >= b * bpb - st / 2 && t < (b + 1) * bpb - st / 2) p[clamp(Math.round((t - b * bpb) / st), 0, steps - 1)] = 1; const k = p.join(''); pats[k] = (pats[k] || 0) + 1; }
+    const pat = Object.keys(pats).sort((a, b) => pats[b] - pats[a])[0].split('').map(Number);
+    const err = ons.reduce((a, t) => a + Math.abs(t / st - Math.round(t / st)), 0) / ons.length;   // (how well the grid itself fits)
+    for (let k = 1; k <= steps; k++) for (let r = 0; r < steps; r++) {
+      const e = euclid(steps, k, r); let h = 0; for (let i = 0; i < steps; i++) if (!!e[i] !== !!pat[i]) h++;
+      const sc = h / steps + 0.6 * err + 0.01 * (steps / 16);
+      if (!best || sc < best.sc) best = { steps, puls: k, rot: r, div, ham: h, sc, pat: pat.join('') };
+    }
+  }
+  const c = {}; for (const x of W.n) { const I = hxVIdx(W, x); c[I] = (c[I] || 0) + 1; }
+  const I = +Object.keys(c).sort((a, b) => c[b] - c[a])[0], per = hxVPer(W), len = N.free ? 12 * P['t.range'] + 1 : N.notes.length;
+  let oct = 0, deg = I; while (deg >= len && oct < 2) { deg -= per; oct++; } while (deg < 0 && oct > -2) { deg += per; oct--; }
+  const ec = {}; for (const x of W.n) ec[x.eng] = (ec[x.eng] || 0) + 1;
+  return Object.assign(best, { deg: clamp(deg, 0, Math.max(0, len - 1)), oct, eng: Object.keys(ec).sort((a, b) => ec[b] - ec[a])[0] });
+}
+function hxPulsLernt(L, lane) {
+  const F = hxPulsFit(L); if (!F) { toast('In dieser Schleife ist kein Rhythmus zu lesen.'); return null; }
+  const p = 'l' + lane + '.';
+  remember();
+  for (const [k, v] of [['steps', F.steps], ['puls', F.puls], ['rot', F.rot], ['div', F.div], ['deg', F.deg], ['oct', F.oct], ['on', true]]) setParam(p + k, v);
+  if (ENGINES[F.eng] && P[p + 'eng'] !== F.eng) setParam(p + 'eng', F.eng);
+  hxSay('Puls lernt: Spur ' + (lane + 1) + ', ' + F.puls + ' aus ' + F.steps);
+  toast('Spur ' + (lane + 1) + ' spielt jetzt ' + F.puls + ' aus ' + F.steps + ' (Versatz ' + F.rot + ') wie ' + hxName(L) + '.', 3000, { label: 'Rückgängig', fn: undo });
+  return F;
+}
+
+// ---- Knospen (SPEC §12.4): what the machine will change, a bar before it sounds – a bud at the top edge of the column of
+// each changed note (it swells and bursts when the note sounds; an answer's buds a chain; a Wiederkehr a ring forming at
+// the edge). Drawn on the field's canvas, no pointer events ----
+HX.kn = new Map();
+function hxKnAdd(id, f, t, t0, kind, prev, slot) {
+  if (HX.kn.has(id) || HX.kn.size > 160) return;
+  const x = f != null ? hxDeg(f).x : null;
+  if (f != null && x == null) return;
+  HX.kn.set(id, { x, t, t0, kind, prev, slot });
+}
+// the changed notes of the varied passes ahead – one bar and a little more – of every loop at Variieren or Wandern
+function hxKnTick(now) {
+  if (document.hidden) return;
+  const ahead = hxGdBarLen() + 0.6;
+  for (const L of hxLoopsLive()) {
+    if (L.bew || L.state !== 'spielt' || hxEigN(L) < 2 || !(hxWLebt(L) || hxWLm(L))) continue;
+    const kNow = hxPassK(L, Math.round(hxF(now)));
+    for (let k = kNow; k <= kNow + 4 && hxPassF(L, k) < hxF(now + ahead); k++) {
+      if (k === kNow && hxPassF(L, k) < hxF(now)) continue;
+      for (const id of L.sch) {
+        const S = HX.sch.get(id); if (!hxWCan(S)) continue;
+        const W0 = hxWBase(L, S); if (!W0 || !W0.n.length) continue;
+        hxVarW(L, S, k, W0);
+        const r = S.vc && S.vc.m.get(k); if (!r || !r.chg || !r.chg.length) continue;
+        const a = hxPassF(L, k), b = hxPassF(L, k + 1), B0 = L.d.b0 + k * L.d.beats, takt = W0.u === 'b' && hxTakt(L) && (L.sp || 1) === 1, key = hxWKeyNow();
+        r.chg.forEach((x, i) => {
+          const fr = takt ? hxFrameAt(B0 + Math.max(0, x.t)) : a + (Math.max(0, x.t) / W0.len) * (b - a), t = hxT(fr);
+          if (t > now) hxKnAdd('v:' + S.key + ':' + k + ':' + i, hxWF(L, W0, x, key), t, Math.max(now, t - hxGdBarLen()), 'var', null, L.slot);
+        });
+      }
+    }
+  }
+}
+function hxKnFrame(c, w, h, now) {
+  if (!HX.kn.size) return;
+  const out = [];
+  for (const [id, b] of HX.kn) {
+    if (now > b.t + 0.35) { HX.kn.delete(id); continue; }
+    if (now < b.t0) continue;
+    const g = clamp((now - b.t0) / Math.max(0.05, b.t - b.t0), 0, 1), burst = now >= b.t ? (now - b.t) / 0.35 : 0;
+    if (b.kind === 'wk') {   // a ring forming at the field's right edge, its loop's number inside
+      const x = w - 22, y = 22, r = 6 + 8 * g;
+      c.strokeStyle = 'rgba(134,240,208,' + (0.85 * (1 - burst)).toFixed(3) + ')'; c.lineWidth = 1.6;
+      c.beginPath(); c.arc(x, y, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * g); c.stroke();
+      if (b.slot != null) { c.fillStyle = c.strokeStyle; c.font = '600 10px ' + COL.fontNum; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(String(b.slot + 1), x, y); }
+      continue;
+    }
+    const x = b.x * w, y = 7, r = burst ? 3 + 9 * burst : 1.5 + 3.5 * g, a = burst ? 0.8 * (1 - burst) : 0.35 + 0.5 * g;
+    out.push([b, x]);
+    c.fillStyle = 'rgba(134,240,208,' + a.toFixed(3) + ')';
+    if (burst) { for (let i = 0; i < 6; i++) { const an = (i / 6) * Math.PI * 2; c.beginPath(); c.arc(x + Math.cos(an) * r, y + Math.sin(an) * r * 0.7, 1.3, 0, Math.PI * 2); c.fill(); } }
+    else { c.beginPath(); c.ellipse(x, y + r * 0.2, r * 0.75, r, 0, 0, Math.PI * 2); c.fill(); }
+  }
+  // an answer's buds are a chain: a thin thread from each to the one before it
+  c.strokeStyle = 'rgba(134,240,208,0.35)'; c.lineWidth = 1;
+  for (const [b, x] of out) if (b.prev) { const p = HX.kn.get(b.prev); if (p && now >= p.t0 && now < p.t + 0.35) { c.beginPath(); c.moveTo(p.x * w, 7); c.lineTo(x, 7); c.stroke(); } }
+}
+
+// ---- the Gärtner's heartbeat: every scheduler tick (cheap parts), its decisions ten times a second ----
+function hxGdTick(now, horizon) {
+  hxAntPlay(now, horizon);
+  hxWkTick(now);
+  hxGdApply(now);
+  const pn = performance.now();
+  if (pn - HXG.tE < 100) return;
+  HXG.tE = pn;
+  hxAntIngest(now);
+  hxKnTick(now);
+  if (HXA.cur && hxGdStep() < 2) hxAntStop('Gärtner hört nur zu');
+  const B = hxGdBarAt(now);
+  if (HXG.bar == null) HXG.bar = B.i;
+  else if (B.i !== HXG.bar) { HXG.bar = B.i; try { hxGdBar(B, now); } catch (e) { console.warn(e); } }
+  hxAntMaybe(now);
+  if (P['hx.hand'] === 'an' && pn - (HXH.tS || 0) > 60000) { HXH.tS = pn; hxHandPend(); }
+}
+// the Gärtner's step or a behaviour changed: what it may no longer do is taken back at once
+function hxGdParam(id) {
+  const st = hxGdStep();
+  if (st < 1 || (id === 'hx.gPlatz' && !P['hx.gPlatz']) || (id === 'hx.gRollen' && !P['hx.gRollen'])) hxGdReset();
+  if (st < 2 || !P['hx.gAntw']) hxAntStop(st < 2 ? 'Gärtner hört nur zu' : '');
+  if ((st < 2 || !P['hx.gWk']) && HXW_K.wk) hxWkNein();
+  if (id === 'hx.gaertner') hxSay('Gärtner: ' + HX_GSTW[P['hx.gaertner']]);
+  if (id === 'hx.hand') hxHandParam();
+  hxRailDirty(); hxCardDirty();
+}
+// ✓ ✕ for whatever the machine plans first: a Wiederkehr, the Gärtner's plan, an answer – else a living loop's pass
+function hxMachNein() { if (hxWkNein()) return true; if (HXG.plan) { for (const x of HXG.plan.items.slice()) { const L = hxByKey(x.key); if (L) hxGdNein(L, true); } hxSay('Gärtner: abgelehnt'); return true; } if (hxAntOn()) { hxAntStop('abgelehnt'); return true; } return false; }
+function hxMachLob() { if (HXW_K.wk) { if (HX.chips && HX.chips.kind === 'wk') HX.chips = null; hxSay('Wiederkehr behalten'); hxRailDirty(); return true; } if (hxGdLob()) return true; if (hxAntOn()) { if (HX.chips && HX.chips.kind === 'ant') HX.chips = null; hxRailDirty(); return true; } return false; }
+
+// ---- the Handschrift (SPEC §12.5): memory across sessions, on the device only (IndexedDB „myzel-hand“, store
+// „handschrift“, ≤ 1 MB) – the token counts (pruned), grooves per tempo band, tempi, scales, sources, the chord
+// progressions, the operators' weights from ✓ and ✕. Off by default; when on, each session's material waits as „pend“
+// until the player takes it („In die Handschrift übernehmen?“ – at the next start, or in the card); Vergessen; export and
+// import as a file (another player's only by an explicit choice) ----
+const HXH = { db: null, prog: {}, tS: 0, asked: false };
+HX.hs = null;
+function hxHandDb() {
+  if (HXH.db) return Promise.resolve(HXH.db);
+  return new Promise((res) => { try { const rq = indexedDB.open('myzel-hand', 1); rq.onupgradeneeded = () => { if (!rq.result.objectStoreNames.contains('handschrift')) rq.result.createObjectStore('handschrift', { keyPath: 'id' }); }; rq.onsuccess = () => { HXH.db = rq.result; res(HXH.db); }; rq.onerror = () => res(null); rq.onblocked = () => res(null); } catch (e) { res(null); } });
+}
+async function hxHandIo(mode, fn) { const db = await hxHandDb(); if (!db) return null; return new Promise((res) => { try { const tx = db.transaction('handschrift', mode), r = fn(tx.objectStore('handschrift')); tx.oncomplete = () => res(r && 'result' in r ? r.result : true); tx.onerror = tx.onabort = () => res(null); } catch (e) { res(null); } }); }
+const hxHandGet = (id) => hxHandIo('readonly', (st) => st.get(id));
+const hxHandPut = (o) => hxHandIo('readwrite', (st) => st.put(o));
+const hxHandDel = (id) => hxHandIo('readwrite', (st) => st.delete(id));
+// this session's material as a Handschrift (what the next ones would learn from it)
+function hxHandSess() {
+  const tok = {}; for (const [ctx, m] of HXA.sc) { const o = {}; for (const [k, v] of m) o[k] = v; tok[ctx] = o; }
+  const tempi = {}, scales = {}, srcs = {}, grooves = {};
+  for (const L of hxLoopsLive().concat(HX.grave.map((g) => g.snap))) {
+    if (!L || L.bew || L.eng === 'bew') continue;
+    if (L.bpm && (L.d ? hxTakt(L) : true)) { const b = String(Math.round(L.bpm)); tempi[b] = (tempi[b] || 0) + 1; }
+    if (L.eng) srcs[L.eng] = (srcs[L.eng] || 0) + 1;
+    const sch = L.sch && L.sch.map ? L.sch.map((x) => (typeof x === 'number' ? HX.sch.get(x) : x)).filter(Boolean) : [];
+    const W = (sch.find((S) => S.wn) || {}).wn;
+    if (W && W.key) { scales[W.key.scale] = (scales[W.key.scale] || 0) + 1; const G = hxGrooveOf(W, L.bpb); if (G && L.bpm) { const band = String(Math.round(L.bpm / 20) * 20); const g = grooves[band] || (grooves[band] = { C: [0, 0, 0, 0], n: 0 }); G.C.forEach((v, i) => (g.C[i] += v)); g.n++; } }
+  }
+  return { tok, tempi, scales, srcs, grooves, prog: Object.assign({}, HXH.prog), ow: Object.assign({}, HX.vw), n: 1, t: Date.now() };
+}
+// two Handschriften into one; then pruned to stay under 1 MB (the rarest contexts go first)
+function hxHandMerge(a, b) {
+  const o = a ? JSON.parse(JSON.stringify(a)) : { v: 1, tok: {}, tempi: {}, scales: {}, srcs: {}, grooves: {}, prog: {}, ow: {}, n: 0 };
+  const add = (x, y) => { for (const k in y || {}) x[k] = (x[k] || 0) + y[k]; };
+  for (const ctx in b.tok || {}) { const m = o.tok[ctx] || (o.tok[ctx] = {}); add(m, b.tok[ctx]); }
+  add(o.tempi, b.tempi); add(o.scales, b.scales); add(o.srcs, b.srcs); add(o.prog, b.prog);
+  for (const band in b.grooves || {}) { const g = o.grooves[band] || (o.grooves[band] = { C: [0, 0, 0, 0], n: 0 }), h = b.grooves[band]; h.C.forEach((v, i) => (g.C[i] += v)); g.n += h.n; }
+  for (const k in b.ow || {}) o.ow[k] = o.ow[k] != null ? Math.sqrt(o.ow[k] * b.ow[k]) : b.ow[k];
+  o.n = (o.n || 0) + (b.n || 1); o.t = Date.now(); o.v = 1;
+  return hxHandPrune(o);
+}
+function hxHandPrune(o, cap) {
+  const lim = cap || 1000000;
+  let s = JSON.stringify(o);
+  while (s.length > lim) {
+    const ctxs = Object.entries(o.tok).map(([k, m]) => [k, Object.values(m).reduce((a, b) => a + b, 0)]).sort((a, b) => a[1] - b[1]);
+    if (!ctxs.length) break;
+    const drop = Math.max(1, Math.floor(ctxs.length * 0.15));
+    for (let i = 0; i < drop; i++) delete o.tok[ctxs[i][0]];
+    s = JSON.stringify(o);
+  }
+  o.bytes = s.length;
+  return o;
+}
+// the Handschrift into play: the corpus starts with its counts, the operators with its weights, the Takt finder's tempo prior
+function hxHandUse(hs) {
+  HX.hs = hs; HXA.c = new Map(); HXA.hsN = 0;
+  for (const [ctx, m] of HXA.sc) for (const [k, v] of m) hxAntCount(HXA.c, ctx, k, v);
+  if (hs && P['hx.hand'] === 'an') {
+    for (const ctx in hs.tok) for (const k in hs.tok[ctx]) { hxAntCount(HXA.c, ctx, k, hs.tok[ctx][k]); if (ctx === '') HXA.hsN += hs.tok[ctx][k]; }
+    for (const k in hs.ow || {}) if (HX.vw[k] == null) HX.vw[k] = clamp(hs.ow[k], 0.05, 2);
+  }
+}
+// the tempo the Takt finder leans to: 100, or the player's own (the median of his loops' tempi)
+function hxTempoPrior() {
+  const hs = HX.hs; if (!hs || P['hx.hand'] !== 'an' || !hs.tempi) return 100;
+  const list = []; for (const b in hs.tempi) for (let i = 0; i < Math.min(50, hs.tempi[b]); i++) list.push(+b);
+  if (list.length < 3) return 100;
+  list.sort((a, b) => a - b); return clamp(list[list.length >> 1], 40, 220);
+}
+async function hxHandLoad() {
+  if (P['hx.hand'] !== 'an') { hxHandUse(null); return; }
+  const hs = await hxHandGet('main'); hxHandUse(hs || null);
+  const pend = await hxHandGet('pend');
+  if (pend && pend.d && !HXH.asked && pend.sess !== HXH.sess) { HXH.asked = true; toast('Die letzte Sitzung in die Handschrift übernehmen?', 12000, [{ label: 'Übernehmen', fn: () => hxHandTake(pend) }, { label: 'Nein', fn: () => hxHandDel('pend') }]); }
+}
+HXH.sess = Date.now().toString(36);
+// the session waits as „pend“ (written every minute while there is material, and when the page is hidden)
+async function hxHandPend() {
+  if (P['hx.hand'] !== 'an' || HXA.n < 8) return;
+  await hxHandPut({ id: 'pend', sess: HXH.sess, d: hxHandSess(), t: Date.now() });
+}
+async function hxHandTake(pend) {
+  const p = pend || { d: hxHandSess() }, hs = hxHandMerge((await hxHandGet('main')) || null, p.d);
+  await hxHandPut(Object.assign({ id: 'main' }, hs)); await hxHandDel('pend');
+  if (!pend) { HXA.sc = new Map(); HXH.prog = {}; }   // (this session is in it now: it is not counted twice)
+  hxHandUse(hs); toast('In die Handschrift übernommen (' + Math.round((hs.bytes || 0) / 1024) + ' kB).', 2500); hxCardDirty();
+  return hs;
+}
+async function hxHandForget() { await hxHandDel('main'); await hxHandDel('pend'); hxHandUse(null); toast('Die Handschrift ist vergessen.', 2500); hxCardDirty(); }
+async function hxHandExport() { const hs = await hxHandGet('main'); if (!hs) { toast('Noch keine Handschrift gespeichert.'); return null; } const o = Object.assign({}, hs); delete o.id; offerFile('myzel-handschrift-' + stamp(new Date()) + '.json', new Blob([JSON.stringify({ app: 'Myzel', handschrift: 1, d: o })], { type: 'application/json' })); return o; }
+function hxHandImport(file) {
+  const rd = new FileReader();
+  rd.onload = () => {
+    let o = null; try { o = JSON.parse(rd.result); } catch (e) {}
+    const d = o && o.handschrift && o.d && typeof o.d.tok === 'object' ? o.d : null;
+    if (!d) { toast('Diese Datei ist keine Handschrift von Myzel.'); return; }
+    toast('Diese Handschrift verwenden? Sie ersetzt deine.', 12000, [{ label: 'Ersetzen', fn: async () => { const hs = hxHandPrune(Object.assign({ v: 1 }, d)); await hxHandPut(Object.assign({ id: 'main' }, hs)); if (P['hx.hand'] !== 'an') setParam('hx.hand', 'an'); else hxHandUse(hs); toast('Handschrift übernommen.', 2000); hxCardDirty(); } }, { label: 'Abbrechen', fn: () => {} }]);
+  };
+  rd.readAsText(file);
+}
+function hxHandParam() { if (P['hx.hand'] === 'an') hxHandLoad(); else { hxHandUse(null); } hxCardDirty(); }
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && !HXW.on) hxHandPend(); });
+
+// ---- the card: the Gärtner (its step and what it sees), each loop's role, its freedom, Wiederkehr, Begleiten, Puls lernt;
+// the Handschrift in the settings ----
+function hxCardGd(btn) {
+  const box = HXK.gd; if (!box) return;
+  const chip = (t, on, fn, aria) => { const b = h('button', { type: 'button', class: 'chip', 'aria-pressed': on ? 'true' : 'false', 'aria-label': aria || null }, t); b.addEventListener('click', fn); return b; };
+  if (!hxLoopsLive().length && hxGdStep() === 0) { box.replaceChildren(); return; }
+  const st = P['hx.gaertner'], E = Math.round(HXG.Es * 100), lr = HXG.want && HXG.want !== 'still' ? HX_ROLEW[HXG.want] : 'still';
+  const plan = HXG.plan ? HXG.plan.items.map((x) => { const L = hxByKey(x.key); return L ? hxName(L) + ' ' + (x.gt === 0 ? 'pausiert' : x.word || 'wie gespielt') : ''; }).filter(Boolean).join(', ') : '';
+  box.replaceChildren(h('div', { class: 'hx-gh' }, h('b', null, 'Gärtner'), h('span', null, ' – wie sehr die Schleifen auf dich hören')),
+    h('div', { class: 'hx-row' }, h('span', { class: 'lab' }, 'Stufe'), h('div', { class: 'chips small' }, ...HX_GST.map((k) => chip(HX_GSTW[k], st === k, () => setParam('hx.gaertner', k), 'Gärtner ' + HX_GSTW[k])))),
+    st !== 'schaut' ? h('p', { class: 'note' }, 'Du spielst: ' + lr + ' · Energie ' + E + ' %' + (plan ? ' · geplant: ' + plan : '') + (HXA.n + HXA.hsN < 40 && st === 'antwortet' ? ' · zum Antworten noch ' + (40 - HXA.n - HXA.hsN) + ' Töne' : '')) : null,
+    HXG.plan || HXW_K.wk || hxAntOn() ? h('div', { class: 'hx-row end' }, btn('✕ ablehnen', () => { hxMachNein(); hxCardDirty(); }, { aria: 'Was der Gärtner plant, ablehnen' }), btn('✓ behalten', () => { hxMachLob(); hxCardDirty(); })) : null);
+}
+function hxCardMit(L, chip, row, btn) {
+  if (L.bew) return [];
+  const mi = hxMi(L), r = hxRoleOf(L), sch = L.sch.map((id) => HX.sch.get(id)).filter(Boolean), notes = sch.some(hxWCan);
+  const out = [];
+  if (mi.sugg) out.push(h('div', { class: 'hx-row' }, h('span', { class: 'lab' }, 'Vorschlag'), h('div', { class: 'chips small' }, h('span', { class: 'hx-ms' }, 'Begleitung (' + (HX_ROLEW[mi.sugg] || mi.sugg) + '), stumm'),
+    chip('Einschalten', false, () => { if (L.state === 'angehalten') hxReenter([L]); else hxState(L.id, 'spielt', null, { X: 0.02 }); hxSuggTake(L); }, 'Vorschlag einschalten'), chip('Verwerfen', false, () => hxDrop(L), 'Vorschlag verwerfen'))));
+  out.push(row('Rolle', chip('auto' + (r && !mi.rolle ? ': ' + HX_ROLEW[r.role] + (r.conf < 0.25 ? '?' : '') : ''), !mi.rolle, () => { mi.rolle = null; mi.rc = null; hxSaveMeta(L.id); hxCardDirty(); }, 'Rolle automatisch'),
+    ...HX_ROLES.map((k) => chip(HX_ROLEW[k], mi.rolle === k, () => { mi.rolle = k; hxSaveMeta(L.id); hxCardDirty(); hxSay(hxName(L) + ': Rolle ' + HX_ROLEW[k]); }, 'Rolle ' + HX_ROLEW[k]))));
+  const sw = hxStance(L);
+  out.push(row('Gärtner', chip('darf', !mi.gOff, () => { mi.gOff = false; hxSaveMeta(L.id); hxCardDirty(); }, 'Der Gärtner darf diese Schleife leiser, lauter, stumm machen' + (hxEigN(L) >= 2 ? ' und ausdünnen' : '')), chip('nicht', !!mi.gOff, () => { mi.gOff = true; if ((L.gg != null && L.gg !== 1) || L.gdv) hxGdNein(L, true); hxSaveMeta(L.id); hxCardDirty(); }, 'Der Gärtner lässt diese Schleife in Ruhe'),
+    chip('darf wiederkehren', !!mi.wk, () => { mi.wk = !mi.wk; hxSaveMeta(L.id); hxCardDirty(); }, 'Wiederkehr: kommt zurück, wenn du ihr Motiv spielst'), sw ? h('span', { class: 'hx-ms' }, sw) : null,
+    L.gg != null && L.gg !== 1 || L.gdv ? chip('✕', false, () => hxGdNein(L), 'Gärtner zurücknehmen') : null));
+  if (notes && hxTakt(L)) out.push(h('div', { class: 'hx-row end' },
+    !mi.sugg && (r && r.role === 'melodie') ? btn('Begleiten', () => hxBegleiten(L), { aria: 'Bass und Akkorde zu dieser Melodie vorschlagen (stumm)' }) : null,
+    r && ['bass', 'schlag'].includes(r.role) ? h('span', { class: 'chips small' }, h('span', { class: 'hx-ms' }, 'Puls lernt:'), ...[0, 1, 2, 3].map((i) => chip('Spur ' + (i + 1), false, () => hxPulsLernt(L, i), 'Spur ' + (i + 1) + ' des Puls lernt den Rhythmus dieser Schleife'))) : null));
+  return out;
+}
+function hxCardHand(btn) {
+  const box = HXK.hand; if (!box) return;
+  const on = P['hx.hand'] === 'an', hs = HX.hs;
+  const imp = h('input', { type: 'file', accept: 'application/json,.json', hidden: '' }); imp.addEventListener('change', () => { if (imp.files[0]) hxHandImport(imp.files[0]); imp.value = ''; });
+  box.replaceChildren(h('div', { class: 'hx-row' }, h('span', { class: 'lab' }, 'Handschrift'), h('div', { class: 'hx-kb' }, h('span', { class: 'hx-ms' }, on ? (hs ? Math.round((hs.bytes || 0) / 1024) + ' kB · ' + (hs.n || 0) + (hs.n === 1 ? ' Sitzung' : ' Sitzungen') : 'noch leer') : 'aus'),
+    on ? btn('Sitzung übernehmen', () => hxHandTake(null)) : null, on ? btn('Vergessen', () => toast('Die Handschrift vergessen?', 8000, { label: 'Vergessen', fn: hxHandForget }), { cls: 'ghost danger' }) : null,
+    on ? btn('Export', hxHandExport) : null, btn('Import', () => imp.click()), imp)),
+    h('p', { class: 'note' }, 'Die Handschrift merkt sich dich, nur auf diesem Gerät: deine Tempi, Grooves, Tonleitern, Klänge, Wendungen und was du behalten oder abgelehnt hast. Dann kennt die Takt-Erkennung dein Tempo, und der Gärtner antwortet ab der ersten Minute. Am Ende einer Sitzung fragt Myzel, ob sie übernommen wird.'));
+}
+// the rail's chips while the machine plans: what, and ✕ per loop · ✓
+function hxChipsMach(chip, box) {
+  const C = HX.chips;
+  if (C.kind === 'gd' && HXG.plan) {
+    const G = HXG.plan;
+    box.append(h('span', { class: 'hx-cw' }, 'Gärtner' + (G.b != null ? ' ab Takt ' + hxBarNo(G.b) : '')));
+    for (const x of G.items) { const L = hxByKey(x.key); if (L) chip('✕ ' + (L.slot + 1), () => { hxGdNein(L); HXU.sig = ''; hxRailDirty(); }, { aria: 'Ablehnen: ' + hxName(L) + ' ' + (x.gt === 0 ? 'pausiert' : x.word || 'wie gespielt') }); }
+    chip('✓', () => { hxGdLob(); HXU.sig = ''; hxRailDirty(); }, { cls: 'pri', aria: 'Behalten' });
+    return true;
+  }
+  if (C.kind === 'wk' && HXW_K.wk) { const L = hxByKey(HXW_K.wk.key); box.append(h('span', { class: 'hx-cw' }, (L ? hxName(L) : 'Schleife') + ' kehrt wieder ab Takt ' + hxBarNo(HXW_K.wk.b))); chip('✕', () => { hxWkNein(); HXU.sig = ''; hxRailDirty(); }, { cls: 'pri', aria: 'Wiederkehr ablehnen' }); chip('✓', () => { hxMachLob(); HXU.sig = ''; }, { aria: 'Wiederkehr behalten' }); return true; }
+  if (C.kind === 'ant' && hxAntOn()) { box.append(h('span', { class: 'hx-cw' }, 'Antwort · ' + HXA.cur.n + ' Töne')); chip('✕', () => { hxAntStop('abgelehnt'); HXU.sig = ''; hxRailDirty(); }, { cls: 'pri', aria: 'Antwort abbrechen' }); return true; }
+  return false;
+}
 
 function showResume(show) { $('#resume').hidden = !show; if (show) $('#btnResume').focus({ preventScroll: true }); }
 function start() {
