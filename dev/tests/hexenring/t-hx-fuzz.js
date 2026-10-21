@@ -25,6 +25,12 @@ Object.assign(ACTS, { key: 3, wuchs: 4, lob: 2, nein: 2, anker: 1, beginn: 1, sp
 // (Etappe 3) the Mitspieler: the Gärtner's step and behaviours, its ✕ ✓, a ring's veto, roles, Wiederkehr marks,
 // Begleiten, Puls lernt, an answer started at once, the Handschrift's switch and its take; FUZZ_M=0: step 2b's bag
 Object.assign(ACTS, { gst: 3, gbeh: 1, gnein: 2, glob: 1, rolle: 1, wkMark: 1, begl: 1, pulsL: 1, antw: 2, hand: 1 });
+// (Etappe 4) the ecology: Nähren (Rhizom, Regen, Glut, Sehne), the Sammelschleife (made, its feedback, Festhalten,
+// emptied, kept as a Schicht), Einwurzeln and Moder, Ladung (the switch and the charge), Live, MIDI out, a planned
+// note refused, Treffen setzen and lifted, the microphone (a test source: on, off, the Korb's choice, Gesang als
+// Noten); FUZZ_E=0: Etappe 3's bag
+Object.assign(ACTS, { naehr: 3, acc: 2, zers: 2, lad: 2, live: 2, midiL: 1, veto: 1, tref: 1, mic: 2, ges: 1 });
+if (process.env.FUZZ_E === '0') for (const k of ['naehr', 'acc', 'zers', 'lad', 'live', 'midiL', 'veto', 'tref', 'mic', 'ges']) delete ACTS[k];
 if (process.env.FUZZ_M === '0') for (const k of ['gst', 'gbeh', 'gnein', 'glob', 'rolle', 'wkMark', 'begl', 'pulsL', 'antw', 'hand']) delete ACTS[k];
 if (process.env.FUZZ_W === '0') for (const k of ['key', 'wuchs', 'lob', 'nein', 'anker', 'beginn', 'speed', 'stopp', 'rev', 'trim', 'dbl', 'vb', 'abr', 'slc', 'nt', 'erst', 'auslW', 'export', 'pulsE', 'folge', 'feld', 'buehne', 'lied']) delete ACTS[k];   // (the sequences of step 2a's fuzz)
 const BAG = Object.entries(ACTS).flatMap(([k, w]) => Array(w).fill(k));
@@ -116,6 +122,20 @@ async function install(page) {
       pulsL: (a, b) => { const L = pickL(a); if (L && !L.bew) M.hxPulsLernt(L, Math.floor(b * 4)); },
       antw: (a) => { const ns = M.HXA.notes.slice(-6); if (ns.length >= 3) M.hxAntStart({ notes: ns.map((x) => Object.assign({}, x, { tok: x.tok || '1:1:0' })), id: 1e6 + Math.floor(a * 1e5), mi: 0.3 }, M.A.ctx.currentTime); },
       hand: async (a) => { if (a < 0.4) M.setParam('hx.hand', M.P['hx.hand'] === 'an' ? 'aus' : 'an'); else if (M.P['hx.hand'] === 'an') await M.hxHandTake(null); },
+      naehr: (a, b, c) => { const L = pickL(a); if (L && !L.bew) M.hxNaehr(L, ['rhz', 'rgn', 'glt', 'shn'][Math.floor(b * 4)], c < 0.6, true); },
+      acc: (a, b, c) => { const L = pickL(a); if (!L || L.bew) return; if (!L.acc) { if (b < 0.5) M.hxAccMake(L, [0.5, 1, 2, 4][Math.floor(c * 4)], 0.7); } else { const w = ['fb', 'on', 'leer', 'copy'][Math.floor(b * 4)]; if (w === 'copy') M.hxAccCopy(L, c < 0.5); else M.hxAccSet(L, w, w === 'fb' ? [0.5, 0.7, 0.85, 0.95][Math.floor(c * 4)] : w === 'on' ? c < 0.5 : undefined); } },
+      zers: (a, b, c) => { const L = pickL(a); if (!L || L.bew) return; if (b < 0.5) M.hxEinwSet(L, M.HX_EINW[Math.floor(c * M.HX_EINW.length)][0]); else M.hxModerSet(L, M.HX_MODER[Math.floor(c * M.HX_MODER.length)][0], c > 0.9); },
+      lad: (a, b) => { if (a < 0.4) { const L = pickL(b); if (L && !L.bew) M.hxLadSet(L, !L.ladung); } else { M.GK.p.lad = b > 0.2; M.LAD.lvl = b; } },
+      live: (a, b) => { const L = pickL(a); if (L && !L.bew) M.hxWSet(L, 'live', b < 0.6); },
+      midiL: (a, b) => { const L = pickL(a); if (L && !L.bew) M.hxMidiSet(L, b < 0.6); },
+      veto: (a) => { const L = pickL(a); if (!L) return; const v = M.hxVetoList(L); if (v.length) M.hxVeto(L, v[Math.floor(a * v.length)]); },
+      tref: (a) => { if (a < 0.6) M.hxTreffenSetzen(M.A.ctx.currentTime + 20 + a * 60, { anker: a < 0.3, bluehen: a < 0.45 }); else M.hxTreffenAb(); },
+      mic: async (a, b) => {
+        if (a < 0.45 && !M.HX.mic.on) { const ctx = M.A.ctx, o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = 196 + 200 * b; g.gain.value = 0.2; o.connect(g); o.start(); window.__fzMic = o; await M.hxMicOn({ src: g }); }
+        else if (a < 0.7) { M.hxMicOff(); if (window.__fzMic) { try { window.__fzMic.stop(); } catch (e) {} window.__fzMic = null; } }
+        else M.HX.mic.korb = b < 0.6;
+      },
+      ges: async (a) => { const L = M.hxLoopsLive().find((x) => x.sch.some((id) => { const S = M.HX.sch.get(id); return S && S.cut && S.cut.in === 3 && S.aud; })); if (L) await M.hxGesang(L); },
       param: (a, b) => { const [k, v] = [['hx.modus', ['neu', 'dieselbe']], ['hx.start', ['takt', 'ton', 'sofort']], ['hx.laenge', ['auto', 'wie1', 'fest']]][Math.floor(a * 3)]; M.setParam(k, v[Math.floor(b * v.length)]); },
     };
     window.__act = async (name, a, b, c) => {

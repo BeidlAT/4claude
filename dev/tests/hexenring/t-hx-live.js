@@ -81,13 +81,14 @@ const has = (p) => PARTS.includes(p);
       const seen2 = new Set(); const end = performance.now() + 900; while (performance.now() < end) { for (const v of A.voices) if (v.loop) seen2.add(v); await window.__sleep(25); }
       o.after = seen2.size; o.lmOff = !M.HX.sch.get(L.sch[0]).lm;
       const mt2 = await window.__meter(L.id, 800); o.schLvl2 = Math.max(...mt2.map((x) => x[1]));
+      const S0 = M.HX.sch.get(L.sch[0]); o.dbg = JSON.stringify({ st: L.state, gg: L.gg, gain: S0.gain, mute: S0.mute, lm: S0.lm, wu: M.hxWAktiv(L), n: mt2.length, sch: L.sch.length, idle: M.IDLE.on, off: M.IDLE.hxOff });
       return o;
     }, MOTIF);
     ok(r.L && r.st !== 'kein' && r.lm && r.voices >= r.notes && r.notes >= 6, `Live chosen while the Werk-Rahmen works (${r.st}): real voices play the notes (${r.voices} in a pass of ${r.notes} notes and the next), the Schicht falls silent at the seam (its level ${r.schLvl != null ? r.schLvl.toFixed(4) : '?'})`);
     ok(r.allLoop && r.humus === 0 && r.schLvl < 1e-4, `  loop voices on the Hexenring's way – none in the notes Humus (${r.humus})`);
     ok(r.chipLive && !r.chipWuchs && r.rec, `  the card shows „Live“ chosen, the record keeps it`);
     ok(r.lv0 > 0 && r.loopGone && r.stolenMine === 0 && r.loopWhileFull === 0 && r.keptAfter === r.kept, `  the player's notes come first: the loop's ${r.lv0} voices gave way before any of the player's ${r.mine} (none of them taken), and while all are held no loop note is played (${r.loopWhileFull})`);
-    ok(r.lmOff && r.after === 0 && r.schLvl2 > 0.003, `  Live off: from the seam the Schicht again (level ${r.schLvl2 ? r.schLvl2.toFixed(3) : '?'}), no voices`);
+    ok(r.lmOff && r.after === 0 && r.schLvl2 > 0.003, `  Live off: from the seam the Schicht again (level ${r.schLvl2 ? r.schLvl2.toFixed(3) : '?'}), no voices` + (r.schLvl2 > 0.003 ? '' : ' ' + r.dbg));
   }
 
   // ---------- midi ----------
