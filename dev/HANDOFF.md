@@ -2,8 +2,9 @@
 
 ## Für den Besitzer – jetzt (22.10.2026)
 
-**Fertig zum Testen.** Der Hexenring ist mit allen vier Etappen gebaut und durch die Schlussprüfung: jede Testreihe grün,
-jede Suite einzeln auf der Maschine gelaufen (Zahlen unten bei „Final pass“). Sobald der Pull Request in den
+**Fertig zum Testen.** Der Hexenring ist mit allen vier Etappen gebaut und durch die Schlussprüfung: jede Suite einzeln
+auf der Maschine gelaufen, alle Reihen des Hexenrings und der App grün (Zahlen unten bei „Final pass“). Nicht grün sind
+nur Kostenreihen des Klang-Prüfstands (`bench.js`) – siehe „Deine Entscheidung“ gleich unten. Sobald der Pull Request in den
 Standard-Branch übernommen ist, aktualisiert sich die App unter beidlat.github.io von selbst (installierte Apps holen die
 neue Version, die Service-Worker-Version ändert sich mit jedem Inhalt).
 
@@ -20,6 +21,18 @@ neue Version, die Service-Worker-Version ändert sich mit jedem Inhalt).
   jedem 10-ms-Fenster zwischen den Pegeln ihrer beiden Seiten (gemessen höchstens ±0,34 dB).
 - **Akkorde vom Keyboard:** Anlehnen biegt bei einem Akkord wieder den obersten Ton, auch wenn das Gerät gerade
   beschäftigt ist (die Töne werden nach ihrem Zeitstempel als Akkord erkannt).
+
+**Deine Entscheidung (offen):**
+- **Kostentabelle und Rechner:** Die Testmaschine wurde während der Schlussprüfung zweimal neu gestartet und lief danach
+  auf einer anderen Rechnerumgebung. Dort messen mehrere Klangquellen teurer als in der Kalibrierung vom 18.10.
+  (Halm, Harz, Böe, Amöbe, Gespinst um 5–15 %, Elmsfeuer in Stufe 3 fast doppelt: 4,4–6,3 statt 2,51). Derselbe Test mit
+  dem Stand vor der Schlussprüfung misst gleich viel – es liegt an der Maschine, nicht am neuen Code. Ich habe die
+  Tabelle deshalb nicht nach dieser einen Maschine umgeschrieben (sie würde z. B. Elmsfeuer in Stufe 3 auf weniger als
+  die halbe Stimmenzahl drücken). Vorschlag: einmal `klang/tests/recal.js` (≈ 3 h) auf einem ruhigen Rechner – oder
+  du sagst, dass diese Maschine gilt, dann trage ich alles nach ihr ein.
+- **Harz, Glas, hoher Ton:** Bei 1568 Hz spricht das Glas bei etwa einer von 16 Noten erst nach ≈ 1 s an (es schwillt
+  von −52 auf −20 dB); der Ton ist dann richtig gestimmt (−1,6 ct), aber die Tonhöhenreihe misst bei 0,6 s noch den
+  zweiten Glas-Modus und schlägt fehl. Gewollt (ein Glas „greift“ manchmal spät) oder soll es immer gleich ansprechen?
 
 **Fürs Ohr beim ersten Test** (die ersten Punkte stehen auch in `dev/IDEEN.md`):
 - die Bandträgheit beim Tempoändern einer Schleife (schießt ≈ 22 % des Schritts über);
