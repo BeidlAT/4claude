@@ -146,7 +146,7 @@ function costRow(okf, what, tab, cur, env, f) {
     boe: { f0: [110, 220, 440, 880, 1760], ys: [0.2, 0.5, 0.8], tol: 5, costMax: 0.8, pp: { 'boe.rauschen': 0 } },   // (pitch: the strings, without the wind's band among them)
     // Amöbe: the lock at Zeit 0 (SPEC: ≤ 3 ct, 50–500 Hz; a short window's estimate scatters with the harmonics' wander
     // higher up – the long-window lock is amoLock below); every note has its own seed polygon: centroids averaged
-    amo: { f0: [55, 110, 220, 440], ys: [0.2, 0.5], tol: 3, costMax: 0.45, pp: { 'amo.zeit': 0 }, cAvg: 6 },
+    amo: { f0: [55, 110, 220, 440], ys: [0.2, 0.5], tol: 3, costMax: 0.45, pp: { 'amo.zeit': 0 }, cAvg: 16 },   // (16 notes: one note's centroid at 0.3 s spans 300–600 Hz at y 0 and 320–770 at y 0.5 – means 395 / 445, the same in the calibration build; six read the scatter: 2 of 4 runs on 22.10.)
     // Sehne: pitch on the fundamental's line (the stiffness stretches the partials: a harmonic comb reads them sharp),
     // open and under the E-Bow; Höhe's colour at the pluck (held, the hand is the palm, a node or the E-Bow – not a filter)
     shn: { f0: [55, 110, 220, 440, 880, 2000], ys: [0.5, 0.9], tol: 3, costMax: 0.7, line: true, cAt: 0.055, cN: 4 },
