@@ -528,6 +528,15 @@ Nahtwahl and the gain curve, and sends `{aus}`.
 
 ---
 
+**As built (final pass): the seam law held in every window.** `hxSeamK` keeps its time-local equal-power curve as the
+start; `hxSeamBand` then checks the law itself – every 10-ms window through the seam (from one before the fade to one
+after it, a quarter window apart) within the two sides' own levels – and, only where a window falls outside (by more than
+≈ 0.1 dB), moves the curve's points: the least that brings every window into the band, its bends penalised so the curve
+has no edge of its own (each window's power a quadratic form in the points; coordinate descent, a point's move checked on
+the windows it reaches). Gong material had fallen up to −1.7 dB below both sides (beating partials, a 10-ms fade); now
+t-hx-seams over 20 random runs each: Gong −0.17 … +0.34 dB, Harz −0.13 … +0.16, Bordun −0.26 … +0.25, Böe −0.16 …
++0.25, third differences ≤ 1.32 × the material's. 7–33 ms on the page per seam (a harvest, a bake).
+
 ## 8. Werk-Rahmen
 
 **Boot.** `hxWerk()` creates `<iframe hidden src="<location without hash>?werk=1">` (same origin; on `file://` it is a

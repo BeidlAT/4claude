@@ -285,14 +285,19 @@ async function check(page, t0, t1) {
     const up = (id) => page.evaluate((id) => window.__M.onUp({ pointerId: id }), id);
     // the sensor's delay: Gestik's lanes are written earlier by it than a knob's (latency shift)
     let r = await page.evaluate(() => {
-      const M = window.__M, a = M.faeShift(true) - M.faeShift(false);
-      M.faeIn('m|pan|gk:probe', 0.5, 'm', 'pan', 'gk:probe', true, 0); M.faeIn('m|pan|map:probe:1', 0.5, 'm', 'pan', 'map:probe:1', false, 0);
-      const s1 = M.FA.lanes.get('m|pan|gk:probe').s, s2 = M.FA.lanes.get('m|pan|map:probe:1').s;
-      M.faeIn('m|pan|gk:probe', 0, 'm', 'pan', 'gk:probe', true, 0); M.faeIn('m|pan|map:probe:1', 0, 'm', 'pan', 'map:probe:1', false, 0);
-      M.FA.lanes.delete('m|pan|gk:probe'); M.FA.lanes.delete('m|pan|map:probe:1');
-      return { a, d: s2 - s1, want: ((0.08 * M.FA.bpm) / 60) * 48 };
+      // (five pairs, the median: the two writes of a pair read the clock one after the other, and on this headless
+      // machine the audio clock may jump a stall's worth between them – one pair read 5 steps where 7.7 were right)
+      const M = window.__M, a = M.faeShift(true) - M.faeShift(false), ds = [];
+      for (let i = 0; i < 5; i++) {
+        M.faeIn('m|pan|gk:probe', 0.5, 'm', 'pan', 'gk:probe', true, 0); M.faeIn('m|pan|map:probe:1', 0.5, 'm', 'pan', 'map:probe:1', false, 0);
+        const s1 = M.FA.lanes.get('m|pan|gk:probe').s, s2 = M.FA.lanes.get('m|pan|map:probe:1').s;
+        M.faeIn('m|pan|gk:probe', 0, 'm', 'pan', 'gk:probe', true, 0); M.faeIn('m|pan|map:probe:1', 0, 'm', 'pan', 'map:probe:1', false, 0);
+        M.FA.lanes.delete('m|pan|gk:probe'); M.FA.lanes.delete('m|pan|map:probe:1');
+        ds.push(s2 - s1);
+      }
+      return { a, d: ds.slice().sort((x, y) => x - y)[2], ds, want: ((0.08 * M.FA.bpm) / 60) * 48 };
     });
-    ck(Math.abs(r.a - 0.08) < 1e-9 && Math.abs(r.d - r.want) <= 1, `latency shift: a measured sensor delay of 80 ms – Gestik's values are written ${r.d} steps earlier than a knob's (${r.want.toFixed(1)} expected)`);
+    ck(Math.abs(r.a - 0.08) < 1e-9 && Math.abs(r.d - r.want) <= 1, `latency shift: a measured sensor delay of 80 ms – Gestik's values are written ${r.d} steps earlier than a knob's (${r.want.toFixed(1)} expected; the median of ${r.ds.join(', ')})`);
     // a note held, the phone leant forward and back for a bar (Anlehnen · Höhe): written down; the Korb takes the sound,
     // its chip „nur Bewegung“ makes the bars a Schleife of Bewegung
     await down(1, 0.35, 0.5);
