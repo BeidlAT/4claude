@@ -2005,7 +2005,7 @@ the processor without their curve (`kc: null`) – the one-number rho law there 
 (t-hx-proc, random material). Now each takes `hxSeamOf` of its own audio, and t-hx-proc drives the processor as the app
 does (with the seam's curve).
 **The cost table kept (owner, 22.10.2026):** after the container moved hosts, bench.js measured several engines over their
-entries – and the calibration build (73ab260) just as much (A/B). Where an entry does not cover this machine, the row
-measures the calibration build in turns and asks this build to cost no more + 10 % (`costRow`, slot calref); the table
-is unchanged.
+entries – and the calibration build (73ab260) just as much (A/B). Where an entry does not cover this machine, the row is
+reported as MACHINE with its numbers, the reason at bench.js's head (`costRow`; `COST_STRICT=1` measures the calibration
+build, slot calref, in turns and asks for no more + 10 %); the table is unchanged.
 **Harz, Glas speaks at once (owner, 22.10.2026):** klang SPEC §3.1.

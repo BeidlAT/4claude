@@ -27,8 +27,8 @@ neue Version, die Service-Worker-Version ändert sich mit jedem Inhalt).
   Flamme 1,40–1,52 / 2,65–3,03 (1,63 / 2,93); Harz je Körper bis 1,74 / 3,94 (1,71 / 3,85); Böe 0,74 / 1,12 (0,69 / 1,11);
   Amöbe 0,55 / 1,45 (0,47 / 1,34); Gespinst 0,37 / 0,83 (0,34 / 1,01); Elmsfeuer 1,25–1,61 / 4,4–6,3 (1,09 / 2,51) – der
   Stand vor der Schlussprüfung misst dort genauso (A/B), es liegt an der Maschine. Die Kostenreihen des Prüfstands
-  vergleichen deshalb, wenn ein Eintrag die Messung nicht deckt, abwechselnd mit dem Kalibrierungs-Stand (73ab260): dieser
-  Stand darf nicht mehr als 10 % teurer sein.
+  sind deshalb als maschinenabhängig markiert: deckt ein Eintrag die Messung nicht, steht „MACHINE“ mit den Zahlen da
+  statt eines Fehlers (`COST_STRICT=1` misst den Kalibrierungs-Stand 73ab260 abwechselnd mit).
 - **Harz, Glas spricht immer sofort an:** hohe Töne bekamen ihren Anschub zu schwach (√ statt (f/800)^1,5 über 800 Hz),
   und das Dublett-Paar schwebte schon im ersten Moment auseinander und zog sein Muster vom Bogen weg. Jetzt wächst die
   Schwebung in den ersten 0,3 s herein. Gemessen über viele Noten und Seeds (Zahlen unten bei „Final pass“): kein später
