@@ -82,8 +82,10 @@ async function lane(url) {
 }
 (async () => {
   const runs = [], refs = [];
-  for (let i = 0; i < 2; i++) { runs.push(await lane()); refs.push(await lane(URL_REF)); }
-  const pick = (L, k, g) => { const v = L.map((x) => x[g][k]).sort((a, b) => a - b); return v[v.length >> 1]; };   // (the higher of two: v[1])
+  // (five rounds in turns, the median of each: on this headless machine one round of the same build scattered 0.34–0.65 ms
+  // for a flush – the higher of two read noise as a difference)
+  for (let i = 0; i < 5; i++) { runs.push(await lane()); refs.push(await lane(URL_REF)); }
+  const pick = (L, k, g) => { const v = L.map((x) => x[g][k]).sort((a, b) => a - b); return v[v.length >> 1]; };
   const errors = runs.flatMap((x) => x.errors);
   const r = {}, f = {}, R = {}, F = {};
   for (const k of ['w', 'idle', 'tick', 'flush', 'relay']) { r[k] = pick(runs, k, 'r'); R[k] = pick(refs, k, 'r'); }
@@ -97,7 +99,7 @@ async function lane(url) {
   ok(fit(r.relay, 2, R.relay), 'laying half a second of all 8 lanes anew (a tempo change): ' + r.relay.toFixed(3) + ' ms, the median of 10 (< 2 ms)' + ref(r.relay.toFixed(3), R.relay.toFixed(3)));
   ok(fit(f.send, 0.05, F.send), 'the Funkstrecke\'s sender: ' + (f.send * 1000).toFixed(1) + ' µs per Gestik update with every axis to send (< 50 µs)' + ref((f.send * 1000).toFixed(1), (F.send * 1000).toFixed(1)));
   ok(fit(f.recv, 0.05, F.recv), 'its receiver: ' + (f.recv * 1000).toFixed(1) + ' µs a message (< 50 µs)' + ref((f.recv * 1000).toFixed(1), (F.recv * 1000).toFixed(1)));
-  console.log('INFO each figure the higher of two rounds, this build and the reference in turns: ' + JSON.stringify(runs.map((x) => x.r)) + ' / ' + JSON.stringify(refs.map((x) => x.r)));
+  console.log('INFO each figure the median of five rounds, this build and the reference in turns: ' + JSON.stringify(runs.map((x) => x.r)) + ' / ' + JSON.stringify(refs.map((x) => x.r)));
   ok(!errors.length, 'no page errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
   await H.close();
 })().catch((e) => { console.log('FAIL ' + e.stack); process.exitCode = 1; return H.close(); });
