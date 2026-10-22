@@ -9846,6 +9846,15 @@ function myzelDsp() {
     // a tail stream from the seam on: the Ausklang (src 0) or the Schicht's own audio from base (src 1); free: not under
     // the loop's state (a stop's); fade: frames of a fade-out (0: none)
     uses(S, O) { for (let t = 0; t < S.tn; t++) if (S.tc[t] === O.ch || S.tc[t] === O.ac) return true; return false; }
+    // (final pass) a version whose chunks another read of this Schicht still owns – the version playing, the old one, the
+    // stream's fallback, a parked one – is not given back now; its owner gives it when it goes (the guard held caught it
+    // in the fuzz: a late stream slot fell back to the pass before, whose chunks were the old version being given back)
+    sharedV(S, V) {
+      const c = V && V.ch; if (!c) return false;
+      if (S.ch === c || (S.old && S.old !== V && S.old.ch === c) || (S.ws && S.ws.prev && S.ws.prev !== V && S.ws.prev.ch === c)) return true;
+      if (S.park) for (const P of S.park) if (P !== V && P.ch === c) return true;
+      return false;
+    }
     tail(S, free, src, base, fade, delay, Vv) {
       const t = S.tn, V = Vv || (S.old && S.old.seam && !S.old.tld ? S.old : S);   // (swapped at this seam: the old version's tail)
       if (t >= HX_TN) return;
@@ -9938,6 +9947,7 @@ function myzelDsp() {
       const J = S.ddN; S.ddN = null;
       if (J.pv !== S.pv) { this.ddBack(S.id, J.dst); return; }
       const O = J.old;
+      if (S.old) { if (S.old.ws || this.uses(S, S.old)) (S.park || (S.park = [])).push(S.old); else if (!this.sharedV(S, S.old)) this.gvQ.push([{ schicht: S.id, old: 1 }, [S.old]]); }   // (final pass: an old version still there was dropped unreturned)
       O.ch = S.ch; O.tot = S.tot; O.pre = S.pre; O.len = S.len; O.ac = S.ac; O.aoff = S.aoff; O.aend = S.aend; O.out = S.out; O.end = L.s0 + S.zo + S.X + 1; O.ddA = false;
       S.old = O; S.aoffS = S.aoff;
       S.ch = J.dst; S.tot = J.n0; S.ac = J.dst; S.aoff = this.ddInv(J.map, S.pre, O.aoff); S.aend = this.ddInv(J.map, S.pre, O.aend);
@@ -10000,7 +10010,7 @@ function myzelDsp() {
     }
     wsSet(S, V, seam, X) {
       if (!seam) {
-        if (S.old) { if (S.old.ws || this.uses(S, S.old)) (S.park || (S.park = [])).push(S.old); else if (!(S.ws && S.ws.prev && S.ws.prev.ch === S.old.ch)) this.gvQ.push([{ schicht: S.id, old: 1 }, [S.old]]); }
+        if (S.old) { if (S.old.ws || this.uses(S, S.old)) (S.park || (S.park = [])).push(S.old); else if (S.old.ch !== V.ch && !this.sharedV(S, S.old)) this.gvQ.push([{ schicht: S.id, old: 1 }, [S.old]]); }   // (V may bring the old one's chunks back: the fallback)
         const O = this.wsVer(S); O.xo = envNew(1); envGo(O.xo, 0, X); O.seam = false; O.end = 0;
         S.old = O; S.xin.v = 0; envGo(S.xin, 1, X);
         // (two throws crossing mid-pass – a late pass and its fallback, a pass and the anchor – are partly correlated: the
@@ -10111,7 +10121,7 @@ function myzelDsp() {
       } else if (e.kind === 'replace') {
         const S = this.sch(d.schicht), B = e.S, L = S && this.loopOf(S);
         if (!S) { this.give({ schicht: d.schicht }, [B]); return; }
-        if (S.old) { if (S.old.ws || this.uses(S, S.old)) (S.park || (S.park = [])).push(S.old); else this.give({ schicht: S.id, old: 1 }, [S.old]); }   // (an Ausklang still reading it keeps it; step 2a: a stream slot's version goes with its slot)
+        if (S.old) { if (S.old.ws || this.uses(S, S.old)) (S.park || (S.park = [])).push(S.old); else if (S.old.ch !== B.ch && !this.sharedV(S, S.old)) this.give({ schicht: S.id, old: 1 }, [S.old]); }   // (an Ausklang still reading it keeps it; step 2a: a stream slot's version goes with its slot)
         const O = B.xo, seam = !!(L && L.k >= 0 && Math.abs(x - L.s1) <= 1);   // at its seam: the seam's own crossfade joins the versions
         B.xo = null;
         if (B.zoN != null) S.zoN = B.zoN;
@@ -10645,8 +10655,8 @@ function myzelDsp() {
           if (S.tb[t] + S.tq[t] >= lim + RS_T || (N && S.tfI[t] >= N)) { const e = S.tn - 1; S.tq[t] = S.tq[e]; S.tb[t] = S.tb[e]; S.tc[t] = S.tc[e]; S.tl[t] = S.tl[e]; S.tfr[t] = S.tfr[e]; S.tfN[t] = S.tfN[e]; S.tfI[t] = S.tfI[e]; S.tsrc[t] = S.tsrc[e]; S.tout[t] = S.tout[e]; S.tsd[t] = S.tsd[e]; S.tst[t] = S.tst[e]; S.tc[e] = null; S.tn--; t--; }
         }
         // (what goes back to the page goes once this span's summed reads are done – a read of it may be waiting in a group)
-        if (S.old && (S.old.seam ? Y >= S.old.end : S.old.xo.i >= S.old.xo.N) && !this.uses(S, S.old)) { const O = S.old; S.old = null; if (!O.ws && !(S.ws && S.ws.prev && S.ws.prev.ch === O.ch)) this.gvQ.push([{ schicht: S.id, old: 1 }, [O]]); }   // (the old version done: back to the page – a stream slot's goes with its slot, the fallback stays)
-        if (S.park) for (let i = 0; i < S.park.length; i++) if (!this.uses(S, S.park[i])) { if (!S.park[i].ws && !(S.ws && S.ws.prev && S.ws.prev.ch === S.park[i].ch)) this.gvQ.push([{ schicht: S.id, old: 1 }, [S.park[i]]]); S.park.splice(i--, 1); }   // (versions kept for their Ausklänge)
+        if (S.old && (S.old.seam ? Y >= S.old.end : S.old.xo.i >= S.old.xo.N) && !this.uses(S, S.old)) { const O = S.old; S.old = null; if (!O.ws && !this.sharedV(S, O)) this.gvQ.push([{ schicht: S.id, old: 1 }, [O]]); }   // (the old version done: back to the page – a stream slot's goes with its slot, the fallback stays)
+        if (S.park) for (let i = 0; i < S.park.length; i++) if (!this.uses(S, S.park[i])) { if (!S.park[i].ws && !this.sharedV(S, S.park[i])) this.gvQ.push([{ schicht: S.id, old: 1 }, [S.park[i]]]); S.park.splice(i--, 1); }   // (versions kept for their Ausklänge)
         if (S.ws) this.wsGc(L, S);
         if (S.dying && S.e.i >= S.e.N && S.e.v === 0) { S.dead = true; S.tn = 0; this.gvQ.push([{ schicht: S.id }, (S.old ? [S, S.old] : [S]).concat(S.park || [], S.ddN ? [{ ch: S.ddN.dst }] : [], this.wsAll(S))]); S.old = null; S.park = null; S.ddN = null; L.sch.splice(si--, 1); }
       }

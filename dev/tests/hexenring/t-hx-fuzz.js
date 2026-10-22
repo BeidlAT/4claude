@@ -154,7 +154,9 @@ async function install(page) {
       await sleep(300);
       const orph = [...M.HX.sch.values()].filter((S) => !M.HX.loops.has(S.loop)).length, weg = [...M.HX.loops.values()].filter((L) => L.state === 'weg').map((L) => L.id);
       if (M.HX.nan && M.HX.nan.length) { F.trip = (F.trip || []).concat(M.HX.nan); if (!F.tripAt) F.tripAt = F.last.slice(); M.HX.nan.length = 0; }
-      return { voices: M.A.voices.size, touches: M.touches.size, ms: i * 50, loops: M.hxLoopsLive().length, mem: M.hxMemUsed(), cap: M.P['hx.mem'] * 1048576, state: M.A.ctx.state, orph, weg };
+      // (a voice that stays: what it is – its source, the way it came, its state, its end – and the actions before it)
+      const vs = [...M.A.voices].slice(0, 3).map((v) => ({ eng: v.eng, as: v.as, loop: !!v.loop, hx: v.hxSrc || null, wk: !!v.wk, alive: v.alive, rel: !!v.released, endIn: v.endAt === Infinity ? 'inf' : +(v.endAt - M.A.ctx.currentTime).toFixed(2), rz: v.rz ? { pend: v.rz.pend, done: v.rz.done } : null, cost: v.cost }));
+      return { voices: M.A.voices.size, touches: M.touches.size, vs, last: M.A.voices.size ? F.last.slice(-12) : null, ms: i * 50, loops: M.hxLoopsLive().length, mem: M.hxMemUsed(), cap: M.P['hx.mem'] * 1048576, state: M.A.ctx.state, orph, weg };
     };
   }, MEM_MB);
 }
@@ -178,7 +180,7 @@ async function install(page) {
     }
     seqs++;
     const s = await page.evaluate(() => window.__settle());
-    if (s.voices || s.touches) stuck.push(`seq ${seqs}: ${s.voices} voices, ${s.touches} fingers after Stille`);
+    if (s.voices || s.touches) { stuck.push(`seq ${seqs}: ${s.voices} voices, ${s.touches} fingers after Stille`); console.log('STUCK seq ' + seqs + ' ' + JSON.stringify(s.vs) + ' after ' + JSON.stringify(s.last)); }
     const stale = s.weg.filter((id) => weg0.includes(id)); weg0 = s.weg;
     if (s.orph || stale.length) books.push(`seq ${seqs}: ${s.orph} Schichten without their Schleife, Schleifen ${stale.join(',') || '–'} cleared a sequence ago and still held`);
     if (s.mem > s.cap + 64 * 1048576) over.push(`seq ${seqs}: ${Math.round(s.mem / 1048576)} MB of ${Math.round(s.cap / 1048576)}`);
