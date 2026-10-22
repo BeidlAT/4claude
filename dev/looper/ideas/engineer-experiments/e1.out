@@ -1,0 +1,95 @@
+{
+ "passS": 5.714,
+ "durS": 7.214,
+ "unitMsPerVoiceS": 6.69,
+ "base1Ms": 560,
+ "base3Ms": 827,
+ "neb1": {
+  "ms": 1319,
+  "rtWhole": 0.183,
+  "rtVoicesOnly": 0.105,
+  "units": 15.73,
+  "notes": 22,
+  "peak": -6.99
+ },
+ "neb3": {
+  "ms": 2091,
+  "rtWhole": 0.29,
+  "rtVoicesOnly": 0.175,
+  "units": 26.17,
+  "notes": 22,
+  "peak": -6.76
+ },
+ "hrz3": {
+  "ms": 1973,
+  "rtWhole": 0.274,
+  "rtVoicesOnly": 0.159,
+  "units": 23.74,
+  "notes": 22,
+  "peak": -9.58
+ },
+ "shn3": {
+  "ms": 1141,
+  "rtWhole": 0.158,
+  "rtVoicesOnly": 0.043,
+  "units": 6.49,
+  "notes": 22,
+  "peak": -3.44
+ },
+ "glt3": {
+  "ms": 1522,
+  "rtWhole": 0.211,
+  "rtVoicesOnly": 0.096,
+  "units": 14.38,
+  "notes": 22,
+  "peak": -9.59
+ },
+ "gng3": {
+  "ms": 2328,
+  "rtWhole": 0.323,
+  "rtVoicesOnly": 0.208,
+  "units": 31.08,
+  "notes": 22,
+  "peak": -6.46
+ },
+ "rhz3": {
+  "ms": 1368,
+  "rtWhole": 0.19,
+  "rtVoicesOnly": 0.075,
+  "units": 11.21,
+  "notes": 22,
+  "peak": -4.98
+ },
+ "elm3": {
+  "ms": 2075,
+  "rtWhole": 0.288,
+  "rtVoicesOnly": 0.173,
+  "units": 25.84,
+  "notes": 22,
+  "peak": -4.23
+ },
+ "gsp3": {
+  "ms": 1581,
+  "rtWhole": 0.219,
+  "rtVoicesOnly": 0.104,
+  "units": 15.61,
+  "notes": 22,
+  "peak": -0.46
+ },
+ "amo3": {
+  "ms": 1601,
+  "rtWhole": 0.222,
+  "rtVoicesOnly": 0.107,
+  "units": 16.03,
+  "notes": 22,
+  "peak": -8.24
+ },
+ "hlm3": {
+  "ms": 1141,
+  "rtWhole": 0.158,
+  "rtVoicesOnly": 0.044,
+  "units": 6.5,
+  "notes": 22,
+  "peak": -7.59
+ }
+}

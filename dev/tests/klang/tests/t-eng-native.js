@@ -131,17 +131,17 @@ const settle = (page, ms) => page.evaluate((ms) => window.__sleep(ms), ms);
       window.__send([0xe0, 0x7f, 0x7f]); await window.__sleep(800); const f1 = zc(), bend = A.bendCents;
       window.__send([0xe0, 0, 0x40]); await window.__sleep(400);
       const lv = []; for (let i = 0; i < 6; i++) { lv.push(lvl()); await window.__sleep(1000); }   // (a long hold: the loop keeps sounding)
-      window.__send([0x80, 57, 0]); const tr = A.ctx.currentTime; await window.__sleep(700); const glow = lvl(); await window.__sleep(2200); const left = [...A.voices].filter((x) => x.alive && x.eng === 'glt').length;
+      window.__send([0x80, 57, 0]); const tr = A.ctx.currentTime; while (A.ctx.currentTime - tr < 0.7) await window.__sleep(5); const glow = lvl(), gdt = A.ctx.currentTime - tr; await window.__sleep(2200); const left = [...A.voices].filter((x) => x.alive && x.eng === 'glt').length;   // (the glow after 0.7 s of the audio clock: a wall-clock wait on a busy headless machine read the tail up to a second later)
       // lanes at level 3
       M.setParam('v.eng', 'neb'); M.setParam('l0.eng', 'glt'); M.setParam('l0.on', true); M.setParam('l1.eng', 'glt'); M.setParam('l1.on', true); M.setParam('dev.q', '3'); M.seqStart();
       let n = 0, over = 0, maxL = 0; for (let i = 0; i < 40; i++) { await window.__sleep(50); const l = M.voiceLoad(); maxL = Math.max(maxL, l); over = Math.max(over, l - M.getBudget()[0]); n = Math.max(n, [...A.voices].filter((x) => x.alive && x.eng === 'glt' && x.gltN).length); }
       M.seqStop(); M.setParam('dev.q', '1'); M.setParam('l0.on', false); M.setParam('l1.on', false); M.setParam('v.eng', 'glt'); await window.__sleep(3200);
-      return { nat: !!(v && v.gltN && !v.wk), f0, f1, bend, lv, glow, left, n, over, maxL, rest: A.voices.size };
+      return { nat: !!(v && v.gltN && !v.wk), f0, f1, bend, lv, glow, gdt, left, n, over, maxL, rest: A.voices.size };
     });
     const c = 1200 * Math.log2(g.f1 / g.f0), lr = Math.max(...g.lv) - Math.min(...g.lv);
     L.ok(g.nat && g.f0 > 215 && g.f0 < 225 && Math.abs(c - g.bend) <= 25, `no AudioWorklet: Glut's native loop on a MIDI key (A3 at ${g.f0.toFixed(1)} Hz), the wheel bends it ${c.toFixed(0)} ct (bus ${g.bend} ct)`);
     L.ok(Math.min(...g.lv) > -45 && lr <= 8, `…a 6-s hold keeps sounding, never cut (${g.lv.map((x) => x.toFixed(1)).join(' / ')} dBFS)`);
-    L.ok(g.glow > Math.min(...g.lv) - 20 && g.left === 0, `…let go it glows on (${g.glow.toFixed(1)} dBFS 0.7 s later), then the voice is freed`);
+    L.ok(g.glow > Math.min(...g.lv) - 20 && g.left === 0, `…let go it glows on (${g.glow.toFixed(1)} dBFS ${g.gdt.toFixed(2)} s later on the audio clock), then the voice is freed`);
     L.ok(g.n > 0 && g.over <= 1e-9 && g.rest === 0, `…Puls lanes at level 3 play the native loop (up to ${g.n} voices, max load ${g.maxL.toFixed(2)}, never above the budget), all end`);
     L.ok(!errors.length, 'no console errors without AudioWorklet ' + errors.join(' | '));
     await ctx.close(); }

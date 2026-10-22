@@ -97,7 +97,7 @@ async function open(opts = {}) {
     navigator.requestMIDIAccess = () => { M.asked++; return Promise.resolve(M.access); };
     const q = navigator.permissions.query.bind(navigator.permissions);
     navigator.permissions.query = (d) => (d && d.name === 'midi' ? Promise.resolve({ state: 'prompt' }) : q(d));
-    window.__send = (bytes, id = 'k1') => { const i = inputs.get(id); if (i && i.onmidimessage) i.onmidimessage({ data: new Uint8Array(bytes), timeStamp: performance.now() }); };
+    window.__send = (bytes, id = 'k1', ts) => { const i = inputs.get(id); if (i && i.onmidimessage) i.onmidimessage({ data: new Uint8Array(bytes), timeStamp: ts != null ? ts : performance.now() }); };   // (ts: the device's own stamp – a keyboard stamps a chord's notes as it plays them, however late the page reads them)
   }, opts.cfg || {});
   await page.goto(opts.url || BASE);
   if (opts.frame) return { page, errors, ctx };   // a host page with the app in a frame

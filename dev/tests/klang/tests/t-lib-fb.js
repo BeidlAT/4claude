@@ -1,5 +1,5 @@
 // Klangquellen: without AudioWorklet the worklet sources say „⌁ spielt als …“ (row, tile, bar chip, engine section) and
-// stay choosable; with it, the module loads on the first probe (the glyph pulses meanwhile). The help texts come from
+// stay choosable; with it, the module stands since sound start (the Hexenring). The help texts come from
 // the families, not from lists of sources.   node t-lib-fb.js
 const { chromium } = require('/opt/node22/lib/node_modules/playwright');
 const L = require('./dsplib'), K = require('./klh');
@@ -36,7 +36,9 @@ const L = require('./dsplib'), K = require('./klh');
     M.kqHear(T, 'hlm'); await window.__sleep(60); o.as = [...M.A.voices].filter((v) => v.alive && v.probe && !v.probeEnd).map((v) => v.as).join(); M.kqClose();
     return o;
   });
-  L.ok(r.st0 === '' && r.st1 === 'laden' && r.pulse && r.st2 === 'ok' && !r.after && !r.fb && r.as === 'hlm', 'first probe of Halm loads the module (' + r.st0 + ' → ' + r.st1 + ' → ' + r.st2 + '), the glyph pulses meanwhile; then Halm itself plays (' + r.as + ')');
+  // (Hexenring, owner 18.10.2026: the module loads at sound start – before, at the first worklet source; the pulsing
+  // glyph is then seen only while sound start's load is still under way)
+  L.ok(r.st0 === 'ok' && r.st1 === 'ok' && !r.pulse && r.st2 === 'ok' && !r.after && !r.fb && r.as === 'hlm', 'the module stands since sound start (' + r.st0 + ' → ' + r.st1 + ' → ' + r.st2 + '): the first probe of Halm plays Halm itself at once (' + r.as + ')');
   // the texts: from the families
   r = await page.evaluate(() => {
     const M = window.__M; M.openPanel('presets');

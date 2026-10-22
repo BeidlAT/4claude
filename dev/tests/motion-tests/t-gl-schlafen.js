@@ -25,7 +25,11 @@ const snap = (page) => page.evaluate(() => {
   return { on: M.SLP.on, art: M.SLP.art, down: M.SLP.down, frozen: M.A.frozen, seq: M.SEQ.on, stopB: M.SEQ.stopB, dly: M.modVal('dly'), mx: M.MOD.mx, k: M.SLP.k, dk: M.SLP.dk, open: M.SLP.open,
     shade: !!(M.GK.shade && !M.GK.shade.hidden), shadeTxt: M.GK.shade ? M.GK.shade.textContent : '', ico: b.dataset.st, zz: M.VIS.zz, stage: document.querySelector('#stage').classList.contains('gk-zz'), anchor: M.SEQ.anchorT, wenden: M.GK.ev.wenden };
 });
-const rms = (page, k) => page.evaluate((k) => window.__g.rms(k === 'dlyret' ? window.__M.MIX.s.dly.dry : k === 'out' ? window.__M.A.out : window.__M.MIX.s[k].dry, 2), k);
+const rms = (page, k, reads = 2) => page.evaluate(([k, reads]) => window.__g.rms(k === 'dlyret' ? window.__M.MIX.s.dly.dry : k === 'out' ? window.__M.A.out : window.__M.MIX.s[k].dry, reads), [k, reads]);
+// the whole output with the Puls in it: reads every 60 ms over 2 s – four of its beats, so a level does not depend on
+// whether a 170-ms read caught a hit (two reads scattered by ±3 dB on the same steady sound)
+// (the phone held meanwhile: the sensor keeps streaming, as in a hand)
+const rmsOut = async (page) => (await Promise.all([rms(page, 'out', 34), play(page, 2.4, M.hold(45))]))[0];
 (async () => {
   // ================= Freeze-Kadenz =================
   {
@@ -130,8 +134,8 @@ const rms = (page, k) => page.evaluate((k) => window.__g.rms(k === 'dlyret' ? wi
     await gestik(page);
     await setup(page);
     await page.evaluate(() => { const M = window.__M; M.gkSet('slArt', 'stille'); M.seqStart(); });
-    await play(page, 1, M.hold(45));
-    const o0 = await rms(page, 'out');
+    await play(page, 3, M.hold(45));   // (the echo and the hall in their steady state, as they are when it wakes)
+    const o0 = await rmsOut(page);
     await play(page, 1.4, M.faceDown(45));
     const s = await snap(page), o1 = await rms(page, 'out');
     ok(s.on && s.art === 'stille' && !s.seq && db(o1) < -90, 'Stille: silence at once (' + db(o1).toFixed(0) + ' dBFS), the Puls stops');
@@ -141,7 +145,7 @@ const rms = (page, k) => page.evaluate((k) => window.__g.rms(k === 'dlyret' ? wi
     await page.evaluate(() => window.__a.up(601));
     await play(page, 1.6, M.faceUp(45));
     await play(page, 0.5, M.hold(45));
-    const w = await snap(page), o3 = await rms(page, 'out'), mv = await page.evaluate(() => { const M = window.__M; return [M.A.masterVol.gain.value, M.SLP.mg]; });
+    const w = await snap(page), o3 = await rmsOut(page), mv = await page.evaluate(() => { const M = window.__M; return [M.A.masterVol.gain.value, M.SLP.mg]; });
     ok(!w.on && w.seq && near(db(o3), db(o0), 2) && mv[1] === 1, 'woken: the sound and the Puls are back (' + (db(o3) - db(o0)).toFixed(1) + ' dB)');
     ok(!errors.length, 'no errors ' + errors.join(' | '));
     await page.context().close();

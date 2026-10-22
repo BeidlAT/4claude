@@ -44,25 +44,41 @@ const { open, ok, close, rain } = require('./gs-h');
       await window.__sleep(30);
     }
     // the picture: the rain's own drawing and the Geflecht's spores following the slope, once in each of 240 frames
-    // (as the app draws it – a batch drawn at once would measure the canvas's backlog, not the drawing)
-    const V = [], c = M.fctx;
-    await new Promise((res) => {
-      let i = 0;
-      const f = () => { const t0 = performance.now(); M.rgVisFrame(c, M.VIS.w, M.VIS.h); for (const s of M.VIS.spores) M.rgSpore(s); V.push(performance.now() - t0); if (++i < 240) requestAnimationFrame(f); else res(); };
-      requestAnimationFrame(f);
-    });
-    V.sort((a, b) => a - b);
-    return { k, sp, tick: med(T), tickW: Math.max(...T), vis: V[V.length >> 1], visW: V[Math.floor(V.length * 0.95)], struck: M.RG.n - n0 };
+    // (as the app draws it – a batch drawn at once would measure the canvas's backlog, not the drawing) – three times,
+    // the median of the three medians (one run alone read 1.0 ms where its neighbours read 0.2: the machine, busy)
+    const c = M.fctx, VV = [];
+    for (let rep = 0; rep < 3; rep++) {
+      const V = [];
+      await new Promise((res) => {
+        let i = 0;
+        const f = () => { const t0 = performance.now(); M.rgVisFrame(c, M.VIS.w, M.VIS.h); for (const s of M.VIS.spores) M.rgSpore(s); V.push(performance.now() - t0); if (++i < 240) requestAnimationFrame(f); else res(); };
+        requestAnimationFrame(f);
+      });
+      V.sort((a, b) => a - b); VV.push([V[V.length >> 1], V[Math.floor(V.length * 0.95)]]);
+      await window.__sleep(300);
+    }
+    VV.sort((a, b) => a[0] - b[0]);
+    return { k, sp, tick: med(T), tickW: Math.max(...T), vis: VV[1][0], visW: VV[1][1], visAll: VV.map((x) => x[0]), struck: M.RG.n - n0 };
   });
+  // the frames once more, rain and none in turn: the rain still falling, then Neigen off (no rain), each 4 s (the
+  // machine's load drifts – the first comparison, made minutes apart, measured it as much as the rain)
+  const withRain2 = await fps(4000);
+  await page.evaluate(() => window.__M.gkSet('neigen', 'anl'));
+  await page.waitForTimeout(1000);
+  const base2 = await fps(4000);
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+  const lo = (a, b, k) => Math.min(a[k], b[k]), hi = (a, b, k) => Math.max(a[k], b[k]);
+  const B = { med: lo(base, base2, 'med'), p95: lo(base, base2, 'p95'), o20: lo(base, base2, 'o20') }, W = { med: lo(withRain, withRain2, 'med'), p95: lo(withRain, withRain2, 'p95'), o20: lo(withRain, withRain2, 'o20') };
+  console.log('INFO frames (median / 95 % / over 20 ms): without ' + [base, base2].map((x) => x.med.toFixed(1) + '/' + x.p95.toFixed(1) + '/' + Math.round(x.o20 * 100) + '%').join(', ') + '; with the rain ' + [withRain, withRain2].map((x) => x.med.toFixed(1) + '/' + x.p95.toFixed(1) + '/' + Math.round(x.o20 * 100) + '%').join(', ') + '; the rain\'s drawing ' + r.visAll.map((x) => x.toFixed(2)).join(', ') + ' ms');
   const f = (x) => x.toFixed(3);
   ok(r.k === 24 && r.sp === 16, 'the worst case: 24 Keime, 16 spores, steep');
   ok(r.tick < 0.5, 'CPU 4× slower: the scheduler\'s part ' + f(r.tick) + ' ms a tick (worst block ' + f(r.tickW) + ' ms, < 0.5 ms; a tick every 25 ms)');
-  ok(r.vis < 0.3, 'the rain\'s drawing: ' + f(r.vis) + ' ms a frame (median of 240 frames; 95 %: ' + f(r.visW) + ' ms; < 0.3 ms)');
+  ok(r.vis < 0.3, 'the rain\'s drawing: ' + f(r.vis) + ' ms a frame (median of 240 frames, the middle of three runs; 95 %: ' + f(r.visW) + ' ms; < 0.3 ms)');
   // (p95 of frames swings with whatever else the machine does; the share of slow frames (> 20 ms) against the same
   // comparisons is the steadier measure – either passing is a pass)
-  const slow = withRain.o20 <= Math.max(base.o20, puls.o20) + 0.05;
-  ok(withRain.med <= base.med * 1.15 + 1 && (withRain.p95 <= Math.max(base.p95, puls.p95) + 1 || slow), 'the frames of the running app: ' + f(withRain.med) + ' ms with the rain, ' + f(base.med) + ' ms without (median; 95 %: ' + f(withRain.p95) + ' / ' + f(base.p95) + ' – the Puls striking as often: ' + f(puls.p95) + '; frames over 20 ms ' + Math.round(withRain.o20 * 100) + ' % / ' + Math.round(base.o20 * 100) + ' % / ' + Math.round(puls.o20 * 100) + ' %)');
+  // (each side its better of two runs: a stall of the machine slows one run, not the rain)
+  const slow = W.o20 <= Math.max(B.o20, puls.o20) + 0.05;
+  ok(W.med <= B.med * 1.15 + 1 && (W.p95 <= Math.max(B.p95, puls.p95) + 1 || slow), 'the frames of the running app: ' + f(W.med) + ' ms with the rain, ' + f(B.med) + ' ms without (median, the better of two runs each; 95 %: ' + f(W.p95) + ' / ' + f(B.p95) + ' – the Puls striking as often: ' + f(puls.p95) + '; frames over 20 ms ' + Math.round(W.o20 * 100) + ' % / ' + Math.round(B.o20 * 100) + ' % / ' + Math.round(puls.o20 * 100) + ' %)');
   ok(errors.length === 0, 'no errors ' + errors.join(' | '));
   await close();
 })().catch(async (e) => { console.log('FAIL ' + e.stack); process.exitCode = 1; await close(); });

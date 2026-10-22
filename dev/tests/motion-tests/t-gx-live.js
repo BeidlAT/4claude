@@ -1,11 +1,11 @@
 // Fix phase (gx), live in the app (slot gx: sh ../v2/mk.sh /home/user/4claude/myzel gx):   node t-gx-live.js
 // lying on the back with the phone overhead (no veil while held, a finger wakes it and plays), the veil over a phone
 // lying still on its face, the sign from deviceorientation stored per device, the dragged lean that stays for
-// Sporenregen, the mixer's "Regen" strip only while it can rain, the bass guard's nodes made once, the Fährte's Gestik
-// lanes resting while Gestik is off, "Rückgängig" for a deleted Fährte and for a user preset's Gestik settings, a knob
+// Sporenregen, the mixer's "Regen" strip only while it can rain, the bass guard's nodes made once, a Schleife of
+// Bewegung's Gestik lanes resting while Gestik is off, ↶ for a deleted one and for a user preset's Gestik settings, a knob
 // winning learn over a swaying phone, the sustain pedal, "Taste" without a pad, chords from a keyboard, the rest
-// detent of Tonhöhe, Fingerhalt, Ladung in a sound without grains, Schlafen's tail and the long sleep, the field's tag
-// of a running Fährte, a recording that ends while only the rain plays.
+// detent of Tonhöhe, Fingerhalt, Ladung in a sound without grains, Schlafen's tail and the long sleep, the ring
+// of a Schleife of Bewegung (once the Fährte's tag), a recording that ends while only the rain plays.
 process.env.BASE = process.env.BASE || 'http://127.0.0.1:8790/gx-inst/index.html';
 const H = require('./gk-h');
 const L = require('./gk-lib');
@@ -122,7 +122,7 @@ const st = (page) => page.evaluate(() => { const M = window.__M, sh = document.q
     ok(!errors.length, 'no page errors ' + errors.join(' | '));
     await page.context().close();
   }
-  // ---- 4. the bass guard's nodes; the Fährte's Gestik lanes; Fährte undo; preset undo; learn; pedal; Taste ----
+  // ---- 4. the bass guard's nodes; a Schleife of Bewegung's Gestik lanes and its undo; preset undo; learn; pedal; Taste ----
   {
     const { page, errors } = await H.open({ vp: MOB, cfg: { perm: 'granted', ins: [['k1', 'microKEY Air']] } });
     await gestikOn(page);
@@ -134,15 +134,19 @@ const st = (page) => page.evaluate(() => { const M = window.__M, sh = document.q
       return seen.size;
     });
     ok(nodes === 1, 'the bass guard: one low-pass and analyser per audio context, however often Gestik comes on (' + nodes + ')');
-    // a Fährte with a Gestik lane and a knob lane (what a knob and Anlehnen did, taken by a tap), then Gestik off
+    // a Schleife of Bewegung with a Gestik lane and a knob lane (what a knob and Anlehnen did, taken by the Korb – once a
+    // Fährte's tap), then Gestik off
     const fl = await page.evaluate(async () => {
       const M = window.__M;
+      for (let i = 0; i < 100 && M.HX.state !== 'ok'; i++) await new Promise((r) => setTimeout(r, 50));
       M.modSet('gk:anl.h', 'hoehe', 0.4); M.modSet('map:knob', 'flt', 0.5);
       for (let i = 0; i < 40; i++) { M.modSet('gk:anl.h', 'hoehe', 0.4 * Math.sin(i / 3)); M.modSet('map:knob', 'flt', 0.5 * Math.cos(i / 4)); await new Promise((r) => setTimeout(r, 60)); }
-      M.faeTake(M.faeHeard(performance.now()), 'tap', 1);
-      await new Promise((r) => setTimeout(r, 2600));
-      const L = M.FA.loop;
-      return { loop: !!L, lanes: L ? L.lanes.map((l) => l.src) : [] };
+      M.setParam('hx.laenge', 'fest'); M.setParam('hx.festT', 1);
+      M.hxKorb(null);
+      let L = null;
+      for (let i = 0; i < 120 && !(L && L.bew.lanes.length); i++) { await new Promise((r) => setTimeout(r, 50)); L = M.hxLoopsLive().find((x) => x.bew); }
+      await new Promise((r) => setTimeout(r, 300));
+      return { loop: !!L, lanes: L ? L.bew.lanes.map((l) => l.src) : [] };
     });
     if (fl.loop && fl.lanes.some((s) => s.startsWith('gk:'))) {
       const off = await page.evaluate(async () => {
@@ -150,24 +154,25 @@ const st = (page) => page.evaluate(() => { const M = window.__M, sh = document.q
         M.gkDisable();
         await new Promise((r) => setTimeout(r, 500));
         const ks = Object.values(M.MOD.t).flatMap((T) => [...T.s.keys()]);
-        return { gk: ks.filter((k) => k.startsWith('fae:') && k.includes('|gk:')), map: ks.filter((k) => k.startsWith('fae:') && k.includes('|map:')) };
+        return { gk: ks.filter((k) => k.startsWith('hxb') && k.includes('|gk:')), map: ks.filter((k) => k.startsWith('hxb') && k.includes('|map:')) };
       });
-      ok(!off.gk.length && off.map.length > 0, 'Gestik off: the Fährte\'s Gestik lanes rest, a knob\'s lane plays on (' + JSON.stringify(off) + ')');
+      ok(!off.gk.length && off.map.length > 0, 'Gestik off: the Schleife\'s Gestik lanes rest, a knob\'s lane plays on (' + JSON.stringify(off) + ')');
       await gestikOn(page);
       await sleep(600);
-      const on = await page.evaluate(() => Object.values(window.__M.MOD.t).flatMap((T) => [...T.s.keys()]).filter((k) => k.startsWith('fae:') && k.includes('|gk:')).length);
+      const on = await page.evaluate(() => Object.values(window.__M.MOD.t).flatMap((T) => [...T.s.keys()]).filter((k) => k.startsWith('hxb') && k.includes('|gk:')).length);
       ok(on > 0, 'Gestik on again: they play again (' + on + ')');
-      // double tap: deleted – with "Rückgängig"
+      // deleted (its card) – ↶ brings it back
       const u = await page.evaluate(async () => {
         const M = window.__M;
-        M.faeClear(true);
-        const t = document.querySelector('#toastAct'), msg = document.querySelector('#toastMsg').textContent, had = !t.hidden && /Rückgängig/.test(t.textContent);
-        t.click();
+        M.hxDelete(M.hxLoopsLive().find((x) => x.bew));
+        const gone = !M.hxLoopsLive().some((x) => x.bew);
+        M.hxUndoStep();
         await new Promise((r) => setTimeout(r, 200));
-        return { had, msg, back: !!M.FA.loop };
+        return { gone, back: M.hxLoopsLive().some((x) => x.bew && x.state === 'spielt') };
       });
-      ok(u.had && u.back, 'Fährte deleted: "' + u.msg + '" with Rückgängig – it plays again');
-    } else ok(false, 'a Fährte with a Gestik lane was made (' + JSON.stringify(fl) + ')');
+      ok(u.gone && u.back, 'the Schleife of Bewegung deleted – ↶ brings it back, it plays again');
+      await page.evaluate(() => { const M = window.__M; for (const L of M.hxLoopsLive()) M.hxDrop(L); M.setParam('hx.laenge', 'auto'); });
+    } else ok(false, 'a Schleife of Bewegung with a Gestik lane was made (' + JSON.stringify(fl) + ')');
     // a user preset (format 2) with Gestik settings, then Rückgängig: the own settings come back
     const pr = await page.evaluate(async () => {
       const M = window.__M;
@@ -222,7 +227,10 @@ const st = (page) => page.evaluate(() => { const M = window.__M, sh = document.q
       const M = window.__M, w = (ms) => new Promise((r) => setTimeout(r, ms)), out = [];
       for (const order of [[60, 64, 67], [67, 60, 64], [64, 67, 60]]) {
         window.__setPose({ beta: 45, roll: 0 }); await w(300);
-        for (const n of order) { window.__send([0x90, n, 100]); await w(2); }
+        // (a keyboard stamps the chord's notes 2 ms apart as it plays them; the page may read them later – a busy frame
+        // between two of them in this headless machine spread them by more than the 40-ms stroke window in wall time)
+        const ts0 = performance.now(); let i = 0;
+        for (const n of order) { (window.__gx = window.__gx || []).push(performance.now() - ts0 - 2 * i); window.__send([0x90, n, 100], 'k1', ts0 + 2 * i++); await w(2); }
         await w(300);
         window.__setPose({ beta: 45, roll: 22 }); await w(900);
         const ts = [...M.touches.values()].map((tt) => ({ f: tt.f, c: tt.ga ? Math.round(tt.ga.c) : 0 })).sort((a, b) => a.f - b.f);
@@ -232,6 +240,7 @@ const st = (page) => page.evaluate(() => { const M = window.__M, sh = document.q
       }
       return out;
     });
+    console.log('INFO the chord\'s notes read by the page late against their stamps by ' + (await page.evaluate(() => window.__gx.map((x) => x.toFixed(1)).join(' '))) + ' ms');
     ok(ch.every((s) => /^0\/0\/[1-9]\d*$/.test(s)), 'a chord from the keyboard, any arrival order: the top note bends, the others stay (' + ch.join(' · ') + ')');
     const dr = await page.evaluate(async () => {
       const M = window.__M, w = (ms) => new Promise((r) => setTimeout(r, ms)), out = {};
@@ -245,7 +254,7 @@ const st = (page) => page.evaluate(() => { const M = window.__M, sh = document.q
     ok(!errors.length, 'no page errors ' + errors.join(' | '));
     await page.context().close();
   }
-  // ---- 6. Ladung in a sound without grains; Schlafen's long sleep; the Fährte tag; a recording with only rain ----
+  // ---- 6. Ladung in a sound without grains; Schlafen's long sleep; a Schleife of Bewegung's ring; a recording with only rain ----
   {
     const { page, errors } = await H.open({ vp: MOB, cfg: { perm: 'granted', noMidi: true } });
     await gestikOn(page);
@@ -268,16 +277,20 @@ const st = (page) => page.evaluate(() => { const M = window.__M, sh = document.q
       return r;
     });
     ok(sl.asleep && !sl.on && !sl.seq && sl.kt === 0 && sl.kt2 === 1 && !sl.dk, 'woken after a long sleep: into silence – the Puls stays stopped, the echo and hall come back after 1.5 s (' + JSON.stringify(sl) + ')');
+    // (the Fährte's tag on the field is retired: a Schleife of Bewegung shows as a ring of the Ringleiste)
     const tg = await page.evaluate(async () => {
       const M = window.__M;
+      M.hxRailShow && M.hxRailShow(true);
       for (let i = 0; i < 30; i++) { M.modSet('map:knob', 'flt', 0.5 * Math.sin(i / 3)); await new Promise((r) => setTimeout(r, 60)); }
-      M.faeTake(M.faeHeard(performance.now()), 'tap', 1);
-      await new Promise((r) => setTimeout(r, 2600));
-      M.faeUI();
-      const t = document.querySelector('#faeTag');
-      return { loop: !!M.FA.loop, hidden: t.hidden, text: t.textContent };
+      M.setParam('hx.laenge', 'fest'); M.setParam('hx.festT', 1);
+      M.hxKorb(null);
+      let L = null;
+      for (let i = 0; i < 120 && !(L && L.bew.lanes.length); i++) { await new Promise((r) => setTimeout(r, 50)); L = M.hxLoopsLive().find((x) => x.bew); }
+      await new Promise((r) => setTimeout(r, 300));
+      const b = L && document.querySelectorAll('.hx-ring')[L.slot];
+      return { loop: !!L, aria: b ? b.getAttribute('aria-label') : '' };
     });
-    ok(tg.loop && !tg.hidden && /^Fährte · 1 Takt/.test(tg.text), 'a Fährte runs: the field says so ("' + tg.text + '")');
+    ok(tg.loop && /^Schleife \d, Bewegung, 1 Takt, spielt/.test(tg.aria), 'a Schleife of Bewegung plays: its ring says so ("' + tg.aria + '")');
     ok(!errors.length, 'no page errors ' + errors.join(' | '));
     await page.context().close();
   }

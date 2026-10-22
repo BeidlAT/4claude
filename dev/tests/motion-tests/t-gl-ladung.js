@@ -94,7 +94,7 @@ const samples = (page) => page.evaluate(() => { clearInterval(window.__si); retu
     await play(page, 1, M.hold(45));
     // ---- the patch ----
     const aft = await page.evaluate(() => ({ P: window.__g.patch(), preset: window.__M.UI.preset, ir: window.__M.A.irJob, w: window.__w }));
-    const patchKeys = Object.keys(aft.w.set).filter((k) => k !== 'myzel.gestik.v1' && k !== 'myzel.midimap.v1');
+    const patchKeys = Object.keys(aft.w.set).filter((k) => k !== 'myzel.gestik.v1' && k !== 'myzel.midimap.v1' && k !== 'myzel.hx.dev.v1');   // (the Hexenring's device flags: its coach mark, seen once)
     ok(aft.P === before.P && aft.preset === before.preset && aft.ir === before.ir && !patchKeys.length && !aft.w.toast, 'the patch is never written: values, preset mark, no save (' + (patchKeys.join(', ') || 'only Gestik’s own settings') + '), no toast, no new hall');
     ok(!errors.length, 'no errors ' + errors.join(' | '));
     await page.context().close();

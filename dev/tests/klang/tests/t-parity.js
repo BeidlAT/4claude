@@ -32,7 +32,10 @@ const OLD_ENGS = ['neb', 'kor', 'hau', 'obt', 'stm', 'swm', 'tie', 'glo', 'mem',
       await new Promise((r) => setTimeout(r, 400));
       return { mods: window.__addMod.slice(), dsp: !!A.ctx.__dsp, state: M.DSP.state, ok: A.workletOK, as: [...A.voices].map((v) => v.as) };
     }, OLD_ENGS);
-    L.ok(r.mods.length === 0 && !r.dsp && r.state === '', `old engines everywhere (Klang, Ebene, Puls, hits, panic): no worklet module loaded (addModule calls: ${r.mods.length}, DSP.state '${r.state}')`);
+    // (Hexenring, owner 18.10.2026: the module now loads at sound start – the Humus records from the first note; before,
+    // a session with the old engines never loaded it. The old engines still play their own native voices.)
+    const blob0 = r.mods.filter((u) => u.startsWith('blob:')).length;
+    L.ok(blob0 === 1 && r.dsp && r.state === 'ok' && r.as.every((k) => OLD_ENGS.includes(k)), `old engines everywhere (Klang, Ebene, Puls, hits, panic): the module loaded once, at sound start, for the Hexenring (addModule calls: ${r.mods.length}, DSP.state '${r.state}'), the voices native (${[...new Set(r.as)].join(' ') || 'none left'})`);
     // the first worklet engine: the module, once
     const r2 = await page.evaluate(async () => {
       const M = window.__M; M.setParam('v.eng', 'hlm');
@@ -43,7 +46,7 @@ const OLD_ENGS = ['neb', 'kor', 'hau', 'obt', 'stm', 'swm', 'tie', 'glo', 'mem',
       return { mods: window.__addMod.slice(), state: M.DSP.state, as: v.as };
     });
     const blob = r2.mods.filter((u) => u.startsWith('blob:')).length;
-    L.ok(r2.state === 'ok' && blob === 1 && r2.as === 'hlm', `selecting Halm loads the module once (calls: ${r2.mods.join(' | ')}), later selections reuse it, the voice plays its processor`);
+    L.ok(r2.state === 'ok' && blob === 1 && r2.as === 'hlm', `selecting Halm reuses the module of sound start (calls: ${r2.mods.join(' | ')}), the voice plays its processor`);
     L.ok(!errors.filter((e) => !/myzel-dsp\.js|Failed to load resource/.test(e)).length, 'no errors in the live session ' + errors.join(' | '));
     await ctx.close();
   }

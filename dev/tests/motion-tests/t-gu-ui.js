@@ -1,5 +1,5 @@
 // Part 7 (UI and texts): the Gestik card in the order of play, the Lebenszeichen with its word, the hint lines, the
-// Wasserwaage for keyboard and screen reader, the card's Fährte and Zuweisen buttons, 44 px targets on touch screens,
+// Wasserwaage for keyboard and screen reader, the card's Zuweisen button (its Fährte button retired), 44 px targets on touch screens,
 // no sideways scrolling at 360 px, the live region, the tile's words per platform, the start screen and the
 // Spielhilfe, iPhone (no vibration: no Haptik; Zuordnungen with Gestik), a computer without sensor, the claude.ai view,
 // the iPad's larger Wasserwaage, reduced motion.   node t-gu-ui.js   (slot gu: sh ../v2/mk.sh /home/user/4claude/myzel gu)
@@ -26,7 +26,7 @@ const small = (sel) => [...document.querySelector(sel).querySelectorAll('button,
     await page.click('#btnStart'); await page.waitForFunction(() => window.__M.A.started);
     await page.evaluate(() => window.__M.openPanel('presets')); await sleep(300);
     const sh = await page.evaluate(() => [...document.querySelectorAll('.help li')].map((l) => l.textContent).find((t) => /^Gestik:/.test(t)) || '');
-    ok(/Neigen lehnt/.test(sh) && /Schütteln lädt/.test(sh) && /Umdrehen/.test(sh) && /Fährte/.test(sh) && /Sporenregen/.test(sh) && /Wasserwaage/.test(sh), 'Spielhilfe has a Gestik line naming the functions and the way without a sensor');
+    ok(/Neigen lehnt/.test(sh) && /Schütteln lädt/.test(sh) && /Umdrehen/.test(sh) && /Bewegung als Schleife/.test(sh) && /Sporenregen/.test(sh) && /Wasserwaage/.test(sh), 'Spielhilfe has a Gestik line naming the functions and the way without a sensor');
     await page.evaluate(() => window.__M.openPanel('dev')); await sleep(250);
     const tile = await page.evaluate(() => { const b = document.querySelector('[data-gk="on"]'); return { sub: b.dataset.sub, vis: !b.hidden, ico: document.getElementById('btnGk').hidden }; });
     ok(tile.vis && tile.sub === 'Neigen, schütteln, umdrehen' && tile.ico, 'tile: „Gestik einschalten · ' + tile.sub + '“, the bar\'s spore still hidden');
@@ -65,15 +65,9 @@ const small = (sel) => [...document.querySelector(sel).querySelectorAll('button,
     ok(!sm.length, 'touch: every control in the card is at least 44 px' + (sm.length ? ' – too small: ' + JSON.stringify(sm.slice(0, 6)) : ''));
     const tl = await page.evaluate(small, '.kc-go-row');
     ok(!tl.length, 'touch: the tiles are at least 44 px' + (tl.length ? JSON.stringify(tl) : ''));
-    // the card's Fährte button: hold arms a recording (like the bar's), the state shows on both
-    const fb = await page.$('.gk-fae-b');
-    await fb.scrollIntoViewIfNeeded(); await sleep(100);
-    const bb = await fb.boundingBox();
-    await page.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2); await page.mouse.down(); await sleep(600); await page.mouse.up();
-    await sleep(150);
-    const fs = await page.evaluate(() => ({ card: document.querySelector('.gk-fae-b').dataset.st, bar: document.getElementById('btnFae').dataset.st, aria: document.querySelector('.gk-fae-b').getAttribute('aria-label'), win: !!window.__M.FA.win }));
-    ok(fs.win && /^(arm|rec)$/.test(fs.card) && fs.card === fs.bar && /^Fährte: nimmt/.test(fs.aria), 'card\'s Fährte button: held → ' + fs.card + ' (bar: ' + fs.bar + '), „' + fs.aria + '“');
-    await page.evaluate(() => window.__M.faeClear(true));
+    // the Fährte's buttons (card and bar) are retired – the Korb of the Hexenring takes Bewegung (t-hx-bew)
+    const fs = await page.evaluate(() => ({ card: !!document.querySelector('.gk-fae-b'), bar: !!document.getElementById('btnFae'), line: (document.querySelector('.gk-fae') || {}).hidden }));
+    ok(!fs.card && !fs.bar && fs.line !== false, 'the Fährte\'s buttons are gone from the card and the bar; its line shows only while a Schleife of Bewegung plays');
     // the card's Zuweisen button starts learn
     await page.click('.gk-zw .btn'); await sleep(150);
     const ln = await page.evaluate(() => window.__M.LEARN.on);
@@ -194,7 +188,7 @@ const small = (sel) => [...document.querySelector(sel).querySelectorAll('button,
     await H.gestikOn(page); await sleep(1500);
     const v = await page.evaluate(() => ({ stat: document.querySelector('.gk-stat').textContent, a: !document.querySelector('.gk-card .kc-app').hidden && document.querySelector('.gk-card .kc-app a').href, hint: document.querySelector('.gk-hint').textContent }));
     ok(v.stat === 'In dieser Ansicht gesperrt – öffne Myzel als App:' && v.a === 'https://beidlat.github.io/4claude/', 'card: „' + v.stat + '“ + the link (the address once)');
-    ok(/Wasserwaage, der Sporenregen und die Fährte/.test(v.hint), 'and what still works: „' + v.hint + '“');
+    ok(/Wasserwaage, der Sporenregen und Schleifen aus Bewegung/.test(v.hint), 'and what still works: „' + v.hint + '“');
     await page.context().close();
   }
   // ---------- 6. iPad, portrait: a larger Wasserwaage in the wide card; the words of a tablet ----------

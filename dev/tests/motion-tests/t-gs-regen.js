@@ -1,7 +1,7 @@
 // Sporenregen, the motion (slot gs; node t-gs-regen.js): leaning right the spores play your Keime upward, left
 // downward, toward you down through the Höhe (bright to dark); steeper is faster and denser, level is silence; "Harfe"
 // glides through the columns; without a sensor the dragged Wasserwaage leans it; shaking sprinkles spores, Schlafen
-// lets them seep away; a Fährte leans it by itself; a real sensor leans it, a phone leaned on a stand keeps it raining.
+// lets them seep away; a Schleife of Bewegung leans it by itself; a real sensor leans it, a phone leaned on a stand keeps it raining.
 const { open, ok, close, rain, pairs, tools } = require('./gs-h');
 const G = require('./gl-h');
 const run = (page, tilt, ms, setup) => page.evaluate(async ([tilt, ms, setup]) => {
@@ -119,24 +119,25 @@ const heard = (hits, by, dir) => {
     return { n: h.length, down: h.length > 1 };
   });
   ok(r.n > 0, 'a control bound to „Sporenregen: Neigung ↔“ leans it as well (' + r.n + ' strikes)');
-  // the Fährte: the demo's loop leans it by itself
+  // a Schleife of Bewegung (the demo's, once the Fährte's loop): it leans it by itself
   r = await page.evaluate(async () => {
     const M = window.__M;
     window.__tilt(0, 0); await window.__sleep(1500);
     const pre = M.PRESETS.find((p) => p.key === 'sporenfaehrte');
+    for (let i = 0; i < 100 && M.HX.state !== 'ok'; i++) await window.__sleep(50);
     M.faeImport(pre.fae, 'test');
     const xs = [];
     window.__collect();
     for (let i = 0; i < 30; i++) { await window.__sleep(100); xs.push(M.modVal('rgx')); }
     const h = window.__stop();
-    const lanes = M.FA.loop && M.FA.loop.lanes.map((l) => l.name);
-    M.faeClear(false);
+    const B = M.hxLoopsLive().find((x) => x.bew), lanes = B && B.bew.lanes.map((l) => l.k + '|' + l.src);
+    if (B) M.hxDrop(B);
     return { n: h.length, max: Math.max(...xs.map(Math.abs)), lanes };
   });
-  ok(r.lanes && r.lanes.includes('fae:rgx|gk:regen.x') && r.max > 0.2 && r.n > 0, 'a Fährte on the rain\'s slope leans it while the hand rests – the rain plays itself (' + r.n + ' strikes, slope up to ' + r.max.toFixed(2) + ')');
-  // the Fährte writes the rain's slope down like any of Gestik's functions
+  ok(r.lanes && r.lanes.includes('rgx|gk:regen.x') && r.max > 0.2 && r.n > 0, 'a Schleife of Bewegung on the rain\'s slope leans it while the hand rests – the rain plays itself (' + r.n + ' strikes, slope up to ' + r.max.toFixed(2) + ')');
+  // the Humus's Bewegung writes the rain's slope down like any of Gestik's functions
   r = await page.evaluate(async () => { const M = window.__M; window.__tilt(0.5, 0); await window.__sleep(400); const L = M.FA.lanes.get('m|rgx|gk:regen.x'), o = { v: L ? L.v : null, keys: [...M.FA.lanes.keys()].join(' ') }; window.__tilt(0, 0); return o; });
-  ok(r.v != null && Math.abs(r.v - 0.5) < 1e-9, 'the Fährte writes the rain\'s slope down (lane m|rgx|gk:regen.x: ' + JSON.stringify(r) + ')');
+  ok(r.v != null && Math.abs(r.v - 0.5) < 1e-9, 'the Bewegung writes the rain\'s slope down (lane m|rgx|gk:regen.x: ' + JSON.stringify(r) + ')');
   // a recognised own binding of the tilt ("Eigene") takes the axis: the rain's route rests
   r = await page.evaluate(async () => {
     const M = window.__M;

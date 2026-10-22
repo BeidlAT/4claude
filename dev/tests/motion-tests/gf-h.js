@@ -3,7 +3,7 @@
 //   __probe(node)  – an AudioWorklet that samples a node's output on the audio thread (time, value per render quantum):
 //                    what really sounds, also while the main thread stalls; samples in window.__PR.pts
 //   __drive(name, k, f) – a mod-layer source following f(audio time) at 100 Hz (like a knob or Gestik would)
-//   __loop()       – the running Fährte as plain data (lanes, clock, strength), to compute what must sound
+//   __loop()       – the Fährte's loop as plain data (retired with the Hexenring: null; t-hx-bew has __bew())
 //   __outs(id, name) – a fake MIDI output whose sent bytes are kept (Funkstrecke)
 // and in node: model(L, T) – the loop's value at audio time T (as the mod layer interpolates its points).
 const H = require('./gk-h');

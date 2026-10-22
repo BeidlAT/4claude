@@ -85,8 +85,10 @@ const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) process
   r = await page.evaluate(async () => {
     const M = window.__M; M.setParam('rec.tail', false); M.setParam('rec.arm', true); M.setParam('rec.bars', 1);
     M.recToggle(); const st = M.CAP.state; await window.__wait(700);
-    M.onDown({ pointerId: 'k', pt: { x: 0.3, y: 0.5, px: 100, py: 100 } }); M.onUp({ pointerId: 'k' });
-    M.setParam('v.eng', 'mem');
+    // (a struck note – its onset is where it starts, not where a slow attack crosses the threshold – tapped as played: the
+    // release in a task of its own; a voice starts only once the task that made it has ended)
+    M.setParam('v.eng', 'mem'); M.setParam('v.layer', 'off'); await window.__wait(300);
+    M.onDown({ pointerId: 'k', pt: { x: 0.3, y: 0.5, px: 100, py: 100 } }); await window.__wait(30); M.onUp({ pointerId: 'k' });
     await window.__untilIdle(); const { tk, L } = window.__last(); M.setParam('rec.arm', false);
     return { st, frames: tk.frames, first: window.__onsets(L, 0.005)[0] };
   });

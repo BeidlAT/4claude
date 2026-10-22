@@ -40,10 +40,11 @@ HEAD = """<!doctype html>
 </head>
 <body>
 """
-# The service worker is registered only outside the claude.ai viewer (which does not allow service workers).
+# The service worker is registered only outside the claude.ai viewer (which does not allow service workers), and never
+# by the Hexenring's hidden render frame (?werk=1, SPEC §8: render-only, it must not touch the app's caches).
 TAIL = """
 <script>
-if ('serviceWorker' in navigator && !(window.claude && window.claude.use)) {
+if ('serviceWorker' in navigator && !(window.claude && window.claude.use) && !/[?&]werk=1(&|$)/.test(location.search)) {
   window.addEventListener('load', function () {
     navigator.serviceWorker.register('sw.js').then(function (reg) {
       reg.addEventListener('updatefound', function () {

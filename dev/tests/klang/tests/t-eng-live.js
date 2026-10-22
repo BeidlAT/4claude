@@ -60,9 +60,12 @@ const settle = (page, ms) => page.evaluate((ms) => window.__sleep(ms), ms);
       const lanes = [...M.A.voices].filter((v) => v.eng === key).map((v) => v.as + (v.wk ? '*' : ''));
       M.seqStop(); M.setParam('dev.q', '1'); M.setParam('l0.on', false); M.setParam('l1.on', false); M.setParam('v.layer', 'off'); M.setParam('v.eng', key);
       await window.__sleep(key === 'hlm' ? 600 : key === 'rnk' ? 1500 : key === 'shn' ? 900 : key === 'zpf' ? 1500 : key === 'glt' ? 4000 : key === 'khl' ? 600 : key === 'boe' ? 4500 : key === 'amo' ? 1200 : 3500);
-      return { maxV, maxL: +maxL.toFixed(2), vb: vb3, over, lanes, left: M.A.voices.size, broken: [...M.A.workletBroken], mx: M.mxSrcText('l0') };
+      // (a step the Puls had scheduled ahead – up to 0.35 s – still starts after the stop and plays its gate and its
+      // release: on a busy machine that outlived the fixed wait; a voice that never ends still fails after 4 s more)
+      let more = 0; while (M.A.voices.size && more < 4000) { await window.__sleep(100); more += 100; }
+      return { maxV, maxL: +maxL.toFixed(2), vb: vb3, over, lanes, left: M.A.voices.size, more, broken: [...M.A.workletBroken], mx: M.mxSrcText('l0') };
     }, key);
-    L.ok(busy.lanes.length && busy.lanes.every((s) => s === key + '*') && !busy.over && busy.left === 0 && !busy.broken.length, `${key}: Puls lanes at level 3 play it (${busy.lanes.length} voices sounding, max load ${busy.maxL} ≤ ${busy.vb}), all end, nothing broken (${JSON.stringify({ over: busy.over, left: busy.left, broken: busy.broken, lanes: busy.lanes.join() })})`);
+    L.ok(busy.lanes.length && busy.lanes.every((s) => s === key + '*') && !busy.over && busy.left === 0 && !busy.broken.length, `${key}: Puls lanes at level 3 play it (${busy.lanes.length} voices sounding, max load ${busy.maxL} ≤ ${busy.vb}), all end${busy.more ? ' (the last ' + busy.more + ' ms later)' : ''}, nothing broken (${JSON.stringify({ over: busy.over, left: busy.left, broken: busy.broken, lanes: busy.lanes.join() })})`);
     // Gestik: a shake hammers the rings (wkShake is what the shake subscription calls)
     if (key === 'rnk') {
       const sh = await page.evaluate(async () => {

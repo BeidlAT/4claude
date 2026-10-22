@@ -3,7 +3,7 @@
 Ein Touch-Instrument für ambiente, perkussive, experimentelle und psychedelische Klänge – im Browser, gemacht fürs Handy.
 
 - **Als App (auch offline):** https://beidlat.github.io/4claude/ – im Browser öffnen, dann „Teilen → Zum Home-Bildschirm“ (iPhone) bzw. „App installieren“ (Android).
-- **In claude.ai:** https://claude.ai/artifact/HNZYLEaUvtCfkyYWi3SuDr (privat)
+- **In claude.ai:** https://claude.ai/artifact/HNZYLEaUvtCfkyYWi3SuDr (privat; noch der Stand vor den neuen Klangquellen und dem Hexenring)
 
 ## Klänge
 
@@ -27,7 +27,7 @@ Ein Touch-Instrument für ambiente, perkussive, experimentelle und psychedelisch
   - Erzeugt: Glasharfe, Chor, Metall, Staub, Wasser, Vögel, Zikaden, Flüstern, Harmonium und Kurzwelle.
   - Echo (die letzten 8 Sekunden des eigenen Spiels).
   - Eigene Datei: eine Audiodatei oder Aufnahme mit bis zu 30 Sekunden. Sie wird auf dem Gerät gespeichert, ihr Grundton wird erkannt.
-  - Mikrofon (live).
+  - Mikrofon (live) – erst nach der Erlaubnis des Browsers, nur solange diese Quelle gewählt ist.
 - **Aufnahme:** frei oder in Takten (1–64), samplegenau als Schleife.
 
 ## Mixer (Tab „Mixer“)
@@ -96,7 +96,7 @@ Das Handy wird Teil des Instruments: Finger, Tasten oder der Puls wählen die T�
   - **Anlehnen:** Vor- und Zurückneigen formt die Klangfarbe der gehaltenen Töne. Seitlich biegt es den neuesten Ton (bei einem Akkord den obersten) nach einer kleinen Ruhezone zur Nachbarstufe der Skala und rastet ab 80 % ein. Bebung ist ein Vibrato aus dem Handgelenk. Tragen gibt es auf Wunsch.
   - **Ladung:** Schütteln lädt das Myzel auf (dichtere Körner, Regen, ein vollerer Puls, leierndes Echo). Danach entlädt es sich über 0,3 bis 30 s. Schwenken, also Kreisen wie mit einem Weinglas, lässt gehaltene Töne singen.
   - **Schlafen:** Display nach unten friert den Klang ein (Freeze-Kadenz, Stille oder Szene B). Zurückdrehen weckt ihn. Nach einer halben Minute klingt der Schweif aus, und nach langem Schlaf wacht Myzel still auf. Liegt das Handy still auf dem Display, ruhen Berührungen; in der Hand, etwa im Liegen über dem Gesicht, weckt es ein Finger auf dem Display.
-  - **Fährte:** Bewegung wird im Takt mitgeschrieben. Ein Tipp macht die letzten 1, 2 oder 4 Takte zur Schleife, die mit jedem Durchgang verblasst. Sie nimmt auch jeden anderen stetigen Regler auf, deshalb nützt sie auch am Computer.
+  - **Bewegung als Schleife** (früher die Fährte): Bewegung und jeder stetige Regler werden immer im Takt mitgeschrieben. Hörte der Hexenring nur Bewegung, erntet der Korb eine „Schleife aus Bewegung“; nach jeder Ernte macht der Chip „nur Bewegung“ aus demselben Fenster eine. Sie legt das Neigen oder den Regler wieder aufs Live-Spiel – deshalb nützt sie auch am Computer. Alte Presets, Szenen und Dateien mit einer Fährte laden sie so.
   - **Sporenregen:** Gespielte Töne werden leuchtende Keime. Geneigte Sporen rollen darüber und spielen sie im Raster des Pulses, auf einem eigenen Mixer-Kanal „Regen“ (im Pult, sobald es regnen kann). Flach hingelegt wird es still; an einem Ständer zählt die Waagerechte, und eine von Hand gezogene Neigung bleibt stehen.
   - **Funkstrecke:** sendet die Gestik als MIDI (14-Bit-NRPN auf Kanal 16), etwa per USB an einen Computer. Myzel erkennt sie dort als „Gestik (Handy)“. Ob ein Handy dafür einen MIDI-Ausgang bekommt, ist ungetestet.
 - **Rezepte:** Manche Presets bringen Gestik-Einstellungen mit. Sie wirken, solange Gestik an ist; eigene Zuweisungen gehen vor.
@@ -104,14 +104,32 @@ Das Handy wird Teil des Instruments: Finger, Tasten oder der Puls wählen die T�
 - **Plattformen:**
   - **Android-Handys:** alles, Haptik nur hier. Bebung, Drehen und Schwenken brauchen ein Gyroskop; fehlt es, sagt die Karte das.
   - **iPhone und iPad:** Die Erlaubnis kommt im Tipp. Auf dem iPad ist Bebung zuerst aus (zu schwer fürs Handgelenk), der Sporenregen geht gut auf dem Schoß. Mit Gestik bekommen iPhone und iPad erstmals die Zuordnungen.
-  - **Computer:** meist ohne Sensor. Dort zieht man die Wasserwaage, nimmt Regler mit der Fährte auf oder holt ein Handy per Funkstrecke.
-  - **claude.ai-Ansicht:** Bewegung ist gesperrt. Wasserwaage, Sporenregen und Fährte gehen trotzdem.
+  - **Computer:** meist ohne Sensor. Dort zieht man die Wasserwaage, macht Regler zur Schleife aus Bewegung oder holt ein Handy per Funkstrecke.
+  - **claude.ai-Ansicht:** Bewegung ist gesperrt. Wasserwaage und Sporenregen gehen trotzdem.
 - **Ehrliche Grenzen:**
   - Der Browser liefert Bewegung mit etwa 60 Hz und geschätzt 40 bis 100 ms Verzögerung. Deshalb formt, lädt und lenkt Gestik nur; sie wählt nie Töne und löst keine frei getimten Schläge aus.
   - Der Bildschirm muss an bleiben. Myzel hält ihn wach, das kostet Akku.
   - Starkes Neigen kann die Ansicht drehen. Dagegen helfen die Drehsperre des Geräts oder „Vollbild mit Drehsperre“ (Android).
   - Systemgesten wie „Schütteln zum Widerrufen“ kann eine Web-App nicht abfangen.
   - Die Schwellen passen sich dem Grundrauschen des Geräts an. Getestet ist alles mit simulierten Sensoren, auf echten Geräten noch kaum.
+
+## Hexenring (Looper)
+
+Ein Looper, bei dem man vorher nichts drücken muss: Myzel schreibt immer mit – den Klang, die Noten und die Bewegung (der „Humus“, ohne Mikrofon). Gefällt dir, was du gerade gespielt hast, tippst du auf den **Korb**: Der Hexenring findet Takt und Länge, und an der nächsten Naht übernimmt die Schleife, im Takt und ohne Lücke. Gedacht für starke Geräte (aktuelles iPad Pro, Desktop-PC); auf Handys geht es auch, mit weniger auf einmal.
+
+- **Die Ringleiste** unter dem Spielfeld: Korb, Hauptknopf (aufnehmen und überspielen, auch gehalten), ein Ring je Schleife (Tipp: stumm/an, lange: die Karte), ↶/↷, der Form-Knopf. Pedale, MIDI-Tasten, die nanoKONTROL2-Seite und die Tastatur (Leertaste, E, 1–8, Strg+Z) bedienen dasselbe. Schleifen und Form sind nach dem Neuladen wieder da.
+- **Jeder Durchgang ist ein Angebot:** Was du über einer Schleife spielst, lässt sich nachträglich als neue Schicht behalten. Die **Auslese** baut aus vier Wiederholungen die beste echte Fassung oder die gemeinte (aus allen Versuchen).
+- **Abdruck und Wuchs:** Eine Schleife spielt zuerst genau, was du gehört hast, die Effektkette eingebrannt (auf Wunsch „folgt der Effektkette“). Schleifen mit Noten können **wachsen**: Myzels Klangquellen spielen sie im Hintergrund neu – „Treu“ einmal, „Lebendig“ jeden Durchgang ein wenig anders. So folgen sie der Tonart, dem Tempo oder einem anderen Klang; ✓ behält einen Durchgang, ✕ geht zurück, ⚓ holt die Aufnahme. Kommt das Gerät an seine Grenze, weicht zuerst das Lebendige – nie dein Live-Spiel.
+- **Verwandeln:** wie ein Tonband schneller oder langsamer (mit der Trägheit eines Bandmotors), Bandstopp, rückwärts, trimmen, verdoppeln, Verblassen, Abrieb, Auslassen und Würfeln; an den Noten Stufen, dünner und dichter, Groove, Krebs, Umkehrung; Einwurzeln (die Schleife wächst in ein auf die Tonleiter gestimmtes Saitennetz) und Moder (die Höhen zerfallen zu Knistern). Die saubere Fassung bleibt immer.
+- **Form:** Lichtungen (merken, was gerade klingt, und auf der nächsten Eins dorthin wechseln), Kern, Lücke, Schluss, Szenen A/B, Folge, eine Setliste, die Bühnenansicht mit großen Ringen.
+- **Mitspieler** (abschaltbar, Standard „schaut zu“): Variieren und Wandern lassen Schleifen sich selbst verändern – was kommt, zeigt eine Knospe einen Takt vorher; der Gärtner macht Platz, wenn du in den Bass gehst oder dicht spielst, antwortet auf deine Phrasen aus deinem eigenen Material, schlägt Begleitungen vor und bringt markierte Schleifen zurück, wenn du ihr Motiv spielst. Die Handschrift (Standard aus) merkt sich auf dem Gerät deine Wendungen.
+- **Schleifen nähren Myzel:** das Saitennetz von Gespinst, die Körner, Rhizom (Netz „eigen“ – die Lawinen bleiben bei der Schleife, dein Spiel bleibt frisch – oder „geteilt“ mit deinem Spiel), den Sporenregen, Glut und Sehne. Schleife in Schleife nimmt eine andere Schleife jeden Durchgang auf und lässt sie verwehen; „Treffen“ zeigt und setzt, wann alle Schleifen wieder gemeinsam beginnen.
+- **Mikrofon:** aus, bis du es in der Hexenring-Karte (Tab „Aufnahme“) mit „Mikrofon an“ einschaltest; solange es offen ist, steht ein rotes „● Mikro“ im Feld. Es geht nur in den Humus (zu hören ist es nicht). „Verzögerung messen“ misst den Weg Lautsprecher → Mikrofon, damit Gesungenes im Takt sitzt; mit Bluetooth-Kopfhörern wird Überspielen mit dem Mikrofon abgelehnt. „Gesang als Noten“ macht aus Gesungenem oder Gepfiffenem Noten, die Myzel dann mit seinen Klängen spielt.
+- **Hinaus:** eine Schleife als Aufnahme (WAV, ZIP) und ihre Noten als MIDI-Datei; „Wiedergabe: Live“ spielt ihre Noten mit echten Stimmen, „MIDI · Noten hinaus“ schickt sie an MIDI-Geräte.
+
+## Ruhe
+
+Klingt nichts mehr, steckt Myzel Mixer, Effektketten und Hall ab – erst wenn alles exakt auf null ausgeklungen ist – und jeder Ton steckt sie wieder ein, bevor er erklingt. Der Humus des Hexenrings nimmt dabei weiter auf. Das spart im Leerlauf gut die Hälfte der Rechenlast, ohne dass sich ein hörbares Sample ändert; das Spielfeld zeichnet auf schnellen Bildschirmen höchstens etwa 60 Bilder pro Sekunde.
 
 ## Aufbau
 

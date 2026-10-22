@@ -31,6 +31,9 @@ const { open, ok, close, probes, gestikOn } = require('./gm-h');
     window.__send([0x90, 60, 90]); window.__send([0x90, 64, 90]);
   });
   await page.waitForTimeout(300);
+  // (the Hexenring's coach mark goes once per device – after a while, storing that it went: gone before, as on any
+  // device that has seen it, so the stream's 20-odd seconds measure the stream alone)
+  await page.evaluate(() => { if (window.__M.hxCoachDone) window.__M.hxCoachDone(); });
   const before = await page.evaluate(() => {
     const M = window.__M, W = (window.__w = { set: {}, toast: 0, dirty: 0 });
     const si = Storage.prototype.setItem;
@@ -38,28 +41,31 @@ const { open, ok, close, probes, gestikOn } = require('./gm-h');
     new MutationObserver(() => { if (document.querySelector('#toast').classList.contains('show')) W.toast++; }).observe(document.querySelector('#toast'), { attributes: true, attributeFilter: ['class'] });
     return { P: window.__g.patch(), preset: M.UI.preset, ir: M.A.irJob, ks: M.KS_CACHE.frames, drv: M.A.drvKey, chains: M.A.chains.length };
   });
-  // 10 s at 60 Hz: tilt sweeps and shakes (sensor), mod wheel, a knob, the pitch wheel
+  // 10 s of stream at 60 Hz – 600 steps a frame apart: tilt sweeps and shakes (sensor), mod wheel, a knob, the pitch
+  // wheel. (Counted in steps, the motion on the steps' own clock: on this headless machine a 16.7-ms timer takes 40 ms
+  // – the page's frames – while a step's own work takes 0.1 ms, so 10 s of wall time held only 240 steps.)
   const seen = await page.evaluate(async () => {
-    const M = window.__M, t0 = performance.now(), seen = { flt: 0, hoehe: 0, dly: 0, korD: 0, my: 0, morph: 0 };
+    const M = window.__M, t0 = performance.now(), seen = { flt: 0, hoehe: 0, dly: 0, korD: 0, my: 0, morph: 0, work: 0 };
     let i = 0;
-    while (performance.now() - t0 < 10000) {
-      const t = (performance.now() - t0) / 1000;
+    while (i < 600) {
+      const t = i / 60, w0 = performance.now();
       window.__setPose({ beta: 45 + 20 * Math.sin(t * 1.3), roll: 25 * Math.sin(t * 0.9), lin: t % 4 > 3 ? [12 * Math.sin(t * 60), 0, 0] : [0, 0, 0] });
       const c = Math.round(63.5 + 63.5 * Math.sin(t * 2.1));
       window.__send([0xb0, 1, c]); window.__send([0xb0, 21, 127 - c]); window.__send([0xb0, 22, c]); window.__send([0xe0, 0, Math.round(64 + 40 * Math.sin(t * 1.7))]);
       for (const k of ['flt', 'hoehe', 'dly', 'korD', 'morph']) seen[k] = Math.max(seen[k], Math.abs(M.modVal(k)));
       const tt = M.touches.get(31); if (tt && tt.my != null) seen.my = Math.max(seen.my, Math.abs(tt.my - tt.y));
-      i++;
+      i++; seen.work += performance.now() - w0;
       await window.__sleep(1000 / 60);
     }
-    seen.n = i;
+    seen.n = i; seen.wall = (performance.now() - t0) / 1000; seen.work /= i;
     return seen;
   });
   const after = await page.evaluate(() => {
     const M = window.__M;
     return { P: window.__g.patch(), preset: M.UI.preset, ir: M.A.irJob, ks: M.KS_CACHE.frames, drv: M.A.drvKey, chains: M.A.chains.length, w: window.__w, pend: M.MAP.pend.size };
   });
-  ok(seen.n > 300 && seen.flt > 0.3 && seen.hoehe > 0.2 && seen.dly > 0.5 && seen.korD > 0 && seen.morph > 0.5 && seen.my > 0.05, 'the sound moved all the time: Filter ' + seen.flt.toFixed(2) + ', Höhe ' + seen.hoehe.toFixed(2) + ', Echo-Anteil ' + seen.dly.toFixed(2) + ', Körner-Dichte ' + seen.korD.toFixed(2) + ', A/B-Morph ' + seen.morph.toFixed(2) + ', a held finger\'s height ±' + seen.my.toFixed(2) + ' (' + seen.n + ' steps)');
+  console.log('INFO ' + seen.n + ' steps in ' + seen.wall.toFixed(1) + ' s of wall time, ' + seen.work.toFixed(2) + ' ms of work a step');
+  ok(seen.n >= 600 && seen.flt > 0.3 && seen.hoehe > 0.2 && seen.dly > 0.5 && seen.korD > 0 && seen.morph > 0.5 && seen.my > 0.05, 'the sound moved all the time: Filter ' + seen.flt.toFixed(2) + ', Höhe ' + seen.hoehe.toFixed(2) + ', Echo-Anteil ' + seen.dly.toFixed(2) + ', Körner-Dichte ' + seen.korD.toFixed(2) + ', A/B-Morph ' + seen.morph.toFixed(2) + ', a held finger\'s height ±' + seen.my.toFixed(2) + ' (' + seen.n + ' steps)');
   ok(after.P === before.P, 'the patch values are exactly as before (' + JSON.parse(after.P)['flt.freq'] + ' Hz, rev.size ' + JSON.parse(after.P)['rev.size'] + ')');
   ok(after.preset === before.preset && !!before.preset, 'the preset keeps its mark ("' + after.preset + '")');
   const saves = Object.keys(after.w.set).filter((k) => k !== 'myzel.gestik.v1');
