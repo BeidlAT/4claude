@@ -4,7 +4,7 @@ const { open, ok, close } = require('./h');
 const SETUP = () => {
   // pulses on an ideal grid with random jitter on their timeStamps; extra messages before chosen pulses
   window.__clock = (o) => new Promise((res) => {
-    const per = 60000 / (24 * o.bpm), t0 = o.t0 || performance.now() + 2, log = [];
+    const per = 60000 / (24 * o.bpm), t0 = o.t0 || performance.now() + 2, log = [], offs = [];   // (offs: the audio↔performance mapping each pulse met)
     let k = 0;
     const step = () => {
       const now = performance.now();
@@ -12,9 +12,9 @@ const SETUP = () => {
         const ideal = t0 + k * per;
         for (const e of o.events || []) if (e.k === k) window.__send(e.bytes, o.id || 'c1', ideal - per / 2);
         window.__send([0xf8], o.id || 'c1', ideal + (Math.random() * 2 - 1) * (o.jit || 0));
-        log.push(ideal); k++;
+        log.push(ideal); offs.push(window.__M.A.ctxOff); k++;
       }
-      if (k >= o.n) res({ log, per, t0, end: t0 + k * per }); else setTimeout(step, 1);
+      if (k >= o.n) res({ log, offs, per, t0, end: t0 + k * per }); else setTimeout(step, 1);
     };
     step();
   });
@@ -75,9 +75,11 @@ const SETUP = () => {
       const p = window.__clock({ bpm: 120, n: 6 * 24, jit: 1, events: [{ k: 24, bytes: [0xfa] }, { k: 72, bytes: [0xfc] }, { k: 84, bytes: [0xf2, 8, 0] }, { k: 96, bytes: [0xfb] }] });
       await window.__sleep(24 * 20.8 + 10 * 20.8 + 50); out.started = M.SEQ.on;
       await window.__sleep(48 * 20.8 + 30); out.stopped = !M.SEQ.on;
-      const { log } = await p;
-      // continue at pulse 96 from song position 8 sixteenths = beat 2
-      out.on = M.SEQ.on; out.beat = M.beatAt(M.ctxAt(log[96])); out.beat2 = M.beatAt(M.ctxAt(log[120]));
+      const { log, offs } = await p;
+      // continue at pulse 96 from song position 8 sixteenths = beat 2 – each pulse on the audio clock as the app read it
+      // then (the mapping of that moment: a later one, moved by a stall of the headless audio device meanwhile, put
+      // beat 2 at 1.971)
+      out.on = M.SEQ.on; out.beat = M.beatAt((log[96] - offs[96]) / 1000); out.beat2 = M.beatAt((log[120] - offs[120]) / 1000);
       await window.__sleep(700); window.__send([0xfc], 'c1');
       return out;
     });
@@ -136,7 +138,11 @@ const SETUP = () => {
     const gaps = (a) => a.slice(1).map((m, i) => m.ts - a[i].ts);
     const freeG = gaps(f8(r.free)).slice(1);   // the grid starts at 'now': its first gap is shorter
     ok(r.outs === 2 && r.ctxOk, 'outputs scanned; audio clock mapped onto performance.now()');
-    ok(freeG.length > 12 && freeG.every((g) => Math.abs(g - per(84)) < 0.6), 'while the Puls stands: steady F8 at 84 BPM (' + freeG.length + ' gaps, ' + Math.min(...freeG).toFixed(2) + '–' + Math.max(...freeG).toFixed(2) + ' ms)');
+    // (as for the running Puls below: exact on the audio clock; on performance.now() the mapping walks a fraction of a
+    // millisecond a pulse while the headless audio device stalls – it measured 28.99–29.44 ms gaps then, the audio
+    // clock's exactly 29.76)
+    const freeA = gaps(f8(r.free).map((m) => ({ ts: m.ts - m.off }))).slice(1);
+    ok(freeG.length > 12 && freeA.every((g) => Math.abs(g - per(84)) < 0.01) && freeG.every((g) => Math.abs(g - per(84)) < 1.1), 'while the Puls stands: steady F8 at 84 BPM (' + freeG.length + ' gaps on the audio clock ' + Math.min(...freeA).toFixed(3) + '–' + Math.max(...freeA).toFixed(3) + ' ms; stamped on performance.now() ' + Math.min(...freeG).toFixed(2) + '–' + Math.max(...freeG).toFixed(2) + ' ms)');
     const iFA = r.all.findIndex((m) => m.d[0] === 0xfa), FA = r.all[iFA];
     const before = r.all.slice(0, iFA).filter((m) => m.d[0] === 0xf8), afterFA = f8(r.all.slice(iFA + 1));
     ok(FA && Math.abs(FA.ts - (r.anchor - 1)) < 0.01 && before.every((m) => m.ts < FA.ts), 'Puls start sends Start (FA) just before beat 0; no earlier pulse after it');
@@ -154,7 +160,7 @@ const SETUP = () => {
     ok(ahead.every((a) => a > -1 && a < 351), 'pulses are stamped ahead by at most the Puls look-ahead (max ' + Math.max(...ahead).toFixed(1) + ' ms)');
     const iFC = r.all.findIndex((m) => m.d[0] === 0xfc);
     const post = f8(r.all.slice(iFC + 1)).filter((m) => m.ts > r.all[iFC].at + 120);
-    ok(iFC > iFA && post.length > 5 && gaps(post).every((g) => Math.abs(g - per(120)) < 0.6), 'Puls stop sends Stop (FC); the clock keeps running at the tempo');
+    ok(iFC > iFA && post.length > 5 && gaps(aud(post)).every((g) => Math.abs(g - per(120)) < 0.01) && gaps(post).every((g) => Math.abs(g - per(120)) < 1.1), 'Puls stop sends Stop (FC); the clock keeps running at the tempo (on the audio clock exactly, stamps within 1.1 ms)');
     ok(r.after === r.nOff && r.all[r.all.length - 1] && r.other === 0 && r.pref === false, 'clock out off: stops at once; other outputs never got clock; choice remembered');
 
     // our clock coming back on the same device's input is never followed

@@ -2556,8 +2556,9 @@ const ZPF_COST = { wk: [0.88, 1.49], nat: [1.38, 2] };
 for (const [i, T] of [[0, VCOST1], [1, VCOST3]]) Object.defineProperty(T, 'zpf', { get: () => (wkReady('zpf') ? ZPF_COST.wk : ZPF_COST.nat)[i], enumerable: true });
 // Glut: the worklet loop, or – without AudioWorklet (and while the module loads) – its own native loop, priced as such
 // (the final calibration, the highest + 15 %: the loop 0.68–0.75 / 1.34–1.38, level 3 two loops; the native loop's 26
-// nodes 0.89–0.97 / 1.70–1.79)
-const GLT_COST = { wk: [0.86, 1.58], nat: [1.12, 2.06] };
+// nodes 0.89–0.97 / 1.70–1.79; re-measured in the final pass, three runs of cost.js: the loop 0.76–0.83 / 1.42–1.52,
+// the native loop 1.22–1.28 / 1.81–1.86 – bench.js had measured the native loop at 1.22–1.29 against 1.12)
+const GLT_COST = { wk: [0.96, 1.74], nat: [1.48, 2.13] };
 for (const [i, T] of [[0, VCOST1], [1, VCOST3]]) Object.defineProperty(T, 'glt', { get: () => (A.ctx && gltNat() ? GLT_COST.nat : GLT_COST.wk)[i], enumerable: true });
 const QP = {
   1: { budget: MOBILE ? 14 : 22, maxv: 32, grainMax: MOBILE ? 80 : 128, overlap: MOBILE ? 16 : 24, os: MOBILE ? '2x' : '4x', rich: false, korDens: 1, cost: VCOST1 },
@@ -3975,15 +3976,17 @@ const IDLE_FFT = 4096;
 // exactly after 10 time constants, Chromium snaps it there). Any param's: it costs a comparison.
 (function idleHook() {
   if (typeof AudioParam === 'undefined') return;
+  // (each wrapper with the method's own arguments – no rest array, no apply: the mod layer calls these dozens of times a
+  // frame; measured 4× throttled, a call 2.71 µs through the generic wrapper, 2.27 µs through these, 2.2–2.5 bare)
   const P = AudioParam.prototype, end = (t) => { if (IDLE.on) idleWake(); if (t > IDLE.autoT) IDLE.autoT = t; };
-  const wrap = (k, t) => { const f = P[k]; if (typeof f !== 'function') return; P[k] = function (...a) { end(t(a)); return f.apply(this, a); }; };
-  wrap('setValueAtTime', (a) => +a[1] || 0);
-  wrap('linearRampToValueAtTime', (a) => +a[1] || 0);
-  wrap('exponentialRampToValueAtTime', (a) => +a[1] || 0);
-  wrap('setTargetAtTime', (a) => (+a[1] || 0) + 10 * (+a[2] || 0) + 0.02);
-  wrap('setValueCurveAtTime', (a) => (+a[1] || 0) + (+a[2] || 0));
-  wrap('cancelScheduledValues', (a) => +a[0] || 0);
-  wrap('cancelAndHoldAtTime', (a) => +a[0] || 0);
+  const has = (k) => typeof P[k] === 'function';
+  if (has('setValueAtTime')) { const f = P.setValueAtTime; P.setValueAtTime = function (v, t) { end(+t || 0); return f.call(this, v, t); }; }
+  if (has('linearRampToValueAtTime')) { const f = P.linearRampToValueAtTime; P.linearRampToValueAtTime = function (v, t) { end(+t || 0); return f.call(this, v, t); }; }
+  if (has('exponentialRampToValueAtTime')) { const f = P.exponentialRampToValueAtTime; P.exponentialRampToValueAtTime = function (v, t) { end(+t || 0); return f.call(this, v, t); }; }
+  if (has('setTargetAtTime')) { const f = P.setTargetAtTime; P.setTargetAtTime = function (v, t, c) { end((+t || 0) + 10 * (+c || 0) + 0.02); return f.call(this, v, t, c); }; }
+  if (has('setValueCurveAtTime')) { const f = P.setValueCurveAtTime; P.setValueCurveAtTime = function (v, t, d) { end((+t || 0) + (+d || 0)); return f.call(this, v, t, d); }; }
+  if (has('cancelScheduledValues')) { const f = P.cancelScheduledValues; P.cancelScheduledValues = function (t) { end(+t || 0); return f.call(this, t); }; }
+  if (has('cancelAndHoldAtTime')) { const f = P.cancelAndHoldAtTime; P.cancelAndHoldAtTime = function (t) { end(+t || 0); return f.call(this, t); }; }
   const d = Object.getOwnPropertyDescriptor(P, 'value');
   if (d && d.set) Object.defineProperty(P, 'value', { configurable: true, enumerable: d.enumerable, get: d.get, set(v) { end(0); d.set.call(this, v); } });
 })();

@@ -122,11 +122,16 @@ const db = (x) => (x.md ? (20 * Math.log10(x.md)).toFixed(1) + ' dB at ' + (x.at
       console.log(`INFO ${cs.name}: the switch ${JSON.stringify(d.log)}; old↔Ruhe ${db(x)}`);
       ok(x.md < cs.bound, `${cs.name}: its own grid moved by the pause – a difference of rounding only (${db(x)}, under ${(20 * Math.log10(cs.bound)).toFixed(0)} dB)`);
     } else {
-      const o2 = await render(OLD, cs, false), s = cmp(o, o2);
+      // Chromium's own spread: the old build rendered four times, the largest difference of any two (two renders
+      // under-sampled it – the same build pair measured −116 and −100 dB, −90 and −82 dB, in different runs)
+      const o2 = await render(OLD, cs, false), more = [];
+      for (let i = 0; i < (+process.env.SPREAD_N || 4) - 2; i++) more.push(await render(OLD, cs, false));
+      const all = [o, o2, ...more]; let s = cmp(o, o2);
+      for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) { const x = cmp(all[i], all[j]); if (x.md > s.md) s = x; }
       const tI = (d.log.find((x) => x[1] === 'idle') || [cs.dur])[0], tW = (d.log.find((x) => x[1] === 'wake' && x[0] > tI) || [cs.dur])[0];
       const before = Math.max(cmp(o, d, 0, tI).md, cmp(o2, d, 0, tI).md), after = Math.max(cmp(o, d, tW).md, cmp(o2, d, tW).md);
       const L = (x) => (20 * Math.log10(x || 1e-30)).toFixed(1);
-      console.log(`INFO ${cs.name}: energy ${o.e.toFixed(1)}; the switch ${JSON.stringify(d.log)}; old↔old ${db(s)} (Chromium's summing order); old↔Ruhe before the switch ${L(before)} dB, after the wake ${L(after)} dB`);
+      console.log(`INFO ${cs.name}: energy ${o.e.toFixed(1)}; the switch ${JSON.stringify(d.log)}; old↔old ${db(s)} (Chromium's summing order, the widest of ${all.length} renders); old↔Ruhe before the switch ${L(before)} dB, after the wake ${L(after)} dB`);
       ok((tW < cs.dur || !cs.idle) && (after <= Math.max(before, s.md) * 2 || after < 1e-6), `${cs.name}: after the wake (at ${tW} s) the render differs from the old build no more than before the switch or than the old build from itself (${L(after)} against ${L(Math.max(before, s.md))} dB)`);
     }
     ok(cs.idle ? d.n >= 1 : d.n === 0, `${cs.name}: the switch ${cs.idle ? 'unplugged the graph in the silence' : 'never engaged'} (${d.n} times)`);

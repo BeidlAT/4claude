@@ -6,6 +6,9 @@ D=$(cd "$(dirname "$0")" && pwd)
 sh "$D/../v2/mk.sh" /home/user/4claude/myzel gk >/dev/null
 sh "$D/../v2/mk.sh" "$D/orig" gkbase >/dev/null
 sh "$D/../v2/mk.sh" /home/user/4claude/myzel gm >/dev/null   # part 2, the mod layer (t-gm-*: gm-h.js)
+# the cost rows' reference builds (measured in turns with this one: t-gm-cost – fae609a, the Gestik stages complete;
+# t-gf-cost – 4d6d233, the Fährte become Schleifen of Bewegung)
+for r in gmref:fae609a gfref:4d6d233; do mkdir -p "$D/ref/${r%%:*}"; git -C /home/user/4claude show "${r#*:}:myzel/index.html" > "$D/ref/${r%%:*}/index.html"; cp /home/user/4claude/myzel/tap-worklet.js "$D/ref/${r%%:*}/"; sh "$D/../v2/mk.sh" "$D/ref/${r%%:*}" "${r%%:*}" >/dev/null; done
 sh "$D/../v2/mk.sh" /home/user/4claude/myzel ga >/dev/null   # part 3, Anlehnen (t-ga-*: ga-h.js)
 sh "$D/../v2/mk.sh" /home/user/4claude/myzel gl >/dev/null   # part 4, Ladung and Schlafen (t-gl-*: gl-h.js)
 sh "$D/../v2/mk.sh" /home/user/4claude/myzel gf >/dev/null   # part 5, Fährte and Funkstrecke (t-gf-*: gf-h.js)
