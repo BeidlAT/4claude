@@ -227,7 +227,10 @@ const st = (page) => page.evaluate(() => { const M = window.__M, sh = document.q
       const M = window.__M, w = (ms) => new Promise((r) => setTimeout(r, ms)), out = [];
       for (const order of [[60, 64, 67], [67, 60, 64], [64, 67, 60]]) {
         window.__setPose({ beta: 45, roll: 0 }); await w(300);
-        for (const n of order) { window.__send([0x90, n, 100]); await w(2); }
+        // (a keyboard stamps the chord's notes 2 ms apart as it plays them; the page may read them later – a busy frame
+        // between two of them in this headless machine spread them by more than the 40-ms stroke window in wall time)
+        const ts0 = performance.now(); let i = 0;
+        for (const n of order) { (window.__gx = window.__gx || []).push(performance.now() - ts0 - 2 * i); window.__send([0x90, n, 100], 'k1', ts0 + 2 * i++); await w(2); }
         await w(300);
         window.__setPose({ beta: 45, roll: 22 }); await w(900);
         const ts = [...M.touches.values()].map((tt) => ({ f: tt.f, c: tt.ga ? Math.round(tt.ga.c) : 0 })).sort((a, b) => a.f - b.f);
@@ -237,6 +240,7 @@ const st = (page) => page.evaluate(() => { const M = window.__M, sh = document.q
       }
       return out;
     });
+    console.log('INFO the chord\'s notes read by the page late against their stamps by ' + (await page.evaluate(() => window.__gx.map((x) => x.toFixed(1)).join(' '))) + ' ms');
     ok(ch.every((s) => /^0\/0\/[1-9]\d*$/.test(s)), 'a chord from the keyboard, any arrival order: the top note bends, the others stay (' + ch.join(' · ') + ')');
     const dr = await page.evaluate(async () => {
       const M = window.__M, w = (ms) => new Promise((r) => setTimeout(r, ms)), out = {};

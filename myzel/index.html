@@ -2538,8 +2538,8 @@ let SR = 48000;
 // Tiefe, Stimme, Schwarm, Nebel L3: the median), two runs each and every body, bridge and syllable – the highest + 15 %
 // (elm with its arc built, jrg while its modes ring, mdr its first 4 s with the crackle, boe held at y 0.6, amo across
 // the field at y 0.6; all with their full planned sound, the owner's rule is best sound first)
-const VCOST1 = { neb: 1, kor: 0.6, hau: 0.3, glo: 0.7, mem: 0.4, sai: 0.35, sch: 0.9, gng: 1.55, klb: 1.25, obt: 0.75, stm: 1.05, swm: 1.2, tie: 0.75, trp: 0.7, hlm: 0.68, rnk: 0.63, elm: 1.09, jrg: 1.13, hrz: 1.71, mdr: 0.84, boe: 0.69, amo: 0.47, gsp: 0.34, rhz: 0.71, shn: 0.78, khl: 0.84 };
-const VCOST3 = { neb: 1.9, kor: 1.1, hau: 0.75, glo: 1.4, mem: 0.75, sai: 1.2, sch: 2, gng: 2.8, klb: 2.2, obt: 1.85, stm: 2.4, swm: 2.7, tie: 1.5, trp: 1.5, hlm: 1.15, rnk: 1.07, elm: 2.51, jrg: 2.67, hrz: 3.85, mdr: 1.67, boe: 1.11, amo: 1.34, gsp: 1.01, rhz: 1.38, shn: 1.49, khl: 1.53 };   // measured: level-1 cost × (level 3 / level 1)
+const VCOST1 = { neb: 1, kor: 0.6, hau: 0.3, glo: 0.7, mem: 0.4, sai: 0.35, sch: 0.9, gng: 1.55, klb: 1.25, obt: 0.75, stm: 1.05, swm: 1.2, tie: 0.75, trp: 0.7, hlm: 0.68, rnk: 0.63, elm: 1.09, jrg: 1.13, hrz: 1.71, mdr: 0.84, boe: 0.69, amo: 0.47, gsp: 0.34, rhz: 1.08, shn: 0.78, khl: 0.84 };
+const VCOST3 = { neb: 1.9, kor: 1.1, hau: 0.75, glo: 1.4, mem: 0.75, sai: 1.2, sch: 2, gng: 2.8, klb: 2.2, obt: 1.85, stm: 2.4, swm: 2.7, tie: 1.5, trp: 1.5, hlm: 1.15, rnk: 1.07, elm: 2.51, jrg: 2.67, hrz: 3.85, mdr: 1.67, boe: 1.11, amo: 1.34, gsp: 1.01, rhz: 2.82, shn: 1.49, khl: 1.53 };   // measured: level-1 cost × (level 3 / level 1)
 // Sehne: the table holds the plucked string (jawari the dearer bridge: 0.68 / 1.29 measured at the most); under the
 // E-Bow (its pickup, limiter, band and push) a voice costs 0.94 / 1.84 with the jawari (flat 0.75 / 1.49) – it is
 // priced so while its hand is in the E-Bow's zone
@@ -11082,9 +11082,17 @@ function gspTick() { const W = A.gsp; if (W && W.active && Math.abs(gspKop() - W
 // degrees: there each strike runs its own small net (a pentatonic around its note).
 const RHZ = { q: [], vs: new Set(), h: 0, sp: null, step: false };
 // level: the standard phrase as loud as Nebel/Glocke/Membran (klang/tests/bench.js); at most 12 pings a voice at once
-// (level 3: 20); the budget counts each voice by its pings ringing at once, base + per ping (klang/tests/cost.js with
-// rhz-pings.js, a window the voices live through: one ping 0.62 / 1.20, each more 0.29 / 0.38 – + 15 %; VCOST = one ping)
-const RHZ_PEAK = 0.375, RHZ_CAP = [12, 20], RHZ_MAXF = 40, RHZ_MAXT = 2.5, RHZ_COST = { base: [0.38, 0.94], ping: [0.33, 0.44] };
+// (level 3: 20); the budget counts each voice while it lives by its pings ringing at once and how short they ring:
+// base + ping × pings + gl / τ^ex, τ = the voice's Glimmen × its body's decay (klang/tests/rhz-fit.js, final pass: cost.js
+// and rhz-pings.js over five settings – one long ping, a long cascade, the default, the default high, the shortest
+// Glimmen –, each in the player's net and in nets of their own as a nourishing loop's: a short ping costs its start, so
+// the default and short Glimmen cost more per second alive than the step-1 law – base + ping alone, from long pings –
+// said: up to 1.7× at level 3; entered so every setting is covered + 15 %, the most 1.28 / 1.42 × measured; VCOST = one
+// ping at the current Glimmen)
+const RHZ_PEAK = 0.375, RHZ_CAP = [12, 20], RHZ_MAXF = 40, RHZ_MAXT = 2.5, RHZ_COST = { base: [0.36, 0], ping: [0.24, 0.51], gl: [0.088, 0.646], ex: [0.8, 0.6] };
+const rhzPrice = (i, n, tau) => RHZ_COST.base[i] + RHZ_COST.ping[i] * n + RHZ_COST.gl[i] / Math.pow(Math.max(0.03, tau), RHZ_COST.ex[i]);
+const rhzTau = (dm) => P['rhz.glimmen'] * (RHZ_KN[P['rhz.knoten']] || RHZ_KN.holz).tau * (dm || 1);
+for (const [i, T] of [[0, VCOST1], [1, VCOST3]]) Object.defineProperty(T, 'rhz', { get: () => rhzPrice(i, 1, rhzTau()), enumerable: true, configurable: true });
 // the bodies: partials (ratio, level, decay factor), the decay against Glimmen, the knock's band (× the ping's note),
 // its Q, length and level; lv: the body's level (the longer rings sit lower: one phrase loudness for all three)
 const RHZ_KN = {
@@ -11107,7 +11115,15 @@ function rhzShared() {
   if (!RHZ.sp || RHZ.sp.src !== N.notes) { RHZ.sp = rhzNet(Float64Array.from(N.notes, (x) => x.f)); RHZ.sp.src = N.notes; RHZ.sp.vis = true; }
   return RHZ.sp;
 }
-const rhzRetune = () => { RHZ.sp = null; };   // (a new scale: the net is rebuilt at the next strike, rested; charges underway land on the new degrees)
+// Hexenring: a loop that nourishes Rhizom strikes a net of its own (owner, 21.10.2026) – the field's degrees as the
+// shared one, but its avalanches and its exhaustion are the loop's: the player's net is never tired by a loop, nor the
+// loop's by the player (as a Werk-Rahmen render's own net); built at the loop's first strike, rebuilt with the scale
+function rhzOwn(key) {
+  const M = RHZ.own || (RHZ.own = new Map()); let sp = M.get(key);
+  if (!sp || sp.src !== N.notes) { sp = rhzNet(Float64Array.from(N.notes, (x) => x.f)); sp.src = N.notes; sp.vis = true; M.set(key, sp); }
+  return sp;
+}
+const rhzRetune = () => { RHZ.sp = null; if (RHZ.own) RHZ.own.clear(); };   // (a new scale: the net is rebuilt at the next strike, rested; charges underway land on the new degrees)
 // the struck note's node and octave in the field (a note between degrees: the nearest)
 function rhzSpot(f, sp) {
   let o = P['v.oct'], g = f / Math.pow(2, o);
@@ -11121,7 +11137,7 @@ function rhzVoice(v, t, f, y, vel, o) {
   if (N.free || N.notes.length < 2) {   // its own net: two octaves of a pentatonic either side of the note
     const fr = []; for (let oc = -2; oc <= 2; oc++) for (const s of [0, 2, 4, 7, 9]) if (oc < 2 || s === 0) fr.push(f * Math.pow(2, oc + s / 12));
     sp = rhzNet(Float64Array.from(fr)); i0 = 10;
-  } else { sp = rhzShared(); ({ i0, mul } = rhzSpot(f, sp)); }
+  } else { sp = o.rhzNet ? rhzOwn(o.rhzNet) : rhzShared(); ({ i0, mul } = rhzSpot(f, sp)); }   // (Hexenring: a nourishing loop's own net)
   const kn = RHZ_KN[P['rhz.knoten']] || RHZ_KN.holz, rich = Q.rich, sr = A.ctx.sampleRate;
   // the knock: one noise for every ping of the voice, its band moved to each ping's note
   const mid = v.n(G(1)); mid.connect(v.out);
@@ -11185,7 +11201,7 @@ function rhzPing(v, at, j, g, strike) {
   const ca = amp * kn.cl * (0.35 + 0.65 * R.vel) * (0.6 + 0.6 * R.y);
   R.cg.gain.setValueAtTime(0, at); R.cg.gain.linearRampToValueAtTime(ca, at + 0.0004); R.cg.gain.setTargetAtTime(0, at + 0.0004, kn.ck);
   R.pings.push(x); R.lastEnd = Math.max(R.lastEnd, x.end, at + 0.02);
-  v.cost = Math.max(v.cost, RHZ_COST.base[R.rich ? 1 : 0] + RHZ_COST.ping[R.rich ? 1 : 0] * R.pings.length);   // (the budget hears a big cascade)
+  v.cost = Math.max(v.cost, rhzPrice(R.rich ? 1 : 0, R.pings.length, rhzTau(R.dm)));   // (the budget hears a big cascade)
   if (sp.vis) visPush({ t: at, kind: 'hit', x: noteX(j), y: 0.15 + 0.7 * R.y, s: 0.3 + 0.5 * amp });
 }
 // the clock: every charge due before the horizon arrives (a node still resting swallows it); a voice whose charges
@@ -11210,6 +11226,7 @@ function rhzClear() {
   for (const e of RHZ.q) e.v.rz.pend--;
   RHZ.q = [];
   if (RHZ.sp) RHZ.sp.refr.fill(0);
+  if (RHZ.own) for (const sp of RHZ.own.values()) sp.refr.fill(0);   // (Hexenring: the loops' own nets rest too)
   if (A.ctx) rhzRun(0);
 }
 // held: the native release on v.out and the processor's own end ({off}: breath stops, the ring loses its drive)
@@ -12184,7 +12201,7 @@ function onDown(e) {
   if (touches.has(e.pointerId)) onUp({ pointerId: e.pointerId });   // never leave a note hanging on a reused pointer id
   if (e.pointerType) { try { cvFx.setPointerCapture(e.pointerId); } catch (err) {} }
   const pt = e.pt || stagePoint(e), n = e.note || noteAt(pt.x), now = A.ctx.currentTime;
-  const tt = { id: e.pointerId, x: pt.x, y: pt.y, px: pt.px, py: pt.py, col: n.idx, f: n.f, name: n.name, layers: layers(), voices: [], rollNext: null, hue: VIS.hueAt(pt.x), vel: e.vel, bend: e.bend || false, vn: e.vn, mb: e.mb || 0, mpe: e.mpe, seq: ++MOD.seq, stk: modStroke(), ptype: e.pointerType || null };
+  const tt = { id: e.pointerId, x: pt.x, y: pt.y, px: pt.px, py: pt.py, col: n.idx, f: n.f, name: n.name, layers: layers(), voices: [], rollNext: null, hue: VIS.hueAt(pt.x), vel: e.vel, bend: e.bend || false, vn: e.vn, mb: e.mb || 0, mpe: e.mpe, seq: ++MOD.seq, stk: modStroke(e.stkT), ptype: e.pointerType || null };
   const y0 = (tt.my = modY(tt, tt));   // the newest note: Höhe's full share from its first moment
   for (const ly of tt.layers) {
     if (ENGINES[ly.eng].sustain) {
@@ -12992,7 +13009,7 @@ function midiMsg(src, st, d1, d2, ts) {
   if (midiTake(src, ev)) return;
   const cs = chState(src, ch);
   switch (type) {
-    case 0x90: if (d2) { mpeSeen(cs, ts); midiNoteOn(cs, d1, d2); break; }   // velocity 0 is a note-off
+    case 0x90: if (d2) { mpeSeen(cs, ts); midiNoteOn(cs, d1, d2, ts); break; }   // velocity 0 is a note-off
     // falls through
     case 0x80: midiNoteOff(cs, d1, type === 0x80 ? d2 : 0); break;
     case 0xb0: midiCC(cs, d1, d2, ev); break;
@@ -13926,7 +13943,7 @@ function midiHint() {
 // or a merge may repeat a note-on without its note-off, which must not hang) – until it sends the second note-off of a
 // doubled note itself (src.dbl): then it counts too.
 const midiCounts = (src) => src.count || (mapOf(src), !!src.prof && !!src.prof.count);
-function midiNoteOn(cs, note, vel) {
+function midiNoteOn(cs, note, vel, ts) {
   MIDI.flash = performance.now();
   if (!A.started) { midiHint(); return; }
   const id = midiId(cs.src, cs.ch, note), pc = pedalOf(cs), m = midiNote(note);
@@ -13941,7 +13958,7 @@ function midiNoteOn(cs, note, vel) {
   if (pc.soft) v = Math.max(0.02, v * 0.6);   // soft pedal: quieter, and darker in midiY
   // an MPE note starts with the pressure and CC 74 its channel sent just before (the spec's initial values)
   const mpe = cs.mem, tt0 = { vn, cs, mpe, rel74: mpe && cs.c74 === 64, pp: mpe ? cs.press : 0 }, y = midiY(tt0);
-  onDown({ pointerId: id, pt: { x: m.x, y, px: m.x * VIS.w, py: (1 - y) * VIS.h }, note: m, vel: v, bend: busOf(pc) || true, vn, mb: mpe ? cs.bend * cs.z.memR : 0, mpe });
+  onDown({ pointerId: id, pt: { x: m.x, y, px: m.x * VIS.w, py: (1 - y) * VIS.h }, note: m, vel: v, bend: busOf(pc) || true, vn, mb: mpe ? cs.bend * cs.z.memR : 0, mpe, stkT: ts });   // (stkT: when the key arrived – a chord is one stroke even if the page was busy between its notes)
   const tt = touches.get(id);
   if (tt) { tt.cs = cs; tt.msrc = cs.src; tt.mpe = mpe; tt.rel74 = tt0.rel74; if (mpe) tt.pp = tt0.pp; }
 }
@@ -15878,7 +15895,9 @@ function mxoApply() {
 // Notes struck within 40 ms are one stroke – a chord from a keyboard arrives in any order a few ms apart, so "the
 // newest note" is the stroke's highest (the melody on top: Tonhöhe bends it, whichever key came first); every note of
 // the newest stroke gets Höhe's full share
-function modStroke() { const t = performance.now(); if (t - MOD.stkT > 40) MOD.stkN++; MOD.stkT = t; return MOD.stkN; }
+// (t: when the note arrived – a MIDI event's own time stamp: notes of a chord stay one stroke however late the page gets
+// to them; a touch: now)
+function modStroke(t) { if (!(t > 0)) t = performance.now(); if (Math.abs(t - MOD.stkT) > 40) MOD.stkN++; MOD.stkT = t; return MOD.stkN; }
 function modNewest() {
   let nw = null;
   for (const tt of touches.values()) if (!nw || (tt.stk || 0) > (nw.stk || 0) || ((tt.stk || 0) === (nw.stk || 0) && (tt.f > nw.f || (tt.f === nw.f && (tt.seq || 0) > (nw.seq || 0))))) nw = tt;
@@ -26583,6 +26602,7 @@ function hxDrop(L, X) {
   if (L.bew) modClear('hxb' + L.id + ':*');   // (step 1d: a Schleife of Bewegung leaves the mod layer)
   if (HXN.webs.has(L.id)) hxWebDrop(L.id, true);   // (its own web rings out and goes)
   for (const k of ['glt', 'shn']) if (HXN.feed.has(L.id + ':' + k)) hxFeedDrop(L.id, k, true);   // (step 4: its Höfe too)
+  hxRhzNetDrop(L);   // (its own Rhizom net; its last charges ring out on it)
   L.slot = null;
   if (!HX.fokus) { const n = hxLoopsLive().filter((x) => !x.bew).sort((a, b) => b.made - a.made)[0]; if (n) HX.fokus = n.id; }
   hxRailDirty(); hxCardDirty(); hxStripSync();
@@ -28102,7 +28122,7 @@ async function hxwNotes(d) {
   buildNotes();
   A.voices.clear(); A.grainVoices.clear(); A.revActive = null; A.revWant = 0; A.drvKey = null; A.bor = null; A.frozen = false; A.grains = 0; A.irJob = 0; A.gsp = null; A.elmDrift = null; A.echoCache = null;
   KS_CACHE.clear(); KS_CACHE.frames = 0; ksBuffer.wait.clear();
-  RHZ.q.length = 0; RHZ.vs.clear(); RHZ.h = 0; RHZ.sp = null;
+  RHZ.q.length = 0; RHZ.vs.clear(); RHZ.h = 0; RHZ.sp = null; RHZ.own = null;
   HX.mask = new Set(d.mask || ['fin', 'eb2', 'rgn', 'gsp']);
   const dur = Math.max(0.05, +d.dur || 1), len = Math.ceil(dur * SR), ctx = new OfflineAudioContext(2, len, SR), notes = d.notes || [];
   hxwSeed(HXW_FIX);   // (the graph's own noise and drift buffers: the same in every render)
@@ -32064,14 +32084,31 @@ function hxMidiNote(n, t, t1) {
 }
 function hxMidiSet(L, on) { L.midi = !!on; if (L.fd) L.fd.midi = 0; hxSaveMeta(L.id); hxCardDirty(); hxSay(hxName(L) + ': MIDI-Ausgang ' + (on ? 'an' : 'aus')); if (on && !hxMidiOuts().length) toast('Kein MIDI-Ausgang verbunden – die Noten gehen hinaus, sobald einer da ist.', 3500); }
 
-// ---- Nähren (SPEC §15): Rhizom – each loop note strikes a Rhizom voice on the Hexenring's way; it shares the live net
-// (its avalanches and its exhaustion are the net's, as the field's notes are – a Wuchs render's own net is not used: the
-// strikes are live, so the loop and the player play one net). Regen – each loop note plants a Keim (rgSeed) while the
-// Sporenregen runs; a spore striking it sounds on the Hexenring's way too ----
-function hxNaehrRhz(n, t) {
+// ---- Nähren (SPEC §15): Rhizom – each loop note strikes a Rhizom voice on the Hexenring's way. The net is a choice per
+// loop (owner, 21.10.2026; L.rhzNetz): „eigen“ (the default) – a net of the loop's own (rhzOwn: the field's degrees, but
+// the loop's avalanches and exhaustion stay the loop's, so the player's playing is untouched by them, as a Werk-Rahmen
+// render's own net) – or „geteilt“, step 4's way: the loop strikes the live net, avalanches and exhaustion shared with the
+// player. A switch takes the next strike; voices already ringing finish on the net they began in. Regen – each loop note plants a Keim
+// (rgSeed) while the Sporenregen runs; a spore striking it sounds on the Hexenring's way too ----
+function hxNaehrRhz(L, n, t) {
   if (!ENGINES.rhz) return;
-  const o = { pan: n.pan || 0, bus: hxFeedBus(), loop: true, hxSrc: 'hxr' }, v = hit('rhz', t, n.f, n.y, n.vel, o);
-  HX.rhzN = (HX.rhzN || 0) + 1; const lg = HX.rhzLog || (HX.rhzLog = []); lg.push({ t, v: !!v, loop: !!(v && v.loop), bus: o.bus }); if (lg.length > 64) lg.shift();   // (the last strikes, for the card's tests)
+  const o = { pan: n.pan || 0, bus: hxFeedBus(), loop: true, hxSrc: 'hxr', rhzNet: L.rhzNetz === 'geteilt' ? null : 'hx:' + L.id }, v = hit('rhz', t, n.f, n.y, n.vel, o);
+  HX.rhzN = (HX.rhzN || 0) + 1; const lg = HX.rhzLog || (HX.rhzLog = []); lg.push({ t, v: !!v, loop: !!(v && v.loop), bus: o.bus, cost: v ? v.cost : 0, net: v && v.rz ? (v.rz.sp === RHZ.sp ? 'live' : v.rz.sp === (RHZ.own && RHZ.own.get(o.rhzNet)) ? o.rhzNet : '?') : null }); if (lg.length > 64) lg.shift();   // (the last strikes, for the card's tests)
+}
+// a loop gone or no longer nourishing Rhizom: its net goes with it
+function hxRhzNetDrop(L) { if (RHZ.own) RHZ.own.delete('hx:' + L.id); }
+// the card's „Netz: eigen · geteilt“ (↶/↷ take it back)
+function hxRhzNetz(L, m, quiet) {
+  const was = L.rhzNetz === 'geteilt' ? 'geteilt' : 'eigen'; m = m === 'geteilt' ? 'geteilt' : 'eigen';
+  if (m === was) return false;
+  L.rhzNetz = m; if (m === 'geteilt') hxRhzNetDrop(L);   // (its own net rests until it is chosen again – made afresh then)
+  if (!quiet) {
+    const lk = L.key, go = (x) => () => { const Y = hxByKey(lk); if (Y) hxRhzNetz(Y, x, true); };
+    hxHist({ kind: 'rhzNetz', label: hxName(L) + ': Rhizom-Netz ' + m, undo: go(was), redo: go(m) });
+    hxSay(hxName(L) + ': Rhizom ' + (m === 'eigen' ? 'im eigenen Netz' : 'im Netz deines Spiels'));
+  }
+  hxSaveMeta(L.id); hxCardDirty();
+  return true;
 }
 function hxNaehrRgn(L, n, t) {
   if (!RG.on) return;
@@ -32157,6 +32194,7 @@ function hxNaehr(L, kind, on, quiet) {
     else hxFeedDrop(L.id, kind, true);
     hxSendSync(L);
   }
+  if (kind === 'rhz' && !on) hxRhzNetDrop(L);
   if (kind === 'rgn' && on && !RG.on && !quiet) toast('Die Keime wachsen, sobald der Sporenregen läuft (Gestik: Neigen → Sporenregen).', 4000);
   if (L.fd) L.fd[kind] = 0;
   if (!quiet) { hxSay(hxName(L) + (on ? ' nährt ' + nm : ': ' + nm.replace(/^(den|die) /, '') + ' aus')); hxSaveMeta(L.id); }
@@ -32167,13 +32205,13 @@ function hxNaehr(L, kind, on, quiet) {
 // what a loop keeps of its ecology (the record, the snapshot): Live, MIDI out, Ladung, Zersetzung, a Sammelschleife's source
 function hxEcoOf(L) {
   const o = {};
-  if (L.live) o.live = 1; if (L.midi) o.midi = 1; if (L.ladung) o.ladung = 1; if (L.einw) o.einw = L.einw; if (L.moder) o.moder = Object.assign({}, L.moder); if (L.gesang) o.gesang = 1;
+  if (L.live) o.live = 1; if (L.midi) o.midi = 1; if (L.rhzNetz === 'geteilt') o.rhzNetz = 'geteilt'; if (L.ladung) o.ladung = 1; if (L.einw) o.einw = L.einw; if (L.moder) o.moder = Object.assign({}, L.moder); if (L.gesang) o.gesang = 1;
   if (L.acc) o.acc = { src: L.acc.src, fb: L.acc.fb, ratio: L.acc.ratio, on: !!L.acc.on };
   return Object.keys(o).length ? o : null;
 }
 function hxEcoSet(L, e) {
   if (!e) return;
-  L.live = !!e.live; L.midi = !!e.midi; L.ladung = !!e.ladung; L.einw = e.einw || 0; L.moder = e.moder ? Object.assign({}, e.moder) : null; L.gesang = !!e.gesang;
+  L.live = !!e.live; L.midi = !!e.midi; L.rhzNetz = e.rhzNetz === 'geteilt' ? 'geteilt' : 'eigen'; L.ladung = !!e.ladung; L.einw = e.einw || 0; L.moder = e.moder ? Object.assign({}, e.moder) : null; L.gesang = !!e.gesang;
   if (e.acc) { L.acc = Object.assign({}, e.acc); L.taumeln = false; setTimeout(() => { if (hxByKey(L.key) === L) hxAccLink(L); }, 0); }
 }
 // ---- Ladung on loops (SPEC §17, only if switched on per loop): the shaken charge makes a living loop vary more (Lebendig
@@ -32853,7 +32891,7 @@ function hxEcoTick(now, horizon) {
   for (const L of hxLoopsLive()) {
     if (L.bew || L.state !== 'spielt') continue;
     const n = L.naehrt || {};
-    if (n.rhz) hxFeedAhead(L, 'rhz', now, horizon, (x, t) => hxNaehrRhz(x, t));
+    if (n.rhz) hxFeedAhead(L, 'rhz', now, horizon, (x, t) => hxNaehrRhz(L, x, t));
     if (n.rgn) hxFeedAhead(L, 'rgn', now, horizon, (x, t) => hxNaehrRgn(L, x, t));
     if (L.midi) hxFeedAhead(L, 'midi', now, horizon, (x, t, t1) => hxMidiNote(x, t, t1));
   }
@@ -32879,6 +32917,7 @@ function hxCardEco(L, sch, chip, row, btn) {
   nae.push(chip('Glut', !!n.glt, () => hxNaehr(L, 'glt', !n.glt), 'Nähren: die Schleife ist Zunder der Glut – sie glüht in ihren Tönen'), chip('Sehne', !!n.shn, () => hxNaehr(L, 'shn', !n.shn), 'Nähren: Saiten schwingen mit der Schleife mit'));
   if (!L.acc) nae.push(chip('Schleife …', !!L.accOpen, () => { L.accOpen = !L.accOpen; hxCardDirty(); }, 'Schleife in Schleife: eine neue Schleife nimmt diese in jedem Durchgang auf'));
   out.push(row('Nähren', ...nae));
+  if (notes && n.rhz) { const g = L.rhzNetz === 'geteilt'; out.push(row('Netz', chip('eigen', !g, () => hxRhzNetz(L, 'eigen'), 'Rhizom: ein eigenes Netz der Schleife – dein Spiel bleibt frisch'), chip('geteilt', g, () => hxRhzNetz(L, 'geteilt'), 'Rhizom: das Netz deines Spiels – Lawinen und Erschöpfung gemeinsam'))); }
   if (L.accOpen && !L.acc) out.push(row('Sammeln', h('span', { class: 'hx-ms' }, 'Länge'), ...HX_ACC_R.map(([r, t]) => chip(t, false, () => { L.accOpen = false; hxAccMake(L, r, 0.7); }, 'Neue Sammelschleife, ' + t + ' so lang – Rückführung 0,7'))));
   const lq = hxLadOf(L);
   out.push(row('Ladung', chip('an', !!L.ladung, () => hxLadSet(L, true), 'Ladung: Schütteln lässt diese Schleife brodeln'), chip('aus', !L.ladung, () => hxLadSet(L, false), 'Ladung wirkt nicht auf diese Schleife'),

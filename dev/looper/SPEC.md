@@ -1248,10 +1248,22 @@ Körner“. Not yet (Etappe 4): rhz, rgn, glt, shn, Schleife → Schleife.
 **As built (step 4): the ecology.** One section `/* ---------- Hexenring: Ökologie (Etappe 4) ---------- */`, its
 heartbeat `hxEcoTick` in `hxTick`; per loop `naehrt` and the record `eco` (`hxEcoOf/hxEcoSet`: live, midi, ladung,
 einw, moder, gesang) in snapshot, record and rebuild.
-- *Nähren Rhizom / Regen.* `hxPassNotes` → `hxFeedAhead` → each loop note strikes the live Rhizom net (`hxNaehrRhz`,
-  `hit('rhz')` on `hxFeedBus()`, the strip „Hexenring“'s chain copy; it shares the live net – its avalanches and
-  exhaustion are the net's, so loop and player play one net; documented, as allowed) / plants a Keim (`hxNaehrRgn`,
-  `rgSeed` with `hx` – a spore striking it sounds on the Hexenring's way too). Never in the notes Humus.
+- *Nähren Rhizom / Regen.* `hxPassNotes` → `hxFeedAhead` → each loop note strikes a Rhizom net (`hxNaehrRhz`,
+  `hit('rhz')` on `hxFeedBus()`, the strip „Hexenring“'s chain copy) / plants a Keim (`hxNaehrRgn`, `rgSeed` with `hx` –
+  a spore striking it sounds on the Hexenring's way too). Never in the notes Humus. (Step 4 struck the live net – loop and
+  player shared avalanches and exhaustion; superseded in the final pass, below.)
+- **As built (final pass): the Rhizom net per loop** (owner, 21.10.2026). The card's row „Netz: eigen · geteilt“ under
+  Nähren (shown while Rhizom is nourished), per loop `L.rhzNetz`, kept in the record's `eco` (`rhzNetz: 'geteilt'`; absent
+  = eigen), ↶/↷ (`hxRhzNetz`, history kind `rhzNetz`). **eigen** (the default): `rhzOwn('hx:' + id)` – a net of the
+  loop's own on the field's degrees (as a Werk-Rahmen render's own net), rebuilt with the scale (`rhzRetune` clears
+  `RHZ.own`), rested by Stille/Schlafen (`rhzClear`), dropped with Nähren off or the loop (`hxRhzNetDrop`); the player's
+  net is never tired by the loop. **geteilt**: step 4's way, the live net (`rhzShared`). A switch takes the next strike;
+  a voice keeps the net it began in (`v.rz.sp`), so ringing voices finish there – none cut, no click. Cost per mode:
+  the same price law per voice (`rhzPrice`, below §21) – an own net lets a loop's cascade run unexhausted, so its voices
+  ring more pings (default settings: 0.5 against 0.3 per voice at level 1, measured 0.355 against 0.265 units per voice
+  over cost.js's window; level 3 0.937 against 0.601) and are charged for them. `t-hx-oeko2` B1: both modes (own net,
+  the player's net untouched – no node made to rest – a strike beside it on the player's net; geteilt tiring the
+  player's net; a switch while it plays; record, ↶/↷; a new scale; off).
 - *Nähren Glut / Sehne (Höfe).* `HX_FEED`: Sehne 4 voices (inj 0.06, level 0.7), Glut 2 (inj 0.1, level 0.8, Höhe
   0.22 – below its threshold, the loop is its tinder). `myzel-ember` and `myzel-string` (`MyzelProc`) take an input
   when `po.inj > 0` (or `{inj}`): Sehne injects near the bridge (`SHN_FEED` 0.17; `start({silent})` – no pluck, the
@@ -1710,6 +1722,17 @@ its input, its pan, no voice wrapper) Glut 0.65 / 0.70 at level 1, 0.91 / 0.92 a
 played voice (VCOST, 0.86 / 1.58 and 0.78 / 1.49): measured, they cost less. Live mode's and Nähren Rhizom's voices are
 real voices (VCOST, `voiceLoad`); Einwurzeln renders offline and Moder in the Worker (no voice budget); MIDI out costs
 nothing on the audio thread. `bench.js shn` after its input: 34/34; `bench.js glt`: see §23 (step 4).
+
+**As built (final pass): Rhizom's price, both nets.** `klang/tests/rhz-fit.js` (cost.js candidates `rhz` and `rhzo` –
+each voice striking a net of its own, as a nourishing loop's –, `rhz-pings.js OWN=1`; two runs each, the higher) over
+five settings: one long ping (Reiz 0, Glimmen 0.6), a long cascade (Reiz 1, Erholung 0.1, four voices), the default,
+the default high (y 1), the shortest Glimmen (0.03). The step-1 law (base + ping × pings ringing, from long pings)
+under-priced the default by 15–37 % (level 3 own net: 0.59 priced against 0.94 measured): a short ping costs its start.
+Entered: `RHZ_COST = { base: [0.36, 0], ping: [0.24, 0.51], gl: [0.088, 0.646], ex: [0.8, 0.6] }`, a voice charged while
+it lives `base + ping × pings + gl / τ^ex` (τ = Glimmen × the body's decay), the least such law covering every setting
+in both nets + 15 % (priced 1.15–1.28 × measured at level 1, 1.15–1.42 × at level 3); VCOST = one ping at the current
+Glimmen (default 1.08 / 2.82, was 0.71 / 1.38). A shared or an own net needs no price of its own: the law follows the
+pings a cascade rings.
 
 ---
 

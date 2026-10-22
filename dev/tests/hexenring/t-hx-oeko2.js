@@ -165,6 +165,7 @@ const PARTS = (process.env.PARTS || 'A,B').split(',');
       await window.__sleep(4300);
       const L = window.__L(k); o.notes = L.notes.length;
       M.HX.rhzLog = [];
+      const live = M.rhzShared(), refr0 = Array.from(live.refr);   // (the player's net, as the field's notes strike it)
       M.hxNaehr(L, 'rhz', true);
       const len = M.hxLen(L), k0 = M.hxPassK(L, Math.round(M.hxF(A.ctx.currentTime))) + 1, a = M.hxT(M.hxPassF(L, k0)), b = M.hxT(M.hxPassF(L, k0 + 2));
       while (A.ctx.currentTime < b + 0.4) await window.__sleep(100);
@@ -172,13 +173,47 @@ const PARTS = (process.env.PARTS || 'A,B').split(',');
       o.n = two.length; o.seen = seen.length; o.loop = seen.every((x) => !x.v || x.loop); o.bus = seen.every((x) => x.bus === M.hxChain('fx1').in);
       o.humus = M.hxEvents(0, A.ctx.currentTime + 1, true).filter((e) => e.eng === 'rhz').length;
       o.gesp = await window.__gespielt(2.5);
+      // its own net (owner, 21.10.2026): every strike in the loop's net, the player's net never touched (no node of it
+      // made to rest), the loop's net rested where it fired; the budget prices each voice by its pings and Glimmen (rhzPrice – RHZ_COST from klang/tests/rhz-fit.js, both nets measured)
+      const key = 'hx:' + L.id, own = M.RHZ.own && M.RHZ.own.get(key);
+      o.nets = [...new Set(seen.map((x) => x.net))]; o.liveSame = M.rhzShared() === live && Array.from(live.refr).every((x, i) => x === refr0[i]);
+      o.ownFired = own ? Array.from(own.refr).filter((x) => x > 0).length : -1; o.ownN = own ? own.n : 0; o.liveN = live.n; o.ownVis = !!(own && own.vis);
+      const one = M.rhzPrice((M.getQ ? M.getQ() : M.Q).rich ? 1 : 0, 1, M.rhzTau()); o.one = +one.toFixed(2); o.cost = seen.filter((x) => x.v).every((x) => x.cost >= one - 1e-9); o.costs = [...new Set(seen.filter((x) => x.v).map((x) => +x.cost.toFixed(2)))].slice(0, 6);
+      // a strike of the player's beside it: on the player's net, which the loop has not tired
+      const v = M.hit('rhz', A.ctx.currentTime + 0.05, L.notes[0].f, 0.5, 0.6, {}); o.player = !!(v && v.rz && v.rz.sp === live);
+      // a new scale: the loop's net is made again on its degrees
+      M.rhzRetune(); o.retune = !(M.RHZ.own && M.RHZ.own.has(key));
+      M.hxNaehr(L, 'rhz', true); await window.__sleep(M.hxLen(L) * 1000 + 300); o.again = !!(M.RHZ.own && M.RHZ.own.get(key)) && M.RHZ.own.get(key) !== own && M.RHZ.own.get(key).src === M.N.notes;
+      // „Netz: geteilt“ (the card's switch, step 4's way): switched while it plays – the voices ringing on its own net
+      // finish there (none cut), the next strikes go into the player's net and tire it; ↶ back to „eigen“, ↷ again
+      o.def = L.rhzNetz !== 'geteilt' && !(M.hxEcoOf(L) || {}).rhzNetz;
+      const ring0 = [...A.voices].filter((v) => v.alive && v.rz && v.rz.sp !== live);
+      const shared = M.rhzShared(), sr0 = Array.from(shared.refr), t0 = A.ctx.currentTime, end0 = ring0.map((v) => [v.endAt, v.rz.pend]);
+      M.HX.rhzLog = []; o.sw = M.hxRhzNetz(L, 'geteilt');
+      o.ringOn = ring0.filter((v, i) => v.alive && v.endAt === end0[i][0] && v.rz.pend === end0[i][1]).length; o.ring0 = ring0.length;
+      await window.__sleep(M.hxLen(L) * 1000 + 400);
+      const sh = M.HX.rhzLog.filter((x) => x.v && x.t > t0 + 0.2);
+      o.shNets = [...new Set(sh.map((x) => x.net))]; o.shN = sh.length;
+      o.tired = Array.from(shared.refr).filter((x, i) => x !== sr0[i]).length;
+      o.ringEnded = ring0.every((v) => !v.alive);   // (they rang out by themselves: no stuck voice)
+      o.persist = (M.hxEcoOf(L) || {}).rhzNetz === 'geteilt';
+      M.hxUndoStep(); o.undo = L.rhzNetz === 'eigen'; M.hxRedoStep(); o.redo = L.rhzNetz === 'geteilt'; M.hxUndoStep();
+      M.HX.rhzLog = []; const t1 = A.ctx.currentTime; await window.__sleep(M.hxLen(L) * 1000 + 300);
+      o.backOwn = M.HX.rhzLog.filter((x) => x.v && x.t > t1 + 0.2).every((x) => x.net === key);
       M.hxNaehr(L, 'rhz', false);
-      o.on = !!L.naehrt.rhz; o.len = len;
+      o.on = !!L.naehrt.rhz; o.len = len; o.dropped = !(M.RHZ.own && M.RHZ.own.has(key));
       return o;
     });
     ok(r.k && r.n === 2 * r.notes, `Nähren · Rhizom: every loop note strikes the net – ${r.n} strikes in two passes of ${r.notes} notes`);
     ok(r.loop && r.bus && r.humus === 0, '  on the Hexenring\'s way (the chain\'s copy into the strip „Hexenring“), loop voices that give way, never in the notes Humus');
     ok(r.gesp >= 0 && r.gesp < 1e-5, `  never re-captured: „Gespielt“ heard nothing of them (RMS ${r.gesp.toExponential(1)})`);
+    ok(r.nets.length === 1 && /^hx:/.test(r.nets[0]) && r.ownFired > 0 && r.ownN === r.liveN && r.ownVis, `  a net of the loop's own (${r.nets.join(', ')}; the field's ${r.ownN} degrees, ${r.ownFired} of its nodes fired and rest there)`);
+    ok(r.liveSame && r.player, '  the player\'s net untouched: none of its nodes made to rest by the loop, a strike beside it plays on the player\'s net');
+    ok(r.cost, `  priced as measured: every loop voice counted at least at one ping's price (${r.one}), more with its pings ringing (${r.costs.join(', ')} units)`);
+    ok(r.retune && r.again && !r.on && r.dropped, '  a new scale: the loop\'s net made again on the new degrees; Nähren off: its net goes');
+    ok(r.def && r.sw && r.shN > 0 && r.shNets.length === 1 && r.shNets[0] === 'live' && r.tired > 0, `  „Netz: geteilt“ (default „eigen“): the loop strikes the player's net – ${r.shN} strikes, ${r.tired} of its nodes made to rest by them`);
+    ok(r.ring0 > 0 && r.ringOn === r.ring0 && r.ringEnded, `  switched while it plays: the ${r.ring0} voices ringing on its own net finish there, none cut, all rang out by themselves`);
+    ok(r.persist && r.undo && r.redo && r.backOwn, '  the choice is kept with the loop (its record), ↶ / ↷ take it back and again; back at „eigen“ every strike in its own net');
     // ---------- B2 · Nähren Regen ----------
     r = await ev(async () => {
       const M = window.__M, A = M.A, o = {}, L = M.hxLoopsLive()[0];

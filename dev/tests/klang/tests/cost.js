@@ -29,6 +29,8 @@
 // (fb 0.7, its tape playing) and 'hxj1' the same without the recording – HX_COST.acc = hxk − hxj; 'fglt1' / 'fshn1'
 // NV Höfe voices as hxFeedMake builds them (the engine's processor alone with its pan, fed through its input by a noise
 // source, inj as HX_FEED) – the Hof's price per voice, against the engine's VCOST of a played voice
+// (final pass) 'rhzo1' Rhizom's voices each striking a net of its own (rhzNet, as a loop nourishing Rhizom) – with
+// rhz-pings.js OWN=1 the pings they ring – rhz-fit.js fits RHZ_COST over both
 process.env.SEED_BLOBS = '';
 const { chromium, openInst } = require('../../v2/lib');
 const ROUNDS = +process.argv[2] || 6, DUR = +process.env.DUR || 4, NV = +process.env.NV || 24, NW = +process.env.NW || 1, NH = +process.env.NH || 8;
@@ -41,6 +43,7 @@ const XP = JSON.parse(process.env.PARAMS || '{}');
     const M = window.__M;
     async function run(eng, q, n) {
       M.P['dev.q'] = q;
+      const own = eng === 'rhzo'; if (own) eng = 'rhz';   // (Hexenring Nähren: each voice strikes a net of its own, as a nourishing loop's notes do)
       const nat = /N$/.test(eng); if (nat) eng = eng.slice(0, -1);   // (zpfN, gltN: the native stand-in of an engine with fallback 'native' – the engine marked broken for the run)
       const ctx = await window.__off(48000, DUR, Object.assign({ 'v.eng': eng === 'null' ? 'hlm' : eng === 'web' ? 'gsp' : /^hx/.test(eng) ? 'neb' : eng, 'rev.mix': 0, 'dly.mix': 0 }, XP, nat ? { 'v.eng': 'neb' } : {}));
       if (!nat) await M.ensureDSP(ctx);
@@ -145,7 +148,7 @@ const XP = JSON.parse(process.env.PARAMS || '{}');
             continue;
           }
           if (eng === 'null') { const nd = new AudioWorkletNode(ctx, 'myzel-null', { numberOfInputs: 0, outputChannelCount: [1], processorOptions: { on: { on: 0 } } }); nd.connect(ctx.destination); }
-          else { if (nat) M.A.workletBroken.add(eng); M.playNote(eng, ctx.currentTime, M.noteAt((k * 0.37) % 1).f, YH, 0.5, {}); if (nat) M.A.workletBroken.delete(eng); }
+          else { if (nat) M.A.workletBroken.add(eng); M.playNote(eng, ctx.currentTime, M.noteAt((k * 0.37) % 1).f, YH, 0.5, own ? { rhzNet: 'c' + k } : {}); if (nat) M.A.workletBroken.delete(eng); }
         }
         ctx.resume();
       });

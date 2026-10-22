@@ -34,6 +34,7 @@ for (const [k, env, name = k, entry = name, web] of C) {
 for (let rep = 0; rep < 3; rep++) { const c = cost('web1,web3,' + REF, { NW: '24' }); push('gsp web', c.web1 * c.scale, c.web3 * c.scale); console.log('gsp web run', rep + 1, (c.web1 * c.scale).toFixed(3), (c.web3 * c.scale).toFixed(3)); }
 // Rhizom: a voice with one ping (Reiz 0, a long Glimmen: alive the whole window) and one with many (Reiz 1, Erholung 0.1,
 // four voices so the net is not exhausted) at the same NV – level 3's graph share cancels in the difference
+// (superseded in the final pass by rhz-fit.js: five settings, both nets, a Glimmen term – RHZ_COST as entered now)
 { const ONE = { 'rhz.reiz': 0, 'rhz.glimmen': 0.6 }, MANY = { 'rhz.reiz': 1, 'rhz.erholung': 0.1, 'rhz.glimmen': 0.6 }, D = { DUR: '1.5' };
   const n = {}; for (const [nm, p, y] of [['one', ONE, '0.6'], ['many', MANY, '1']]) for (const q of ['1', '3']) n[nm + q] = pings(Object.assign({ NV: '4', Y: y, Q: q }, D, P(p))).ringingPerVoice;
   const sl = { l1: [], l3: [] };

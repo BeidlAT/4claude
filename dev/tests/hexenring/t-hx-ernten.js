@@ -22,15 +22,22 @@ const { ok } = H;
     const M = window.__M, A = M.A; await window.__reset(); window.__grid(120); await window.__sleep(300);
     const B0 = Math.ceil(M.tgBeat(A.ctx.currentTime + 0.4) / 4) * 4, t0 = M.tgTime(B0);
     const end = window.__riff(t0, 0.5, [0, 2, 4, 7], 2, { eng: 'mem' });   // a 1-bar figure twice after a rest (too short for a repetition: ≥ 5 events must match) → a 2-bar phrase up to E = B0 + 8
+    if (!window.__recMod) { window.__recMod = 1; await A.ctx.audioWorklet.addModule(window.__testUrl); }
+    await window.__until(end + 0.04 + (A.ctx.baseLatency || 0) + (A.ctx.outputLatency || 0));
+    const rec = new AudioWorkletNode(A.ctx, 'hx-recf', { numberOfInputs: 1, numberOfOutputs: 1, channelCount: 2, channelCountMode: 'explicit' }), rz = A.ctx.createGain(); rz.gain.value = 0; M.HX.node.connect(rec, 0); M.HX.node.connect(rec, 1); rec.connect(rz).connect(A.ctx.destination);   // (both outputs: a new Schicht plays dry through the live chain – out 1 – until baked)
     await window.__until(end + 0.1 + (A.ctx.baseLatency || 0) + (A.ctx.outputLatency || 0));
     const T = M.heardT(), plan = M.hxKorbPlan(T);
     M.hxRailState(); const word = M.HXU.korb.textContent, lit = M.HXU.korb.classList.contains('lit');
+    // (when it sounds: the processor's output recorded frame by frame from before the tap – the meter's reports come every
+    // 67 ms and summed the past 67, so their arrival said up to 80 ms later than the sound began)
     const tap = A.ctx.currentTime;
     M.hxKorb(null);
     const L = M.hxLoopsLive()[0];
-    const met = await window.__meter(L.id, 600);
-    const on = met.find((m) => m[1] > 1e-4);
-    await window.__sleep(8300);
+    await window.__sleep(600);
+    const rg = await window.__recGet(rec); M.HX.node.disconnect(rec, 0); M.HX.node.disconnect(rec, 1);
+    let fi = -1; for (let i = 0; i < rg.L.length; i++) if (Math.abs(rg.L[i]) > 1e-4 || Math.abs(rg.R[i]) > 1e-4) { fi = i; break; }
+    const on = fi >= 0 ? [M.hxT(rg.f0 + fi)] : null;
+    await window.__sleep(7700);
     const ps = L.ps.map(([k, f]) => ({ k, dt: M.hxT(f) - M.tgTime(B0 + 8 + L.d.beats * k), exact: f === Math.round(M.hxFrameAt(L.d.b0 + k * L.d.beats)) }));
     // the Schicht's audio = the Humus's window, sample for sample (the copy arrives once its Ausklang is in)
     const S = M.HX.sch.get(L.sch[0]);
@@ -132,10 +139,10 @@ const { ok } = H;
     M.hxRailState(); const word = M.HXU.korb.textContent;
     M.hxKorb(null);
     const L = M.hxLoopsLive()[0];
-    return { clar: plan.tk && plan.tk.clarity, kind: plan.kind, lock: plan.lock, w0: plan.w0 - t0, w1: plan.w1 - T, word, start: M.hxT(L.d.ph0) - A.ctx.currentTime, Lf: L.d.L / M.A.ctx.sampleRate, llock: L.d.lock, pend: M.HX.pend.length };
+    return { clar: plan.tk && plan.tk.clarity, kind: plan.kind, lock: plan.lock, w0: plan.w0 - t0, w1: plan.w1 - T, word, start: M.hxT(L.d.ph0) - A.ctx.currentTime, Lf: L.d.L / M.A.ctx.sampleRate, span: plan.w1 - plan.w0, llock: L.d.lock, pend: M.HX.pend.length };
   });
   ok(r.kind === 'phrase' && r.lock === 'frei' && near(r.w0, 0, 0.002) && near(r.w1, 0, 0.002) && /^frei · 3 s$/.test(r.word), `no Takt, no repetition: from the first note after the silence (${(r.w0 * 1000).toFixed(1)} ms) to the tap (${(r.w1 * 1000).toFixed(1)} ms) – „${r.word}“ (pulse clarity ${r.clar != null ? r.clar.toFixed(2) : '–'})`);
-  ok(r.llock === 'frei' && r.start > 0 && r.start < 0.06 && near(r.Lf, 3.0, 0.03), `  a Frei Schleife (no clear pulse) from its start right after the tap (${Math.round(r.start * 1000)} ms ahead), the tap is the seam (${r.Lf.toFixed(2)} s)`);
+  ok(r.llock === 'frei' && r.start > 0 && r.start < 0.06 && near(r.Lf, r.span, 0.002) && near(r.span, 3.0, 0.15), `  a Frei Schleife (no clear pulse) from its start right after the tap (${Math.round(r.start * 1000)} ms ahead), the tap is the seam (${r.Lf.toFixed(3)} s – the window up to the tap ${r.span.toFixed(3)} s; the tap came ${Math.round((r.span - 3) * 1000)} ms after the 3 s the page waited for)`);
 
   // ---- row 5: the player stopped before the tap → that phrase, from its start: at the tap (no Takt), at the next 1 (Takt) ----
   r = await ev(async () => {

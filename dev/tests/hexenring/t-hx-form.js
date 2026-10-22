@@ -164,13 +164,15 @@ const BPM = 150;
     // the fades, 3 ms: out from 3 ms before the beat (silent on it), back from 3 ms before the 1 (full on it) – the
     // processor's messages, at their frames; and nothing at all in between
     o.out = o.msgs.filter((x) => x[2] === 0).map((x) => [x[0] - f0, x[1]]); o.back = o.msgs.filter((x) => x[2] > 0).map((x) => [x[0] - f1, x[1]]);
-    let mx = 0; for (let f = f0; f < f1 - 3 * ms; f++) mx = Math.max(mx, Math.abs(g.L[f - g.f0]), Math.abs(g.R[f - g.f0]));
-    o.inside = mx;
+    // (a quantum this headless machine's audio device dropped is a gap in the recording – NaN – never sound: counted
+    // apart; at least 90 % of the Lücke must have been heard)
+    let mx = 0, heard = 0, all = 0; for (let f = f0; f < f1 - 3 * ms; f++) { const a = g.L[f - g.f0], b = g.R[f - g.f0]; all++; if (!(a === a && b === b)) continue; heard++; mx = Math.max(mx, Math.abs(a), Math.abs(b)); }
+    o.inside = heard >= 0.9 * all ? mx : NaN; o.heard = +(heard / all).toFixed(3); o.rec = [g.f0 - f0, g.f0 + g.L.length - f1];   // (the recording's window against the Lücke's frames)
     return o;
   });
   ok(Math.abs(r.len - r.beat) < 1e-6 && r.gap < r.before - 60 && r.after > r.before - 6, `Lücke: silent for the last beat before the 1 (${r.before.toFixed(1)} → ${r.gap.toFixed(1)} dB in it → ${r.after.toFixed(1)} after the 1)`);
   ok(r.out.length === 3 && r.out.every(([d, n]) => Math.abs(d + r.r3) <= 1 && n === r.r3) && r.back.length === 3 && r.back.every(([d, n]) => Math.abs(d + r.r3) <= 1 && n === r.r3) && r.inside === 0,
-    `  hard, with 3-ms fades at their frames (out ${JSON.stringify(r.out[0])}, back ${JSON.stringify(r.back[0])} – frames from the beat and the 1, the fade's length); inside exactly silent`);
+    `  hard, with 3-ms fades at their frames (out ${JSON.stringify(r.out[0])}, back ${JSON.stringify(r.back[0])} – frames from the beat and the 1, the fade's length); inside exactly silent (${r.inside}; ${(r.heard * 100).toFixed(1)} % of it recorded – the rest quanta the machine dropped; the recording from ${-r.rec[0]} frames before … ${r.rec[1]} after)`);
 
   // ---- Schluss am Ende: each at its seam, its Ausklang ringing; then ▶ ----
   r = await ev(async () => {
