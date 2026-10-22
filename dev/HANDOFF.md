@@ -61,6 +61,16 @@ Offen sind nur noch Dinge fürs Ohr und ein paar Entscheidungen (unten bei „Ow
 
 **Step 1a (engine core, built):** Taktgeber (`TG`, one beat map; the Puls, MIDI clock in/out, Sporenregen, the Fährte and the bar recorder read it), processor `myzel-ring` (Humus rings, Schleifen/Schichten, seam law, Ausklang hook, resampler), the taps and the strip „Hexenring“ (`hxr` → `A.masterIn`), the notes and Bewegung Humus, the internal calls `hxGrab/hxLoopNew/hxSchichtAdd/hxState/hxGain/hxUndo/hxClear/hxRate/hxTempo` (no UI yet). The DSP module now loads at sound start. Suite `dev/tests/hexenring/run-all.sh` (copy to `<scratch>/hexenring/`). Costs entered: `HX_COST = { capture: 0.68, schicht: 0.31, rs: 0.95 }` (cost.js candidates `hxq…hxr`). (The two step-1a conflicts were decided by the owner and built in 1b: MIDI clock – small errors slew, > 15 ms within ¼ beat; „Alles“ hears everything incl. the Schleifen.)
 
+**Final pass (built, 21./22.10.2026):** SPEC §23 „As built (final pass)“, §15/§21/§7 notes, klang SPEC §2.4. Rhizom Nähren's
+net per loop (`L.rhzNetz`, `rhzOwn`, `hxRhzNetz`, card row „Netz“), Rhizom's price refit (`rhzPrice`, `rhz-fit.js`), Glut's
+`GLT_COST`, the seam law per window (`hxSeamBand`), the processor's chunk bookkeeping (`sharedV` – the guard `held`'s
+report reproduced in the fuzz and fixed), the memory cap over Wuchs/Zersetzung, MIDI chords grouped by time stamp
+(`modStroke(t)`), the AudioParam hooks without rest arrays. Every red row of the list made green – app fixes where the
+app was wrong, test fixes with their measurement where a row measured the headless machine (list in SPEC §23; the cost
+rows now compare in turns with the build their budget was set on: `motion-tests/run-all.sh` builds slots `gmref`
+(fae609a) and `gfref` (4d6d233)). Not reproduced in the fuzz runs after the fixes: a Rhizom loop voice left after Stille
+with charges pending (seen in 2 of 14 runs before; `t-hx-fuzz` now prints such a voice's state).
+
 **Step 4 (Ökologie, built):** SPEC §10.6 and §15 „As built (step 4)“, §21 costs, §23 suites. One section `Hexenring: Ökologie (Etappe 4)` (`hxEcoTick` per tick): pass notes `hxPassNotes`/`hxFeedAhead` (Nähren Rhizom/Regen, MIDI out `hxMidiNote`), Höfe `hxFeedMake` (`HX_FEED`, `MyzelProc` `po.inj`, Sehne `SHN_FEED`, Glut injection), Sammelschleife (`hxAccMake`, processor `{acc}`/`accWrite`/`{accCopy}`), gap mode and fractional lengths (`d.gap`, `d.fr`, `gapTail`), Treffen (`hxCrt`, `hxTreffenOf`, `hxTreffenSetzen`/`hxTrefPlan`, Fruchten), Zersetzung (`hxEinwPass` offline web, `hxModerPass` in the Worker `hxWk`, `hxZersJob`), Mikro (`HX.mic`, input/ring 3, `hxMicOn/Off/Messen`, `#hxMic`), Gesang (`hxYin` with candidate dips, `hxGesangSeg`), Ladung (`hxLadTick`, slice stutter `ps`), vetoes (`hxVetoList/hxVeto`), Live chosen (`L.live`, `hxWLm`), Wiederkehr without a Takt (`hxWkSeqD`). Suites `t-hx-oeko2`, `t-hx-mikro`, `t-hx-live` in run-all; t-hx-fuzz's bag (+10 kinds, `FUZZ_E=0`); `perf/t-idle-live` 5e; `cost.js` candidates `hxi/hxj/hxk/fglt/fshn`. Costs `HX_COST.mic 0.47, acc 0.33, hof {glt [0.8, 1.05], shn [0.77, 1.16]}`.
 
 **Step 3 (Mitspieler, built):** SPEC §12.2–§12.5, §21, §23 „As built (step 3)“. One section before `showResume`:

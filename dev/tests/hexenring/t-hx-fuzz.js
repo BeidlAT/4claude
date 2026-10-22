@@ -15,7 +15,9 @@ const G = require('./hx-g'), H = require('./hx-h');
 const { ok } = H;
 const N = +(process.env.FUZZ_N || 2000), SEQ = 20, MEM_MB = 300;
 let seed = +(process.env.FUZZ_SEED || 1);
-const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+// (Math.imul: the product in 32-bit integers – in doubles it lost its low bits past 2^53, and some seeds fell into a short
+// cycle: seed 120 drew 55 of the 80 kinds, 44 of each over and over)
+const rnd = () => { seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
 const ACTS = { notes: 14, move: 4, korb: 9, korbHold: 3, haupt: 7, ring: 7, undo: 4, redo: 3, leeren: 1, del: 2, level: 2, eig: 2, form: 3, merken: 2, lichGo: 2, kern: 2, luecke: 2,
   schluss: 2, schlussAb: 1, gsp: 2, kor: 1, ausl: 1, korr: 2, chipTo: 2, bewOnly: 1, bewImport: 1, stille: 2, preset: 2, scene: 2, morph: 2, tempo: 2, puls: 2, sleep: 1, wake: 1,
   hide: 1, show: 1, param: 3 };
@@ -148,6 +150,10 @@ async function install(page) {
       try { M.hxHauptUp({ pointerId: 32 }); M.hxKorbRelease({ pointerId: 31 }); } catch (e) { F.exc.push('settle: ' + e.message); }
       if (M.SLP.on) M.slpWake();
       if (document.visibilityState !== 'visible') window.__vis('visible');
+      // (the clock must run for anything to end: hidden and idle, the page suspended its context – back in view it
+      // resumes; where it still stands a second later, a tap, as the player's, resumes it – counted, never silent)
+      for (let w = 0; w < 20 && M.A.ctx.state !== 'running'; w++) await sleep(50);
+      if (M.A.ctx.state !== 'running') { F.tapResume = (F.tapResume || 0) + 1; F.tapWhy = (F.tapWhy || []).concat([M.A.ctx.state + ' us ' + !!M.A.userSuspended]).slice(-4); document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); for (let w = 0; w < 20 && M.A.ctx.state !== 'running'; w++) await sleep(50); }
       M.modSet('map:fz:1', 'flt', 0); M.modSet('map:fz:1', 'pan', 0); M.modSet('map:fz:1', 'dly', 0); M.modSet('map:fz:1', 'hoehe', 0);
       M.panic();
       let i = 0; for (; i < 60 && (M.A.voices.size || M.touches.size); i++) await sleep(50);
@@ -156,7 +162,7 @@ async function install(page) {
       if (M.HX.nan && M.HX.nan.length) { F.trip = (F.trip || []).concat(M.HX.nan); if (!F.tripAt) F.tripAt = F.last.slice(); M.HX.nan.length = 0; }
       // (a voice that stays: what it is – its source, the way it came, its state, its end – and the actions before it)
       const vs = [...M.A.voices].slice(0, 3).map((v) => ({ eng: v.eng, as: v.as, loop: !!v.loop, hx: v.hxSrc || null, wk: !!v.wk, alive: v.alive, rel: !!v.released, endIn: v.endAt === Infinity ? 'inf' : +(v.endAt - M.A.ctx.currentTime).toFixed(2), rz: v.rz ? { pend: v.rz.pend, done: v.rz.done, inVs: M.RHZ.vs.has(v), q: M.RHZ.q.length, qMine: M.RHZ.q.filter((e) => e.v === v).map((e) => +(e.at - M.A.ctx.currentTime).toFixed(3)).slice(0, 4), h: +(M.RHZ.h - M.A.ctx.currentTime).toFixed(3), t0: +(v.rz.t0 - M.A.ctx.currentTime).toFixed(3), fired: v.rz.fired, ctx: M.A.ctx.state, own: v.rz.sp !== M.RHZ.sp } : null, cost: v.cost }));
-      return { voices: M.A.voices.size, touches: M.touches.size, vs, last: M.A.voices.size ? F.last.slice(-12) : null, ms: i * 50, loops: M.hxLoopsLive().length, mem: M.hxMemUsed(), cap: M.P['hx.mem'] * 1048576, state: M.A.ctx.state, orph, weg };
+      return { voices: M.A.voices.size, touches: M.touches.size, vs, ctxState: M.A.ctx.state, last: M.A.voices.size ? F.last.slice(-12) : null, ms: i * 50, loops: M.hxLoopsLive().length, mem: M.hxMemUsed(), cap: M.P['hx.mem'] * 1048576, state: M.A.ctx.state, orph, weg };
     };
   }, MEM_MB);
 }
@@ -170,7 +176,7 @@ async function install(page) {
   await install(page);
   const stuck = [], over = [], heaps = [], books = [];
   let weg0 = [];
-  let trips = 0, done = 0, seqs = 0, reloads = 0, h0 = null, nan = 0, exc = [], acts = {};
+  let trTap = 0, trWhy = [], trips = 0, done = 0, seqs = 0, reloads = 0, h0 = null, nan = 0, exc = [], acts = {};
   const t0 = Date.now();
   while (done < N) {
     for (let i = 0; i < SEQ && done < N; i++, done++) {
@@ -180,14 +186,14 @@ async function install(page) {
     }
     seqs++;
     const s = await page.evaluate(() => window.__settle());
-    if (s.voices || s.touches) { stuck.push(`seq ${seqs}: ${s.voices} voices, ${s.touches} fingers after Stille`); console.log('STUCK seq ' + seqs + ' ' + JSON.stringify(s.vs) + ' after ' + JSON.stringify(s.last)); }
+    if (s.voices || s.touches) { stuck.push(`seq ${seqs}: ${s.voices} voices, ${s.touches} fingers after Stille`); console.log('STUCK seq ' + seqs + ' ctx ' + s.ctxState + ' ' + JSON.stringify(s.vs) + ' after ' + JSON.stringify(s.last)); }
     const stale = s.weg.filter((id) => weg0.includes(id)); weg0 = s.weg;
     if (s.orph || stale.length) books.push(`seq ${seqs}: ${s.orph} Schichten without their Schleife, Schleifen ${stale.join(',') || '–'} cleared a sequence ago and still held`);
     if (s.mem > s.cap + 64 * 1048576) over.push(`seq ${seqs}: ${Math.round(s.mem / 1048576)} MB of ${Math.round(s.cap / 1048576)}`);
     if (seqs % 25 === 0 || seqs === 5) { const hp = await heap(); heaps.push([seqs, hp, Math.round(s.mem / 1048576), s.loops]); if (seqs === 5) h0 = hp; }
     // a reload now and then: the Schleifen come back from storage, the fuzz goes on with them
     if (seqs % 30 === 0 && done < N) {
-      const f = await page.evaluate(() => window.__fz); if ((f.nan || f.nanX || (f.trip && f.trip.length)) && !global.__shown) { global.__shown = 1; console.log('NANDUMP seq', seqs, 'nan', f.nan, 'nanX', f.nanX, 'firsts', JSON.stringify((f.firsts || []).sort((x, y) => x[1] - y[1]).slice(0, 12)), 'at', JSON.stringify(f.at)); console.log('TRIP', JSON.stringify((f.trip || []).slice(0, 4)), 'tripAt', JSON.stringify(f.tripAt)); console.log('TRIP0', JSON.stringify(f.trip0 || null)); } trips += (f.trip || []).length; nan += f.nan; exc = exc.concat(f.exc); for (const k in f.acts) acts[k] = (acts[k] || 0) + f.acts[k];
+      const f = await page.evaluate(() => window.__fz); if ((f.nan || f.nanX || (f.trip && f.trip.length)) && !global.__shown) { global.__shown = 1; console.log('NANDUMP seq', seqs, 'nan', f.nan, 'nanX', f.nanX, 'firsts', JSON.stringify((f.firsts || []).sort((x, y) => x[1] - y[1]).slice(0, 12)), 'at', JSON.stringify(f.at)); console.log('TRIP', JSON.stringify((f.trip || []).slice(0, 4)), 'tripAt', JSON.stringify(f.tripAt)); console.log('TRIP0', JSON.stringify(f.trip0 || null)); } trips += (f.trip || []).length; trTap += f.tapResume || 0; trWhy = trWhy.concat(f.tapWhy || []); nan += f.nan; exc = exc.concat(f.exc); for (const k in f.acts) acts[k] = (acts[k] || 0) + f.acts[k];
       await page.reload(); await page.waitForFunction(() => !!window.__M);
       await H.tools(page); await G.gtools(page);
       await page.click('#btnStart'); await page.waitForFunction(() => window.__M.HX.state === 'ok', null, { timeout: 10000 });
@@ -198,9 +204,10 @@ async function install(page) {
       reloads++;
     }
   }
-  const f = await page.evaluate(() => window.__fz); if ((f.nan || f.nanX || (f.trip && f.trip.length)) && !global.__shown) { global.__shown = 1; console.log('NANDUMP seq', seqs, 'nan', f.nan, 'nanX', f.nanX, 'firsts', JSON.stringify((f.firsts || []).sort((x, y) => x[1] - y[1]).slice(0, 12)), 'at', JSON.stringify(f.at)); console.log('TRIP', JSON.stringify((f.trip || []).slice(0, 4)), 'tripAt', JSON.stringify(f.tripAt)); console.log('TRIP0', JSON.stringify(f.trip0 || null)); } trips += (f.trip || []).length; nan += f.nan; exc = exc.concat(f.exc); for (const k in f.acts) acts[k] = (acts[k] || 0) + f.acts[k];
+  const f = await page.evaluate(() => window.__fz); if ((f.nan || f.nanX || (f.trip && f.trip.length)) && !global.__shown) { global.__shown = 1; console.log('NANDUMP seq', seqs, 'nan', f.nan, 'nanX', f.nanX, 'firsts', JSON.stringify((f.firsts || []).sort((x, y) => x[1] - y[1]).slice(0, 12)), 'at', JSON.stringify(f.at)); console.log('TRIP', JSON.stringify((f.trip || []).slice(0, 4)), 'tripAt', JSON.stringify(f.tripAt)); console.log('TRIP0', JSON.stringify(f.trip0 || null)); } trips += (f.trip || []).length; trTap += f.tapResume || 0; trWhy = trWhy.concat(f.tapWhy || []); nan += f.nan; exc = exc.concat(f.exc); for (const k in f.acts) acts[k] = (acts[k] || 0) + f.acts[k];
   const hEnd = await heap();
   console.log('INFO ' + done + ' actions in ' + seqs + ' sequences, ' + reloads + ' reloads, ' + Math.round((Date.now() - t0) / 1000) + ' s; actions: ' + JSON.stringify(acts));
+  console.log('INFO the context still stood after the page came back into view, a tap resumed it: ' + JSON.stringify([trTap, trWhy]));
   console.log('INFO heap after GC [sequence, MB, Hexenring MB, Schleifen]: ' + JSON.stringify(heaps) + ' → end ' + hEnd + ' MB');
   const missing = Object.keys(ACTS).filter((k) => !acts[k]);
   ok(done === N && !missing.length, `${N} random actions in ${seqs} sequences of ${SEQ}, every kind of action done (${Object.keys(acts).length} kinds)` + (missing.length ? ' – never: ' + missing.join(', ') : ''));
