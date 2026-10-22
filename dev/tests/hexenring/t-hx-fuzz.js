@@ -155,7 +155,7 @@ async function install(page) {
       const orph = [...M.HX.sch.values()].filter((S) => !M.HX.loops.has(S.loop)).length, weg = [...M.HX.loops.values()].filter((L) => L.state === 'weg').map((L) => L.id);
       if (M.HX.nan && M.HX.nan.length) { F.trip = (F.trip || []).concat(M.HX.nan); if (!F.tripAt) F.tripAt = F.last.slice(); M.HX.nan.length = 0; }
       // (a voice that stays: what it is – its source, the way it came, its state, its end – and the actions before it)
-      const vs = [...M.A.voices].slice(0, 3).map((v) => ({ eng: v.eng, as: v.as, loop: !!v.loop, hx: v.hxSrc || null, wk: !!v.wk, alive: v.alive, rel: !!v.released, endIn: v.endAt === Infinity ? 'inf' : +(v.endAt - M.A.ctx.currentTime).toFixed(2), rz: v.rz ? { pend: v.rz.pend, done: v.rz.done } : null, cost: v.cost }));
+      const vs = [...M.A.voices].slice(0, 3).map((v) => ({ eng: v.eng, as: v.as, loop: !!v.loop, hx: v.hxSrc || null, wk: !!v.wk, alive: v.alive, rel: !!v.released, endIn: v.endAt === Infinity ? 'inf' : +(v.endAt - M.A.ctx.currentTime).toFixed(2), rz: v.rz ? { pend: v.rz.pend, done: v.rz.done, inVs: M.RHZ.vs.has(v), q: M.RHZ.q.length, qMine: M.RHZ.q.filter((e) => e.v === v).map((e) => +(e.at - M.A.ctx.currentTime).toFixed(3)).slice(0, 4), h: +(M.RHZ.h - M.A.ctx.currentTime).toFixed(3), t0: +(v.rz.t0 - M.A.ctx.currentTime).toFixed(3), fired: v.rz.fired, ctx: M.A.ctx.state, own: v.rz.sp !== M.RHZ.sp } : null, cost: v.cost }));
       return { voices: M.A.voices.size, touches: M.touches.size, vs, last: M.A.voices.size ? F.last.slice(-12) : null, ms: i * 50, loops: M.hxLoopsLive().length, mem: M.hxMemUsed(), cap: M.P['hx.mem'] * 1048576, state: M.A.ctx.state, orph, weg };
     };
   }, MEM_MB);

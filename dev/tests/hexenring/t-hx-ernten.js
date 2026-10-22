@@ -139,10 +139,10 @@ const { ok } = H;
     M.hxRailState(); const word = M.HXU.korb.textContent;
     M.hxKorb(null);
     const L = M.hxLoopsLive()[0];
-    return { clar: plan.tk && plan.tk.clarity, kind: plan.kind, lock: plan.lock, w0: plan.w0 - t0, w1: plan.w1 - T, word, start: M.hxT(L.d.ph0) - A.ctx.currentTime, Lf: L.d.L / M.A.ctx.sampleRate, span: plan.w1 - plan.w0, llock: L.d.lock, pend: M.HX.pend.length };
+    return { clar: plan.tk && plan.tk.clarity, kind: plan.kind, lock: plan.lock, w0: plan.w0 - t0, w1: plan.w1 - T, word, start: M.hxT(L.d.ph0) - A.ctx.currentTime, Lf: L.d.L / M.A.ctx.sampleRate, span: (() => { const S = M.HX.sch.get(L.sch[0]); return S && S.cut ? (S.cut.w1 - S.cut.w0) / M.A.ctx.sampleRate : plan.w1 - plan.w0; })(), llock: L.d.lock, pend: M.HX.pend.length };
   });
   ok(r.kind === 'phrase' && r.lock === 'frei' && near(r.w0, 0, 0.002) && near(r.w1, 0, 0.002) && /^frei · 3 s$/.test(r.word), `no Takt, no repetition: from the first note after the silence (${(r.w0 * 1000).toFixed(1)} ms) to the tap (${(r.w1 * 1000).toFixed(1)} ms) – „${r.word}“ (pulse clarity ${r.clar != null ? r.clar.toFixed(2) : '–'})`);
-  ok(r.llock === 'frei' && r.start > 0 && r.start < 0.06 && near(r.Lf, r.span, 0.002) && near(r.span, 3.0, 0.15), `  a Frei Schleife (no clear pulse) from its start right after the tap (${Math.round(r.start * 1000)} ms ahead), the tap is the seam (${r.Lf.toFixed(3)} s – the window up to the tap ${r.span.toFixed(3)} s; the tap came ${Math.round((r.span - 3) * 1000)} ms after the 3 s the page waited for)`);
+  ok(r.llock === 'frei' && r.start > 0 && r.start < 0.06 && near(r.Lf, r.span, 0.002) && near(r.span, 3.0, 0.15), `  a Frei Schleife (no clear pulse) from its start right after the tap (${Math.round(r.start * 1000)} ms ahead), the tap is the seam (${r.Lf.toFixed(3)} s – the window it cut up to the tap ${r.span.toFixed(3)} s; the tap came ${Math.round((r.span - 3) * 1000)} ms after the 3 s the page waited for)`);
 
   // ---- row 5: the player stopped before the tap → that phrase, from its start: at the tap (no Takt), at the next 1 (Takt) ----
   r = await ev(async () => {

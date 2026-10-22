@@ -77,7 +77,10 @@ const has = (p) => PARTS.includes(p);
       await window.__sleep(1500);
       // off: the Schicht again
       M.hxWSet(L, 'live', false);
-      const Q = window.__nextPass(L, 1); await window.__until(Q.a + 0.3);
+      // (the scheduler's next tick moves the Schicht's gain back at the seam after it – a switch in the last moments
+      // before a seam takes the one after: the pass after that one is measured, never one the switch could not reach)
+      await window.__sleep(150);
+      const Q = window.__nextPass(L, 2); await window.__until(Q.a + 0.3);
       const seen2 = new Set(); const end = performance.now() + 900; while (performance.now() < end) { for (const v of A.voices) if (v.loop) seen2.add(v); await window.__sleep(25); }
       o.after = seen2.size; o.lmOff = !M.HX.sch.get(L.sch[0]).lm;
       const mt2 = await window.__meter(L.id, 800); o.schLvl2 = Math.max(...mt2.map((x) => x[1]));

@@ -183,8 +183,8 @@ async function check(page, t0, t1) {
     await page.evaluate(() => window.__korbAfterBar(1));
     await page.evaluate(() => window.__undrive('map:test:1', 'flt'));
     await sleep(600);
-    const c = await page.evaluate(() => { const M = window.__M, L = M.hxLoopsLive().find((x) => x.bew); return { on: M.SEQ.on, ext: M.SEQ.ext && M.SEQ.ext.bpm, fbpm: M.FA.bpm, n: L && L.bew.n, bar: L ? (((M.hxBewA(L) / 48 - M.TG.o) % 4) + 4) % 4 : -1, t: M.A.ctx.currentTime }; });
-    ck(c.on && Math.abs(c.ext - 100) < 1.5 && Math.abs(c.fbpm - 100) < 1.5 && c.n === 192, 'clock: an external clock at 100 BPM leads – the Korb takes a bar of Bewegung in its beat (' + c.fbpm.toFixed(2) + ' BPM)');
+    const c = await page.evaluate(() => { const M = window.__M, L = M.hxLoopsLive().find((x) => x.bew); return { on: M.SEQ.on, ext: M.SEQ.ext && M.SEQ.ext.bpm, fbpm: M.TG.want, slope: M.FA.bpm, n: L && L.bew.n, bar: L ? (((M.hxBewA(L) / 48 - M.TG.o) % 4) + 4) % 4 : -1, t: M.A.ctx.currentTime }; });
+    ck(c.on && Math.abs(c.ext - 100) < 1.5 && Math.abs(c.fbpm - 100) < 1.5 && c.n === 192, 'clock: an external clock at 100 BPM leads – the Korb takes a bar of Bewegung in its beat (the Taktgeber at ' + c.fbpm.toFixed(2) + ' BPM; its segment that moment ' + c.slope.toFixed(2) + ' – a slew\'s slope while it locks the phase is not the tempo)');
     ck(c.bar <= 1 / 96 + 1e-6 || c.bar >= 4 - 1 / 96 - 1e-6, '  on the clock\'s bar lines, to half a step (the device\'s Start owns the downbeat; ' + Math.min(c.bar, 4 - c.bar).toFixed(4) + ' beats)');
     await sleep(1500);
     let r = await check(page, c.t + 0.1, c.t + 1.4);
@@ -192,9 +192,9 @@ async function check(page, t0, t1) {
     // the device speeds up to 110 BPM: it follows in beats
     const t2 = await page.evaluate(() => { window.__per = 60000 / (110 * 24); return window.__M.A.ctx.currentTime; });
     await sleep(3500);
-    const c2 = await page.evaluate(() => { const M = window.__M, L = M.hxLoopsLive().find((x) => x.bew); return { ext: M.SEQ.ext && M.SEQ.ext.bpm, fbpm: M.FA.bpm, bar: (((M.hxBewA(L) / 48 - M.TG.o) % 4) + 4) % 4 }; });
+    const c2 = await page.evaluate(() => { const M = window.__M, L = M.hxLoopsLive().find((x) => x.bew); return { ext: M.SEQ.ext && M.SEQ.ext.bpm, fbpm: M.TG.want, slope: M.FA.bpm, bar: (((M.hxBewA(L) / 48 - M.TG.o) % 4) + 4) % 4 }; });
     r = await check(page, t2 + 0.1, t2 + 3.3);
-    ck(Math.abs(c2.ext - 110) < 1.5 && Math.abs(c2.fbpm - 110) < 1.5 && (c2.bar <= 1 / 96 + 1e-6 || c2.bar >= 4 - 1 / 96 - 1e-6) && r.mean < 0.01, '  the device speeds up to 110 BPM: it follows, on the same bar lines (' + c2.fbpm.toFixed(2) + ' BPM, mean ' + r.mean.toFixed(5) + ')');
+    ck(Math.abs(c2.ext - 110) < 1.5 && Math.abs(c2.fbpm - 110) < 1.5 && (c2.bar <= 1 / 96 + 1e-6 || c2.bar >= 4 - 1 / 96 - 1e-6) && r.mean < 0.01, '  the device speeds up to 110 BPM: it follows, on the same bar lines (' + c2.fbpm.toFixed(2) + ' BPM, the segment that moment ' + c2.slope.toFixed(2) + ', mean ' + r.mean.toFixed(5) + ')');
     await page.evaluate(() => { clearInterval(window.__ck); window.__send([0xfc], 'c1'); });
     ck(!errors.length, 'no page errors (clock)' + (errors.length ? ': ' + errors.join(' | ') : ''));
     await GF.close();

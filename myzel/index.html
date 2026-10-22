@@ -26932,8 +26932,12 @@ function hxMemOk(n) {
   }
   HX.hist = HX.hist.filter((st) => !st.dead);
   if (hxMemUsed() + need <= cap) return true;
-  toast('Speichergrenze erreicht (' + P['hx.mem'] + ' MB): lege Schichten zusammen oder entferne Gelöschte.', 7000, { label: 'Aufräumen', fn: () => hxCardOpen() });
-  hxSay('Speicher voll'); HX.memFull = true; hxRailDirty();
+  if (!(HX.memToastT > performance.now())) {   // (once in 30 s: Wuchs and Zersetzung ask again every tick)
+    HX.memToastT = performance.now() + 30000;
+    toast('Speichergrenze erreicht (' + P['hx.mem'] + ' MB): lege Schichten zusammen oder entferne Gelöschte.', 7000, { label: 'Aufräumen', fn: () => hxCardOpen() });
+    hxSay('Speicher voll');
+  }
+  HX.memFull = true; hxRailDirty();
   return false;
 }
 function hxGraveClear() { HX.grave = []; HX.memFull = false; hxCardDirty(); hxSay('Gelöschte entfernt'); }
@@ -29997,7 +30001,7 @@ function hxWRenderFor(L, S, sig, o = {}) {
     S.wBusy = null;
     const X = hxByKey(key);
     if (!X || !HX.sch.has(S.id) || (S.ver || 0) !== ver) return;
-    if (V && V.sig === hxWSig(X, S, o.key)) {
+    if (V && V.sig === hxWSig(X, S, o.key) && (S.wu || hxMemOk(V.n))) {   // (final pass: a first Treu version within the Speichergrenze, as every other buffer – else the Abdruck plays on)
       S.wu = V; S.wuSaved = 0;
       if (hxWAktiv(X) && !(S.anc && S.anc.sig === V.sig)) hxWPlay(S, 'wu', o.f != null && o.f > hxF(hxNowT() + 0.05) ? o.f : hxNextSeam(X).f);
       hxSaveSch(S, 'w');
@@ -30059,7 +30063,7 @@ function hxWTick(now, horizon) {
       const S = HX.sch.get(id);
       if (!hxWCan(S)) continue;
       if (!lebt) { if (S.wLive) { S.wLive = false; hxWStop(S); hxWUpdate(L, { re: true }); } continue; }
-      if (!S.wLive) { S.wLive = true; S.wk = k; hxwWarm(2 * [...HX.sch.values()].filter((x) => x.wLive).length); }
+      if (!S.wLive) { if (!hxMemOk(Math.round(1.5 * (hxWTailEst(S) + 4) * SR))) continue; S.wLive = true; S.wk = k; hxwWarm(2 * [...HX.sch.values()].filter((x) => x.wLive).length); }   // (final pass: its passes in the processor counted against the Speichergrenze before they stream)
       if ((S.wk == null ? -1 : S.wk) >= k1 || a1 - fNow > hxWStartS() * SR) continue;
       if (L.nein && L.nein.k === k1 && S.anc) { S.wk = k1; hxWPlay(S, 'anc', a1); continue; }   // (✕: the anchor plays that pass)
       if (L.frucht != null && L.frucht === k1 && (S.anc || S.wu)) { S.wk = k1; hxWPlay(S, S.anc ? 'anc' : 'wu', a1); continue; }   // (step 4: Fruchten – at a Treffen its anchor once)
@@ -32656,6 +32660,7 @@ function hxZersTick(now) {
 }
 async function hxZersJob(L, S, Z, k) {
   const t0 = performance.now(), lk = L.key, Lf = hxPassF(L, k + 1) - hxPassF(L, k);
+  if ((!Z.base || !S.zrV) && !hxMemOk(2 * Lf)) return;   // (final pass: its steady pass, roots and versions within the Speichergrenze – else the clean Schicht plays on)
   if (!Z.base || Z.base.ver !== (S.ver || 0) || Math.abs(Z.base.Lf - Lf) > 8 || Z.base.src !== hxZersSrc(L, S)) { Z.base = await hxZersBase(L, S); Z.cur = null; Z.gen = 0; if (!Z.base) return; }
   const X = hxByKey(lk); if (!X || !HX.sch.has(S.id) || !hxZersOn(X)) return;
   let V = Z.cur || { L: Z.base.L, R: Z.base.R, rms0: Z.base.rms };

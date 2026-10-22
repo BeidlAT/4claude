@@ -1978,3 +1978,24 @@ scatters (0.84–0.91 against 0.86, eeaaf2c the same), the native loop's VCOST r
 on both builds – its code is untouched; its threshold row once. Performance guard (alone, last): t-idle-parity 47/48 –
 „default patch after the wake“ (−81.8 against −89.7 dB) failed once; the same row fails on eeaaf2c once in two and
 passed on HEAD in a rerun; t-idle-live 25/25; check.js every scenario within its limit.
+
+### As built (final pass): the last red rows, the guard's reports, the regression
+Built: Rhizom Nähren's net per loop (§15), Rhizom's price refit and Glut's VCOST (§21, klang SPEC §2.4), the seam law
+held in every window (§7, `hxSeamBand`), the chunk bookkeeping (`sharedV`), the memory cap over Wuchs and Zersetzung,
+MIDI chords grouped by their time stamps (Anlehnen), the AudioParam hooks' call cost.
+**The guard `held`** (step 2b, seen once in 2b and once in step 3): reproduced in the fuzz (seed 103 of 13 runs, 2000
+actions each) – Schicht 6's old version was given back while its chunks were the version playing (`ver 6`) and later
+while the stream's fallback held them (`prev 6`): a late stream slot fell back (`wsCheck` → `wsSet(S, prev)`) to the
+pass before, whose chunks were the old version `wsSet` had just queued to be given back; a `replace` gave an old version
+the fallback still held. `sharedV(S, V)` keeps any version whose chunks the version playing, the old one, the fallback or
+a parked one still own (its owner gives them when it goes); `ddAdopt` no longer drops an old version unreturned. The
+guard stays as the net.
+**Memory:** one fuzz run counted 376 MB against the 300-MB Speichergrenze for a moment: Treu versions, a living
+Schicht's passes and Zersetzung's buffers were not asked against the cap. Now they are (`hxMemOk`; the Abdruck or the
+clean Schicht plays on when it is full); its toast once in 30 s.
+**Test rows that measured the machine** (each with its measurement, in the commits): t-gm-stream (steps, not wall time),
+t-gm-cost / t-gf-cost (medians in turns with the build each budget was set on), t-gs-cost (repeats in turns), t-gl-schlafen
+(the level over whole beats), t-gx-live (the chord stamped as a keyboard does), t-clock (the audio clock), t-eng-live (a
+Puls step outliving the fixed wait), bench rhz (600 pairs, the tired net's share), t-hx-ernten (the processor's frames),
+t-hx-form (dropped quanta), t-hx-bew (median of five), t-hx-wuchs identity (two of three renders), t-idle-parity (the
+spread of four renders).
