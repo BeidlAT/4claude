@@ -101,7 +101,7 @@ async function render(url, cs, drive) {
       let e = 0; for (let i = 0; i < L.length; i++) e += L[i] * L[i] + R[i] * R[i];
       return { L: Array.from(L), R: Array.from(R), e, log, n: I ? I.n : null, late: I ? I.late : null };
     }, [cs, drive]);
-    r.errors = errors;
+    r.errors = errors; r.L = Float32Array.from(r.L); r.R = Float32Array.from(r.R);   // (four renders of a case held at once: as plain arrays they ran node out of its 2-GB heap)
     return r;
   } finally { await b.close(); }
 }

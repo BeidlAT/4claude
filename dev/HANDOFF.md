@@ -3,7 +3,9 @@
 ## Für den Besitzer – jetzt (22.10.2026)
 
 **Fertig zum Testen.** Der Hexenring ist mit allen vier Etappen gebaut und durch die Schlussprüfung: jede Suite einzeln
-auf der Maschine gelaufen, alle Reihen grün (Zahlen unten bei „Final pass“). Sobald der Pull Request in den
+auf der Maschine gelaufen, alle Reihen des Hexenrings und der App grün (Zahlen in SPEC §23). Offen fürs Ohr bzw. zur
+Entscheidung: Gespinst-Phrasen streuen um ihre Grenzen (Lautheit, Spitze, Nachklang – im Kalibrierungsstand genauso),
+und ein Gestik-Kostenwert liegt 14 % über dem Stand von Etappe 1 (Wachstum der Etappen 2–4, nicht der Schlussprüfung). Sobald der Pull Request in den
 Standard-Branch übernommen ist, aktualisiert sich die App unter beidlat.github.io von selbst (installierte Apps holen die
 neue Version, die Service-Worker-Version ändert sich mit jedem Inhalt).
 

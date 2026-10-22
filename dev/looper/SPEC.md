@@ -2009,3 +2009,18 @@ entries – and the calibration build (73ab260) just as much (A/B). Where an ent
 reported as MACHINE with its numbers, the reason at bench.js's head (`costRow`; `COST_STRICT=1` measures the calibration
 build, slot calref, in turns and asks for no more + 10 %); the table is unchanged.
 **Harz, Glas speaks at once (owner, 22.10.2026):** klang SPEC §3.1.
+**The regression (22.10.2026, each part alone, after two container restarts on another host):** reg.sh – v2 func 41,
+fixes 5, mobile 20, bars 9 (once 8: the armed recording's onset missed, 9 in two runs alone), bars2 4, integrity 3,
+sources 7, live2 7, presets 17, smoke ok, mixfunc all, mixui 3/3; MIDI router 41, mpe 23, clock 29, ports 37, parity 2;
+Gestik 40 suites 974 of 975 (t-gf-cost: a flush with the points 0.452 ms against the reference build's 0.397, + 14 % –
+this build and the one before the final pass, and this one without the AudioParam hooks, measure the same: the growth of
+steps 2–4, not a row of this pass). klang run-all t-dsp 147, t-parity 6, t-eng-live 80, t-eng-native 26, lib 23/26/18/12/8/8;
+smoke-all 28 sources, none silent. bench.js per engine: hrz 35/35, elm 31, boe 29, shn 34, zpf 44, mdr 29, jrg 25, rhz 33,
+khl, rnk, hlm, amo all rows but the machine's cost rows (MACHINE) – amo's centroid row now over 16 notes; gsp: its
+phrase rows scatter with the web (loudness −20.7…−23.4 dB against −22.65, peak −0.7…−3 dB against −1, T60 4.8–8.4 s
+against 8) – the same in the calibration build and the one before this pass (A/B, 6 phrases each), left for the owner.
+Hexenring all 25 suites green (proc 33, taps 17, clock 20, humus 11, ohr 27, ernten 33, grammar 30, persist 15, ui 69,
+werk 15, bake 13, seams 17, form 30, ctl 23, bew 66, oeko 13, fuzz 8, taumeln 14, wuchs 38, tempo 18, tools 47,
+mitspieler 33, gaertner 58, oeko2 56, mikro 24, live 22); the fuzz with seeds 103, 104, 113–120: 8/8 each, no `held`, no
+stuck voice. Perf guard: t-idle-parity 48 (renders kept as Float32Array – four per case ran node out of heap), t-idle-live
+and the CPU check against 7f226e7 all PASS. PWA builds, service-worker version 5fd867cf849b.
