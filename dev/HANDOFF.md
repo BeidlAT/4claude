@@ -3,8 +3,7 @@
 ## Für den Besitzer – jetzt (22.10.2026)
 
 **Fertig zum Testen.** Der Hexenring ist mit allen vier Etappen gebaut und durch die Schlussprüfung: jede Suite einzeln
-auf der Maschine gelaufen, alle Reihen des Hexenrings und der App grün (Zahlen unten bei „Final pass“). Nicht grün sind
-nur Kostenreihen des Klang-Prüfstands (`bench.js`) – siehe „Deine Entscheidung“ gleich unten. Sobald der Pull Request in den
+auf der Maschine gelaufen, alle Reihen grün (Zahlen unten bei „Final pass“). Sobald der Pull Request in den
 Standard-Branch übernommen ist, aktualisiert sich die App unter beidlat.github.io von selbst (installierte Apps holen die
 neue Version, die Service-Worker-Version ändert sich mit jedem Inhalt).
 
@@ -22,17 +21,19 @@ neue Version, die Service-Worker-Version ändert sich mit jedem Inhalt).
 - **Akkorde vom Keyboard:** Anlehnen biegt bei einem Akkord wieder den obersten Ton, auch wenn das Gerät gerade
   beschäftigt ist (die Töne werden nach ihrem Zeitstempel als Akkord erkannt).
 
-**Deine Entscheidung (offen):**
-- **Kostentabelle und Rechner:** Die Testmaschine wurde während der Schlussprüfung zweimal neu gestartet und lief danach
-  auf einer anderen Rechnerumgebung. Dort messen mehrere Klangquellen teurer als in der Kalibrierung vom 18.10.
-  (Halm, Harz, Böe, Amöbe, Gespinst um 5–15 %, Elmsfeuer in Stufe 3 fast doppelt: 4,4–6,3 statt 2,51). Derselbe Test mit
-  dem Stand vor der Schlussprüfung misst gleich viel – es liegt an der Maschine, nicht am neuen Code. Ich habe die
-  Tabelle deshalb nicht nach dieser einen Maschine umgeschrieben (sie würde z. B. Elmsfeuer in Stufe 3 auf weniger als
-  die halbe Stimmenzahl drücken). Vorschlag: einmal `klang/tests/recal.js` (≈ 3 h) auf einem ruhigen Rechner – oder
-  du sagst, dass diese Maschine gilt, dann trage ich alles nach ihr ein.
-- **Harz, Glas, hoher Ton:** Bei 1568 Hz spricht das Glas bei etwa einer von 16 Noten erst nach ≈ 1 s an (es schwillt
-  von −52 auf −20 dB); der Ton ist dann richtig gestimmt (−1,6 ct), aber die Tonhöhenreihe misst bei 0,6 s noch den
-  zweiten Glas-Modus und schlägt fehl. Gewollt (ein Glas „greift“ manchmal spät) oder soll es immer gleich ansprechen?
+**Von dir entschieden (22.10.2026):**
+- **Kostentabelle bleibt** wie kalibriert (18.10.). Zur Information, gemessen auf der Maschine nach den Neustarts (andere
+  Rechnerumgebung): Halm Rohrblatt 0,66–0,73 / 1,15–1,31 (Tabelle 0,68 / 1,15), Flöte 0,78–0,91 / 1,51–1,69 (0,88 / 1,59),
+  Flamme 1,40–1,52 / 2,65–3,03 (1,63 / 2,93); Harz je Körper bis 1,74 / 3,94 (1,71 / 3,85); Böe 0,74 / 1,12 (0,69 / 1,11);
+  Amöbe 0,55 / 1,45 (0,47 / 1,34); Gespinst 0,37 / 0,83 (0,34 / 1,01); Elmsfeuer 1,25–1,61 / 4,4–6,3 (1,09 / 2,51) – der
+  Stand vor der Schlussprüfung misst dort genauso (A/B), es liegt an der Maschine. Die Kostenreihen des Prüfstands
+  vergleichen deshalb, wenn ein Eintrag die Messung nicht deckt, abwechselnd mit dem Kalibrierungs-Stand (73ab260): dieser
+  Stand darf nicht mehr als 10 % teurer sein.
+- **Harz, Glas spricht immer sofort an:** hohe Töne bekamen ihren Anschub zu schwach (√ statt (f/800)^1,5 über 800 Hz),
+  und das Dublett-Paar schwebte schon im ersten Moment auseinander und zog sein Muster vom Bogen weg. Jetzt wächst die
+  Schwebung in den ersten 0,3 s herein. Gemessen über viele Noten und Seeds (Zahlen unten bei „Final pass“): kein später
+  Einsatz mehr, gleicher Ton und gleiche Stimmung, sobald er klingt; die anderen Körper rendern bitgleich wie vorher. Die Schale zeigt bei hohen Tönen dasselbe späte Ansprechen (6 von 16
+  Noten, bis 0,84 s) – nicht angefasst; sag Bescheid, ob sie es auch bekommen soll.
 
 **Fürs Ohr beim ersten Test** (die ersten Punkte stehen auch in `dev/IDEEN.md`):
 - die Bandträgheit beim Tempoändern einer Schleife (schießt ≈ 22 % des Schritts über);

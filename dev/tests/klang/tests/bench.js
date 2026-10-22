@@ -83,6 +83,35 @@ async function one(page, o) {
   }, o));
 }
 
+// The VCOST table is the final calibration (73ab260, 18.10.2026, a quiet machine), kept as it is (owner, 22.10.2026). A
+// machine of another make scales the engines differently against the native references (measured after the container
+// moved hosts on 22.10.: Halm, Harz, Böe, Amöbe, Gespinst 5–15 % over their entries, Elmsfeuer at level 3 4.4–6.3 against
+// 2.51 – and the calibration build itself the same there, A/B). So a row whose entry does not cover this machine's
+// measurement measures the same candidates on the calibration build (slot calref, built here) in turns – reference,
+// this build, reference – and asks that this build costs no more than the calibrated one + 10 % (one run's scatter):
+// the entry then still covers what it was measured on. Never a looser entry: the table's own check comes first.
+const CALREF = '73ab260', CALURL = 'http://127.0.0.1:8790/calref-inst/index.html';
+function calrefSlot() {
+  const { execFileSync } = require('child_process'), v2 = path.join(__dirname, '../../v2'), d = path.join(__dirname, 'ref', 'calref');
+  if (fs.existsSync(path.join(v2, 'calref-inst', 'index.html'))) return;
+  fs.mkdirSync(d, { recursive: true });
+  fs.writeFileSync(path.join(d, 'index.html'), execFileSync('git', ['-C', '/home/user/4claude', 'show', CALREF + ':myzel/index.html'], { maxBuffer: 1 << 28 }));
+  fs.copyFileSync('/home/user/4claude/myzel/tap-worklet.js', path.join(d, 'tap-worklet.js'));
+  execFileSync('sh', [path.join(v2, 'mk.sh'), d, 'calref'], { stdio: 'ignore' });
+}
+// cost.js once: the parsed line (env as the row's own call)
+function costRun(env, url) {
+  const { execFileSync } = require('child_process');
+  return JSON.parse(execFileSync('node', [path.join(__dirname, 'cost.js'), process.env.COST_ROUNDS || '6'], { env: Object.assign({}, process.env, env, url ? { KD_URL: url } : {}), encoding: 'utf8', timeout: 1800000 }).trim().split('\n').pop());
+}
+// the row: covered by the entry, or (another machine) no dearer than the calibration build + 10 %. f(c) → [L1, L3]
+function costRow(okf, what, tab, cur, env, f) {
+  if (tab[0] >= cur[0] && tab[1] >= cur[1]) return okf(true, `${what}VCOST entries cover the measurement: ${tab} ≥ ${cur[0].toFixed(2)}, ${cur[1].toFixed(2)}`);
+  calrefSlot();
+  const r1 = f(costRun(env, CALURL)), c2 = f(costRun(env)), r2 = f(costRun(env, CALURL));
+  const c = [Math.max(cur[0], c2[0]), Math.max(cur[1], c2[1])], r = [Math.max(r1[0], r2[0]), Math.max(r1[1], r2[1])];
+  return okf(c[0] <= 1.1 * r[0] && c[1] <= 1.1 * r[1], `${what}VCOST entries ${tab} under this machine's ${c.map((x) => x.toFixed(2))}; the calibration build (${CALREF}) in turns: ${r.map((x) => x.toFixed(2))} – this build no dearer + 10 % (the table kept, owner 22.10.)`);
+}
 (async () => {
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
   const { page, errors } = await openInst(browser, URL_, false);
@@ -95,7 +124,8 @@ async function one(page, o) {
   // the contract's own price: an empty processor voice (SPEC §8 step 1 gate ≈ 0.06 + 3 × 0.03)
   { const { execFileSync } = require('child_process');
     const c = JSON.parse(execFileSync('node', [path.join(__dirname, 'cost.js'), '6'], { env: Object.assign({}, process.env, { ENGS: 'null1,hau1,obt1,neb3' }), encoding: 'utf8', timeout: 900000 }).trim().split('\n').pop());
-    L.ok(c.null1 * c.scale < 0.25, `contract: an empty worklet voice costs ${(c.null1 * c.scale).toFixed(3)} Nebel units (raw ${c.null1}; node + 3 params ≈ 0.15)`); }
+    if (c.null1 * c.scale < 0.25) L.ok(true, `contract: an empty worklet voice costs ${(c.null1 * c.scale).toFixed(3)} Nebel units (raw ${c.null1}; node + 3 params ≈ 0.15)`);
+    else costRow(L.ok, 'contract: an empty worklet voice (< 0.25) – ', [0.25, 1e9], [c.null1 * c.scale, 0], { ENGS: 'null1,hau1,obt1,neb3' }, (x) => [x.null1 * x.scale, 0]); }
   let fails = 0;
   const T = {
     hlm: { f0: [110, 220, 440, 880, 1760, 2500], ys: [0.45, 0.6, 0.8], tol: 5, costMax: 0.55 },
@@ -251,7 +281,7 @@ async function one(page, o) {
       // reference only. Repeated runs on this machine scatter by ±10–20 %)
       console.log(`INFO ${key}: cost level 1: ${c1.toFixed(3)} Nebel units (raw ${c[key + '1']} × table scale ${c.scale}; SPEC's estimate ${tc.costMax})`);
       console.log(`INFO ${key}: cost level 3: ${c3.toFixed(3)} = ${(c3 / c1).toFixed(2)}× level 1`);
-      ok(rep.cost.table[0] >= c1 && rep.cost.table[1] >= c3, `VCOST entries cover the measurement: ${rep.cost.table} ≥ ${c1.toFixed(2)}, ${c3.toFixed(2)}`); }
+      costRow(ok, '', rep.cost.table, [c1, c3], Object.assign({ ENGS: key + '1,' + key + '3,' + (tc.web ? 'web1,web3,' : '') + 'hau1,hau3,obt1,obt3,tie1,stm1,swm1,neb3' }, tc.cost || {}), (x) => [(x[key + '1'] - (tc.web ? x.web1 / nv : 0)) * x.scale, (x[key + '3'] - (tc.web ? x.web3 / nv : 0)) * x.scale]); }
     // -- engine-specific acceptance rows
     if (key === 'hlm') {
       const lv = {};
@@ -352,7 +382,7 @@ async function one(page, o) {
           const c1 = c.hlm1 * c.scale, c3 = c.hlm3 * c.scale; rep[rohr].cost = { L1: +c1.toFixed(3), L3: +c3.toFixed(3) };
           console.log(`INFO ${key} ${tag}: cost level 1 ${c1.toFixed(3)}, level 3 ${c3.toFixed(3)} Nebel units`);
           const tab = await page.evaluate((rohr) => { const M = window.__M, was = M.P['hlm.rohr']; M.P['hlm.rohr'] = rohr; const t = [M.VCOST1.hlm, M.VCOST3.hlm]; M.P['hlm.rohr'] = was; return t; }, rohr);   // (a voice is priced by its pipe)
-          okr(tab[0] >= c1 && tab[1] >= c3, `VCOST entries cover the measurement: ${tab} ≥ ${c1.toFixed(2)}, ${c3.toFixed(2)}`); }
+          costRow(okr, '', tab, [c1, c3], { ENGS: 'hlm1,hlm3,hau1,hau3,obt1,obt3,tie1,stm1,swm1,neb3', PARAMS: JSON.stringify({ 'hlm.rohr': rohr }) }, (x) => [x.hlm1 * x.scale, x.hlm3 * x.scale]); }
       }
     }
     if (key === 'rnk') {
@@ -489,7 +519,7 @@ async function one(page, o) {
         const w1 = c.web1 * c.scale, w3 = c.web3 * c.scale; rep.webCost = [+w1.toFixed(3), +w3.toFixed(3)];
         console.log(`INFO gsp: the web costs ${w1.toFixed(3)} (8 strings) / ${w3.toFixed(3)} (12) Nebel units`);
         const tab = await page.evaluate(() => window.__M.GSP_COST);
-        ok(tab[0] >= w1 && tab[1] >= w3, `the web's budget entry covers the measurement: ${tab} ≥ ${w1.toFixed(2)}, ${w3.toFixed(2)}`); }
+        costRow(ok, 'the web (GSP_COST): ', tab, [w1, w3], { ENGS: 'web1,web3,hau1,hau3,obt1,obt3,tie1,stm1,swm1,neb3', NW: '24' }, (x) => [x.web1 * x.scale, x.web3 * x.scale]); }
     }
     if (key === 'mdr') {
       // SPEC §3.10's rows and the check's fixes (biologist-mdr): the swell, the upper modes eaten, the crackle (events,
@@ -938,7 +968,7 @@ async function one(page, o) {
           const c1 = c.gltN1 * c.scale, c3 = c.gltN3 * c.scale, tab = await page.evaluate(async () => { const M = window.__M; await window.__ctx(0.2, {}, '1', true); return [M.VCOST1.glt, M.VCOST3.glt]; });
           R_.cost = { L1: +c1.toFixed(3), L3: +c3.toFixed(3), table: tab };
           console.log(`INFO glt native loop: cost level 1 ${c1.toFixed(3)}, level 3 ${c3.toFixed(3)} Nebel units (SPEC's estimate 0.35)`);
-          okg(tab[0] >= c1 && tab[1] >= c3, `VCOST entries (read without the module) cover the measurement: ${tab} ≥ ${c1.toFixed(2)}, ${c3.toFixed(2)}`); }
+          costRow(okg, '(read without the module) ', tab, [c1, c3], { ENGS: 'gltN1,gltN3,hau1,hau3,obt1,obt3,tie1,stm1,swm1,neb3' }, (x) => [x.gltN1 * x.scale, x.gltN3 * x.scale]); }
         rep[nat ? 'native' : 'worklet'] = R_;
       }
       // native: the release ends the voice; a knob turned reaches a sounding native voice (v.upd)
@@ -1286,7 +1316,7 @@ async function one(page, o) {
           const c1 = c.zpfN1 * c.scale, c3 = c.zpfN3 * c.scale; rep.native.cost = { L1: +c1.toFixed(3), L3: +c3.toFixed(3) };
           console.log(`INFO zpf native: cost level 1 ${c1.toFixed(3)}, level 3 ${c3.toFixed(3)} Nebel units`);
           const tab = await page.evaluate(() => { const M = window.__M; M.A.workletBroken.add('zpf'); const t = [M.VCOST1.zpf, M.VCOST3.zpf]; M.A.workletBroken.delete('zpf'); return t; });
-          ok(tab[0] >= c1 && tab[1] >= c3, `native: VCOST entries cover the measurement: ${tab} ≥ ${c1.toFixed(2)}, ${c3.toFixed(2)}`); } }
+          costRow(ok, 'native: ', tab, [c1, c3], { ENGS: 'zpfN1,zpfN3,hau1,hau3,obt1,obt3,tie1,stm1,swm1,neb3' }, (x) => [x.zpfN1 * x.scale, x.zpfN3 * x.scale]); } }
     }
     // -- demos for listening and the spectrogram: level 3, default effects (12-s phrase), and a held gesture
     { const x = pull(await page.evaluate(async (key) => window.__ret(await window.__phr(await window.__ctx(12, { 'v.eng': key }, '3'), 12, key, { step: 0.7, hold: 0.6 })), key));

@@ -7441,7 +7441,7 @@ function myzelDsp() {
       this.p = { koerper: 'glas', druck: 0.5, bogen: 0.5, daempfung: 0.6, schwebung: 0.3, harz: 0.3 };
       this.rng = new PRNG(po.seed || 11);
       if (po.prm) this.set(po.prm);
-      this.vel = 0.75; this.J = 0; this.body = '';
+      this.vel = 0.75; this.J = 0; this.body = ''; this.sk = 1; this.age = 0;
       this.reset();
     }
     reset() {
@@ -7482,6 +7482,11 @@ function myzelDsp() {
       if (m.y != null) this.y = m.y;
       this.build();
       this.gate = this.burst ? Math.max(1, Math.round(0.8 * (m.gate || 0.22) * SR)) : 0;
+      // Glas speaks at once at every height (owner, 22.10.2026): high notes start as loud in their band as low ones do
+      // (the seed (f/800)^1.5 above 800 Hz, not √), and the doublets' split grows in over the first 0.3 s – split from
+      // the first sample, a high pair beat within ≈ 0.1 s (3.8 Hz at 1568 Hz) and drew its pattern away from the bow
+      // while it took hold: one high note in 3–16 spoke only after 0.5–1 s, from −52 dB. Once sounding, the same tone.
+      this.age = 0; this.sk = this.body === 'glas' ? 0 : 1;
       this.kt = 1; this.kc = 0; this.vb = 0; this.phi = 2 * Math.PI * this.rng.next(); this.psi = 2 * Math.PI * this.rng.next();
       for (let j = 0; j < this.J; j++) this.pc[j] = this.kd[j] === 1 ? Math.cos(this.nd[j] * this.phi) : this.kd[j] === 2 ? Math.sin(this.nd[j] * this.phi) : 1;
       this.rw.fill(0);
@@ -7490,9 +7495,14 @@ function myzelDsp() {
       // outside the 32-Hz bands – measured −62 dB), so the modes speak at once and the bow takes them up; a Puls stroke
       // under 0.3 s three times as much, notes above 800 Hz √(f/800) as much (their bands answer slower); the tongue's bite
       // favours its upper modes
-      const N = this.N, M = N - 1, buf = this.buf, amp = BOW_SEED * this.vel * (this.burst && m.gate < 0.3 ? 3 : 1) * (this.f > 800 ? Math.sqrt(this.f / 800) : 1), bite = this.body === 'zunge';
+      const N = this.N, M = N - 1, buf = this.buf, amp = BOW_SEED * this.vel * (this.burst && m.gate < 0.3 ? 3 : 1) * (this.f > 800 ? (this.body === 'glas' ? Math.pow(this.f / 800, 1.5) : Math.sqrt(this.f / 800)) : 1), bite = this.body === 'zunge';
+      // (Glas: a pair's two orientations seeded in phase – the one pattern the bow holds at its contact; with a phase of
+      // its own each, the two could cancel there and the bow found nothing to take up: about one high note in 16 spoke
+      // only after ≈ 1 s, from −52 dB)
+      const inPh = this.body === 'glas'; let phP = 0;
       for (let j = 0; j < this.J; j++) {
-        const D = this.Dt[j], n = Math.min(N - 8, Math.ceil(2 * D)), o = j * N, k = this.md[j], ph = 2 * Math.PI * this.rng.next();
+        const D = this.Dt[j], n = Math.min(N - 8, Math.ceil(2 * D)), o = j * N, k = this.md[j], ph0 = 2 * Math.PI * this.rng.next(), ph = inPh && this.kd[j] === 2 ? phP : ph0;
+        if (this.kd[j] === 1) phP = ph0;
         const wj = (bite ? [0.6, 1, 0.7, 0.5][k] : this.wi[j]) * (this.kd[j] === 1 ? Math.cos(this.nd[j] * this.phi) : this.kd[j] === 2 ? Math.sin(this.nd[j] * this.phi) : 1);
         for (let i = n; i >= 1; i--) buf[o + ((this.w - i) & M)] = amp * wj * Math.sin(ph - 2 * Math.PI * i / D);
       }
@@ -7505,7 +7515,7 @@ function myzelDsp() {
       const fmax = Math.min(16000, 0.42 * SR), teich = this.body === 'teich', wb = teich ? 25 * this.wx * (0.15 + 0.85 * sch) : 0;
       for (let j = 0; j < J; j++) {
         let fj = f * this.fr[j];
-        if (this.kd[j]) fj *= 1 + 0.004 * sch * this.ss[j];   // a doublet: ±0.4 % apart at full Schwebung
+        if (this.kd[j]) fj *= 1 + 0.004 * sch * this.ss[j] * this.sk;   // a doublet: ±0.4 % apart at full Schwebung (Glas: grown in over the first 0.3 s, see start)
         else if (!this.round) fj *= cents(3 * sch * this.rw[j] + (this.rod[j] === 1 ? -wb : wb));   // ±3 ct walk; the water bends the rods apart
         if (fj > fmax) { this.gr[j] = 0; this.Dt[j] = this.D[j] = 4; this.b0[j] = 0; continue; }
         this.Dt[j] = Math.min(this.N - 8, SR / fj);
@@ -7528,6 +7538,7 @@ function myzelDsp() {
         this.wv += dt * (-wf * wf * this.wx - 0.8 * this.wv) + Math.sqrt(dt) * 3 * (this.rng.next() * 2 - 1); this.wx += dt * this.wv;
         if (this.wx > 1) { this.wx = 1; this.wv = 0; } else if (this.wx < -1) { this.wx = -1; this.wv = 0; }
       }
+      this.age += n; this.sk = this.body === 'glas' && this.age < 0.3 * SR ? this.age / (0.3 * SR) : 1;
       this.coef(false);
       // the bow: pressure from Höhe and Druck (0.1–0.75; above, the table sticks for good), speed from velocity and Bogen
       // with the arm's inertia – pressing harder plays louder (Schelleng: a light bow cannot drive as far), y > 0.9 ever
@@ -29957,7 +29968,7 @@ function hxWPlay(S, which, f, keepStream) {
   const V = which === 'anc' ? S.anc : S.wu; if (!V || !V.aud) return false;
   const [cp, tr] = hxCopy(V.aud), out = L.folgt ? 1 : 0;
   if (out) hxOut1();
-  hxPost({ replace: { loop: S.loop, schicht: S.id, chunks: cp, n: V.n, pre: V.pre || 0, len: V.len, ausklang: V.rev ? null : { off: V.len, len: Math.max(0, V.n - V.len) }, f, join: V.rev ? 'xf' : 'ola', X: Math.round(0.01 * SR), rho: 0, zo: 0, kc: 0, out, dd: 1, wu: 1 } }, tr);   // (step 2b: a mirrored version: its margin before it, joined warm)
+  hxPost({ replace: { loop: S.loop, schicht: S.id, chunks: cp, n: V.n, pre: V.pre || 0, len: V.len, ausklang: V.rev ? null : { off: V.len, len: Math.max(0, V.n - V.len) }, f, join: V.rev ? 'xf' : 'ola', X: Math.round(0.01 * SR), rho: 0, zo: 0, kc: V.rev ? hxSeamOf({ pre: V.pre || 0, len: V.len, X: Math.round(0.01 * SR), zo: 0 }, V.aud) : 0, out, dd: 1, wu: 1 } }, tr);   // (step 2b: a mirrored version: its margin before it, joined warm)
   S.play = which; S.out = out; S.swapF = f; S.ddOn = true; hxCount();
   if (!keepStream && S.wLive) S.wk = Math.max(S.wk == null ? -1 : S.wk, hxPassK(L, f));   // (that pass is this version's)
   return true;
@@ -30592,7 +30603,8 @@ function hxRev(L) {
   for (const S of sch) {
     const n = S.n, pre = n - S.pre - S.len, aud = hxRevArr(S.aud, n), bak = S.bak ? hxRevArr(S.bak, n) : null, X = S.X || Math.round(0.01 * SR);
     const c = Object.assign({}, S.cut, { pre, len: S.len, post: S.pre, n, aus: null, stale: true });
-    hxSchSwap(S, c, { aud, bak, f: sw.f, join: 'xf', X, rho: hxRho(bak && S.chain && !L.folgt ? bak : aud, n, pre, S.len, X), zo: 0, kc: null, kcB: null, dr: hxDrMap(S.dr, n, (i) => n - 1 - i) });
+    const g = { pre, len: S.len, X, zo: 0 };   // (the mirrored seam's own curve, as every seam's – the law held in every window, not the one-number fallback)
+    hxSchSwap(S, c, { aud, bak, f: sw.f, join: 'xf', X, rho: hxRho(bak && S.chain && !L.folgt ? bak : aud, n, pre, S.len, X), zo: 0, kc: hxSeamOf(g, aud), kcB: bak ? hxSeamOf(g, bak) : null, dr: hxDrMap(S.dr, n, (i) => n - 1 - i) });
   }
   const fl = hxBandFl(L); L.rev = !was; L.revW = !L.revW;   // (revW: its Wuchs renders mirrored too)
   hxBandStep(L, was ? 'vorwärts' : 'rückwärts', before, fl);
@@ -30616,7 +30628,7 @@ function hxBandTrim(L, what) {
     const len = Math.max(1, Math.round(s.len * f)), pre = s.pre + Math.round(s.len * f * i), X = Math.round(0.01 * SR);
     const c = Object.assign({}, s.cut, { pre, len, post: s.n - pre - len, n: s.n, aus: f === 1 && s.aus ? Object.assign({}, s.aus) : null, stale: true });
     const geom = j === 0 ? (tk ? { beats: T0.d.beats * f } : { L: Math.round(T0.d.L * f) }) : null;
-    hxSchSwap(S, c, { aud: s.aud, bak: s.bak, f: sw.f, join: f === 1 ? s.join : 'xf', X: f === 1 ? s.X : X, rho: f === 1 ? s.rho : hxRho(s.bak && S.chain && !L.folgt ? s.bak : s.aud, s.n, pre, len, X), zo: f === 1 ? s.zo : 0, kc: f === 1 ? s.kc : null, kcB: f === 1 ? s.kcB : null, dr: s.dr, geom,
+    hxSchSwap(S, c, { aud: s.aud, bak: s.bak, f: sw.f, join: f === 1 ? s.join : 'xf', X: f === 1 ? s.X : X, rho: f === 1 ? s.rho : hxRho(s.bak && S.chain && !L.folgt ? s.bak : s.aud, s.n, pre, len, X), zo: f === 1 ? s.zo : 0, kc: f === 1 ? s.kc : hxSeamOf({ pre, len, X, zo: 0 }, s.aud), kcB: f === 1 ? s.kcB : s.bak ? hxSeamOf({ pre, len, X, zo: 0 }, s.bak) : null, dr: s.dr, geom,
       fade: f === 1 && s.aus ? Math.min(Math.round(0.03 * SR), s.aus.len) : 0 });
     S.wn = s.wn ? hxWnWin(s.wn, f * i, f) : S.wn;
   });
@@ -30662,7 +30674,7 @@ async function hxDouble(L) {
   out.forEach(([S, dry, bak], j) => {
     const len2 = 2 * S.len, c = Object.assign({}, S.cut, { pre: dry.pre, len: len2, post: dry.post, n: dry.n, aus: dry.ausN ? { off: dry.pre + len2, len: dry.ausN } : null, stale: true });
     const src = (i) => (i < dry.pre ? S.pre - dry.pre + i : i < dry.pre + len2 ? S.pre + ((i - dry.pre) % S.len) : S.pre + S.len + (i - dry.pre - len2));
-    hxSchSwap(S, c, { aud: dry.aud, bak: bak ? bak.aud : null, f: sw.f, join: S.join, X: S.X, rho: S.rho, zo: 0, kc: null, kcB: null, dr: hxDrMap(S.dr, dry.n, src), fade: dry.ausN ? Math.min(Math.round(0.03 * SR), dry.ausN) : 0,
+    hxSchSwap(S, c, { aud: dry.aud, bak: bak ? bak.aud : null, f: sw.f, join: S.join, X: S.X, rho: S.rho, zo: 0, kc: S.join === 'xf' ? hxSeamOf({ pre: dry.pre, len: len2, X: S.X, zo: 0 }, dry.aud) : null, kcB: S.join === 'xf' && bak ? hxSeamOf({ pre: dry.pre, len: len2, X: S.X, zo: 0 }, bak.aud) : null, dr: hxDrMap(S.dr, dry.n, src), fade: dry.ausN ? Math.min(Math.round(0.03 * SR), dry.ausN) : 0,
       geom: j === 0 ? (tk ? { beats: L.d.beats * 2 } : { L: L.d.L * 2 }) : null });
     if (S.wn) S.wn = Object.assign({}, S.wn, { len: 2 * S.wn.len, n: S.wn.n.concat(S.wn.n.map((x) => Object.assign({}, x, { t: x.t + S.wn.len, held: false }))), lanes: (S.wn.lanes || []).map((ln) => ({ id: ln.id, pts: ln.pts.concat(ln.pts.map(([x, v]) => [x + S.wn.len, v])) })) });
   });
@@ -30801,7 +30813,7 @@ async function hxErstarren(L) {
   for (const [S, V] of got) {
     const pre = V.pre || 0, c = Object.assign({}, S.cut, { pre, len: V.len, post: V.n - pre - V.len, n: V.n, aus: V.rev ? null : { off: pre + V.len, len: Math.max(0, V.n - pre - V.len) }, stale: true });
     S.play = 'ab'; S.wu = null; S.anc = null; hxWStop(S);
-    hxSchSwap(S, c, { aud: V.aud, f: sw.f, join: V.rev ? 'xf' : 'ola', X: Math.round(0.01 * SR), rho: 0, zo: 0, kc: null, fade: V.rev ? 0 : Math.min(Math.round(0.03 * SR), Math.max(0, V.n - pre - V.len)) });
+    hxSchSwap(S, c, { aud: V.aud, f: sw.f, join: V.rev ? 'xf' : 'ola', X: Math.round(0.01 * SR), rho: 0, zo: 0, kc: V.rev ? hxSeamOf({ pre, len: V.len, X: Math.round(0.01 * SR), zo: 0 }, V.aud) : null, fade: V.rev ? 0 : Math.min(Math.round(0.03 * SR), Math.max(0, V.n - pre - V.len)) });
     S.chain = false; S.bak = null; S.baked = false; S.out = L.folgt ? 1 : 0; S.dr = null;
     // (its notes are now what it froze: the tools applied, in the key it sounds in)
     const W = hxWNotesT(L, S); if (W) { const n = W.n.map((x) => { const f = hxWF(L, W, x, key); const y = Object.assign({}, x, { f }); const d = hxDeg(f); return Object.assign(y, { deg: d.deg, oct: d.oct, alt: d.alt }); }); S.wn = Object.assign({}, W, { key: { base: N.base, ...key }, n }); S.wnT = null; }

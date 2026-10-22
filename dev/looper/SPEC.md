@@ -1998,4 +1998,14 @@ t-gm-cost / t-gf-cost (medians in turns with the build each budget was set on), 
 (the level over whole beats), t-gx-live (the chord stamped as a keyboard does), t-clock (the audio clock), t-eng-live (a
 Puls step outliving the fixed wait), bench rhz (600 pairs, the tired net's share), t-hx-ernten (the processor's frames),
 t-hx-form (dropped quanta), t-hx-bew (median of five), t-hx-wuchs identity (two of three renders), t-idle-parity (the
-spread of four renders).
+spread of four renders), t-gf-cost (five rounds in turns, medians), t-eng-native (Glut's glow after 0.7 s of the
+audio clock).
+**Every warm seam with its own curve:** mirrored (Rückwärts), trimmed, doubled loops and a mirrored Wuchs version went to
+the processor without their curve (`kc: null`) – the one-number rho law there bulged a Gong seam +1.15 dB at rho −0.83
+(t-hx-proc, random material). Now each takes `hxSeamOf` of its own audio, and t-hx-proc drives the processor as the app
+does (with the seam's curve).
+**The cost table kept (owner, 22.10.2026):** after the container moved hosts, bench.js measured several engines over their
+entries – and the calibration build (73ab260) just as much (A/B). Where an entry does not cover this machine, the row
+measures the calibration build in turns and asks this build to cost no more + 10 % (`costRow`, slot calref); the table
+is unchanged.
+**Harz, Glas speaks at once (owner, 22.10.2026):** klang SPEC §3.1.

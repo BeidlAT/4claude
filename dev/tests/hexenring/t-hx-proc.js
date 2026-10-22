@@ -202,9 +202,9 @@ const MIN = +process.env.MIN || 60, POOLMIN = +process.env.POOLMIN || 10;
       for (const [kind, Xs] of [['gng', 0.01], ['hrz', 0.04], ['bor', 0.04]]) {
         const [mL, mR] = await material(kind), off = Math.round((kind === 'bor' ? 2.5 : 1.0) * SR) - pre, n = Math.min(mL.length - off, pre + Pi + SR * 2);
         const ch = window.__chunks(n, (i) => mL[off + i], (i) => mR[off + i]), X = Math.round(Xs * SR);
-        const rho = M.hxRho(ch, n, pre, Pi, X);
+        const rho = M.hxRho(ch, n, pre, Pi, X), kc = M.hxSeamOf({ pre, len: Pi, X, zo: 0 }, ch);   // (the seam's own curve, as the app sends every warm seam since the final pass – the one-number rho law bulged +1.15 dB on a Gong window at rho −0.83)
         const D = 5 * P / SR + 0.5, ctx = await window.__ringCtx(Math.ceil(D * SR), SR);
-        const ring = window.__ring(ctx, { msgs: [{ seg: [[0, 0, SR * 60 / BPM]], reset: 1 }, { loop: { id: 1, lock: 'takt', b0: 0, beats: 8 } }, { schicht: { loop: 1, id: 1, chunks: ch, n, pre, len: Pi, join: 'xf', X, rho, fin: X } }] });
+        const ring = window.__ring(ctx, { msgs: [{ seg: [[0, 0, SR * 60 / BPM]], reset: 1 }, { loop: { id: 1, lock: 'takt', b0: 0, beats: 8 } }, { schicht: { loop: 1, id: 1, chunks: ch, n, pre, len: Pi, join: 'xf', X, rho, kc, fin: X } }] });
         const rec = new AudioWorkletNode(ctx, 'hx-rec', { numberOfInputs: 1, numberOfOutputs: 1, channelCount: 2, channelCountMode: 'explicit' });
         ring.connect(rec, 0); rec.connect(ctx.destination);
         await ctx.startRendering();
