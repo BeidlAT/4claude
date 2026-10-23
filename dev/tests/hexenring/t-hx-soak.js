@@ -8,7 +8,7 @@
 //   2. the heap and the renderer's memory reach a plateau: the last third's peak within 60 MB (heap) / 150 MB (resident)
 //      of the first third's peak after the warm-up, and no steady climb (the last third's mean under the middle's + 40 MB)
 //   3. no realm holds more than HX_WRENEW + 2 offline contexts; at least one realm was renewed
-//   node t-hx-soak.js        env SOAK_MIN (default 10)
+//   node t-hx-soak.js        env SOAK_MIN (default 10), RENEW (renew realms after n renders – an experiment)
 const { chromium } = require('/opt/node22/lib/node_modules/playwright');
 const fs = require('fs');
 const H = require('./hx-h');
@@ -23,6 +23,7 @@ function rss(root) {
 (async () => {
   const b = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required', '--enable-precise-memory-info', '--js-flags=--expose-gc'] });
   const ctx = await b.newContext({ viewport: { width: 1280, height: 800 } });
+  if (process.env.RENEW) await ctx.addInitScript((n) => { window.__hxRenew = n; }, +process.env.RENEW);   // (an experiment: renew after n renders)
   const pg = await ctx.newPage(), errors = [];
   pg.on('pageerror', (e) => errors.push(e.message)); pg.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   const cdp = await ctx.newCDPSession(pg);

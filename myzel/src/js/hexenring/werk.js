@@ -95,7 +95,7 @@ function hxwRenew() {
 // HX_WRENEW renders – it takes no new living pass, and once nothing it rendered still sounds or may be kept (✓) and it
 // waits for nothing, its frame goes (hxwRenew, in hxWTick); the next job boots a fresh one. Every render is its own
 // (seeded, built afresh), so the sound does not change.
-const HX_WRENEW = 12;
+const HX_WRENEW = +(window.__hxRenew || 0) || 12;   // (window.__hxRenew: tests only)
 function hxwCall(job, d, tr, R0) {
   const R = R0 || HXW;
   if (job === 'wuchs' || job === 'bake' || job === 'tail') { R.used = (R.used || 0) + 1; if (R.used >= HX_WRENEW && !R.old) { R.old = true; R.oldT = performance.now(); } }
