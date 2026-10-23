@@ -138,7 +138,8 @@ Klingt nichts mehr, steckt Myzel Mixer, Effektketten und Hall ab – erst wenn a
 | `myzel/index.html` | Die ganze App in einer Datei: HTML-Fragment mit CSS und JavaScript (Web Audio), einschließlich Mixer. Einzige Quelle für beide Varianten. |
 | `myzel/tap-worklet.js` | AudioWorklet, das die Summe für Aufnahme und Echo-Körner bitgenau abgreift. |
 | `myzel/pwa/build.py` | Baut daraus die installierbare Offline-App (Dokument-Hülle, lokale Schriften, Manifest, Service Worker). |
-| `myzel/pwa/sw.js` | Service-Worker-Vorlage: speichert alle Dateien versioniert für den Offline-Betrieb. |
+| `myzel/pwa/sw.js` | Service-Worker-Vorlage: speichert alle Dateien versioniert für den Offline-Betrieb; eine neue Version wartet, bis man sie auf dem Startbildschirm übernimmt. |
+| `myzel/CHANGELOG.json` | Was in jeder Version neu ist (deutsch, für Spielende). Die installierte App zeigt es beim Update; jede Veröffentlichung bekommt oben einen Eintrag. |
 | `myzel/pwa/manifest.webmanifest`, `icons/`, `fonts/` | Installationsdaten, App-Icons (`tools/make_icons.py`), Schriften (SIL OFL 1.1). |
 | `.github/workflows/pages.yml` | Veröffentlicht bei jedem Push auf GitHub Pages. |
 

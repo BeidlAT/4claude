@@ -1,5 +1,14 @@
 # Übergabe: Myzel (Stand 22.10.2026 – Klangquellen, Ruhe und der Hexenring fertig, Schlussprüfung grün)
 
+## Für den Besitzer – Updates beim Start (23.10.2026)
+
+Die installierte App fragt jetzt gleich auf dem Startbildschirm nach einer neuen Version, bevor der Klang startet. Gibt
+es eine, steht oben eine Karte „Neue Version verfügbar“ mit dem, was neu ist – „Jetzt aktualisieren“ lädt einmal neu,
+„Später“ lässt alles wie es ist. Solange die Karte offen ist, warten alle anderen Hinweise. Offline oder bei langsamem
+Netz hält nichts den Start auf; gespielt wird nie unterbrochen. Nach dem Aktualisieren steht einmal „Neu in dieser
+Version“. Einmalig, beim Sprung von der jetzigen Version auf diese, kommt noch der alte kurze Hinweis „Neu laden“ – beim
+nächsten Öffnen ist die neue Version da. Was neu ist, steht in `myzel/CHANGELOG.json`.
+
 ## Für den Besitzer – dein erster Test am Handy (23.10.2026)
 
 **Was los war:** Alle drei Beobachtungen hatten eine gemeinsame Ursache – das Handy kam beim Abspielen der Schleifen
@@ -184,6 +193,29 @@ Claude-Session: <this session's URL>
 ```
 
 **App:** `myzel/index.html`, a single file of about 1.4 MB (German UI, vanilla JS + Web Audio). GitHub Pages (https://beidlat.github.io/4claude/) deploys from the default branch `ccr-c7c5d0a6-cus3ip` alone: its `github-pages` environment allows no other branch. The stage-2 session had added its own branch to `.github/workflows/pages.yml`; every push there failed before a runner started (runs 18–31, the owner got a failure mail each time) – it is out again. A session's work reaches the app by a pull request into the default branch; Claude opens it and merges it when the owner says so (18.10.2026: „streich ihn und merge dann“ for #4).
+
+**App updates and release notes (23.10.2026):** the installed app checks for a new version on the start screen,
+before the instrument starts. `pwa/build.py` stamps `window.MYZEL_BUILD = {version, notes}` into the page (version = the
+service worker's cache version, the content hash; notes = `myzel/CHANGELOG.json`'s entries) and calls
+`window.myzelUpdate` (index.html `updBoot`, section „update check“ after `toast`) – outside claude.ai and the Werk-Rahmen
+only, so the artifact has no check. `updBoot` registers `sw.js`, runs `registration.update()` (never awaited by
+anything; 3 s cap), and offers a waiting worker in the card `#upd` at the top of the start screen: „Neue Version
+verfügbar“ with the notes the page lacks (read from the waiting version's own cache, `changelog.json`, after asking it its
+version over a MessageChannel), „Jetzt aktualisieren“ (message `skipWaiting`, reload once on `controllerchange` – only the
+page that asked, never once sound started) and „Später“ (this start only). A worker still installing shows „Neue Version
+wird geladen …“. While the card is open, `toast()` queues (up to 4, shown after it). „Klang starten“ closes the card
+(= Später); a version found only after the start gets one quiet toast. After an update the first start shows „Neu in
+dieser Version“ once (`myzel.neu` = newest id seen, `myzel.neu.von` = the old page's ids, set by „Jetzt aktualisieren“; a
+controlled page with no `myzel.neu` – updated from a version before the card – shows the newest entry). `sw.js`: a new
+version caches everything and then waits; it takes over at once only when the active version predates the card (no
+`changelog.json` in any other `myzel-*` cache) – that old page then shows its old „Neu laden“ toast and the next start is
+the new version (tested against 0a3b1b2). Test: `dev/tests/pwa/t-pwa-update.js` (in `reg.sh`; own server on :8791,
+builds A, B = A + a test entry, A0 = only the oldest entry, OLD = 0a3b1b2; screenshots `out/upd-*.png`).
+**How a release gets its notes:** every pull request into the default branch that changes what a player sees or hears adds
+one entry at the top of `myzel/CHANGELOG.json` – `id` = the publishing date `JJJJ-MM-TT` (a second release on the same day
+`…b`, then `…c`), `punkte` = 2–6 short German sentences for a musician, no internal names (no SPEC terms, no function
+names). `build.py` refuses a malformed list (unique ids, newest first, 2–6 points). A build without a new entry still
+updates (the card then says „Verbesserungen und Korrekturen.“). The version itself needs nothing: it is the hash.
 
 **claude.ai version:** the artifact https://claude.ai/artifact/HNZYLEaUvtCfkyYWi3SuDr, private, capability `downloads` – still stage 1.
 - Republish it with the Artifact tool: `url` + `file_path` = `myzel/index.html`.
