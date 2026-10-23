@@ -3972,6 +3972,7 @@ const IDLE_FFT = 4096;
 // Hexenring (phone report 22.10.2026): the copy of the live chain on the processor's out 1 rests while nothing plays
 // through it (hxF1Tick); p: its params – a move of one of them puts it back first (the hook below), autoT: when the
 // last such move ends
+let hxF1On = false;   // (true while such a copy exists: the hook's one check otherwise)
 const HXF1 = { c: null, off: false, p: new Set(), autoT: 0, useT: 0, taps: null, tapOn: false, tapT: 0, z: null, pT: -1, n: 0 };
 // A param keeps its time only where the render pulls it: Chromium moves a setTarget or a ramp one sample after the other
 // while its node is processed, and a node taken out of the render holds where it stood (measured: a knob turned in a
@@ -3982,7 +3983,7 @@ const HXF1 = { c: null, off: false, p: new Set(), autoT: 0, useT: 0, taps: null,
   if (typeof AudioParam === 'undefined') return;
   // (each wrapper with the method's own arguments – no rest array, no apply: the mod layer calls these dozens of times a
   // frame; measured 4× throttled, a call 2.71 µs through the generic wrapper, 2.27 µs through these, 2.2–2.5 bare)
-  const P = AudioParam.prototype, end = (t, p) => { if (IDLE.on) idleWake(); if (t > IDLE.autoT) IDLE.autoT = t; if (HXF1.p.size && HXF1.p.has(p)) { if (t > HXF1.autoT) HXF1.autoT = t; if (HXF1.off) hxF1Wake(); } };
+  const P = AudioParam.prototype, end = (t, p) => { if (IDLE.on) idleWake(); if (t > IDLE.autoT) IDLE.autoT = t; if (hxF1On && HXF1.p.has(p)) { if (t > HXF1.autoT) HXF1.autoT = t; if (HXF1.off) hxF1Wake(); } };
   const has = (k) => typeof P[k] === 'function';
   if (has('setValueAtTime')) { const f = P.setValueAtTime; P.setValueAtTime = function (v, t) { end(+t || 0, this); return f.call(this, v, t); }; }
   if (has('linearRampToValueAtTime')) { const f = P.linearRampToValueAtTime; P.linearRampToValueAtTime = function (v, t) { end(+t || 0, this); return f.call(this, v, t); }; }
@@ -25719,12 +25720,13 @@ function hxF1Busy(now) {
 }
 function hxF1Reset(c) {
   Object.assign(HXF1, { c, off: false, autoT: 0, useT: hxNowT(), taps: null, tapOn: false, z: null, pT: -1, o1: new Map() });
-  HXF1.p.clear();
+  HXF1.p.clear(); hxF1On = false;
   if (!c) return;
   const keys = ['gain', 'frequency', 'Q', 'detune', 'delayTime', 'pan'];
   for (const v of Object.values(c)) for (const n of Array.isArray(v) ? v : [v]) if (n && typeof n === 'object' && n.context) for (const k of keys) if (n[k] && typeof n[k].setValueAtTime === 'function') HXF1.p.add(n[k]);
   const an = () => { const a = A.ctx.createAnalyser(); a.fftSize = IDLE_FFT; return a; };
   const two = (src) => { const sp = A.ctx.createChannelSplitter(2), L = an(), R = an(); sp.connect(L, 0); sp.connect(R, 1); return [[src, sp], [L, R]]; };
+  hxF1On = HXF1.p.size > 0;
   const [li, gi] = two(c.in), [lo, go] = two(c.out);
   HXF1.taps = { links: [li, lo], g: [gi, go], buf: new Float32Array(IDLE_FFT) };
 }
