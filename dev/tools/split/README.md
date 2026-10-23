@@ -1,7 +1,10 @@
 # Split tool: `myzel/index.html` as a module tree
 
-Prepared during the looper work; to be applied **once, at the end**, when no session edits `myzel/index.html` any more.
-Nothing here touches the app until then.
+**Applied on 23.10.2026 (Plan A below):** the app's source is `myzel/src/` (182 files), `myzel/build.py` (a copy of
+`build.py` here) builds `myzel/index.html` from it byte for byte, and `myzel/index.html` stays committed as the build
+output. Edit the modules, never `index.html`. `myzel/pwa/build.py`, the Pages workflow and `dev/tests/v2/mk.sh` refuse a
+stale `index.html`. This tool stays for the escape hatch (a late branch that still edits `index.html`) and as the record
+of how the tree was cut; `rules.py` is the map that produced `myzel/src`.
 
 | File | What it does |
 |---|---|
@@ -18,7 +21,7 @@ Nothing here touches the app until then.
 - **Where it cuts.** Only at section markers of the file itself (`/* ===== banner ===== */`, `/* ---------- x ---------- */`, `// ---- x ----`) and a few top-level declarations (`const ELM = {`, `function initAudio(`, `function boot(`), and only where `lex.py` sees a line start between two whole statements at the IIFE's top level. A cut moves up over the comment block above it, so a section's heading stays with its code. A rule whose marker is missing, for example in an older or newer file, is reported and skipped: its code stays in the module before it, and the build stays byte-identical. A section added later just lands in the module before it until it gets a rule.
 - **The build** errors on a missing module, an include cycle, a module included twice, and any file under `html/ css/ js/` that no include lists. So a new module cannot be forgotten.
 
-## The module tree (current HEAD: 30 955 lines → 155 files)
+## The module tree (as first planned: 30 955 lines → 155 files; applied: 33 444 lines → 182 files)
 
 ```
 index.html 149 (shell: <title>, font links, <style>/<script> frames, include lines)
@@ -55,6 +58,13 @@ js/hexenring/ taktgeber 94 · node 150 · calls 124 · humus 178 · ohr 104 · e
 js/boot.js 62
 ```
 
+Added at the switch-over (23.10.2026): `js/ui/update.js` 118 (the update card) and `js/ui/start.js` 77 (start screen:
+wake lock, iOS unmute, the phone's keyboard line), cut out of `sheet.js`; Etappe 3 in `js/hexenring/mitspieler/`
+(mitspieler 29 · variieren 198 · rollen 51 · gaertner 114 · antworten 158 · begleiten 173 · wiederkehr 69 · puls-lernt 37 ·
+knospen 58 · herzschlag 31 · handschrift 103 · card 54) and Etappe 4 in `js/hexenring/oekologie/` (pass-notes 38 ·
+midi-out 14 · naehren 130 · ladung 26 · veto 40 · treffen 172 · schleife-in-schleife 51 · zersetzung 116 · worker 92 ·
+mikro 89 · gesang 87 · herzschlag 16 · card 151), cut out of `folge-buehne.js`.
+
 Three files stay large because each is a single declaration and is never cut: `engines/engines.js` (the `ENGINES` object literal, 1 471 lines), `dsp/ring.js` (the class `Ring`, 1 220 lines), and `core/buffers.js` (`genTexture`, 548 lines). The order of the folders is not the order of the build: the shell's include lines are. For example, `js/mixer/strips.js` comes before `js/voices/voice.js`, exactly as in the file.
 
 ## Special cases
@@ -62,7 +72,7 @@ Three files stay large because each is a single declaration and is never cut: `e
 - **The DSP worklet (`myzelDsp`).** It stays **one self-contained function** in the built file, and `MYZEL_DSP_SRC = '(' + myzelDsp + ')();…'` still copies it by `toString()`. Its body is cut into one file per processor (`js/dsp/*.js`, cut at its own `  // ---- Halm: …` markers, depth 1 inside the function, never inside a class). `js/dsp/myzel-dsp.js` is the function's shell: the banner, `function myzelDsp() {`, the include lines, the empty voice `Null`, the `registerProcessor` loop, the `return`, `}` and `// end myzelDsp`. Rule: everything in `js/dsp/` runs in the AudioWorklet scope and may use nothing from the app. `xref.js` checks that `myzelDsp`, `genIR`, `genTexture` and `genKS` (copied by `toString()` into the buffer worker) read no app name (today: self-contained). The loading code (`MYZEL_DSP_SRC`, `ensureDSP`, …) lives in `js/engines/dsp-loader.js`, outside `js/dsp/`. `dev/tests/klang/tests/dsplib.js` finds `function myzelDsp()` … `// end myzelDsp` in the built file as before.
 - **`TAP_SRC` / `myzel/tap-worklet.js`.** `TAP_SRC` is a minified copy of `tap-worklet.js`, used as the Blob fallback when the file URL cannot be loaded, and appended to `MYZEL_DSP_SRC`. It stays verbatim in `js/capture/tap-src.js`. The two copies are still kept in step by hand. After the switch, the builder could generate `TAP_SRC` from the file; that is the one change that would make a build differ from today's bytes, so it is left for later.
 - **Text-pattern test builders.** `dev/tests/v2/mk.sh` patches `new AC({ latencyHint: L })` and `"\nboot();\n})();"`. `motion-tests/gk-lib.js` cuts `/* GK-PURE-BEGIN */…END` (now exactly `js/gestik/recognizer.js`), `motion-tests/syn.sh` checks the largest `<script>`, and `perf/run.sh` and `setup-tests.sh` use `git show <commit>:myzel/index.html`. All of them work on the **built** file, which is byte-identical, so they need no change as long as `myzel/index.html` stays committed (plan below).
-- **`hxProbe` is declared twice** (`hexenring/ernten.js`, the step-1b version, and `hexenring/seams.js`, step 1c). The later one wins, in the single file and in the build alike. It is harmless now, but delete the dead first one before any move to ES modules: as separate modules, the callers in `ernten.js` would silently keep the old version.
+- **`hxProbe` is declared twice** (`hexenring/ernten.js`, the step-1b version, and `hexenring/seams.js`, step 1c). The later one wins, in the single file and in the build alike. It is harmless now, but delete the dead first one before any move to ES modules: as separate modules, the callers in `ernten.js` would silently keep the old version. *(Since removed: the build at the switch-over declares no name twice.)*
 - **The Werk-Rahmen** (`?werk=1`) loads the same page in a hidden frame. Nothing changes as long as one built page is served.
 
 ## Tests (`python3 dev/tools/split/test/run.py <scratch>`)
@@ -78,7 +88,7 @@ The run also includes:
 
 It takes about 3 s per version, one version at a time. If acorn is missing, the statement check is reported as skipped; `npm i acorn eslint-scope` fixes that.
 
-## Switch-over (at the end of the looper work, about 1–2 hours)
+## Switch-over (done 23.10.2026 – kept as the record)
 
 Plan A (recommended): **sources in `myzel/src/`, `myzel/index.html` stays committed as the build output.** Then Pages, the PWA, the claude.ai artifact and every test builder keep working unchanged, and only a guard is added.
 
@@ -113,7 +123,7 @@ Concatenation costs nothing at run time, and the module tree already gives the e
 - **10 `let`/`var` assigned from another module:** `SR`, `Q`, `VBUDGET`, `MAXV`, `JRG_IMP`, `ZPF_BUF`, `userTexEl`, `takeCounter`, `midiDot`, `installEvt`. Imports are read-only, so each needs a setter or a field of a state object (the shared objects `A`, `P`, `HX`, `MIX`, … are already fine: their fields are written, not the bindings).
 - **46 reads at load time from another module, in 30 modules** (for example `MOBILE`, `$`, `HXW` from `core/helpers.js`; `HX` from `hexenring/node.js`; `MXV` from `mixer/mixer.js`). ES modules run in import-graph order, not manifest order, and the graph has cycles. These reads must stay in modules that are evaluated after their source, or move into `boot()`.
 - **Hoisting across files.** Function declarations stay callable across cyclic imports, but a function called at load time that reads another module's `const` hits the TDZ.
-- **`hxProbe`**: remove the dead duplicate first (see above).
+- **`hxProbe`**: the dead duplicate is gone (see above); `xref.js` reports any name declared twice.
 - **The worklet:** `js/dsp/*` becomes a real worklet module file. It would be the parts without the function wrapper, `sampleRate` used as a global, loaded with `addModule(url)` like `tap-worklet.js`, and with a Blob fallback. Likewise a module worker for `genIR`/`genTexture`/`genKS`. `dsplib.js` would then load that file directly.
 - **Strict mode** is already on (`'use strict'` in the IIFE), so nothing changes there.
 - **Test exports:** `mk.sh` injects `window.__M = {…}` before `boot()`. Keep a concatenated test build for that, or add a test-only module that imports the names.

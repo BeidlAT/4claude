@@ -1,5 +1,8 @@
 # Myzel – Code-Map für neue Klangquellen
 
+> **Seit 23.10.2026 ist die Quelle der Modulbaum `myzel/src/`** (`myzel/index.html` ist sein Build und wird nie von Hand
+> bearbeitet). Die Zeilennummern unten gehören zur alten Einzeldatei: Namen mit `grep -rn name myzel/src` suchen.
+
 Quelle: `/home/user/4claude/myzel/index.html` (19 022 Zeilen, git `03050e0`, Stand 2026-10-13). Alle Zeilennummern sind gegen diese Datei verifiziert (grep/sed); Aussagen mit **(assumed)** sind Schlussfolgerungen. Test-Slot: `sh scratchpad/v2/mk.sh /home/user/4claude/myzel km` → `http://127.0.0.1:8790/km-inst/index.html` (Server läuft, cwd `scratchpad/v2`; `window.__M` exportiert u. a. `ENGINES, PD, P, playNote, hit, Voice, dspJob, ksBuffer, KS_CACHE, texture, macroId, setParam, applyQuality, calibrate, getBudget`).
 
 ## 1. Parameter-Schema
