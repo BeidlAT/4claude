@@ -9,6 +9,22 @@ Netz hält nichts den Start auf; gespielt wird nie unterbrochen. Nach dem Aktual
 Version“. Einmalig, beim Sprung von der jetzigen Version auf diese, kommt noch der alte kurze Hinweis „Neu laden“ – beim
 nächsten Öffnen ist die neue Version da. Was neu ist, steht in `myzel/CHANGELOG.json`.
 
+## Für den Besitzer – „am Anschlag“ am Handy (23.10.2026, abends)
+
+**Was los war:** Dass die drei Qualitätsstufen keinen Unterschied machen, hieß: Nicht die Stimmen bremsen, sondern etwas,
+das immer gleich viel kostet. Nachgestellt (Handy mit 120-Hz-Bildschirm, hoher Auflösung, Spielen mit dem Finger,
+gebremster Rechenkern): Der Hauptthread war auf allen drei Stufen zu 94 % ausgelastet – fast alles davon ist das Zeichnen
+des Felds –, jedes fünfte Bild kam zu spät, ein Fingertipp wartete 60–80 ms, bis er überhaupt drankam.
+**Gebaut:** Der **Handy-Modus** (unter „Gerät“ → „Leistung“, auf Handys von selbst an, nie auf iPad oder Rechner; mit
+Schalter): Das Feld zeichnet mit etwas geringerer Auflösung und, solange das Handy ausgelastet ist, 30 statt 60 Bilder pro
+Sekunde – gleich schnell, gleiche Spuren. Im Nachbau: Hauptthread 94 → 55 %, zu späte Bilder 19 → 1 %, Warten des Fingers
+70 → 26 ms, vom Antippen bis zum Ton 110 → 63 ms. **Am Klang ändert sich nichts** (Sample für Sample geprüft).
+**Bitte:** Unter „Gerät“ → „Leistung“ auf **„Leistung messen“** tippen, das Panel schließen und 20 Sekunden ganz normal
+spielen (gern mit Schleifen, so wie es sonst ruckelt). Danach kommt ein Hinweis; dort stehen eine kurze Auswertung und
+„Kopieren“ – den Bericht einfach in den Chat einfügen. Gesendet wird von der App nichts. Am besten zweimal: einmal mit
+Handy-Modus an, einmal aus. Der Bericht zeigt auch, ob der Klang selbst aussetzt – das kann der Handy-Modus nicht beheben
+(er ändert nur das Bild); falls es so ist, schlage ich dir Möglichkeiten vor, die den Klang betreffen, und du entscheidest.
+
 ## Für den Besitzer – dein erster Test am Handy (23.10.2026)
 
 **Was los war:** Alle drei Beobachtungen hatten eine gemeinsame Ursache – das Handy kam beim Abspielen der Schleifen
@@ -116,6 +132,23 @@ slows only the main thread). Built: the out-1 chain copy rests (`HXF1`, `hxF1Tic
 each part of `tick()` and the frame loop (`frameBody`); the recorder's tap renewed when it stops (`capDrop`); the bar
 info's tempo (`barGrid`). Suite `hexenring/t-hx-phone.js` (in run-all; its part 8 needs root for the cgroup).
 `v2/mk.sh` exports the phone-report names (guarded line `hxF1Tick`).
+
+**Leistung messen + Handy-Modus (built, 23.10.2026):** `myzel/src/js/ui/leistung.js` (after `geraet.js`). `LM`: a 20-s
+on-device measurement (`lmStart/lmSample/lmStop/lmResult/lmText/lmSummary`); `tickTry(k)` and `tick()` (now `tickRun`)
+time each part while `LM.on` (keys in `LM_PART`; 21 hxVis and 26 rail are split now; 30 the whole tick, 31 `hxMsg`, 32
+`onDown` via `lmTouch` – touch → sound by `getOutputTimestamp`), frame intervals via `phFrame`, long tasks + LoAF,
+playbackStats/playoutStats (all numeric fields, diffed), the clock lag, `renderCapacity` if present. `PH` (Handy-Modus):
+`set` auto/an/aus (`myzel.handy`), `on = an || (auto && MOBILE && !HX_TABLET)`; effects: `VIS.dpr ≤ PH_DPR` (1.5) and, while
+`PH.load` (8 frame intervals > 25 ms or 2 long tasks within 3 s, or new underruns in 2 seconds within 10 s; hold 15 s,
+doubling on re-entry within 2 min, max 2 min), the field at 30 fps with `VIS.k = 2` motion steps (fade `FADE[2]`, spores,
+bursts, hyphae, ripples, hx rings, Gestik spawn/glow, Regen parity). Universal, invisible: `#outMeter`/rec meters written
+on change, the field's per-frame arrays reused. Tests `perf/t-phone-mode.js` (22 rows, in `perf/run.sh`); harness
+`perf/phone.js` (`--thr`, `--slow <% of a core>` cgroup, `--q`, `--handy aus,auto,dpr,fps30`). Measured (4× main
+throttle, RAF120, DPR 2.75, touch): main 94 → 55 % (DPR cap alone 84, 30 fps alone 71), late frames 19 → 1 %, touch wait
+70 → 26 ms, LM touch→sound 110 → 63 ms; base vs new at q1/q3: main 94/94 – the levels make no difference, as reported.
+With the render threads at 30 % of a core both levels underrun ~1500×/20 s and the clock slows (×0.63–0.86) with or
+without the profile; at 40 % q1 ≈ 190, q3 ≈ 1500 – there the levels would differ. Headless canvas is software raster
+(`ProduceCanvasResource` ≈ 800 ms/s); a real phone rasters on the GPU, hence the on-device report.
 
 **Final pass (built, 21./22.10.2026):** SPEC §23 „As built (final pass)“, §15/§21/§7 notes, klang SPEC §2.4. Rhizom Nähren's
 net per loop (`L.rhzNetz`, `rhzOwn`, `hxRhzNetz`, card row „Netz“), Rhizom's price refit (`rhzPrice`, `rhz-fit.js`), Glut's
