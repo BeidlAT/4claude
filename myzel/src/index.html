@@ -1,0 +1,178 @@
+<title>Myzel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Major+Mono+Display&family=Martian+Mono:wght@400;500&display=swap">
+<style>
+/* @include css/base.css */
+/* @include css/top-bar.css */
+/* @include css/field.css */
+/* @include css/quick-strip.css */
+/* @include css/puls.css */
+/* @include css/recording.css */
+/* @include css/presets.css */
+/* @include css/geraet.css */
+/* @include css/overlays.css */
+/* @include css/hexenring.css */
+/* @include css/mixer/mixer.css */
+/* @include css/mixer/head.css */
+/* @include css/mixer/console.css */
+/* @include css/mixer/puls-mix.css */
+/* @include css/mixer/fruchtkoerper.css */
+/* @include css/mixer/geflecht.css */
+/* @include css/klangquellen.css */
+</style>
+<!-- @include html/glyphs.html -->
+<!-- @include html/app.html -->
+<script>
+(() => {
+'use strict';
+// @include js/core/helpers.js
+// @include js/core/tuning.js
+// @include js/core/params.js
+// @include js/core/notes.js
+// @include js/core/audio.js
+// @include js/core/buffers.js
+// @include js/core/init-audio.js
+// @include js/core/chain.js
+// @include js/core/apply.js
+// @include js/mixer/strips.js
+// @include js/mixer/processing.js
+// @include js/mixer/metering.js
+// @include js/core/ruhe.js
+// @include js/voices/voice.js
+// @include js/engines/elmsfeuer.js
+// @include js/engines/jahresring.js
+// @include js/engines/zapfen-native.js
+// @include js/engines/glut-native.js
+// @include js/engines/engines.js
+// @include js/voices/karplus.js
+// @include js/grains/sources.js
+// @include js/grains/own-material.js
+// @include js/grains/mic.js
+// @include js/voices/alloc.js
+// @include js/core/quality.js
+// @include js/voices/drone.js
+// @include js/capture/tap-src.js
+// @include js/dsp/myzel-dsp.js
+// @include js/engines/dsp-loader.js
+// @include js/engines/gespinst-web.js
+// @include js/engines/rhizom.js
+// @include js/capture/backup.js
+// @include js/capture/record.js
+// @include js/capture/bars.js
+// @include js/capture/wav-zip.js
+// @include js/capture/save.js
+// @include js/capture/preview.js
+// @include js/puls/scheduler.js
+// @include js/play/touch.js
+// @include js/midi/midi.js
+// @include js/midi/webmidi.js
+// @include js/midi/ble.js
+// @include js/midi/messages.js
+// @include js/midi/mapping.js
+// @include js/midi/bindings.js
+// @include js/midi/profiles.js
+// @include js/midi/learn.js
+// @include js/midi/input.js
+// @include js/midi/clock.js
+// @include js/gestik/recognizer.js
+// @include js/gestik/live.js
+// @include js/gestik/zuweisen.js
+// @include js/gestik/messen.js
+// @include js/mod/mod.js
+// @include js/mod/formen.js
+// @include js/gestik/anlehnen.js
+// @include js/gestik/ladung.js
+// @include js/gestik/schlafen.js
+// @include js/gestik/ladung-schlafen-card.js
+// @include js/gestik/sporenregen.js
+// @include js/gestik/faehrte.js
+// @include js/gestik/faehrte-presets.js
+// @include js/gestik/rezepte.js
+// @include js/gestik/funkstrecke.js
+// @include js/ui/visuals.js
+// @include js/ui/controls.js
+// @include js/mixer/mixer.js
+// @include js/mixer/knobs.js
+// @include js/mixer/drags.js
+// @include js/mixer/console.js
+// @include js/mixer/console-draw.js
+// @include js/mixer/head.js
+// @include js/mixer/snapshots.js
+// @include js/mixer/views.js
+// @include js/mixer/geflecht.js
+// @include js/mixer/geflecht-draw.js
+// @include js/mixer/geflecht-gestures.js
+// @include js/mixer/fruchtkoerper.js
+// @include js/mixer/klangbild.js
+// @include js/mixer/formen.js
+// @include js/mixer/wege.js
+// @include js/mixer/summe.js
+// @include js/mixer/pages.js
+// @include js/mixer/hilfe.js
+// @include js/mixer/puls-mix.js
+// @include js/ui/klangquellen.js
+// @include js/ui/presets.js
+// @include js/ui/geraet.js
+// @include js/ui/gestik-card.js
+// @include js/ui/bindings.js
+// @include js/ui/sheet.js
+// @include js/ui/update.js
+// @include js/ui/start.js
+// @include js/hexenring/taktgeber.js
+// @include js/hexenring/node.js
+// @include js/hexenring/calls.js
+// @include js/hexenring/humus.js
+// @include js/hexenring/ohr.js
+// @include js/hexenring/ernten.js
+// @include js/hexenring/grammar.js
+// @include js/hexenring/recuts.js
+// @include js/hexenring/tick.js
+// @include js/hexenring/ringleiste.js
+// @include js/hexenring/card.js
+// @include js/hexenring/persist.js
+// @include js/hexenring/chain-log.js
+// @include js/hexenring/werk.js
+// @include js/hexenring/bake.js
+// @include js/hexenring/seams.js
+// @include js/hexenring/timing.js
+// @include js/hexenring/lichtungen.js
+// @include js/hexenring/controls.js
+// @include js/hexenring/bewegung.js
+// @include js/hexenring/naehren.js
+// @include js/hexenring/auslese.js
+// @include js/hexenring/wuchs.js
+// @include js/hexenring/wuchs-follow.js
+// @include js/hexenring/werkzeug.js
+// @include js/hexenring/band.js
+// @include js/hexenring/noten.js
+// @include js/hexenring/export.js
+// @include js/hexenring/folge-buehne.js
+// @include js/hexenring/mitspieler/mitspieler.js
+// @include js/hexenring/mitspieler/variieren.js
+// @include js/hexenring/mitspieler/rollen.js
+// @include js/hexenring/mitspieler/gaertner.js
+// @include js/hexenring/mitspieler/antworten.js
+// @include js/hexenring/mitspieler/begleiten.js
+// @include js/hexenring/mitspieler/wiederkehr.js
+// @include js/hexenring/mitspieler/puls-lernt.js
+// @include js/hexenring/mitspieler/knospen.js
+// @include js/hexenring/mitspieler/herzschlag.js
+// @include js/hexenring/mitspieler/handschrift.js
+// @include js/hexenring/mitspieler/card.js
+// @include js/hexenring/oekologie/pass-notes.js
+// @include js/hexenring/oekologie/midi-out.js
+// @include js/hexenring/oekologie/naehren.js
+// @include js/hexenring/oekologie/ladung.js
+// @include js/hexenring/oekologie/veto.js
+// @include js/hexenring/oekologie/treffen.js
+// @include js/hexenring/oekologie/schleife-in-schleife.js
+// @include js/hexenring/oekologie/zersetzung.js
+// @include js/hexenring/oekologie/worker.js
+// @include js/hexenring/oekologie/mikro.js
+// @include js/hexenring/oekologie/gesang.js
+// @include js/hexenring/oekologie/herzschlag.js
+// @include js/hexenring/oekologie/card.js
+// @include js/boot.js
+})();
+</script>

@@ -25,6 +25,8 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - name: index.html = Build der Module (myzel/src)?
+        run: python3 myzel/build.py myzel/src --check myzel/index.html
       - name: App bauen
         run: python3 myzel/pwa/build.py _site
       - uses: actions/configure-pages@v5

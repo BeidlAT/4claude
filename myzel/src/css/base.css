@@ -1,0 +1,44 @@
+/* Layout: one-screen instrument. Top bar, play field (pitch across, timbre up), quick strip, tab bar.
+   Settings open as a panel that shrinks the play field instead of covering it: below it on phones in portrait,
+   beside it in landscape and on desktop, so every note stays playable while adjusting.
+   Deliberately single-theme: a dark loam ground the bioluminescent visuals glow on. */
+:root {
+  color-scheme: dark;
+  --loam: #110d0b;
+  --loam-2: #1a1310;
+  --bark: #1d1714;
+  --bark-2: #29211b;
+  --line: #3d312a;
+  --hypha: #f0e6d8;
+  --dim: #a8988a;
+  --spore: #ffb35c;
+  --lumen: #86f0d0;
+  --lilac: #c4a8ff;
+  --rose: #ff8f9e;
+  --rec: #ff5b4d;
+  --ink: #140f0c;
+  --font-display: 'Major Mono Display', ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-ui: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-num: 'Martian Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --gut: 16px;
+}
+[hidden] { display: none !important; }
+html { height: 100%; box-sizing: border-box; background: var(--loam); overscroll-behavior: none; }
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  height: 100%; margin: 0; overflow: hidden; background: var(--loam); color: var(--hypha);
+  font: 15px/1.4 var(--font-ui); -webkit-tap-highlight-color: transparent; overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+}
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; touch-action: manipulation; }
+:focus-visible { outline: 2px solid var(--lumen); outline-offset: 2px; }
+
+#app {
+  position: relative; height: 100%; display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto; grid-template-columns: minmax(0, 1fr);
+  padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px);
+  touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+}
+input[type=text], select { -webkit-user-select: text; user-select: text; }
+

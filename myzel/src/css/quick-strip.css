@@ -1,0 +1,23 @@
+/* ---------- quick strip + tabs ---------- */
+.quick {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 4px 12px; align-items: end;
+  padding: 6px var(--gut) 4px; background: var(--loam-2); border-top: 1px solid var(--line);
+}
+.quick .ctl label { font-size: 11px; color: var(--dim); }
+.quick .val { font-size: 10px; }
+.quick .iconbtn { margin-bottom: 1px; }
+.tabs { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); background: var(--loam-2); border-top: 1px solid var(--line); }
+.tab {
+  display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 2px 9px; min-width: 0; min-height: 48px;
+  background: none; border: 0; color: var(--dim); font: 500 11px/1 var(--font-ui); letter-spacing: .02em;
+}
+.tab svg { width: 20px; height: 20px; }
+.tab[aria-expanded="true"] { color: var(--spore); }
+.tab span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 460px) { .tab { padding-left: 0; padding-right: 0; font-size: 10px; letter-spacing: 0; } }
+.tab { position: relative; }
+.tab .mdot { position: absolute; top: 6px; left: calc(50% + 9px); width: 7px; height: 7px; border-radius: 50%; background: var(--lumen); opacity: 0; transition: opacity .12s; }
+.tab .mdot.conn { opacity: .4; }
+.tab .mdot.on { opacity: 1; transition: none; }
+.note.live { font-variant-numeric: tabular-nums; color: var(--lumen); }
+

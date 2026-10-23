@@ -3,8 +3,10 @@
 
     python3 myzel/pwa/build.py <output-dir>
 
-myzel/index.html stays the single source: it is an HTML fragment (the artifact host wraps it in a document).
-This script wraps it the same way, swaps Google Fonts for the local copies in pwa/fonts, links the manifest
+The app's source is the module tree myzel/src; myzel/index.html is its build (python3 myzel/build.py myzel/src
+myzel/index.html), committed alongside it. This script refuses a stale index.html (not the build of myzel/src), so
+the Pages job fails instead of publishing old code. index.html is an HTML fragment (the artifact host wraps it in a
+document). This script wraps it the same way, swaps Google Fonts for the local copies in pwa/fonts, links the manifest
 and icons, registers the service worker and writes a versioned sw.js that precaches every file for offline use.
 """
 import hashlib, json, os, re, shutil, sys
@@ -14,6 +16,13 @@ APP = os.path.dirname(HERE)
 out = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else os.path.join(APP, 'dist'))
 
 src = open(os.path.join(APP, 'index.html'), encoding='utf-8').read()
+
+# 0. index.html must be the build of the modules in myzel/src (never edited by hand)
+sys.path.insert(0, APP)
+from build import build as build_app   # myzel/build.py
+with open(os.path.join(APP, 'index.html'), encoding='utf-8', newline='') as fh:
+    if build_app(os.path.join(APP, 'src')) != fh.read():
+        sys.exit('myzel/index.html is not the build of myzel/src – run python3 myzel/build.py myzel/src myzel/index.html')
 
 # 1. local fonts instead of Google Fonts (works offline, no third-party requests)
 src, n = re.subn(r'<link rel="preconnect" href="https://fonts\.(googleapis|gstatic)\.com"[^>]*>\n?', '', src)

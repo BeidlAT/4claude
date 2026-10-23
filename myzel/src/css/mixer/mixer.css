@@ -1,0 +1,34 @@
+/* ---------- Mixer (Mischpult) ---------- */
+/* The sheet grows for the mixer: on phones it leaves ~130 px of play field above (still playable), on wide screens
+   it becomes a broad column next to the field. The quick strip steps aside while the mixer is open – Echo and Hall
+   are in the mixer's return strips. */
+.sheet[data-panel="mix"] { height: max(58%, calc(100% - 132px - var(--hxr))); max-height: none; }
+.sheet[data-panel="mix"] .sheet-head { padding: 4px 8px 4px var(--gut); gap: 6px; }
+@media (max-height: 780px) and (orientation: portrait) { .sheet[data-panel="mix"] { height: max(58%, calc(100% - 118px - var(--hxr))); } .sheet[data-panel="mix"] .sheet-head { padding-top: 2px; padding-bottom: 2px; } }
+.sheet[data-panel="mix"] .sheet-body { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
+#app:has(#sheet[data-panel="mix"]:not([hidden])) .quick { display: none; }
+@media (min-width: 900px) {
+  .sheet[data-panel="mix"] { height: auto; width: min(980px, 72vw); }
+}
+/* landscape phones: the field keeps two thirds of its usual room (its note row stays on one line); the field's
+   "dunkel" label would run into the notes beside the mixer, so it steps aside */
+@media (orientation: landscape) and (max-height: 540px) {
+  .sheet[data-panel="mix"] { height: auto; width: min(600px, 64%); }
+  .sheet[data-panel="mix"] .sheet-head { padding-top: 2px; padding-bottom: 2px; }
+  #app:has(#sheet[data-panel="mix"]:not([hidden])) .axis.bottom { display: none; }
+}
+.mx {
+  position: relative; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden;
+  background: radial-gradient(90% 34% at 8% 0%, rgba(255, 179, 92, .065), transparent 70%),
+              radial-gradient(60% 28% at 96% 0%, rgba(134, 240, 208, .04), transparent 70%);
+}
+.mx-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+/* view switch, in the sheet's head */
+.mx-vsw { flex: none; display: flex; }
+.mx-vsw button { height: 44px; padding: 0; background: none; border: 0; display: grid; place-items: center; }
+.mx-vsw button span { display: block; padding: 7px 11px 8px; border: 1px solid var(--line); font: 400 12px/1 var(--font-display); color: var(--dim); background: transparent; }
+.mx-vsw button:first-child span { border-radius: 999px 0 0 999px; }
+.mx-vsw button:last-child span { border-radius: 0 999px 999px 0; margin-left: -1px; }
+.mx-vsw button[aria-checked="true"] span { color: var(--ink); background: var(--hypha); border-color: var(--hypha); }
+

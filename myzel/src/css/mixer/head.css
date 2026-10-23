@@ -1,0 +1,152 @@
+/* ---------- head band: fruiting body, loudness, snapshots, second knob ---------- */
+.mx-band { flex: none; position: relative; z-index: 4; display: grid; align-items: center; gap: 2px 12px; padding: 6px 12px 4px; border-bottom: 1px solid rgba(240, 230, 216, .07); }
+.mx[data-w="narrow"] .mx-band { grid-template-columns: 86px minmax(0, 1fr) 104px; grid-template-areas: "fk loud br" "fk snap snap"; column-gap: 10px; padding-bottom: 5px; }
+/* wide: the loudness takes what is left; its stats wrap rather than run under the right column (mid-width windows) */
+.mx[data-w="wide"] .mx-band { grid-template-columns: 124px minmax(0, 1fr) minmax(270px, 360px); grid-template-rows: 1fr auto auto auto 1fr; grid-template-areas: "fk loud ." "fk loud snap" "fk loud img" "fk loud br" "fk loud ."; padding: 8px var(--gut) 10px; column-gap: 20px; row-gap: 6px; }
+/* short (landscape phones): one row – the meter bridge, the loudness with its unit, A/B */
+.mx[data-short="1"] .mx-band { grid-template-columns: minmax(76px, 112px) auto minmax(180px, 1fr); grid-template-areas: "br loud snap"; padding: 2px 8px 2px 46px; column-gap: 8px; }
+.mx[data-short="1"] .mx-big em { font-size: 0; }
+.mx[data-short="1"] .mx-big em::before { content: "lufs"; font-size: 10px; }
+.mx-fk { grid-area: fk; position: relative; width: 100%; aspect-ratio: 1; padding: 0; border: 0; background: none; border-radius: 50%; align-self: center; cursor: pointer; }
+.mx-fk canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+/* readouts that change several times a second repaint only themselves */
+.mx-big b, .mx-stats b, .mx-img b { display: inline-block; }
+.mx-big b, .mx-stats b, .mx-img b, .mx-pk span, .mx-val span, .mx-kv { contain: layout paint; }
+.mx-fk:focus-visible { outline-offset: 3px; }
+.mx-loud { grid-area: loud; min-width: 0; display: grid; gap: 3px; align-content: center; }
+.mx-snap { grid-area: snap; }
+.mx-br { grid-area: br; }
+.mx-img { grid-area: img; display: none; gap: 4px 14px; flex-wrap: wrap; padding: 4px 0 0 4px; font: 400 10px/1.3 var(--font-num); color: var(--dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mx-img b { font-weight: 500; color: var(--hypha); transition: color .3s; }
+.mx-img b.ok { color: var(--lumen); } .mx-img b.hot { color: var(--spore); } .mx-img b.over { color: var(--rec); }
+.mx[data-w="wide"]:not([data-short="1"]) .mx-img { display: flex; }
+.mx-img b.gr { color: var(--rose); } .mx-img b.q { color: var(--dim); }
+.mx-lh { display: flex; align-items: center; gap: 10px; min-height: 16px; }
+.mx-lbl, .mx-regl { font: 400 10px/1 var(--font-display); color: var(--dim); letter-spacing: .03em; white-space: nowrap; }
+.mx-tgt { position: relative; padding: 2px 0; min-height: 18px; background: none; border: 0; font: 400 10px/1 var(--font-display); color: var(--spore); text-decoration: underline dotted rgba(255, 179, 92, .55); text-underline-offset: 3px; white-space: nowrap; }
+.mx-tgt::after { content: ""; position: absolute; inset: -13px -8px; }
+.mx-big { display: flex; align-items: baseline; gap: 7px; white-space: nowrap; min-width: 0; }
+.mx-bl { display: grid; gap: 3px; align-self: center; justify-items: start; }
+.mx-big b { font: 500 25px/1 var(--font-num); font-variant-numeric: tabular-nums; letter-spacing: -.03em; color: var(--hypha); transition: color .3s; }
+.mx-big em { font: 400 10px/1 var(--font-display); font-style: normal; color: var(--dim); }
+.mx-stats { display: flex; align-items: center; flex-wrap: nowrap; gap: 2px 10px; font: 400 10px/1.25 var(--font-num); color: var(--dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mx[data-w="wide"] .mx-stats { flex-wrap: wrap; }
+.mx-stats b { font-weight: 500; color: var(--hypha); transition: color .3s; }
+.mx-loud b.ok { color: var(--lumen); text-shadow: 0 0 16px rgba(134, 240, 208, .3); }
+.mx-loud b.hot { color: var(--spore); text-shadow: 0 0 16px rgba(255, 179, 92, .3); }
+.mx-loud b.over { color: var(--rec); text-shadow: 0 0 16px rgba(255, 91, 77, .35); }
+.mx-loud b.q { color: var(--dim); }
+.mx-rst { position: relative; flex: none; width: 24px; height: 18px; margin: -2px -4px; padding: 0; border: 0; background: none; color: var(--dim); display: grid; place-items: center; }
+.mx-rst svg { width: 14px; height: 14px; }
+.mx-rst::after { content: ""; position: absolute; inset: -13px -10px; }
+.mx-rst:hover { color: var(--hypha); }
+.mx-hist { display: block; width: 100%; height: 42px; margin-top: 3px; }
+.mx[data-w="narrow"] .mx-hist, .mx[data-w="narrow"] .mx-stats .lra, .mx[data-w="narrow"] .mx-stats .spk { display: none; }
+.mx[data-w="narrow"] .mx-lh { display: none; }
+.mx[data-w="wide"] .mx-big b { font-size: 34px; }
+.mx[data-w="wide"] .mx-loud { gap: 4px; }
+.mx[data-short="1"] .mx-lh, .mx[data-short="1"] .mx-stats, .mx[data-short="1"] .mx-hist, .mx[data-short="1"] .mx-fk, .mx[data-short="1"] .mx-bl .mx-tgt { display: none; }
+.mx[data-short="1"] .mx-big b { font-size: 20px; }
+.mx[data-short="1"] .mx-br { height: 40px; }
+.mx[data-short="1"] .mx-q { top: 50%; left: 2px; translate: 0 -50%; place-items: center; }
+.mx[data-short="1"] .mx-q span { margin: 0; }
+
+/* snapshots and morph */
+.mx-snap { position: relative; display: flex; align-items: center; gap: 0; min-width: 0; }
+.mx-ab { position: relative; flex: none; width: 44px; height: 44px; padding: 0; border: 0; background: none; display: grid; place-items: center; -webkit-touch-callout: none; }
+/* holding A or B: a ring closes in one second, then the mix is stored; letting go before still glides */
+.mx-abr { position: absolute; inset: 0; pointer-events: none; }
+.mx-abr svg { display: block; width: 44px; height: 44px; transform: rotate(-90deg); }
+.mx-abr circle { fill: none; stroke: var(--spore); stroke-width: 2.5; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 100; opacity: 0; }
+.mx-ab-b .mx-abr circle { stroke: var(--lumen); }
+.mx-ab.hold .mx-abr circle { opacity: 1; stroke-dashoffset: 0; transition: stroke-dashoffset 1s linear, opacity .12s; }
+/* round buttons get a round focus ring */
+.mx-ab:focus-visible, .mx-store:focus-visible, .mxd-nav:focus-visible, .mxl-x:focus-visible, .mx-q:focus-visible { outline: none; }
+.mx-ab:focus-visible span, .mx-store:focus-visible svg, .mxd-nav:focus-visible svg, .mxl-x:focus-visible svg, .mx-q:focus-visible span { box-shadow: 0 0 0 2px var(--lumen); }
+.mx-ab span { width: 34px; height: 34px; border-radius: 50% 50% 44% 44%; display: grid; place-items: center; padding-bottom: 2px; font: 400 15px/1 var(--font-display); border: 1px solid var(--line); background: var(--bark-2); transition: background .2s, color .2s, box-shadow .2s; }
+.mx-ab-a span { color: var(--spore); }
+.mx-ab-b span { color: var(--lumen); }
+.mx-ab-a.on span { background: var(--spore); border-color: var(--spore); color: var(--ink); box-shadow: 0 0 16px -2px rgba(255, 179, 92, .7); }
+.mx-ab-b.on span { background: var(--lumen); border-color: var(--lumen); color: var(--ink); box-shadow: 0 0 16px -2px rgba(134, 240, 208, .6); }
+.mx-morph { position: relative; flex: 1 1 auto; min-width: 80px; height: 44px; touch-action: none; cursor: ew-resize; border-radius: 12px; }
+.mx-morph canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.mx-morph:focus-visible { outline: 2px solid var(--lumen); outline-offset: -2px; }
+.mx-store { position: relative; flex: none; width: 44px; height: 44px; padding: 0; border: 0; background: none; display: grid; place-items: center; color: var(--hypha); }
+.mx-store svg { width: 34px; height: 34px; padding: 8px; border-radius: 50%; border: 1px solid var(--line); background: var(--bark-2); }
+.mx-store[aria-expanded="true"] svg { border-color: var(--hypha); }
+.mx-dot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--rose); box-shadow: 0 0 0 2px var(--bark), 0 0 8px var(--rose); opacity: 0; transition: opacity .2s; }
+.mx-store.edited .mx-dot { opacity: 1; }
+.mx-menu { position: absolute; z-index: 30; right: 0; top: 46px; min-width: 250px; padding: 6px; display: grid; gap: 1px; background: #231b16; border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 18px 44px rgba(0, 0, 0, .6); }
+.mx-menu button { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 8px 12px; border: 0; border-radius: 10px; background: none; text-align: left; font: 500 14px/1.2 var(--font-ui); color: var(--hypha); }
+.mx-menu button:hover, .mx-menu button:focus-visible { background: var(--bark-2); outline: none; }
+.mx-menu button b { width: 16px; font: 400 15px/1 var(--font-display); color: var(--spore); text-align: center; }
+.mx-menu button b.lu { color: var(--lumen); }
+.mx-menu hr { border: 0; border-top: 1px solid var(--line); margin: 4px 8px; }
+
+/* "2. Regler": what every strip's second knob controls – in the sheet's head, beside the view switch */
+.mx-reg { flex: none; display: flex; align-items: center; min-width: 0; height: 44px; }
+.mx-reg[hidden], .mx-regc[hidden] { display: none; }
+.mx-regl { margin-right: 4px; }
+.mx-reg button { height: 44px; padding: 0 2px; background: none; border: 0; display: grid; place-items: center; }
+.mx-reg button span { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; border: 1px solid var(--line); font: 500 12px/1 var(--font-ui); color: var(--dim); white-space: nowrap; transition: color .15s, background .15s, border-color .15s; }
+.mx-reg button span i, .mx-regc i { width: 7px; height: 7px; border-radius: 50%; background: var(--lc); opacity: .5; flex: none; }
+.mx-reg button[aria-checked="true"] span { color: var(--hypha); background: rgba(240, 230, 216, .07); border-color: color-mix(in srgb, var(--lc) 70%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--lc) 40%, transparent), 0 0 16px -8px var(--lc); }
+.mx-reg button[aria-checked="true"] span i { opacity: 1; box-shadow: 0 0 8px var(--lc); }
+.mx-reg button:focus-visible { outline: none; }
+.mx-reg button:focus-visible span { box-shadow: 0 0 0 2px var(--lumen); }
+/* the compact one: "2 · Echo", a tap steps on */
+.mx-regc { --lc: var(--hypha); flex: none; height: 44px; padding: 0; border: 0; background: none; display: grid; place-items: center; }
+.mx-regc > span { display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 11px 0 9px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--lc) 70%, transparent); background: rgba(240, 230, 216, .06); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--lc) 30%, transparent), 0 0 16px -8px var(--lc); font: 500 13px/1 var(--font-ui); color: var(--hypha); white-space: nowrap; }
+.mx-regc small { font: 400 10px/1 var(--font-display); color: var(--dim); margin-right: 1px; }
+.mx-regc i { opacity: 1; box-shadow: 0 0 8px var(--lc); }
+.mx-regc:focus-visible { outline: none; }
+.mx-regc:focus-visible > span { box-shadow: 0 0 0 2px var(--lumen); }
+@media (max-width: 370px) {
+  .sheet[data-panel="mix"] .mx-vsw button span { padding: 7px 8px 8px; font-size: 11px; }
+  .sheet[data-panel="mix"] #btnPanic { padding-left: 10px; padding-right: 10px; }
+  .mx-regc > span { padding: 0 9px 0 7px; gap: 5px; font-size: 12.5px; }
+}
+
+/* a solo somewhere: a rose lamp in the head (the band's, the detail's); a tap lifts all solos */
+.mx-sololamp { position: relative; flex: none; height: 44px; padding: 0 2px; border: 0; background: none; display: flex; align-items: center; justify-content: center; }
+.mx-sololamp[hidden] { display: none; }
+.mx-sololamp span { display: flex; align-items: center; height: 22px; padding: 0 8px 1px 18px; border-radius: 999px; background: var(--rose); color: var(--ink); font: 400 11px/1 var(--font-display); letter-spacing: .04em; box-shadow: 0 0 0 1px rgba(17, 13, 11, .9), 0 0 16px -2px var(--rose); }
+.mx-sololamp i { position: absolute; left: 9px; top: 50%; width: 6px; height: 6px; margin-top: -3px; border-radius: 50%; background: var(--ink); animation: mxSolo 1.6s ease-in-out infinite; }
+@keyframes mxSolo { 50% { opacity: .25; } }
+.mx-sololamp:focus-visible { outline: none; }
+.mx-sololamp:focus-visible span { box-shadow: 0 0 0 2px var(--lumen); }
+/* in the band: on the fruiting body's lower corner (the "?" sits on its upper one); in the Geflecht's slim head
+   beside the "?" */
+.mx-band .mx-solo { position: absolute; z-index: 5; left: 4px; top: 60px; }
+.mx[data-w="wide"] .mx-band .mx-solo { left: 10px; top: 92px; }
+.mx[data-view="geflecht"]:not([data-slim="1"]) .mx-band .mx-solo, .mx[data-short="1"] .mx-band .mx-solo { top: 50%; left: 44px; translate: 0 -50%; }
+.mx[data-view="geflecht"][data-solo="1"]:not([data-slim="1"]) .mx-band, .mx[data-short="1"][data-solo="1"] .mx-band { padding-left: 116px; }
+.mx[data-w="wide"][data-slim="1"] .mx-band .mx-solo { top: 50%; left: 64px; translate: 0 -50%; }
+.mx[data-w="wide"][data-slim="1"][data-solo="1"] .mx-band { padding-left: 136px; }
+
+/* meter bridge: tap or drag to scroll the rack */
+.mx-br { position: relative; width: 100%; height: 44px; touch-action: none; cursor: pointer; border-radius: 10px; }
+.mx-br canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.mx[data-w="wide"]:not([data-scroll="1"]) .mx-br { display: none; }
+.mx:not([data-view="pult"]) .mx-br { display: none; }
+.mx[data-w="wide"] .mx-br { height: 30px; }
+
+/* the floating value tip */
+.mx-tip {
+  position: absolute; left: 0; top: 0; z-index: 40; pointer-events: none; display: flex; align-items: baseline; gap: 6px;
+  padding: 5px 9px 6px; border-radius: 10px; white-space: nowrap; background: rgba(17, 13, 11, .92); border: 1px solid rgba(240, 230, 216, .1);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .5); font: 500 12px/1.2 var(--font-ui); color: var(--hypha);
+  translate: -50% -100%; opacity: 0; transition: opacity .12s;
+}
+.mx-tip.show { opacity: 1; }
+.mx-tip b { font: 500 13px/1 var(--font-num); color: var(--c); font-variant-numeric: tabular-nums; }
+.mx-tip em { display: none; font-style: normal; font-size: 11px; color: var(--lumen); }
+.mx-tip.fine em { display: inline; }
+
+/* ---------- body and views ---------- */
+.mx-body { position: relative; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.mx-view { position: relative; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+/* the detail lies over the mixer (phones) or over the rack beside the Summe (wide); top/right are set by the layout */
+.mx-detail { position: absolute; left: 0; right: 0; top: 0; bottom: 0; z-index: 8; display: flex; flex-direction: column; background: var(--bark); }
+.mx[data-cover=""] .mx-detail { border-top: 1px solid rgba(240, 230, 216, .07); border-right: 1px solid rgba(240, 230, 216, .08); box-shadow: 16px 0 22px -16px rgba(0, 0, 0, .7); }
+

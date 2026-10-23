@@ -1,0 +1,256 @@
+/* ---------- Gerät: Keyboard & Controller ---------- */
+/* Connect tiles: the two ways in, big enough to find on a phone; the second line says which is which */
+.kc-go-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(188px, 1fr)); gap: 8px; margin: 2px 0 8px; }
+.kc-go {
+  display: grid; grid-template-columns: 30px minmax(0, 1fr); align-items: center; column-gap: 12px; min-height: 60px; padding: 9px 16px 9px 14px;
+  border-radius: 16px; border: 1px solid var(--line); background: var(--bark-2); color: var(--hypha); text-align: left; font: 600 14px/1.25 var(--font-ui);
+}
+.kc-go svg { grid-row: 1 / span 2; width: 26px; height: 26px; color: var(--spore); }
+.kc-go[data-ble] svg { color: var(--lilac); }
+.kc-go span { min-width: 0; overflow-wrap: break-word; }   /* two tiles side by side (a phone in landscape): the label wraps, never cut to "Gestik einschal…" */
+.kc-go::after { content: attr(data-sub); grid-column: 2; font: 400 12px/1.3 var(--font-ui); color: var(--dim); }
+.kc-go.primary { background: var(--spore); border-color: var(--spore); color: var(--ink); box-shadow: 0 6px 22px -10px rgba(255, 179, 92, .8); }
+.kc-go.primary svg, .kc-go.primary::after { color: rgba(20, 15, 12, .72); }
+.kc-go:disabled { opacity: .5; cursor: progress; }
+.kc-status { display: flex; gap: 9px; align-items: baseline; color: var(--hypha); }
+.kc-status::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--line); transform: translateY(-1px); }
+.kc-status[data-st="on"]::before { background: var(--lumen); box-shadow: 0 0 9px rgba(134, 240, 208, .7); }
+.kc-status[data-st="warn"]::before { background: var(--rose); }
+.kc-tools { display: flex; flex-wrap: wrap; gap: 4px 6px; margin: -2px 0 8px; }
+.kc-tools .btn { min-height: 44px; margin-left: -10px; margin-right: 6px; padding: 6px 10px; border-color: transparent; background: none; color: var(--dim); font-weight: 500; text-decoration: underline dotted rgba(168, 152, 138, .6); text-underline-offset: 4px; }
+.kc-tools .btn:hover { color: var(--hypha); }
+details.plat { margin: -6px 0 10px; font-size: 13px; color: var(--dim); max-width: 62ch; }
+details.plat > summary, details.kc-more > summary, details.kc-bd > summary {
+  cursor: pointer; padding: 12px 0; min-height: 44px; line-height: 20px; color: var(--hypha); font-weight: 600; list-style-position: inside;
+}
+details.plat .help { margin-bottom: 8px; }
+/* device cards: one per keyboard or controller, live light, what it is, what it did last, its switches */
+.kc-devs { display: grid; gap: 10px; margin: 4px 0 12px; }
+.kc-devs:empty { display: none; }
+.kc-dev {
+  display: grid; gap: 8px; padding: 6px 12px 12px; border-radius: 16px; border: 1px solid var(--line); min-width: 0;
+  background: linear-gradient(180deg, rgba(240, 230, 216, .035), transparent 46px), var(--bark-2);
+}
+.kc-dev.off { background: transparent; }
+.kc-dev.off .kc-dn { color: var(--dim); }
+.kc-dh { display: flex; align-items: center; gap: 10px; min-height: 44px; min-width: 0; }
+.kc-dn { flex: 1 1 auto; min-width: 0; font: 600 14.5px/1.25 var(--font-ui); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kc-badge {
+  flex: none; padding: 4px 8px 3px; border-radius: 999px; border: 1px solid rgba(255, 179, 92, .35); color: var(--spore);
+  font: 500 10px/1 var(--font-num); letter-spacing: .04em; white-space: nowrap;
+}
+.kc-badge.bt { border-color: rgba(196, 168, 255, .4); color: var(--lilac); }
+.kc-led { flex: none; width: 10px; height: 10px; border-radius: 50%; background: #3a2e27; box-shadow: inset 0 1px 2px rgba(0, 0, 0, .7); transition: background .3s, box-shadow .3s; }
+.kc-led.ok { background: rgba(134, 240, 208, .32); }
+.kc-led.err { background: var(--rose); }
+.kc-led.on { background: var(--lumen); box-shadow: 0 0 0 3px rgba(134, 240, 208, .14), 0 0 12px rgba(134, 240, 208, .85); transition: none; }
+.sw.kc-tog { width: auto; flex: none; min-height: 44px; padding: 0 0 0 8px; margin-right: -2px; }
+.kc-prof { margin: 0; font-size: 13px; line-height: 1.4; color: var(--dim); }
+.kc-prof b { color: var(--hypha); font-weight: 600; }
+.kc-last {
+  margin: 0; min-height: 30px; padding: 7px 10px; border-radius: 9px; background: var(--loam); border: 1px solid rgba(240, 230, 216, .06);
+  font: 400 11px/1.4 var(--font-num); color: var(--lumen); font-variant-numeric: tabular-nums; overflow-wrap: anywhere;
+}
+.kc-last.idle { color: var(--dim); }
+.kc-opts { display: grid; grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); gap: 0 18px; }
+.kc-opts .sw { min-height: 44px; }
+.kc-dev .note { margin: 0; }
+.kc-dev .note:empty { display: none; }
+.kc-dev .row .btn { min-height: 44px; }
+details.kc-more { font-size: 13px; color: var(--dim); }
+details.kc-more > summary { padding: 10px 0; font-weight: 500; color: var(--dim); }
+details.kc-more[open] > summary { color: var(--hypha); }
+.kc-ctrls { margin: 0 0 4px; display: grid; grid-template-columns: minmax(0, 11rem) minmax(0, 1fr); gap: 5px 14px; }
+.kc-ctrls dt { font: 400 11px/1.45 var(--font-num); color: var(--hypha); }
+.kc-ctrls dd { margin: 0; font-size: 12.5px; line-height: 1.4; }
+@media (max-width: 420px) { .kc-ctrls { grid-template-columns: minmax(0, 1fr); gap: 0; } .kc-ctrls dd { margin-bottom: 7px; } }
+.kc-diag { margin: 0 0 6px; font: 400 11px/1.5 var(--font-num); color: var(--dim); overflow-wrap: anywhere; }
+.kc-hint { margin: 6px 0 2px; padding-left: 10px; border-left: 2px solid rgba(255, 179, 92, .45); font-size: 12.5px; line-height: 1.45; color: var(--dim); }
+.kc-sub { margin: 14px 0 6px; font: 400 11px/1 var(--font-display); letter-spacing: .03em; color: var(--dim); text-transform: lowercase; }
+.kc-sub:first-child { margin-top: 2px; }
+/* foldable sections: the header is the button; the summary on the right says what is set */
+.sec.fold .sec-h { margin: 0; }
+.sec.fold .sec-h h3 { flex: 1 1 auto; min-width: 0; }
+.fold-b {
+  display: flex; align-items: center; gap: 8px; width: 100%; min-height: 44px; margin: -6px 0 -4px; padding: 0; border: 0; background: none; text-align: left;
+  font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit;
+}
+.fold-b svg { flex: none; width: 14px; height: 14px; color: var(--dim); transition: transform .18s; }
+.fold-b[aria-expanded="true"] svg { transform: rotate(90deg); }
+.sec.fold .sec-h p { max-width: 58%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fold-body { padding-top: 10px; }
+/* bindings: the control on the device → what it drives; lights when it acts */
+.kc-learn-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin: 0 0 10px; }
+.kc-learn-row .note { flex: 1 1 14rem; margin: 0; }
+.btn.kc-learn { min-height: 48px; padding: 8px 20px 8px 16px; font-size: 14px; }
+.btn.kc-learn svg { width: 18px; height: 18px; }
+.btn.kc-learn[aria-pressed="true"] { background: var(--lumen); border-color: var(--lumen); color: var(--ink); box-shadow: 0 0 18px -4px rgba(134, 240, 208, .7); }
+.kc-bg { margin: 6px 0 10px; }
+.kc-bgh { display: flex; align-items: center; gap: 10px; min-height: 44px; border-bottom: 1px solid var(--line); }
+.kc-bgh b { flex: 1 1 auto; min-width: 0; font: 600 13px/1.3 var(--font-ui); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kc-bgh .btn { flex: none; min-height: 40px; }
+.kc-bl { list-style: none; margin: 0; padding: 0; }
+.kc-b {
+  display: grid; grid-template-columns: 10px minmax(0, 1fr) 44px; align-items: center; column-gap: 12px; row-gap: 1px; min-height: 54px;
+  padding: 5px 0; border-bottom: 1px solid rgba(61, 49, 42, .55);
+}
+.kc-b > .kc-led { grid-row: 1 / span 2; }
+.kc-bc { grid-column: 2; min-width: 0; font: 400 11px/1.35 var(--font-num); color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kc-bt { grid-column: 2; min-width: 0; font-size: 13.5px; line-height: 1.35; color: var(--hypha); overflow-wrap: anywhere; }
+.kc-bt em { font-style: normal; font: 400 10px/1.3 var(--font-num); color: var(--dim); margin-left: 6px; }
+.kc-b.off .kc-bt { color: var(--dim); text-decoration: line-through; text-decoration-color: rgba(168, 152, 138, .55); }
+.kc-b.none .kc-bt { color: var(--rose); }
+.kc-be { grid-column: 3; grid-row: 1 / span 2; width: 44px; height: 44px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--dim); }
+.kc-be svg { width: 18px; height: 18px; }
+.kc-be:hover, .kc-be[aria-expanded="true"] { color: var(--hypha); background: var(--bark-2); }
+.kc-empty { margin: 8px 0 4px; font-size: 13px; color: var(--dim); }
+details.kc-bd { border-bottom: 1px solid rgba(61, 49, 42, .55); }
+details.kc-bd > summary { font-weight: 500; color: var(--dim); }
+details.kc-bd[open] > summary { color: var(--hypha); }
+details.kc-bd .kc-b:last-child { border-bottom: 0; }
+.kc-ed { grid-column: 1 / -1; display: grid; gap: 10px; margin: 6px 0 6px; padding: 12px; border-radius: 14px; background: var(--loam-2); border: 1px solid var(--line); }
+.kc-ed .lab { font-size: 13px; color: var(--hypha); }
+.kc-ed .chips { padding-top: 2px; }
+.kc-ed .chips.small .chip { min-height: 40px; }
+/* touch screens: every control in the keyboard sections is at least 44 px high (the app's chips, switches and buttons
+   elsewhere are a little lower) */
+@media (pointer: coarse) { .kc-sec :is(.chip, .sw, .btn), .kc-ed .chips.small .chip { min-height: 44px; } .kc-sec .chip, .kc-ed .chip { min-width: 44px; } }
+.kc-why { margin: -2px 0 10px; }
+.kc-app { margin: 0 0 10px; }
+.kc-app a { display: inline-block; padding: 12px 0; color: var(--lumen); font: 500 13px/20px var(--font-num); text-underline-offset: 3px; }
+.kc-rng { display: grid; grid-template-columns: 2.6rem minmax(0, 1fr) 3.4rem; align-items: center; gap: 0 10px; font-size: 12.5px; color: var(--dim); }
+.kc-rng .val { text-align: right; }
+/* Gestik: its card among the keyboards – the Wasserwaage beside the five axes and three events */
+.kc-badge.gk { border-color: rgba(134, 240, 208, .4); color: var(--lumen); }
+.gk-card .kc-dn { white-space: normal; }   /* "dieses Handy" wraps rather than being cut beside a long badge */
+/* the Lebenszeichen: rate and jitter in figures, what is wrong in words; on the right what Gestik does now */
+.gk-life { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 12px; }
+.gk-life:has(.gk-stat:empty) { display: none; }
+.gk-stat.warn { color: var(--rose); font: 500 13px/1.4 var(--font-ui); }
+.gk-life.warn { border-color: rgba(255, 143, 158, .28); }
+.gk-mode { margin-left: auto; color: var(--dim); white-space: nowrap; }
+.gk-mode:empty { display: none; }
+.gk-mode[data-m="live"] { color: var(--spore); }
+.gk-mode[data-m="hold"] { color: var(--lumen); }
+.gk-mode::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 6px; border-radius: 50%; background: currentColor; opacity: .8; transform: translateY(-1px); }
+.gk-hint { margin: -2px 0 0 !important; }
+.gk-card .note.gk-fine { font-size: 12px; opacity: .8; }
+/* the live region for Gestik's state changes: fixed, so it never makes the page scrollable */
+.gk-say { position: fixed; top: 0; left: 0; width: 1px; height: 1px; margin: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* the Wasserwaage beside the five axes, the three events below; it grows with the card (and on touch screens) */
+.gk-main { --ww: 140px; display: grid; grid-template-columns: var(--ww) minmax(0, 1fr); grid-template-areas: "ww ax" "ev ev"; gap: 8px 16px; align-items: center; }
+.gk-wwb { grid-area: ww; display: grid; place-items: center; }
+/* positioned: the hidden description inside stays inside the scrolling panel (an absolute box would stretch the page) */
+.gk-card { position: relative; container-type: inline-size; }
+@media (pointer: coarse) { .gk-main { --ww: 148px; } }
+@container (min-width: 520px) { .gk-main { --ww: 184px; grid-template-columns: var(--ww) minmax(0, 26rem); } }
+@media (max-width: 330px) { .gk-main { grid-template-columns: minmax(0, 1fr); grid-template-areas: "ww" "ax" "ev"; } }
+.gk-ww { width: var(--ww); height: var(--ww); border-radius: 50%; background: radial-gradient(circle, rgba(240, 230, 216, .05), transparent 72%), var(--loam); box-shadow: inset 0 2px 10px rgba(0, 0, 0, .55), 0 0 0 1px rgba(240, 230, 216, .04); touch-action: none; cursor: grab; }
+.gk-ww:active { cursor: grabbing; }
+.gk-ww:focus-visible { outline: 2px solid var(--lumen); outline-offset: 3px; }
+.gk-axes { grid-area: ax; display: grid; gap: 2px; min-width: 0; }
+.gk-ax { display: grid; grid-template-columns: 5.8em minmax(0, 1fr); align-items: center; gap: 8px; min-height: 30px; padding: 0 2px; border: 0; border-radius: 6px; background: none; text-align: left; font: 400 11px/1.2 var(--font-num); color: var(--dim); }
+.gk-bar { position: relative; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.gk-bar i { position: absolute; top: 0; bottom: 0; left: var(--l, 50%); width: var(--w, 0%); border-radius: 3px; background: var(--spore); }
+.gk-ax.na { opacity: .6; }
+.gk-ax.na .gk-bar i { display: none; }
+.gk-ax.na .gk-bar { height: auto; background: none; overflow: visible; }
+.gk-ax.na .gk-bar::after { content: "braucht Gyroskop"; font: 400 10.5px/1.2 var(--font-ui); color: var(--dim); }
+.gk-evs { grid-area: ev; display: flex; flex-wrap: wrap; gap: 6px; }
+.gk-ev { min-height: 32px; padding: 3px 11px; border-radius: 999px; border: 1px solid var(--line); background: none; color: var(--dim); font: 500 12px/1.2 var(--font-ui); transition: background .2s, color .2s; }
+.gk-ev.on { border-color: var(--lumen); background: var(--lumen); color: var(--ink); }
+body.mlearn .gk-ax, body.mlearn .gk-ev { outline: 1px solid rgba(134, 240, 208, .3); outline-offset: 1px; cursor: crosshair; }
+/* outside Zuweisen the bars and lamps only show: no chip's border, no tab stop (gkCardSync) */
+body:not(.mlearn) .gk-ev:not(.on) { border-color: transparent; }
+body:not(.mlearn) :is(.gk-ax, .gk-ev) { cursor: default; }
+.gk-mehr > summary { font-weight: 500; }
+.gk-set { display: grid; gap: 2px; }
+.gk-set .lab { font-size: 13px; color: var(--hypha); }
+.gk-card > .note { margin: -4px 0 0; }
+.kc-rng.gk-entl, .kc-rng.gk-rng { grid-template-columns: 5.4rem minmax(0, 1fr) 3.4rem; }
+.gk-mess dd { font-variant-numeric: tabular-nums; }
+.gk-anl > .gk-set { margin-top: 8px; }
+.gk-anl > .note { margin: 4px 0 0; }
+.gk-sum { color: var(--dim); font-size: 12px; }
+.gk-card .chip:disabled { opacity: .42; }
+.gk-card .sw:disabled { opacity: .42; cursor: not-allowed; }
+.gk-card .note.warn { color: var(--rose); }
+.gk-sub { display: grid; gap: 6px; margin: 2px 0 0; padding-left: 12px; border-left: 2px solid var(--line); }
+/* an open fold is an inset of its own, so its settings never read as the card's */
+.gk-card > details.kc-more[open], .gk-pair > details[open] { margin: 0 -4px; padding: 0 12px 12px; border-radius: 14px; background: var(--loam-2); border: 1px solid var(--line); }
+.gk-card > details.kc-more[open] > summary, .gk-pair > details[open] > summary { padding-bottom: 6px; }
+/* Ladung and Schlafen: the switch, its settings folded right under it */
+.gk-pair { display: grid; }
+.gk-pair > .kc-opts { grid-template-columns: minmax(0, 1fr); }
+.gk-pair > details:not([open]) > summary { padding-top: 2px; }
+.gk-card > .kc-sub { margin: 10px 0 -2px; }
+.gk-btns { gap: 8px; }
+.gk-zw { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 4px 12px; }
+.gk-zw .btn { min-height: 44px; }
+.gk-lad.off > :not(summary), .gk-slp.off > :not(summary) { opacity: .5; }
+/* the Gestik symbol in the bar: lit while it acts, its ring the Ladung; asleep or resting it dims and says z */
+.gk-ico { flex: none; width: 36px; height: 38px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--dim); }
+.gk-ico svg { width: 30px; height: 30px; overflow: visible; }
+.gk-ico .trk { fill: none; stroke: var(--line); stroke-width: 2; }
+.gk-ico .lad { fill: none; stroke: var(--spore); stroke-width: 2.6; stroke-linecap: round; transform: rotate(-90deg); transform-origin: 16px 16px; transition: stroke-dasharray .12s linear; }
+.gk-ico .spo { fill: currentColor; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; transition: color .3s; }
+.gk-ico .zz { display: none; font: 600 9px var(--font-num); fill: var(--dim); }
+.gk-ico[data-st="live"] { color: var(--spore); }
+.gk-ico[data-st="live"] .spo { filter: drop-shadow(0 0 2.5px var(--spore)); }
+.gk-ico[data-st="hold"] { color: var(--lumen); }
+.gk-ico[data-st="ruhe"], .gk-ico[data-st="schlaf"] { opacity: .62; }
+.gk-ico[data-st="ruhe"] .zz, .gk-ico[data-st="schlaf"] .zz { display: inline; }
+.gk-ico[data-st="schlaf"] .lad { stroke: var(--lumen); }
+.gk-ico.glas .spo { color: var(--lumen); }
+@media (max-width: 459px) { .bar.gk .logo { display: none; } }
+@media (max-width: 340px) { .bar.gk { gap: 5px; } .gk-ico { width: 30px; } }
+/* the narrow symbol takes a tap 44 px wide and high (into the gaps beside them, never onto a neighbour) */
+.gk-ico { position: relative; }
+.gk-ico::before { content: ""; position: absolute; inset: -3px -4px; }   /* 44 × 44 to the finger */
+/* a phone with Gestik on: REC waits as a dot (its time shows while it records) and the gaps close a little, so the
+   sound's name keeps its room beside four round buttons */
+@media (max-width: 400px) {
+  .bar.gk { gap: 6px; }
+  .bar.gk .recbtn[data-state="idle"] { min-width: 38px; width: 38px; padding: 0; }
+  .bar.gk .recbtn[data-state="idle"] #recLabel { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+}
+@media (max-width: 340px) { .gk-ico::before { inset: -3px -3px; } }
+.kc-pads { display: flex; align-items: center; gap: 8px; margin: 4px 0; } .kc-pads .lab { font-size: 12px; color: var(--dim); } .kc-pads .chips { padding: 0; }
+.kc-pads .chip[aria-pressed="true"] { background: var(--spore); border-color: var(--spore); color: var(--ink); }
+.gk-fae { color: var(--lumen); }
+/* the Funkstrecke's dark view: only the Wasserwaage on black, touches swallowed */
+.gkf-dark { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; align-content: center; gap: 14px; background: #000; touch-action: none; }
+.gkf-dark p { margin: 0; padding: 0 var(--gut); font: 500 13px/1.4 var(--font-num); color: var(--dim); text-align: center; }
+.gkf-dark .fine { font: 400 12px/1.4 var(--font-ui); opacity: .6; }
+/* asleep: the field dims, a veil swallows touches while the screen lies on the table */
+.stage.gk-zz > canvas { filter: brightness(.38) saturate(.5); transition: filter 2.5s ease; }
+.gk-shade { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: rgba(17, 13, 11, .55); touch-action: none; }
+.gk-shade p { margin: 0; padding: 0 var(--gut); font: 400 15px/1.4 var(--font-ui); color: var(--dim); text-align: center; }
+@media (pointer: coarse) { .gk-ax, .gk-ev, .gk-card .chips.small .chip { min-height: 44px; } .gk-ev { padding: 3px 15px; } .gk-card input[type=range] { height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gk-ico .lad, .gk-ico .spo, .gk-ev, .stage.gk-zz > canvas { transition: none; }
+}
+.kc-tgt { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 13px; color: var(--dim); }
+.kc-tgt b { color: var(--hypha); font-weight: 600; }
+.kc-ed input[type=search] { width: 100%; min-height: 44px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--loam); font-size: 16px; -webkit-user-select: text; user-select: text; }
+.kc-res { display: flex; flex-wrap: wrap; gap: 6px; max-height: 220px; overflow: auto; }
+.kc-res:empty { display: none; }
+.kc-res button, .mlearn-bar .ml-list button { min-height: 44px; padding: 6px 13px; border-radius: 999px; border: 1px solid var(--line); background: var(--bark); font: 500 12.5px/1.25 var(--font-ui); text-align: left; color: var(--hypha); }
+.kc-res button i, .mlearn-bar .ml-list button i { font-style: normal; color: var(--dim); }
+.kc-ed .row { justify-content: space-between; }
+/* the monitor: what arrived, newest on top, and what it did */
+.kc-mon { list-style: none; margin: 8px 0 4px; padding: 6px 10px; border-radius: 12px; background: var(--loam); border: 1px solid var(--line); max-height: 320px; overflow: auto; overscroll-behavior: contain; font: 400 11px/1.4 var(--font-num); font-variant-numeric: tabular-nums; }
+.kc-mon li { display: grid; grid-template-columns: 5.6em minmax(0, 1fr) auto; column-gap: 10px; padding: 4px 0; border-bottom: 1px solid rgba(61, 49, 42, .45); }
+.kc-mon li:last-child { border-bottom: 0; }
+.kc-mon .t { color: var(--dim); }
+.kc-mon .m { color: var(--hypha); min-width: 0; }
+.kc-mon .c { color: var(--dim); }
+.kc-mon .x { grid-column: 2 / -1; display: flex; gap: 6px; color: var(--lumen); min-width: 0; white-space: nowrap; }
+.kc-mon .x i { flex: 0 1 auto; max-width: 48%; font-style: normal; color: var(--dim); overflow: hidden; text-overflow: ellipsis; }
+.kc-mon .x b { flex: 1 1 auto; min-width: 0; font-weight: 400; overflow: hidden; text-overflow: ellipsis; }
+.kc-mon .x.no { color: var(--dim); }
+.kc-mon li.new .m { color: var(--spore); }
+.kc-mon .e { color: var(--dim); padding: 10px 0; display: block; }
+.kc-clk { margin: 4px 0 0; font: 400 11px/1.4 var(--font-num); color: var(--lilac); }
+
