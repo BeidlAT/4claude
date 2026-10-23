@@ -3969,6 +3969,11 @@ function mixMeters(dt) {
 // 2 points more, but up to −57 dB with Leiern; dev/tests/perf).
 const IDLE = { on: false, ctx: null, keeper: null, feed: null, taps: null, tapOn: false, tapT: 0, autoT: 0, cut: [], qT: 0, z: null, pT: -1, auto: false, late: 0, n: 0, echo: false, hall: true };
 const IDLE_FFT = 4096;
+// Hexenring (phone report 22.10.2026): the copy of the live chain on the processor's out 1 rests while nothing plays
+// through it (hxF1Tick); p: its params – a move of one of them puts it back first (the hook below), autoT: when the
+// last such move ends
+let hxF1On = false;   // (true while such a copy exists: the hook's one check otherwise)
+const HXF1 = { c: null, off: false, p: new Set(), autoT: 0, useT: 0, taps: null, tapOn: false, tapT: 0, z: null, pT: -1, n: 0 };
 // A param keeps its time only where the render pulls it: Chromium moves a setTarget or a ramp one sample after the other
 // while its node is processed, and a node taken out of the render holds where it stood (measured: a knob turned in a
 // silence would only start to glide when the next note woke the graph). So every automation wakes the graph first,
@@ -3978,17 +3983,17 @@ const IDLE_FFT = 4096;
   if (typeof AudioParam === 'undefined') return;
   // (each wrapper with the method's own arguments – no rest array, no apply: the mod layer calls these dozens of times a
   // frame; measured 4× throttled, a call 2.71 µs through the generic wrapper, 2.27 µs through these, 2.2–2.5 bare)
-  const P = AudioParam.prototype, end = (t) => { if (IDLE.on) idleWake(); if (t > IDLE.autoT) IDLE.autoT = t; };
+  const P = AudioParam.prototype, end = (t, p) => { if (IDLE.on) idleWake(); if (t > IDLE.autoT) IDLE.autoT = t; if (hxF1On && HXF1.p.has(p)) { if (t > HXF1.autoT) HXF1.autoT = t; if (HXF1.off) hxF1Wake(); } };
   const has = (k) => typeof P[k] === 'function';
-  if (has('setValueAtTime')) { const f = P.setValueAtTime; P.setValueAtTime = function (v, t) { end(+t || 0); return f.call(this, v, t); }; }
-  if (has('linearRampToValueAtTime')) { const f = P.linearRampToValueAtTime; P.linearRampToValueAtTime = function (v, t) { end(+t || 0); return f.call(this, v, t); }; }
-  if (has('exponentialRampToValueAtTime')) { const f = P.exponentialRampToValueAtTime; P.exponentialRampToValueAtTime = function (v, t) { end(+t || 0); return f.call(this, v, t); }; }
-  if (has('setTargetAtTime')) { const f = P.setTargetAtTime; P.setTargetAtTime = function (v, t, c) { end((+t || 0) + 10 * (+c || 0) + 0.02); return f.call(this, v, t, c); }; }
-  if (has('setValueCurveAtTime')) { const f = P.setValueCurveAtTime; P.setValueCurveAtTime = function (v, t, d) { end((+t || 0) + (+d || 0)); return f.call(this, v, t, d); }; }
-  if (has('cancelScheduledValues')) { const f = P.cancelScheduledValues; P.cancelScheduledValues = function (t) { end(+t || 0); return f.call(this, t); }; }
-  if (has('cancelAndHoldAtTime')) { const f = P.cancelAndHoldAtTime; P.cancelAndHoldAtTime = function (t) { end(+t || 0); return f.call(this, t); }; }
+  if (has('setValueAtTime')) { const f = P.setValueAtTime; P.setValueAtTime = function (v, t) { end(+t || 0, this); return f.call(this, v, t); }; }
+  if (has('linearRampToValueAtTime')) { const f = P.linearRampToValueAtTime; P.linearRampToValueAtTime = function (v, t) { end(+t || 0, this); return f.call(this, v, t); }; }
+  if (has('exponentialRampToValueAtTime')) { const f = P.exponentialRampToValueAtTime; P.exponentialRampToValueAtTime = function (v, t) { end(+t || 0, this); return f.call(this, v, t); }; }
+  if (has('setTargetAtTime')) { const f = P.setTargetAtTime; P.setTargetAtTime = function (v, t, c) { end((+t || 0) + 10 * (+c || 0) + 0.02, this); return f.call(this, v, t, c); }; }
+  if (has('setValueCurveAtTime')) { const f = P.setValueCurveAtTime; P.setValueCurveAtTime = function (v, t, d) { end((+t || 0) + (+d || 0), this); return f.call(this, v, t, d); }; }
+  if (has('cancelScheduledValues')) { const f = P.cancelScheduledValues; P.cancelScheduledValues = function (t) { end(+t || 0, this); return f.call(this, t); }; }
+  if (has('cancelAndHoldAtTime')) { const f = P.cancelAndHoldAtTime; P.cancelAndHoldAtTime = function (t) { end(+t || 0, this); return f.call(this, t); }; }
   const d = Object.getOwnPropertyDescriptor(P, 'value');
-  if (d && d.set) Object.defineProperty(P, 'value', { configurable: true, enumerable: d.enumerable, get: d.get, set(v) { end(0); d.set.call(this, v); } });
+  if (d && d.set) Object.defineProperty(P, 'value', { configurable: true, enumerable: d.enumerable, get: d.get, set(v) { end(0, this); d.set.call(this, v); } });
 })();
 function idleBuild() {
   const ctx = A.ctx;
@@ -11281,12 +11286,17 @@ const PART_BYTES = 180 * 1024 * 1024;     // split size when a host refuses one 
 // frame and Safari render the whole graph on the worklet thread, which has a lower priority than their real-time audio
 // thread – so plain playing stays on the real-time thread until the first recording.
 function ensureCapture() {
+  if (CAP.node && CAP.node.context !== A.ctx) capDrop();   // (phone report: a tap of an earlier context hears nothing)
   if (CAP.node) return Promise.resolve(true);
   if (!CAP.pending) {
     CAP.pending = setupCapture().then(() => true, (e) => { console.error(e); toast('Die Aufnahme ist in diesem Browser nicht verfügbar.'); return false; });
     CAP.pending.then(() => { CAP.pending = null; });
   }
   return CAP.pending;
+}
+function capDrop() {
+  const o = CAP.node; CAP.node = null; CAP.chunks = 0; CAP.sf = null; CAP.fill = 0; CAP.pos = 0;
+  if (o) { try { o.port.onmessage = null; } catch (e) {} try { o.disconnect(); } catch (e) {} try { A.out.disconnect(o); } catch (e) {} }
 }
 async function setupCapture() {
   const ctx = A.ctx;
@@ -11324,7 +11334,7 @@ async function setupCapture() {
   }
   A.out.connect(node);
   const z = G(0); node.connect(z).connect(ctx.destination);
-  CAP.node = node;
+  CAP.node = node; CAP.lastP = performance.now();
   renderRecInfo();
 }
 function onChunk(l, r, isFlush, f) {
@@ -11340,7 +11350,7 @@ function onChunk(l, r, isFlush, f) {
     if (aa > pl) pl = aa; if (bb > pr) pr = bb;
   }
   CAP.fill = Math.min(n, CAP.fill + len);
-  if (len) { CAP.ringF = f + len; CAP.chunks = (CAP.chunks || 0) + 1; }   // an empty flush must not move the clock
+  if (len) { CAP.ringF = f + len; CAP.chunks = (CAP.chunks || 0) + 1; CAP.lastP = performance.now(); }   // an empty flush must not move the clock
   if (pl > CAP.mL) CAP.mL = pl; if (pr > CAP.mR) CAP.mR = pr;
   if (CAP.bar) {
     const kept = barChunk(l, r, f, len, pl, pr);
@@ -12159,6 +12169,9 @@ function grainTick(horizon) {
     while (k.next < horizon && k.next < v.endAt) { spawnGrain(v, k.next); k.next += step * rand(0.6, 1.4); }
   }
 }
+// a part of the tick or of the frame that throws: said once per part (not 40 times a second), the others go on
+const TICK_ERR = new Set();
+function tickTry(k, fn) { try { fn(); } catch (e) { if (!TICK_ERR.has(k)) { TICK_ERR.add(k); console.error(e); } } }
 function tick() {
   const nowW = performance.now();
   // track the worst recent gap between ticks (decays over ~10 s) and look further ahead after main-thread stalls,
@@ -12168,7 +12181,12 @@ function tick() {
   if (!A.ctx || A.ctx.state !== 'running') return;
   const horizon = A.ctx.currentTime + clamp(0.07 + 2 * (A.jitter || 0.025), 0.12, 0.35);
   // (Hexenring: after a stall the Taktgeber follows the device before the Puls schedules)
-  try { ctxSync(); if (A.ctxJump) { A.ctxJump = false; if (SEQ.ext && CLK.run && CLK.n > 2) clkFollow(); } jrgClock(); seqTick(horizon); clkOutTick(horizon); rollTick(horizon); grainTick(horizon); previewTick(horizon); faeTick(horizon); if (GK.on || RG.on) rgTick(horizon); if (MOD.tm) modFlush(true); if (A.gsp) gspTick(); if (RHZ.vs.size || RHZ.q.length) rhzRun(horizon); hxTick(horizon); idleTick(); } catch (e) { console.error(e); }   // (Hexenring: its waits, the Ohr, the field's rings)
+  // each part on its own (phone report 22.10.2026): one that throws must not take the others with it – a Puls, a
+  // Hexenring wait (its count-in, a recording that starts on the 1), Ruhe and the recorder's preview run on
+  const T = tickTry;
+  T(0, () => { ctxSync(); if (A.ctxJump) { A.ctxJump = false; if (SEQ.ext && CLK.run && CLK.n > 2) clkFollow(); } }); T(1, jrgClock); T(2, () => seqTick(horizon)); T(3, () => clkOutTick(horizon)); T(4, () => rollTick(horizon));
+  T(5, () => grainTick(horizon)); T(6, () => previewTick(horizon)); T(7, () => faeTick(horizon)); if (GK.on || RG.on) T(8, () => rgTick(horizon)); if (MOD.tm) T(9, () => modFlush(true)); if (A.gsp) T(10, gspTick);
+  if (RHZ.vs.size || RHZ.q.length) T(11, () => rhzRun(horizon)); T(12, () => hxTick(horizon)); T(13, idleTick);   // (Hexenring: its waits, the Ohr, the field's rings)
 }
 function startClock() {
   const fallback = () => { if (!A.clockId) A.clockId = setInterval(tick, 25); };
@@ -17810,10 +17828,13 @@ function frameCtl() {
   if (MAP.due) mapFlush();   // controller values of this frame
   if (MOD.due || MOD.n) modFlush();   // the mod layer: what Gestik and the Formen targets deflect
 }
-function frame(ts) {
+// (phone report 22.10.2026: the next frame is asked for first, and the parts after the field each on their own – one that
+// throws can no longer stop the drawing, the meters, the recorder's time or the count-in for good)
+function frame(ts) { requestAnimationFrame(frame); tickTry(20, () => frameBody(ts)); }
+function frameBody(ts) {
   if (FR.prev) { const d = ts - FR.prev; if (d > 2 && d < 40) FR.iv += (d - FR.iv) * 0.1; FR.acc = Math.min(FR.acc + d, 50); }
   FR.prev = ts;
-  if (FR.iv < 12.5 && FR.acc < 15.5) { frameCtl(); requestAnimationFrame(frame); return; }   // (the display's frame interval, smoothed)
+  if (FR.iv < 12.5 && FR.acc < 15.5) { frameCtl(); return; }   // (the display's frame interval, smoothed)
   FR.acc = Math.max(0, FR.acc - 16.67);
   const dt = Math.min(0.05, (ts - (VIS.t || ts)) / 1000);
   VIS.t = ts;
@@ -17930,14 +17951,13 @@ function frame(ts) {
       c.fillStyle = (tt.gaT && ts - tt.gaT < 250) || (bd && g.snap) ? COL.lumen : COL.hypha; c.fillText(nm, tt.px, ly);
     }
   }
-  hxVisFrame(c, w, h); hxRailFrame(ts);   // Hexenring: its rings on the field, the Ringleiste
-  updateMeters(dt);
+  tickTry(21, () => { hxVisFrame(c, w, h); hxRailFrame(ts); });   // Hexenring: its rings on the field, the Ringleiste
+  tickTry(22, () => updateMeters(dt));
   const pan = UI.panel && panelOf(UI.panel);
-  if (pan && pan.frame) pan.frame(dt, ts);
+  if (pan && pan.frame) tickTry(23, () => pan.frame(dt, ts));
   if (midiDot) midiDot.classList.toggle('on', ts - MIDI.flash < 140);
-  frameCtl();
-  if (UI.panel === 'dev' && ts - (VIS.devT || 0) > 400) { VIS.devT = ts; updDevLive(); }
-  requestAnimationFrame(frame);
+  tickTry(24, frameCtl);
+  if (UI.panel === 'dev' && ts - (VIS.devT || 0) > 400) { VIS.devT = ts; tickTry(25, updDevLive); }
 }
 
 /* =====================================================================
@@ -18195,7 +18215,7 @@ const PANELS = [
   { key: 'fx', title: 'Effekte', icon: ICON.fx, build: buildFx },
   { key: 'puls', title: 'Puls', icon: ICON.puls, build: buildPuls, frame: (dt, ts) => { drawRings(); if (typeof pulsMixFrame === 'function') pulsMixFrame(dt, ts); },
     open: () => { if (typeof pulsMixOpen === 'function') pulsMixOpen(); }, close: () => { if (typeof pulsMixClose === 'function') pulsMixClose(); } },
-  { key: 'rec', title: 'Aufnahme', icon: ICON.rec, build: buildRec, open: () => { renderTakes(); hxCardRender(); }, frame: () => hxCardFrame() },   // (Hexenring: its card)
+  { key: 'rec', title: 'Aufnahme', icon: ICON.rec, build: buildRec, open: () => { renderTakes(); renderBarInfo(); hxCardRender(); }, frame: () => hxCardFrame() },   // (Hexenring: its card)
   { key: 'presets', title: 'Presets', icon: ICON.presets, build: buildPresets },
   { key: 'dev', title: 'Gerät', icon: ICON.dev, build: buildDev, open: updDevUI, frame: devFrame },
 ];
@@ -23668,8 +23688,11 @@ function renderBarInfo() {
   for (const w of CTLWRAP['rec.bars'] || []) w.classList.toggle('inactive', P['rec.len'] !== 'bars');
   if (!barInfoEl) return;
   if (P['rec.len'] !== 'bars') { barInfoEl.textContent = 'Frei: läuft, bis du wieder tippst.'; return; }
-  const bars = P['rec.bars'], bpm = P['seq.bpm'], sec = bars * 4 * 60 / bpm;
-  barInfoEl.textContent = bars + (bars === 1 ? ' Takt' : ' Takte') + ' im 4/4-Takt bei ' + Math.round(bpm) + ' BPM (Tempo unter „Puls“) = ' + fmtDur(sec) + '. ' +
+  // (phone report 22.10.2026: the tempo the take will have – a Schleife's or a device's where it leads, not the slider's –
+  // and the length is set here, in Takten: the tempo is what plays, and moving it moves the Schleifen with it)
+  const bars = P['rec.bars'], bpm = A.ctx ? barGrid().bpm : P['seq.bpm'], sec = bars * 4 * 60 / bpm;
+  const who = SEQ.ext ? 'das Tempo des Geräts' : TG.hxOn ? 'das Tempo der Schleifen' : 'das Tempo unter „Puls“';
+  barInfoEl.textContent = bars + (bars === 1 ? ' Takt' : ' Takte') + ' im 4/4-Takt bei ' + dec(String(Math.round(bpm * 10) / 10)) + ' BPM (' + who + ') = ' + fmtDur(sec) + '. Die Länge stellst du hier in Takten ein; sie ändert nichts an dem, was gerade spielt. ' +
     'Läuft der Puls, beginnt die Aufnahme auf der nächsten Eins, sonst sofort – oder mit dem ersten Ton, wenn „Erst mit dem ersten Ton starten“ an ist. ' +
     'Die Datei ist auf das Sample genau so lang. Läuft der Puls schon vor dem Start, geht die Schleife von selbst nahtlos weiter; sonst legt „Nachklang“ den Ausklang an den Anfang, wenn am Ende nichts mehr klingt. Tippen während der Aufnahme beendet sie mit dem laufenden Takt, ein zweites Tippen sofort.';
 }
@@ -23744,6 +23767,13 @@ function updRecUI() {
 }
 const meterState = { l: 0, r: 0, o: 0 };
 function updateMeters(dt) {
+  // (phone report 22.10.2026) a tap that has stopped delivering while a recording waits or runs is made anew, once per
+  // recording: its blocks carry the audio clock's frames, so a take in bars goes on where it stood (the gap is silence)
+  if (CAP.state === 'idle') CAP.reTap = false;
+  else if (CAP.node && !CAP.pending && !CAP.reTap && A.ctx && A.ctx.state === 'running' && performance.now() - (CAP.lastP || 0) > 4000) {
+    CAP.reTap = true; console.warn('Aufnahme: der Abgriff liefert nichts – neu verbunden');
+    capDrop(); ensureCapture().then((ok) => { if (!ok) toast('Die Aufnahme bekommt keinen Klang – bitte die Seite neu laden.', 6000); });
+  }
   const decay = Math.pow(0.05, dt);
   const inL = CAP.node ? CAP.mL : A.anaPeak || 0, inR = CAP.node ? CAP.mR : A.anaPeak || 0;
   meterState.l = Math.max(inL, meterState.l * decay);
@@ -25530,6 +25560,7 @@ const hxT = (f) => HX.tR + (f - HX.fR) / SR;
 const hxLive = () => !!(A.ctx && !(typeof OfflineAudioContext !== 'undefined' && A.ctx instanceof OfflineAudioContext));
 function hxPost(m, tr) {
   if (!HX.node || HX.ctx !== A.ctx) return false;
+  if (HXF1.off) for (const k in m) { const v = m[k]; if (v && typeof v === 'object' && v.out) { hxF1Wake(); break; } }   // (phone report: whatever is sent to play on out 1 finds the chain copy awake)
   if (m.loop) { if (IDLE.on) idleWake(); if (IDLE.hxOff) hxGates(true); IDLE.hxT = null; }   // Ruhe: a Schleife will sound
   else if ((m.wst || m.replace || m.schicht) && (IDLE.on || IDLE.hxOff)) { if (IDLE.on) idleWake(); if (IDLE.hxOff) hxGates(true); IDLE.hxT = null; }   // (step 2a: a Wuchs pass, a version – it sounds through the same way)
   if (HX.batch) {   // (hxBatch: one message – a key twice sends what is there first)
@@ -25664,7 +25695,75 @@ function hxChain(k) {
   return (HX[k] = c);
 }
 // out 1: the loops that follow the live chain go through their own copy of it, then the strip (nothing taps either)
-function hxOut1() { if (HX.node && !HX.out1) { if (IDLE.on) idleWake(); HX.g1 = G(1); HX.node.connect(HX.g1, 1).connect(hxChain('fx1').in); HX.out1 = true; } }   // (Ruhe: its gate as out 0's)
+function hxOut1() { if (HXF1.off) hxF1Wake(); if (HX.node && !HX.out1) { if (IDLE.on) idleWake(); HX.g1 = G(1); HX.node.connect(HX.g1, 1).connect(hxChain('fx1').in); HX.out1 = true; } }   // (Ruhe: its gate as out 0's)
+// Ruhe for that copy (phone report 22.10.2026). It costs what the live chain costs (drive with its oversampling, ring,
+// filter, phaser, chorus, pan – measured in the Android emulation 3–4 % of a core, an eighth of everything while loops
+// play) and ran from the first Schleife on for good, though after the bake every Schicht plays on out 0 and only zeros
+// pass it. It now rests – its link to the strip taken out, so the browser no longer runs it – once nothing has played
+// through it for 10 s (no Schicht on out 1 – one that left it counts a pass of its loop longer –, no Hof, no answer, no
+// loop played live), its input and its output have been exact zeros for 2 s (taps as Ruhe's, plugged in only for that
+// check) and no move of one of its own params is under way. Every use puts the link back first: hxOut1 (a voice, a Hof
+// into it), any message to the processor that plays on out 1 (hxPost), any move of one of its params (the AudioParam
+// hook – a param keeps its time only where the render pulls it). What it holds then is zeros – its filters, delays and
+// the drive's oversampler have had nothing else for long enough – and its LFOs are the live chain's: it plays on sample
+// for sample as if it had run.
+function hxF1Busy(now) {
+  let busy = !!((HXN.feed && HXN.feed.size) || hxAntOn());
+  const o1 = HXF1.o1 || (HXF1.o1 = new Map());
+  for (const S of HX.sch.values()) if (S.out) { busy = true; o1.set(S.id, S.loop); }
+  for (const [id, lp] of o1) {
+    const S = HX.sch.get(id); if (S && S.out) continue;
+    o1.delete(id); const L = HX.loops.get(lp); HXF1.useT = Math.max(HXF1.useT, now + (L ? Math.min(120, hxLen(L)) : 0));
+  }
+  if (!busy) for (const L of HX.loops.values()) if (L.live || (L.sch.some((id) => { const S = HX.sch.get(id); return S && S.lm; }))) { busy = true; break; }
+  return busy;
+}
+function hxF1Reset(c) {
+  Object.assign(HXF1, { c, off: false, autoT: 0, useT: hxNowT(), taps: null, tapOn: false, z: null, pT: -1, o1: new Map() });
+  HXF1.p.clear(); hxF1On = false;
+  if (!c) return;
+  const keys = ['gain', 'frequency', 'Q', 'detune', 'delayTime', 'pan'];
+  for (const v of Object.values(c)) for (const n of Array.isArray(v) ? v : [v]) if (n && typeof n === 'object' && n.context) for (const k of keys) if (n[k] && typeof n[k].setValueAtTime === 'function') HXF1.p.add(n[k]);
+  const an = () => { const a = A.ctx.createAnalyser(); a.fftSize = IDLE_FFT; return a; };
+  const two = (src) => { const sp = A.ctx.createChannelSplitter(2), L = an(), R = an(); sp.connect(L, 0); sp.connect(R, 1); return [[src, sp], [L, R]]; };
+  hxF1On = HXF1.p.size > 0;
+  const [li, gi] = two(c.in), [lo, go] = two(c.out);
+  HXF1.taps = { links: [li, lo], g: [gi, go], buf: new Float32Array(IDLE_FFT) };
+}
+function hxF1Taps(on) {
+  const T = HXF1.taps; if (!T || HXF1.tapOn === on) return;
+  HXF1.tapOn = on;
+  for (const [a, b] of T.links) { try { if (on) a.connect(b); else a.disconnect(b); } catch (e) {} }
+  if (on) { HXF1.tapT = hxNowT(); HXF1.z = null; }
+}
+function hxF1Wake() {
+  const c = HXF1.c;
+  HXF1.off = false;
+  if (!c || c.ctx !== A.ctx) return;
+  if (IDLE.on) idleWake();
+  try { c.out.connect(stripIn('hxr')); } catch (e) {}
+  HXF1.useT = hxNowT(); HXF1.z = null;
+}
+// (in hxTick) – sleeps only from the quiet the taps saw; a Schicht still on out 1, a Hof, an answer, a loop played live,
+// or a move of its params under way keeps it awake
+function hxF1Tick(now) {
+  if (HXF1.c !== HX.fx1) hxF1Reset(HX.fx1 && HX.fx1.ctx === A.ctx ? HX.fx1 : null);
+  const c = HXF1.c; if (!c || HXF1.off) return;
+  if (hxF1Busy(now)) HXF1.useT = Math.max(HXF1.useT, now);
+  if (now - HXF1.useT < 10 || now < HXF1.autoT) { HXF1.z = null; hxF1Taps(false); return; }
+  hxF1Taps(true);
+  if (now - HXF1.tapT < (IDLE_FFT + 256) / SR) return;
+  const T = HXF1.taps, b = T.buf, gap = now - HXF1.pT > (IDLE_FFT - 256) / SR;
+  HXF1.pT = now;
+  let zero = true;
+  for (const g of T.g) { for (const a of g) { a.getFloatTimeDomainData(b); for (let k = 0; k < b.length; k++) if (b[k] !== 0) { zero = false; break; } if (!zero) break; } if (!zero) break; }
+  if (!zero) { HXF1.z = null; return; }
+  if (HXF1.z == null || gap) HXF1.z = now - IDLE_FFT / SR;
+  if (now - HXF1.z < 2) return;
+  hxF1Taps(false);
+  try { c.out.disconnect(stripIn('hxr')); } catch (e) { return; }
+  HXF1.off = true; HXF1.n++;
+}
 const hxSrcText = () => { const n = HX.loops.size; return n ? n + (n === 1 ? ' Schleife' : ' Schleifen') : 'aus'; };
 // the mixer shows the strip from the first Schleife on (or once something of it was set)
 function hxStripSync() { if (MX.root) { mxRgnSync(); mxSrcAll(); } }
@@ -25771,7 +25870,7 @@ function hxCount() {
     for (const id of L.sch) {
       p++; const S = HX.sch.get(id); if (!S) continue;
       if (S.out) o1 = 1;
-      const tau = dr && S.dr && L.taumeln !== false;
+      const tau = dr && S.dr && hxTauOn(L);
       if (!(L.rate || S.rc || tau)) continue;
       if (!tau || S.ddOn) g |= 1 << (S.out ? 1 : 0); else r++;
     }
@@ -26108,7 +26207,7 @@ function hxSchNew(loop, c, o = {}) {
   d.dd = chain && !bak && !L.folgt ? 0 : 1;   // (step 1d: the version to de-drift – a dry one waits for its baked version)
   if (d.out) hxOut1();
   let tr;
-  d.tau = L.taumeln !== false;
+  d.tau = hxTauOn(L);   // (phone report: unless the guard let Taumeln rest)
   if (o.aud) { const [cp, t1] = hxCopy(bak || o.aud); d.chunks = cp; tr = t1; if (o.dr) { d.dr = Float32Array.from(o.dr); tr.push(d.dr.buffer); } }
   else {
     const [dst, t1] = hxChunks(c.n), [cp, t2] = hxChunks(c.n);
@@ -27014,6 +27113,7 @@ function hxTick(horizon) {
   hxPendTick(now);
   const R = HX.rec;
   if (R && R.phase === 'wait' && now >= R.t0) { R.phase = 'rec'; hxSay('Aufnahme läuft'); hxRailDirty(); }
+  hxF1Tick(now);   // (the chain copy on out 1 rests while nothing plays through it)
   if (R && R.loopKey && R.w1 && now >= R.w1) { HX.rec = null; if (HX.chips && HX.chips.kind === 'mult') HX.chips = null; hxRailDirty(); }   // (an auto-length recording closed at its end)
   hxPunchTick();
   hxAusWatch();
@@ -27731,7 +27831,7 @@ function hxCardOne(L, btn) {
       !k.tempo && !k.len && !k.eins && !k.davor ? h('span', { class: 'hx-ms' }, sch.length > 1 ? 'nur mit einer Schicht' : 'nicht mehr im Humus') : null),
     L.acc ? null : L.src === 2 ? row('Quelle', h('span', { class: 'hx-ms' }, 'Puls (seine Spuren)')) : row('Quelle', chip('Gespielt', !L.src, () => hxKorr(L, 'in0'), 'Quelle: was du gespielt hast'), chip('Alles', L.src === 1, () => hxKorr(L, 'in1'), 'Quelle: alles, was klingt (auch die Schleifen)'), HX.mic.ring ? chip('Mikro', L.src === 3, () => hxKorr(L, 'in3'), 'Quelle: das Mikrofon') : null),   // (step 2b: a Puls harvest; step 4: the Mikro)
     hxCardChain(L, sch, chip, row),
-    row('Taumeln', chip('mit', L.taumeln !== false, () => hxTaumelnSet(L, true), 'Taumeln: die Schleife taumelt mit dem Live-Spiel'), chip('eigene Stimmung', L.taumeln === false, () => hxTaumelnSet(L, false), 'Taumeln aus: sie bleibt in ihrer Stimmung')),
+    row('Taumeln', chip('mit', hxTauOn(L), () => hxTaumelnSet(L, true), 'Taumeln: die Schleife taumelt mit dem Live-Spiel'), chip('eigene Stimmung', !hxTauOn(L), () => hxTaumelnSet(L, false), 'Taumeln aus: sie bleibt in ihrer Stimmung'), HX.tauRest && L.taumeln !== false ? h('span', { class: 'hx-ms' }, 'ruht – das Handy ist ausgelastet') : null),
     ...hxCardWuchs(L, sch, chip, row, btn),
     ...hxCardMit(L, chip, row, btn),   // (Etappe 3: role, Gärtner, Wiederkehr, Begleiten, Puls lernt)
     hxCardTools(L, sch, chip, row, btn),   // (step 2b)
@@ -28417,7 +28517,9 @@ function hxTauOrig(L) {
     hxSchSwap(S, c, { aud: s.aud, bak: s.bak, zo: s.zo, kc: s.kc, kcB: s.kcB, dr: s.dr, cutAus: s.cutAus, spliced: s.spliced, f: sw.f, join: s.join, X: s.X, rho: s.rho, fade: Math.min(Math.round(0.03 * SR), s.aus ? s.aus.len : 0) });
   }
 }
-function hxTaumelnSet(L, on) { L.taumeln = !!on; hxPost({ tau: { loop: L.id, on: !!on } }); if (!on) hxTauOrig(L); hxCount(); hxSay(hxName(L) + (on ? ': taumelt mit' : ': bleibt in ihrer Stimmung')); hxSaveMeta(L.id); hxCardDirty(); }
+function hxTaumelnSet(L, on) {
+  if (on && HX.tauRest) { HX.tauRest = false; for (const X of hxLoopsLive()) if (X !== L && !X.bew && X.taumeln !== false) hxPost({ tau: { loop: X.id, on: true } }); }   // (phone report: „mit“ brings back what the guard let rest, for every loop)
+  L.taumeln = !!on; hxPost({ tau: { loop: L.id, on: !!on } }); if (!on) hxTauOrig(L); hxCount(); hxSay(hxName(L) + (on ? ': taumelt mit' : ': bleibt in ihrer Stimmung')); hxSaveMeta(L.id); hxCardDirty(); }
 
 // ---- seams, complete (SPEC §7) ----
 // the attack offsets of sources whose sound rises well after the note (bowed, blown, swelling): a note's forbidden zone
@@ -30316,6 +30418,25 @@ function hxWGuard() {
   G.t = now;
   return true;
 }
+
+// ---- the guard's second step on a phone (phone report 22.10.2026): the device still drops audio while loops play and
+// the Wuchs is not (or no longer) to blame – Taumeln rests: every Schicht is read as recorded, frame for frame, instead
+// of through the resampler (its 32 taps per frame and Schicht are the dearest part of a loop on the audio thread:
+// measured 0.8 % of a desktop core per loop, on a phone four to six times that). The loops keep the tuning they were
+// played in (a few cents against a live note that drifts); said once, shown in the card; a tap on „mit“ there brings it
+// back for all of them (and the guard may step again). Never on an iPad or a computer: there it stays. ----
+function hxTauGuard() {
+  if (!MOBILE || HX_TABLET || HX.tauRest || !(P['mov.drift'] > 0)) return false;
+  const list = hxLoopsLive().filter((L) => !L.bew && L.taumeln !== false);
+  if (!list.some((L) => L.state === 'spielt')) return false;
+  HX.tauRest = true;
+  for (const L of list) { hxPost({ tau: { loop: L.id, on: false } }); hxTauOrig(L); }
+  hxCount(); hxCardDirty();
+  hxSay('Schleifen bleiben in ihrer Stimmung – das Handy ist ausgelastet');
+  toast('Das Handy kam beim Abspielen der Schleifen an seine Grenze: Sie bleiben jetzt in ihrer Stimmung (Taumeln ruht). In der Karte unter „Aufnahme“ holt „mit“ es zurück.', 7000);
+  return true;
+}
+const hxTauOn = (L) => L.taumeln !== false && !HX.tauRest;   // (what the processor is told: the loop's choice, unless the guard let it rest)
 
 // ---- (step 2a) Live mode (SPEC §10.6) – only where there is no Werk-Rahmen (a sandbox without frames): a loop that must
 // grow plays its notes through real voices, scheduled ahead in the scheduler's tick as the Puls's are, into the live
@@ -33082,16 +33203,35 @@ function start() {
 // not inside the first note (whose sound waits for the task that makes it)
 function oscWarm() { if (!A.ctx) return; try { for (const t of ['sine', 'sawtooth', 'square', 'triangle']) { const o = A.ctx.createOscillator(); o.type = t; } } catch (e) {} }
 // Chrome 146+ reports output underruns. If the device drops audio, play fewer voices at once and lighten the drive.
+// Hexenring (phone report 22.10.2026): where the browser counts none, the audio clock tells – a render that falls behind
+// lets the context's time run slower than the page's (the device plays the frames that were not ready as silence, the
+// graph renders them later): a second in which the clock lost 25 ms or more counts. That count serves the loops' steps on
+// a phone only (the Wuchs, Taumeln) – never the live budget or A.lite, which wait for the browser's own figures.
 function watchUnderruns() {
   const ps = A.ctx.playbackStats || A.ctx.playoutStats;
-  if (!ps) return;
-  const count = () => (ps.underrunEvents != null ? ps.underrunEvents : ps.fallbackFramesEvents) || 0;
+  if (!ps && !(MOBILE && !HX_TABLET)) return;
+  const ck = { p: 0, c: 0, lag: 0, n: 0 };
+  const clock = () => {
+    const ctx = A.ctx, ts = ctx.getOutputTimestamp ? ctx.getOutputTimestamp() : null;
+    const p = ts && ts.performanceTime > 0 ? ts.performanceTime : performance.now(), c = ts && ts.performanceTime > 0 ? ts.contextTime : ctx.currentTime;
+    if (!ck.p) { ck.p = p; ck.c = c; ck.lag = 0; return ck.n; }
+    const lag = (p - ck.p) / 1000 - (c - ck.c);
+    if (lag - ck.lag >= 0.025) ck.n++;
+    ck.lag = Math.max(ck.lag, lag);
+    return ck.n;
+  };
+  const count = ps ? () => (ps.underrunEvents != null ? ps.underrunEvents : ps.fallbackFramesEvents) || 0 : clock;
   let last = count();
+  const hits = [];   // (the seconds with new underruns, the last ten: a lasting stutter, not one glitch)
   setInterval(() => {
-    if (document.visibilityState !== 'visible' || !A.ctx || A.ctx.state !== 'running') return;
-    const u = count();
+    if (document.visibilityState !== 'visible' || !A.ctx || A.ctx.state !== 'running') { ck.p = 0; return; }   // (a pause stops the clock: counted afresh)
+    const u = count(), now = performance.now();
     A.underruns = u;
+    if (u > last) hits.push(now);
+    while (hits.length && now - hits[0] > 10000) hits.shift();
     if (u > last && hxWGuard()) { last = u; return; }   // Hexenring: (step 2a) the Wuchs gives way first – never the live budget, never A.lite for it
+    if (u > last && hits.length >= 2 && hxTauGuard()) { last = u; return; }   // Hexenring: (phone report) then, on a phone and when it lasts, the loops' Taumeln
+    if (!ps) { last = u; return; }
     if (u > last && VBUDGET > 6) {
       A.budgetScale = (A.budgetScale || 1) * 0.8;
       A.lite = true; applyQuality(); updDevUI();

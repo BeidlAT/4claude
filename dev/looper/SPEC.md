@@ -1745,6 +1745,53 @@ pings a cascade rings.
 
 ---
 
+**As built (phone report, 22./23.10.2026).** The owner's first test on a phone (a mid-range Android, 120-Hz display,
+Chrome): loops stuttered („sehr abgehackt … hat auch seinen Charme“), a recording seemed to wait for the 1 and then do
+nothing, or said it recorded but stayed at 0, and changing the length made what played slower or faster. Through the
+real UI in the Android emulation (412 × 915, touch, real taps and drags; Puls on and off; fresh storage and after a
+reload; Ruhe asleep; a reported output latency of 0.35 and 1.5 s; the main thread throttled 6× with 120-Hz frames) the
+recorder, the Hauptknopf, „Klopf mit“ and the count-in all work, and no length control touches what plays. CDP's CPU
+throttling slows the main thread only, so the render threads were put into a cgroup with a share of one core
+(`t-hx-phone` 8, root): there the report appears as one cause – the render falling behind. At 30 % of a core with two
+loops the step-4 build dropped ≈ 400 device buffers per 5 s (Chromium's playoutStats) – a granular stutter; at 15 % the
+audio clock itself runs at 0.4× real time, and with it the count-in to the 1 and a recording's time (they hardly move),
+and how fast what plays comes out depends on the load of the moment (a slider dragged). Live playing without loops
+stayed clean at 35 % where loops did not. What loops added on the render thread (desktop core, Android emulation): the
+copy of the live chain on out 1, 3–4 % – from the first Schleife on for good, though after the bake only zeros pass it;
+Taumeln's resampler, 0.8 % per loop (offline, 32 taps per frame and Schicht); the processor's reads ≈ 0.4 % per loop.
+Built (no sound changed on any device unless the device itself drops audio):
+- **The copy on out 1 rests** (`HXF1`, `hxF1Tick`/`hxF1Wake`/`hxF1Busy`, in `hxTick`): its link to the strip is taken
+  out once nothing has played through it for 10 s (no Schicht on out 1 – one that left it a pass of its loop longer –,
+  no Hof, no answer, no loop played live), its input and output have been exact zeros for 2 s (analyser taps, plugged in
+  only for that check) and no move of its own params is under way. It wakes first for every use: `hxOut1`, any
+  `hxPost` with `out` (hxSchPlay sent out-1 versions without hxOut1 – found by the test: such a loop fell silent), any
+  automation of one of its params (the AudioParam hook now passes the param: `HXF1.p`). It holds zeros and its LFOs
+  are the live chain's, so it plays on sample for sample. Worklet thread 25–28 % → 22–25 % with one to three loops.
+- **The guard's second step on a phone** (`hxTauGuard`, after the Wuchs's step, only `MOBILE && !HX_TABLET`): when
+  the device keeps dropping audio (two seconds with underruns within ten) while loops play, Taumeln rests – every
+  Schicht read as recorded, frame for frame (`hxTauOn`; de-drifted versions swapped back by `hxTauOrig`); said once, a
+  toast, the card shows „ruht – das Handy ist ausgelastet“; „mit“ brings it back for all loops (the guard may step
+  again). The loop keeps the tuning it was played in (a few cents against the live drift). Never on an iPad or a
+  computer. Then, as before, the live budget (A.lite). Where the browser has no underrun figures, a phone counts them
+  from the audio clock falling 25 ms or more behind the page's in a second (getOutputTimestamp) – for the loops' steps
+  only, never A.lite. Emulated slow core, 30 %, two loops: ≈ 400 → 0–1 fallback events per 5 s once both act.
+- **Hardening:** `tick()` runs each part in its own try (`tickTry`, said once per part) – one that throws can no
+  longer stop the Hexenring's waits (a recording that starts on the 1), Ruhe, the preview; the frame loop asks for its
+  next frame first and runs the rail, meters (the recorder's time), the panel and the controls each on its own. The
+  recorder's tap: one of an earlier context is replaced (`capDrop`), one that stops delivering for 4 s while a
+  recording waits or runs is made anew once (its blocks carry the audio clock's frames: a take in bars goes on).
+- **The bar info** in the Aufnahme panel says the tempo the take will have (`barGrid`: a Schleife's where one leads –
+  it said the slider's 84 BPM while loops ran at 103.5) and that the length is set in Takten without touching what
+  plays (it used to send the player to the Puls's tempo, which moves the Schleifen with it).
+Regression (phone report): Hexenring 27 suites green (t-hx-phone 21; t-hx-gaertner crashed once in the full run at
+row 33 and passed 58/58 alone); reg.sh green but two Gestik rows, both re-run alone: t-gs-regen passed, t-gf-cost's
+mod-flush time is noisy on this machine in both builds (interleaved A/B: new/ref 0.99, 1.02, 1.19, 1.16 – step 4 build
+1.10, 0.92, 1.11, 1.00); klang run-all and smoke-all green; perf guard: CPU check all PASS, t-idle-parity's 20-s ramp
+row failed once on the reference build's self-difference (−116 dB against our unchanged −100 dB) and passed on a re-run.
+Not built (for the owner): a partial Ruhe for the live part while only loops sound – the Gespielt taps keep the source
+strips running for the Humus (3.5 %), the rest of the awake graph is the master, echo, hall and strips (≈ 18 % of a
+desktop core); a phone slower than ≈ 20 % of this core stutters with loops even after the guard.
+
 ## 22. Tests (new suite `dev/tests/hexenring/`, run by `run-all.sh`; Playwright on an instrumented slot `hx`)
 
 | Suite | Proves |
@@ -1769,6 +1816,7 @@ pings a cascade rings.
 | `t-hx-ki.js` | Eigensinn operators keep scale/strong beats, MaxOrder ≤ 6, roles, Platz machen, die anderen spielen, answers' constraints, Begleiten in scale, Wiederkehr rules, Puls lernt |
 | `t-hx-oeko.js` | Nähren paths never re-captured; Treffen setzen meets exactly once at T; Einwurzeln follows a scale change; Mikro latency ±1 ms with a DelayNode loopback; YIN notes |
 | bench | `cost.js` rows for the processor, streams, webs; `bench.js` rows for Glut/Sehne after their inputs |
+| `t-hx-phone.js` | (phone report) the phone's own way: Android emulation, real taps and drags only – Aufnahme in Takten and frei (Puls on/off, fresh, after a reload), the Hauptknopf with its count-in, Klopf mit, length changes while loops play (spectrum shift 0 cents), the out-1 copy's rest and wake, output continuity with the main thread 6× throttled, a slow audio core (cgroup) and the guard |
 
 Also: every existing suite (`reg.sh`, `klang/tests/run-all.sh`, smoke-all) stays green; Fährte checks ported (§18).
 
