@@ -1881,7 +1881,8 @@ const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform ==
 // Hexenring: the Werk-Rahmen – this page in a hidden frame of itself (?werk=1) renders offline for the looper (SPEC
 // §8): no UI, no storage writes, no MIDI, no Gestik, no live context, no service worker. t/now: a recorded change set at
 // its own moment / a recorded state set at once (setP); dead: voices that end during a render, cleaned after it.
-const HXW = { on: (() => { try { return /[?&]werk=1(&|$)/.test(location.search); } catch (e) { return false; } })(), t: null, now: false, dead: null, ctx: null };
+// (Leistung, 23.10.2026: or a realm booted from srcdoc – its frame's name says it, hxwShell)
+const HXW = { on: (() => { try { return /[?&]werk=1(&|$)/.test(location.search) || window.name === 'myzel-werk'; } catch (e) { return false; } })(), t: null, now: false, dead: null, ctx: null };
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
   set(k, v) { if (HXW.on) return false; try { localStorage.setItem(k, v); return true; } catch (e) { return false; } },   // (Hexenring: the Werk-Rahmen writes nothing)
@@ -9694,7 +9695,8 @@ function myzelDsp() {
       if (m.rate) for (const R of [].concat(m.rate)) { const T = R.schicht != null ? this.sch(R.schicht) : this.lp(R.loop); if (T) { T.rt = Math.pow(2, Math.max(-20, Math.min(20, +R.cents || 0)) / 1200); T.rv = (T.rt - T.r) / Math.max(1, Math.round(R.ramp != null ? R.ramp : 0.05 * SR)); } }
       if (m.wst) this.wsMsg(m.wst, m.wst.port);   // (step 2a: a living Schicht's pass, streamed through its own port)
       if (m.wstop) { const S = this.sch(m.wstop.schicht); if (S) this.wsStop(S); }
-      if (m.wport) this.wpt.push(m.wport);   // (step 2a: a Werk-Rahmen's own port – the live frame every 0.1 s, for its pacing)
+      if (m.wport) { this.wpt.push(m.wport); m.wport.__id = m.wid; }   // (step 2a: a Werk-Rahmen's own port – the live frame every 0.1 s, for its pacing)
+      if (m.wportOff != null) for (let i = 0; i < this.wpt.length; i++) if (this.wpt[i].__id === m.wportOff) { try { this.wpt[i].close(); } catch (e) {} this.wpt.splice(i--, 1); }   // (Leistung: a realm renewed – its port goes)
       if (m.tau) for (const L of this.loops) if (L.id === m.tau.loop) for (const S of L.sch) { S.tau = !!m.tau.on; if (S.tau) this.ddAsk(S); }
       if (m.ddGo) this.ddStart(m.ddGo);   // (step 1d) the page's chunks for a de-drifted version
       // (step 1d) Nähren: a loop's output, post level and state, into its own pair of output 2 (ch: 0…7; −1 off) – the send
@@ -10925,11 +10927,15 @@ function myzelDsp() {
       this.CH = po.chunk || 8192; this.n = Math.max(1, po.n | 0); this.body = po.body | 0; this.from = Math.floor(Math.max(0, po.from | 0) / this.CH) * this.CH;
       this.F = 0; this.L = null; this.R = null; this.out = null; this.q = []; this.pk = 0; this.cpk = 0; this.done = false;
       this.fN = Math.min(Math.max(1, this.n - this.body), Math.round(0.03 * SR));   // (the last frames: the fade if it gets there)
-      this.port.onmessage = (e) => { const d = e.data; if (d && d.port) { this.out = d.port; for (const [m, tr] of this.q) this.out.postMessage(m, tr); this.q = []; } };
+      this.port.onmessage = (e) => { const d = e.data; if (d && d.port) { this.out = d.port; for (const [m, tr] of this.q) this.out.postMessage(m, tr); this.q = []; if (this.done) this.fin(); } };
     }
     send(m, tr) { if (this.out) this.out.postMessage(m, tr || []); else this.q.push([m, tr || []]); }
+    fin() { if (this.out) { try { this.out.close(); } catch (e) {} this.out = null; } }   // (after the end was posted: what was sent arrives)
+    // (Leistung, 23.10.2026: the owner's desktop report – memory filling while loops only played) once the pass is sent,
+    // the sink lets go: its port to the live ring closed, process() false – else Chromium kept every living pass's
+    // offline context alive (an AudioWorklet's persistent root), its graph and its buffers: ≈ 4 MB a pass, for good
     process(inputs) {
-      if (this.done) return true;
+      if (this.done) { this.fin(); return false; }
       const a = inputs[0], l = a && a[0], r = a && (a[1] || a[0]), n = l ? l.length : 128, CH = this.CH;
       let k = 0;
       while (k < n && this.F < this.n && !this.done) {
@@ -10952,11 +10958,11 @@ function myzelDsp() {
           const ci = Math.floor((this.F - 1) / CH), st = ci * CH;
           if (this.L) {
             if (st < this.body) this.pk = Math.max(this.pk, this.cpk);
-            if (st >= this.body && this.cpk <= this.pk * 3.2e-5) { this.send({ end: st }); this.done = true; this.L = this.R = null; break; }   // (−90 dB)
+            if (st >= this.body && this.cpk <= this.pk * 3.2e-5) { this.send({ end: st }); this.done = true; this.L = this.R = null; if (this.out) this.fin(); break; }   // (−90 dB)
             if (this.bad && !this.badT) { this.badT = 1; this.send({ nan: this.bad, i: ci }); }
             this.send({ i: ci, L: this.L, R: this.R }, [this.L.buffer, this.R.buffer]); this.L = this.R = null;
           }
-          if (this.F >= this.n) { this.send({ end: this.n }); this.done = true; }
+          if (this.F >= this.n) { this.send({ end: this.n }); this.done = true; if (this.out) this.fin(); }
         }
       }
       return true;
@@ -28653,12 +28659,31 @@ function hxChainRec(ta, tb) {
 // MessagePort (postMessage only – on file:// the frame is an origin of its own); booted at the first need. When it
 // cannot boot (a sandbox without frames, a blocked URL) the bake is off: loops follow the live chain, the card says so.
 Object.assign(HXW, { frame: null, port: null, st: '', p: null, wait: new Map(), id: 0, why: '', ver: 1, ms: [] });
+// (Leistung, 23.10.2026) a realm's document: this page's own HTML with its app script loaded from one Blob made once –
+// Chromium keeps ≈ 5 MB of every document it loaded whose 2.3 MB script was inline, also after the frame went (measured:
+// 40 loads, +4.8 MB each, no plateau; from a script file or a Blob, +0.5–1 MB): the realms are renewed (HX_WRENEW), so
+// each load counted. Not over http(s), or when the page cannot read itself: the frame loads ?werk=1 as before
+function hxwShell() {
+  if (HXW.shellP) return HXW.shellP;
+  return (HXW.shellP = (async () => {
+    try {
+      if (!/^https?:$/.test(location.protocol)) return null;
+      const sc = [...document.scripts].find((s) => !s.src && s.text.includes('function hxwBoot('));
+      if (!sc) return null;
+      const r = await fetch(location.href.split('#')[0]); if (!r.ok) return null;
+      const html = await r.text(), i = html.indexOf(sc.text); if (i < 0) return null;
+      const a = html.lastIndexOf('<script', i), b = html.indexOf('<\/script>', i + sc.text.length); if (a < 0 || b < 0) return null;
+      const url = URL.createObjectURL(new Blob([sc.text], { type: 'text/javascript' }));
+      return html.slice(0, a) + '<script src="' + url + '"><\/script>' + html.slice(b + 9);   // (escaped: this text sits in the page's own inline script)
+    } catch (e) { return null; }
+  })());
+}
 function hxWerk(R0) {
   const R = R0 || HXW;   // (step 2a: one of the realms – HXW, the first, or one of its pool)
   if (HXW.on) return Promise.resolve(false);
   if (R.p) return R.p;
   R.st = 'laden';
-  R.p = new Promise((res) => {
+  R.p = hxwShell().then((shell) => new Promise((res) => {
     let done = false, tA = 0;
     const fail = (why) => {
       if (done) return; done = true; clearTimeout(tA); R.st = 'kein'; R.why = why;
@@ -28690,17 +28715,47 @@ function hxWerk(R0) {
       clearTimeout(tA); tA = setTimeout(() => fail('antwort'), 4000);
     });
     f.addEventListener('error', () => fail('laden'));
-    f.src = url;
+    if (shell) { f.name = 'myzel-werk'; f.srcdoc = shell; } else f.src = url;
     try { document.body.appendChild(f); } catch (e) { fail('rahmen'); return; }
     R.frame = f;
-  });
+  }));
   return R.p;
 }
 const hxwOk = () => HXW.st !== 'kein';
+function hxwRenew() {
+  const now = performance.now();
+  for (const R of [HXW, ...HXW.pool]) {
+    if (!R || !R.old || R.st !== 'ok' || R.n || R.wait.size || now - R.oldT < 3000) continue;
+    let still = false;   // (a pass it rendered that sounds now or comes: its stream reads its port, ✓ asks it for that pass)
+    for (const S of HX.sch.values()) {
+      if (!S.wRe) continue;
+      const L = HX.loops.get(S.loop), kNow = L ? hxPassK(L, Math.round(hxF(hxNowT()))) : -Infinity;
+      for (const k in S.wRe) if (S.wRe[k] === R && +k >= kNow) { still = true; break; }
+      if (still) break;
+    }
+    if (still) continue;
+    for (const S of HX.sch.values()) if (S.wRe) for (const k in S.wRe) if (S.wRe[k] === R) delete S.wRe[k];
+    try { if (R.port) R.port.close(); } catch (e) {}
+    try { if (R.frame) R.frame.remove(); } catch (e) {}
+    if (R.wid != null) hxPost({ wportOff: R.wid });   // (the live ring's port to it)
+    Object.assign(R, { st: '', p: null, frame: null, port: null, wait: new Map(), n: 0, used: 0, old: false, ms: [] });
+    HXW.renew = (HXW.renew || 0) + 1;
+    if (R !== HXW && [...HX.sch.values()].some((S) => S.wLive)) hxwCall('warm', { sr: SR }, [], R);   // (booted again before a pass needs it)
+  }
+}
 // a job → Promise of its reply (null when there is no Werk-Rahmen); tr: buffers handed over (the caller keeps none);
 // R: the realm (step 2a; the first one unless told)
+// (Leistung, 23.10.2026 – the owner's desktop report: the memory filled while loops only played, the screen hitched in
+// the garbage collector's pauses) Chromium keeps every OfflineAudioContext that loaded an AudioWorklet module alive for
+// as long as its document lives – each render of a realm (a living pass ≈ 4 MB: its graph, its buffers) stayed for good;
+// measured, 8 % of a living pass's memory came back. Only the frame's going frees them: a realm is renewed after
+// HX_WRENEW renders – it takes no new living pass, and once nothing it rendered still sounds or may be kept (✓) and it
+// waits for nothing, its frame goes (hxwRenew, in hxWTick); the next job boots a fresh one. Every render is its own
+// (seeded, built afresh), so the sound does not change.
+const HX_WRENEW = 12;
 function hxwCall(job, d, tr, R0) {
   const R = R0 || HXW;
+  if (job === 'wuchs' || job === 'bake' || job === 'tail') { R.used = (R.used || 0) + 1; if (R.used >= HX_WRENEW && !R.old) { R.old = true; R.oldT = performance.now(); } }
   return hxWerk(R).then((ok) => new Promise((res) => {
     if (!ok || !R.port) { res(null); return; }
     const id = ++R.id;
@@ -28857,6 +28912,7 @@ async function hxwNotes(d) {
   Math.random = HXW_RND;
   const setup = (performance.now() - T0) / 1000;   // (graph, module, the notes scheduled: before a sample renders)
   const t0 = performance.now(), buf = await ctx.startRendering(), ms = performance.now() - t0;
+  if (snk) { try { snk.port.onmessage = null; snk.port.close(); snk.disconnect(); tap.disconnect(); } catch (e) {} }   // (Leistung: nothing of this render is kept but its buffer – see WSend)
   const dead = HXW.dead; HXW.dead = null;
   for (const v of dead) v.cleanup();
   for (const v of A.voices) v.cleanup();
@@ -30418,7 +30474,7 @@ function hxwPick() {
   let idle = null, fresh = null, least = null;
   for (let i = 1; i <= HX_WPOOL; i++) {
     const R = hxwRealm(i);
-    if (R.st === 'kein') continue;
+    if (R.st === 'kein' || R.old) continue;   // (Leistung: one being renewed takes no new pass)
     if (R.st === 'ok' && !R.n) { idle = R; break; }
     if (!R.st && !fresh) fresh = R;
     if (!least || R.n < least.n) least = R;
@@ -30429,7 +30485,8 @@ function hxwPick() {
 function hxwWport(R) {
   if (!HX.node || !R.port || R.st !== 'ok') return;
   const ch = new MessageChannel();
-  hxPost({ wport: ch.port1 }, [ch.port1]);
+  R.wid = (HXW.widN = (HXW.widN || 0) + 1);
+  hxPost({ wport: ch.port1, wid: R.wid }, [ch.port1]);
   try { R.port.postMessage({ job: 'wport', port: ch.port2 }, [ch.port2]); } catch (e) {}
 }
 function hxwWportAll() { for (const R of [HXW, ...HXW.pool]) if (R.st === 'ok') hxwWport(R); }
@@ -30724,6 +30781,7 @@ function hxWTick(now, horizon) {
   if (HX.wKlang && performance.now() >= HX.wKlang) { HX.wKlang = 0; for (const L of hxLoopsLive()) if ((L.klang || 'eigen') === 'feld' && hxWAktiv(L)) hxWUpdate(L); }
   const fNow = hxF(now), pnow = performance.now(), G = HX.wGuard;
   if (G.max < Infinity && pnow - G.t > 60000) { G.t = pnow; G.max = G.max + 1 >= HX_WPOOL ? Infinity : G.max + 1; }   // (a minute without an underrun: one more at once again)
+  if (pnow - (HXW.renT || 0) > 1000) { HXW.renT = pnow; hxwRenew(); }   // (Leistung: realms renewed – their renders' memory freed)
   if (G.hold && !(G.pause > pnow)) { G.hold = false; G.end = pnow; hxGuardLog('zurueck'); hxCardDirty(); }   // (phone: the pause's span clean – the loops live again from their next pass)
   for (const L of hxLoopsLive()) {
     if (L.bew || L.state === 'weg') continue;

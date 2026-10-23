@@ -5,7 +5,7 @@ function hxwPick() {
   let idle = null, fresh = null, least = null;
   for (let i = 1; i <= HX_WPOOL; i++) {
     const R = hxwRealm(i);
-    if (R.st === 'kein') continue;
+    if (R.st === 'kein' || R.old) continue;   // (Leistung: one being renewed takes no new pass)
     if (R.st === 'ok' && !R.n) { idle = R; break; }
     if (!R.st && !fresh) fresh = R;
     if (!least || R.n < least.n) least = R;
@@ -16,7 +16,8 @@ function hxwPick() {
 function hxwWport(R) {
   if (!HX.node || !R.port || R.st !== 'ok') return;
   const ch = new MessageChannel();
-  hxPost({ wport: ch.port1 }, [ch.port1]);
+  R.wid = (HXW.widN = (HXW.widN || 0) + 1);
+  hxPost({ wport: ch.port1, wid: R.wid }, [ch.port1]);
   try { R.port.postMessage({ job: 'wport', port: ch.port2 }, [ch.port2]); } catch (e) {}
 }
 function hxwWportAll() { for (const R of [HXW, ...HXW.pool]) if (R.st === 'ok') hxwWport(R); }
@@ -311,6 +312,7 @@ function hxWTick(now, horizon) {
   if (HX.wKlang && performance.now() >= HX.wKlang) { HX.wKlang = 0; for (const L of hxLoopsLive()) if ((L.klang || 'eigen') === 'feld' && hxWAktiv(L)) hxWUpdate(L); }
   const fNow = hxF(now), pnow = performance.now(), G = HX.wGuard;
   if (G.max < Infinity && pnow - G.t > 60000) { G.t = pnow; G.max = G.max + 1 >= HX_WPOOL ? Infinity : G.max + 1; }   // (a minute without an underrun: one more at once again)
+  if (pnow - (HXW.renT || 0) > 1000) { HXW.renT = pnow; hxwRenew(); }   // (Leistung: realms renewed – their renders' memory freed)
   if (G.hold && !(G.pause > pnow)) { G.hold = false; G.end = pnow; hxGuardLog('zurueck'); hxCardDirty(); }   // (phone: the pause's span clean – the loops live again from their next pass)
   for (const L of hxLoopsLive()) {
     if (L.bew || L.state === 'weg') continue;

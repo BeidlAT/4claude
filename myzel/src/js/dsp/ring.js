@@ -120,7 +120,8 @@
       if (m.rate) for (const R of [].concat(m.rate)) { const T = R.schicht != null ? this.sch(R.schicht) : this.lp(R.loop); if (T) { T.rt = Math.pow(2, Math.max(-20, Math.min(20, +R.cents || 0)) / 1200); T.rv = (T.rt - T.r) / Math.max(1, Math.round(R.ramp != null ? R.ramp : 0.05 * SR)); } }
       if (m.wst) this.wsMsg(m.wst, m.wst.port);   // (step 2a: a living Schicht's pass, streamed through its own port)
       if (m.wstop) { const S = this.sch(m.wstop.schicht); if (S) this.wsStop(S); }
-      if (m.wport) this.wpt.push(m.wport);   // (step 2a: a Werk-Rahmen's own port – the live frame every 0.1 s, for its pacing)
+      if (m.wport) { this.wpt.push(m.wport); m.wport.__id = m.wid; }   // (step 2a: a Werk-Rahmen's own port – the live frame every 0.1 s, for its pacing)
+      if (m.wportOff != null) for (let i = 0; i < this.wpt.length; i++) if (this.wpt[i].__id === m.wportOff) { try { this.wpt[i].close(); } catch (e) {} this.wpt.splice(i--, 1); }   // (Leistung: a realm renewed – its port goes)
       if (m.tau) for (const L of this.loops) if (L.id === m.tau.loop) for (const S of L.sch) { S.tau = !!m.tau.on; if (S.tau) this.ddAsk(S); }
       if (m.ddGo) this.ddStart(m.ddGo);   // (step 1d) the page's chunks for a de-drifted version
       // (step 1d) Nähren: a loop's output, post level and state, into its own pair of output 2 (ch: 0…7; −1 off) – the send
@@ -1351,11 +1352,15 @@
       this.CH = po.chunk || 8192; this.n = Math.max(1, po.n | 0); this.body = po.body | 0; this.from = Math.floor(Math.max(0, po.from | 0) / this.CH) * this.CH;
       this.F = 0; this.L = null; this.R = null; this.out = null; this.q = []; this.pk = 0; this.cpk = 0; this.done = false;
       this.fN = Math.min(Math.max(1, this.n - this.body), Math.round(0.03 * SR));   // (the last frames: the fade if it gets there)
-      this.port.onmessage = (e) => { const d = e.data; if (d && d.port) { this.out = d.port; for (const [m, tr] of this.q) this.out.postMessage(m, tr); this.q = []; } };
+      this.port.onmessage = (e) => { const d = e.data; if (d && d.port) { this.out = d.port; for (const [m, tr] of this.q) this.out.postMessage(m, tr); this.q = []; if (this.done) this.fin(); } };
     }
     send(m, tr) { if (this.out) this.out.postMessage(m, tr || []); else this.q.push([m, tr || []]); }
+    fin() { if (this.out) { try { this.out.close(); } catch (e) {} this.out = null; } }   // (after the end was posted: what was sent arrives)
+    // (Leistung, 23.10.2026: the owner's desktop report – memory filling while loops only played) once the pass is sent,
+    // the sink lets go: its port to the live ring closed, process() false – else Chromium kept every living pass's
+    // offline context alive (an AudioWorklet's persistent root), its graph and its buffers: ≈ 4 MB a pass, for good
     process(inputs) {
-      if (this.done) return true;
+      if (this.done) { this.fin(); return false; }
       const a = inputs[0], l = a && a[0], r = a && (a[1] || a[0]), n = l ? l.length : 128, CH = this.CH;
       let k = 0;
       while (k < n && this.F < this.n && !this.done) {
@@ -1378,11 +1383,11 @@
           const ci = Math.floor((this.F - 1) / CH), st = ci * CH;
           if (this.L) {
             if (st < this.body) this.pk = Math.max(this.pk, this.cpk);
-            if (st >= this.body && this.cpk <= this.pk * 3.2e-5) { this.send({ end: st }); this.done = true; this.L = this.R = null; break; }   // (−90 dB)
+            if (st >= this.body && this.cpk <= this.pk * 3.2e-5) { this.send({ end: st }); this.done = true; this.L = this.R = null; if (this.out) this.fin(); break; }   // (−90 dB)
             if (this.bad && !this.badT) { this.badT = 1; this.send({ nan: this.bad, i: ci }); }
             this.send({ i: ci, L: this.L, R: this.R }, [this.L.buffer, this.R.buffer]); this.L = this.R = null;
           }
-          if (this.F >= this.n) { this.send({ end: this.n }); this.done = true; }
+          if (this.F >= this.n) { this.send({ end: this.n }); this.done = true; if (this.out) this.fin(); }
         }
       }
       return true;

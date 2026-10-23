@@ -139,7 +139,9 @@ registerProcessor('hx-gap', HxGap);`;
   // ---------- 4 · the fallback: no Werk-Rahmen ----------
   {
     const { page: fp, errors: fe } = await H.open({});
-    await fp.route(/werk=1/, (route) => route.abort());
+    // (blocked: the frame's URL, and – Leistung, 23.10.2026: a realm boots from srcdoc with the page's script from a Blob
+    // – the page's read of itself, so it falls back to the URL)
+    await fp.route('**/*', (route) => { const r = route.request(); if (/werk=1/.test(r.url()) || r.resourceType() === 'fetch') return route.abort(); return route.continue(); });
     const q = await fp.evaluate(async () => {
       const M = window.__M, A = M.A, t0 = performance.now(), okk = await M.hxWerk();
       M.setParam('v.human', 0); M.setParam('rev.mix', 0); M.setParam('dly.mix', 0);
@@ -155,7 +157,8 @@ registerProcessor('hx-gap', HxGap);`;
     });
     ok(!q.okk && q.st === 'kein', `a frame that cannot boot (its URL blocked): no Werk-Rahmen (${q.why}), known after ${(q.ms / 1000).toFixed(1)} s`);
     ok(q.chain && q.out === 1 && !q.baked && q.note && q.folgt, `…the bake is off: a new loop plays dry through the live chain (out ${q.out}), the card says so`);
-    ok(!fe.length, 'no page errors (fallback)' + (fe.length ? ': ' + fe.join(' | ') : ''));
+    const fe2 = fe.filter((x) => !/Failed to load resource: net::ERR_FAILED/.test(x));   // (the blocked requests themselves)
+    ok(!fe2.length, 'no page errors (fallback)' + (fe2.length ? ': ' + fe2.join(' | ') : ''));
   }
   await H.close();
   process.exit(H.summary() ? 1 : 0);

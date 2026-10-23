@@ -707,6 +707,27 @@ pause Lebendig renders (loops fall back to their cached Treu/Abdruck) → reduce
 if no Wuchs ran) the old behaviour. Predict render time from `CAL.unit` × load × duration; refuse to start a living
 render the device cannot sustain (card: "lebt, sobald Rechenzeit frei ist").
 
+**As built (report A, 23.10.2026).** The owner's on-device report: 8 loops, none playing (`spielt=0`), the Werk-Rahmen
+not started, 29 underruns in 15 s (a quarter of the time), the audio clock at 0.87×, and the live budget cut to 6
+(`scale 0.41`, `A.lite`) – the order above was not kept. Why: `hxWGuard` claims an underrun only while Wuchs worked
+within 8 s, `hxTauGuard` only while a loop plays, so with halted loops every underrun fell to the old rule – while the
+halted loops cost their full reads (§21 „As built (report A)“). Now: (1) on a phone (`MOBILE && !HX_TABLET`) Lebendig
+**holds** – a living loop plays its last complete pass on (no slot comes, the processor's `wsSeam` replays the current
+one with its Ausklang; nothing renders, not even a Treu version), the passes not yet heard are dropped and their renders
+stopped, held while underruns last (30 s after the last, doubled on a return within 2 min, ≤ 4 min; `hxWHold`,
+`hxWHoldKeep`, the card: „spielt den letzten Durchgang – das Handy ist ausgelastet“); a key or tempo change still renders
+its `must` pass – never the old key; (2) fewer at once (`G.max`, as before); (3) Taumeln rests (phone report); (4) while
+loops sound or Wuchs ran within a minute the live budget and `A.lite` are never touched (`hxGuardGrenze`, said once);
+otherwise the old rule. Desktop and iPad keep their guard. Everywhere: a living pass whose time passed while its render
+still waited in a realm's queue is dropped before it begins (`hxWDropPast`, realm job `drop` – never heard; the backlog
+had reached 12–25 jobs under load and went on rendering for a minute after the pause). Measured (`t-hx-phone` 9c, a
+desktop core at 60 % shared by the render threads and the realms' offline threads, 8 loops of which 4 Lebendig): steps
+lebendig → weniger → taumeln → grenze, underruns per 5 s 274, 393, 400, 408, 465, 131, 6, 0, 0, the budget 14 kept; the
+build before in the same case 350–530 per 5 s for 40 s with no relief (its pause left the queued renders running, so
+Taumeln never came). (4) has a price where the loops alone overload: at 30 % of a core with two loops (`t-hx-phone` 8) the old rule's
+`A.lite` acted last; without it the loops' own steps gave 1601 → 29 and 1543 → 760 fallbacks per 20/15 s in two runs
+(the build before 1369 → 66) – whether `A.lite` may act again for loops is the owner's call (HANDOFF, „Owner's calls“).
+
 ### 10.6 Live mode (Etappe 4, and fallback)
 Notes replayed through real voices scheduled ahead in `tick()` (like the Puls), `o.bus = stripIn('hxr')`, `v.loop =
 true`; loop voices are stolen before live ones (`steal` prefers `v.loop`); MIDI out of loop notes optional.
@@ -1791,6 +1812,27 @@ row failed once on the reference build's self-difference (−116 dB against our 
 Not built (for the owner): a partial Ruhe for the live part while only loops sound – the Gespielt taps keep the source
 strips running for the Humus (3.5 %), the rest of the awake graph is the master, echo, hall and strips (≈ 18 % of a
 desktop core); a phone slower than ≈ 20 % of this core stutters with loops even after the guard.
+
+**As built (report A, 23.10.2026).** *A halted loop cost as much as a playing one.* `span()` read every Schicht of a
+loop whose state is a settled 0 (angehalten, stumm) – Taumeln's resampler, the seam's reads, the Ausklänge under the
+state – and multiplied by 0 after; `hxCount` priced halted loops at 0, and any loop kept Ruhe awake and a Schicht on out 1
+the chain's copy. Now the processor skips those reads (`mute`, per Schicht `skp` – a worn one is read on; `nil` skips the
+mix when nothing free of the state rang) – offline the same samples (`po.noMute`, max |d| 0 over halts at and inside a
+pass, re-entries, mutes, Schlafen's tail on both outputs) and 8 halted loops of two Schichten with Taumeln 3.7 → 0.38 s of
+render per 20 s (none 0.09 s); `hxF1Busy`, `idleSrc` and `IDLE.hxT` count only sounding loops (`hxSounds`: playing, about
+to change, a Sammelschleife), and `hxPost` wakes Ruhe, the gates and the copy before a state `spielt` arrives. Live
+(Android emulation, desktop core): 8 halted loops on out 1 with live notes cost the realtime thread ≈ +14 points before,
+≈ +5 now. *What a loop costs* (same emulation, unthrottled, 8 loops of two bars): playing with Taumeln ≈ +27 points on the
+realtime thread – reads ≈ 2.5, Taumeln ≈ 0.9 per loop –, against 8 held Nebel voices (14.5 points: 1.8 per unit) ≈ 1.5
+units per loop where `hxCount` counts 2.15 (safe); Taumeln resting: 6.4 units measured, 6.6 counted; the chain's copy on
+out 1 ≈ 4.6 points (2.5 units, `fx1` 2.71); a living stream on the audio thread little (`stream` 0.1). Four Lebendig
+loops at level 3: the Werk-Rahmen ≈ 90 % of a core on its offline threads plus 30–40 points of the page's main thread
+(the realms are same-origin iframes) – on a phone this competes for the cores the audio thread needs; it is the dominant
+cost, governed by §10.5 (no voice budget). `HX_COST` unchanged. Shown: the card's „Rechenzeit: Schleifen und Humus x von
+y Einheiten …“ (`#hxCost`, refreshed each second), Gerät → Leistung's live line (`#lmHx`), and „Leistung messen“'s lines
+`loops` (each loop's `hxCostOf`, its flags, the sum; `hxCountL` is `hxCount`'s law per loop), `werk` (renders begun, done,
+stopped, ms each, × real time, wait, queue), `guard` (`HX.gLog`: lebendig, weniger, taumeln, grenze, lite, zurueck with
+their second), `latency` (the hint asked for, base/output latency mean, min, max, the buffer in frames).
 
 ## 22. Tests (new suite `dev/tests/hexenring/`, run by `run-all.sh`; Playwright on an instrumented slot `hx`)
 

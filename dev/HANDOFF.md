@@ -9,6 +9,23 @@ Netz hält nichts den Start auf; gespielt wird nie unterbrochen. Nach dem Aktual
 Version“. Einmalig, beim Sprung von der jetzigen Version auf diese, kommt noch der alte kurze Hinweis „Neu laden“ – beim
 nächsten Öffnen ist die neue Version da. Was neu ist, steht in `myzel/CHANGELOG.json`.
 
+## Für den Besitzer – deine zwei Messberichte (23.10.2026, nachts)
+
+**Was los war:** In Bericht A spielte keine der 8 Schleifen (sie waren angehalten, etwa nach dem Neuladen) – trotzdem
+rechnete das Audio-Herz jede von ihnen weiter, samt Taumeln, und nur am Ende wurde stumm geschaltet. Myzel zählte
+angehaltene Schleifen aber als kostenlos; die Notbremse für die Schleifen griff nur bei spielenden. So landete sie beim
+alten Mittel und nahm deinem Live-Spiel viermal Stimmen weg (übrig blieben 2). Nachgestellt: genau dieser Zustand.
+**Behoben:** Angehaltene und stumme Schleifen kosten jetzt nichts (Sample für Sample der gleiche Klang, auf jedem Gerät);
+die Kopie der Effektkette und die Ruhe schlafen dann auch. Auf dem Handy (nie iPad oder Rechner) gilt jetzt die
+vereinbarte Reihenfolge: zuerst spielen lebendige Schleifen ihren letzten Durchgang weiter, bis wieder Luft ist (nichts
+wird neu gerechnet), dann ruht das Taumeln – und dein Live-Spiel behält immer alle Stimmen. Im Nachbau mit 8 Schleifen,
+4 davon lebendig, auf einem gebremsten Kern: Aussetzer pro 5 s von gut 400 auf 0. In der Karte und unter „Leistung“
+steht, wie viel die Schleifen gerade belegen; „Leistung messen“ zeigt es pro Schleife, dazu die Arbeit fürs Lebendige,
+wann Myzel entlastet hat und die echte Latenz.
+**Die 400–500 ms vom Antippen bis zum Ton** kommen fast ganz von der Latenz „Sicher“: dein Handy meldet dort 128 ms
+Puffer plus 257 ms Ausgabe. Bitte einmal mit „Standard“ messen.
+**Zum Entscheiden (nicht gebaut, weil es den Klang ändert):** siehe „Owner's calls“ unten, Punkt „Handy und Schleifen“.
+
 ## Für den Besitzer – „am Anschlag“ am Handy (23.10.2026, abends)
 
 **Was los war:** Dass die drei Qualitätsstufen keinen Unterschied machen, hieß: Nicht die Stimmen bremsen, sondern etwas,
@@ -132,6 +149,26 @@ slows only the main thread). Built: the out-1 chain copy rests (`HXF1`, `hxF1Tic
 each part of `tick()` and the frame loop (`frameBody`); the recorder's tap renewed when it stops (`capDrop`); the bar
 info's tempo (`barGrid`). Suite `hexenring/t-hx-phone.js` (in run-all; its part 8 needs root for the cgroup).
 `v2/mk.sh` exports the phone-report names (guarded line `hxF1Tick`).
+
+**Report A – loops on a phone (built, 23.10.2026, night):** SPEC §10.5 and §21 „As built (report A)“. Root cause: the
+8 loops did not play (`spielt=0`, restored or halted) yet `span()` read every Schicht of a halted/muted loop (Taumeln's
+resampler included) before multiplying by the state's 0, while `hxCount` priced only playing loops and `hxTauGuard` acted
+only on playing ones; `hxWGuard` needs Wuchs work within 8 s (the Werk-Rahmen had not even started, `werk=-`) – so
+`watchUnderruns` fell to the old rule: 0.8⁴ = 0.41, `A.lite`. Built: the processor skips reads under a settled silent
+state (`mute`/`skp`/`nil`, `po.noMute` the reference – offline max |d| 0; 8 halted loops 3.7 → 0.4 s per 20 s of audio);
+`hxF1Busy`, `idleSrc`, `IDLE.hxT` count only sounding loops (`hxSounds`), `hxPost` wakes copy/Ruhe/gates for a state
+`spielt` (`hxOut1Of`); the phone guard (`HX_PHONE`): `hxWGuard` holds (`G.hold`, `G.span` 30 s doubling to 4 min,
+`hxWHold`, `hxWHoldKeep`) – the processor replays the last pass, `hxWStop` drops the rest –, then Taumeln, then
+`hxGuardGrenze` (never `A.lite` while loops sound or Wuchs ran within 60 s); everywhere a living pass whose time passed
+while its render still waits in a realm queue is dropped (`hxWDropPast`, realm job `drop`); `hxGuardLog`/`HX.gLog`,
+`HX.wSt`/`hxWStat`; per loop `hxCountL`/`hxCostOf` (one law with `hxCount`); the card's `#hxCost`, Gerät's `#lmHx`
+(`lmLive`), LM lines `loops`/`werk`/`guard`/`latency` (`lmLoops/lmLoopsRes/lmWerk/lmGuard`). Measured (Android
+emulation, a desktop core): 8 playing loops ≈ +27 points on the realtime thread (reads ≈ 2.5, Taumeln ≈ 0.9 per loop,
+≈ 1.5 units each against 8 Nebel voices; `HX_COST` counts 2.15 – safe), the out-1 copy ≈ 4.6; 4 Lebendig loops at level 3:
+the Werk-Rahmen ≈ 90 % of a core offline plus 30–40 points of the page's main thread (realms are same-origin iframes),
+its queue growing (12–25 jobs) – the dominant cost. Tests: `t-hx-phone` part 9 (`PARTS=9`; 9c needs root – a cgroup
+shared with the realms' `Offline AudioW` threads, `SLOW9`), `t-phone-mode` part 5; harness `scratchpad/x8/x8.js` (not in
+the repo). `v2/mk.sh` exports the new names (guarded line `hxGuardLog`).
 
 **Leistung messen + Handy-Modus (built, 23.10.2026):** `myzel/src/js/ui/leistung.js` (after `geraet.js`). `LM`: a 20-s
 on-device measurement (`lmStart/lmSample/lmStop/lmResult/lmText/lmSummary`); `tickTry(k)` and `tick()` (now `tickRun`)
@@ -395,6 +432,15 @@ Then use these:
   Figures are audio / conv / main. While sound plays the runs scatter by ±2–4 points; there the new build equals the one before within that (Ruhe does not apply; only the Hexenring's resting strip and the taps' rest save, ≈ 1 point). At idle the audio threads are back at the published build's level, except the device thread's hand-over to the worklet thread (3 points on the desktop, 1.3 in the Android emulation – any worklet costs it; the Hexenring's processor must record from the first note). The compositor and the GPU process are unchanged (≈ 5 and 28–31). With a 120-Hz display emulated (`--hz120`, Android, idle / play): main thread 46.3 → 35.9 and 97.5 → 89.7 (the old build managed 76 of 120 frames while playing, the new one draws its 60). The owner's options at idle (live, medians of 3; audio + conv): desktop 26.1 default → echo asleep 23.8, hall asleep 12.8, both 11.3; Android 20.9 → 19.6 / 8.3 / 7.0.
 
 ### Owner's calls (open)
+- **Handy und Schleifen (report A, 23.10.2026) – options that change the sound on a phone, not built:** (1) Wuchs on
+  phones at level 1 (or „gespielt“) instead of 3 – a living pass renders 2–3× cheaper; (2) fewer realms on phones (1–2):
+  living passes come late more often, the last pass repeats more; (3) under lasting overload, halt or mute a loop by
+  itself (the quietest or the oldest) instead of only easing; (4) a shorter resampler for Taumeln on phones (fewer taps:
+  a little aliasing at the top); (5) shorter Ausklang tails on phones; (6) the partial Ruhe for the live part while only
+  loops sound (from the phone report). (7) let the old last step – `A.lite` and the live budget – act again when loops alone overload (it lightens
+  the worklet sources and the drive for everything; `t-hx-phone` 8 at 30 % of a core eases as much without it: 1601 → 29
+  fallbacks, 1543 → 760 in another run; the build before 1369 → 66 – this machine scatters). Built without asking: the halted-loop savings (exact), Lebendig's hold (the agreed
+  first step), the guard never taking live voices for loops.
 - **Ruhe – the hall and the echo at idle (performance pass, 20.10.2026):** they keep running while the rest of the graph sleeps, because a pause moves where their rounding falls (after a sleep the hall's tail differs by −103 dB, an echo with Leiern by −64 dB from one that never paused – inaudible, not bit-exact). Letting them sleep (`IDLE.hall`, `IDLE.echo`, no UI yet) would save at idle: the hall 13 points of a core (desktop 26 → 13 %, Android emulation 21 → 8 %), the echo 1–2 more. The owner chose (20.10.2026): the hall sleeps (`IDLE.hall = true`, the default; t-idle-parity's hall case bounds what moves, the exact cases keep it running to prove the rest), the echo runs on (`IDLE.echo` stays an option); the field stays at 60 frames.
 - **The field at 60 frames (performance pass):** on 90/120-Hz displays the field now draws ≈ 60 times a second. Its motion is counted per frame (made at 60 Hz), so there it used to run up to twice as fast with shorter trails – now it moves as designed everywhere. A visible change (no sound change); if the owner preferred the faster field, the alternative is drawing every frame with the motion scaled by time (twice the drawing).
 - Moder: default Nachklang 5 s (KONZEPT says „4–6 s Brummen“) – kept.
