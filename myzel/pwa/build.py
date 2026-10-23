@@ -40,39 +40,43 @@ HEAD = """<!doctype html>
 </head>
 <body>
 """
-# The service worker is registered only outside the claude.ai viewer (which does not allow service workers), and never
-# by the Hexenring's hidden render frame (?werk=1, SPEC §8: render-only, it must not touch the app's caches).
+# The update check (index.html's updBoot: registers sw.js, asks for a newer version on the start screen, shows its
+# notes) runs only outside the claude.ai viewer (which does not allow service workers), and never in the Hexenring's
+# hidden render frame (?werk=1, SPEC §8: render-only, it must not touch the app's caches). MYZEL_BUILD carries this
+# build's version (the service worker's cache version) and its release notes from CHANGELOG.json.
 TAIL = """
 <script>
-if ('serviceWorker' in navigator && !(window.claude && window.claude.use) && !/[?&]werk=1(&|$)/.test(location.search)) {
-  window.addEventListener('load', function () {
-    navigator.serviceWorker.register('sw.js').then(function (reg) {
-      reg.addEventListener('updatefound', function () {
-        var w = reg.installing;
-        if (!w) return;
-        w.addEventListener('statechange', function () {
-          // a newer version has been stored while this one is open: the app offers a reload
-          if (w.state === 'activated' && navigator.serviceWorker.controller) window.dispatchEvent(new Event('myzel-update'));
-        });
-      });
-    }).catch(function () {});
-  });
-}
+window.MYZEL_BUILD = __BUILD__;
+if ('serviceWorker' in navigator && !(window.claude && window.claude.use) && !/[?&]werk=1(&|$)/.test(location.search) && window.myzelUpdate) window.myzelUpdate(window.MYZEL_BUILD);
 </script>
 </body>
 </html>
 """
 
+# 2. release notes (myzel/CHANGELOG.json, newest first): every release adds an entry on top – see its "regel"
+log = json.load(open(os.path.join(APP, 'CHANGELOG.json'), encoding='utf-8'))
+notes = log['versionen']
+ids = [e['id'] for e in notes]
+assert notes and len(set(ids)) == len(ids), 'CHANGELOG.json: ids missing or not unique'
+assert ids == sorted(ids, reverse=True), 'CHANGELOG.json: newest entry first'
+for e in notes:
+    assert re.fullmatch(r'\d{4}-\d{2}-\d{2}[a-z]?', e['id']), 'CHANGELOG.json: id is a date (2026-10-23, 2026-10-23b): ' + e['id']
+    assert 2 <= len(e['punkte']) <= 6 and all(isinstance(p, str) and p.strip() for p in e['punkte']), 'CHANGELOG.json: 2–6 points in ' + e['id']
+notes = [{'id': e['id'], 'punkte': e['punkte']} for e in notes]
+
 if os.path.isdir(out):
     shutil.rmtree(out)
 os.makedirs(out)
-open(os.path.join(out, 'index.html'), 'w', encoding='utf-8').write(HEAD + src + TAIL)
+page = HEAD + src + TAIL.replace('__BUILD__', '{"version":"__MYZEL_VERSION__","notes":' + json.dumps(notes, ensure_ascii=False).replace('</', '<\\/') + '}')
+open(os.path.join(out, 'index.html'), 'w', encoding='utf-8').write(page)
+json.dump(notes, open(os.path.join(out, 'changelog.json'), 'w', encoding='utf-8'), ensure_ascii=False)   # read by an older open version from this one's cache
 shutil.copy(os.path.join(APP, 'tap-worklet.js'), out)
 shutil.copy(os.path.join(HERE, 'manifest.webmanifest'), out)
 for d in ('fonts', 'icons'):
     shutil.copytree(os.path.join(HERE, d), os.path.join(out, d))
 
-# 2. service worker: precache list + a version derived from the content of every file
+# 3. service worker: precache list + a version derived from the content of every file (index.html still holding its
+#    placeholder; the version is stamped into it afterwards)
 assets = []
 for root, _, files in os.walk(out):
     for f in sorted(files):
@@ -87,4 +91,5 @@ version = h.hexdigest()[:12]
 sw = open(os.path.join(HERE, 'sw.js'), encoding='utf-8').read()
 sw = sw.replace("'__VERSION__'", json.dumps(version)).replace('__ASSETS__', json.dumps(['./'] + assets, indent=2))
 open(os.path.join(out, 'sw.js'), 'w', encoding='utf-8').write(sw)
-print('built', out, '– version', version, '–', len(assets) + 1, 'files cached for offline use')
+open(os.path.join(out, 'index.html'), 'w', encoding='utf-8').write(page.replace('__MYZEL_VERSION__', version))
+print('built', out, '– version', version, '– notes', ids[0], '–', len(assets) + 1, 'files cached for offline use')
