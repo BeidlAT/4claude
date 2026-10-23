@@ -28649,6 +28649,7 @@ function hxwBoot() {
       const d = ev.data;
       if (d && d.job === 'wport') { hxwPort(d.port); return; }   // (step 2a: the live frame, straight from myzel-ring)
       if (d && d.job === 'feld') { HXW.feld = d.P || null; return; }   // (a loop that follows the field: its sound's knobs, at the next suspend)
+      if (d && d.job === 'drop') { HXW.jobs = HXW.jobs.filter((j) => j.keep !== d.keep || (HXW.port.postMessage({ id: j.id, job: j.job, stopped: 1 }), false)); return; }   // (Leistung: a pass whose time has passed before its render began – nothing of it was heard)
       if (d && d.job === 'stop') { if (HXW.cur && HXW.cur.key === d.keep) HXW.cur.stop = true; HXW.jobs = HXW.jobs.filter((j) => j.keep !== d.keep || (HXW.port.postMessage({ id: j.id, job: j.job, stopped: 1 }), false)); return; }   // (step 2a: a stream no longer wanted)
       HXW.jobs.push(d); hxwNext();
     };
@@ -30513,9 +30514,9 @@ async function hxWRender(L, S, sig, key) {
   if (!job) return null;
   if (!S.wseed) S.wseed = ((Math.random() * 2147483646) | 0) + 1;   // (never a render without its own throw)
   const seed = S.anc ? S.anc.seed : S.wseed;
-  HX.wRen++; HX.wLast = performance.now(); hxCount();
-  const m = await hxwCall('wuchs', hxWJob(L, S, job, seed));
-  HX.wRen--; HX.wLast = performance.now(); hxCount();
+  HX.wRen++; HX.wLast = performance.now(); hxCount(); HX.wSt.n++;
+  const tw = performance.now(), m = await hxwCall('wuchs', hxWJob(L, S, job, seed));
+  HX.wRen--; HX.wLast = performance.now(); hxCount(); hxWStat(m, performance.now() - tw, job.dur);
   if (!m || m.err || !m.L) { if (m && m.err) console.warn('Hexenring: Wuchs', m.err); return null; }
   const n = hxWTrim(m.L, m.R, job.lenF), [aud] = hxChunks(n);
   hxWTailAdd(S, (n - job.lenF) / SR, n >= m.L.length);
@@ -30594,11 +30595,13 @@ function hxWSlot(L, S, k, o = {}) {
   hxPost({ wst: { schicht: S.id, k, len: job.lenF, cap: Math.ceil(job.dur * SR) + HX_CH, at: o.at, must: !!o.must, from, port: ch.port1 } }, [ch.port1]);
   const seed = o.treu ? (S.anc ? S.anc.seed : S.wseed) : hxWSeedK(S, k);
   const d = Object.assign(hxWJob(L, S, job, seed), { port: ch.port2, F0: a, lead: HX_WLEAD, from: from / SR, keep: S.key + ':' + k, feld: (L.klang || 'eigen') === 'feld' });
-  R.n++; HX.wJobs++; HX.wLast = performance.now(); hxCount();
+  R.n++; HX.wJobs++; HX.wLast = performance.now(); hxCount(); HX.wSt.n++; HX.wSt.q = Math.max(HX.wSt.q, HX.wJobs);
   const re = S.wRe || (S.wRe = {}); re[k] = R; for (const x in re) if (+x < k - 12) delete re[x];   // (✓ asks the realm that rendered a pass; it keeps its last ten)
   const t0 = performance.now();
+  (S.wPend || (S.wPend = new Set())).add(k);
   hxwCall('wuchs', d, [ch.port2], R).then((m) => {
-    R.n = Math.max(0, R.n - 1); HX.wJobs = Math.max(0, HX.wJobs - 1); HX.wLast = performance.now(); hxCount();
+    S.wPend.delete(k);
+    R.n = Math.max(0, R.n - 1); HX.wJobs = Math.max(0, HX.wJobs - 1); HX.wLast = performance.now(); hxCount(); hxWStat(m, performance.now() - t0, job.dur);
     if (!m || m.stopped) return;
     if (m.rms) { S.wMs = m.rms; S.wDur = m.dur; }
     if (m.tail != null) hxWTailAdd(S, m.tail, m.cut);
@@ -30607,6 +30610,20 @@ function hxWSlot(L, S, k, o = {}) {
   });
   S.wSeeds = Object.assign(S.wSeeds || {}, { [k]: seed });
   return true;
+}
+// (Leistung, 23.10.2026) the Werk-Rahmen's work, for „Leistung messen“: renders begun and done (stopped ones apart), the
+// render's own time (its offline context), the whole wait from the request (setup, the queue of its realm, the pacing),
+// the seconds of audio made, the most jobs waiting at once
+HX.wSt = { n: 0, done: 0, stop: 0, ms: 0, wall: 0, audio: 0, q: 0 };
+function hxWStat(m, wall, dur) { const W = HX.wSt; if (!m || m.err) return; if (m.stopped) { W.stop++; return; } W.done++; W.ms += +m.rms || +m.ms || 0; W.wall += wall; W.audio += +dur || 0; }
+// (Leistung, 23.10.2026) a living pass whose time has passed while its render still waits in its realm's queue – the
+// device falls behind – is never heard (its slot went at its pass's end): it is dropped before it begins. One that
+// began rendering goes on (what it streams may already sound, its Ausklang rings into the next pass)
+function hxWDropPast(S, kNow) {
+  if (!S.wPend || !S.wPend.size) return;
+  const sent = S.wDropS || (S.wDropS = new Set());
+  for (const k of S.wPend) if (k < kNow && !sent.has(k)) { sent.add(k); const R = S.wRe && S.wRe[k]; try { if (R && R.port) R.port.postMessage({ job: 'drop', keep: S.key + ':' + k }); } catch (e) {} }
+  for (const k of sent) if (!S.wPend.has(k)) sent.delete(k);
 }
 // a living Schicht's stream stops (its fixed version comes back, or it is gone): the processor drops the passes not yet
 // heard, and the realms rendering them stop streaming (all: the pass playing too – an undo, a clear)
@@ -30627,20 +30644,24 @@ function hxWTick(now, horizon) {
   if (HX.wKlang && performance.now() >= HX.wKlang) { HX.wKlang = 0; for (const L of hxLoopsLive()) if ((L.klang || 'eigen') === 'feld' && hxWAktiv(L)) hxWUpdate(L); }
   const fNow = hxF(now), pnow = performance.now(), G = HX.wGuard;
   if (G.max < Infinity && pnow - G.t > 60000) { G.t = pnow; G.max = G.max + 1 >= HX_WPOOL ? Infinity : G.max + 1; }   // (a minute without an underrun: one more at once again)
+  if (G.hold && !(G.pause > pnow)) { G.hold = false; G.end = pnow; hxGuardLog('zurueck'); hxCardDirty(); }   // (phone: the pause's span clean – the loops live again from their next pass)
   for (const L of hxLoopsLive()) {
     if (L.bew || L.state === 'weg') continue;
     if (L.treuBis != null && tgBeat(now) >= L.treuBis) { L.treuBis = null; hxRailDirty(); hxCardDirty(); }
     if (L.wRefused && pnow > (L.wRetry || 0)) { L.wRetry = pnow + 4000; if (hxWCanLive(L)) { L.wRefused = false; hxCardDirty(); } }
-    const lebt = hxWLebt(L) && L.state === 'spielt';
+    const lebt = hxWLebt(L) && L.state === 'spielt', hold = !lebt && hxWHold(L);   // (phone: the guard holds – the last complete pass plays on)
     const k = hxPassK(L, Math.round(fNow)), k1 = k + 1, a1 = hxPassF(L, k1);
     for (const id of L.sch) {
       const S = HX.sch.get(id);
       if (!hxWCan(S)) continue;
-      if (!lebt) { if (S.wLive) { S.wLive = false; hxWStop(S); hxWUpdate(L, { re: true }); } continue; }
-      if (!S.wLive) { if (!hxMemOk(Math.round(1.5 * (hxWTailEst(S) + 4) * SR))) continue; S.wLive = true; S.wk = k; hxwWarm(2 * [...HX.sch.values()].filter((x) => x.wLive).length); }   // (final pass: its passes in the processor counted against the Speichergrenze before they stream)
+      if (S.wPend && S.wPend.size) hxWDropPast(S, k);
+      if (!lebt && !hold) { if (S.wLive) { S.wLive = false; hxWStop(S); hxWUpdate(L, { re: true }); } continue; }
+      if (!S.wLive) {
+        if (hold) continue; if (!hxMemOk(Math.round(1.5 * (hxWTailEst(S) + 4) * SR))) continue; S.wLive = true; S.wk = k; hxwWarm(2 * [...HX.sch.values()].filter((x) => x.wLive).length); }   // (final pass: its passes in the processor counted against the Speichergrenze before they stream)
       if ((S.wk == null ? -1 : S.wk) >= k1 || a1 - fNow > hxWStartS() * SR) continue;
       if (L.nein && L.nein.k === k1 && S.anc) { S.wk = k1; hxWPlay(S, 'anc', a1); continue; }   // (✕: the anchor plays that pass)
       if (L.frucht != null && L.frucht === k1 && (S.anc || S.wu)) { S.wk = k1; hxWPlay(S, S.anc ? 'anc' : 'wu', a1); continue; }   // (step 4: Fruchten – at a Treffen its anchor once)
+      if (hold) continue;   // (nothing renders: the processor plays the last complete pass at the seam – no slot comes)
       if (HX.wGuard.max < Infinity && HX.wJobs >= HX.wGuard.max) continue;   // (the guard: fewer at once)
       S.wk = k1;
       const key = HX.folge ? (a1 >= Math.round(hxF(HX.folge.t)) ? HX.folge.key : hxWScale(HX.folge.old['t.root'], HX.folge.old['t.scale'])) : null;   // (an announced key: from its bar line on)
@@ -30856,7 +30877,7 @@ function hxWWord(L) {
   if (!hxWAktiv(L)) return '';
   if (HXW.st === 'kein') return 'live gespielt';   // (Live mode: no Werk-Rahmen)
   const S = L.sch.map((id) => HX.sch.get(id)).filter(hxWCan), busy = S.some((s) => s.wBusy), ready = S.every((s) => s.play === 'wu' || s.play === 'anc');
-  if (hxEigN(L) >= 1) { if (HX.wGuard.pause > performance.now() || L.wRefused) return 'lebt, sobald Rechenzeit frei ist'; if (L.treuBis != null) { const n = Math.max(1, Math.min(8, Math.floor((L.treuBis - tgBeat(hxNowT())) / 4 + 0.01))); return 'Treu noch ' + n + (n === 1 ? ' Takt' : ' Takte'); } return ['', 'lebt', 'variiert', 'wandert'][hxEigN(L)]; }
+  if (hxEigN(L) >= 1) { if (hxWHold(L)) return 'spielt den letzten Durchgang – das Handy ist ausgelastet'; if (HX.wGuard.pause > performance.now() || L.wRefused) return 'lebt, sobald Rechenzeit frei ist'; if (L.treuBis != null) { const n = Math.max(1, Math.min(8, Math.floor((L.treuBis - tgBeat(hxNowT())) / 4 + 0.01))); return 'Treu noch ' + n + (n === 1 ? ' Takt' : ' Takte'); } return ['', 'lebt', 'variiert', 'wandert'][hxEigN(L)]; }
   return busy ? 'wächst …' : ready ? 'Wuchs' : 'wächst …';
 }
 // can the device keep this loop living? its passes' predicted render time against what the pool can spend
@@ -30870,13 +30891,41 @@ function hxWCanLive(L) {
 // ---- the CPU guard (SPEC §10.5, owner rule): an underrun while Wuchs works first pauses the living passes (the loops
 // play their Treu or Abdruck), then lets fewer render at once – the live budget and A.lite are never touched for it.
 // → true when the Wuchs took the blame ----
+// On a phone (Leistung, 23.10.2026 – the owner's report A) the pause holds: a living loop plays its last complete pass on,
+// pass after pass, as a Treu loop would (its stream stays, no render starts – not even a Treu one), and the passes not
+// yet heard stop rendering at once; it lasts while the device keeps dropping audio (30 s after the last underrun, twice
+// as long when it comes back within two minutes, at most four) – then the loop lives again from its next pass.
+const HX_PHONE = MOBILE && !HX_TABLET;
 function hxWGuard() {
   const now = performance.now(), ran = HX.wJobs > 0 || HX.wRen > 0 || now - HX.wLast < 8000;
   if (!ran) return false;
   const G = HX.wGuard, lebt = hxLoopsLive().some((L) => hxEigN(L) >= 1 && hxWAktiv(L));
-  if (lebt && !(G.pause > now)) { G.pause = now + 30000; G.n++; hxSay('Schleifen leben gleich weiter – das Gerät ist gerade ausgelastet'); for (const L of hxLoopsLive()) hxCardDirty(); }
-  else G.max = Math.max(1, Math.min(G.max === Infinity ? HX_WPOOL : G.max, HX.wJobs || 1) - 1 || 1);
+  if (lebt && !(G.pause > now)) {
+    G.n++;
+    if (HX_PHONE) {
+      G.hold = true; G.span = now - (G.end || -1e9) < 120000 ? Math.min(240000, 2 * (G.span || 30000)) : 30000; G.pause = now + G.span;
+      for (const S of HX.sch.values()) if (S.wLive) hxWStop(S);   // (the passes not yet heard: dropped, their renders stopped – the one playing stays)
+      hxGuardLog('lebendig', Math.round(G.span / 1000));
+      hxSay('Lebendige Schleifen spielen ihren letzten Durchgang weiter – das Handy ist ausgelastet');
+    } else { G.pause = now + 30000; hxGuardLog('lebendig', 30); hxSay('Schleifen leben gleich weiter – das Gerät ist gerade ausgelastet'); }
+    hxCardDirty();
+  } else { G.max = Math.max(1, Math.min(G.max === Infinity ? HX_WPOOL : G.max, HX.wJobs || 1) - 1 || 1); hxGuardLog('weniger', G.max); }
   G.t = now;
+  return true;
+}
+// (phone) while the pause holds, every second with underruns keeps it: the loops live again only once the device has
+// been clean for the pause's span
+function hxWHoldKeep(now) { const G = HX.wGuard; if (G.hold && G.pause > now) G.pause = Math.max(G.pause, now + (G.span || 30000)); }
+// (phone) a living loop the guard holds: it plays its last complete pass on, no render starts
+const hxWHold = (L) => !!HX.wGuard.hold && HX.wGuard.pause > performance.now() && L.state === 'spielt' && hxEigN(L) >= 1 && !L.revW && !L.live && hxWAktiv(L) && !L.wRefused;
+// the guard's steps, kept for „Leistung messen“ (which, when, the underruns of that second)
+function hxGuardLog(step, v) { const a = HX.gLog || (HX.gLog = []); a.push({ t: performance.now(), step, v: v != null ? v : '' }); if (a.length > 200) a.shift(); }
+// (phone) the device drops audio while loops sound and their steps are taken: the live budget and A.lite stay – the
+// loops are what costs, and the owner's rule is that they give way, never the live playing. Said once
+function hxGuardGrenze() {
+  if (!HX_PHONE || !(hxBusy() || (HX.wLast > 0 && performance.now() - HX.wLast < 60000))) return false;
+  hxGuardLog('grenze');
+  if (!HX.grenzeSaid) { HX.grenzeSaid = true; hxCardDirty(); toast('Das Handy ist mit den Schleifen ausgelastet. Dein Live-Spiel behält alle Stimmen; hältst du eine Schleife an oder schaltest sie stumm, wird es wieder flüssig.', 8000); }
   return true;
 }
 
@@ -30890,7 +30939,7 @@ function hxTauGuard() {
   if (!MOBILE || HX_TABLET || HX.tauRest || !(P['mov.drift'] > 0)) return false;
   const list = hxLoopsLive().filter((L) => !L.bew && L.taumeln !== false);
   if (!list.some((L) => L.state === 'spielt')) return false;
-  HX.tauRest = true;
+  HX.tauRest = true; hxGuardLog('taumeln');
   for (const L of list) { hxPost({ tau: { loop: L.id, on: false } }); hxTauOrig(L); }
   hxCount(); hxCardDirty();
   hxSay('Schleifen bleiben in ihrer Stimmung – das Handy ist ausgelastet');
@@ -33689,12 +33738,14 @@ function watchUnderruns() {
     if (document.visibilityState !== 'visible' || !A.ctx || A.ctx.state !== 'running') { ck.p = 0; return; }   // (a pause stops the clock: counted afresh)
     const u = count(), now = performance.now();
     A.underruns = u;
-    if (u > last) hits.push(now);
+    if (u > last) { hits.push(now); hxWHoldKeep(now); }   // Hexenring: (Leistung) a phone's held Lebendig stays held while it lasts
     while (hits.length && now - hits[0] > 10000) hits.shift();
     if (u > last && hxWGuard()) { last = u; return; }   // Hexenring: (step 2a) the Wuchs gives way first – never the live budget, never A.lite for it
     if (u > last && hits.length >= 2 && hxTauGuard()) { last = u; return; }   // Hexenring: (phone report) then, on a phone and when it lasts, the loops' Taumeln
+    if (u > last && hxGuardGrenze()) { last = u; return; }   // Hexenring: (Leistung, report A) a phone with loops sounding: the live budget stays
     if (!ps) { last = u; return; }
     if (u > last && VBUDGET > 6) {
+      hxGuardLog('lite', Math.round(VBUDGET * 0.8));
       A.budgetScale = (A.budgetScale || 1) * 0.8;
       A.lite = true; applyQuality(); updDevUI();
       if (!A.liteHinted) {

@@ -78,6 +78,7 @@ function hxwBoot() {
       const d = ev.data;
       if (d && d.job === 'wport') { hxwPort(d.port); return; }   // (step 2a: the live frame, straight from myzel-ring)
       if (d && d.job === 'feld') { HXW.feld = d.P || null; return; }   // (a loop that follows the field: its sound's knobs, at the next suspend)
+      if (d && d.job === 'drop') { HXW.jobs = HXW.jobs.filter((j) => j.keep !== d.keep || (HXW.port.postMessage({ id: j.id, job: j.job, stopped: 1 }), false)); return; }   // (Leistung: a pass whose time has passed before its render began – nothing of it was heard)
       if (d && d.job === 'stop') { if (HXW.cur && HXW.cur.key === d.keep) HXW.cur.stop = true; HXW.jobs = HXW.jobs.filter((j) => j.keep !== d.keep || (HXW.port.postMessage({ id: j.id, job: j.job, stopped: 1 }), false)); return; }   // (step 2a: a stream no longer wanted)
       HXW.jobs.push(d); hxwNext();
     };
