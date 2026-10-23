@@ -24682,6 +24682,11 @@ function lmStart() {
   LM.ck = { p0: 0, c0: 0, p: 0, c: 0, p1: 0, c1: 0, n: 0, lagMs: 0 };
   LM.smp = { n: 0, load: 0, loadMax: 0, vMax: 0, gr: 0, idle: 0, panel: new Map(), hid: 0, loops: 0, spielt: 0, sch: 0, leb: 0, phLoad: 0 };
   LM.ps0 = lmStats(); LM.u0 = A.underruns || 0; LM.res = null;
+  // (the audio side in detail – 23.10.2026, after report A: each loop's share of the budget, the Werk-Rahmen's work, the
+  // guard's steps, the latency the context reports against the one asked for)
+  LM.lp = new Map(); LM.lsum = { n: 0, loops: 0, max: 0, hx: 0, cap: 0 }; LM.lat = { n: 0, out: 0, outMin: Infinity, outMax: 0, base: 0 };
+  if (typeof HX !== 'undefined' && HX.wSt) { HX.wSt.q = HX.wJobs || 0; LM.w0 = Object.assign({}, HX.wSt); }
+  LM.gT = performance.now();
   LM.rc = null;
   const rc = A.ctx.renderCapacity;
   if (rc && rc.start) try { LM.rc = { n: 0, avg: 0, peak: 0, und: 0 }; rc.onupdate = (e) => { const R = LM.rc; if (!R) return; R.n++; R.avg += e.averageLoad || 0; R.peak = Math.max(R.peak, e.peakLoad || 0); R.und = Math.max(R.und, e.underrunRatio || 0); }; rc.start({ updateInterval: 1 }); } catch (e) { LM.rc = null; }
@@ -24705,8 +24710,48 @@ function lmSample() {
   const live = hxLoopsLive();
   S.loops = Math.max(S.loops, live.length); S.spielt = Math.max(S.spielt, live.filter((L) => L.state === 'spielt').length); S.sch = Math.max(S.sch, HX.sch.size);
   S.leb = Math.max(S.leb, live.filter((L) => hxWAktiv(L)).length);
+  lmLoops(live);
+  const c = A.ctx, La = LM.lat, o = (c.outputLatency || 0) * 1000; La.n++; La.out += o; La.base += (c.baseLatency || 0) * 1000; if (o < La.outMin) La.outMin = o; if (o > La.outMax) La.outMax = o;
   lmClock();
   if (S.n % 4 === 0) lmUI();
+}
+// each loop's share of the budget (hxCostOf – what voiceLoad counts for it) and what it did: played, lived, held by the
+// guard, rested its Taumeln, played through the chain's copy on out 1
+function lmLoops(live) {
+  if (!HX.node) return;
+  const Z = LM.lsum; let sum = 0;
+  for (const L of live) {
+    const c = hxCostOf(L); sum += c;
+    let e = LM.lp.get(L.key); if (!e) LM.lp.set(L.key, (e = { slot: L.slot, n: 0, c: 0, max: 0, sp: 0, leb: 0, hold: 0, tau: 0, o1: 0 }));
+    e.n++; e.c += c; if (c > e.max) e.max = c;
+    if (L.state === 'spielt') e.sp++;
+    if (hxWLebt(L) && L.state === 'spielt') e.leb++;
+    if (hxWHold(L)) e.hold++;
+    if (!L.bew && !hxTauOn(L)) e.tau++;
+    if (L.sch.some((id) => { const S = HX.sch.get(id); return S && S.out; })) e.o1++;
+  }
+  const hx = hxLoad(); Z.n++; Z.loops += sum; if (sum > Z.max) Z.max = sum; Z.hx += hx;
+}
+function lmLoopsRes() {
+  const Z = LM.lsum, n = Math.max(1, Z.n), r2 = (x) => Math.round(x * 100) / 100;
+  const each = [...LM.lp.values()].sort((a, b) => a.slot - b.slot).map((e) => {
+    const f = [e.sp * 2 > e.n ? 'spielt' : e.sp ? 'teils' : 'halt', e.leb * 2 > e.n ? 'leb' : '', e.hold ? 'hold' : '', e.tau * 2 > e.n ? 'tau-ruht' : '', e.o1 * 2 > e.n ? 'out1' : ''].filter(Boolean).join(',');
+    return 'S' + (e.slot + 1) + '=' + r2(e.c / Math.max(1, e.n)) + '(' + f + ')';
+  });
+  return { sum: { loops: r2(Z.loops / n), max: r2(Z.max), hx: r2(Z.hx / n), rest: r2((Z.hx - Z.loops) / n), budget: VBUDGET, f1: HX.node && HX.o1 ? HX_COST.fx1 : 0 }, each };
+}
+// the Werk-Rahmen in the window: renders begun (living passes and Treu), done, stopped; their own render time (the offline
+// context's) per second of audio, the wait from the request, the most waiting at once
+function lmWerk(secs) {
+  const W = HX.wSt, W0 = LM.w0 || W, d = (k) => (W[k] || 0) - (W0[k] || 0), done = d('done');
+  return { st: HXW.st || '-', pool: (HXW.pool || []).filter((R) => R.st === 'ok').length, n: d('n'), perS: r1(d('n') / Math.max(1, secs)), done, stop: d('stop'), ms: done ? Math.round(d('ms') / done) : 0, wait: done ? Math.round(d('wall') / done) : 0,
+    xRT: d('audio') > 0 ? +(d('ms') / 1000 / d('audio')).toFixed(3) : 0, q: W.q || 0, jobs: HX.wJobs || 0 };
+}
+// the guard's steps in the window (which, at which second), and where it stands at the end
+function lmGuard() {
+  const steps = (HX.gLog || []).filter((e) => e.t >= LM.gT).map((e) => e.step + (e.v !== '' ? ':' + e.v : '') + '@' + Math.round((e.t - LM.t0) / 1000));
+  const G = HX.wGuard || {}, now = performance.now();
+  return { steps, now: { pause: G.pause > now ? Math.round((G.pause - now) / 1000) : 0, hold: !!(G.hold && G.pause > now), max: G.max === Infinity ? '-' : G.max, tau: !!HX.tauRest, lite: !!A.lite, scale: r1(A.budgetScale || 1) } };
 }
 function lmStop() {
   if (!LM.on) return;
@@ -24751,6 +24796,9 @@ function lmResult(ms) {
   R.audio = { sr: c.sampleRate, base: r1((c.baseLatency || 0) * 1000), out: r1((c.outputLatency || 0) * 1000), lat: P['dev.lat'], latCtx: A.latMode, q: P['dev.q'], budget: VBUDGET, scale: A.budgetScale || 1, lite: !!A.lite };
   R.voices = { load: S.n ? Math.round(100 * S.load / S.n) : 0, loadMax: Math.round(100 * S.loadMax), max: S.vMax, grains: S.gr, idle: S.n ? Math.round(100 * S.idle / S.n) : 0 };
   R.hx = { loops: S.loops, spielt: S.spielt, sch: S.sch, leb: S.leb, tau: !!HX.tauRest, f1: HXF1.off ? 'ruht' : 'an', werk: HXW.st || '-', wg: HX.wGuard ? HX.wGuard.n || 0 : 0, state: HX.state };
+  R.lp = lmLoopsRes(); R.werk = lmWerk(secs); R.guard = lmGuard();
+  const La = LM.lat, hint = P['dev.lat'] === 'min' ? '0' : P['dev.lat'] === 'safe' ? 'balanced' : 'interactive';
+  R.lat = { set: P['dev.lat'], hint, base: La.n ? r1(La.base / La.n) : 0, out: La.n ? r1(La.out / La.n) : 0, outMin: La.n ? r1(La.outMin) : 0, outMax: r1(La.outMax), buf: Math.round((c.baseLatency || 0) * c.sampleRate), avg: R.ps && R.ps.averageLatency != null ? R.ps.averageLatency : null };
   const nav = navigator, ua = nav.userAgent || '';
   const os = (ua.match(/Android [\d.]+/) || ua.match(/(iPhone|iPad|Mac) OS [\d_]+/) || [ANDROID ? 'Android' : IOS ? 'iOS' : 'Desktop'])[0].replace(/_/g, '.');
   const br = (ua.match(/(Chrome|CriOS|Firefox|FxiOS|Version)\/(\d+)/) || [])[0] || '?';
@@ -24777,6 +24825,10 @@ function lmText(R) {
   L.push('tick ' + kv(R.tick) + ' · lt ' + (R.lt ? kv(R.lt) : 'none') + ' · loaf ' + (R.loaf ? kv(Object.assign({}, R.loaf, { top: R.loaf.top.join(',') || '-' })) : 'none'));
   L.push('touch ' + (R.touch ? kv(R.touch) : 'none'));
   L.push('voices ' + kv(R.voices) + ' · hx ' + kv(R.hx));
+  L.push('loops ' + kv(R.lp.sum) + (R.lp.each.length ? ' · ' + R.lp.each.join(' ') : ''));
+  L.push('werk ' + kv(R.werk));
+  L.push('guard ' + (R.guard.steps.length ? R.guard.steps.join(' ') : 'none') + ' · ' + kv(R.guard.now));
+  L.push('latency ' + kv(R.lat));
   return L.join('\n');
 }
 // the short German summary: what was measured, then where the limit lies
@@ -24788,6 +24840,11 @@ function lmSummary(R) {
   S.push(R.under ? 'Klang: ' + R.under + ' Aussetzer in ' + Math.round(R.secs) + ' s' + (R.rc ? ' (Audio-Kern im Mittel ' + R.rc.avg + ' %, Spitze ' + R.rc.peak + ' %)' : '') + '.' : 'Klang: keine Aussetzer gemessen' + (R.rc ? ' (Audio-Kern im Mittel ' + R.rc.avg + ' %, Spitze ' + R.rc.peak + ' %)' : '') + '.');
   S.push(R.under && slow ? 'Ergebnis: Klang und Oberfläche sind beide ausgelastet.' : R.under ? 'Ergebnis: Der Klang setzt aus, obwohl die Oberfläche flüssig läuft – der Audio-Kern ist am Limit.'
     : slow ? 'Ergebnis: Die Oberfläche ist ausgelastet (Zeichnen und Rechnen auf dem Hauptthread); der Klang läuft sauber.' : 'Ergebnis: kein Engpass gemessen.');
+  if (R.hx.loops) S.push('Schleifen: ' + R.hx.loops + ', davon ' + R.hx.spielt + ' spielend – sie belegen im Mittel ' + d(R.lp.sum.loops) + ' von ' + R.lp.sum.budget + ' Einheiten (mit Humus und Effektkette ' + d(R.lp.sum.hx) + '); angehaltene kosten nichts.');
+  if (R.werk.n) S.push('Lebendige Schleifen: ' + R.werk.n + ' Durchgänge neu gerechnet, jeder etwa ' + R.werk.ms + ' ms (' + d(R.werk.xRT) + ' × Echtzeit).');
+  const GW = { lebendig: 'Lebendig hält an', weniger: 'weniger auf einmal gerechnet', taumeln: 'Taumeln ruht', grenze: 'Live-Spiel geschützt', lite: 'weniger Live-Stimmen', zurueck: 'Lebendig wieder an' };
+  if (R.guard.steps.length) S.push('Myzel hat entlastet: ' + [...new Set(R.guard.steps.map((x) => GW[x.split(/[:@]/)[0]] || x))].join(', ') + '.');
+  S.push('Latenz: eingestellt „' + ({ min: 'Minimal', safe: 'Sicher', std: 'Standard' }[R.lat.set] || R.lat.set) + '“ – das Gerät meldet ' + d(R.lat.base) + ' ms Puffer und ' + d(R.lat.out) + ' ms Ausgabe.');
   S.push('Handy-Modus war ' + (PH.on ? 'an' : 'aus') + (R.ph.load ? ' (davon ' + R.ph.load + ' % der Zeit mit 30 Bildern pro Sekunde)' : '') + '. „Kopieren“ und den Bericht an Claude schicken.');
   return S;
 }
@@ -24851,12 +24908,13 @@ function lmBuild() {
   U.auto = h('button', { type: 'button', class: 'btn ghost', id: 'phAuto', hidden: true, onclick: () => phSet('auto') }, 'Wieder automatisch');
   U.go = h('button', { type: 'button', class: 'btn primary', id: 'lmGo', onclick: lmStart }, 'Leistung messen');
   U.st = h('p', { class: 'note live', 'aria-live': 'polite' });
+  U.hx = h('p', { class: 'note', id: 'lmHx' });
   U.sum = h('ul', { class: 'help lm-sum', hidden: true });
   U.txt = h('textarea', { class: 'lm-txt', readonly: true, rows: 8, spellcheck: 'false', 'aria-label': 'Bericht' });
   U.copy = h('button', { type: 'button', class: 'btn', id: 'lmCopy', onclick: lmCopy }, 'Kopieren');
   U.rep = h('details', { class: 'plat lm-rep', hidden: true }, h('summary', null, 'Bericht (Text)'), U.txt);
   U.sec = section('Leistung', 'Wie flüssig Myzel auf diesem Gerät läuft',
-    h('div', { class: 'ctl wide' }, U.sw), U.phNote, h('div', { class: 'row' }, U.auto),
+    h('div', { class: 'ctl wide' }, U.sw), U.phNote, h('div', { class: 'row' }, U.auto), U.hx,
     h('p', { class: 'note' }, 'Leistung messen: ' + LM_SECS + ' Sekunden lang, während du ganz normal spielst (das Panel darf dabei zu sein). Danach steht hier, wo es eng wird, und ein kurzer Bericht zum Kopieren – gesendet wird nichts.'),
     h('div', { class: 'row' }, U.go, U.copy), U.st, U.sum, U.rep);
   lmUI();
@@ -24876,6 +24934,18 @@ function lmUI() {
   U.copy.hidden = !LM.res;
   U.sum.hidden = U.rep.hidden = !LM.res;
   if (LM.res && U.txt.value !== LM.txt) { U.txt.value = LM.txt; U.sum.replaceChildren(...LM.sum.map((x) => h('li', null, x))); }
+}
+// (Leistung, 23.10.2026) what the loops take now, live: their share of the budget and what the guard has eased
+function lmLive() {
+  const U = LM.ui; if (!U || !U.hx) return;
+  let t = '';
+  if (A.ctx && HX.node && hxLoopsLive().length) {
+    const live = hxLoopsLive(), sp = live.filter((L) => L.state === 'spielt').length, c = live.reduce((s, L) => s + hxCostOf(L), 0), G = HX.wGuard, now = performance.now();
+    t = 'Schleifen: ' + live.length + ', davon ' + sp + ' spielend – sie belegen ' + dec(c.toFixed(1)) + ' von ' + VBUDGET + ' Einheiten (dazu Humus und Effektkette ' + dec((hxLoad() - c).toFixed(1)) + '; angehaltene kosten nichts).' +
+      (G.hold && G.pause > now ? ' Lebendige spielen ihren letzten Durchgang, noch ' + Math.ceil((G.pause - now) / 1000) + ' s.' : G.pause > now ? ' Lebendig wartet, bis Rechenzeit frei ist.' : '') + (HX.tauRest ? ' Taumeln ruht.' : '');
+  }
+  if (U.hx.textContent !== t) U.hx.textContent = t;
+  U.hx.hidden = !t;
 }
 function lmCopy() {
   if (!LM.txt) return;
@@ -25623,6 +25693,7 @@ function updDevLive() {
   const load = voiceLoad();
   devEls.qLive.textContent = 'Jetzt: ' + A.voices.size + (A.voices.size === 1 ? ' Stimme klingt' : ' Stimmen klingen') + ' · ' + Math.round(100 * load / Math.max(1, VBUDGET)) + ' % der Grenze' +
     (A.grains ? ' · ' + A.grains + ' Körner' : '') + (A.budgetScale && A.budgetScale < 1 ? ' · nach Aussetzern auf ' + Math.round(A.budgetScale * 100) + ' % gesenkt' : '');
+  lmLive();   // (Leistung: the loops' share)
 }
 
 /* ---------- sheet + tabs ---------- */
@@ -26321,34 +26392,38 @@ function hxClear(loop, at, X) {
 }
 // Taumeln compensation, MIDI clock nachführen (SPEC §9): the loop read faster or slower by `cents` (±20), resampled
 function hxRate(loop, cents) { const L = HX.loops.get(loop); if (!L) return false; L.rate = +cents || 0; hxCount(); return hxPost({ rate: { loop, cents: L.rate } }); }
-// what plays, for the budget
-function hxCount() {
-  let p = 0, r = 0;
-  let o1 = 0;
-  const dr = A.ctx && P['mov.drift'] > 0;   // (Taumeln resamples while there is a drift to follow)
-  for (const L of HX.loops.values()) if (L.state === 'spielt') {
-    let g = 0;   // (step 1d: the reads of a loop at one rate are resampled once per output – a de-drifted Schicht, or the loop's own rate; one still read against its own drift alone)
-    for (const id of L.sch) {
-      p++; const S = HX.sch.get(id); if (!S) continue;
-      if (S.out) o1 = 1;
-      const tau = dr && S.dr && hxTauOn(L);
-      if (!(L.rate || S.rc || tau)) continue;
-      if (!tau || S.ddOn) g |= 1 << (S.out ? 1 : 0); else r++;
-    }
-    r += (g & 1) + (g >> 1);
+// what plays, for the budget – one loop's parts (Leistung, 23.10.2026: the same count per loop, for the card and
+// „Leistung messen“; a loop that does not play costs nothing – the processor reads nothing of it)
+function hxCountL(L, bpm, dr) {
+  const o = { p: 0, r: 0, o1: 0, ws: 0, bd: 0, sl: 0, ab: 0 };
+  if (L.state !== 'spielt') return o;
+  let g = 0;   // (step 1d: the reads of a loop at one rate are resampled once per output – a de-drifted Schicht, or the loop's own rate; one still read against its own drift alone)
+  for (const id of L.sch) {
+    o.p++; const S = HX.sch.get(id); if (!S) continue;
+    if (S.out) o.o1 = 1;
+    const tau = dr && S.dr && hxTauOn(L);
+    if (!(L.rate || S.rc || tau)) continue;
+    if (!tau || S.ddOn) g |= 1 << (S.out ? 1 : 0); else o.r++;
   }
-  let ws = 0; for (const L of HX.loops.values()) if (L.state === 'spielt' && hxEigN(L) >= 1) for (const id of L.sch) { const S = HX.sch.get(id); if (S && S.wLive) ws++; }   // (step 2a: the living Schichten's streams)
+  o.r += (g & 1) + (g >> 1);
+  if (hxEigN(L) >= 1) for (const id of L.sch) { const S = HX.sch.get(id); if (S && S.wLive) o.ws++; }   // (step 2a: the living Schichten's streams)
   // (step 2b) the tape: a loop at another speed reads through the wider kernel (once per output, as its rate's resampling);
   // a Schicht in slices (Schnitt at another tempo, Auslassen, Würfeln) reads each slice on its own; a worn one is filtered
-  let bd = 0, sl = 0, ab = 0;
-  const bpm = A.ctx ? tgBpm(hxNowT()) : 0;
-  for (const L of HX.loops.values()) {
-    if (L.state !== 'spielt' || L.bew) continue;
+  if (!L.bew) {
     const sp = L.sp || 1, n = L.sch.length;
-    if (sp !== 1) bd += sp > 1.6 ? HX_COST.k24 : sp > 1.03 ? HX_COST.k16 : HX_COST.rs;
-    else if ((L.slc && (L.slc.pd > 0 || L.slc.pw > 0)) || (L.ladung && L.ladQ > 0 && !hxWAktiv(L)) || (typeof hxSchnitt === 'function' && hxSchnitt(L) && hxTakt(L) && L.bpm && Math.abs(bpm / L.bpm - 1) > 1e-4)) sl += n;   // (step 4: Ladung's slices)
-    if (L.ab && L.ab.rate > 0) ab += n;
+    if (sp !== 1) o.bd = sp > 1.6 ? HX_COST.k24 : sp > 1.03 ? HX_COST.k16 : HX_COST.rs;
+    else if ((L.slc && (L.slc.pd > 0 || L.slc.pw > 0)) || (L.ladung && L.ladQ > 0 && !hxWAktiv(L)) || (typeof hxSchnitt === 'function' && hxSchnitt(L) && hxTakt(L) && L.bpm && Math.abs(bpm / L.bpm - 1) > 1e-4)) o.sl = n;   // (step 4: Ladung's slices)
+    if (L.ab && L.ab.rate > 0) o.ab = n;
   }
+  return o;
+}
+const hxCostL = (o) => o.p * HX_COST.schicht + o.r * HX_COST.rs + o.ws * HX_COST.stream + o.bd + o.sl * HX_COST.slice + o.ab * HX_COST.abr;
+// one loop's share of the budget (units), as hxCount counts it
+function hxCostOf(L) { return hxCostL(hxCountL(L, A.ctx ? tgBpm(hxNowT()) : 0, A.ctx && P['mov.drift'] > 0)); }
+function hxCount() {
+  let p = 0, r = 0, o1 = 0, ws = 0, bd = 0, sl = 0, ab = 0;
+  const dr = A.ctx && P['mov.drift'] > 0, bpm = A.ctx ? tgBpm(hxNowT()) : 0;   // (Taumeln resamples while there is a drift to follow)
+  for (const L of HX.loops.values()) { const o = hxCountL(L, bpm, dr); p += o.p; r += o.r; o1 |= o.o1; ws += o.ws; bd += o.bd; sl += o.sl; ab += o.ab; }
   let acN = 0; for (const L of HX.loops.values()) if (L.acc && L.acc.on && L.state !== 'weg') acN++;   // (step 4: a Sammelschleife records every frame, playing or not)
   HX.play = p; HX.rs = r; HX.o1 = o1; HX.dd = HX.ddRun.size ? 1 : 0; HX.ws = ws; HX.bd = bd; HX.sl = sl; HX.ab = ab; HX.acN = acN;   // (one de-drift job works at a time, the others wait)
 }
@@ -27575,6 +27650,7 @@ function hxTick(horizon) {
   const R = HX.rec;
   if (R && R.phase === 'wait' && now >= R.t0) { R.phase = 'rec'; hxSay('Aufnahme läuft'); hxRailDirty(); }
   hxF1Tick(now);   // (the chain copy on out 1 rests while nothing plays through it)
+  if (HXK.cost && pnow - (HXK.costT || 0) > 1000 && HXK.cost.isConnected) { HXK.costT = pnow; hxCardSub(); }   // (Leistung: the loops' share, as it changes)
   if (R && R.loopKey && R.w1 && now >= R.w1) { HX.rec = null; if (HX.chips && HX.chips.kind === 'mult') HX.chips = null; hxRailDirty(); }   // (an auto-length recording closed at its end)
   hxPunchTick();
   hxAusWatch();
@@ -28089,7 +28165,7 @@ function hxCardSec() {
   HXK.acts = h('div', { class: 'hx-acts' });
   HXK.list = h('div', { class: 'hx-cards' });
   HXK.grave = h('div', { class: 'hx-grave' });
-  HXK.mem = h('p', { class: 'note' });
+  HXK.mem = h('p', { class: 'note' }); HXK.cost = h('p', { class: 'note', id: 'hxCost' });
   HXK.form = h('div', { class: 'hx-form-sec' });   // (step 1d: Lichtungen, Kern, Lücke, Schluss)
   HXK.gd = h('div', { class: 'hx-form-sec hx-gd' });   // (Etappe 3: the Gärtner)
   const set = foldSec('hxset', 'Einstellungen', [
@@ -28106,7 +28182,7 @@ function hxCardSec() {
     HXK.mem,
     h('p', { class: 'note' }, 'Der Korb erntet, was du gespielt hast („Gespielt“: deine Klangquellen nach Stumm und Solo, ohne Echo und Hall); „Alles“ wählst du pro Schleife – es hört auch die Schleifen mit, wie ein Zusammenmischen. Die Humus-Länge gilt ab dem nächsten Klangstart.'),
   ]);
-  HXK.sec = h('div', { class: 'sec hx-sec', id: 'hxSec' }, h('div', { class: 'sec-h' }, h('h3', null, 'Hexenring'), HXK.sub), HXK.acts, HXK.list, HXK.gd, HXK.form, HXK.grave, set);
+  HXK.sec = h('div', { class: 'sec hx-sec', id: 'hxSec' }, h('div', { class: 'sec-h' }, h('h3', null, 'Hexenring'), HXK.sub), HXK.acts, HXK.cost, HXK.list, HXK.gd, HXK.form, HXK.grave, set);
   HXK.dirty = true; hxCardRender();
   return HXK.sec;
 }
@@ -28150,6 +28226,10 @@ function hxCardSub() {
   const n = hxLoopsLive().length, mb = Math.round(hxMemUsed() / 1048576);
   const t = (n ? n + (n === 1 ? ' Schleife' : ' Schleifen') + ' · ' : '') + mb + ' MB · Humus ' + P['hx.humus'] + ' s';
   if (HXK.sub.textContent !== t) HXK.sub.textContent = t;
+  // (Leistung, 23.10.2026) the share of the device's budget the loops take now – the same count that leaves the rest to the
+  // live playing (units: one simple voice each); a halted loop costs nothing
+  const c = hxLoad(), ct = HX.node ? 'Rechenzeit: Schleifen und Humus ' + dec(c.toFixed(1)) + ' von ' + VBUDGET + ' Einheiten' + (c >= VBUDGET ? ' – für dein Live-Spiel bleibt nur, was das Gerät darüber hinaus schafft' : ' – für dein Live-Spiel bleiben ' + dec((VBUDGET - c).toFixed(1))) + '.' : '';
+  if (HXK.cost && HXK.cost.textContent !== ct) HXK.cost.textContent = ct;
   const mt = 'Belegt: ' + mb + ' von ' + P['hx.mem'] + ' MB (Schleifen, ihre Kopien, Gelöschte, Verlauf, Aufnahmen, Humus).' + (HX.saveFail ? ' Der Gerätespeicher ist voll – neue Schichten werden nicht mehr gesichert.' : IDB.ok ? ' Schleifen werden auf diesem Gerät gesichert und kommen nach einem Neuladen zurück.' : ' Diese Ansicht kann Schleifen nicht sichern.') + (HX.est ? ' Gerätespeicher: ' + HX.est : '')
     + (HXW.st === 'kein' ? ' Einbrennen und der Ausklang aus den Noten gehen in dieser Ansicht nicht (kein Werk-Rahmen): Schleifen folgen der Effektkette.' : '');
   if (HXK.mem.textContent !== mt) HXK.mem.textContent = mt;

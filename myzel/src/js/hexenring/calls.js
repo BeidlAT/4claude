@@ -90,34 +90,38 @@ function hxClear(loop, at, X) {
 }
 // Taumeln compensation, MIDI clock nachführen (SPEC §9): the loop read faster or slower by `cents` (±20), resampled
 function hxRate(loop, cents) { const L = HX.loops.get(loop); if (!L) return false; L.rate = +cents || 0; hxCount(); return hxPost({ rate: { loop, cents: L.rate } }); }
-// what plays, for the budget
-function hxCount() {
-  let p = 0, r = 0;
-  let o1 = 0;
-  const dr = A.ctx && P['mov.drift'] > 0;   // (Taumeln resamples while there is a drift to follow)
-  for (const L of HX.loops.values()) if (L.state === 'spielt') {
-    let g = 0;   // (step 1d: the reads of a loop at one rate are resampled once per output – a de-drifted Schicht, or the loop's own rate; one still read against its own drift alone)
-    for (const id of L.sch) {
-      p++; const S = HX.sch.get(id); if (!S) continue;
-      if (S.out) o1 = 1;
-      const tau = dr && S.dr && hxTauOn(L);
-      if (!(L.rate || S.rc || tau)) continue;
-      if (!tau || S.ddOn) g |= 1 << (S.out ? 1 : 0); else r++;
-    }
-    r += (g & 1) + (g >> 1);
+// what plays, for the budget – one loop's parts (Leistung, 23.10.2026: the same count per loop, for the card and
+// „Leistung messen“; a loop that does not play costs nothing – the processor reads nothing of it)
+function hxCountL(L, bpm, dr) {
+  const o = { p: 0, r: 0, o1: 0, ws: 0, bd: 0, sl: 0, ab: 0 };
+  if (L.state !== 'spielt') return o;
+  let g = 0;   // (step 1d: the reads of a loop at one rate are resampled once per output – a de-drifted Schicht, or the loop's own rate; one still read against its own drift alone)
+  for (const id of L.sch) {
+    o.p++; const S = HX.sch.get(id); if (!S) continue;
+    if (S.out) o.o1 = 1;
+    const tau = dr && S.dr && hxTauOn(L);
+    if (!(L.rate || S.rc || tau)) continue;
+    if (!tau || S.ddOn) g |= 1 << (S.out ? 1 : 0); else o.r++;
   }
-  let ws = 0; for (const L of HX.loops.values()) if (L.state === 'spielt' && hxEigN(L) >= 1) for (const id of L.sch) { const S = HX.sch.get(id); if (S && S.wLive) ws++; }   // (step 2a: the living Schichten's streams)
+  o.r += (g & 1) + (g >> 1);
+  if (hxEigN(L) >= 1) for (const id of L.sch) { const S = HX.sch.get(id); if (S && S.wLive) o.ws++; }   // (step 2a: the living Schichten's streams)
   // (step 2b) the tape: a loop at another speed reads through the wider kernel (once per output, as its rate's resampling);
   // a Schicht in slices (Schnitt at another tempo, Auslassen, Würfeln) reads each slice on its own; a worn one is filtered
-  let bd = 0, sl = 0, ab = 0;
-  const bpm = A.ctx ? tgBpm(hxNowT()) : 0;
-  for (const L of HX.loops.values()) {
-    if (L.state !== 'spielt' || L.bew) continue;
+  if (!L.bew) {
     const sp = L.sp || 1, n = L.sch.length;
-    if (sp !== 1) bd += sp > 1.6 ? HX_COST.k24 : sp > 1.03 ? HX_COST.k16 : HX_COST.rs;
-    else if ((L.slc && (L.slc.pd > 0 || L.slc.pw > 0)) || (L.ladung && L.ladQ > 0 && !hxWAktiv(L)) || (typeof hxSchnitt === 'function' && hxSchnitt(L) && hxTakt(L) && L.bpm && Math.abs(bpm / L.bpm - 1) > 1e-4)) sl += n;   // (step 4: Ladung's slices)
-    if (L.ab && L.ab.rate > 0) ab += n;
+    if (sp !== 1) o.bd = sp > 1.6 ? HX_COST.k24 : sp > 1.03 ? HX_COST.k16 : HX_COST.rs;
+    else if ((L.slc && (L.slc.pd > 0 || L.slc.pw > 0)) || (L.ladung && L.ladQ > 0 && !hxWAktiv(L)) || (typeof hxSchnitt === 'function' && hxSchnitt(L) && hxTakt(L) && L.bpm && Math.abs(bpm / L.bpm - 1) > 1e-4)) o.sl = n;   // (step 4: Ladung's slices)
+    if (L.ab && L.ab.rate > 0) o.ab = n;
   }
+  return o;
+}
+const hxCostL = (o) => o.p * HX_COST.schicht + o.r * HX_COST.rs + o.ws * HX_COST.stream + o.bd + o.sl * HX_COST.slice + o.ab * HX_COST.abr;
+// one loop's share of the budget (units), as hxCount counts it
+function hxCostOf(L) { return hxCostL(hxCountL(L, A.ctx ? tgBpm(hxNowT()) : 0, A.ctx && P['mov.drift'] > 0)); }
+function hxCount() {
+  let p = 0, r = 0, o1 = 0, ws = 0, bd = 0, sl = 0, ab = 0;
+  const dr = A.ctx && P['mov.drift'] > 0, bpm = A.ctx ? tgBpm(hxNowT()) : 0;   // (Taumeln resamples while there is a drift to follow)
+  for (const L of HX.loops.values()) { const o = hxCountL(L, bpm, dr); p += o.p; r += o.r; o1 |= o.o1; ws += o.ws; bd += o.bd; sl += o.sl; ab += o.ab; }
   let acN = 0; for (const L of HX.loops.values()) if (L.acc && L.acc.on && L.state !== 'weg') acN++;   // (step 4: a Sammelschleife records every frame, playing or not)
   HX.play = p; HX.rs = r; HX.o1 = o1; HX.dd = HX.ddRun.size ? 1 : 0; HX.ws = ws; HX.bd = bd; HX.sl = sl; HX.ab = ab; HX.acN = acN;   // (one de-drift job works at a time, the others wait)
 }

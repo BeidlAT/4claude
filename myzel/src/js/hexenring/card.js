@@ -7,7 +7,7 @@ function hxCardSec() {
   HXK.acts = h('div', { class: 'hx-acts' });
   HXK.list = h('div', { class: 'hx-cards' });
   HXK.grave = h('div', { class: 'hx-grave' });
-  HXK.mem = h('p', { class: 'note' });
+  HXK.mem = h('p', { class: 'note' }); HXK.cost = h('p', { class: 'note', id: 'hxCost' });
   HXK.form = h('div', { class: 'hx-form-sec' });   // (step 1d: Lichtungen, Kern, Lücke, Schluss)
   HXK.gd = h('div', { class: 'hx-form-sec hx-gd' });   // (Etappe 3: the Gärtner)
   const set = foldSec('hxset', 'Einstellungen', [
@@ -24,7 +24,7 @@ function hxCardSec() {
     HXK.mem,
     h('p', { class: 'note' }, 'Der Korb erntet, was du gespielt hast („Gespielt“: deine Klangquellen nach Stumm und Solo, ohne Echo und Hall); „Alles“ wählst du pro Schleife – es hört auch die Schleifen mit, wie ein Zusammenmischen. Die Humus-Länge gilt ab dem nächsten Klangstart.'),
   ]);
-  HXK.sec = h('div', { class: 'sec hx-sec', id: 'hxSec' }, h('div', { class: 'sec-h' }, h('h3', null, 'Hexenring'), HXK.sub), HXK.acts, HXK.list, HXK.gd, HXK.form, HXK.grave, set);
+  HXK.sec = h('div', { class: 'sec hx-sec', id: 'hxSec' }, h('div', { class: 'sec-h' }, h('h3', null, 'Hexenring'), HXK.sub), HXK.acts, HXK.cost, HXK.list, HXK.gd, HXK.form, HXK.grave, set);
   HXK.dirty = true; hxCardRender();
   return HXK.sec;
 }
@@ -68,6 +68,10 @@ function hxCardSub() {
   const n = hxLoopsLive().length, mb = Math.round(hxMemUsed() / 1048576);
   const t = (n ? n + (n === 1 ? ' Schleife' : ' Schleifen') + ' · ' : '') + mb + ' MB · Humus ' + P['hx.humus'] + ' s';
   if (HXK.sub.textContent !== t) HXK.sub.textContent = t;
+  // (Leistung, 23.10.2026) the share of the device's budget the loops take now – the same count that leaves the rest to the
+  // live playing (units: one simple voice each); a halted loop costs nothing
+  const c = hxLoad(), ct = HX.node ? 'Rechenzeit: Schleifen und Humus ' + dec(c.toFixed(1)) + ' von ' + VBUDGET + ' Einheiten' + (c >= VBUDGET ? ' – für dein Live-Spiel bleibt nur, was das Gerät darüber hinaus schafft' : ' – für dein Live-Spiel bleiben ' + dec((VBUDGET - c).toFixed(1))) + '.' : '';
+  if (HXK.cost && HXK.cost.textContent !== ct) HXK.cost.textContent = ct;
   const mt = 'Belegt: ' + mb + ' von ' + P['hx.mem'] + ' MB (Schleifen, ihre Kopien, Gelöschte, Verlauf, Aufnahmen, Humus).' + (HX.saveFail ? ' Der Gerätespeicher ist voll – neue Schichten werden nicht mehr gesichert.' : IDB.ok ? ' Schleifen werden auf diesem Gerät gesichert und kommen nach einem Neuladen zurück.' : ' Diese Ansicht kann Schleifen nicht sichern.') + (HX.est ? ' Gerätespeicher: ' + HX.est : '')
     + (HXW.st === 'kein' ? ' Einbrennen und der Ausklang aus den Noten gehen in dieser Ansicht nicht (kein Werk-Rahmen): Schleifen folgen der Effektkette.' : '');
   if (HXK.mem.textContent !== mt) HXK.mem.textContent = mt;
