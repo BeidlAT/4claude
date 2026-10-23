@@ -1,5 +1,27 @@
 # Übergabe: Myzel (Stand 22.10.2026 – Klangquellen, Ruhe und der Hexenring fertig, Schlussprüfung grün)
 
+## Für den Besitzer – dein erster Test am Handy (23.10.2026)
+
+**Was los war:** Alle drei Beobachtungen hatten eine gemeinsame Ursache – das Handy kam beim Abspielen der Schleifen
+mit dem Rechnen des Klangs nicht hinterher. Dann fehlen dem Lautsprecher immer wieder kleine Stücke (das „Abgehackte“,
+klingt fast wie ein Granular-Effekt), und wenn es schlimm wird, läuft sogar die Uhr des Klangs langsamer: Das Einzählen
+bis zur Eins und die Aufnahmezeit bewegen sich dann kaum („wartet auf die 1“, „bleibt bei 0“), und je nachdem, was du
+gerade sonst tust (etwa einen Regler ziehen), klingt es langsamer oder schneller. Nachgestellt mit einem künstlich
+gebremsten Rechenkern: genau dieses Bild, und ohne Schleifen (nur live gespielt) blieb es sauber.
+**Behoben:** Eine Kopie der Effektkette, die ab der ersten Schleife dauerhaft mitlief, obwohl nach dem Einbrennen nichts
+mehr durch sie ging, ruht jetzt (Klang Sample für Sample gleich, auf jedem Gerät). Und auf dem Handy – nur dort, nie auf
+iPad oder Rechner – gibt es eine ehrliche Notbremse: Setzt der Klang trotzdem aus, solange Schleifen spielen, bleiben die
+Schleifen in ihrer Stimmung statt mit dem Live-Spiel zu „taumeln“ (das Taumeln kostet pro Schleife am meisten). Myzel
+sagt es dir einmal, in der Karte steht „ruht – das Handy ist ausgelastet“, und „mit“ holt es zurück. Im Test mit zwei
+Schleifen: vorher rund 400 Aussetzer in 5 Sekunden, danach keine. Dazu: Die Aufnahme kann nicht mehr an einem Fehler
+anderswo hängen bleiben, und der Hinweis „8 Takte bei … BPM“ zeigt jetzt das Tempo, in dem wirklich aufgenommen wird
+(vorher stand dort das Puls-Tempo, auch wenn die Schleifen schneller liefen) – die Länge stellst du dort in Takten ein,
+das ändert nie, was gerade spielt. (Das Puls-Tempo dagegen bewegt die Schleifen mit, wie du es entschieden hast.)
+**Bitte am Handy noch einmal probieren:** Schleifen spielen lassen, ein paar Minuten; aufnehmen in Takten mit und ohne
+Puls. Wenn die Notbremse kommt, siehst du den Hinweis. Ist das Handy deutlich schwächer als mein Nachbau, stockt es auch
+danach noch – dann wäre der nächste Schritt, beim reinen Schleifen-Spielen auch die Live-Kette ruhen zu lassen (etwa
+4 % weniger; das würde ich nur mit deinem Okay bauen).
+
 ## Für den Besitzer – jetzt (22.10.2026)
 
 **Fertig zum Testen.** Der Hexenring ist mit allen vier Etappen gebaut und durch die Schlussprüfung: jede Suite einzeln
@@ -76,6 +98,15 @@ Offen sind nur noch Dinge fürs Ohr und ein paar Entscheidungen (unten bei „Ow
 **Working notes:** binding spec `dev/looper/SPEC.md` (§23 build order; "As built" notes per step), builder rules `dev/looper/BRIEF-build.md`, research/proposals/reviews/listening examples under `dev/looper/`. Owner decisions (18.10.2026): no measuring day – the build machine is the reference, target a current iPad Pro and desktop PCs; new-loop start and loop quality are settings (defaults: Abdruck, Stufe 3); audio loops on tempo change: Schnitt for rhythmic, frei for pads, never stretched; Taumeln per loop; everything else per the concept's recommendations; build everything, publish at the end (PR into `ccr-c7c5d0a6-cus3ip`, merge when the owner says so). Progress per step is in the session's commits and SPEC's "As built" notes.
 
 **Step 1a (engine core, built):** Taktgeber (`TG`, one beat map; the Puls, MIDI clock in/out, Sporenregen, the Fährte and the bar recorder read it), processor `myzel-ring` (Humus rings, Schleifen/Schichten, seam law, Ausklang hook, resampler), the taps and the strip „Hexenring“ (`hxr` → `A.masterIn`), the notes and Bewegung Humus, the internal calls `hxGrab/hxLoopNew/hxSchichtAdd/hxState/hxGain/hxUndo/hxClear/hxRate/hxTempo` (no UI yet). The DSP module now loads at sound start. Suite `dev/tests/hexenring/run-all.sh` (copy to `<scratch>/hexenring/`). Costs entered: `HX_COST = { capture: 0.68, schicht: 0.31, rs: 0.95 }` (cost.js candidates `hxq…hxr`). (The two step-1a conflicts were decided by the owner and built in 1b: MIDI clock – small errors slew, > 15 ms within ¼ beat; „Alles“ hears everything incl. the Schleifen.)
+
+**Phone report (built, 23.10.2026):** SPEC §21 „As built (phone report)“. The owner's three symptoms were one cause –
+the render falling behind on a phone while loops play (reproduced with the render threads in a cgroup; CDP throttling
+slows only the main thread). Built: the out-1 chain copy rests (`HXF1`, `hxF1Tick/Wake/Busy`, woken by `hxOut1`, any
+`hxPost` with `out`, any automation of its params through the AudioParam hook); the guard's phone step `hxTauGuard`
+(Taumeln rests, `hxTauOn`, `HX.tauRest`), a clock-lag underrun count for phones without playbackStats; `tickTry` for
+each part of `tick()` and the frame loop (`frameBody`); the recorder's tap renewed when it stops (`capDrop`); the bar
+info's tempo (`barGrid`). Suite `hexenring/t-hx-phone.js` (in run-all; its part 8 needs root for the cgroup).
+`v2/mk.sh` exports the phone-report names (guarded line `hxF1Tick`).
 
 **Final pass (built, 21./22.10.2026):** SPEC §23 „As built (final pass)“, §15/§21/§7 notes, klang SPEC §2.4. Rhizom Nähren's
 net per loop (`L.rhzNetz`, `rhzOwn`, `hxRhzNetz`, card row „Netz“), Rhizom's price refit (`rhzPrice`, `rhz-fit.js`), Glut's
