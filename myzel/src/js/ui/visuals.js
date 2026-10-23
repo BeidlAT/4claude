@@ -31,7 +31,7 @@ function readColors() {
 function resize() {
   const r = stage.getBoundingClientRect();
   VIS.w = Math.max(1, r.width); VIS.h = Math.max(1, r.height);
-  VIS.dpr = Math.min(2, window.devicePixelRatio || 1);
+  VIS.dpr = Math.min(PH.on ? PH_DPR : 2, window.devicePixelRatio || 1);   // (the Handy-Modus draws the field at 1.5 × at most: ui/leistung.js)
   for (const c of [cvBg, cvFx]) { c.width = Math.round(VIS.w * VIS.dpr); c.height = Math.round(VIS.h * VIS.dpr); }
   fctx.setTransform(VIS.dpr, 0, 0, VIS.dpr, 0, 0);
   if (!VIS.spores.length) for (let i = 0; i < 36; i++) VIS.spores.push({ x: Math.random(), y: Math.random(), v: rand(0.0003, 0.0012), p: Math.random() * 6 });
@@ -76,7 +76,10 @@ function drawBg() {
 // Drawn about 60 times a second at most: a 90- or 120-Hz display calls frame() more often, and the field's motion is
 // counted per drawn frame (spores, hyphae, ripples, the fades – made at 60 Hz, they ran faster there) – half the
 // drawing for the same picture. What plays (the controllers' values, MPE bends, the mod layer) still runs on every call.
-const FR = { iv: 16.7, prev: 0, acc: 0 };
+// The Handy-Modus under load (PH.load, ui/leistung.js) draws it about 30 times a second: each drawn frame then moves the
+// field two steps (VIS.k) and fades it as two would – the same speed and the same trails, half the drawing.
+const FR = { iv: 16.7, prev: 0, acc: 0, drew: false };
+const FADE = [null, 'rgba(0,0,0,' + (REDUCED ? 0.4 : 0.085) + ')', 'rgba(0,0,0,' + (1 - Math.pow(1 - (REDUCED ? 0.4 : 0.085), 2)).toFixed(4) + ')'];
 function frameCtl() {
   if (MIDI.mbDue) midiFrame();
   if (MAP.due) mapFlush();   // controller values of this frame
@@ -84,18 +87,22 @@ function frameCtl() {
 }
 // (phone report 22.10.2026: the next frame is asked for first, and the parts after the field each on their own – one that
 // throws can no longer stop the drawing, the meters, the recorder's time or the count-in for good)
-function frame(ts) { requestAnimationFrame(frame); tickTry(20, () => frameBody(ts)); }
+function frame(ts) { requestAnimationFrame(frame); if (PH.on || LM.on) phFrame(ts); tickTry(20, () => frameBody(ts)); }
 function frameBody(ts) {
-  if (FR.prev) { const d = ts - FR.prev; if (d > 2 && d < 40) FR.iv += (d - FR.iv) * 0.1; FR.acc = Math.min(FR.acc + d, 50); }
+  const T = PH.load ? 33.33 : 16.67;   // (the drawing's interval: 60 frames a second, the Handy-Modus under load 30)
+  if (FR.prev) { const d = ts - FR.prev; if (d > 2 && d < 40) FR.iv += (d - FR.iv) * 0.1; FR.acc = Math.min(FR.acc + d, T + 33.33); }
   FR.prev = ts;
-  if (FR.iv < 12.5 && FR.acc < 15.5) { frameCtl(); return; }   // (the display's frame interval, smoothed)
-  FR.acc = Math.max(0, FR.acc - 16.67);
+  FR.drew = false;
+  if (FR.iv < T * 0.75 && FR.acc < T - 1.17) { frameCtl(); return; }   // (the display's frame interval, smoothed)
+  FR.acc = Math.max(0, FR.acc - T);
+  FR.drew = true;
+  const k = (VIS.k = T > 20 && FR.iv < 25 ? 2 : 1);   // (steps of the field's motion in this drawn frame)
   const dt = Math.min(0.05, (ts - (VIS.t || ts)) / 1000);
   VIS.t = ts;
   if (!REDUCED) VIS.hue = (VIS.hue + dt * 7) % 360;
   const c = fctx, w = VIS.w, h = VIS.h;
   c.globalCompositeOperation = 'destination-out';
-  c.fillStyle = 'rgba(0,0,0,' + (REDUCED ? 0.4 : 0.085) + ')';
+  c.fillStyle = FADE[k];
   c.fillRect(0, 0, w, h);
   c.globalCompositeOperation = 'lighter';
   const now = A.ctx ? A.ctx.currentTime : 0;
@@ -115,8 +122,8 @@ function frameBody(ts) {
   if (VIS.rg) rgVisFrame(c, w, h);   // Sporenregen: Keime, spores, the slope
   // spores
   for (const s of VIS.spores) {
-    if (VIS.rg) rgSpore(s);   // raining: they follow the slope instead of rising
-    else { s.y -= s.v * (REDUCED ? 0 : VIS.sv); if (s.y < -0.02) { s.y = 1.02; s.x = Math.random(); } }
+    if (VIS.rg) { rgSpore(s); if (k > 1) rgSpore(s); }   // raining: they follow the slope instead of rising
+    else { s.y -= s.v * (REDUCED ? 0 : VIS.sv) * k; if (s.y < -0.02) { s.y = 1.02; s.x = Math.random(); } }
     const a = (0.12 + 0.1 * Math.sin(ts / 900 + s.p)) * VIS.sa;
     c.fillStyle = 'hsla(' + ((VIS.hue + s.x * 120) % 360) + ',70%,70%,' + a.toFixed(3) + ')';
     c.fillRect(s.x * w, s.y * h, 1.6, 1.6);
@@ -125,27 +132,36 @@ function frameBody(ts) {
   // on the lean, away from where the finger was)
   const gnw = GA.vis ? modNewest() : null;
   for (const tt of touches.values()) {
-    if (Math.random() < 0.6) VIS.burst(tt.px, tt.py, tt.hue, 1, 0.5);
+    for (let i = 0; i < k; i++) if (Math.random() < 0.6) VIS.burst(tt.px, tt.py, tt.hue, 1, 0.5);
     const rr = 26 + 6 * Math.sin(ts / 140), q = GA.vis ? gaGlow(tt, gnw) : null, gx = q ? q[0] : tt.px, gy = q ? q[1] : tt.py;
     const g = c.createRadialGradient(gx, gy, 0, gx, gy, rr * 1.8);
     g.addColorStop(0, 'hsla(' + tt.hue + ',90%,72%,0.35)'); g.addColorStop(1, 'hsla(' + tt.hue + ',90%,60%,0)');
     c.fillStyle = g; c.beginPath(); c.arc(gx, gy, rr * 1.8, 0, Math.PI * 2); c.fill();
   }
-  // hyphae: segments are grouped by quantised colour, alpha and width, so each group is one path and one stroke
+  // hyphae: segments are grouped by quantised colour, alpha and width, so each group is one path and one stroke (the
+  // groups' arrays and the list's second array are kept from frame to frame: no garbage each frame)
   c.lineCap = 'round';
-  const hy = VIS.hy, keepH = [], buckets = new Map();
-  for (const f of hy) {
-    const nx = f.x + Math.cos(f.a) * f.sp + VIS.lx, ny = f.y + Math.sin(f.a) * f.sp + VIS.ly;   // (Sporenregen: they lean with the slope)
-    const hue = ((f.hue % 360) + 360) % 360;
-    const key = ((hue / 12) | 0) * 100 + Math.min(5, (f.life * 6) | 0) * 10 + (f.w > 1.2 ? 1 : 0);
-    let seg = buckets.get(key);
-    if (!seg) { seg = []; buckets.set(key, seg); }
-    seg.push(f.x, f.y, nx, ny);
-    f.x = nx; f.y = ny; f.a += rand(-0.38, 0.38); f.life -= 0.011; f.sp *= 0.995;
-    if (f.life > 0.45 && Math.random() < 0.035 && hy.length + keepH.length < HY_MAX) keepH.push({ x: f.x, y: f.y, a: f.a + pick([-0.7, 0.7]), life: f.life * 0.8, hue: f.hue + 8, w: f.w * 0.7, sp: f.sp });
-    if (f.life > 0 && f.x > -10 && f.x < w + 10 && f.y > -10 && f.y < h + 10) keepH.push(f);
+  const buckets = VIS.bk || (VIS.bk = new Map());
+  for (const seg of buckets.values()) seg.length = 0;
+  let hy = VIS.hy;
+  for (let st = 0; st < k; st++) {
+    const keepH = VIS.hyB && VIS.hyB !== hy ? VIS.hyB : [];
+    keepH.length = 0;
+    for (const f of hy) {
+      const nx = f.x + Math.cos(f.a) * f.sp + VIS.lx, ny = f.y + Math.sin(f.a) * f.sp + VIS.ly;   // (Sporenregen: they lean with the slope)
+      const hue = ((f.hue % 360) + 360) % 360;
+      const key = ((hue / 12) | 0) * 100 + Math.min(5, (f.life * 6) | 0) * 10 + (f.w > 1.2 ? 1 : 0);
+      let seg = buckets.get(key);
+      if (!seg) { seg = []; buckets.set(key, seg); }
+      seg.push(f.x, f.y, nx, ny);
+      f.x = nx; f.y = ny; f.a += rand(-0.38, 0.38); f.life -= 0.011; f.sp *= 0.995;
+      if (f.life > 0.45 && Math.random() < 0.035 && hy.length + keepH.length < HY_MAX) keepH.push({ x: f.x, y: f.y, a: f.a + pick([-0.7, 0.7]), life: f.life * 0.8, hue: f.hue + 8, w: f.w * 0.7, sp: f.sp });
+      if (f.life > 0 && f.x > -10 && f.x < w + 10 && f.y > -10 && f.y < h + 10) keepH.push(f);
+    }
+    VIS.hyB = hy; hy = keepH;
   }
   for (const [key, seg] of buckets) {
+    if (!seg.length) continue;
     const hueQ = Math.floor(key / 100) * 12 + 6, life = ((Math.floor(key / 10) % 10) + 0.5) / 6;
     c.strokeStyle = 'hsla(' + hueQ + ',85%,66%,' + (life * 0.55).toFixed(3) + ')';
     c.lineWidth = key % 10 ? 1.8 : 0.9;
@@ -153,11 +169,13 @@ function frameBody(ts) {
     for (let i = 0; i < seg.length; i += 4) { c.moveTo(seg[i], seg[i + 1]); c.lineTo(seg[i + 2], seg[i + 3]); }
     c.stroke();
   }
-  VIS.hy = keepH;
+  VIS.hy = hy;
   // ripples, grouped the same way
-  const keepR = [], rb = new Map();
+  const keepR = VIS.ripB && VIS.ripB !== VIS.rip ? VIS.ripB : [], rb = VIS.rb || (VIS.rb = new Map());
+  keepR.length = 0;
+  for (const list of rb.values()) list.length = 0;
   for (const r of VIS.rip) {
-    r.r += r.v; r.life -= 0.022;
+    r.r += r.v * k; r.life -= 0.022 * k;
     if (r.life <= 0) continue;
     const hue = ((r.hue % 360) + 360) % 360, key = ((hue / 12) | 0) * 10 + Math.min(5, (r.life * 6) | 0);
     let list = rb.get(key);
@@ -167,12 +185,13 @@ function frameBody(ts) {
   }
   c.lineWidth = 1.2;
   for (const [key, list] of rb) {
+    if (!list.length) continue;
     c.strokeStyle = 'hsla(' + (Math.floor(key / 10) * 12 + 6) + ',80%,70%,' + ((((key % 10) + 0.5) / 6) * 0.5).toFixed(3) + ')';
     c.beginPath();
     for (const r of list) { c.moveTo(r.x + r.r, r.y); c.arc(r.x, r.y, r.r, 0, Math.PI * 2); }
     c.stroke();
   }
-  VIS.rip = keepR;
+  VIS.ripB = VIS.rip; VIS.rip = keepR;
   // scope (and the output level for the meters while no recording tap exists)
   if (A.analyser) {
     A.analyser.getFloatTimeDomainData(A.scopeBuf);
@@ -205,7 +224,7 @@ function frameBody(ts) {
       c.fillStyle = (tt.gaT && ts - tt.gaT < 250) || (bd && g.snap) ? COL.lumen : COL.hypha; c.fillText(nm, tt.px, ly);
     }
   }
-  tickTry(21, () => { hxVisFrame(c, w, h); hxRailFrame(ts); });   // Hexenring: its rings on the field, the Ringleiste
+  tickTry(21, () => hxVisFrame(c, w, h)); tickTry(26, () => hxRailFrame(ts));   // Hexenring: its rings on the field, the Ringleiste
   tickTry(22, () => updateMeters(dt));
   const pan = UI.panel && panelOf(UI.panel);
   if (pan && pan.frame) tickTry(23, () => pan.frame(dt, ts));

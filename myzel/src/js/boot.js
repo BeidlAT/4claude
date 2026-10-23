@@ -11,6 +11,7 @@ function boot() {
   learnBar();
   startKeysLine();
   { const miss = engMissSay(); if (miss) toast(miss, 8000); }   // the stored patch named a source this version lacks
+  phApply();   // the Handy-Modus (ui/leistung.js): before the field's first size
   resize();
   if (window.ResizeObserver) new ResizeObserver(resize).observe(stage); else window.addEventListener('resize', resize);
   cvFx.addEventListener('pointerdown', onDown);

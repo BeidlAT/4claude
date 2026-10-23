@@ -57,7 +57,7 @@ function hxNode() {
   // out, so a Schleife that sounds at once finds it open – its value is read by the very quantum that plays the message)
   HX.g0 = G(1); node.connect(HX.g0, 0).connect(stripIn('hxr')); HX.g1 = null; IDLE.hxT = null;
   if (IDLE.keeper && IDLE.ctx === ctx) node.connect(IDLE.keeper.gain, 0);   // Ruhe: it records while the rest sleeps
-  node.port.onmessage = (e) => hxMsg(e.data);
+  node.port.onmessage = (e) => { if (!LM.on) { hxMsg(e.data); return; } const t0 = performance.now(); try { hxMsg(e.data); } finally { lmPart(31, performance.now() - t0); } };   // („Leistung messen“ counts its time)
   node.onprocessorerror = () => { console.warn('Hexenring: Prozessorfehler'); HX.state = 'kein'; HX.node = null; };
   HX.node = node; HX.ctx = ctx; HX.state = 'ok'; HX.fR = Math.round(ctx.currentTime * SR); HX.tR = ctx.currentTime; HXN.split = null; HXN.webs.clear(); HXN.feed.clear();
   if (HX.mic.on) hxMicOff(); HX.mic.ring = false;   // (step 4: a new processor – its Mikro ring is made again when it is switched on)

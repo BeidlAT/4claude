@@ -519,6 +519,10 @@ body:not(.mlearn) :is(.gk-ax, .gk-ev) { cursor: default; }
 .kc-mon .e { color: var(--dim); padding: 10px 0; display: block; }
 .kc-clk { margin: 4px 0 0; font: 400 11px/1.4 var(--font-num); color: var(--lilac); }
 
+/* Leistung: the summary and the report to copy */
+.lm-sum { margin: 6px 0 8px; font-size: 13px; }
+details.lm-rep { margin: 0 0 10px; max-width: none; }
+.lm-txt { width: 100%; box-sizing: border-box; min-height: 9em; font: 400 11px/1.4 var(--font-num); color: var(--hypha); background: rgba(0,0,0,0.25); border: 1px solid var(--line); border-radius: 6px; padding: 8px; resize: vertical; }
 /* ---------- start / resume overlays ---------- */
 .start {
   position: absolute; inset: 0; z-index: 10; overflow-y: auto; display: grid; place-items: center;
@@ -12185,8 +12189,10 @@ function grainTick(horizon) {
 }
 // a part of the tick or of the frame that throws: said once per part (not 40 times a second), the others go on
 const TICK_ERR = new Set();
-function tickTry(k, fn) { try { fn(); } catch (e) { if (!TICK_ERR.has(k)) { TICK_ERR.add(k); console.error(e); } } }
-function tick() {
+// („Leistung messen“: while it runs, each part's time is counted – LM, ui/leistung.js; otherwise one test of a flag)
+function tickTry(k, fn) { const t0 = LM.on ? performance.now() : 0; try { fn(); } catch (e) { if (!TICK_ERR.has(k)) { TICK_ERR.add(k); console.error(e); } } if (t0) lmPart(k, performance.now() - t0); }
+function tick() { if (!LM.on) { tickRun(); return; } const t0 = performance.now(); lmGap(t0); tickRun(); lmPart(30, performance.now() - t0); }
+function tickRun() {
   const nowW = performance.now();
   // track the worst recent gap between ticks (decays over ~10 s) and look further ahead after main-thread stalls,
   // so a late tick never leaves a hole in the Puls, Wirbel or grain stream
@@ -12250,6 +12256,7 @@ function stagePoint(e) {
 }
 function onDown(e) {
   if (!A.started) return;
+  const lmT = LM.on ? performance.now() : 0;   // („Leistung messen“: from the touch to the voice)
   if (e.preventDefault) e.preventDefault();
   if (e.pointerType && SLP.down) return;   // Gestik: the screen lies on the table – no phantom touches
   if (NA.q.length) noteAfterRun();   // (the last note's own work first: in order)
@@ -12276,6 +12283,7 @@ function onDown(e) {
   // runs them first
   const at = A.ctx.currentTime;
   noteAfter(() => { noteEvent(at); VIS.touchStart(tt); });
+  if (lmT) lmTouch(e, lmT);
 }
 // the work after a note, in a task of its own (a message: the next task, before any timer)
 const NA = { q: [], ch: null };
@@ -16695,11 +16703,11 @@ function gkVisFrame(c, w, h, dt) {
   const lad = VIS.lad || 0, gl = VIS.glas || 0, zz = !!VIS.zz;
   VIS.sv = zz ? -0.35 : 1 + 2.5 * lad; VIS.sa = zz ? 0.45 : 1 + 1.4 * lad;
   if (zz) { for (const s of VIS.spores) if (s.y > 0.995) s.y = 0.995; }
-  else if (lad > 0.01 && Math.random() < lad * 0.7 && VIS.hy.length < HY_MAX) {
+  else for (let st = 0; st < (VIS.k || 1); st++) if (lad > 0.01 && Math.random() < lad * 0.7 && VIS.hy.length < HY_MAX) {   // (VIS.k: the Handy-Modus under load moves two steps a drawn frame)
     const s = VIS.spores[Math.floor(Math.random() * VIS.spores.length)], x = s.x * w, y = s.y * h;
     for (let i = 0, n = 1 + Math.round(lad * 2); i < n && VIS.hy.length < HY_MAX; i++) VIS.hy.push({ x, y, a: rand(0, Math.PI * 2), life: rand(0.5, 0.9), hue: VIS.hueAt(s.x) + rand(-20, 20), w: 0.6 + lad, sp: 0.8 + 1.6 * lad * Math.random() });
   }
-  if (lad > 0.01 && !zz && (VIS.gn = (VIS.gn || 0) + 1) % 3 === 0) {   // every third frame (the trails keep it): ≈ 0.14 at full charge
+  if (lad > 0.01 && !zz && (VIS.gn = (VIS.gn || 0) + (VIS.k || 1)) % 3 < (VIS.k || 1)) {   // every third frame (the trails keep it): ≈ 0.14 at full charge
     const g = c.createRadialGradient(w / 2, h * 1.1, 0, w / 2, h * 1.1, h * 0.9);
     g.addColorStop(0, 'rgba(255,179,92,' + (0.036 * lad).toFixed(4) + ')'); g.addColorStop(1, 'rgba(255,179,92,0)');
     c.fillStyle = g; c.fillRect(0, h * 0.2, w, h * 0.8);
@@ -17143,7 +17151,7 @@ function rgVisFrame(c, w, h) {
   const now = A.ctx ? A.ctx.currentTime : 0, b = beatAt(now);
   RG.gx += (modVal('rgx', now) - RG.gx) * 0.2; RG.gy += (modVal('rgy', now) - RG.gy) * 0.2;
   VIS.lx = REDUCED ? 0 : RG.gx * 0.6; VIS.ly = REDUCED ? 0 : -RG.gy * 0.6;
-  const odd = (RG.fr = (RG.fr || 0) + 1) & 1;
+  const odd = (RG.fr = (RG.fr || 0) + (VIS.k || 1)) & 1;   // (two steps a drawn frame in the Handy-Modus under load: every Keim each drawn frame)
   for (const k of RG.k) {
     if (k.t0 > now) continue;
     const left = k.end == null ? 1 : clamp((k.end - b) / 4, 0, 1), age = now - k.hitT, lit = age >= 0 && age < 0.35 ? 1 - age / 0.35 : 0;
@@ -17791,7 +17799,7 @@ function readColors() {
 function resize() {
   const r = stage.getBoundingClientRect();
   VIS.w = Math.max(1, r.width); VIS.h = Math.max(1, r.height);
-  VIS.dpr = Math.min(2, window.devicePixelRatio || 1);
+  VIS.dpr = Math.min(PH.on ? PH_DPR : 2, window.devicePixelRatio || 1);   // (the Handy-Modus draws the field at 1.5 × at most: ui/leistung.js)
   for (const c of [cvBg, cvFx]) { c.width = Math.round(VIS.w * VIS.dpr); c.height = Math.round(VIS.h * VIS.dpr); }
   fctx.setTransform(VIS.dpr, 0, 0, VIS.dpr, 0, 0);
   if (!VIS.spores.length) for (let i = 0; i < 36; i++) VIS.spores.push({ x: Math.random(), y: Math.random(), v: rand(0.0003, 0.0012), p: Math.random() * 6 });
@@ -17836,7 +17844,10 @@ function drawBg() {
 // Drawn about 60 times a second at most: a 90- or 120-Hz display calls frame() more often, and the field's motion is
 // counted per drawn frame (spores, hyphae, ripples, the fades – made at 60 Hz, they ran faster there) – half the
 // drawing for the same picture. What plays (the controllers' values, MPE bends, the mod layer) still runs on every call.
-const FR = { iv: 16.7, prev: 0, acc: 0 };
+// The Handy-Modus under load (PH.load, ui/leistung.js) draws it about 30 times a second: each drawn frame then moves the
+// field two steps (VIS.k) and fades it as two would – the same speed and the same trails, half the drawing.
+const FR = { iv: 16.7, prev: 0, acc: 0, drew: false };
+const FADE = [null, 'rgba(0,0,0,' + (REDUCED ? 0.4 : 0.085) + ')', 'rgba(0,0,0,' + (1 - Math.pow(1 - (REDUCED ? 0.4 : 0.085), 2)).toFixed(4) + ')'];
 function frameCtl() {
   if (MIDI.mbDue) midiFrame();
   if (MAP.due) mapFlush();   // controller values of this frame
@@ -17844,18 +17855,22 @@ function frameCtl() {
 }
 // (phone report 22.10.2026: the next frame is asked for first, and the parts after the field each on their own – one that
 // throws can no longer stop the drawing, the meters, the recorder's time or the count-in for good)
-function frame(ts) { requestAnimationFrame(frame); tickTry(20, () => frameBody(ts)); }
+function frame(ts) { requestAnimationFrame(frame); if (PH.on || LM.on) phFrame(ts); tickTry(20, () => frameBody(ts)); }
 function frameBody(ts) {
-  if (FR.prev) { const d = ts - FR.prev; if (d > 2 && d < 40) FR.iv += (d - FR.iv) * 0.1; FR.acc = Math.min(FR.acc + d, 50); }
+  const T = PH.load ? 33.33 : 16.67;   // (the drawing's interval: 60 frames a second, the Handy-Modus under load 30)
+  if (FR.prev) { const d = ts - FR.prev; if (d > 2 && d < 40) FR.iv += (d - FR.iv) * 0.1; FR.acc = Math.min(FR.acc + d, T + 33.33); }
   FR.prev = ts;
-  if (FR.iv < 12.5 && FR.acc < 15.5) { frameCtl(); return; }   // (the display's frame interval, smoothed)
-  FR.acc = Math.max(0, FR.acc - 16.67);
+  FR.drew = false;
+  if (FR.iv < T * 0.75 && FR.acc < T - 1.17) { frameCtl(); return; }   // (the display's frame interval, smoothed)
+  FR.acc = Math.max(0, FR.acc - T);
+  FR.drew = true;
+  const k = (VIS.k = T > 20 && FR.iv < 25 ? 2 : 1);   // (steps of the field's motion in this drawn frame)
   const dt = Math.min(0.05, (ts - (VIS.t || ts)) / 1000);
   VIS.t = ts;
   if (!REDUCED) VIS.hue = (VIS.hue + dt * 7) % 360;
   const c = fctx, w = VIS.w, h = VIS.h;
   c.globalCompositeOperation = 'destination-out';
-  c.fillStyle = 'rgba(0,0,0,' + (REDUCED ? 0.4 : 0.085) + ')';
+  c.fillStyle = FADE[k];
   c.fillRect(0, 0, w, h);
   c.globalCompositeOperation = 'lighter';
   const now = A.ctx ? A.ctx.currentTime : 0;
@@ -17875,8 +17890,8 @@ function frameBody(ts) {
   if (VIS.rg) rgVisFrame(c, w, h);   // Sporenregen: Keime, spores, the slope
   // spores
   for (const s of VIS.spores) {
-    if (VIS.rg) rgSpore(s);   // raining: they follow the slope instead of rising
-    else { s.y -= s.v * (REDUCED ? 0 : VIS.sv); if (s.y < -0.02) { s.y = 1.02; s.x = Math.random(); } }
+    if (VIS.rg) { rgSpore(s); if (k > 1) rgSpore(s); }   // raining: they follow the slope instead of rising
+    else { s.y -= s.v * (REDUCED ? 0 : VIS.sv) * k; if (s.y < -0.02) { s.y = 1.02; s.x = Math.random(); } }
     const a = (0.12 + 0.1 * Math.sin(ts / 900 + s.p)) * VIS.sa;
     c.fillStyle = 'hsla(' + ((VIS.hue + s.x * 120) % 360) + ',70%,70%,' + a.toFixed(3) + ')';
     c.fillRect(s.x * w, s.y * h, 1.6, 1.6);
@@ -17885,27 +17900,36 @@ function frameBody(ts) {
   // on the lean, away from where the finger was)
   const gnw = GA.vis ? modNewest() : null;
   for (const tt of touches.values()) {
-    if (Math.random() < 0.6) VIS.burst(tt.px, tt.py, tt.hue, 1, 0.5);
+    for (let i = 0; i < k; i++) if (Math.random() < 0.6) VIS.burst(tt.px, tt.py, tt.hue, 1, 0.5);
     const rr = 26 + 6 * Math.sin(ts / 140), q = GA.vis ? gaGlow(tt, gnw) : null, gx = q ? q[0] : tt.px, gy = q ? q[1] : tt.py;
     const g = c.createRadialGradient(gx, gy, 0, gx, gy, rr * 1.8);
     g.addColorStop(0, 'hsla(' + tt.hue + ',90%,72%,0.35)'); g.addColorStop(1, 'hsla(' + tt.hue + ',90%,60%,0)');
     c.fillStyle = g; c.beginPath(); c.arc(gx, gy, rr * 1.8, 0, Math.PI * 2); c.fill();
   }
-  // hyphae: segments are grouped by quantised colour, alpha and width, so each group is one path and one stroke
+  // hyphae: segments are grouped by quantised colour, alpha and width, so each group is one path and one stroke (the
+  // groups' arrays and the list's second array are kept from frame to frame: no garbage each frame)
   c.lineCap = 'round';
-  const hy = VIS.hy, keepH = [], buckets = new Map();
-  for (const f of hy) {
-    const nx = f.x + Math.cos(f.a) * f.sp + VIS.lx, ny = f.y + Math.sin(f.a) * f.sp + VIS.ly;   // (Sporenregen: they lean with the slope)
-    const hue = ((f.hue % 360) + 360) % 360;
-    const key = ((hue / 12) | 0) * 100 + Math.min(5, (f.life * 6) | 0) * 10 + (f.w > 1.2 ? 1 : 0);
-    let seg = buckets.get(key);
-    if (!seg) { seg = []; buckets.set(key, seg); }
-    seg.push(f.x, f.y, nx, ny);
-    f.x = nx; f.y = ny; f.a += rand(-0.38, 0.38); f.life -= 0.011; f.sp *= 0.995;
-    if (f.life > 0.45 && Math.random() < 0.035 && hy.length + keepH.length < HY_MAX) keepH.push({ x: f.x, y: f.y, a: f.a + pick([-0.7, 0.7]), life: f.life * 0.8, hue: f.hue + 8, w: f.w * 0.7, sp: f.sp });
-    if (f.life > 0 && f.x > -10 && f.x < w + 10 && f.y > -10 && f.y < h + 10) keepH.push(f);
+  const buckets = VIS.bk || (VIS.bk = new Map());
+  for (const seg of buckets.values()) seg.length = 0;
+  let hy = VIS.hy;
+  for (let st = 0; st < k; st++) {
+    const keepH = VIS.hyB && VIS.hyB !== hy ? VIS.hyB : [];
+    keepH.length = 0;
+    for (const f of hy) {
+      const nx = f.x + Math.cos(f.a) * f.sp + VIS.lx, ny = f.y + Math.sin(f.a) * f.sp + VIS.ly;   // (Sporenregen: they lean with the slope)
+      const hue = ((f.hue % 360) + 360) % 360;
+      const key = ((hue / 12) | 0) * 100 + Math.min(5, (f.life * 6) | 0) * 10 + (f.w > 1.2 ? 1 : 0);
+      let seg = buckets.get(key);
+      if (!seg) { seg = []; buckets.set(key, seg); }
+      seg.push(f.x, f.y, nx, ny);
+      f.x = nx; f.y = ny; f.a += rand(-0.38, 0.38); f.life -= 0.011; f.sp *= 0.995;
+      if (f.life > 0.45 && Math.random() < 0.035 && hy.length + keepH.length < HY_MAX) keepH.push({ x: f.x, y: f.y, a: f.a + pick([-0.7, 0.7]), life: f.life * 0.8, hue: f.hue + 8, w: f.w * 0.7, sp: f.sp });
+      if (f.life > 0 && f.x > -10 && f.x < w + 10 && f.y > -10 && f.y < h + 10) keepH.push(f);
+    }
+    VIS.hyB = hy; hy = keepH;
   }
   for (const [key, seg] of buckets) {
+    if (!seg.length) continue;
     const hueQ = Math.floor(key / 100) * 12 + 6, life = ((Math.floor(key / 10) % 10) + 0.5) / 6;
     c.strokeStyle = 'hsla(' + hueQ + ',85%,66%,' + (life * 0.55).toFixed(3) + ')';
     c.lineWidth = key % 10 ? 1.8 : 0.9;
@@ -17913,11 +17937,13 @@ function frameBody(ts) {
     for (let i = 0; i < seg.length; i += 4) { c.moveTo(seg[i], seg[i + 1]); c.lineTo(seg[i + 2], seg[i + 3]); }
     c.stroke();
   }
-  VIS.hy = keepH;
+  VIS.hy = hy;
   // ripples, grouped the same way
-  const keepR = [], rb = new Map();
+  const keepR = VIS.ripB && VIS.ripB !== VIS.rip ? VIS.ripB : [], rb = VIS.rb || (VIS.rb = new Map());
+  keepR.length = 0;
+  for (const list of rb.values()) list.length = 0;
   for (const r of VIS.rip) {
-    r.r += r.v; r.life -= 0.022;
+    r.r += r.v * k; r.life -= 0.022 * k;
     if (r.life <= 0) continue;
     const hue = ((r.hue % 360) + 360) % 360, key = ((hue / 12) | 0) * 10 + Math.min(5, (r.life * 6) | 0);
     let list = rb.get(key);
@@ -17927,12 +17953,13 @@ function frameBody(ts) {
   }
   c.lineWidth = 1.2;
   for (const [key, list] of rb) {
+    if (!list.length) continue;
     c.strokeStyle = 'hsla(' + (Math.floor(key / 10) * 12 + 6) + ',80%,70%,' + ((((key % 10) + 0.5) / 6) * 0.5).toFixed(3) + ')';
     c.beginPath();
     for (const r of list) { c.moveTo(r.x + r.r, r.y); c.arc(r.x, r.y, r.r, 0, Math.PI * 2); }
     c.stroke();
   }
-  VIS.rip = keepR;
+  VIS.ripB = VIS.rip; VIS.rip = keepR;
   // scope (and the output level for the meters while no recording tap exists)
   if (A.analyser) {
     A.analyser.getFloatTimeDomainData(A.scopeBuf);
@@ -17965,7 +17992,7 @@ function frameBody(ts) {
       c.fillStyle = (tt.gaT && ts - tt.gaT < 250) || (bd && g.snap) ? COL.lumen : COL.hypha; c.fillText(nm, tt.px, ly);
     }
   }
-  tickTry(21, () => { hxVisFrame(c, w, h); hxRailFrame(ts); });   // Hexenring: its rings on the field, the Ringleiste
+  tickTry(21, () => hxVisFrame(c, w, h)); tickTry(26, () => hxRailFrame(ts));   // Hexenring: its rings on the field, the Ringleiste
   tickTry(22, () => updateMeters(dt));
   const pan = UI.panel && panelOf(UI.panel);
   if (pan && pan.frame) tickTry(23, () => pan.frame(dt, ts));
@@ -23795,7 +23822,9 @@ function updateMeters(dt) {
   CAP.mL = CAP.mR = 0; A.anaPeak = 0;
   const lvl = Math.max(meterState.l, meterState.r);
   const pct = (g) => clamp((gainToDb(g) + 60) / 60, 0, 1) * 100;
-  $('#outMeter').style.width = pct(lvl).toFixed(1) + '%';
+  // (a style is written only when the bar moves: an unchanged width would still cost a style pass each frame)
+  const ow = pct(lvl).toFixed(1) + '%', om = meterState.el || (meterState.el = $('#outMeter'));
+  if (ow !== meterState.w) { meterState.w = ow; om.style.width = ow; }
   const bar = CAP.bar;
   if (bar && CAP.state === 'cue') {
     const left = Math.max(0, bar.f0 / SR - A.ctx.currentTime);
@@ -23813,7 +23842,7 @@ function updateMeters(dt) {
     if (recTimeEl) recTimeEl.textContent = t;
   }
   if (UI.panel === 'rec' && mBars.length) {
-    [meterState.l, meterState.r].forEach((g, i) => { mBars[i].style.width = pct(g).toFixed(1) + '%'; });
+    for (let i = 0; i < 2; i++) { const v = pct(i ? meterState.r : meterState.l).toFixed(1) + '%'; if (mBars[i].style.width !== v) mBars[i].style.width = v; }
     if (CAP.state !== 'idle') [CAP.pkL, CAP.pkR].forEach((g, i) => {
       mPks[i].textContent = g > 0 ? dec(gainToDb(g).toFixed(1)) + ' dB' : '−∞ dB';
       mPks[i].classList.toggle('clip', g >= 0.97);
@@ -24255,6 +24284,7 @@ function buildDev() {
   const latInfo = h('p', { class: 'note' });
   const latBtn = h('button', { type: 'button', class: 'btn primary', hidden: true, onclick: restartAudio }, 'Klang neu starten');
   box.append(section('Latenz', 'Zeit vom Anschlag bis zum Ton', grid(ctl('dev.lat', { label: 'Ausgabe' })), latInfo, h('div', { class: 'row' }, latBtn)));
+  box.append(lmBuild());   // Leistung: the Handy-Modus and „Leistung messen“ (ui/leistung.js)
   box.append(section('Computertastatur', null, h('p', { class: 'note' }, 'Ohne Keyboard spielen die Tasten A bis Ö (Grundreihe) die ersten Töne der Spielfläche, mit Umschalt weiter oben.')));
   Object.assign(devEls, { qInfo, qLive, latInfo, latBtn });
   updDevUI();
@@ -24349,6 +24379,7 @@ function updDevUI() {
         ' Der Browser rechnet allen Klang auf einem Prozessorkern – Stufe 3 füllt ihn' + (MOBILE ? '; auf Handys kann es knacken.' : '.');
   updDevLive();
   updLatText();
+  lmUI();
   kcUI();
 }
 // the keyboard part: status, which buttons, the platform's help, cards, bindings, what the folded parts hold
@@ -24560,6 +24591,287 @@ function gkfCardSync(C) {
   tx(C.fsTxt, !api && !BLE.devs.size ? 'Dieser Browser hat kein Web MIDI – senden geht hier nicht.' : !cur ? (outs.length ? 'Wähle den Ausgang, an dem der Computer (oder das Musikprogramm) hängt.' : MIDI.state === 'ready' ? 'Kein MIDI-Ausgang gefunden.' : 'Erst „MIDI-Ausgänge suchen“ – der Browser fragt nach der Erlaubnis.')
     : !have ? 'Der Ausgang „' + devShort(cur) + '“ ist gerade nicht da.' : !GK.live ? 'Sendet an ' + devShort(have.name) + ', sobald der Sensor antwortet.' : 'Sendet an ' + devShort(have.name) + ' · ' + (GKS.rate || '…') + ' Nachrichten/s');
   tx(C.fsSum, cur ? ' · ' + (have ? 'sendet' : 'Ausgang fehlt') : '');
+}
+/* =====================================================================
+   Leistung: „Leistung messen“ and the Handy-Modus (Gerät)
+   ===================================================================== */
+// The owner's phone report (23.10.2026): on his phone the app runs at its limit, the three quality levels all alike – a
+// constant load, not the voices. An emulation keeps missing what a real phone does, so the phone measures itself: 20 s
+// while the player plays as always, then a short German summary and a compact text report to copy and send (nothing is
+// sent anywhere by the page). While it runs LM counts each part of the frame and of the tick (tickTry's keys), the
+// frame intervals and the drawn frames' time, the tick's gaps, long tasks and long animation frames, touch → sound, the
+// device's underruns (playbackStats / playoutStats, else the audio clock against the page's), the render capacity where
+// the browser reports it, the voices' load and the Hexenring's state. Off, it costs one test of LM.on per part.
+const LM_SECS = 20;
+// tickTry's keys: the tick's parts 0–13, the frame 20 and its parts 21–26, the whole tick 30, the processor's messages 31,
+// a touch's handler 32
+const LM_PART = { 0: 'takt', 1: 'jahresring', 2: 'puls', 3: 'clockOut', 4: 'wirbel', 5: 'koerner', 6: 'vorschau', 7: 'faehrte', 8: 'regen', 9: 'mod', 10: 'gespinst', 11: 'rhizom', 12: 'hxTick', 13: 'ruhe',
+  20: 'frame', 21: 'hxFeld', 22: 'meter', 23: 'panel', 24: 'ctl', 25: 'devLive', 26: 'rail', 30: 'tick', 31: 'hxMsg', 32: 'onDown' };
+const LM = { on: false, t0: 0, pMs: new Float64Array(40), pN: new Uint32Array(40), pMax: new Float64Array(40), raf: new Float32Array(4096), nR: 0, fb: new Float32Array(2048), nF: 0,
+  gap: new Float32Array(2048), nG: 0, lastT: 0, tch: [], lt: null, loaf: null, ps0: null, ck: null, rc: null, smp: null, timer: 0, res: null, txt: '', sum: null, ui: null, obs: [] };
+function lmPart(k, ms) {
+  LM.pMs[k] += ms; LM.pN[k]++; if (ms > LM.pMax[k]) LM.pMax[k] = ms;
+  if (k === 20 && FR.drew && LM.nF < LM.fb.length) LM.fb[LM.nF++] = ms;   // (a drawn frame's own time)
+}
+function lmGap(t) { if (LM.lastT && LM.nG < LM.gap.length) LM.gap[LM.nG++] = t - LM.lastT; LM.lastT = t; }
+// a touch: its wait in the queue (the event's time → its handler), the handler, and when the voice it started reaches the
+// speaker – the audio clock's frame at the handler's end, mapped by getOutputTimestamp (else the reported latencies)
+function lmTouch(e, t0) {
+  const t1 = performance.now(), ts = e.timeStamp, c = A.ctx;
+  lmPart(32, t1 - t0);
+  if (!(ts > 0) || !c || LM.tch.length >= 400) return;
+  let out = null;
+  try { const o = c.getOutputTimestamp && c.getOutputTimestamp(); if (o && o.performanceTime > 0) out = o.performanceTime + (c.currentTime - o.contextTime) * 1000 + 128000 / SR - ts; } catch (err) {}
+  if (out == null || !(out > 0) || out > 2000) out = t1 - ts + ((c.baseLatency || 0) + (c.outputLatency || 0)) * 1000 + 128000 / SR;
+  LM.tch.push([t0 - ts, t1 - t0, out]);
+}
+// the browser's own figures of the output (Chrome: playbackStats, or the experimental playoutStats): every number it has
+function lmStats() {
+  const ps = A.ctx && (A.ctx.playbackStats || A.ctx.playoutStats);
+  if (!ps) return null;
+  const o = { kind: A.ctx.playbackStats ? 'playbackStats' : 'playoutStats' };
+  for (const k in ps) { try { const v = ps[k]; if (typeof v === 'number') o[k] = v; } catch (e) {} }
+  return o;
+}
+// the audio clock against the page's: a render that falls behind lets the context's time run slower (as watchUnderruns)
+function lmClock() {
+  const c = A.ctx; let p = performance.now(), t = c.currentTime;
+  try { const o = c.getOutputTimestamp && c.getOutputTimestamp(); if (o && o.performanceTime > 0) { p = o.performanceTime; t = o.contextTime; } } catch (e) {}
+  const K = LM.ck;
+  if (!K.p0) { K.p0 = K.p = p; K.c0 = K.c = t; return; }
+  if (p - K.p < 900) return;
+  const lag = (p - K.p) / 1000 - (t - K.c);
+  if (lag >= 0.025) K.n++;
+  K.lagMs += Math.max(0, lag) * 1000; K.p = p; K.c = t; K.p1 = p; K.c1 = t;
+}
+function lmObserve(on) {
+  for (const o of LM.obs) try { o.disconnect(); } catch (e) {}
+  LM.obs = [];
+  if (!on || !window.PerformanceObserver) return;
+  const sup = PerformanceObserver.supportedEntryTypes || [];
+  if (sup.includes('longtask')) { const o = new PerformanceObserver((l) => { for (const e of l.getEntries()) { const L = LM.lt; L.n++; L.ms += e.duration; if (e.duration > L.max) L.max = e.duration; } }); o.observe({ type: 'longtask' }); LM.obs.push(o); LM.lt.ok = true; }
+  // a long animation frame (≥ 50 ms): how much was rendering (style, layout, paint, the canvases' hand-over) and which
+  // scripts ran in it
+  if (sup.includes('long-animation-frame')) {
+    const o = new PerformanceObserver((l) => {
+      for (const e of l.getEntries()) {
+        const F = LM.loaf, end = e.startTime + e.duration;
+        F.n++; F.ms += e.duration; F.block += e.blockingDuration || 0;
+        if (e.renderStart) F.render += end - e.renderStart;
+        if (e.styleAndLayoutStart) F.style += end - e.styleAndLayoutStart;
+        for (const s of e.scripts || []) { const k = (s.invokerType || '') + ':' + (s.sourceFunctionName || s.invoker || '?'); F.inv.set(k, (F.inv.get(k) || 0) + s.duration); }
+      }
+    });
+    o.observe({ type: 'long-animation-frame' }); LM.obs.push(o); LM.loaf.ok = true;
+  }
+}
+function lmStart() {
+  if (LM.on || !A.ctx || A.ctx.state !== 'running') { if (!LM.on) toast('Erst den Klang starten, dann messen.', 3000); return; }
+  LM.pMs.fill(0); LM.pN.fill(0); LM.pMax.fill(0); LM.nR = LM.nF = LM.nG = 0; LM.lastT = 0; LM.tch = [];
+  LM.lt = { n: 0, ms: 0, max: 0, ok: false }; LM.loaf = { n: 0, ms: 0, block: 0, render: 0, style: 0, inv: new Map(), ok: false };
+  LM.ck = { p0: 0, c0: 0, p: 0, c: 0, p1: 0, c1: 0, n: 0, lagMs: 0 };
+  LM.smp = { n: 0, load: 0, loadMax: 0, vMax: 0, gr: 0, idle: 0, panel: new Map(), hid: 0, loops: 0, spielt: 0, sch: 0, leb: 0, phLoad: 0 };
+  LM.ps0 = lmStats(); LM.u0 = A.underruns || 0; LM.res = null;
+  LM.rc = null;
+  const rc = A.ctx.renderCapacity;
+  if (rc && rc.start) try { LM.rc = { n: 0, avg: 0, peak: 0, und: 0 }; rc.onupdate = (e) => { const R = LM.rc; if (!R) return; R.n++; R.avg += e.averageLoad || 0; R.peak = Math.max(R.peak, e.peakLoad || 0); R.und = Math.max(R.und, e.underrunRatio || 0); }; rc.start({ updateInterval: 1 }); } catch (e) { LM.rc = null; }
+  lmObserve(true);
+  LM.t0 = performance.now(); LM.on = true;
+  lmClock();
+  LM.timer = setInterval(lmSample, 250);
+  toast('Leistung messen: spiel jetzt ' + LM_SECS + ' Sekunden wie immer – das Panel darf zu.', 5000);
+  lmUI();
+}
+function lmSample() {
+  const S = LM.smp, el = performance.now() - LM.t0;
+  if (el >= LM_SECS * 1000) { lmStop(); return; }
+  S.n++;
+  const ld = voiceLoad() / Math.max(1, VBUDGET); S.load += ld; S.loadMax = Math.max(S.loadMax, ld);
+  S.vMax = Math.max(S.vMax, A.voices.size); S.gr = Math.max(S.gr, A.grains || 0);
+  if (IDLE.on) S.idle++;
+  if (PH.load) S.phLoad++;
+  const pk = UI.panel || '-'; S.panel.set(pk, (S.panel.get(pk) || 0) + 1);
+  if (document.visibilityState !== 'visible') S.hid++;
+  const live = hxLoopsLive();
+  S.loops = Math.max(S.loops, live.length); S.spielt = Math.max(S.spielt, live.filter((L) => L.state === 'spielt').length); S.sch = Math.max(S.sch, HX.sch.size);
+  S.leb = Math.max(S.leb, live.filter((L) => hxWAktiv(L)).length);
+  lmClock();
+  if (S.n % 4 === 0) lmUI();
+}
+function lmStop() {
+  if (!LM.on) return;
+  LM.on = false; clearInterval(LM.timer); lmObserve(false);
+  lmClock();
+  try { if (A.ctx.renderCapacity && LM.rc) A.ctx.renderCapacity.stop(); } catch (e) {}
+  LM.res = lmResult(performance.now() - LM.t0);
+  LM.txt = lmText(LM.res); LM.sum = lmSummary(LM.res);
+  toast('Leistung gemessen – das Ergebnis steht unter „Gerät“ → „Leistung“.', 7000, { label: 'Zeigen', fn: () => { openPanel('dev'); setTimeout(() => { if (LM.ui) LM.ui.sec.scrollIntoView({ block: 'start' }); }, 60); } });
+  lmUI();
+}
+const lmQ = (a, n, p) => { if (!n) return 0; const s = Array.from(a.subarray(0, n)).sort((x, y) => x - y); return s[Math.min(n - 1, Math.floor(p * n))]; };
+const lmQa = (a, p) => { if (!a.length) return 0; const s = a.slice().sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.floor(p * s.length))]; };
+const r1 = (x) => Math.round(x * 10) / 10;
+function lmResult(ms) {
+  const secs = ms / 1000, c = A.ctx, S = LM.smp, R = {};
+  R.secs = r1(secs);
+  // frames: the display's interval (its rate), how many came late (over 1.5 × the usual), the drawn frames and their time
+  const med = lmQ(LM.raf, LM.nR, 0.5);
+  let late = 0; for (let i = 0; i < LM.nR; i++) if (LM.raf[i] > 1.5 * med) late++;
+  R.hz = med ? Math.round(1000 / med) : 0; R.raf = { n: LM.nR, p50: r1(med), p95: r1(lmQ(LM.raf, LM.nR, 0.95)), max: r1(lmQ(LM.raf, LM.nR, 1)), late: LM.nR ? Math.round(100 * late / LM.nR) : 0 };
+  R.draw = { fps: r1(LM.nF / secs), p50: r1(lmQ(LM.fb, LM.nF, 0.5)), p95: r1(lmQ(LM.fb, LM.nF, 0.95)), max: r1(lmQ(LM.fb, LM.nF, 1)) };
+  R.tick = { n: LM.pN[30], gapP95: r1(lmQ(LM.gap, LM.nG, 0.95)), gapMax: r1(lmQ(LM.gap, LM.nG, 1)) };
+  // each part's main-thread time per second (the field's own: the frame without its parts)
+  const per = (k) => LM.pMs[k] / secs;
+  R.parts = {};
+  for (const k in LM_PART) if (LM.pN[k]) R.parts[LM_PART[k]] = r1(per(k));
+  R.parts.feld = r1(per(20) - per(21) - per(22) - per(23) - per(24) - per(25) - per(26));
+  R.lt = LM.lt.ok ? { n: LM.lt.n, ms: Math.round(LM.lt.ms), max: Math.round(LM.lt.max) } : null;
+  const F = LM.loaf;
+  R.loaf = F.ok ? { n: F.n, ms: Math.round(F.ms), block: Math.round(F.block), render: Math.round(F.render), style: Math.round(F.style), top: [...F.inv].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k, v]) => k.slice(0, 40) + '=' + Math.round(v)) } : null;
+  const T = LM.tch;
+  R.touch = T.length ? { n: T.length, queue: r1(lmQa(T.map((x) => x[0]), 0.5)), queueMax: r1(lmQa(T.map((x) => x[0]), 1)), hd: r1(lmQa(T.map((x) => x[1]), 0.5)), ton: Math.round(lmQa(T.map((x) => x[2]), 0.5)), tonP95: Math.round(lmQa(T.map((x) => x[2]), 0.95)) } : null;
+  // underruns: the browser's figures (their change in the window), the page's own count, the audio clock
+  const p0 = LM.ps0, p1 = lmStats();
+  if (p0 && p1) { R.ps = { kind: p1.kind }; for (const k in p1) if (k !== 'kind' && typeof p1[k] === 'number') R.ps[k] = /latency/i.test(k) ? r1(p1[k] * (p1[k] < 10 ? 1000 : 1)) : r1(p1[k] - (p0[k] || 0)); }
+  const K = LM.ck;
+  R.clock = { lagN: K.n, speed: K.p1 > K.p0 ? +((K.c1 - K.c0) / ((K.p1 - K.p0) / 1000)).toFixed(4) : null };
+  R.under = R.ps ? (R.ps.underrunEvents != null ? R.ps.underrunEvents : R.ps.fallbackFramesEvents != null ? R.ps.fallbackFramesEvents : null) : null;
+  if (R.under == null) R.under = K.n;
+  R.rc = LM.rc && LM.rc.n ? { avg: Math.round(100 * LM.rc.avg / LM.rc.n), peak: Math.round(100 * LM.rc.peak), und: r1(100 * LM.rc.und) } : null;
+  R.audio = { sr: c.sampleRate, base: r1((c.baseLatency || 0) * 1000), out: r1((c.outputLatency || 0) * 1000), lat: P['dev.lat'], latCtx: A.latMode, q: P['dev.q'], budget: VBUDGET, scale: A.budgetScale || 1, lite: !!A.lite };
+  R.voices = { load: S.n ? Math.round(100 * S.load / S.n) : 0, loadMax: Math.round(100 * S.loadMax), max: S.vMax, grains: S.gr, idle: S.n ? Math.round(100 * S.idle / S.n) : 0 };
+  R.hx = { loops: S.loops, spielt: S.spielt, sch: S.sch, leb: S.leb, tau: !!HX.tauRest, f1: HXF1.off ? 'ruht' : 'an', werk: HXW.st || '-', wg: HX.wGuard ? HX.wGuard.n || 0 : 0, state: HX.state };
+  const nav = navigator, ua = nav.userAgent || '';
+  const os = (ua.match(/Android [\d.]+/) || ua.match(/(iPhone|iPad|Mac) OS [\d_]+/) || [ANDROID ? 'Android' : IOS ? 'iOS' : 'Desktop'])[0].replace(/_/g, '.');
+  const br = (ua.match(/(Chrome|CriOS|Firefox|FxiOS|Version)\/(\d+)/) || [])[0] || '?';
+  R.dev = { os, br, cores: nav.hardwareConcurrency || 0, mem: nav.deviceMemory || 0, dpr: r1(window.devicePixelRatio || 1), scr: (screen.width || 0) + 'x' + (screen.height || 0), vp: innerWidth + 'x' + innerHeight, mobile: MOBILE, tablet: HX_TABLET };
+  const cvs = [...document.querySelectorAll('canvas')].filter((x) => x.width && x.offsetParent);
+  R.cv = { fx: cvFx.width + 'x' + cvFx.height, dpr: VIS.dpr, n: cvs.length, mpx: r1(cvs.reduce((s, x) => s + x.width * x.height, 0) / 1e6) };
+  R.ph = { on: PH.on, set: PH.set, load: S.n ? Math.round(100 * S.phLoad / S.n) : 0 };
+  R.panel = [...S.panel].map(([k, v]) => k + ':' + Math.round(100 * v / S.n)).join(',');
+  R.hid = S.hid; R.gk = !!GK.on; R.puls = !!SEQ.on; R.midi = MIDI.ports.size;
+  R.build = (window.MYZEL_BUILD && window.MYZEL_BUILD.version ? String(window.MYZEL_BUILD.version) : 'dev').slice(0, 12);
+  return R;
+}
+// the compact text to send: one topic per line, short keys (read by whoever helps – no names of devices)
+function lmText(R) {
+  const kv = (o) => Object.entries(o).map(([k, v]) => k + '=' + v).join(' ');
+  const L = [];
+  L.push('Myzel Leistung ' + R.build + ' · ' + new Date().toISOString().slice(0, 16).replace('T', ' ') + ' · ' + R.secs + ' s');
+  L.push('dev ' + kv(R.dev));
+  L.push('handy ' + kv(R.ph) + ' · panel ' + R.panel + (R.hid ? ' hidden=' + R.hid : '') + ' gk=' + R.gk + ' puls=' + R.puls + ' midi=' + R.midi);
+  L.push('audio ' + kv(R.audio));
+  L.push('under ' + R.under + ' · ' + (R.ps ? kv(R.ps) : 'stats=none') + ' · clock ' + kv(R.clock) + (R.rc ? ' · rc ' + kv(R.rc) : ' · rc=none'));
+  L.push('raf hz=' + R.hz + ' ' + kv(R.raf) + ' · draw ' + kv(R.draw) + ' · cv ' + kv(R.cv));
+  L.push('main ms/s ' + kv(R.parts));
+  L.push('tick ' + kv(R.tick) + ' · lt ' + (R.lt ? kv(R.lt) : 'none') + ' · loaf ' + (R.loaf ? kv(Object.assign({}, R.loaf, { top: R.loaf.top.join(',') || '-' })) : 'none'));
+  L.push('touch ' + (R.touch ? kv(R.touch) : 'none'));
+  L.push('voices ' + kv(R.voices) + ' · hx ' + kv(R.hx));
+  return L.join('\n');
+}
+// the short German summary: what was measured, then where the limit lies
+function lmSummary(R) {
+  const S = [], d = (x) => dec(String(x));
+  const slow = R.raf.late >= 10 || (R.lt && R.lt.n >= 5) || (R.loaf && R.loaf.n >= 10);
+  S.push('Bild: ' + d(R.draw.fps) + ' Bilder pro Sekunde gezeichnet (Bildschirm ' + R.hz + ' Hz), ' + R.raf.late + ' % der Bilder kamen zu spät' + (R.lt ? ', ' + R.lt.n + ' lange Aufgaben über 50 ms' : '') + '.');
+  S.push(R.touch ? 'Vom Antippen bis zum Ton: etwa ' + R.touch.ton + ' ms (bei jedem zwanzigsten bis ' + R.touch.tonP95 + ' ms; davon Warten auf den Hauptthread ' + d(R.touch.queue) + ' ms).' : 'Kein Antippen gemessen – beim nächsten Mal während der Messung auf dem Feld spielen.');
+  S.push(R.under ? 'Klang: ' + R.under + ' Aussetzer in ' + Math.round(R.secs) + ' s' + (R.rc ? ' (Audio-Kern im Mittel ' + R.rc.avg + ' %, Spitze ' + R.rc.peak + ' %)' : '') + '.' : 'Klang: keine Aussetzer gemessen' + (R.rc ? ' (Audio-Kern im Mittel ' + R.rc.avg + ' %, Spitze ' + R.rc.peak + ' %)' : '') + '.');
+  S.push(R.under && slow ? 'Ergebnis: Klang und Oberfläche sind beide ausgelastet.' : R.under ? 'Ergebnis: Der Klang setzt aus, obwohl die Oberfläche flüssig läuft – der Audio-Kern ist am Limit.'
+    : slow ? 'Ergebnis: Die Oberfläche ist ausgelastet (Zeichnen und Rechnen auf dem Hauptthread); der Klang läuft sauber.' : 'Ergebnis: kein Engpass gemessen.');
+  S.push('Handy-Modus war ' + (PH.on ? 'an' : 'aus') + (R.ph.load ? ' (davon ' + R.ph.load + ' % der Zeit mit 30 Bildern pro Sekunde)' : '') + '. „Kopieren“ und den Bericht an Claude schicken.');
+  return S;
+}
+
+/* ---------- the Handy-Modus: on phones the drawing gets lighter – never the sound ---------- */
+// What it changes (all of it the screen's, none of it the sound's – the engines, the voices and every sample stay as they
+// are): the field's canvas at 1.5 × the CSS pixels at most (else 2 ×), and while the page shows load – frames late, long
+// tasks, the device dropping audio – the field drawn about 30 times a second with its motion stepped twice (the same
+// speed and trails; the Ringleiste, the meters and the open panel's frame go with it). Automatic on phones (a coarse
+// pointer, not an iPad-sized screen), never on an iPad or a computer; a switch in „Gerät“ sets it either way.
+const PH_DPR = 1.5;
+const PH = { set: (() => { const v = store.get('myzel.handy'); return v === 'an' || v === 'aus' ? v : 'auto'; })(), on: false, load: false, until: 0, hold: 15000, calmT: 0, hb: [], lt: [], uh: [], u: 0, from: 0, prevTs: 0, timer: 0, obs: null };
+const phAuto = () => MOBILE && !HX_TABLET;
+function phApply() {
+  const on = PH.set === 'an' || (PH.set === 'auto' && phAuto());
+  if (on === PH.on) return;
+  PH.on = on;
+  if (!on) { PH.load = false; PH.hb.length = PH.lt.length = 0; }
+  phWatch();
+  if (VIS.w) resize();
+}
+function phSet(v) { PH.set = v; store.set('myzel.handy', v === 'auto' ? '' : v); phApply(); lmUI(); }
+// load: frames late (an interval over 25 ms: a frame shown 1.5 frames of 60 Hz or longer: 8 within 3 s), long tasks (2
+// within 3 s), the device's underruns (new ones in 2 seconds within 10 s – one glitch is not a load) – they hold the 30
+// frames for 15 s, each return within 2 min of a release twice as long (at most 2 min)
+function phFrame(ts) {
+  const d = PH.prevTs ? ts - PH.prevTs : 0; PH.prevTs = ts;
+  if (!d || d > 1000) return;   // (the page was hidden)
+  if (LM.on && LM.nR < LM.raf.length) LM.raf[LM.nR++] = d;
+  if (PH.on && d > 25 && PH.from && ts > PH.from) PH.hb.push(ts);
+}
+function phWatch() {
+  if (PH.obs) { try { PH.obs.disconnect(); } catch (e) {} PH.obs = null; }
+  clearInterval(PH.timer); PH.timer = 0;
+  if (!PH.on) return;
+  try { if (window.PerformanceObserver && (PerformanceObserver.supportedEntryTypes || []).includes('longtask')) { PH.obs = new PerformanceObserver((l) => { for (const e of l.getEntries()) PH.lt.push(e.startTime); }); PH.obs.observe({ type: 'longtask' }); } } catch (e) { PH.obs = null; }
+  PH.timer = setInterval(phTick, 1000);
+}
+function phTick() {
+  const now = performance.now();
+  if (!A.started || !A.ctx || A.ctx.state !== 'running' || document.visibilityState !== 'visible') { PH.from = 0; PH.hb.length = PH.lt.length = 0; return; }
+  if (!PH.from) { PH.from = now + 5000; PH.u = A.underruns || 0; PH.uh.length = 0; return; }   // (the first seconds after a start or a return load anyway)
+  while (PH.hb.length && now - PH.hb[0] > 3000) PH.hb.shift();
+  while (PH.lt.length && (now - PH.lt[0] > 3000 || PH.lt[0] < PH.from)) PH.lt.shift();
+  const u = A.underruns || 0;
+  if (u > PH.u) PH.uh.push(now);
+  PH.u = u;
+  while (PH.uh.length && now - PH.uh[0] > 10000) PH.uh.shift();
+  const why = PH.hb.length >= 8 ? 'bild' : PH.lt.length >= 2 ? 'lang' : PH.uh.length >= 2 ? 'klang' : '';
+  if (why) {
+    if (!PH.load) { if (now - PH.calmT > 120000) PH.hold = 15000; else PH.hold = Math.min(120000, PH.hold * 2); PH.load = true; PH.why = why; }
+    PH.until = now + PH.hold;
+  } else if (PH.load && now > PH.until) { PH.load = false; PH.calmT = now; }
+}
+
+/* ---------- the section in „Gerät“ ---------- */
+function lmBuild() {
+  const U = (LM.ui = {});
+  U.sw = h('button', { type: 'button', class: 'sw', id: 'phSw', role: 'switch', 'aria-checked': 'false', 'aria-label': 'Handy-Modus', onclick: () => phSet(PH.on ? 'aus' : 'an') }, h('span', { class: 'lab' }, 'Handy-Modus'), h('span', { class: 'knob', 'aria-hidden': 'true' }));
+  U.phNote = h('p', { class: 'note' });
+  U.auto = h('button', { type: 'button', class: 'btn ghost', id: 'phAuto', hidden: true, onclick: () => phSet('auto') }, 'Wieder automatisch');
+  U.go = h('button', { type: 'button', class: 'btn primary', id: 'lmGo', onclick: lmStart }, 'Leistung messen');
+  U.st = h('p', { class: 'note live', 'aria-live': 'polite' });
+  U.sum = h('ul', { class: 'help lm-sum', hidden: true });
+  U.txt = h('textarea', { class: 'lm-txt', readonly: true, rows: 8, spellcheck: 'false', 'aria-label': 'Bericht' });
+  U.copy = h('button', { type: 'button', class: 'btn', id: 'lmCopy', onclick: lmCopy }, 'Kopieren');
+  U.rep = h('details', { class: 'plat lm-rep', hidden: true }, h('summary', null, 'Bericht (Text)'), U.txt);
+  U.sec = section('Leistung', 'Wie flüssig Myzel auf diesem Gerät läuft',
+    h('div', { class: 'ctl wide' }, U.sw), U.phNote, h('div', { class: 'row' }, U.auto),
+    h('p', { class: 'note' }, 'Leistung messen: ' + LM_SECS + ' Sekunden lang, während du ganz normal spielst (das Panel darf dabei zu sein). Danach steht hier, wo es eng wird, und ein kurzer Bericht zum Kopieren – gesendet wird nichts.'),
+    h('div', { class: 'row' }, U.go, U.copy), U.st, U.sum, U.rep);
+  lmUI();
+  return U.sec;
+}
+function lmUI() {
+  const U = LM.ui; if (!U || !U.sec) return;
+  U.sw.setAttribute('aria-checked', String(PH.on));
+  const t = 'Handy-Modus: ' + (PH.on ? 'an' : 'aus') + (PH.set === 'auto' ? ' (automatisch)' : ' (von dir eingestellt)') + '. ' +
+    (PH.on ? 'Das Feld zeichnet mit geringerer Auflösung und, solange das Gerät ausgelastet ist, 30 statt 60 Bilder pro Sekunde' + (PH.load ? ' – gerade jetzt' : '') + '. Der Klang bleibt genau gleich.'
+      : 'Auf Handys schaltet er sich selbst ein; er macht nur das Zeichnen leichter, nie den Klang.');
+  if (U.phNote.textContent !== t) U.phNote.textContent = t;
+  U.auto.hidden = PH.set === 'auto';
+  U.go.disabled = LM.on;
+  const st = LM.on ? 'Misst … noch ' + Math.max(0, Math.ceil(LM_SECS - (performance.now() - LM.t0) / 1000)) + ' s – spiel wie immer.' : LM.res ? '' : A.ctx ? '' : 'Erst den Klang starten.';
+  if (U.st.textContent !== st) U.st.textContent = st;
+  U.copy.hidden = !LM.res;
+  U.sum.hidden = U.rep.hidden = !LM.res;
+  if (LM.res && U.txt.value !== LM.txt) { U.txt.value = LM.txt; U.sum.replaceChildren(...LM.sum.map((x) => h('li', null, x))); }
+}
+function lmCopy() {
+  if (!LM.txt) return;
+  const ok = () => toast('Bericht kopiert – füge ihn im Chat ein.', 3500);
+  const no = () => { LM.ui.rep.open = true; LM.ui.txt.focus(); LM.ui.txt.select(); toast('Kopieren ging nicht – der Bericht ist markiert: lange drücken und „Kopieren“.', 6000); };
+  try { navigator.clipboard.writeText(LM.txt).then(ok, no); } catch (e) { no(); }
 }
 /* ---------- the Gestik card ---------- */
 // One card among the keyboards, in the order of play: the Lebenszeichen (rate and jitter, or plainly what is wrong, and
@@ -25738,7 +26050,7 @@ function hxNode() {
   // out, so a Schleife that sounds at once finds it open – its value is read by the very quantum that plays the message)
   HX.g0 = G(1); node.connect(HX.g0, 0).connect(stripIn('hxr')); HX.g1 = null; IDLE.hxT = null;
   if (IDLE.keeper && IDLE.ctx === ctx) node.connect(IDLE.keeper.gain, 0);   // Ruhe: it records while the rest sleeps
-  node.port.onmessage = (e) => hxMsg(e.data);
+  node.port.onmessage = (e) => { if (!LM.on) { hxMsg(e.data); return; } const t0 = performance.now(); try { hxMsg(e.data); } finally { lmPart(31, performance.now() - t0); } };   // („Leistung messen“ counts its time)
   node.onprocessorerror = () => { console.warn('Hexenring: Prozessorfehler'); HX.state = 'kein'; HX.node = null; };
   HX.node = node; HX.ctx = ctx; HX.state = 'ok'; HX.fR = Math.round(ctx.currentTime * SR); HX.tR = ctx.currentTime; HXN.split = null; HXN.webs.clear(); HXN.feed.clear();
   if (HX.mic.on) hxMicOff(); HX.mic.ring = false;   // (step 4: a new processor – its Mikro ring is made again when it is switched on)
@@ -27297,7 +27609,7 @@ function hxVisFrame(c, w, h) {
     const keep = [];
     c.font = '600 10px ' + COL.fontNum; c.textAlign = 'center'; c.textBaseline = 'middle';
     for (const r of HXV.rings) {
-      r.life -= 0.016;
+      r.life -= 0.016 * (VIS.k || 1);   // (the Handy-Modus under load: two steps a drawn frame)
       if (r.life <= 0) continue;
       keep.push(r);
       const x = r.x * w, y = (1 - r.y) * h, rad = 9 + (1 - r.life) * 10, a = 0.75 * r.life;
@@ -33391,6 +33703,7 @@ function boot() {
   learnBar();
   startKeysLine();
   { const miss = engMissSay(); if (miss) toast(miss, 8000); }   // the stored patch named a source this version lacks
+  phApply();   // the Handy-Modus (ui/leistung.js): before the field's first size
   resize();
   if (window.ResizeObserver) new ResizeObserver(resize).observe(stage); else window.addEventListener('resize', resize);
   cvFx.addEventListener('pointerdown', onDown);

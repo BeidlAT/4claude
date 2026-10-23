@@ -668,7 +668,9 @@ function updateMeters(dt) {
   CAP.mL = CAP.mR = 0; A.anaPeak = 0;
   const lvl = Math.max(meterState.l, meterState.r);
   const pct = (g) => clamp((gainToDb(g) + 60) / 60, 0, 1) * 100;
-  $('#outMeter').style.width = pct(lvl).toFixed(1) + '%';
+  // (a style is written only when the bar moves: an unchanged width would still cost a style pass each frame)
+  const ow = pct(lvl).toFixed(1) + '%', om = meterState.el || (meterState.el = $('#outMeter'));
+  if (ow !== meterState.w) { meterState.w = ow; om.style.width = ow; }
   const bar = CAP.bar;
   if (bar && CAP.state === 'cue') {
     const left = Math.max(0, bar.f0 / SR - A.ctx.currentTime);
@@ -686,7 +688,7 @@ function updateMeters(dt) {
     if (recTimeEl) recTimeEl.textContent = t;
   }
   if (UI.panel === 'rec' && mBars.length) {
-    [meterState.l, meterState.r].forEach((g, i) => { mBars[i].style.width = pct(g).toFixed(1) + '%'; });
+    for (let i = 0; i < 2; i++) { const v = pct(i ? meterState.r : meterState.l).toFixed(1) + '%'; if (mBars[i].style.width !== v) mBars[i].style.width = v; }
     if (CAP.state !== 'idle') [CAP.pkL, CAP.pkR].forEach((g, i) => {
       mPks[i].textContent = g > 0 ? dec(gainToDb(g).toFixed(1)) + ' dB' : '−∞ dB';
       mPks[i].classList.toggle('clip', g >= 0.97);

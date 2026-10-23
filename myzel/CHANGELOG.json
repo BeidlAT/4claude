@@ -2,6 +2,14 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-23c",
+      "punkte": [
+        "Auf dem Handy spielt Myzel flüssiger: Der Handy-Modus zeichnet das Feld leichter und, wenn es eng wird, mit 30 statt 60 Bildern pro Sekunde. Am Klang ändert sich nichts.",
+        "Unter „Gerät“ → „Leistung“ siehst du, ob er an ist, und kannst ihn selbst ein- oder ausschalten.",
+        "Neu: „Leistung messen“. 20 Sekunden normal spielen, dann zeigt Myzel, wo es auf deinem Gerät eng wird. Mit „Kopieren“ kannst du den Bericht weitergeben."
+      ]
+    },
+    {
       "id": "2026-10-23b",
       "punkte": [
         "Eine neue Version meldet sich jetzt gleich beim Start, bevor der Klang beginnt: „Jetzt aktualisieren“ oder „Später“.",
