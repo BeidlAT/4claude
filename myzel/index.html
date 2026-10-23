@@ -25559,6 +25559,7 @@ const hxT = (f) => HX.tR + (f - HX.fR) / SR;
 const hxLive = () => !!(A.ctx && !(typeof OfflineAudioContext !== 'undefined' && A.ctx instanceof OfflineAudioContext));
 function hxPost(m, tr) {
   if (!HX.node || HX.ctx !== A.ctx) return false;
+  if (HXF1.off) for (const k in m) { const v = m[k]; if (v && typeof v === 'object' && v.out) { hxF1Wake(); break; } }   // (phone report: whatever is sent to play on out 1 finds the chain copy awake)
   if (m.loop) { if (IDLE.on) idleWake(); if (IDLE.hxOff) hxGates(true); IDLE.hxT = null; }   // Ruhe: a Schleife will sound
   else if ((m.wst || m.replace || m.schicht) && (IDLE.on || IDLE.hxOff)) { if (IDLE.on) idleWake(); if (IDLE.hxOff) hxGates(true); IDLE.hxT = null; }   // (step 2a: a Wuchs pass, a version – it sounds through the same way)
   if (HX.batch) {   // (hxBatch: one message – a key twice sends what is there first)
@@ -25700,10 +25701,11 @@ function hxOut1() { if (HXF1.off) hxF1Wake(); if (HX.node && !HX.out1) { if (IDL
 // pass it. It now rests – its link to the strip taken out, so the browser no longer runs it – once nothing has played
 // through it for 10 s (no Schicht on out 1 – one that left it counts a pass of its loop longer –, no Hof, no answer, no
 // loop played live), its input and its output have been exact zeros for 2 s (taps as Ruhe's, plugged in only for that
-// check) and no move of one of its own params is under way. Every use goes through hxOut1, which puts the link back
-// first, and so does any move of one of its params (the AudioParam hook: a param keeps its time only where the render
-// pulls it). What it holds then is zeros – its filters, delays and the drive's oversampler have had nothing else for
-// long enough – and its LFOs are the live chain's: it plays on sample for sample as if it had run.
+// check) and no move of one of its own params is under way. Every use puts the link back first: hxOut1 (a voice, a Hof
+// into it), any message to the processor that plays on out 1 (hxPost), any move of one of its params (the AudioParam
+// hook – a param keeps its time only where the render pulls it). What it holds then is zeros – its filters, delays and
+// the drive's oversampler have had nothing else for long enough – and its LFOs are the live chain's: it plays on sample
+// for sample as if it had run.
 function hxF1Busy(now) {
   let busy = !!((HXN.feed && HXN.feed.size) || hxAntOn());
   const o1 = HXF1.o1 || (HXF1.o1 = new Map());
@@ -33218,12 +33220,15 @@ function watchUnderruns() {
   };
   const count = ps ? () => (ps.underrunEvents != null ? ps.underrunEvents : ps.fallbackFramesEvents) || 0 : clock;
   let last = count();
+  const hits = [];   // (the seconds with new underruns, the last ten: a lasting stutter, not one glitch)
   setInterval(() => {
     if (document.visibilityState !== 'visible' || !A.ctx || A.ctx.state !== 'running') { ck.p = 0; return; }   // (a pause stops the clock: counted afresh)
-    const u = count();
+    const u = count(), now = performance.now();
     A.underruns = u;
+    if (u > last) hits.push(now);
+    while (hits.length && now - hits[0] > 10000) hits.shift();
     if (u > last && hxWGuard()) { last = u; return; }   // Hexenring: (step 2a) the Wuchs gives way first – never the live budget, never A.lite for it
-    if (u > last && hxTauGuard()) { last = u; return; }   // Hexenring: (phone report) then, on a phone, the loops' Taumeln
+    if (u > last && hits.length >= 2 && hxTauGuard()) { last = u; return; }   // Hexenring: (phone report) then, on a phone and when it lasts, the loops' Taumeln
     if (!ps) { last = u; return; }
     if (u > last && VBUDGET > 6) {
       A.budgetScale = (A.budgetScale || 1) * 0.8;
