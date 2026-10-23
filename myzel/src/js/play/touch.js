@@ -35,6 +35,7 @@ function stagePoint(e) {
 }
 function onDown(e) {
   if (!A.started) return;
+  const lmT = LM.on ? performance.now() : 0;   // („Leistung messen“: from the touch to the voice)
   if (e.preventDefault) e.preventDefault();
   if (e.pointerType && SLP.down) return;   // Gestik: the screen lies on the table – no phantom touches
   if (NA.q.length) noteAfterRun();   // (the last note's own work first: in order)
@@ -61,6 +62,7 @@ function onDown(e) {
   // runs them first
   const at = A.ctx.currentTime;
   noteAfter(() => { noteEvent(at); VIS.touchStart(tt); });
+  if (lmT) lmTouch(e, lmT);
 }
 // the work after a note, in a task of its own (a message: the next task, before any timer)
 const NA = { q: [], ch: null };

@@ -204,11 +204,11 @@ function gkVisFrame(c, w, h, dt) {
   const lad = VIS.lad || 0, gl = VIS.glas || 0, zz = !!VIS.zz;
   VIS.sv = zz ? -0.35 : 1 + 2.5 * lad; VIS.sa = zz ? 0.45 : 1 + 1.4 * lad;
   if (zz) { for (const s of VIS.spores) if (s.y > 0.995) s.y = 0.995; }
-  else if (lad > 0.01 && Math.random() < lad * 0.7 && VIS.hy.length < HY_MAX) {
+  else for (let st = 0; st < (VIS.k || 1); st++) if (lad > 0.01 && Math.random() < lad * 0.7 && VIS.hy.length < HY_MAX) {   // (VIS.k: the Handy-Modus under load moves two steps a drawn frame)
     const s = VIS.spores[Math.floor(Math.random() * VIS.spores.length)], x = s.x * w, y = s.y * h;
     for (let i = 0, n = 1 + Math.round(lad * 2); i < n && VIS.hy.length < HY_MAX; i++) VIS.hy.push({ x, y, a: rand(0, Math.PI * 2), life: rand(0.5, 0.9), hue: VIS.hueAt(s.x) + rand(-20, 20), w: 0.6 + lad, sp: 0.8 + 1.6 * lad * Math.random() });
   }
-  if (lad > 0.01 && !zz && (VIS.gn = (VIS.gn || 0) + 1) % 3 === 0) {   // every third frame (the trails keep it): ≈ 0.14 at full charge
+  if (lad > 0.01 && !zz && (VIS.gn = (VIS.gn || 0) + (VIS.k || 1)) % 3 < (VIS.k || 1)) {   // every third frame (the trails keep it): ≈ 0.14 at full charge
     const g = c.createRadialGradient(w / 2, h * 1.1, 0, w / 2, h * 1.1, h * 0.9);
     g.addColorStop(0, 'rgba(255,179,92,' + (0.036 * lad).toFixed(4) + ')'); g.addColorStop(1, 'rgba(255,179,92,0)');
     c.fillStyle = g; c.fillRect(0, h * 0.2, w, h * 0.8);

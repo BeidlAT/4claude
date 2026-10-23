@@ -371,7 +371,7 @@ function rgVisFrame(c, w, h) {
   const now = A.ctx ? A.ctx.currentTime : 0, b = beatAt(now);
   RG.gx += (modVal('rgx', now) - RG.gx) * 0.2; RG.gy += (modVal('rgy', now) - RG.gy) * 0.2;
   VIS.lx = REDUCED ? 0 : RG.gx * 0.6; VIS.ly = REDUCED ? 0 : -RG.gy * 0.6;
-  const odd = (RG.fr = (RG.fr || 0) + 1) & 1;
+  const odd = (RG.fr = (RG.fr || 0) + (VIS.k || 1)) & 1;   // (two steps a drawn frame in the Handy-Modus under load: every Keim each drawn frame)
   for (const k of RG.k) {
     if (k.t0 > now) continue;
     const left = k.end == null ? 1 : clamp((k.end - b) / 4, 0, 1), age = now - k.hitT, lit = age >= 0 && age < 0.35 ? 1 - age / 0.35 : 0;

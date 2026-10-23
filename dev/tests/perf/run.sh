@@ -6,7 +6,8 @@
 #   sh run.sh baseline   measure the current tree (5 runs) and store it as baseline.json, with its commit as reference
 #   sh run.sh table <commit>…   perf.js on any commits (slots p<commit>-inst), every scenario, both viewports
 # Parts: lib.js (viewports, /proc per thread, scenarios), perf.js (the table), inv.js (the node inventory: what the
-# render pulls and what of it is busy), check.js (the guard), t-idle-parity.js, t-idle-live.js.
+# render pulls and what of it is busy), check.js (the guard), t-idle-parity.js, t-idle-live.js, t-phone-mode.js (the Handy-
+# Modus and „Leistung messen“), phone.js (the owner's phone report emulated: node phone.js --help).
 D=$(cd "$(dirname "$0")" && pwd); V="$D/../v2"; R=/home/user/4claude
 PARITY_BASE=e341c1b   # the last build before Ruhe: the parity reference
 build() { mkdir -p "$D/src-$1" && git -C "$R" show "$1:myzel/index.html" > "$D/src-$1/index.html" && git -C "$R" show "$1:myzel/tap-worklet.js" > "$D/src-$1/tap-worklet.js" && sh "$V/mk.sh" "$D/src-$1" "$2" >/dev/null; }
@@ -22,5 +23,6 @@ build "$REF" perfref
 rc=0
 echo "== t-idle-parity"; OLD="p$PARITY_BASE-inst" NEW=perfnew-inst node "$D/t-idle-parity.js" || rc=1
 echo "== t-idle-live"; URL=http://127.0.0.1:8790/perfcur-inst/index.html node "$D/t-idle-live.js" || rc=1
+echo "== t-phone-mode"; SLOT=perfcur-inst node "$D/t-phone-mode.js" || rc=1
 echo "== check (against $REF)"; node "$D/check.js" || rc=1
 exit $rc

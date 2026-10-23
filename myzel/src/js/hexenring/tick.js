@@ -146,7 +146,7 @@ function hxVisFrame(c, w, h) {
     const keep = [];
     c.font = '600 10px ' + COL.fontNum; c.textAlign = 'center'; c.textBaseline = 'middle';
     for (const r of HXV.rings) {
-      r.life -= 0.016;
+      r.life -= 0.016 * (VIS.k || 1);   // (the Handy-Modus under load: two steps a drawn frame)
       if (r.life <= 0) continue;
       keep.push(r);
       const x = r.x * w, y = (1 - r.y) * h, rad = 9 + (1 - r.life) * 10, a = 0.75 * r.life;

@@ -64,6 +64,7 @@ function buildDev() {
   const latInfo = h('p', { class: 'note' });
   const latBtn = h('button', { type: 'button', class: 'btn primary', hidden: true, onclick: restartAudio }, 'Klang neu starten');
   box.append(section('Latenz', 'Zeit vom Anschlag bis zum Ton', grid(ctl('dev.lat', { label: 'Ausgabe' })), latInfo, h('div', { class: 'row' }, latBtn)));
+  box.append(lmBuild());   // Leistung: the Handy-Modus and „Leistung messen“ (ui/leistung.js)
   box.append(section('Computertastatur', null, h('p', { class: 'note' }, 'Ohne Keyboard spielen die Tasten A bis Ö (Grundreihe) die ersten Töne der Spielfläche, mit Umschalt weiter oben.')));
   Object.assign(devEls, { qInfo, qLive, latInfo, latBtn });
   updDevUI();
@@ -158,6 +159,7 @@ function updDevUI() {
         ' Der Browser rechnet allen Klang auf einem Prozessorkern – Stufe 3 füllt ihn' + (MOBILE ? '; auf Handys kann es knacken.' : '.');
   updDevLive();
   updLatText();
+  lmUI();
   kcUI();
 }
 // the keyboard part: status, which buttons, the platform's help, cards, bindings, what the folded parts hold

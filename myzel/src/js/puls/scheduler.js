@@ -119,8 +119,10 @@ function grainTick(horizon) {
 }
 // a part of the tick or of the frame that throws: said once per part (not 40 times a second), the others go on
 const TICK_ERR = new Set();
-function tickTry(k, fn) { try { fn(); } catch (e) { if (!TICK_ERR.has(k)) { TICK_ERR.add(k); console.error(e); } } }
-function tick() {
+// („Leistung messen“: while it runs, each part's time is counted – LM, ui/leistung.js; otherwise one test of a flag)
+function tickTry(k, fn) { const t0 = LM.on ? performance.now() : 0; try { fn(); } catch (e) { if (!TICK_ERR.has(k)) { TICK_ERR.add(k); console.error(e); } } if (t0) lmPart(k, performance.now() - t0); }
+function tick() { if (!LM.on) { tickRun(); return; } const t0 = performance.now(); lmGap(t0); tickRun(); lmPart(30, performance.now() - t0); }
+function tickRun() {
   const nowW = performance.now();
   // track the worst recent gap between ticks (decays over ~10 s) and look further ahead after main-thread stalls,
   // so a late tick never leaves a hole in the Puls, Wirbel or grain stream
