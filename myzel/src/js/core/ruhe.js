@@ -68,7 +68,9 @@ function idleBuild() {
   IDLE.taps = { links, g: [[e0, e1], [r0, r1], [m0, m1]], buf: new Float32Array(IDLE_FFT) };
 }
 // what can sound: a voice, a held finger, the Bordun, a frozen echo, the Puls, the rain, a Schleife, a web that rings
-const idleSrc = () => !!(A.voices.size || A.grainVoices.size || touches.size || A.bor || A.frozen || SEQ.on || rgSounds() || HX.loops.size || HXN.webs.size || (HXN.feed && HXN.feed.size) || HX.ws || (typeof preview !== 'undefined' && preview) ||
+// (Leistung, 23.10.2026: a Schleife that is halted or muted sounds no more – a loop played again wakes the graph first,
+// hxPost with a state „spielt“; its stop's Ausklang still ringing keeps the taps from seeing zeros)
+const idleSrc = () => !!(A.voices.size || A.grainVoices.size || touches.size || A.bor || A.frozen || SEQ.on || rgSounds() || hxSounds() || HXN.webs.size || (HXN.feed && HXN.feed.size) || HX.ws || (typeof preview !== 'undefined' && preview) ||
   (A.gsp && A.gsp.active) || RHZ.vs.size || RHZ.q.length || (A.revWant && !A.revActive));
 // the taps hear only the quiet after the last sound: while a source sounds nothing is counted, so they rest then (and
 // while the graph sleeps); plugged in, they are read once they hold a whole window of what came since
@@ -98,8 +100,8 @@ function idleTick(force) {
   // the Hexenring's processor without a Schleife (or a web of one) for 20 s: its way to the master, zeros, is closed –
   // its strip and its sends rest then even while other sound plays, where they may (whatever its strip's filters held
   // has died away; hxGates); a new Schleife opens it (hxPost)
-  if (HX.g0 && HX.ctx === A.ctx) { if (HX.loops.size || HXN.webs.size || (HXN.feed && HXN.feed.size) || hxAntOn() || IDLE.hxT == null) IDLE.hxT = now; else if (!IDLE.hxOff && now - IDLE.hxT >= 20) hxGates(false); }
-  if (idleSrc() || now < IDLE.autoT) { IDLE.qT = now; IDLE.z = null; idleTaps(false); if (IDLE.on) idleWake(!!(A.voices.size || A.bor || HX.loops.size)); return; }   // (those wake it themselves: late)
+  if (HX.g0 && HX.ctx === A.ctx) { if (hxSounds() || HXN.webs.size || (HXN.feed && HXN.feed.size) || hxAntOn() || IDLE.hxT == null) IDLE.hxT = now; else if (!IDLE.hxOff && now - IDLE.hxT >= 20) hxGates(false); }
+  if (idleSrc() || now < IDLE.autoT) { IDLE.qT = now; IDLE.z = null; idleTaps(false); if (IDLE.on) idleWake(!!(A.voices.size || A.bor || hxSounds())); return; }   // (those wake it themselves: late)
   if (IDLE.on) return;
   idleTaps(true);
   if (now - IDLE.tapT < (IDLE_FFT + 256) / SR) return;
