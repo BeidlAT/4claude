@@ -1,0 +1,80 @@
+<div id="app" lang="de">
+  <header class="bar" id="bar">
+    <div class="logo" aria-hidden="true">myzel</div>
+    <button id="engChip" class="eng-chip" type="button" aria-controls="sheet" aria-label="Klangquelle: Nebel. Einstellungen öffnen"><span class="lbl">Klang</span><span id="engGlyph" class="eng-g" aria-hidden="true"></span><span id="engName">Nebel</span></button>
+    <button id="btnPuls" class="iconbtn" type="button" aria-pressed="false" aria-label="Puls" title="Puls starten oder anhalten" data-act="puls"></button>
+    <button id="btnFreeze" class="iconbtn" type="button" aria-pressed="false" aria-label="Echo einfrieren" title="Echo einfrieren" data-act="freeze"></button>
+    <button id="btnGk" class="gk-ico" type="button" hidden aria-label="Gestik" title="Gestik" data-st="aus"><svg viewBox="0 0 32 32" aria-hidden="true"><circle class="trk" cx="16" cy="16" r="13"/><circle class="lad" cx="16" cy="16" r="13" pathLength="100" stroke-dasharray="0 100"/><g class="spo"><circle cx="16" cy="16" r="3.3"/><path d="M16 11.2V8.4M16 20.8v2.8M11.2 16H8.4M20.8 16h2.8M12.6 12.6l-2-2M19.4 19.4l2 2M19.4 12.6l2-2M12.6 19.4l-2 2"/></g><text class="zz" x="22.5" y="10.5">z</text></svg></button>
+    <button id="btnRec" class="recbtn" type="button" data-state="idle" aria-label="Aufnahme starten" data-act="rec"><span class="dot"></span><span id="recLabel">REC</span></button>
+    <div class="meter" aria-hidden="true"><i id="outMeter"></i></div>
+  </header>
+
+  <div class="main" id="main">
+    <div class="stcol" id="stcol">
+    <div class="stage" id="stage">
+      <canvas id="cvBg" aria-hidden="true"></canvas>
+      <canvas id="cvFx" tabindex="0" role="application" aria-roledescription="Spielfläche" aria-label="Spielfläche. Waagrecht die Tonhöhe, senkrecht die Klangfarbe. Mit der Tastatur: Tasten A bis Ö spielen die ersten Töne."></canvas>
+      <div class="axis top" aria-hidden="true">hell ↑</div>
+      <div class="axis bottom" aria-hidden="true">dunkel ↓</div>
+      <div class="hx-tag" id="hxTag" aria-hidden="true" hidden></div>
+      <div class="hx-mic" id="hxMic" role="status" aria-label="Mikrofon ist an" hidden>● Mikro</div>
+      <div class="hx-coach" id="hxCoach" hidden>Spiel etwas Schönes, dann tippe den Korb.</div>
+    </div>
+    <div class="hxr" id="hxRail" role="toolbar" aria-label="Hexenring – Schleifen" hidden>
+      <canvas id="hxCv" aria-hidden="true"></canvas>
+      <button type="button" class="hxb hx-korb" id="hxKorb" aria-label="Korb: ernten"><span class="w">leer</span></button>
+      <button type="button" class="hxb hx-haupt" id="hxHaupt" aria-label="Neue Schleife aufnehmen" tabindex="-1"><span class="w">neu</span></button>
+      <div class="hx-mid" id="hxMid"></div>
+      <button type="button" class="hxb hx-pg" id="hxPg" hidden tabindex="-1"></button>
+      <button type="button" class="hxb hx-undo" id="hxUndo" aria-label="Zurück (halten: alle leeren)" tabindex="-1"></button>
+      <button type="button" class="hxb hx-redo" id="hxRedo" aria-label="Wiederholen" hidden tabindex="-1"></button>
+      <button type="button" class="hxb hx-form" id="hxForm" aria-label="Form: nächste Lichtung (halten: Form-Zeile)" tabindex="-1"><span class="w">Form</span></button>
+      <button type="button" class="hxb hx-fold" id="hxFold" aria-label="Ringleiste einklappen" tabindex="-1"></button>
+      <div class="hx-vh" id="hxLive" aria-live="polite"></div>
+    </div>
+    </div>
+    <section id="sheet" class="sheet" hidden aria-labelledby="sheetTitle">
+      <div class="sheet-head">
+        <h2 id="sheetTitle">klang</h2>
+        <button id="btnPanic" class="btn ghost" type="button" title="Alle Töne, Bordun, Echo, Hall und Puls sofort stoppen" data-act="stille">Stille</button>
+        <button id="btnClose" class="iconbtn" type="button" aria-label="Einstellungen schließen"></button>
+      </div>
+      <div class="sheet-body" id="sheetBody"></div>
+    </section>
+  </div>
+
+  <div class="quick" id="quick"></div>
+
+  <nav class="tabs" id="tabs" aria-label="Einstellungen"></nav>
+
+  <div class="start" id="start" role="dialog" aria-modal="true" aria-labelledby="startTitle">
+    <div class="start-in">
+      <section class="upd" id="upd" hidden aria-labelledby="updTitle">
+        <h2 id="updTitle">Neue Version verfügbar</h2>
+        <div class="upd-notes" id="updNotes"></div>
+        <div class="upd-row"><button id="updGo" class="btn primary" type="button">Jetzt aktualisieren</button><button id="updLater" class="btn" type="button">Später</button></div>
+      </section>
+      <h1 id="startTitle">myzel</h1>
+      <p class="tag">Ein Instrument für Ambient, Perkussion und experimentelle, psychedelische Klänge – gespielt mit den Fingern.</p>
+      <ul>
+        <li><b>Waagrecht</b><span>Tonhöhe, eingerastet in die gewählte Skala</span></li>
+        <li><b>Senkrecht</b><span>Klangfarbe – oben hell, unten dunkel</span></li>
+        <li><b>Finger</b><span id="startFingerLine">Mehrere gleichzeitig; Wischen schlägt Holz, Erz und Erde an</span></li>
+        <li><b>Puls</b><span>Euklidische Rhythmen auf vier Spuren</span></li>
+        <li><b>Aufnahme</b><span>Verlustfrei als WAV, direkt von der Summe</span></li>
+        <li><b>Keyboard</b><span id="startKeysLine">MIDI-Keyboard oder Controller per USB oder Bluetooth verbinden – Tasten spielen, Regler und Pads steuern</span></li>
+        <li><b>Gestik</b><span id="startGkLine">Neigen, schütteln, umdrehen – das Handy formt den Klang mit</span></li>
+      </ul>
+      <div class="go-row"><button id="btnStart" class="btn primary go" type="button">Klang starten</button><button id="btnStartKeys" class="btn go" type="button" hidden>Mit Keyboard starten</button></div>
+      <p class="fine" id="startFine">Kopfhörer oder gute Lautsprecher bringen die Tiefen und den Raum am besten zur Geltung.</p>
+    </div>
+  </div>
+
+  <div class="resume" id="resume" hidden>
+    <button id="btnResume" class="btn primary go" type="button">Klang fortsetzen</button>
+    <p>Das Gerät hat die Wiedergabe unterbrochen, etwa durch einen Anruf oder das Sperren des Bildschirms.</p>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"><span id="toastMsg"></span><button id="toastAct" type="button" hidden></button><button id="toastAct2" class="act2" type="button" hidden></button></div>
+</div>
+

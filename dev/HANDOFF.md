@@ -1,5 +1,14 @@
 # Übergabe: Myzel (Stand 22.10.2026 – Klangquellen, Ruhe und der Hexenring fertig, Schlussprüfung grün)
 
+## Für den Besitzer – Updates beim Start (23.10.2026)
+
+Die installierte App fragt jetzt gleich auf dem Startbildschirm nach einer neuen Version, bevor der Klang startet. Gibt
+es eine, steht oben eine Karte „Neue Version verfügbar“ mit dem, was neu ist – „Jetzt aktualisieren“ lädt einmal neu,
+„Später“ lässt alles wie es ist. Solange die Karte offen ist, warten alle anderen Hinweise. Offline oder bei langsamem
+Netz hält nichts den Start auf; gespielt wird nie unterbrochen. Nach dem Aktualisieren steht einmal „Neu in dieser
+Version“. Einmalig, beim Sprung von der jetzigen Version auf diese, kommt noch der alte kurze Hinweis „Neu laden“ – beim
+nächsten Öffnen ist die neue Version da. Was neu ist, steht in `myzel/CHANGELOG.json`.
+
 ## Für den Besitzer – dein erster Test am Handy (23.10.2026)
 
 **Was los war:** Alle drei Beobachtungen hatten eine gemeinsame Ursache – das Handy kam beim Abspielen der Schleifen
@@ -69,8 +78,8 @@ neue Version, die Service-Worker-Version ändert sich mit jedem Inhalt).
 - die offenen Bestätigungen unten (z. B. nur Schleifen aus Bewegung bewegen das Live-Instrument; Schwarm und Tropfen
   rendern im Werk-Rahmen nicht bitgleich).
 
-**Wie es weitergeht:** Die vereinbarte Reihenfolge steht in `dev/IDEEN.md` (als Nächstes: die Module, dann die
-Bibliothek freier Aufnahmen, Stimme als Instrument, ein Hörprototyp). Neue Sitzung: dieses Repository und diesen Branch
+**Wie es weitergeht:** Die vereinbarte Reihenfolge steht in `dev/IDEEN.md` (die Module sind seit 23.10.2026 umgestellt –
+Quelle `myzel/src/`, siehe „App“ unten; danach die Bibliothek freier Aufnahmen, Stimme als Instrument, ein Hörprototyp). Neue Sitzung: dieses Repository und diesen Branch
 öffnen und schreiben:
 
 > Lies dev/HANDOFF.md und dev/IDEEN.md und mach mit dem nächsten Punkt weiter.
@@ -183,7 +192,30 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Claude-Session: <this session's URL>
 ```
 
-**App:** `myzel/index.html`, a single file of about 1.4 MB (German UI, vanilla JS + Web Audio). GitHub Pages (https://beidlat.github.io/4claude/) deploys from the default branch `ccr-c7c5d0a6-cus3ip` alone: its `github-pages` environment allows no other branch. The stage-2 session had added its own branch to `.github/workflows/pages.yml`; every push there failed before a runner started (runs 18–31, the owner got a failure mail each time) – it is out again. A session's work reaches the app by a pull request into the default branch; Claude opens it and merges it when the owner says so (18.10.2026: „streich ihn und merge dann“ for #4).
+**App:** source in `myzel/src/` – a module tree (since 23.10.2026): the shell `myzel/src/index.html` holds one `@include` line per module (their order is the app's order: one IIFE, one shared scope), modules under `html/`, `css/`, `js/{core,voices,engines,dsp,grains,capture,puls,play,midi,gestik,mod,ui,mixer,hexenring}/` (Etappe 3 in `js/hexenring/mitspieler/`, Etappe 4 in `js/hexenring/oekologie/`); `js/dsp/*` is the body of `myzelDsp()` (AudioWorklet scope – nothing from the app). `myzel/index.html` is the **built output, committed alongside** (one file of about 1.4 MB, German UI, vanilla JS + Web Audio) – never edit it by hand; edit modules, then `python3 myzel/build.py myzel/src myzel/index.html` and commit both. Guards: `myzel/pwa/build.py` and the Pages workflow refuse a stale `index.html` (`python3 myzel/build.py myzel/src --check myzel/index.html`), and so does `dev/tests/v2/mk.sh` as its first step. Find code with `grep -rn name myzel/src`. The split tool and its module map: `dev/tools/split/` (README: how it cuts, the escape hatch for a late branch that still edits `index.html`, what a move to real ES modules would take). GitHub Pages (https://beidlat.github.io/4claude/) deploys from the default branch `ccr-c7c5d0a6-cus3ip` alone: its `github-pages` environment allows no other branch. The stage-2 session had added its own branch to `.github/workflows/pages.yml`; every push there failed before a runner started (runs 18–31, the owner got a failure mail each time) – it is out again. A session's work reaches the app by a pull request into the default branch; Claude opens it and merges it when the owner says so (18.10.2026: „streich ihn und merge dann“ for #4).
+
+**App updates and release notes (23.10.2026):** the installed app checks for a new version on the start screen,
+before the instrument starts. `pwa/build.py` stamps `window.MYZEL_BUILD = {version, notes}` into the page (version = the
+service worker's cache version, the content hash; notes = `myzel/CHANGELOG.json`'s entries) and calls
+`window.myzelUpdate` (`myzel/src/js/ui/update.js`, `updBoot`) – outside claude.ai and the Werk-Rahmen
+only, so the artifact has no check. `updBoot` registers `sw.js`, runs `registration.update()` (never awaited by
+anything; 3 s cap), and offers a waiting worker in the card `#upd` at the top of the start screen: „Neue Version
+verfügbar“ with the notes the page lacks (read from the waiting version's own cache, `changelog.json`, after asking it its
+version over a MessageChannel), „Jetzt aktualisieren“ (message `skipWaiting`, reload once on `controllerchange` – only the
+page that asked, never once sound started) and „Später“ (this start only). A worker still installing shows „Neue Version
+wird geladen …“. While the card is open, `toast()` queues (up to 4, shown after it). „Klang starten“ closes the card
+(= Später); a version found only after the start gets one quiet toast. After an update the first start shows „Neu in
+dieser Version“ once (`myzel.neu` = newest id seen, `myzel.neu.von` = the old page's ids, set by „Jetzt aktualisieren“; a
+controlled page with no `myzel.neu` – updated from a version before the card – shows the newest entry). `sw.js`: a new
+version caches everything and then waits; it takes over at once only when the active version predates the card (no
+`changelog.json` in any other `myzel-*` cache) – that old page then shows its old „Neu laden“ toast and the next start is
+the new version (tested against 0a3b1b2). Test: `dev/tests/pwa/t-pwa-update.js` (in `reg.sh`; own server on :8791,
+builds A, B = A + a test entry, A0 = only the oldest entry, OLD = 0a3b1b2; screenshots `out/upd-*.png`).
+**How a release gets its notes:** every pull request into the default branch that changes what a player sees or hears adds
+one entry at the top of `myzel/CHANGELOG.json` – `id` = the publishing date `JJJJ-MM-TT` (a second release on the same day
+`…b`, then `…c`), `punkte` = 2–6 short German sentences for a musician, no internal names (no SPEC terms, no function
+names). `build.py` refuses a malformed list (unique ids, newest first, 2–6 points). A build without a new entry still
+updates (the card then says „Verbesserungen und Korrekturen.“). The version itself needs nothing: it is the hash.
 
 **claude.ai version:** the artifact https://claude.ai/artifact/HNZYLEaUvtCfkyYWi3SuDr, private, capability `downloads` – still stage 1.
 - Republish it with the Artifact tool: `url` + `file_path` = `myzel/index.html`.
@@ -230,7 +262,7 @@ Then use these:
   - `mixui/f/func.js` needs slot `mix`.
   - `midi-tests/run-all.sh`.
   - `motion-tests/run-all.sh` is long; a few timing checks flake under load, so re-run those alone.
-- Syntax check: `sh <scratch>/motion-tests/syn.sh myzel/index.html`.
+- Syntax check: `sh <scratch>/motion-tests/syn.sh myzel/index.html` (after the build). All test builders read the built `myzel/index.html`; `mk.sh` refuses it when it is stale against `myzel/src`.
 - `sh <scratch>/reg.sh` runs every regression suite after a stage (v2, mixfunc, mixui, MIDI, Gestik) into `<scratch>/reglogs/`, summary on stdout.
 - Performance (`dev/tests/perf/`, 20.10.2026): `sh <scratch>/perf/run.sh` is the guard – Ruhe's parity and live tests, then CPU per thread against `baseline.json`'s reference build, measured alternately; `reg.sh` runs it last (`PERF=0` skips it; ≈ 75 min). `node <scratch>/perf/perf.js [--runs 3] [--vp d,a] [--sc …] [--hz120] <slot>…` is the table, `inv.js <slot>` the live graph's inventory, `attrib.js <slot>` each always-on part's share. Details: „Notes from the performance pass“ below. Never beside another heavy test.
 - Cost (`klang/tests/cost.js`): this machine's render times scatter by ±20 % between runs. The script keeps each candidate's fastest of N interleaved rounds and scales by the **median** of the held native references; struck engines need `DUR` inside their voices' life (Jahresring: `DUR=2 PARAMS='{"jrg.holz":1,"jrg.jahreszeit":"sommer"}'`; Rhizom: see the final calibration below). A singleton (Gespinst's web) is measured as 24 of them (`NW=24`). Re-run before believing a single number – busy builders skewed it by up to 1.7×; on a quiet machine two runs agree within ≈ 10 %. `recal.js` is the full calibration.

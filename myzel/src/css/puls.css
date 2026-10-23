@@ -1,0 +1,18 @@
+/* ---------- puls panel ---------- */
+.transport { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-bottom: 10px; }
+.lanehead {
+  position: sticky; top: -4px; z-index: 2; display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 12px; align-items: center;
+  margin: 0 calc(-1 * var(--gut)) 10px; padding: 8px var(--gut); background: var(--bark); border-bottom: 1px solid var(--line);
+}
+#ringCv { width: 132px; height: 132px; display: block; }
+.lanes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.lane-tab {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; min-height: 58px; padding: 7px 9px; border-radius: 12px;
+  border: 1px solid var(--line); background: transparent; color: var(--hypha); text-align: left;
+}
+.lane-tab b { font: 600 12px/1.2 var(--font-ui); display: flex; align-items: center; gap: 6px; }
+.lane-tab b i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); flex: none; }
+.lane-tab small { font: 400 10px/1.2 var(--font-num); color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.lane-tab[aria-pressed="true"] { border-color: var(--c); background: var(--bark-2); }
+.lane-tab.off b { color: var(--dim); }
+

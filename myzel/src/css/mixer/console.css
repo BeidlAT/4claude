@@ -1,0 +1,182 @@
+/* ---------- the console ---------- */
+.mx-scroll { position: relative; flex: 1 1 auto; min-height: 0; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; touch-action: pan-x; scrollbar-width: thin; scrollbar-color: rgba(240, 230, 216, .14) transparent; }
+.mx[data-w="narrow"] .mx-scroll { scrollbar-width: none; }
+.mx[data-w="narrow"] .mx-scroll::-webkit-scrollbar { display: none; }
+/* the soil under the strips holds the two rails, the knots and the send threads: deep enough for a 44 px route node */
+.mx-row { --soil: 46px; position: relative; display: flex; align-items: stretch; height: 100%; min-width: max-content; padding: 0 0 var(--soil) 4px; }
+.mx[data-w="wide"] .mx-row { --soil: 60px; padding-left: 12px; }
+.mx-cvs, .mx-cvd { position: absolute; left: 0; top: 0; z-index: 0; pointer-events: none; }
+.mx-grp { position: relative; z-index: 1; display: flex; flex-direction: column; flex: 1 0 auto; }
+.mx-grp + .mx-grp { margin-left: 4px; }
+.mx-gh { flex: none; height: 16px; display: flex; align-items: center; gap: 6px; padding: 0 6px; font: 400 10px/1 var(--font-display); color: rgba(168, 152, 138, .78); letter-spacing: .04em; white-space: nowrap; }
+.mx-gh::before, .mx-gh::after { content: ""; flex: 1; min-width: 6px; height: 1px; background: linear-gradient(90deg, transparent, rgba(240, 230, 216, .15)); }
+.mx-gh::after { background: linear-gradient(90deg, rgba(240, 230, 216, .15), transparent); }
+.mx-gs { flex: 1 1 auto; min-height: 0; display: flex; }
+.mx-g-sum { position: sticky; right: 0; z-index: 3; flex: none; margin: 0 0 calc(-1 * var(--soil)) 6px; border-left: 1px solid rgba(240, 230, 216, .08); background: var(--bark); box-shadow: -16px 0 22px -14px rgba(0, 0, 0, .8); }
+/* a strip scrolling under the Summe fades out before its scale meets the Summe's own */
+.mx-g-sum::before { content: ""; position: absolute; top: 0; bottom: 0; left: -15px; width: 14px; pointer-events: none; background: linear-gradient(to right, color-mix(in srgb, var(--bark) 0%, transparent), var(--bark)); }
+.mx:not([data-scroll="1"]) .mx-g-sum::before { display: none; }
+.mx-g-sum .mx-gs { padding-bottom: var(--soil); }
+.mx-cvsum { position: absolute; left: 0; top: 0; width: 100%; pointer-events: none; }
+
+.mx-st {
+  --sw: 88px; position: relative; flex: 1 0 var(--sw); max-width: 108px; min-width: 0; border-radius: 12px;
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  grid-template-areas: "hd hd" "k1 k2" "m s" "stem stem" "val val"; transition: background .2s;
+}
+.mx[data-w="wide"] .mx-st { --sw: 74px; }
+.mx-st.gone { display: none; }   /* "Regen" while it cannot sound and was never set (mxRgnSync) */
+.mx .mx-st.mx-sum { --sw: 122px; flex: none; width: var(--sw); max-width: none; }
+.mx-st + .mx-st::before { content: ""; position: absolute; left: 0; top: 44px; bottom: 24px; width: 1px; background: linear-gradient(to bottom, transparent, rgba(240, 230, 216, .055) 18%, rgba(240, 230, 216, .055) 82%, transparent); }
+.mx-st.sel { background: linear-gradient(to bottom, color-mix(in srgb, var(--c) 10%, transparent), transparent 46%); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 26%, transparent); }
+.mx-sh { grid-area: hd; min-width: 0; height: 40px; margin: 2px 2px 0; padding: 2px 3px; border: 0; background: none; border-radius: 10px; display: grid; justify-items: center; align-content: center; gap: 3px; text-align: center; color: inherit; }
+.mx[data-w="narrow"] .mx-sh { height: 34px; gap: 2px; }
+.mx[data-w="narrow"] .mx-gh { height: 14px; }
+.mx[data-w="narrow"]:not([data-strip="tight"]) .mx-row { padding-left: 8px; }
+.mx[data-w="narrow"][data-strip="classic"] .mx-st .mx-kl { margin-top: 0; }
+.mx-sh:hover { background: rgba(240, 230, 216, .04); }
+.mx-nm { display: flex; align-items: center; gap: 5px; max-width: 100%; font: 600 12px/1.1 var(--font-ui); white-space: nowrap; }
+.mx-nm span { overflow: hidden; text-overflow: ellipsis; }
+.mx-nm > i { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); }
+.mx-nm > i.mx-dot4 { width: 9px; height: 9px; display: grid; grid-template-columns: 4px 4px; gap: 1px; border-radius: 0; background: none; box-shadow: none; }
+.mx-dot4 b { width: 4px; height: 4px; border-radius: 50%; background: var(--spore); }
+.mx-dot4 b:nth-child(2) { background: var(--lumen); }
+.mx-dot4 b:nth-child(3) { background: var(--lilac); }
+.mx-dot4 b:nth-child(4) { background: var(--rose); }
+.mx-sh .mx-src { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 400 10px/1.1 var(--font-num); color: var(--dim); }
+.mx-sum .mx-nm { font: 400 13px/1 var(--font-display); letter-spacing: .02em; }
+.mx[data-detail-on] .mx-sh .mx-src::after { content: " \203A"; color: rgba(168, 152, 138, .6); }
+/* an empty mushroom: its source plays nothing – the cap is an outline without gill light, the knobs and value
+   stay usable but step back (the stem says "aus", see mxStemBody) */
+.mx-st.srcoff .mx-sh .mx-src { color: rgba(168, 152, 138, .55); }
+.mx-st.srcoff .mx-nm > i { background: transparent; box-shadow: inset 0 0 0 1.5px var(--c); }
+.mx-st.srcoff .mx-cap svg { filter: none; }
+.mx-st.srcoff .mx-cap :is(.cg, .ce, .ch, .cw) { display: none; }
+.mx-st.srcoff .mx-cap .cd { fill: #120d0a; stroke-opacity: .4; }
+.mx-st.srcoff .mx-cap .cr { stroke-opacity: .45; }
+.mx-st.srcoff :is(.mx-kw, .mx-val, .mx-rings) { opacity: .5; }
+.mx-st.dormant .mx-nm { color: var(--dim); }
+.mx-st.dormant .mx-nm > i { background: #6f6157; box-shadow: none; }
+.mx-st.dormant .mx-kn, .mx-st.dormant .mx-rings { opacity: .55; }
+.mx-st.dormant .mx-cap svg { filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .6)) saturate(.15); opacity: .82; }
+
+/* gill knobs */
+.mx-kw { display: grid; justify-items: center; align-content: start; min-width: 0; }
+.mx-kw.k1 { grid-area: k1; }
+.mx-kw.k2 { grid-area: k2; }
+.mx-kn { position: relative; width: 44px; height: 44px; border-radius: 50%; touch-action: pan-x; cursor: ns-resize; }
+.mx-kn canvas { display: block; width: 40px; height: 40px; margin: 2px; pointer-events: none; }
+.mx-kn:focus-visible { outline: 2px solid var(--lumen); outline-offset: -1px; }
+.mx-kv { margin-top: -3px; font: 400 10px/1.1 var(--font-num); color: var(--dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mx-kw.mod .mx-kv { color: var(--hypha); }
+.mx-kl { margin-top: 2px; font: 500 9.5px/1.1 var(--font-ui); letter-spacing: .01em; white-space: nowrap; color: color-mix(in srgb, var(--kc, var(--dim)) 55%, var(--dim)); }
+.mx-kw.off .mx-kn { opacity: .35; cursor: default; }
+.mx-kw.off .mx-kv { color: rgba(168, 152, 138, .7); }
+.mx[data-w="wide"] .mx-st:not(.mx-sum) .mx-kn { width: 37px; }
+.mx[data-w="wide"] .mx-st:not(.mx-sum) .mx-kn canvas { width: 34px; height: 34px; margin: 5px 1.5px; }
+.mx[data-w="wide"] .mx-st:not(.mx-sum) .mx-kl { font-size: 8.5px; }
+.mx[data-roomy="1"] .mx-st:not(.mx-sum) .mx-kn { width: 40px; }
+.mx[data-roomy="1"] .mx-st:not(.mx-sum) .mx-kn canvas { width: 38px; height: 38px; margin: 3px 1px; }
+.mx[data-roomy="1"] .mx-st:not(.mx-sum) .mx-kl { font-size: 9px; }
+
+/* mute / solo; on the Summe: monitoring */
+.mx-m, .mx-s { height: 44px; min-width: 0; padding: 0 3px; background: none; border: 0; display: grid; place-items: center; }
+.mx-st .mx-m { grid-area: m; }
+.mx-st .mx-s { grid-area: s; }
+.mx-m span, .mx-s span { width: 100%; max-width: 40px; height: 28px; border-radius: 8px; display: grid; place-items: center; border: 1px solid var(--line); background: rgba(240, 230, 216, .025); font: 500 11px/1 var(--font-num); color: var(--dim); transition: background .12s, color .12s, box-shadow .12s; }
+.mx-m[aria-pressed="true"] span { background: var(--rose); border-color: var(--rose); color: var(--ink); box-shadow: 0 0 12px -2px var(--rose); }
+.mx-s[aria-pressed="true"] span { background: var(--lumen); border-color: var(--lumen); color: var(--ink); box-shadow: 0 0 12px -2px var(--lumen); }
+.mx-st .mx-wide { grid-column: 1 / 3; }
+.mx-wide span { max-width: 80px; }
+.mx-mon span { max-width: 54px; font-size: 10px; letter-spacing: -.01em; white-space: nowrap; }
+.mx[data-strip="tight"] .mx-mon span, .mx[data-strip="side"] .mx-mon span { font-size: 9.5px; letter-spacing: -.03em; }
+.mx-mon[aria-pressed="true"] span { background: var(--spore); border-color: var(--spore); color: var(--ink); box-shadow: 0 0 12px -2px var(--spore); }
+.mx-mon:disabled span { opacity: .45; }
+
+/* the stem: meter on the canvas behind, cap and readouts on top */
+.mx-stem { grid-area: stem; position: relative; min-height: 70px; touch-action: pan-x; cursor: ns-resize; }
+/* the held peak sits on the stem's top ring – the clip lamp – and turns into a red CLIP there; its 44 px target
+   reaches into the top of the travel, under the cap */
+.mx-pk { position: absolute; top: 0; left: 50%; z-index: 1; width: 52px; height: 22px; translate: -50% 0; padding: 1px 0 0; background: none; border: 0; display: flex; justify-content: center; align-items: flex-start; cursor: pointer; }
+.mx-pk::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 44px; }
+.mx-pk span { font: 500 10.5px/1 var(--font-num); color: rgba(168, 152, 138, .95); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mx-pk.hot span { color: var(--spore); }
+.mx-pk.clip span { color: var(--rec); font-weight: 600; letter-spacing: .05em; text-shadow: 0 0 10px rgba(255, 91, 77, .6); }
+.mx-cap { position: absolute; top: 0; left: 50%; width: 48px; height: 44px; z-index: 2; cursor: grab; will-change: transform; }
+.mx-cap svg { position: absolute; left: 1px; top: 3px; width: calc(100% - 2px); height: auto; overflow: visible; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .6)) drop-shadow(0 0 7px color-mix(in srgb, var(--c) 35%, transparent)); transition: filter .15s; }
+.mx-stem.drag .mx-cap svg, .mx-cap:focus-visible svg { filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .6)) drop-shadow(0 0 12px var(--c)); }
+.mx-stem.drag, .mx-stem.drag .mx-cap { cursor: grabbing; }
+.mx-cap:focus-visible { outline: none; }
+.mx-cap:focus-visible::after { content: ""; position: absolute; left: -4px; right: -4px; top: 2px; bottom: 2px; border-radius: 12px; box-shadow: 0 0 0 2px var(--lumen); }
+.mx-val { grid-area: val; position: relative; z-index: 3; height: 26px; padding: 0; border: 0; background: none; display: grid; place-items: center; }
+.mx-val::after { content: ""; position: absolute; left: 0; right: 0; top: -11px; bottom: 0; }
+.mx-val span { padding: 3px 7px; border-radius: 7px; background: var(--bark); box-shadow: 0 0 0 1px rgba(240, 230, 216, .09); font: 500 11.5px/1 var(--font-num); font-variant-numeric: tabular-nums; color: var(--hypha); white-space: nowrap; }
+/* the route node: in the soil under its strip (placed by the layout), never over the value above it */
+.mx-node { position: absolute; left: 0; top: 100%; width: 44px; height: 44px; z-index: 2; padding: 0; border: 0; background: none; border-radius: 12px; cursor: pointer; }
+.mx-bead { position: absolute; left: 0; top: 0; z-index: 1; width: 18px; height: 18px; border-radius: 50%; }
+.mx-node:hover { background: rgba(240, 230, 216, .035); }
+.mx-node:focus-visible { outline-offset: -3px; }
+
+/* the Puls group strip */
+.mx-rings { grid-column: 1 / 3; grid-row: 2; height: 62px; padding: 0; border: 0; background: none; display: grid; place-items: center; border-radius: 12px; }
+.mx-rings canvas { width: 54px; height: 54px; display: block; }
+.mx[data-layer="duck"] .mx-rings { display: none; }
+.mx:not([data-layer="duck"]) .duckonly { display: none; }
+.mx-takt { grid-area: k2; padding: 0; border: 0; background: none; display: grid; justify-items: center; align-content: start; --tc: var(--spore); }
+.mx-tk { width: 40px; height: 40px; margin: 2px; border-radius: 50%; display: grid; place-items: center; border: 1px solid color-mix(in srgb, var(--tc) 60%, transparent); background: radial-gradient(circle, color-mix(in srgb, var(--tc) 18%, transparent), transparent 70%); box-shadow: 0 0 14px -6px var(--tc); }
+.mx-tk b { font: 500 8.5px/1.05 var(--font-num); color: var(--tc); text-align: center; width: 26px; white-space: normal; }
+.mx-takt .mx-kl { margin-top: 9px; }
+
+/* the Summe: Tiefen and Höhen beside the stem, where its cap never goes */
+.mx-xk { position: absolute; right: 0; top: 30px; z-index: 1; display: grid; gap: 6px; }
+.mx-xk .mx-kw { width: 44px; }
+
+/* strips beside the stem when the panel is short: knobs next to it, M/S below */
+.mx[data-strip="side"] .mx-st, .mx[data-strip="tight"] .mx-st {
+  --sw: 96px; grid-template-columns: minmax(0, 1fr) 46px; grid-template-rows: auto auto auto minmax(0, 1fr) auto auto;
+  grid-template-areas: "hd hd" "stem k1" "stem k2" "stem ." "val ." "m s";
+}
+.mx[data-strip="side"] .mx-st.mx-sum, .mx[data-strip="tight"] .mx-st.mx-sum { --sw: 160px; padding-right: 4px; }
+.mx[data-strip="side"] .mx-sum .mx-m, .mx[data-strip="side"] .mx-sum .mx-s { grid-row: 6; grid-column: 1 / 3; width: 50%; }
+.mx[data-strip="side"] .mx-sum .mx-m { justify-self: start; }
+.mx[data-strip="side"] .mx-sum .mx-s { justify-self: end; }
+/* there M/S stand in the hypha's way down to the rail: an opaque base like the value box's, so the hypha and its
+   spores pass behind them instead of shining through the letters */
+.mx[data-strip="side"] .mx-st :is(.mx-m, .mx-s):not([aria-pressed="true"]) span { background: linear-gradient(rgba(240, 230, 216, .025), rgba(240, 230, 216, .025)), var(--bark); }
+.mx[data-strip="side"] .mx-st .mx-kv, .mx[data-strip="tight"] .mx-st .mx-kv { margin-top: -4px; }
+.mx[data-strip="side"] .mx-st .mx-kl { margin: 1px 0 4px; }
+.mx[data-strip="side"] .mx-rings, .mx[data-strip="tight"] .mx-rings { grid-column: 2; grid-row: 2 / 4; height: auto; align-self: start; padding-top: 4px; }
+.mx[data-strip="side"] .mx-rings canvas, .mx[data-strip="tight"] .mx-rings canvas { width: 42px; height: 42px; }
+.mx[data-strip="side"] .mx-sum .mx-xk, .mx[data-strip="tight"] .mx-sum .mx-xk { right: 0; }
+/* small phones: the Summe slims to stem, value, Mono and −20 dB (its four knobs wait in its Fruchtkörper, opened from
+   its head or the fruiting body) – so three channels fit beside it */
+.mx[data-sumslim="1"] .mx-st { --sw: 92px; }
+.mx[data-sumslim="1"] .mx-st.mx-sum { --sw: 74px; padding-right: 0; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto auto auto; grid-template-areas: "hd" "stem" "val" "m" "s"; }
+.mx[data-sumslim="1"] .mx-sum :is(.k1, .k2, .mx-xk) { display: none; }
+.mx[data-sumslim="1"] .mx-sum .mx-m, .mx[data-sumslim="1"] .mx-sum .mx-s { grid-row: auto; grid-column: 1; width: auto; justify-self: stretch; }
+.mx[data-sumslim="1"] .mx-sum .mx-mon span { max-width: 62px; }
+.mx[data-sumslim="1"] .mx-sum .mx-nm { font-size: 12px; }
+/* tight (landscape phones): no group labels, no rails; beside the stem the two knobs, each with its value under it,
+   the value box; M and S side by side at the bottom – every target 44 px */
+.mx[data-strip="tight"] .mx-row { --soil: 0px; }
+.mx[data-strip="tight"] .mx-gh { height: 4px; font-size: 0; }
+.mx[data-strip="tight"] .mx-gh::before, .mx[data-strip="tight"] .mx-gh::after { display: none; }
+.mx[data-strip="tight"] .mx-node { display: none; }
+.mx[data-strip="tight"] .mx-sh { height: 24px; margin-top: 0; }
+.mx[data-strip="tight"] .mx-sh .mx-src { display: none; }
+.mx[data-strip="tight"] .mx-st { grid-template-columns: minmax(0, 1fr) 46px; grid-template-rows: auto auto auto minmax(0, 1fr) auto auto; grid-template-areas: "hd hd" "stem k1" "stem k2" "stem ." "stem val" "m s"; }
+.mx[data-strip="tight"] .mx-val { height: 24px; }
+.mx[data-strip="tight"] .mx-val span { padding: 3px 4px; font-size: 10.5px; }
+.mx[data-strip="tight"] .mx-st .mx-kl { display: none; }
+.mx[data-strip="tight"] .mx-st .mx-kn { width: 44px; height: 44px; }
+.mx[data-strip="tight"] .mx-st .mx-kn canvas { width: 38px; height: 38px; margin: 3px; }
+.mx[data-strip="tight"] .mx-st .mx-kv { display: block; margin: -5px 0 0; font-size: 9.5px; line-height: 1; }
+.mx[data-strip="tight"] .mx-st .mx-kw.k2 .mx-kv { color: color-mix(in srgb, var(--kc) 70%, var(--hypha)); }
+.mx[data-strip="tight"] .mx-st .mx-m, .mx[data-strip="tight"] .mx-st .mx-s { height: 44px; }
+.mx[data-strip="tight"] .mx-st .mx-m span, .mx[data-strip="tight"] .mx-st .mx-s span { height: 30px; max-width: 42px; }
+.mx[data-strip="tight"] .mx-st .mx-wide { grid-column: 1 / 3; }
+.mx[data-strip="tight"] .mx-sum .mx-xk { top: 22px; gap: 0; }
+.mx[data-strip="tight"] .mx-sum .mx-xk .mx-kl { display: none; }
+.mx[data-strip="tight"] .mx-rings { grid-column: 2; grid-row: 2 / 4; height: auto; align-self: start; padding-top: 4px; }
+.mx[data-strip="tight"] .mx-takt .mx-kl { display: none; }
+

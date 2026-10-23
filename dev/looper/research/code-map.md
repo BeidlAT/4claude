@@ -1,5 +1,8 @@
 # Myzel – code map for a new LOOPER
 
+> **Since 23.10.2026 the app's source is the module tree `myzel/src/`** (`myzel/index.html` is its build, never edited by
+> hand). The line numbers below are of the old one-file app: find a name with `grep -rn name myzel/src`.
+
 Source: `myzel/index.html` (24 012 lines, git `bf4bf26`, 18.10.2026) and `myzel/tap-worklet.js`. Line numbers are from
 this commit and will drift: **search by name**. "(A)" marks an inference rather than something read in the code. The
 Fährte (motion/modulation loops) is covered by a separate report. It appears here only where a looper must share its
@@ -234,7 +237,7 @@ Clock facts for a looper:
 | Underruns | `watchUnderruns` 23930 | Chrome `playbackStats`: budget ×0.8 per event and `A.lite` (processors get `{lite:1}`). |
 | Worklet module | `myzelDsp` 6351, `MyzelProc` 6398, `MYZEL_DSP_SRC` 9214, `ensureDSP` 9229, `dspWanted` 9225, `wkVoice` 9284 | One Blob module (tried first) with a `myzel-dsp.js` fallback, built by `toString()` from `myzelDsp()`, which may not use closures. It has shared tables (TANH, EXP2, SIN, NOISE) and classes (PRNG, OnePole, DcBlock, Allpass1, FracDelay, Reso, Biquad). Contract: k-rate `freq/detune/hoehe`; port messages carry `{t}` and are applied at frame `round((t−currentTime)·SR)`; reports `{done}`; `{kill}`. It is **loaded only when a worklet engine is in use**, because loading moves Safari and Chrome-in-iframe to the worklet thread. It also registers `myzel-tap` inside try/catch. |
 | Tap file order | `setupCapture` | The tap loads **`tap-worklet.js` first, then the Blob**. A processor added only to `TAP_SRC` would lose to a stale sibling file, so both must change. `pwa/build.py` precaches every file. |
-| Offline / single file | `pwa/sw.js`, `pwa/build.py` | `index.html` is the single source (an HTML fragment). The PWA wraps it, uses local fonts, and has a cache-first SW with a versioned cache. No server and no COOP/COEP, so **no SharedArrayBuffer**: audio goes to and from worklets by `postMessage` with transfer. External scripts are not used. |
+| Offline / single file | `pwa/sw.js`, `pwa/build.py` | `myzel/src/` is the source (modules); `index.html` is its build, one HTML fragment. The PWA wraps it, uses local fonts, and has a cache-first SW with a versioned cache. No server and no COOP/COEP, so **no SharedArrayBuffer**: audio goes to and from worklets by `postMessage` with transfer. External scripts are not used. |
 | iOS | `iosUnmute` 23832, `micStart`, `start()` | A silent `<audio>` loop and `audioSession='playback'` work around the ring switch. The mic needs 'play-and-record'. Unlock with a silent buffer inside the gesture. WebKit worklet glitches and silent-worklet bugs are noted in `dev/klang/research/webaudio.md` §2/§9. iOS has no `playbackStats` and no vibration. iPad/iPhone Safari have no Web MIDI or Web Bluetooth. |
 | claude.ai view | `inViewer` 10132, `DL` (`window.claude.use('downloads')`) | Mic, motion and MIDI are blocked (toasts point to the app URL). Saving works only as a ZIP through the capability. IndexedDB or localStorage may be unavailable (`IDB.ok`, and `store.set` returns false); the UI warns. The artifact is still at stage 1 (HANDOFF). |
 | Memory | `REC_MAX_S` 9522, `renderTakes` | Stereo float32 at 48 kHz is **384 KB/s**; 8 bars at 84 BPM (22.9 s) is ≈ 8.8 MB. Takes are kept in RAM (the UI shows the MB). The 20-min cap is ≈ 460 MB. The `CAP` ring is 8 s ≈ 3 MB. |

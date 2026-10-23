@@ -1,7 +1,8 @@
 # Brief for building one Myzel sound source (klang stages 4–6, reserves)
 
-You build ONE new sound source ("engine") for Myzel, a touch instrument in a single HTML file
-(`myzel/index.html`, ~1.4 MB, vanilla JS + Web Audio, German UI). Read this whole brief first, then the
+You build ONE new sound source ("engine") for Myzel, a touch instrument built into a single HTML file
+(`myzel/index.html`, ~1.4 MB, vanilla JS + Web Audio, German UI) from the modules in `myzel/src/` – edit the modules,
+then `python3 myzel/build.py myzel/src myzel/index.html`; never edit `myzel/index.html` by hand. Read this whole brief first, then the
 binding documents below. You work in your own git worktree (the path you were started in) – never in
 `/home/user/4claude` itself, never on another branch, never push. Commit your work in your worktree when done
 (one or a few commits, message trailer below) and report the commit hash.

@@ -10,7 +10,8 @@ Gedächtnis dafür; jede neue Sitzung liest sie zusammen mit `dev/HANDOFF.md`.
 2. **Module.** `myzel/index.html` in Module aufteilen (HTML-Gerüst, CSS, JavaScript-Module je Bereich: Klangquellen,
    DSP, Mischpult, Gestik, MIDI, Puls, Hexenring …), mit einem Build-Schritt, der Zeichen für Zeichen dieselbe App
    erzeugt. Das Werkzeug dafür liegt fertig in `dev/tools/split/` (README mit Checkliste, Umstellung ≈ 1–2 h). Danach
-   können mehrere Bauabschnitte parallel arbeiten.
+   können mehrere Bauabschnitte parallel arbeiten. **Erledigt (23.10.2026):** die Quelle ist `myzel/src/` (182 Dateien),
+   `python3 myzel/build.py myzel/src myzel/index.html` baut daraus Byte für Byte dieselbe App.
 3. **Bibliothek freier Aufnahmen**, klein und kuratiert, bei Bedarf nachgeladen und offline gespeichert:
    - Feldaufnahmen für die Körner (Wald, Wasser, Wind, Vögel, Stimmen, Glas …);
    - Impulsantworten echter Räume für den Hall (Kirche, Höhle, Treppenhaus, Wald);

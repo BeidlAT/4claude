@@ -135,15 +135,20 @@ Klingt nichts mehr, steckt Myzel Mixer, Effektketten und Hall ab – erst wenn a
 
 | Pfad | Inhalt |
 |---|---|
-| `myzel/index.html` | Die ganze App in einer Datei: HTML-Fragment mit CSS und JavaScript (Web Audio), einschließlich Mixer. Einzige Quelle für beide Varianten. |
+| `myzel/src/` | Die Quelle der App, in Module geteilt: `index.html` (die Hülle mit einer `@include`-Zeile je Modul – ihre Reihenfolge ist die Reihenfolge der App), `html/`, `css/` und `js/` (z. B. `js/core/`, `js/engines/`, `js/dsp/` für das AudioWorklet, `js/mixer/`, `js/hexenring/`). Hier wird bearbeitet. |
+| `myzel/build.py` | Setzt die Module zu `myzel/index.html` zusammen (reines Aneinanderhängen): `python3 myzel/build.py myzel/src myzel/index.html`; `--check myzel/index.html` prüft nur. |
+| `myzel/index.html` | Die gebaute App in einer Datei (HTML-Fragment mit CSS und JavaScript, Web Audio, einschließlich Mixer), mit eingecheckt – Grundlage für beide Varianten. Nie von Hand bearbeiten: `pwa/build.py`, die Veröffentlichung und die Tests lehnen eine Datei ab, die nicht dem Build von `myzel/src` entspricht. |
 | `myzel/tap-worklet.js` | AudioWorklet, das die Summe für Aufnahme und Echo-Körner bitgenau abgreift. |
 | `myzel/pwa/build.py` | Baut daraus die installierbare Offline-App (Dokument-Hülle, lokale Schriften, Manifest, Service Worker). |
-| `myzel/pwa/sw.js` | Service-Worker-Vorlage: speichert alle Dateien versioniert für den Offline-Betrieb. |
+| `myzel/pwa/sw.js` | Service-Worker-Vorlage: speichert alle Dateien versioniert für den Offline-Betrieb; eine neue Version wartet, bis man sie auf dem Startbildschirm übernimmt. |
+| `myzel/CHANGELOG.json` | Was in jeder Version neu ist (deutsch, für Spielende). Die installierte App zeigt es beim Update; jede Veröffentlichung bekommt oben einen Eintrag. |
 | `myzel/pwa/manifest.webmanifest`, `icons/`, `fonts/` | Installationsdaten, App-Icons (`tools/make_icons.py`), Schriften (SIL OFL 1.1). |
-| `.github/workflows/pages.yml` | Veröffentlicht bei jedem Push auf GitHub Pages. |
+| `.github/workflows/pages.yml` | Veröffentlicht bei jedem Push auf GitHub Pages (prüft vorher, dass `myzel/index.html` der Build von `myzel/src` ist). |
+| `dev/tools/split/` | Das Werkzeug, mit dem die Datei in Module geteilt wurde (`rules.py` = die Modulkarte), mit Tests. |
 
 ## Entwickeln
 
+- Ändern: Module in `myzel/src/` bearbeiten, dann `python3 myzel/build.py myzel/src myzel/index.html` und beides einchecken.
 - Die claude.ai-Version wird direkt aus `myzel/index.html` veröffentlicht (mit `tap-worklet.js` als Zusatzdatei und der Fähigkeit `downloads`).
 - Lokal testen: `python3 myzel/pwa/build.py dist && npx http-server dist` und `http://localhost:8080` öffnen (Service Worker brauchen `localhost` oder HTTPS).
 - Die App erkennt selbst, wo sie läuft: in claude.ai speichert sie Aufnahmen als ZIP über die Downloads-Fähigkeit, als eigenständige App direkt als WAV (iPhone: über das Teilen-Menü).

@@ -3,7 +3,8 @@
 You build part of the Hexenring looper into Myzel. Read first:
 - `dev/looper/SPEC.md` – binding build spec (English). Your step is named in your task.
 - `dev/looper/KONZEPT.md` – the owner-facing concept (German); §12 = the owner's decisions.
-- `dev/looper/research/code-map.md` – where things are in the code (line numbers drift: search by name).
+- `dev/looper/research/code-map.md` – where things are in the code (its line numbers are of the old one-file app: search
+  by name, `grep -rn name myzel/src`).
 - `dev/looper/ideas/engineer.md`, `dev/looper/ideas/check-engineer.md`, `dev/looper/research/faehrte.md` – measurements,
   pitfalls; prototype scripts in `dev/looper/ideas/engineer-experiments/` (e.g. `loopproc.js`, `e4-drift.js`,
   `e10-click.js`, `e9-direct.js`) and `dev/looper/ideas/check-engineer-experiments/` (`c1-swap.js` …).
@@ -12,9 +13,13 @@ You build part of the Hexenring looper into Myzel. Read first:
   simplify; if two goals conflict, stop and report – do not decide.
 
 ## Rules
-- The app is one file: `myzel/index.html` (German UI, vanilla JS + Web Audio). Worklet code lives inside `myzelDsp()`
-  (copied by `toString()`, no outside closures). New code in the delimited section `/* ---------- Hexenring ---------- */`
-  with prefixes `hx`/`HX`; hooks in existing code minimal and marked `// Hexenring:`. Match the surrounding style:
+- The app's source is the module tree `myzel/src/` (German UI, vanilla JS + Web Audio); `myzel/index.html` is its build,
+  committed alongside – never edit it by hand. Edit the modules, then rebuild with `python3 myzel/build.py myzel/src
+  myzel/index.html` and commit both (`mk.sh`, `pwa/build.py` and the Pages job refuse a stale build). The order of the
+  `@include` lines in `myzel/src/index.html` is the app's order (one IIFE, one shared scope); a new module needs its own
+  include line there (the build refuses a file no line lists). Worklet code lives in `myzel/src/js/dsp/` – the body of
+  `myzelDsp()` (copied by `toString()`, no outside closures). Hexenring code lives in `myzel/src/js/hexenring/` (Etappe 3:
+  `mitspieler/`, Etappe 4: `oekologie/`) with prefixes `hx`/`HX`; hooks in existing code minimal and marked `// Hexenring:`. Match the surrounding style:
   dense, commented with the *why*, German UI strings, short.
 - Work directly in `/home/user/4claude` on the current branch (`ccr-183ec81a-rkp3np`). You are the only builder
   working right now. Commit when a coherent piece works and its tests pass; push with `git push -u origin
@@ -30,7 +35,7 @@ You build part of the Hexenring looper into Myzel. Read first:
   >/dev/null 2>&1 &`). `sh $S/v2/mk.sh /home/user/4claude/myzel hx` builds `$S/v2/hx/` and the instrumented
   `$S/v2/hx-inst/` (window.__M exports; extend the export list in `$S/v2/mk.sh` **and** in `dev/tests/v2/mk.sh` via its
   guarded-block mechanism if you need more internals). Playwright: `require('/opt/node22/lib/node_modules/playwright')`,
-  Chromium args `['--autoplay-policy=no-user-gesture-required']`, start sound with `#btnStart`. Syntax check:
+  Chromium args `['--autoplay-policy=no-user-gesture-required']`, start sound with `#btnStart`. Syntax check (after the build):
   `sh $S/motion-tests/syn.sh myzel/index.html`.
 - New tests go to `dev/tests/hexenring/` (copy them into `$S/hexenring/` to run; paths like the other suites) with a
   `run-all.sh`. Keep every existing suite green; at the end of your step run at least: `sh $S/reg.sh` (v2, mixfunc,

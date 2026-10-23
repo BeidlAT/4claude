@@ -1,6 +1,8 @@
 #!/bin/sh
 # Build test copies: $1 = source dir, $2 = name → v2/<name>/ (plain) and v2/<name>-inst/ (window.__M exposed)
 SRC=$1; NAME=$2; P=$(dirname "$0")
+# the app is built from its modules ($SRC/src): never test a stale index.html
+[ -d "$SRC/src" ] && { python3 "$SRC/build.py" "$SRC/src" --check "$SRC/index.html" >/dev/null || { echo "mk.sh: $SRC/index.html is not the build of $SRC/src – run python3 $SRC/build.py $SRC/src $SRC/index.html" >&2; exit 1; }; }
 mkdir -p "$P/$NAME" "$P/$NAME-inst"
 HEAD='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body>'
 { printf '%s' "$HEAD"; cat "$SRC/index.html"; printf '</body></html>'; } > "$P/$NAME/index.html"

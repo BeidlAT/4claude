@@ -1,0 +1,41 @@
+{
+  "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
+  "versionen": [
+    {
+      "id": "2026-10-23b",
+      "punkte": [
+        "Eine neue Version meldet sich jetzt gleich beim Start, bevor der Klang beginnt: „Jetzt aktualisieren“ oder „Später“.",
+        "Dabei steht, was neu ist – und nach dem Aktualisieren einmal unter „Neu in dieser Version“."
+      ]
+    },
+    {
+      "id": "2026-10-23",
+      "punkte": [
+        "Schleifen spielen auf dem Handy ohne Aussetzer: kein abgehacktes Knistern mehr, Einzählen und Aufnahmezeit laufen wieder im Takt.",
+        "Kommt das Handy trotzdem an seine Grenze, bleiben die Schleifen in ihrer Stimmung, statt mitzuschweben. Myzel sagt es dir einmal, „mit“ in der Karte holt es zurück.",
+        "Die Aufnahme bleibt nicht mehr hängen, wenn anderswo etwas schiefgeht.",
+        "„8 Takte bei … BPM“ zeigt das Tempo, in dem wirklich aufgenommen wird."
+      ]
+    },
+    {
+      "id": "2026-10-22",
+      "punkte": [
+        "Neu: der Hexenring, ein Looper unter dem Feld. Ernte, was du gerade gespielt hast, nimm Schleifen auf und schichte sie – nach dem Neuladen sind sie wieder da.",
+        "Schleifen wie ein Tonband: schneller, langsamer, rückwärts, kürzen, verblassen lassen. Schleifen mit Noten wachsen neu, folgen Tonart und Tempo und gehen als WAV oder MIDI hinaus.",
+        "Ganze Stücke: Lichtungen, Szenen, Folge und Setliste, eine Bühnenansicht mit großen Ringen; Bedienung auch mit Pedal, MIDI und Tastatur.",
+        "Mitspieler: Schleifen variieren auf Wunsch, der Gärtner macht deinem Spiel Platz, antwortet auf deine Phrasen und schlägt Bass und Akkorde vor.",
+        "Schleifen nähren Rhizom, Glut, Sehne und den Sporenregen; Mikrofon und Gesang werden zu Schleifen, Gesungenes auch zu Noten.",
+        "Ruhe: Klingt nichts, schläft der Klangweg – deutlich weniger Rechenlast im Leerlauf, kein Ton verändert. Das Feld läuft gleichmäßig mit 60 Bildern."
+      ]
+    },
+    {
+      "id": "2026-10-18",
+      "punkte": [
+        "Neun neue Klangquellen: Moder, Böe, Amöbe, Sehne, Zapfen, Glut, Gespinst, Kehlchen und Rhizom.",
+        "Halm spielt jetzt auch Flöte und Flamme, Harz streicht fünf Körper.",
+        "Sieben neue Klangwelten, jede mit eigenem Gestik-Rezept.",
+        "Das Gespinst hat einen eigenen Kanal im Mixer."
+      ]
+    }
+  ]
+}

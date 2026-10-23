@@ -538,6 +538,15 @@ body:not(.mlearn) :is(.gk-ax, .gk-ev) { cursor: default; }
 .start .fine { margin: 0; font-size: 12px; color: var(--dim); }
 .resume { position: absolute; inset: 0; z-index: 11; display: grid; place-items: center; align-content: center; gap: 12px; padding: 24px var(--gut); background: rgba(17, 13, 11, .78); text-align: center; }
 .resume p { margin: 0; max-width: 34ch; font-size: 14px; color: var(--dim); }
+/* the update card on the start screen (installed app only): first in the start screen, nothing lies over it */
+.upd { display: grid; gap: 10px; padding: 14px 16px 16px; border: 1px solid var(--lumen); border-radius: 14px; background: var(--bark); box-shadow: 0 10px 30px rgba(0, 0, 0, .45); }
+.upd h2 { margin: 0; font: 600 17px/1.3 var(--font-ui); color: var(--lumen); }
+.upd-notes { max-height: 38vh; overflow-y: auto; display: grid; gap: 6px; font-size: 14px; line-height: 1.4; color: var(--hypha); overscroll-behavior: contain; }
+.upd-notes .d { margin: 4px 0 0; font: 500 11px/1.4 var(--font-num); color: var(--dim); letter-spacing: .06em; }
+.upd-notes .p { margin: 0; padding-left: 14px; text-indent: -14px; }
+.upd-notes .p::before { content: '·'; display: inline-block; width: 14px; text-indent: 0; color: var(--lumen); }
+.upd-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.upd-row .btn { min-height: 44px; padding: 8px 18px; }
 
 .toast {
   position: absolute; left: 50%; bottom: 128px; transform: translate(-50%, 8px); z-index: 12;
@@ -1818,6 +1827,11 @@ body.mlearn #stage::after { content: ""; position: absolute; inset: 0; backgroun
 
   <div class="start" id="start" role="dialog" aria-modal="true" aria-labelledby="startTitle">
     <div class="start-in">
+      <section class="upd" id="upd" hidden aria-labelledby="updTitle">
+        <h2 id="updTitle">Neue Version verfügbar</h2>
+        <div class="upd-notes" id="updNotes"></div>
+        <div class="upd-row"><button id="updGo" class="btn primary" type="button">Jetzt aktualisieren</button><button id="updLater" class="btn" type="button">Später</button></div>
+      </section>
       <h1 id="startTitle">myzel</h1>
       <p class="tag">Ein Instrument für Ambient, Perkussion und experimentelle, psychedelische Klänge – gespielt mit den Fingern.</p>
       <ul>
@@ -25363,6 +25377,7 @@ function closePanel() {
 
 /* ---------- misc ---------- */
 function toast(msg, ms = 3200, action) {
+  if (UPD.mode) { UPD.q.push([msg, ms, action]); if (UPD.q.length > 4) UPD.q.shift(); return; }   // the update card is answered first (updClose shows them)
   const t = $('#toast'), b = $('#toastAct'), b2 = $('#toastAct2'), acts = Array.isArray(action) ? action : action ? [action] : [];   // (Hexenring: „Weiter · Leeren“ – two)
   if (P['hx.buehne'] && !acts.length && ms < 5000) { if (typeof hxSay === 'function') hxSay(msg); return; }   // Hexenring (step 2b): the Bühnenansicht shows few toasts – the rest is said
   $('#toastMsg').textContent = msg;
@@ -25375,6 +25390,124 @@ function toast(msg, ms = 3200, action) {
   t.classList.add('show');
   clearTimeout(toast.tm); toast.tm = setTimeout(() => t.classList.remove('show', 'act'), ms);
 }
+/* ---------- update check (installed app only: build.py's page calls window.myzelUpdate) ---------- */
+// At every start the app asks for a newer version while the start screen shows – before the instrument starts. A new
+// version loads completely into its own cache and then waits (pwa/sw.js) until „Jetzt aktualisieren“ lets it take over
+// and the page reloads once; that happens only from the start screen, so never while sound plays. Offline or slow, the
+// check never holds anything up: the card simply appears once the new version is ready, while the start screen is
+// still there. Release notes: build.py embeds myzel/CHANGELOG.json (build.notes, newest first) and caches it as
+// changelog.json, so the waiting version's notes come from its own cache; shown are the entries this page lacks.
+// After an update the first start shows „Neu in dieser Version“ once. The claude.ai artifact has none of this.
+const UPD = { build: null, reg: null, mode: '', q: [], later: false, said: false, going: false, done: false, w: null, checking: false };
+const UPD_SEEN = 'myzel.neu', UPD_FROM = 'myzel.neu.von';
+function updBoot(build) {
+  if (HXW.on || UPD.build || !build || !('serviceWorker' in navigator)) return;
+  UPD.build = build;
+  const sw = navigator.serviceWorker;
+  $('#updGo').addEventListener('click', updGo);
+  $('#updLater').addEventListener('click', () => { if (UPD.mode !== 'neu') UPD.later = true; updClose(); });
+  sw.addEventListener('controllerchange', () => { if (UPD.going) updReload(); });   // only the page that asked reloads
+  try { updNeu(); } catch (e) {}
+  sw.register('sw.js').then((reg) => {
+    UPD.reg = reg;
+    reg.addEventListener('updatefound', () => updWatch(reg));   // the browser's own check at navigation, too
+    updCheck();
+  }).catch(() => {});
+  // back to an app that waited in the background with its start screen: ask again
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !A.started) updCheck(); });
+}
+async function updCheck() {
+  const reg = UPD.reg;
+  if (!reg || A.started || UPD.checking) return;
+  UPD.checking = true;
+  try { if (!reg.waiting) await Promise.race([reg.update().catch(() => {}), new Promise((r) => setTimeout(r, 3000))]); }
+  catch (e) {}
+  UPD.checking = false;
+  updWatch(reg);
+}
+// a waiting version is offered; one still loading shows the card in its loading state (and offers itself when ready)
+function updWatch(reg) {
+  if (!reg.active) return;   // the first install: nothing to update
+  if (reg.waiting) { updOffer(reg); return; }
+  const w = reg.installing;
+  if (!w || UPD.w === w) return;
+  UPD.w = w;
+  if (!A.started && !UPD.later && !UPD.mode) updShow('load');
+  w.addEventListener('statechange', () => {
+    if (w.state === 'installed') updOffer(reg);
+    else if (w.state === 'redundant' && UPD.mode === 'load') updClose();
+  });
+}
+async function updOffer(reg) {
+  const w = reg.waiting;
+  if (!w || UPD.going) return;
+  if (A.started) {   // found only after the start: no card, no reload – it comes at the next start
+    if (!UPD.said) { UPD.said = true; toast('Neue Version bereit – sie kommt beim nächsten Start.', 5000); }
+    return;
+  }
+  if (UPD.later) return;
+  let notes = null;
+  try {
+    const v = await Promise.race([new Promise((res) => { const ch = new MessageChannel(); ch.port1.onmessage = (e) => res(e.data && e.data.version); w.postMessage({ type: 'version' }, [ch.port2]); }), new Promise((r) => setTimeout(r, 1500))]);
+    const r = v && await caches.match('changelog.json', { cacheName: 'myzel-' + v });
+    if (r) { const have = new Set(updIds(UPD.build.notes)); notes = (await r.json()).filter((e) => e && !have.has(e.id)); }
+  } catch (e) {}
+  if (A.started || UPD.later || UPD.going || reg.waiting !== w) return;
+  updShow('upd', notes);
+}
+const updIds = (n) => (Array.isArray(n) ? n : []).map((e) => e.id);
+// „Neu in dieser Version“, once: the entries the version before lacked (stored by updGo), else those after the last one
+// seen; a page that was installed before but never stored one (an update from a version without notes) shows the newest
+function updNeu() {
+  const notes = Array.isArray(UPD.build.notes) ? UPD.build.notes : [], top = notes[0];
+  if (!top) return;
+  const seen = store.get(UPD_SEEN), from = store.get(UPD_FROM);
+  let show = [];
+  if (from) {
+    let old = []; try { old = JSON.parse(from) || []; } catch (e) {}
+    show = notes.filter((e) => !old.includes(e.id));
+    try { localStorage.removeItem(UPD_FROM); } catch (e) {}
+  } else if (seen) { if (seen !== top.id) { const i = notes.findIndex((e) => e.id === seen); show = notes.slice(0, i < 0 ? 1 : i); } }
+  else if (navigator.serviceWorker.controller) show = [top];
+  store.set(UPD_SEEN, top.id);
+  if (show.length) updShow('neu', show);
+}
+function updShow(mode, notes) {
+  if ($('#start').hidden) return;
+  const box = $('#updNotes'), go = $('#updGo'), later = $('#updLater');
+  UPD.mode = mode;
+  $('#updTitle').textContent = mode === 'neu' ? 'Neu in dieser Version' : mode === 'load' ? 'Neue Version wird geladen …' : 'Neue Version verfügbar';
+  box.replaceChildren();
+  if (mode === 'upd' && !(notes && notes.length)) box.append(h('p', { class: 'p' }, 'Verbesserungen und Korrekturen.'));
+  for (const e of notes || []) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(e.id || '');
+    if (m) box.append(h('p', { class: 'd' }, +m[3] + '.' + +m[2] + '.' + m[1]));
+    for (const p of e.punkte || []) box.append(h('p', { class: 'p' }, String(p)));
+  }
+  box.hidden = !box.childNodes.length;
+  go.hidden = mode !== 'upd'; go.disabled = false; later.disabled = false;
+  later.textContent = mode === 'neu' ? 'OK' : 'Später';
+  $('#upd').hidden = false;
+}
+function updClose() {
+  if (!UPD.mode) return;
+  UPD.mode = '';
+  $('#upd').hidden = true;
+  const q = UPD.q; UPD.q = [];
+  q.forEach((a, i) => setTimeout(() => toast(...a), 400 + i * 3400));
+}
+function updGo() {
+  const w = UPD.reg && UPD.reg.waiting;
+  if (!w || A.started) { updClose(); return; }
+  UPD.going = true;
+  store.set(UPD_FROM, JSON.stringify(updIds(UPD.build.notes)));
+  $('#updTitle').textContent = 'Wird aktualisiert …';
+  for (const id of ['updGo', 'updLater', 'btnStart', 'btnStartKeys']) $('#' + id).disabled = true;
+  w.postMessage({ type: 'skipWaiting' });
+  setTimeout(updReload, 4000);   // a browser that missed the controllerchange: reload anyway (still A? the card comes again)
+}
+function updReload() { if (UPD.done || A.started) return; UPD.done = true; location.reload(); }
+
 function ensureRunning() {
   if (A.ctx && A.ctx.state !== 'running') { try { const p = A.ctx.resume(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
 }
@@ -33164,7 +33297,8 @@ function hxMicTagSync() {
 
 function showResume(show) { $('#resume').hidden = !show; if (show) $('#btnResume').focus({ preventScroll: true }); }
 function start() {
-  if (A.started) return;
+  if (A.started || UPD.going) return;
+  updClose();   // the update card counts as „Später“
   if (GK.want && !GK.on) gkEnable(true);   // Gestik was on: its permission inside this tap (iOS may forget it between sessions)
   iosUnmute();
   try { initAudio(); }
@@ -33301,7 +33435,7 @@ function boot() {
   // installable web app (outside claude.ai): offer installing, and a reload after an update was stored offline
   window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; if (installBtn) installBtn.hidden = false; });
   window.addEventListener('appinstalled', () => { installEvt = null; if (installBtn) installBtn.hidden = true; toast('Myzel ist installiert und startet jetzt auch offline vom Home-Bildschirm.'); });
-  window.addEventListener('myzel-update', () => toast('Eine neue Version von Myzel ist da.', 12000, { label: 'Neu laden', fn: () => location.reload() }));
+  if (!HXW.on) window.myzelUpdate = updBoot;   // the installed app's update check (pwa/build.py calls it)
   requestAnimationFrame(frame);
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => drawBg());
 }
