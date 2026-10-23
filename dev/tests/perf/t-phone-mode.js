@@ -11,6 +11,10 @@
 //   4. the sound bit-identical: offline renders (one oscillator per note through the echo, the hall and the master – the
 //      exact case of t-idle-parity) with the Handy-Modus on and under load, and off: every sample equal; the parameters,
 //      the budget and the quality the same
+//   5. the audio side in the report (after the owner's report A, 23.10.2026): with loops – one playing, one halted, one
+//      Lebendig – each loop's share of the budget (the halted one 0) and their sum as the budget counts it, the
+//      Werk-Rahmen's renders (begun, done, their time against real time), the guard's steps with their second, the
+//      latency asked for against what the context reports; the live line in „Leistung“ and the card's line say the same
 //   node t-phone-mode.js        env SLOT (default perfcur-inst: sh ../v2/mk.sh /home/user/4claude/myzel perfcur)
 const { chromium } = require('/opt/node22/lib/node_modules/playwright');
 const L = require('./lib.js');
@@ -90,8 +94,9 @@ async function touches(pg, secs) {
   await tap(P.page, '#tab-dev'); await P.page.waitForTimeout(300);
   const R = await P.page.evaluate(() => { const M = window.__M, U = M.LM.ui; return { res: M.LM.res, txt: U.txt.value, sum: [...U.sum.querySelectorAll('li')].map((x) => x.textContent), sumHidden: U.sum.hidden }; });
   ok(on && /Leistung gemessen/.test(toastTxt), `3. „Leistung messen“ tapped (running ${on}), the panel closed, 20 s of touches – the toast „${toastTxt.slice(0, 50)}…“`);
-  ok(!R.sumHidden && R.sum.length === 5 && /^Bild: /.test(R.sum[0]) && /^Vom Antippen bis zum Ton: etwa \d+ ms/.test(R.sum[1]) && /^Klang: /.test(R.sum[2]) && /^Ergebnis: /.test(R.sum[3]) && /Handy-Modus war an/.test(R.sum[4]), `3.   the summary: ${R.sum.join(' | ')}`);
-  const topics = ['Myzel Leistung', '\ndev ', '\nhandy ', '\naudio ', '\nunder ', '\nraf hz=', '\nmain ms/s ', '\ntick ', '\ntouch n=', '\nvoices ', ' hx loops='];
+  const latL = R.sum.find((x) => /^Latenz: /.test(x)) || '';
+  ok(!R.sumHidden && R.sum.length >= 6 && /^Bild: /.test(R.sum[0]) && /^Vom Antippen bis zum Ton: etwa \d+ ms/.test(R.sum[1]) && /^Klang: /.test(R.sum[2]) && /^Ergebnis: /.test(R.sum[3]) && /^Latenz: eingestellt „Sicher“ – das Gerät meldet \d+(,\d)? ms Puffer und \d+(,\d)? ms Ausgabe\.$/.test(latL) && /Handy-Modus war an/.test(R.sum[R.sum.length - 1]), `3.   the summary: ${R.sum.join(' | ')}`);
+  const topics = ['Myzel Leistung', '\ndev ', '\nhandy ', '\naudio ', '\nunder ', '\nraf hz=', '\nmain ms/s ', '\ntick ', '\ntouch n=', '\nvoices ', ' hx loops=', '\nloops loops=', '\nwerk st=', '\nguard ', '\nlatency set=safe hint=balanced base='];
   const miss = topics.filter((t) => !R.txt.includes(t));
   ok(!miss.length && R.res.touch && R.res.touch.n >= 10 && R.res.parts.feld > 0 && R.res.parts.tick > 0 && R.res.hz >= 100 && R.res.audio.sr > 0 && R.res.voices.max >= 1, `3.   the report: every topic (${miss.length ? 'missing ' + miss.join(',') : 'all'}), ${R.res.touch && R.res.touch.n} touches (touch → sound ${R.res.touch && R.res.touch.ton} ms), display ${R.res.hz} Hz, ${R.txt.split('\n').length} lines, ${R.txt.length} characters`);
   ok(!/Pixel|Build\//.test(R.txt) && /os=Android 14 br=Chrome\/\d+/.test(R.txt), `3.   no device name in it (${(R.txt.match(/os=[^\n]*? br=\S+/) || [''])[0]})`);
@@ -116,6 +121,40 @@ async function touches(pg, secs) {
     ok(!q.on && !q.load, `3. ${name} under the same load: never (on ${q.on}, load ${q.load}, the field at ${q.dpr} ×)`);
     await Q.ctx.close();
   }
+
+  // ---- 5. the audio side in the report: per loop, the Werk-Rahmen, the guard's steps, the latency ----
+  P = await open(b, PHONE);
+  const r5 = await P.page.evaluate(async () => {
+    const M = window.__M, A = M.A, sl = (ms) => new Promise((r) => setTimeout(r, ms)), keys = [];
+    M.setParam('hx.laenge', 'fest'); M.setParam('hx.festT', 1); M.setParam('seq.bpm', 120); for (const i of [0, 1, 2, 3]) M.setParam('l' + i + '.on', false); M.seqStart(); await sl(600);
+    for (let j = 0; j < 3; j++) {
+      const beat = 60 / M.tgBpm(A.ctx.currentTime), t0 = M.tgTime(Math.ceil(M.tgBeat(A.ctx.currentTime + 0.3) / 4) * 4);
+      for (let i = 0; i < 4; i++) { const t = t0 + i * beat, v = M.playNote('neb', t, M.N.notes[(2 * i + j) % M.N.notes.length].f, 0.5, 0.7, { bus: M.stripIn('fin') }); if (v && v.release) setTimeout(() => v.release(), (t + 0.3 - A.ctx.currentTime) * 1000); }
+      while (A.ctx.currentTime < t0 + 4 * beat + 0.05) await sl(30);
+      const L = M.hxHarvest(M.hxKorbPlan(M.hxHeard()), {}); if (L) keys.push(L.key); await sl(300);
+    }
+    M.seqStop();
+    for (let i = 0; i < 100; i++) { let all = true; for (const k of keys) { const L = M.hxByKey(k); for (const id of L.sch) { const S = M.HX.sch.get(id); if (!(S && S.wn && S.aud)) { all = false; M.hxWNotesAll(L); } } } if (all) break; await sl(100); }
+    M.hxState(M.hxByKey(keys[1]).id, 'angehalten', null);
+    M.hxWSet(M.hxByKey(keys[2]), 'eig', 'lebendig');
+    await sl(6000);
+    M.lmStart(); await sl(1500); M.hxGuardLog('taumeln'); await sl(6000);
+    const each = keys.map((k) => +M.hxCostOf(M.hxByKey(k)).toFixed(2));
+    M.lmStop();
+    M.openPanel('dev'); await sl(900);
+    return { txt: M.LM.txt, res: M.LM.res, sum: M.LM.sum, each, slots: keys.map((k) => M.hxByKey(k).slot), live: (document.getElementById('lmHx') || {}).textContent || '', cost: (document.getElementById('hxCost') || {}).textContent || '' };
+  });
+  const ln = (k) => (r5.txt.split('\n').find((x) => x.startsWith(k + ' ')) || '');
+  const lp = ln('loops'), wk = ln('werk'), gd = ln('guard'), la = ln('latency');
+  const s2 = new RegExp('S' + (r5.slots[1] + 1) + '=0\\(halt[,a-z-]*\\)'), s1 = new RegExp('S' + (r5.slots[0] + 1) + '=[0-9.]+\\(spielt[,a-z-]*\\)');   // (the guard may have stepped on this machine: tau-ruht)
+  ok(s1.test(lp) && s2.test(lp) && r5.each[1] === 0 && r5.each[0] > 0.3 && Math.abs(r5.res.lp.sum.hx - r5.res.lp.sum.loops - r5.res.lp.sum.rest) < 0.02, `5. per loop: „${lp}“ (the halted one 0; now ${r5.each.join(', ')})`);
+  ok(/^werk st=ok pool=\d+ n=\d+ perS=[\d.]+ done=\d+ stop=\d+ ms=\d+ wait=\d+ xRT=[\d.]+ q=\d+ jobs=\d+$/.test(wk) && r5.res.werk.n >= 1 && r5.res.werk.done >= 1 && r5.res.werk.xRT > 0, `5.   the Werk-Rahmen: „${wk}“`);
+  ok(/^guard (\S+ )*taumeln@[12]( \S+)* · pause=\d+ hold=(true|false) max=\S+ tau=(true|false) lite=(true|false) scale=[\d.]+$/.test(gd), `5.   the guard's steps: „${gd}“`);
+  ok(/^latency set=safe hint=balanced base=[\d.]+ out=[\d.]+ outMin=[\d.]+ outMax=[\d.]+ buf=\d+ avg=\S+$/.test(la), `5.   the latency: „${la}“`);
+  ok(/^Schleifen: 3, davon 2 spielend – sie belegen im Mittel \d+(,\d+)? von \d+ Einheiten/.test(r5.sum.find((x) => /^Schleifen:/.test(x)) || '') && /^Lebendige Schleifen: \d+ Durchgänge neu gerechnet/.test(r5.sum.find((x) => /^Lebendige/.test(x)) || '') && r5.sum.some((x) => x === 'Myzel hat entlastet: Taumeln ruht.'), `5.   the summary: ${r5.sum.slice(4, -1).join(' | ')}`);
+  ok(/^Schleifen: 3, davon 2 spielend – sie belegen \d+,\d von \d+ Einheiten/.test(r5.live) && /^Rechenzeit: Schleifen und Humus \d+,\d von \d+ Einheiten/.test(r5.cost), `5.   „Leistung“ live: „${r5.live}“ · the card: „${r5.cost}“`);
+  ok(!P.errors.length, `5. no page error (${P.errors.slice(0, 2).join(' | ')})`);
+  await P.ctx.close();
 
   // ---- 4. the sound bit-identical ----
   // (Chromium's offline render is bit-reproducible only where at most two signals meet – t-idle-parity: so the echo and the
