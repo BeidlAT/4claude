@@ -1783,6 +1783,11 @@ Built (no sound changed on any device unless the device itself drops audio):
 - **The bar info** in the Aufnahme panel says the tempo the take will have (`barGrid`: a Schleife's where one leads –
   it said the slider's 84 BPM while loops ran at 103.5) and that the length is set in Takten without touching what
   plays (it used to send the player to the Puls's tempo, which moves the Schleifen with it).
+Regression (phone report): Hexenring 27 suites green (t-hx-phone 21; t-hx-gaertner crashed once in the full run at
+row 33 and passed 58/58 alone); reg.sh green but two Gestik rows, both re-run alone: t-gs-regen passed, t-gf-cost's
+mod-flush time is noisy on this machine in both builds (interleaved A/B: new/ref 0.99, 1.02, 1.19, 1.16 – step 4 build
+1.10, 0.92, 1.11, 1.00); klang run-all and smoke-all green; perf guard: CPU check all PASS, t-idle-parity's 20-s ramp
+row failed once on the reference build's self-difference (−116 dB against our unchanged −100 dB) and passed on a re-run.
 Not built (for the owner): a partial Ruhe for the live part while only loops sound – the Gespielt taps keep the source
 strips running for the Humus (3.5 %), the rest of the awake graph is the master, echo, hall and strips (≈ 18 % of a
 desktop core); a phone slower than ≈ 20 % of this core stutters with loops even after the guard.
