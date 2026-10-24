@@ -14,10 +14,28 @@ const LM_SECS = 20;
 const LM_PART = { 0: 'takt', 1: 'jahresring', 2: 'puls', 3: 'clockOut', 4: 'wirbel', 5: 'koerner', 6: 'vorschau', 7: 'faehrte', 8: 'regen', 9: 'mod', 10: 'gespinst', 11: 'rhizom', 12: 'hxTick', 13: 'ruhe',
   20: 'frame', 21: 'hxFeld', 22: 'meter', 23: 'panel', 24: 'ctl', 25: 'devLive', 26: 'rail', 30: 'tick', 31: 'hxMsg', 32: 'onDown' };
 const LM = { on: false, t0: 0, pMs: new Float64Array(40), pN: new Uint32Array(40), pMax: new Float64Array(40), raf: new Float32Array(4096), nR: 0, fb: new Float32Array(2048), nF: 0,
-  gap: new Float32Array(2048), nG: 0, lastT: 0, tch: [], lt: null, loaf: null, ps0: null, ck: null, rc: null, smp: null, timer: 0, res: null, txt: '', sum: null, ui: null, obs: [] };
+  gap: new Float32Array(2048), nG: 0, lastT: 0, ev: [], ul: [], up: {}, ut: 0, tch: [], lt: null, loaf: null, ps0: null, ck: null, rc: null, smp: null, timer: 0, res: null, txt: '', sum: null, ui: null, obs: [] };
 function lmPart(k, ms) {
   LM.pMs[k] += ms; LM.pN[k]++; if (ms > LM.pMax[k]) LM.pMax[k] = ms;
   if (k === 20 && FR.drew && LM.nF < LM.fb.length) LM.fb[LM.nF++] = ms;   // (a drawn frame's own time)
+}
+// (desktop report 24.10.2026) what happened when the sound dropped: the underruns' moments (polled every 100 ms while
+// measuring) beside the moments of what could cause one – Ruhe and the chain copy waking or resting (links in the graph),
+// the Hexenring's gates, big messages to the processor (a version, a Schicht; Taumeln on/off), a living pass begun, the
+// guard's steps, the main thread's long tasks and its garbage collections (the heap falling)
+function lmEv(k) { if (LM.on && LM.ev.length < 4000) LM.ev.push([performance.now(), k]); }
+function lmUPoll() {
+  const ps = A.ctx && (A.ctx.playbackStats || A.ctx.playoutStats); if (!ps) return;
+  const u = (ps.underrunEvents != null ? ps.underrunEvents : ps.fallbackFramesEvents) || 0, d = ps.underrunDuration != null ? ps.underrunDuration * 1000 : ps.fallbackFramesDuration != null ? ps.fallbackFramesDuration : null, U = LM.up;
+  if (U.u != null && u > U.u && LM.ul.length < 400) LM.ul.push([performance.now(), u - U.u, d != null && U.d != null ? Math.max(0, d - U.d) : null]);
+  U.u = u; U.d = d;
+  const m = performance.memory; if (m) { const h = m.usedJSHeapSize; if (U.h && h < U.h - 2e6) lmEv('gc:' + Math.round((U.h - h) / 1e6)); U.h = h; }
+}
+function lmUlog(R0) {
+  return LM.ul.slice(0, 24).map(([t, n, ms]) => {
+    const near = new Map(); for (const [te, k] of LM.ev) if (te >= t - 1100 && te <= t + 100) { const kk = k.replace(/:[\d.]+(MB)?$/, (x) => (/MB/.test(x) ? x : '')); near.set(kk, (near.get(kk) || 0) + 1); }
+    return '+' + ((t - LM.t0) / 1000).toFixed(1) + (n > 1 ? 'x' + n : '') + (ms != null ? '/' + r1(ms) + 'ms' : '') + '[' + ([...near].map(([k, c]) => k + (c > 1 ? '*' + c : '')).join(',') || '-') + ']';
+  });
 }
 function lmGap(t) { if (LM.lastT && LM.nG < LM.gap.length) LM.gap[LM.nG++] = t - LM.lastT; LM.lastT = t; }
 // a touch: its wait in the queue (the event's time → its handler), the handler, and when the voice it started reaches the
@@ -55,7 +73,7 @@ function lmObserve(on) {
   LM.obs = [];
   if (!on || !window.PerformanceObserver) return;
   const sup = PerformanceObserver.supportedEntryTypes || [];
-  if (sup.includes('longtask')) { const o = new PerformanceObserver((l) => { for (const e of l.getEntries()) { const L = LM.lt; L.n++; L.ms += e.duration; if (e.duration > L.max) L.max = e.duration; } }); o.observe({ type: 'longtask' }); LM.obs.push(o); LM.lt.ok = true; }
+  if (sup.includes('longtask')) { const o = new PerformanceObserver((l) => { for (const e of l.getEntries()) { lmEv('lang:' + Math.round(e.duration)); const L = LM.lt; L.n++; L.ms += e.duration; if (e.duration > L.max) L.max = e.duration; } }); o.observe({ type: 'longtask' }); LM.obs.push(o); LM.lt.ok = true; }
   // a long animation frame (≥ 50 ms): how much was rendering (style, layout, paint, the canvases' hand-over) and which
   // scripts ran in it
   if (sup.includes('long-animation-frame')) {
@@ -80,14 +98,16 @@ function lmStart() {
   LM.ps0 = lmStats(); LM.u0 = A.underruns || 0; LM.res = null;
   // (the audio side in detail – 23.10.2026, after report A: each loop's share of the budget, the Werk-Rahmen's work, the
   // guard's steps, the latency the context reports against the one asked for)
-  LM.lp = new Map(); LM.lsum = { n: 0, loops: 0, max: 0, hx: 0, cap: 0 }; LM.lat = { n: 0, out: 0, outMin: Infinity, outMax: 0, base: 0 };
+  LM.why = new Map(); LM.lp = new Map(); LM.lsum = { n: 0, loops: 0, max: 0, hx: 0, cap: 0 }; LM.lat = { n: 0, out: 0, outMin: Infinity, outMax: 0, base: 0 };
   if (typeof HX !== 'undefined' && HX.wSt) { HX.wSt.q = HX.wJobs || 0; LM.w0 = Object.assign({}, HX.wSt); }
   LM.gT = performance.now();
   LM.rc = null;
   const rc = A.ctx.renderCapacity;
   if (rc && rc.start) try { LM.rc = { n: 0, avg: 0, peak: 0, und: 0 }; rc.onupdate = (e) => { const R = LM.rc; if (!R) return; R.n++; R.avg += e.averageLoad || 0; R.peak = Math.max(R.peak, e.peakLoad || 0); R.und = Math.max(R.und, e.underrunRatio || 0); }; rc.start({ updateInterval: 1 }); } catch (e) { LM.rc = null; }
   lmObserve(true);
+  LM.ev = []; LM.ul = []; LM.up = {};
   LM.t0 = performance.now(); LM.on = true;
+  lmUPoll(); LM.ut = setInterval(lmUPoll, 100);
   lmClock();
   LM.timer = setInterval(lmSample, 250);
   toast('Leistung messen: spiel jetzt ' + LM_SECS + ' Sekunden wie immer – das Panel darf zu.', 5000);
@@ -122,6 +142,7 @@ function lmLoops(live) {
     e.n++; e.c += c; if (c > e.max) e.max = c;
     if (L.state === 'spielt') e.sp++;
     if (hxWLebt(L) && L.state === 'spielt') e.leb++;
+    else if (hxEigN(L) >= 1 && hxWAktiv(L) && L.state === 'spielt') { const w = hxWHold(L) ? 'hold' : HX.wGuard.pause > performance.now() ? 'pause' : L.wRefused ? 'refused' : L.wMemT ? 'mem' : L.treuBis != null ? 'treu8' : L.revW ? 'rev' : L.live ? 'live' : '?'; LM.why.set(w, (LM.why.get(w) || 0) + 1); }
     if (hxWHold(L)) e.hold++;
     if (!L.bew && !hxTauOn(L)) e.tau++;
     if (L.sch.some((id) => { const S = HX.sch.get(id); return S && S.out; })) e.o1++;
@@ -140,18 +161,19 @@ function lmLoopsRes() {
 // context's) per second of audio, the wait from the request, the most waiting at once
 function lmWerk(secs) {
   const W = HX.wSt, W0 = LM.w0 || W, d = (k) => (W[k] || 0) - (W0[k] || 0), done = d('done');
-  return { st: HXW.st || '-', pool: (HXW.pool || []).filter((R) => R.st === 'ok').length, n: d('n'), perS: r1(d('n') / Math.max(1, secs)), done, stop: d('stop'), ms: done ? Math.round(d('ms') / done) : 0, wait: done ? Math.round(d('wall') / done) : 0,
+  const rs = [HXW, ...(HXW.pool || [])].map((R) => (R.st === 'ok' ? (R.old ? 'o' : R.n ? 'r' : 'i') : R.st === 'laden' ? 'l' : R.st === 'kein' ? 'x' : '-')).join('');   // (each realm: i idle, r rendering, o being renewed, l loading, x none, - not booted)
+  return { st: HXW.st || '-', realms: rs, pool: (HXW.pool || []).filter((R) => R.st === 'ok').length, n: d('n'), perS: r1(d('n') / Math.max(1, secs)), done, stop: d('stop'), ms: done ? Math.round(d('ms') / done) : 0, wait: done ? Math.round(d('wall') / done) : 0,
     xRT: d('audio') > 0 ? +(d('ms') / 1000 / d('audio')).toFixed(3) : 0, q: W.q || 0, jobs: HX.wJobs || 0 };
 }
 // the guard's steps in the window (which, at which second), and where it stands at the end
 function lmGuard() {
-  const steps = (HX.gLog || []).filter((e) => e.t >= LM.gT).map((e) => e.step + (e.v !== '' ? ':' + e.v : '') + '@' + Math.round((e.t - LM.t0) / 1000));
+  const steps = (HX.gLog || []).filter((e) => e.t >= LM.gT).map((e) => e.step + (e.v !== '' ? ':' + e.v : '') + '@' + r1((e.t - LM.t0) / 1000));
   const G = HX.wGuard || {}, now = performance.now();
-  return { steps, now: { pause: G.pause > now ? Math.round((G.pause - now) / 1000) : 0, hold: !!(G.hold && G.pause > now), max: G.max === Infinity ? '-' : G.max, tau: !!HX.tauRest, lite: !!A.lite, scale: r1(A.budgetScale || 1) } };
+  return { steps, now: { pause: G.pause > now ? Math.round((G.pause - now) / 1000) : 0, hold: !!(G.hold && G.pause > now), max: G.max === Infinity ? '-' : G.max, tau: !!HX.tauRest, lite: !!A.lite, scale: Math.round(100 * (A.budgetScale || 1)) / 100, budget: VBUDGET } };
 }
 function lmStop() {
   if (!LM.on) return;
-  LM.on = false; clearInterval(LM.timer); lmObserve(false);
+  lmUPoll(); LM.on = false; clearInterval(LM.timer); clearInterval(LM.ut); lmObserve(false);
   lmClock();
   try { if (A.ctx.renderCapacity && LM.rc) A.ctx.renderCapacity.stop(); } catch (e) {}
   LM.res = lmResult(performance.now() - LM.t0);
@@ -191,8 +213,8 @@ function lmResult(ms) {
   R.rc = LM.rc && LM.rc.n ? { avg: Math.round(100 * LM.rc.avg / LM.rc.n), peak: Math.round(100 * LM.rc.peak), und: r1(100 * LM.rc.und) } : null;
   R.audio = { sr: c.sampleRate, base: r1((c.baseLatency || 0) * 1000), out: r1((c.outputLatency || 0) * 1000), lat: P['dev.lat'], latCtx: A.latMode, q: P['dev.q'], budget: VBUDGET, scale: A.budgetScale || 1, lite: !!A.lite };
   R.voices = { load: S.n ? Math.round(100 * S.load / S.n) : 0, loadMax: Math.round(100 * S.loadMax), max: S.vMax, grains: S.gr, idle: S.n ? Math.round(100 * S.idle / S.n) : 0 };
-  R.hx = { loops: S.loops, spielt: S.spielt, sch: S.sch, leb: S.leb, tau: !!HX.tauRest, f1: HXF1.off ? 'ruht' : 'an', werk: HXW.st || '-', wg: HX.wGuard ? HX.wGuard.n || 0 : 0, state: HX.state };
-  R.lp = lmLoopsRes(); R.werk = lmWerk(secs); R.guard = lmGuard();
+  R.hx = { loops: S.loops, spielt: S.spielt, sch: S.sch, leb: S.leb, tau: !!HX.tauRest, f1: HXF1.off ? 'ruht' : 'an', werk: HXW.st || '-', wg: HX.wGuard ? HX.wGuard.n || 0 : 0, state: HX.state, nichtLeb: [...LM.why].map(([k, v]) => k + ':' + Math.round(100 * v / Math.max(1, LM.lsum.n)) + '%').join(',') || '-' };
+  R.lp = lmLoopsRes(); R.werk = lmWerk(secs); R.guard = lmGuard(); R.ulog = lmUlog();
   const La = LM.lat, hint = A.latMode === 'min' ? '0' : A.latMode === 'safe' ? 'balanced' : 'interactive';
   R.lat = { set: P['dev.lat'], ctx: A.latMode, own: LAT.own ? 1 : 0, step: LAT.auto || '-', hint, base: La.n ? r1(La.base / La.n) : 0, out: La.n ? r1(La.out / La.n) : 0, outMin: La.n ? r1(La.outMin) : 0, outMax: r1(La.outMax), buf: Math.round((c.baseLatency || 0) * c.sampleRate), avg: R.ps && R.ps.averageLatency != null ? R.ps.averageLatency : null };
   const nav = navigator, ua = nav.userAgent || '';
@@ -223,6 +245,7 @@ function lmText(R) {
   L.push('voices ' + kv(R.voices) + ' · hx ' + kv(R.hx));
   L.push('loops ' + kv(R.lp.sum) + (R.lp.each.length ? ' · ' + R.lp.each.join(' ') : ''));
   L.push('werk ' + kv(R.werk));
+  L.push('ulog ' + (R.ulog.length ? R.ulog.join(' ') : 'none'));
   L.push('guard ' + (R.guard.steps.length ? R.guard.steps.join(' ') : 'none') + ' · ' + kv(R.guard.now));
   L.push('latency ' + kv(R.lat));
   return L.join('\n');
@@ -238,7 +261,7 @@ function lmSummary(R) {
     : slow ? 'Ergebnis: Die Oberfläche ist ausgelastet (Zeichnen und Rechnen auf dem Hauptthread); der Klang läuft sauber.' : 'Ergebnis: kein Engpass gemessen.');
   if (R.hx.loops) S.push('Schleifen: ' + R.hx.loops + ', davon ' + R.hx.spielt + ' spielend – sie belegen im Mittel ' + d(R.lp.sum.loops) + ' von ' + R.lp.sum.budget + ' Einheiten (mit Humus und Effektkette ' + d(R.lp.sum.hx) + '); angehaltene kosten nichts.');
   if (R.werk.n) S.push('Lebendige Schleifen: ' + R.werk.n + ' Durchgänge neu gerechnet, jeder etwa ' + R.werk.ms + ' ms (' + d(R.werk.xRT) + ' × Echtzeit).');
-  const GW = { lebendig: 'Lebendig hält an', weniger: 'weniger auf einmal gerechnet', taumeln: 'Taumeln ruht', grenze: 'Live-Spiel geschützt', lite: 'weniger Live-Stimmen', zurueck: 'Lebendig wieder an', latenz: 'Latenz ab dem nächsten Start zurückgestellt' };
+  const GW = { lebendig: 'Lebendig hält an', weniger: 'weniger auf einmal gerechnet', taumeln: 'Taumeln ruht', grenze: 'Live-Spiel geschützt', lite: 'weniger Live-Stimmen', stimmen: 'kurz weniger Live-Stimmen', mehr: 'Stimmen wieder frei', taumelt: 'Taumeln wieder an', zurueck: 'Lebendig wieder an', latenz: 'Latenz ab dem nächsten Start zurückgestellt' };
   if (R.guard.steps.length) S.push('Myzel hat entlastet: ' + [...new Set(R.guard.steps.map((x) => GW[x.split(/[:@]/)[0]] || x))].join(', ') + '.');
   S.push('Latenz: eingestellt „' + (LAT_NAME[R.lat.set] || R.lat.set) + '“' + (R.lat.ctx !== R.lat.set ? ' (gemessen mit „' + (LAT_NAME[R.lat.ctx] || R.lat.ctx) + '“ – das neue gilt nach einem Neustart)' : '') + ' – das Gerät meldet ' + d(R.lat.base) + ' ms Puffer und ' + d(R.lat.out) + ' ms Ausgabe.');
   const tip = latHint(R.lat.base + R.lat.out); if (tip) S.push('Tipp: ' + tip);

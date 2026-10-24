@@ -130,13 +130,14 @@ function idleEnter() {
     hxGates(false);
   }
   idleTaps(false);
-  IDLE.cut = cut; IDLE.on = true; IDLE.n++;
+  IDLE.cut = cut; IDLE.on = true; IDLE.n++; lmEv('ruhe');
 }
 // the gates on the Hexenring's way (zeros while no Schleife exists): values, read by the very quantum that plays. At
 // the processor's outputs while its strip goes straight to the master and no loop has used out 1 (the strip rests too);
 // else at the master's input only (hxGateM): a copy of the chain runs on behind it – its chorus, delays that move,
 // would come back with their rounding moved, as the echo's
 function hxGates(on) {
+  if (IDLE.hxOff === on) lmEv(on ? 'tor-auf' : 'tor-zu');
   IDLE.hxOff = !on;
   const deep = P['xhxr.route'] === 'dir' && !HX.out1;
   for (const g of [HX.g0, HX.g1]) if (g && HX.ctx === A.ctx) g.gain.value = on || !deep ? 1 : 0;
@@ -145,7 +146,7 @@ function hxGates(on) {
 // before anything sounds (and before the graph around the cut links changes): every link back, in the order taken
 function idleWake(late) {
   if (!IDLE.on) return;
-  IDLE.on = false;
+  IDLE.on = false; lmEv('wach');
   for (const [a, b, ...x] of IDLE.cut) { try { if (x[0] === 'feed') a.disconnect(b); else a.connect(b, ...x); } catch (e) {} }
   IDLE.cut = []; IDLE.z = null; IDLE.qT = A.ctx ? A.ctx.currentTime : 0;
   if (late) { IDLE.late++; console.warn('Ruhe: zu spät geweckt'); }

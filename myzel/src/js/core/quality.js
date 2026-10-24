@@ -23,6 +23,9 @@ function applyQuality() {
   if (A.bor && A.bor.rich !== Q.rich) { stopBordun(); startBordun(); }
   if (A.gsp) { if (A.gsp.rich !== !!Q.rich) gspDrop(); else A.gsp.node.port.postMessage({ lite: A.lite ? 1 : 0 }); }   // (the web: rebuilt at the next note with 8 or 12 strings)
 }
+// the live budget alone (the guard's voice limit and its way back): nothing in the chains is rebuilt and nothing that
+// sounds is cut – new notes respect it (playNote steals a fading voice first)
+function budgetApply() { VBUDGET = Math.max(6, Math.round(Q.budget * (A.budgetScale || 1))); }
 async function calibrate() {
   if (CAL.running || !A.ctx || typeof OfflineAudioContext === 'undefined') return;
   CAL.running = true;
