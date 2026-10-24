@@ -4,14 +4,16 @@
 
 Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`). Offen, in dieser Reihenfolge:
 
-1. **Ausrichtung bestätigen lassen (Vorschlag, noch nicht entschieden):** der **PC mit Keyboard wird Hauptgerät**
-   (dafür entwickeln, messen, optimieren); iPad läuft über die Web-App mit (MIDI dort evtl. über eine iPad-Browser-App wie
-   „Web MIDI Browser“ oder „Bluefy“ – ungetestet, Besitzer probiert), Handy nebenher ohne eigene Arbeit. Grund: Apple
-   verlangt 99 €/Jahr für eigene Apps; am PC mit Keyboard macht es dem Besitzer am meisten Spaß. Native App später zuerst
-   für Windows (siehe `dev/IDEEN.md`).
+1. **Ausrichtung – entschieden (24.10.2026):** der **PC mit Keyboard ist Hauptgerät** (dafür entwickeln, messen,
+   optimieren); das iPad läuft über die Web-App mit (MIDI dort evtl. über eine iPad-Browser-App wie „Web MIDI Browser“
+   oder „Bluefy“ – ungetestet, Besitzer probiert). **Das Handy wird nicht weiter verfolgt** (keine eigene Arbeit, keine
+   Fragen mehr dazu – so war es besprochen). Grund: Apple verlangt 99 €/Jahr für eigene Apps; am PC mit Keyboard macht es
+   dem Besitzer am meisten Spaß. Native App später zuerst für Windows (siehe `dev/IDEEN.md`).
 2. **Looper-Bedienung neu:** Audit, Konzept und klickbares Mockup liegen in `dev/looper/bedienung/` (AUDIT.md, KONZEPT.md,
-   mockup.html; privates Artifact: https://claude.ai/artifact/UDuaiAtuLNikwVvJ6NuRnu). Der Besitzer entscheidet E1–E8
-   aus KONZEPT.md, erst dann umbauen. Bei PC-Schwerpunkt: zuerst Maus, Tastatur, Tastenkürzel und MIDI, Touch zweitrangig.
+   mockup.html; privates Artifact: https://claude.ai/artifact/UDuaiAtuLNikwVvJ6NuRnu). **Entschieden (24.10.2026):**
+   E1 ja (● legt Schichten auf die aktive Schleife, „+“ beginnt eine neue), E2 (a) (⤓ über laufenden Schleifen legt eine
+   neue Schleife an und fragt „als Schicht auf Schleife 1?“); E3 entfällt (Handy). **E4–E8 bleiben offen – nichts bauen**,
+   bis der Besitzer es sagt. Beim Umbau: zuerst Maus, Tastatur, Tastenkürzel und MIDI, Touch zweitrangig.
    B1 (Doppeltipp) ist behoben; B2–B13 gehören in den Umbau.
 3. **Restliche kurze Aussetzer am PC:** die Last des einen Audio-Kerns; bei Schleifen kostet Taumelns Resampler ≈ 80 %.
    Nächster Schritt: Taumeln ohne Klangänderung schneller rechnen. Danach evtl. Schleifen in Workern vorausrechnen
