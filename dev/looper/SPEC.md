@@ -748,6 +748,41 @@ Taumeln never came). (4) has a price where the loops alone overload: at 30 % of 
 `A.lite` acted last; without it the loops' own steps gave 1601 → 29 and 1543 → 760 fallbacks per 20/15 s in two runs
 (the build before 1369 → 66) – whether `A.lite` may act again for loops is the owner's call (HANDOFF, „Owner's calls“).
 
+**As built (desktop report, 24.10.2026).** The owner's desktop report (a 12-core PC, Chrome, „Sicher“ – 10-ms buffer –, q 3, 11
+loops of which 6 playing and 7 Lebendig, 8 underruns in 20 s, 0.1 s missing): the old last step had cut the live budget
+six times (scale 0.262, budget 29) and set `A.lite`, neither ever coming back, and the Werk-Rahmen rendered nothing
+(`werk n=0`, `wg=2`). Why Lebendig was idle: not the budget – `hxWCanLive` never reads it – but the desktop guard. Its
+pause switched every living Schicht back to its Treu version (a burst of whole versions to the processor while it was
+late) for 30 s; any later underrun within 8 s of Wuchs work re-armed it, the next ones (no Wuchs within 8 s) fell to the
+old rule. Also `hxWGuard` counted the first 8 s after loading as Wuchs work (`wLast` 0). Now, per device class
+(`watchUnderruns`, `gdRecover`, `budgetApply`, `hxTauBack`):
+- every device: (1) Lebendig **holds** (the phone's rule – the last complete pass plays on, nothing renders, held while
+  underruns last: 30 s after the last, doubled on a return within 2 min, ≤ 4 min), then fewer at once (`G.max`);
+  (2) Taumeln rests when it lasts (two seconds with underruns within 10 s);
+- a computer or an iPad (`!HX_PHONE`): Taumeln comes back by itself after the same kind of quiet span; then, only while
+  underruns last (≥ 2 seconds within 10 s), a **voice limit**: budget × 0.8 at most every 5 s, never under half, without
+  `applyQuality` (no chain rebuilt, no `steal` – new notes respect it); `A.lite` never; said once;
+- a phone: unchanged – `hxGuardGrenze` while loops sound, else budget × 0.8 and `A.lite` each second with underruns;
+- everywhere: the budget back a step (× 1.25) after 30 s without underruns, then every 30 s, to the full budget (a
+  phone's `A.lite` stays). Logged as `stimmen`, `mehr`, `taumelt`.
+Card: a living loop waiting for the Speichergrenze says so (`L.wMemT`: „lebt, sobald Speicher frei ist“).
+„Leistung messen“: `ulog` – each underrun (polled every 100 ms: count, missing ms) with what happened in the 1.1 s
+before it (Ruhe `ruhe`/`wach`, the chain copy `f1-ruht`/`f1-wach`, the gates `tor-auf`/`tor-zu`, messages to the
+processor over 64 KB or `replace`/`tau` with their size, `durchgang` – a living pass begun –, `guard:<step>`, `lang:<ms>`
+long tasks, `gc:<MB>` the main heap falling); `werk realms=` every realm (i idle, r rendering, o renewing, l loading,
+- not booted – the old `st` showed only the first realm, which living passes never use); `hx nichtLeb=` why playing
+Lebendig loops did not live (hold, pause, refused, mem, treu8); the guard's steps to 0.1 s and the budget.
+Measured (`t-hx-dsoak`, this 4-core container shared with another agent's browser; desktop viewport, guard held back,
+live notes all along; „Sicher“): live notes alone 4 underrun moments in 40 s (the audio thread at 46 % of a core), with 8
+loops – 6 playing, 4 Lebendig – 9 (67 %); at the 128-frame buffer 93 vs 143 moments in 120 s (47 / 61 %). Around the
+underruns no event kind of the app comes more often than at random instants (graph links 18 vs 16 %, messages 15 vs
+10 %, main GC 10 vs 8 %); the AudioWorklet thread's own GC: 30 minor collections in 12 s, ≤ 1.1 ms (trace); a trace of
+the render thread: callbacks p50 1.74 ms of CPU per 2.9-ms period, p99 2.8 ms, the long ones mostly wall ≫ CPU (the
+thread descheduled – the shared machine). Offline, the ring processor with 6 loops of 2 Schichten: 0.45 ms per quantum
+with Taumeln, 0.08 without (Taumeln is 80 % of it); a quantum where all six loops' seams fall: ≈ +0.55 ms. What is left
+is the render thread's load: the loops add 15–20 points of a core here, most of it Taumeln's resampler. Not changed:
+the resampler (an exact speed-up would need a rework of `rd` – a candidate for its own step), the alignment of seams.
+
 ### 10.6 Live mode (Etappe 4, and fallback)
 Notes replayed through real voices scheduled ahead in `tick()` (like the Puls), `o.bus = stripIn('hxr')`, `v.loop =
 true`; loop voices are stolen before live ones (`steal` prefers `v.loop`); MIDI out of loop notes optional.
