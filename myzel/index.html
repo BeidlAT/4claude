@@ -34061,6 +34061,7 @@ function watchUnderruns() {
     const u = count(), now = performance.now();
     A.underruns = u;
     latWatch(ps, u, last, now);   // (Android's „Minimal“ by default: lasting underruns step the latency back from the next start)
+    if (u > last && now - LAT.t0 < 8000) { last = u; return; }   // (the sound's start – modules, wave tables, the first renders – is no lasting stutter: before, hxWGuard's wLast 0 took these by accident)
     if (u > last) { hits.push(now); hxWHoldKeep(now); GD.uT = now; }   // Hexenring: (Leistung) a held Lebendig stays held while it lasts
     while (hits.length && now - hits[0] > 10000) hits.shift();
     gdRecover(now);

@@ -157,8 +157,8 @@ async function touches(pg, secs) {
   const lp = ln('loops'), wk = ln('werk'), gd = ln('guard'), la = ln('latency');
   const s2 = new RegExp('S' + (r5.slots[1] + 1) + '=0\\(halt[,a-z-]*\\)'), s1 = new RegExp('S' + (r5.slots[0] + 1) + '=[0-9.]+\\(spielt[,a-z-]*\\)');   // (the guard may have stepped on this machine: tau-ruht)
   ok(s1.test(lp) && s2.test(lp) && r5.each[1] === 0 && r5.each[0] > 0.3 && Math.abs(r5.res.lp.sum.hx - r5.res.lp.sum.loops - r5.res.lp.sum.rest) < 0.02, `5. per loop: „${lp}“ (the halted one 0; now ${r5.each.join(', ')})`);
-  ok(/^werk st=ok pool=\d+ n=\d+ perS=[\d.]+ done=\d+ stop=\d+ ms=\d+ wait=\d+ xRT=[\d.]+ q=\d+ jobs=\d+$/.test(wk) && r5.res.werk.n >= 1 && r5.res.werk.done >= 1 && r5.res.werk.xRT > 0, `5.   the Werk-Rahmen: „${wk}“`);
-  ok(/^guard (\S+ )*taumeln@[12]( \S+)* · pause=\d+ hold=(true|false) max=\S+ tau=(true|false) lite=(true|false) scale=[\d.]+$/.test(gd), `5.   the guard's steps: „${gd}“`);
+  ok(/^werk st=ok realms=[irolx-]+ pool=\d+ n=\d+ perS=[\d.]+ done=\d+ stop=\d+ ms=\d+ wait=\d+ xRT=[\d.]+ q=\d+ jobs=\d+$/.test(wk) && r5.res.werk.n >= 1 && r5.res.werk.done >= 1 && r5.res.werk.xRT > 0, `5.   the Werk-Rahmen: „${wk}“`);
+  ok(/^guard (\S+ )*taumeln@[12](\.\d)?( \S+)* · pause=\d+ hold=(true|false) max=\S+ tau=(true|false) lite=(true|false) scale=[\d.]+ budget=\d+$/.test(gd), `5.   the guard's steps: „${gd}“`);
   ok(/^latency set=min ctx=min own=0 step=- hint=0 base=[\d.]+ out=[\d.]+ outMin=[\d.]+ outMax=[\d.]+ buf=\d+ avg=\S+$/.test(la), `5.   the latency: „${la}“`);
   ok(/^Schleifen: 3, davon 2 spielend – sie belegen im Mittel \d+(,\d+)? von \d+ Einheiten/.test(r5.sum.find((x) => /^Schleifen:/.test(x)) || '') && /^Lebendige Schleifen: \d+ Durchgänge neu gerechnet/.test(r5.sum.find((x) => /^Lebendige/.test(x)) || '') && r5.sum.some((x) => /^Myzel hat entlastet: .*Taumeln ruht/.test(x)), `5.   the summary: ${r5.sum.slice(4, -1).join(' | ')}`);
   ok(/^Schleifen: 3, davon 2 spielend – sie belegen \d+,\d von \d+ Einheiten/.test(r5.live) && /^Rechenzeit: Schleifen und Humus \d+,\d von \d+ Einheiten/.test(r5.cost), `5.   „Leistung“ live: „${r5.live}“ · the card: „${r5.cost}“`);

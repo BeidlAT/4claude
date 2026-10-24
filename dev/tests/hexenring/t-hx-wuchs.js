@@ -347,7 +347,7 @@ async function wtools(page) {
       return out;
     });
     ok(r.took && JSON.stringify(r.b0) === JSON.stringify(r.after), `an underrun while Wuchs works: the Wuchs gives way – the live budget, its scale and A.lite untouched (${JSON.stringify(r.after)})`);
-    ok(!r.lebt && /sobald Rechenzeit frei/.test(r.word), `…Lebendig pauses: the loop plays its Treu version („${r.word}“)`);
+    ok(!r.lebt && /letzten Durchgang – das Gerät ist ausgelastet/.test(r.word), `…Lebendig holds (every device since the desktop report, 24.10.2026): the loop plays its last complete pass on („${r.word}“)`);
     ok(!r.noWuchs, `…an underrun without any Wuchs work: the old rule applies (the guard takes no blame)`);
     ok(r.refused && !r.lebtR && /sobald Rechenzeit frei/.test(r.wordR), `a living render the device cannot sustain (a slow device's measure) is refused: „${r.wordR}“`);
   }

@@ -6,6 +6,7 @@
 //   2. a computer, loops playing (one Lebendig): Lebendig holds first, Taumeln rests next, never A.lite, the live budget
 //      only after the loops' steps; after the quiet span Taumeln is back by itself and Lebendig lives again
 //   3. an iPad: as a computer (a voice limit, never A.lite)
+//   (the first 8 s after the sound's start never step the guard – modules and wave tables load then)
 //   4. a phone, no loops: the old step (budget × 0.8 and A.lite) – unchanged –, and the budget comes back after 30 s quiet
 //   node t-hx-guard.js        (slot hx: sh ../v2/mk.sh /home/user/4claude/myzel hx – run-all.sh builds it)
 //   PARTS=1,4 node t-hx-guard.js
@@ -37,7 +38,7 @@ async function open(dev) {
   await page.evaluate(() => { const M = window.__M; M.CAL.unit = 0.0045; M.setParam('dev.q', '3'); M.applyQuality(); });
   return { page, ctx, errors };
 }
-const guardOn = (P) => P.page.evaluate(() => { window.__guardOk = true; window.__gT = performance.now(); window.__M.watchUnderruns(); });
+const guardOn = (P) => P.page.evaluate(() => { window.__guardOk = true; window.__gT = performance.now(); window.__M.watchUnderruns(); window.__M.LAT.t0 -= 10000; });   // (as long after the sound's start as a session: its first 8 s count for nothing)
 const st = (P) => P.page.evaluate(() => { const M = window.__M; return { vb: M.vbudget(), sc: M.A.budgetScale || 1, lite: !!M.A.lite, tau: !!M.HX.tauRest, log: (M.HX.gLog || []).filter((e) => e.t >= window.__gT).map((e) => e.step + (e.v !== '' ? ':' + e.v : '')), toasts: [...document.querySelectorAll('.toast, #toast')].map((x) => x.textContent).join(' | ') }; });
 // underruns: one more each second for s seconds
 async function drop(P, s) { for (let i = 0; i < s; i++) { await P.page.evaluate(() => { window.__fu.underrunEvents++; window.__fu.underrunDuration += 0.012; }); await P.page.waitForTimeout(1000); } }

@@ -763,6 +763,7 @@ old rule. Also `hxWGuard` counted the first 8 s after loading as Wuchs work (`wL
   underruns last (≥ 2 seconds within 10 s), a **voice limit**: budget × 0.8 at most every 5 s, never under half, without
   `applyQuality` (no chain rebuilt, no `steal` – new notes respect it); `A.lite` never; said once;
 - a phone: unchanged – `hxGuardGrenze` while loops sound, else budget × 0.8 and `A.lite` each second with underruns;
+- everywhere: underruns in the first 8 s after the sound's start step nothing (before, `hxWGuard`'s `wLast` 0 swallowed them by accident – without that a phone's start-up dropouts set `A.lite`, `t-hx-phone` 8);
 - everywhere: the budget back a step (× 1.25) after 30 s without underruns, then every 30 s, to the full budget (a
   phone's `A.lite` stays). Logged as `stimmen`, `mehr`, `taumelt`.
 Card: a living loop waiting for the Speichergrenze says so (`L.wMemT`: „lebt, sobald Speicher frei ist“).
