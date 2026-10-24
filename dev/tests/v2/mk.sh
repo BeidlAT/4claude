@@ -55,6 +55,7 @@ if 'function hxEcoTick(' in s: extra += ['hxPassNotes', 'hxFeedAhead', 'hxFeedBu
 if 'function lmStart(' in s: extra += ['LM', 'PH', 'PH_DPR', 'lmStart', 'lmStop', 'lmResult', 'lmText', 'lmSummary', 'lmUI', 'phApply', 'phSet', 'phAuto', 'phTick', 'FR', 'VIS', 'cvFx', 'resize', 'HX_TABLET', 'MOBILE', 'updateMeters', 'openPanel', 'IDLE', 'vbudget: () => VBUDGET', 'qcur: () => Q']
 if 'function hxF1Tick(' in s: extra += ['HXF1', 'hxF1Tick', 'hxF1Wake', 'hxF1Busy', 'hxF1Taps', 'CAP', 'recToggle', 'barGrid', 'renderBarInfo', 'watchUnderruns', 'hxWGuard', 'hxTaumelnSet', 'hxCount', 'HX_TABLET', 'MOBILE', 'ANDROID', 'A', 'TG', 'seqBpm', 'tgBpm', 'hxLen', 'hxReport', 'HXW']
 if 'function hxGuardLog(' in s: extra += ['hxGuardLog', 'hxGuardGrenze', 'hxWHold', 'hxWHoldKeep', 'hxTauGuard', 'HX_PHONE', 'hxWWord', 'hxCardDirty', 'lmLoops', 'lmLoopsRes', 'lmWerk', 'lmGuard', 'lmLive', 'hxCostOf', 'hxCountL', 'hxSounds', 'hxWDropPast', 'hxFolgt', 'hxState', 'hxCardSub', 'hxwRenew', 'hxwRealm', 'hxwCall']
+if 'function latWatch(' in s: extra += ['LAT', 'latWatch', 'latHint', 'latRestore', 'latAuto', 'latAutoAgain', 'latSet', 'updDrive', 'updLatText', 'updDevUI', 'devEls: () => devEls', 'restoreState', 'saveState', 'initAudio', 'ANDROID', 'IOS', 'applyQuality', 'Q', 'stripIn', 'PD', 'hxwChain', 'hxChainRec', 'makeChain', 'HXW']
 import re as _re
 def _defined(n):
     if ':' in n: return True

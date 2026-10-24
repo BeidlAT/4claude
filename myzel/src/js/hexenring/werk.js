@@ -367,7 +367,8 @@ function hxwChain(C) {
   A.panLfo = osc('pan'); A.panLfoG = G(0); A.panLfo.connect(A.panLfoG);
   let c; ws(() => { c = makeChain(); });
   const pan = () => { setP(A.panLfo.frequency, P['mov.panRate']); setP(A.panLfoG.gain, P['mov.pan']); };
-  const all = (os, lite) => { const q = Q, l = A.lite; Q = Object.assign({}, q, { os }); A.lite = !!lite; A.drvKey = null; try { updDrive(); updRing(); updFilter(); updPhaser(); updChorus(); pan(); } finally { Q = q; A.lite = l; } };   // (as the bake: every chain of this render – the graph's own is not heard)
+  const old = C.ids.includes('dev.lat');   // (a record from before 24.10.2026: its „Minimal“ drive without oversampling, as recorded)
+  const all = (os, lite) => { const q = Q, l = A.lite; Q = Object.assign({}, q, { os }); A.lite = !!lite; A.drvKey = null; HXW.latOld = old; try { updDrive(); updRing(); updFilter(); updPhaser(); updChorus(); pan(); } finally { Q = q; A.lite = l; HXW.latOld = false; } };   // (as the bake: every chain of this render – the graph's own is not heard)
   HXW.now = true; A.drvKey = null;
   try { all(C.os, C.lite); } finally { HXW.now = false; }
   for (const [k, nm] of Object.entries(HX_LFO)) { const L = C.lfo[k], p = A[nm].frequency; setNow(p, L[1]); if (L[2] != null && Math.abs(L[2] - L[1]) > 1e-9) p.setTargetAtTime(L[2], 0, L[3]); }
@@ -401,7 +402,8 @@ async function hxwBake(d) {
   A.panLfo = osc('pan'); A.panLfoG = G(0); A.panLfo.connect(A.panLfoG);
   const c = makeChain();
   const pan = () => { setP(A.panLfo.frequency, P['mov.panRate']); setP(A.panLfoG.gain, P['mov.pan']); };   // (as updMove: Kreisen)
-  const all = () => { updDrive(); updRing(); updFilter(); updPhaser(); updChorus(); pan(); };
+  const old = C.ids.includes('dev.lat');   // (a record from before 24.10.2026, hxwChain)
+  const all = () => { HXW.latOld = old; try { updDrive(); updRing(); updFilter(); updPhaser(); updChorus(); pan(); } finally { HXW.latOld = false; } };
   HXW.now = true; A.drvKey = null;
   try { all(); } finally { HXW.now = false; }
   // the rates as they were at the window's start: the value, and a glide still under way

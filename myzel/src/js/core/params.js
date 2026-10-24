@@ -472,7 +472,9 @@ SEL('rec.len', 'Länge', [['free', 'Frei'], ['bars', 'In Takten']], 'free', { ch
 NUM('rec.bars', 'Takte', 1, 64, 8, '', { step: 1, rec: 1, fmt: (v) => v + (v === 1 ? ' Takt' : ' Takte') });
 // Gerät: Rechenleistung, Latenz, MIDI-Keyboard (gelten für dieses Gerät, nicht Teil der Klang-Presets)
 SEL('dev.q', 'Qualitätsstufe', [['1', '1 · Leicht'], ['2', '2 · Voll'], ['3', '3 · Gewaltig']], MOBILE ? '1' : '2', { chips: 1, dev: 1 });
-SEL('dev.lat', 'Latenz', [['min', 'Minimal'], ['std', 'Standard'], ['safe', 'Sicher']], ANDROID ? 'safe' : MOBILE ? 'std' : 'min', { chips: 1, dev: 1 });
+// (24.10.2026: Android starts in „Minimal“ – Chrome there opens its fast output only for the numeric hint; lasting
+// underruns step back by themselves, latStep. iPhone and iPad „Standard“, computers „Minimal“ as before)
+SEL('dev.lat', 'Latenz', [['min', 'Minimal'], ['std', 'Standard'], ['safe', 'Sicher']], MOBILE && !ANDROID ? 'std' : 'min', { chips: 1, dev: 1 });
 SEL('midi.map', 'Tasten', [['scale', 'Skala'], ['white', 'Weiße Tasten'], ['chrom', 'Chromatisch']], 'scale', { chips: 1, dev: 1 });
 NUM('midi.y', 'Höhe auf der Spielfläche', 0, 1, 0.55, '%', { dev: 1 });
 BOOL('midi.vel', 'Anschlagdynamik', true, { dev: 1 });

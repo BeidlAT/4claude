@@ -1882,7 +1882,7 @@ const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform ==
 // §8): no UI, no storage writes, no MIDI, no Gestik, no live context, no service worker. t/now: a recorded change set at
 // its own moment / a recorded state set at once (setP); dead: voices that end during a render, cleaned after it.
 // (Leistung, 23.10.2026: or a realm booted from srcdoc – its frame's name says it, hxwShell)
-const HXW = { on: (() => { try { return /[?&]werk=1(&|$)/.test(location.search) || window.name === 'myzel-werk'; } catch (e) { return false; } })(), t: null, now: false, dead: null, ctx: null };
+const HXW = { on: (() => { try { return /[?&]werk=1(&|$)/.test(location.search) || window.name === 'myzel-werk'; } catch (e) { return false; } })(), t: null, now: false, dead: null, ctx: null, latOld: false };
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
   set(k, v) { if (HXW.on) return false; try { localStorage.setItem(k, v); return true; } catch (e) { return false; } },   // (Hexenring: the Werk-Rahmen writes nothing)
@@ -2409,7 +2409,9 @@ SEL('rec.len', 'Länge', [['free', 'Frei'], ['bars', 'In Takten']], 'free', { ch
 NUM('rec.bars', 'Takte', 1, 64, 8, '', { step: 1, rec: 1, fmt: (v) => v + (v === 1 ? ' Takt' : ' Takte') });
 // Gerät: Rechenleistung, Latenz, MIDI-Keyboard (gelten für dieses Gerät, nicht Teil der Klang-Presets)
 SEL('dev.q', 'Qualitätsstufe', [['1', '1 · Leicht'], ['2', '2 · Voll'], ['3', '3 · Gewaltig']], MOBILE ? '1' : '2', { chips: 1, dev: 1 });
-SEL('dev.lat', 'Latenz', [['min', 'Minimal'], ['std', 'Standard'], ['safe', 'Sicher']], ANDROID ? 'safe' : MOBILE ? 'std' : 'min', { chips: 1, dev: 1 });
+// (24.10.2026: Android starts in „Minimal“ – Chrome there opens its fast output only for the numeric hint; lasting
+// underruns step back by themselves, latStep. iPhone and iPad „Standard“, computers „Minimal“ as before)
+SEL('dev.lat', 'Latenz', [['min', 'Minimal'], ['std', 'Standard'], ['safe', 'Sicher']], MOBILE && !ANDROID ? 'std' : 'min', { chips: 1, dev: 1 });
 SEL('midi.map', 'Tasten', [['scale', 'Skala'], ['white', 'Weiße Tasten'], ['chrom', 'Chromatisch']], 'scale', { chips: 1, dev: 1 });
 NUM('midi.y', 'Höhe auf der Spielfläche', 0, 1, 0.55, '%', { dev: 1 });
 BOOL('midi.vel', 'Anschlagdynamik', true, { dev: 1 });
@@ -3509,12 +3511,14 @@ const chainsOf = (only) => (only ? [[only, setNow]] : (A.chains || []).map((c) =
 function updDrive(only) {
   if (!A.ctx) return;
   const type = P['drv.type'], amt = P['drv.amt'], mix = P['drv.mix'];
-  const key = type + ':' + amt.toFixed(3) + ':' + mix.toFixed(3) + ':' + P['dev.lat'] + ':' + Q.os + ':' + !!A.lite;
+  const key = type + ':' + amt.toFixed(3) + ':' + mix.toFixed(3) + ':' + Q.os + ':' + !!A.lite;
   if (!only && A.drvKey === key) return;
   if (!only) A.drvKey = key;
   const curve = driveCurve(type, amt, mix);
-  // oversampling costs latency (2x: 128 frames, 4x: 192 frames on the whole voice path), so "Minimal" plays without it
-  const os = mix < 0.001 || type === 'crush' || P['dev.lat'] === 'min' ? 'none' : A.lite ? '2x' : Q.os;
+  // the oversampling follows the quality level in every latency mode (owner, 24.10.2026: the full sound, and the 2–4 ms it
+  // adds – 2x 128, 4x 192 frames – in „Minimal“ too). Hexenring: a loop recorded before that, in „Minimal“, renders as it
+  // was recorded – without (HXW.latOld: its chain record still carries dev.lat)
+  const os = mix < 0.001 || type === 'crush' || (HXW.latOld && P['dev.lat'] === 'min') ? 'none' : A.lite ? '2x' : Q.os;
   for (const [c] of chainsOf(only)) {
     c.drv.curve = curve;
     if (c.drv.oversample !== os) c.drv.oversample = os;
@@ -6560,7 +6564,9 @@ function playNote(eng, t, f, y, vel, o = {}) {
 const CAL = { unit: Number(store.get('myzel.cal.v1')) || 0, running: false };
 function applyQuality() {
   Q = QP[P['dev.q']] || QP[1];
-  const cap = CAL.unit ? Math.floor((P['dev.lat'] === 'min' ? 0.4 : 0.5) / CAL.unit) : 0;
+  // (the smallest buffer leaves less slack per callback: 40 % of the core instead of 50 – the context's own buffer, which a
+  // new setting changes only at the next sound start)
+  const cap = CAL.unit ? Math.floor(((A.ctx ? A.latMode : P['dev.lat']) === 'min' ? 0.4 : 0.5) / CAL.unit) : 0;
   if (Q === QP[2]) Q.budget = cap ? clamp(cap, 14, Q.base) : Q.base;
   if (Q === QP[3]) {
     Q.budget = cap ? clamp(cap, 24, 360) : 48;
@@ -18214,6 +18220,7 @@ function onDeviceChanged(id) {
     if (P['dev.q'] !== '1' && A.ctx && !CAL.fresh) calibrate();
   }
   if (id === 'dev.lat') {
+    latChosen();
     applyQuality();
     if (A.ctx && P['dev.lat'] !== A.latMode) toast('Der neue Ausgabepuffer gilt nach einem Neustart des Klangs.', 8000, { label: 'Neu starten', fn: restartAudio });
   }
@@ -18263,6 +18270,7 @@ function restoreState() {
     if (r) for (const id in r) if (PD[id] && PD[id].rec) P[id] = sanitize(PD[id], r[id]);
     const dv = JSON.parse(store.get('myzel.dev.v1') || 'null');
     if (dv) for (const id in dv) if (PD[id] && PD[id].dev) P[id] = sanitize(PD[id], dv[id]);
+    latRestore(dv);   // (the latency: chosen by hand, or the default with this device's step – ui/leistung.js)
   } catch (e) {}
 }
 
@@ -24301,10 +24309,11 @@ function buildDev() {
   box.append(section('Qualität', 'Wie viele und wie reiche Stimmen gleichzeitig', grid(ctl('dev.q', { label: 'Stufe' })), qInfo, qLive));
   const latInfo = h('p', { class: 'note' });
   const latBtn = h('button', { type: 'button', class: 'btn primary', hidden: true, onclick: restartAudio }, 'Klang neu starten');
-  box.append(section('Latenz', 'Zeit vom Anschlag bis zum Ton', grid(ctl('dev.lat', { label: 'Ausgabe' })), latInfo, h('div', { class: 'row' }, latBtn)));
+  const latAutoB = h('button', { type: 'button', class: 'btn ghost', id: 'latAuto', hidden: true, onclick: latAutoAgain }, 'Wieder automatisch');
+  box.append(section('Latenz', 'Zeit vom Anschlag bis zum Ton', grid(ctl('dev.lat', { label: 'Ausgabe' })), latInfo, h('div', { class: 'row' }, latBtn, latAutoB)));
   box.append(lmBuild());   // Leistung: the Handy-Modus and „Leistung messen“ (ui/leistung.js)
   box.append(section('Computertastatur', null, h('p', { class: 'note' }, 'Ohne Keyboard spielen die Tasten A bis Ö (Grundreihe) die ersten Töne der Spielfläche, mit Umschalt weiter oben.')));
-  Object.assign(devEls, { qInfo, qLive, latInfo, latBtn });
+  Object.assign(devEls, { qInfo, qLive, latInfo, latBtn, latAuto: latAutoB });
   updDevUI();
   return box;
 }
@@ -24805,8 +24814,8 @@ function lmResult(ms) {
   R.voices = { load: S.n ? Math.round(100 * S.load / S.n) : 0, loadMax: Math.round(100 * S.loadMax), max: S.vMax, grains: S.gr, idle: S.n ? Math.round(100 * S.idle / S.n) : 0 };
   R.hx = { loops: S.loops, spielt: S.spielt, sch: S.sch, leb: S.leb, tau: !!HX.tauRest, f1: HXF1.off ? 'ruht' : 'an', werk: HXW.st || '-', wg: HX.wGuard ? HX.wGuard.n || 0 : 0, state: HX.state };
   R.lp = lmLoopsRes(); R.werk = lmWerk(secs); R.guard = lmGuard();
-  const La = LM.lat, hint = P['dev.lat'] === 'min' ? '0' : P['dev.lat'] === 'safe' ? 'balanced' : 'interactive';
-  R.lat = { set: P['dev.lat'], hint, base: La.n ? r1(La.base / La.n) : 0, out: La.n ? r1(La.out / La.n) : 0, outMin: La.n ? r1(La.outMin) : 0, outMax: r1(La.outMax), buf: Math.round((c.baseLatency || 0) * c.sampleRate), avg: R.ps && R.ps.averageLatency != null ? R.ps.averageLatency : null };
+  const La = LM.lat, hint = A.latMode === 'min' ? '0' : A.latMode === 'safe' ? 'balanced' : 'interactive';
+  R.lat = { set: P['dev.lat'], ctx: A.latMode, own: LAT.own ? 1 : 0, step: LAT.auto || '-', hint, base: La.n ? r1(La.base / La.n) : 0, out: La.n ? r1(La.out / La.n) : 0, outMin: La.n ? r1(La.outMin) : 0, outMax: r1(La.outMax), buf: Math.round((c.baseLatency || 0) * c.sampleRate), avg: R.ps && R.ps.averageLatency != null ? R.ps.averageLatency : null };
   const nav = navigator, ua = nav.userAgent || '';
   const os = (ua.match(/Android [\d.]+/) || ua.match(/(iPhone|iPad|Mac) OS [\d_]+/) || [ANDROID ? 'Android' : IOS ? 'iOS' : 'Desktop'])[0].replace(/_/g, '.');
   const br = (ua.match(/(Chrome|CriOS|Firefox|FxiOS|Version)\/(\d+)/) || [])[0] || '?';
@@ -24850,11 +24859,65 @@ function lmSummary(R) {
     : slow ? 'Ergebnis: Die Oberfläche ist ausgelastet (Zeichnen und Rechnen auf dem Hauptthread); der Klang läuft sauber.' : 'Ergebnis: kein Engpass gemessen.');
   if (R.hx.loops) S.push('Schleifen: ' + R.hx.loops + ', davon ' + R.hx.spielt + ' spielend – sie belegen im Mittel ' + d(R.lp.sum.loops) + ' von ' + R.lp.sum.budget + ' Einheiten (mit Humus und Effektkette ' + d(R.lp.sum.hx) + '); angehaltene kosten nichts.');
   if (R.werk.n) S.push('Lebendige Schleifen: ' + R.werk.n + ' Durchgänge neu gerechnet, jeder etwa ' + R.werk.ms + ' ms (' + d(R.werk.xRT) + ' × Echtzeit).');
-  const GW = { lebendig: 'Lebendig hält an', weniger: 'weniger auf einmal gerechnet', taumeln: 'Taumeln ruht', grenze: 'Live-Spiel geschützt', lite: 'weniger Live-Stimmen', zurueck: 'Lebendig wieder an' };
+  const GW = { lebendig: 'Lebendig hält an', weniger: 'weniger auf einmal gerechnet', taumeln: 'Taumeln ruht', grenze: 'Live-Spiel geschützt', lite: 'weniger Live-Stimmen', zurueck: 'Lebendig wieder an', latenz: 'Latenz ab dem nächsten Start zurückgestellt' };
   if (R.guard.steps.length) S.push('Myzel hat entlastet: ' + [...new Set(R.guard.steps.map((x) => GW[x.split(/[:@]/)[0]] || x))].join(', ') + '.');
-  S.push('Latenz: eingestellt „' + ({ min: 'Minimal', safe: 'Sicher', std: 'Standard' }[R.lat.set] || R.lat.set) + '“ – das Gerät meldet ' + d(R.lat.base) + ' ms Puffer und ' + d(R.lat.out) + ' ms Ausgabe.');
+  S.push('Latenz: eingestellt „' + (LAT_NAME[R.lat.set] || R.lat.set) + '“' + (R.lat.ctx !== R.lat.set ? ' (gemessen mit „' + (LAT_NAME[R.lat.ctx] || R.lat.ctx) + '“ – das neue gilt nach einem Neustart)' : '') + ' – das Gerät meldet ' + d(R.lat.base) + ' ms Puffer und ' + d(R.lat.out) + ' ms Ausgabe.');
+  const tip = latHint(R.lat.base + R.lat.out); if (tip) S.push('Tipp: ' + tip);
   S.push('Handy-Modus war ' + (PH.on ? 'an' : 'aus') + (R.ph.load ? ' (davon ' + R.ph.load + ' % der Zeit mit 30 Bildern pro Sekunde)' : '') + '. „Kopieren“ und den Bericht an Claude schicken.');
   return S;
+}
+
+/* ---------- the latency's default on Android, its step back, the hint (24.10.2026) ---------- */
+// Chrome on Android opens its fast output only for the numeric hint („Minimal“, latencyHint 0 – measured on the owner's
+// phone: 2.7 ms buffer + 64 ms output, touch → sound 125 ms; „Standard“ and „Sicher“ alike there: 128 + 260–300 ms, 400–
+// 500 ms). So Android starts in „Minimal“; where the device keeps dropping audio in it, Myzel steps back – „Standard“, then
+// „Sicher“ – from the next sound start, and says so once. A choice made in „Gerät“ is never touched.
+// myzel.lat.v1 {own, auto}: own – chosen by hand; auto – the step this device took. Before the mark every device setting was
+// stored with its default, so a stored „Sicher“ on Android (its default until then, from the start) counts as not chosen,
+// anything else as chosen (elsewhere: anything but today's default).
+const LAT = { own: false, auto: '', quiet: false, said: false, hits: [], dur: null, t0: 0 };
+const latAuto = () => ANDROID && !LAT.own;
+const LAT_NAME = { min: 'Minimal', std: 'Standard', safe: 'Sicher' };
+function latRestore(dv) {
+  let m = null; try { m = JSON.parse(store.get('myzel.lat.v1') || 'null'); } catch (e) {}
+  const def = PD['dev.lat'].d, was = dv && dv['dev.lat'];
+  if (m && typeof m === 'object') { LAT.own = !!m.own; LAT.auto = m.auto === 'std' || m.auto === 'safe' ? m.auto : ''; }
+  else LAT.own = !!was && was !== (ANDROID ? 'safe' : def);
+  if (!LAT.own) P['dev.lat'] = (ANDROID && LAT.auto) || def;
+  if (!HXW.on) latSave();   // (a Werk-Rahmen boots the same page: it only reads)
+}
+function latSave() { store.set('myzel.lat.v1', JSON.stringify({ own: LAT.own ? 1 : 0, auto: LAT.auto })); }
+function latSet(v) { LAT.quiet = true; try { setParam('dev.lat', v); } finally { LAT.quiet = false; } saveState(); }
+// (onDeviceChanged: the chips in „Gerät“)
+function latChosen() { if (LAT.quiet) return; LAT.own = true; LAT.auto = ''; latSave(); saveState(); }   // (both at once: a reload right after keeps the pair)
+function latAutoAgain() { LAT.own = false; LAT.auto = ''; latSave(); latSet(PD['dev.lat'].d); updDevUI(); }
+// lasting: within 30 s, 100 ms of audio missing (where the browser tells the duration) or 12 seconds with new underruns
+// (by the audio clock only: 4 seconds, each a lag of 25 ms or more); never in the first 5 s after the start – a few
+// tiny events at many voices (that phone in „Minimal“: 8 in 20 s at 28 voices and 80 grains, duration ≈ 0) are not
+function latWatch(ps, u, last, now) {
+  let d = null;
+  if (ps) { const x = ps.underrunDuration != null ? ps.underrunDuration * 1000 : ps.fallbackFramesDuration != null ? ps.fallbackFramesDuration : null; if (x != null) { d = LAT.dur != null ? Math.max(0, x - LAT.dur) : 0; LAT.dur = x; } }
+  if (!latAuto() || A.latMode === 'safe' || P['dev.lat'] !== A.latMode || now - LAT.t0 < 5000) return false;
+  const H = LAT.hits;
+  if (u > last) H.push([now, d]);
+  while (H.length && now - H[0][0] > 30000) H.shift();
+  const ms = H.reduce((a, x) => a + (x[1] || 0), 0);
+  if (!(ms >= 100 || H.length >= (ps ? 12 : 4))) return false;
+  const to = A.latMode === 'min' ? 'std' : 'safe';
+  H.length = 0; LAT.auto = to; latSave(); latSet(to);
+  hxGuardLog('latenz', to);
+  if (!LAT.said) { LAT.said = true; toast('Der Klang setzte immer wieder aus – ab dem nächsten Klangstart nimmt Myzel die Latenz „' + LAT_NAME[to] + '“ (mehr Reserve, etwas mehr Verzögerung).', 9000, { label: 'Jetzt neu starten', fn: restartAudio }); }
+  updDevUI();
+  return true;
+}
+// over ≈ 100 ms from the context to the speaker: „Minimal“ where it is not set, and on Android Firefox (its output path is
+// very short there – but it has no MIDI)
+function latHint(ms) {
+  if (!(ms > 100)) return '';
+  let t = '';
+  if (P['dev.lat'] !== 'min') t += 'Stell die Latenz auf „Minimal“' + (ANDROID ? ' – auf vielen Android-Handys öffnet erst sie den schnellen Weg.' : '.');
+  if (ANDROID && !/Firefox\//.test(navigator.userAgent || '')) t += (t ? ' ' : '') + 'Sehr kurz ist der Weg auch in Firefox – dort aber ohne MIDI.';
+  return t ? 'Über 100 ms bis zum Lautsprecher (' + Math.round(ms) + ' ms). ' + t : '';
 }
 
 /* ---------- the Handy-Modus: on phones the drawing gets lighter – never the sound ---------- */
@@ -25685,13 +25748,16 @@ function updLatText() {
     if (out > 0.04) lt += ' Das Ausgabegerät meldet viel Verzögerung – meist ein großer Puffer im Audiotreiber (in dessen Einstellungen verkleinern), Bluetooth (100 bis 300 ms) oder Lautsprecher am Monitor.';
   }
   const mode = P['dev.lat'];
-  lt += mode === 'min' ? ' Minimal: kleinster Puffer, den das System erlaubt; die Verzerrung läuft ohne Überabtastung (minimal rauer).'
-    : mode === 'std' ? ' Standard: üblicher Puffer der Plattform, Verzerrung mit Überabtastung.'
-      : ' Sicher: größerer Puffer gegen Aussetzer bei hoher Last (Standard auf Android).';
+  lt += mode === 'min' ? ' Minimal: der kleinste Puffer, den das System erlaubt.' : mode === 'std' ? ' Standard: der übliche Puffer der Plattform.' : ' Sicher: ein größerer Puffer gegen Aussetzer bei hoher Last.';
+  lt += ' Der Klang ist in allen drei gleich (die Verzerrung mit Überabtastung nach der Qualitätsstufe, 2–4 ms).';
+  // (Android, 24.10.2026: „Minimal“ by default, stepping back by itself – ui/leistung.js)
+  if (ANDROID) lt += LAT.own ? ' Von dir eingestellt.' : LAT.auto ? ' Automatisch: nach wiederholten Aussetzern auf „' + LAT_NAME[LAT.auto] + '“ gestellt.' : ' Automatisch: setzt der Klang immer wieder aus, nimmt Myzel ab dem nächsten Start „Standard“, danach „Sicher“.';
   if (IOS) lt += ' iPhone und iPad wählen den Puffer selbst.';
   if (A.ctx) lt += A.latMode !== mode ? ' Der neue Puffer gilt nach einem Neustart des Klangs.' : ' Nach Änderungen am Audiotreiber den Klang neu starten, dann misst der Browser neu.';
+  if (A.ctx) { const tip = latHint(((A.ctx.baseLatency || 0) + (A.ctx.outputLatency || 0)) * 1000); if (tip) lt += ' ' + tip; }
   if (devEls.latInfo.textContent !== lt) devEls.latInfo.textContent = lt;
   devEls.latBtn.hidden = !A.ctx;
+  if (devEls.latAuto) devEls.latAuto.hidden = !(ANDROID && LAT.own);
 }
 function updDevLive() {
   if (!devEls || !devEls.qInfo) return;
@@ -28615,7 +28681,7 @@ function hxPrmAt(key, T, base) {
 }
 // ---- the chain's state written down (in the Humus's timebase): every change of drive, ring, filter, phaser, chorus and
 // Kreisen as a snapshot of their settings, and the mod layer's deflections of them as lines – three minutes ----
-const HX_CHAIN = ['drv.type', 'drv.amt', 'drv.mix', 'rng.freq', 'rng.mix', 'flt.type', 'flt.freq', 'flt.q', 'flt.lfoRate', 'flt.lfoDepth', 'pha.mix', 'pha.fb', 'pha.rate', 'pha.depth', 'cho.rate', 'cho.depth', 'cho.mix', 'mov.pan', 'mov.panRate', 'dev.lat'];
+const HX_CHAIN = ['drv.type', 'drv.amt', 'drv.mix', 'rng.freq', 'rng.mix', 'flt.type', 'flt.freq', 'flt.q', 'flt.lfoRate', 'flt.lfoDepth', 'pha.mix', 'pha.fb', 'pha.rate', 'pha.depth', 'cho.rate', 'cho.depth', 'cho.mix', 'mov.pan', 'mov.panRate'];   // (until 24.10.2026 also 'dev.lat': „Minimal“ then played the drive without oversampling – such a record keeps it, HXW.latOld)
 const HXL = { ev: [], mod: {} };
 function hxChainLog() {
   if (HXW.on || !A.ctx || !hxLive()) return;
@@ -29026,7 +29092,8 @@ function hxwChain(C) {
   A.panLfo = osc('pan'); A.panLfoG = G(0); A.panLfo.connect(A.panLfoG);
   let c; ws(() => { c = makeChain(); });
   const pan = () => { setP(A.panLfo.frequency, P['mov.panRate']); setP(A.panLfoG.gain, P['mov.pan']); };
-  const all = (os, lite) => { const q = Q, l = A.lite; Q = Object.assign({}, q, { os }); A.lite = !!lite; A.drvKey = null; try { updDrive(); updRing(); updFilter(); updPhaser(); updChorus(); pan(); } finally { Q = q; A.lite = l; } };   // (as the bake: every chain of this render – the graph's own is not heard)
+  const old = C.ids.includes('dev.lat');   // (a record from before 24.10.2026: its „Minimal“ drive without oversampling, as recorded)
+  const all = (os, lite) => { const q = Q, l = A.lite; Q = Object.assign({}, q, { os }); A.lite = !!lite; A.drvKey = null; HXW.latOld = old; try { updDrive(); updRing(); updFilter(); updPhaser(); updChorus(); pan(); } finally { Q = q; A.lite = l; HXW.latOld = false; } };   // (as the bake: every chain of this render – the graph's own is not heard)
   HXW.now = true; A.drvKey = null;
   try { all(C.os, C.lite); } finally { HXW.now = false; }
   for (const [k, nm] of Object.entries(HX_LFO)) { const L = C.lfo[k], p = A[nm].frequency; setNow(p, L[1]); if (L[2] != null && Math.abs(L[2] - L[1]) > 1e-9) p.setTargetAtTime(L[2], 0, L[3]); }
@@ -29060,7 +29127,8 @@ async function hxwBake(d) {
   A.panLfo = osc('pan'); A.panLfoG = G(0); A.panLfo.connect(A.panLfoG);
   const c = makeChain();
   const pan = () => { setP(A.panLfo.frequency, P['mov.panRate']); setP(A.panLfoG.gain, P['mov.pan']); };   // (as updMove: Kreisen)
-  const all = () => { updDrive(); updRing(); updFilter(); updPhaser(); updChorus(); pan(); };
+  const old = C.ids.includes('dev.lat');   // (a record from before 24.10.2026, hxwChain)
+  const all = () => { HXW.latOld = old; try { updDrive(); updRing(); updFilter(); updPhaser(); updChorus(); pan(); } finally { HXW.latOld = false; } };
   HXW.now = true; A.drvKey = null;
   try { all(); } finally { HXW.now = false; }
   // the rates as they were at the window's start: the value, and a glide still under way
@@ -33930,11 +33998,13 @@ function watchUnderruns() {
   };
   const count = ps ? () => (ps.underrunEvents != null ? ps.underrunEvents : ps.fallbackFramesEvents) || 0 : clock;
   let last = count();
+  LAT.t0 = performance.now(); LAT.dur = null;
   const hits = [];   // (the seconds with new underruns, the last ten: a lasting stutter, not one glitch)
   setInterval(() => {
     if (document.visibilityState !== 'visible' || !A.ctx || A.ctx.state !== 'running') { ck.p = 0; return; }   // (a pause stops the clock: counted afresh)
     const u = count(), now = performance.now();
     A.underruns = u;
+    latWatch(ps, u, last, now);   // (Android's „Minimal“ by default: lasting underruns step the latency back from the next start)
     if (u > last) { hits.push(now); hxWHoldKeep(now); }   // Hexenring: (Leistung) a phone's held Lebendig stays held while it lasts
     while (hits.length && now - hits[0] > 10000) hits.shift();
     if (u > last && hxWGuard()) { last = u; return; }   // Hexenring: (step 2a) the Wuchs gives way first – never the live budget, never A.lite for it
@@ -33947,7 +34017,7 @@ function watchUnderruns() {
       A.lite = true; applyQuality(); updDevUI();
       if (!A.liteHinted) {
         A.liteHinted = true;
-        toast('Das Gerät kam kurz an seine Grenze – Myzel spielt jetzt etwas weniger Stimmen gleichzeitig.' + (A.latMode === 'min' ? ' Knackt es weiter, stelle unter „Gerät“ die Latenz auf „Standard“.' : ''), 7000);
+        toast('Das Gerät kam kurz an seine Grenze – Myzel spielt jetzt etwas weniger Stimmen gleichzeitig.' + (A.latMode === 'min' && !latAuto() ? ' Knackt es weiter, stelle unter „Gerät“ die Latenz auf „Standard“.' : ''), 7000);
       }
     }
     last = u;

@@ -193,6 +193,7 @@ function onDeviceChanged(id) {
     if (P['dev.q'] !== '1' && A.ctx && !CAL.fresh) calibrate();
   }
   if (id === 'dev.lat') {
+    latChosen();
     applyQuality();
     if (A.ctx && P['dev.lat'] !== A.latMode) toast('Der neue Ausgabepuffer gilt nach einem Neustart des Klangs.', 8000, { label: 'Neu starten', fn: restartAudio });
   }
@@ -242,6 +243,7 @@ function restoreState() {
     if (r) for (const id in r) if (PD[id] && PD[id].rec) P[id] = sanitize(PD[id], r[id]);
     const dv = JSON.parse(store.get('myzel.dev.v1') || 'null');
     if (dv) for (const id in dv) if (PD[id] && PD[id].dev) P[id] = sanitize(PD[id], dv[id]);
+    latRestore(dv);   // (the latency: chosen by hand, or the default with this device's step – ui/leistung.js)
   } catch (e) {}
 }
 

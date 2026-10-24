@@ -127,11 +127,13 @@ function watchUnderruns() {
   };
   const count = ps ? () => (ps.underrunEvents != null ? ps.underrunEvents : ps.fallbackFramesEvents) || 0 : clock;
   let last = count();
+  LAT.t0 = performance.now(); LAT.dur = null;
   const hits = [];   // (the seconds with new underruns, the last ten: a lasting stutter, not one glitch)
   setInterval(() => {
     if (document.visibilityState !== 'visible' || !A.ctx || A.ctx.state !== 'running') { ck.p = 0; return; }   // (a pause stops the clock: counted afresh)
     const u = count(), now = performance.now();
     A.underruns = u;
+    latWatch(ps, u, last, now);   // (Android's „Minimal“ by default: lasting underruns step the latency back from the next start)
     if (u > last) { hits.push(now); hxWHoldKeep(now); }   // Hexenring: (Leistung) a phone's held Lebendig stays held while it lasts
     while (hits.length && now - hits[0] > 10000) hits.shift();
     if (u > last && hxWGuard()) { last = u; return; }   // Hexenring: (step 2a) the Wuchs gives way first – never the live budget, never A.lite for it
@@ -144,7 +146,7 @@ function watchUnderruns() {
       A.lite = true; applyQuality(); updDevUI();
       if (!A.liteHinted) {
         A.liteHinted = true;
-        toast('Das Gerät kam kurz an seine Grenze – Myzel spielt jetzt etwas weniger Stimmen gleichzeitig.' + (A.latMode === 'min' ? ' Knackt es weiter, stelle unter „Gerät“ die Latenz auf „Standard“.' : ''), 7000);
+        toast('Das Gerät kam kurz an seine Grenze – Myzel spielt jetzt etwas weniger Stimmen gleichzeitig.' + (A.latMode === 'min' && !latAuto() ? ' Knackt es weiter, stelle unter „Gerät“ die Latenz auf „Standard“.' : ''), 7000);
       }
     }
     last = u;
