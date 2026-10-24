@@ -32,6 +32,35 @@
     }
     return T;
   }
+  // (Leistung, 24.10.2026) the live reads' tables in doubles: the taps T and each phase's step to the next D = T(p + 1) − T(p),
+  // both exactly what rd computed from the float table before – the same weights, bit for bit, two loads and a subtraction less
+  function rsKern(T, N) {
+    const W = Float64Array.from(T), D = new Float64Array(RS_N * N);
+    for (let i = 0; i < D.length; i++) D[i] = W[i + N] - W[i];
+    return { T, N, C: N / 2 - 1, T64: W, D64: D, oT: 0, oD: 0 };
+  }
+  // (Leistung, 24.10.2026) the resampler in WebAssembly (rs-wasm.js, from dev/tools/wasm/rs.c): the same sums as rd's
+  // JavaScript, bit for bit, ≈ 3× faster – Taumeln was most of the loops' load on the audio thread. One memory per
+  // scope, made with the first Ring (never in process()): the three kernels' tables, a source room (stereo interleaved
+  // floats, RSW.SN frames) and the sums (RSW.ON frames). false: no WebAssembly with SIMD here – rd reads in JavaScript
+  let RSW = null;
+  function rsWasmMake() {
+    try {
+      if (typeof WebAssembly !== 'object' || typeof RS_WASM !== 'string') return false;
+      const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/', s = RS_WASM.replace(/=+$/, ''), b = new Uint8Array(Math.floor(s.length * 3 / 4));
+      for (let i = 0, j = 0, v = 0, q = 0; i < s.length; i++) { v = (v << 6) | A.indexOf(s[i]); q += 6; if (q >= 8) { q -= 8; b[j++] = (v >> q) & 255; } }
+      if (!WebAssembly.validate(b)) return false;
+      const K = [RSK.k0, RSK.k16, RSK.k24], SN = 16384, ON = 2048, PN = 4096;
+      let at = 0;
+      for (const k of K) { k.oT = at; at += k.T64.byteLength; k.oD = at; at += k.D64.byteLength; }
+      const dd = { oT: at, oD: at + 8 * (RS_N + 1) * 160, on: false };   // (room for the de-drift job's kernel – filled with its first job)
+      at = dd.oD + 8 * RS_N * 160;
+      const OS = at, OO = OS + 8 * SN, OP = OO + 16 * ON, mem = new WebAssembly.Memory({ initial: Math.ceil((OP + 8 * PN) / 65536) });
+      const ex = new WebAssembly.Instance(new WebAssembly.Module(b), { env: { memory: mem } }).exports, f64 = new Float64Array(mem.buffer);
+      for (const k of K) { f64.set(k.T64, k.oT >> 3); f64.set(k.D64, k.oD >> 3); }
+      return { rs: ex.rs, rsp: ex.rsp, f32: new Float32Array(mem.buffer), f64, OS, OO, OP, SN, ON, PN, dd };
+    } catch (e) { return false; }
+  }
   // an envelope: v now; a → b over N frames (i done) by the smooth law – to or from 0 equal-power (sin/cos), else s(x)
   const envNew = (v) => ({ v, a: v, b: v, i: 0, N: 0 });
   const envGo = (E, to, N) => { E.a = E.v; E.b = to; E.i = 0; E.N = Math.max(1, N | 0); };
@@ -39,8 +68,8 @@
     constructor(o) {
       super();
       const po = (o && o.processorOptions) || {};
-      if (!RS) RS = rsTable();
-      if (!RSK) RSK = { k16: { T: rsTable(0.97 / 1.6, 56, 8), N: 56, C: 27 }, k24: { T: rsTable(0.97 / 2.4, 80, 8), N: 80, C: 39 } };
+      if (!RSK) { RS = rsTable(); RSK = { k0: rsKern(RS, RS_T), k16: rsKern(rsTable(0.97 / 1.6, 56, 8), 56), k24: rsKern(rsTable(0.97 / 2.4, 80, 8), 80) }; RSW = rsWasmMake(); }
+      this.rsW = po.rsJs ? null : RSW;   // (po.rsJs: the JavaScript resampler – the tests' reference)
       let sh = 0; while ((1 << sh) < (po.chunk || 8192)) sh++;
       this.CH = 1 << sh; this.SH = sh; this.M = this.CH - 1;
       this.hN = Math.max(2, Math.ceil((po.humusS || 64) * SR / this.CH));   // chunks per Humus ring
@@ -352,6 +381,7 @@
       const S = this.sch(d.schicht), dst = d.dst;
       if (!S || S.pv !== d.pv || S.ddA || S.dying || S.dead || !S.dr || !dst || !dst.length) { this.ddBack(d.schicht, dst); return; }
       if (!this.ddT) this.ddT = rsTable(0.97, 160, 10);
+      if (RSW && !RSW.dd.on) { const k = rsKern(this.ddT, 160); RSW.f64.set(k.T64, RSW.dd.oT >> 3); RSW.f64.set(k.D64, RSW.dd.oD >> 3); RSW.dd.on = true; }   // (the same table in every Ring: made the same way)
       // (the knots: dd index i0 + 32 k; the anchor – the pass start, index pre – is a knot. A Schicht that enters mid-pass
       // has pre < 0: its anchor lies before its buffer – the knots start at the buffer, integrated forward from the anchor)
       const cap = dst.length * this.CH, pre = S.pre, K0 = Math.ceil(pre / 32), i0 = pre - K0 * 32, kA = Math.max(0, K0), nK = kA + Math.ceil(Math.max(0, cap - Math.max(0, pre)) / 32) + 2;
@@ -387,6 +417,36 @@
         J.ph = 3; return;
       }
       const T = this.ddT, N = 160, CC = N / 2 - 1, SH = this.SH, M = this.M, ch = J.src, tot = J.stot, e = Math.min(J.n0, J.x + this.ddBlk);
+      // (Leistung, 24.10.2026) in WebAssembly where it is here: the block's positions φ(x), the source's frames they touch,
+      // the same sums (bit for bit, rsp in dev/tools/wasm/rs.c); a frame no tap reaches comes back −0 – + 0 makes it the 0
+      // JavaScript writes (a sum that starts at 0 is never −0)
+      const RW = this.rsW, nb = e - J.x;
+      if (RW && RW.dd.on && nb > 0 && nb <= RW.PN && nb <= RW.ON) {
+        const P = RW.f64, pb = RW.OP >> 3;
+        let lo = Infinity, hi = -Infinity, fin = true;
+        for (let z = 0; z < nb; z++) { const p = this.ddPhi(J.map, J.x + z); P[pb + z] = p; if (!(p > -1e9 && p < 1e9)) fin = false; if (p < lo) lo = p; if (p > hi) hi = p; }
+        const a0 = fin ? Math.max(0, Math.floor(lo) - CC - 2) : 0, a1 = fin ? Math.min(tot, Math.floor(hi) - CC + N + 2) : 0, m = a1 - a0;
+        let ok = fin && m <= RW.SN;
+        if (ok && m > 0) {
+          const F = RW.f32; let x = a0, d = RW.OS >> 2;
+          while (x < a1) {
+            const c = ch[x >> SH]; if (!c) { ok = false; break; }
+            const L = c[0], R = c[1], xe = Math.min(a1, x + M + 1 - (x & M));
+            for (let j = x & M; x < xe; x++, j++) { F[d++] = L[j]; F[d++] = R[j]; }
+          }
+        }
+        if (ok) {
+          const Q = RW.f64, ob = RW.OO >> 3;
+          if (m > 0) RW.rsp(RW.OS, a0, m, RW.OP, nb, RW.dd.oT, RW.dd.oD, N, CC, RW.OO);
+          for (let z = 0; J.x < e; J.x++, z++) {
+            const c = J.dst[J.x >> SH], k = J.x & M, sl = m > 0 ? Q[ob + 2 * z] + 0 : 0, sr = m > 0 ? Q[ob + 2 * z + 1] + 0 : 0;
+            if (sl !== sl || sr !== sr) { J.ph = 9; return; }
+            c[0][k] = sl; c[1][k] = sr;
+          }
+          if (J.x >= J.n0) J.ph = 4;
+          return;
+        }
+      }
       for (; J.x < e; J.x++) {
         const c = J.dst[J.x >> SH], k = J.x & M, p = this.ddPhi(J.map, J.x), i = Math.floor(p), ph = (p - i) * RS_N, p0 = ph | 0, a = ph - p0, b0 = p0 * N, i0 = i - CC;
         let sl = 0, sr = 0;
@@ -696,25 +756,67 @@
       }
       // (step 2b: read faster than its own rate – a speed step up – through a kernel whose band ends below the output's
       // Nyquist; the shared one up to 1.03)
-      const ar = r < 0 ? -r : r, K = ar > 1.03 ? (ar > 1.6 ? RSK.k24 : RSK.k16) : null, T = K ? K.T : RS, NT = K ? K.N : RS_T, CC = K ? K.C : RS_C;
-      for (let k = o; k < o + n; k++, p += r) {
-        const i = Math.floor(p), ph = (p - i) * RS_N, p0 = ph | 0, a = ph - p0, c0 = p0 * NT;
-        let i0 = i - CC;
-        if (i0 + NT <= 0 || i0 >= tot) continue;
-        let sl = 0, sr = 0;
-        if (i0 >= 0 && i0 + NT <= tot && (i0 & M) + NT <= M + 1) {   // all taps in one chunk
-          const c = ch[i0 >> SH]; if (!c) continue;   // (step 2a: a Wuchs pass's chunk not streamed in yet reads as silence – never a throw)
-          const L = c[0], R = c[1], j0 = i0 & M;
-          for (let t = 0; t < NT; t++) { const w = T[c0 + t] + a * (T[c0 + NT + t] - T[c0 + t]); sl += w * L[j0 + t]; sr += w * R[j0 + t]; }
+      // (Leistung, 24.10.2026) two frames at a time where both have all their taps in one chunk: each frame sums its taps
+      // in the same order as alone (the same samples, bit for bit), but the two frames' sums no longer wait on each other –
+      // a frame's 32 additions in a row were the resampler's limit. Taumeln ≈ 1.8× faster
+      const ar = r < 0 ? -r : r, K = ar > 1.03 ? (ar > 1.6 ? RSK.k24 : RSK.k16) : RSK.k0, T = K.T64, D = K.D64, NT = K.N, CC = K.C;
+      const RW = this.rsW;
+      if (RW && n <= RW.ON && p - p === 0 && r - r === 0 && p < 1e9 && p > -1e9) {   // (WebAssembly: the source's frames these reads touch, copied, then the same sums)
+        const pl = p + (n - 1) * r, lo = Math.max(0, Math.floor(p < pl ? p : pl) - CC - 2), hi = Math.min(tot, Math.floor(p < pl ? pl : p) - CC + NT + 2), m = hi - lo;
+        if (m <= 0) return;   // (no frame reaches the source: JavaScript skips every one)
+        if (m <= RW.SN) {
+          const F = RW.f32; let x = lo, d = RW.OS >> 2, ok = true;
+          while (x < hi) {
+            const c = ch[x >> SH]; if (!c) { ok = false; break; }   // (a chunk not streamed in: JavaScript's way, below)
+            const L = c[0], R = c[1], xe = Math.min(hi, x + M + 1 - (x & M));
+            for (let j = x & M; x < xe; x++, j++) { F[d++] = L[j]; F[d++] = R[j]; }
+          }
+          if (ok) {
+            RW.rs(RW.OS, lo, m, p, r, n, K.oT, K.oD, NT, CC, RW.OO);
+            const Q = RW.f64, b = RW.OO >> 3;
+            if (ga) for (let z = 0, k = o; z < n; z++, k++) { const w = ga[k]; oL[k] += w * Q[b + 2 * z]; oR[k] += w * Q[b + 2 * z + 1]; }
+            else for (let z = 0, k = o; z < n; z++, k++) { oL[k] += g * Q[b + 2 * z]; oR[k] += g * Q[b + 2 * z + 1]; }
+            return;
+          }
+        }
+      }
+      const e = o + n, top = M + 1 - NT;
+      let k = o;
+      while (k < e) {
+        const i = Math.floor(p), ph = (p - i) * RS_N, p0 = ph | 0, a = ph - p0, c0 = p0 * NT, i0 = i - CC;
+        if (k + 1 < e && i0 >= 0) {   // (the pair: this frame and the next, each in one chunk – one chunk, as the next starts at most 2 later)
+          const pb = p + r, ib = Math.floor(pb), i1 = ib - CC;
+          if (i1 >= 0 && i0 + NT <= tot && i1 + NT <= tot && (i0 & M) <= top && (i1 & M) <= top && (i0 >> SH) === (i1 >> SH)) {
+            const c = ch[i0 >> SH];
+            if (c) {
+              const L = c[0], R = c[1], j0 = i0 & M, j1 = i1 & M, phb = (pb - ib) * RS_N, q1 = phb | 0, b = phb - q1, c1 = q1 * NT;
+              let sl = 0, sr = 0, ul = 0, ur = 0;
+              for (let t = 0; t < NT; t++) {
+                const w = T[c0 + t] + a * D[c0 + t], v = T[c1 + t] + b * D[c1 + t];
+                sl += w * L[j0 + t]; sr += w * R[j0 + t]; ul += v * L[j1 + t]; ur += v * R[j1 + t];
+              }
+              const w = ga ? ga[k] : g, v = ga ? ga[k + 1] : g;
+              oL[k] += w * sl; oR[k] += w * sr; oL[k + 1] += v * ul; oR[k + 1] += v * ur;
+              k += 2; p = pb + r; continue;
+            }
+          }
+        }
+        let sl = 0, sr = 0, x = i0;
+        if (x + NT <= 0 || x >= tot) { k++; p += r; continue; }
+        if (x >= 0 && x + NT <= tot && (x & M) <= top) {   // all taps in one chunk
+          const c = ch[x >> SH]; if (!c) { k++; p += r; continue; }   // (step 2a: a Wuchs pass's chunk not streamed in yet reads as silence – never a throw)
+          const L = c[0], R = c[1], j0 = x & M;
+          for (let t = 0; t < NT; t++) { const w = T[c0 + t] + a * D[c0 + t]; sl += w * L[j0 + t]; sr += w * R[j0 + t]; }
         } else {
-          for (let t = 0; t < NT; t++, i0++) {
-            if (i0 < 0 || i0 >= tot) continue;
-            const c = ch[i0 >> SH]; if (!c) continue;
-            const j = i0 & M, w = T[c0 + t] + a * (T[c0 + NT + t] - T[c0 + t]);
+          for (let t = 0; t < NT; t++, x++) {
+            if (x < 0 || x >= tot) continue;
+            const c = ch[x >> SH]; if (!c) continue;
+            const j = x & M, w = T[c0 + t] + a * D[c0 + t];
             sl += w * c[0][j]; sr += w * c[1][j];
           }
         }
         const w = ga ? ga[k] : g; oL[k] += w * sl; oR[k] += w * sr;
+        k++; p += r;
       }
     }
     // an envelope's gains for n frames into arr[o…]; false while it holds still (then E.v is the gain)
@@ -1334,7 +1436,7 @@
       for (const L of this.loops) for (const S of L.sch) { sn++; for (const c of S.ch) if (c && !seen.has(c[0])) { seen.add(c[0]); sc++; } }   // (step 2a: a stream's chunk not there yet is null)
       return { F: this.F, hN: this.hN, hum: this.hum.reduce((a, x) => a + x.length, 0), free: this.free.length, schChunks: sc, schichten: sn, loops: this.loops.length,
         jobs: this.jobs.length, q: this.q.length, segs: this.nS, h0: this.h0, alloc: this.nA, capF: this.capF, jx: this.jobs.map((J) => [J.dd ? 'dd' : J.rs ? 'rs' : J.S ? 'fill' : 'grab', J.x - (J.f0 || 0), (J.f1 || 0) - (J.f0 || 0)]), dd: this.loops.map((L) => L.sch.map((S) => (S.ddA ? 1 : S.ddN ? 0.5 : 0))),
-        sl: this.loops.map((L) => [L.id, L.slA ? 1 : 0, L.vs, L.takt ? 1 : 0]),   // (step 2b: in slices, the tape's speed)
+        sl: this.loops.map((L) => [L.id, L.slA ? 1 : 0, L.vs, L.takt ? 1 : 0]), rsw: this.rsW ? 1 : 0,   // (Leistung, 24.10.2026: the resampler in WebAssembly)   // (step 2b: in slices, the tape's speed)
         acc: this.loops.filter((L) => L.acc).map((L) => [L.id, L.acc.src.join(','), L.acc.fb]), gap: this.loops.filter((L) => L.gap).map((L) => [L.id, L.Lf, L.ph0]), mic: this.micOn ? 1 : 0, rings: this.hum.map((x) => x.length),   // (step 4)
         ws: this.loops.map((L) => L.sch.map((S) => (S.ws ? { n: S.ws.slots.length, cur: S.ws.cur ? S.ws.cur.k : null, hold: S.ws.hold ? 1 : 0, ks: S.ws.slots.map((Z) => [Z.k, Z.c0, Z.hi, Number.isFinite(Z.n) ? Z.n : -1, Z.on ? 1 : 0]) } : { wu: S.wu ? 1 : 0, tn: S.tn }))), wpt: this.wpt.length };   // (step 2a: the streams)   // (step 1d: the jobs' progress, de-drifted Schichten)
     }

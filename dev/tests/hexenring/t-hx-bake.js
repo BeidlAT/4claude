@@ -12,7 +12,7 @@
 const H = require('./hx-h'), G = require('./hx-g');
 const { ok } = H;
 (async () => {
-  const { page, errors } = await G.open({});
+  const { page, errors } = await G.open({ init: () => { const si = window.setInterval; window.setInterval = function (f, ms, ...a) { if (typeof f === 'function' && /hxWGuard/.test(String(f))) return 0; return si.call(this, f, ms, ...a); }; } });   // (the underrun guard held back: on a loaded test machine it lets Taumeln rest – t-hx-guard tests it)
   const ev = (fn, a) => page.evaluate(fn, a);
   await ev(async () => {
     const M = window.__M;

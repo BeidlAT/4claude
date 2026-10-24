@@ -19,6 +19,7 @@ function myzelDsp() {
   // @include js/dsp/kehlchen.js
   // @include js/dsp/zapfen.js
   // @include js/dsp/glut.js
+  // @include js/dsp/rs-wasm.js
   // @include js/dsp/ring.js
   // an empty voice: the per-node price of the contract (SPEC §8 step 1 gate, ≈ 0.06 + 0.03 per param)
   class Null extends MyzelProc { render(L, R, a, b) { for (let i = a; i < b; i++) L[i] = 0; } }
