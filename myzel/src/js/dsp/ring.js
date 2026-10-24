@@ -72,7 +72,7 @@
       // Schichten of a loop share one rate. po.noSum / po.noDD: the step-1c paths (the tests' reference)
       this.gS = [0, 1, 2, 3].map(() => [[new Float32Array(this.CH), new Float32Array(this.CH)]]);
       this.gM = [0, 1, 2, 3].map(() => ({ n: 0, r: 0, p: 0, fr: 0, ch: [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], tot: new Float64Array(16), d: new Float64Array(16), g: new Float64Array(16) }));
-      this.noSum = !!po.noSum; this.noDD = !!po.noDD; this.ddPool = !!po.ddPool; this.gvQ = []; this.dvF = 1; this.ddT = null; this.ddBlk = Math.max(16, po.ddBlk | 0 || 64);
+      this.noSum = !!po.noSum; this.noDD = !!po.noDD; this.noMute = !!po.noMute; this.ddPool = !!po.ddPool; this.gvQ = []; this.dvF = 1; this.ddT = null; this.ddBlk = Math.max(16, po.ddBlk | 0 || 64);
       this.wA = new Float32Array(S); this.wG = new Float32Array(S); this.sgA = new Float32Array(S); this.sndW = false;
       this.bG = new Float32Array(S); this.gSl = new Float32Array(S); this.slQ = new Float64Array(3); this.AB = [new Float32Array(S), new Float32Array(S)];   // (step 2b: a stop's fade, a slice's gains, a worn Schicht's own sum)   // (step 1d: Schluss „welkend“, the sends to the loops' own webs)
       this.rep = 0; this.met = 0; this.nA = 0; this.late = 0; this.wpt = []; this.wrep = 0;   // (step 2a: the Werk-Rahmen's ports – the live frame every 0.1 s)
@@ -120,7 +120,8 @@
       if (m.rate) for (const R of [].concat(m.rate)) { const T = R.schicht != null ? this.sch(R.schicht) : this.lp(R.loop); if (T) { T.rt = Math.pow(2, Math.max(-20, Math.min(20, +R.cents || 0)) / 1200); T.rv = (T.rt - T.r) / Math.max(1, Math.round(R.ramp != null ? R.ramp : 0.05 * SR)); } }
       if (m.wst) this.wsMsg(m.wst, m.wst.port);   // (step 2a: a living Schicht's pass, streamed through its own port)
       if (m.wstop) { const S = this.sch(m.wstop.schicht); if (S) this.wsStop(S); }
-      if (m.wport) this.wpt.push(m.wport);   // (step 2a: a Werk-Rahmen's own port – the live frame every 0.1 s, for its pacing)
+      if (m.wport) { this.wpt.push(m.wport); m.wport.__id = m.wid; }   // (step 2a: a Werk-Rahmen's own port – the live frame every 0.1 s, for its pacing)
+      if (m.wportOff != null) for (let i = 0; i < this.wpt.length; i++) if (this.wpt[i].__id === m.wportOff) { try { this.wpt[i].close(); } catch (e) {} this.wpt.splice(i--, 1); }   // (Leistung: a realm renewed – its port goes)
       if (m.tau) for (const L of this.loops) if (L.id === m.tau.loop) for (const S of L.sch) { S.tau = !!m.tau.on; if (S.tau) this.ddAsk(S); }
       if (m.ddGo) this.ddStart(m.ddGo);   // (step 1d) the page's chunks for a de-drifted version
       // (step 1d) Nähren: a loop's output, post level and state, into its own pair of output 2 (ch: 0…7; −1 off) – the send
@@ -994,7 +995,7 @@
     span(L, X, Y, o, outs) {
       const n = Y - X, V = this.V;
       for (let c = 0; c < 2; c++) { const v = V[c], a = v[0], b = v[1], p = v[2], q = v[3]; for (let k = o; k < o + n; k++) { a[k] = 0; b[k] = 0; p[k] = 0; q[k] = 0; } }
-      let used = 0;
+      let used = 0, fu = false;   // (fu: a tail free of the state was read)
       // the read rate glides to its target in a straight line (Taumeln, MIDI clock): one step per span
       if (L.r !== L.rt) { L.r += L.rv * n; if (!(L.rv > 0 ? L.r < L.rt : L.r > L.rt)) L.r = L.rt; }
       // (step 2b) the tape's speed: its mean over these frames, exactly as the glide's position runs (so a step lands in
@@ -1006,6 +1007,12 @@
       const j0 = X - L.s0, q0 = L.q, sum = !this.noSum;
       if (sum) for (let k = 0; k < 4; k++) this.gM[k].n = 0;
       let any = false;
+      // (Leistung, 23.10.2026) a loop whose state is a settled silence (angehalten, stumm) is read for nothing: what it
+      // reads is multiplied by its state's 0 below. Its Schichten keep their place, their envelopes and their streams;
+      // only the reads under the state stop – the Ausklänge free of it (a stop's, a Schlafen's) ring on. The same samples
+      // as before (a worn Schicht is read on: its filter follows what it reads). Before, 8 halted loops cost as much on the
+      // audio thread as 8 playing ones, and nothing counted them (the owner's phone report A: 8 loops, none playing)
+      const mute = L.st.v === 0 && L.st.i >= L.st.N && !this.noMute;   // (po.noMute: read on – the tests' reference)
       for (let si = 0; si < L.sch.length; si++) {
         const S = L.sch[si];
         if (S.dead) continue;
@@ -1040,6 +1047,7 @@
         const so = S.f0 > X ? S.f0 - X : 0;
         if (so >= n) continue;
         const m = n - so, ko = o + so, qs = sq + so * r, ab = S.ab && S.ab.on && S.ab.age > 0 ? S.ab : null, Vo = ab ? this.AB : V[S.out];   // (step 2b: a worn Schicht is read into its own pair first)
+        const skp = mute && !ab;   // (its reads under the state are skipped)
         // (step 4) gap (Treffen setzen): the pass is the phrase and a silence of its own length – the Schicht's window is read
         // once from the pass start, then its Ausklang (its own continuation, to the first foreign onset) rings on as a tail;
         // a pass shorter than the window cuts only its silence, the rest rings on over the seam. Nothing is stretched.
@@ -1077,10 +1085,10 @@
             }
             const C = S.old && S.old.seam && (!S.old.tld || S.old.kS === L.k) ? S.old : S, co = C === S ? S.out : C.out, Vc = ab ? Vo : V[co];   // (the pass that ended: the version swapped out at this seam, out of its own output – at that seam only, step 2a)
             used |= 1 << co;
-            this.rd(C.ch, C.tot, C.pre + S.pe + qs, !!C.ddA === !!S.ddA ? r : rX, zx, ko, 0, gI, Vc[0], Vc[1]);
+            if (!skp) this.rd(C.ch, C.tot, C.pre + S.pe + qs, !!C.ddA === !!S.ddA ? r : rX, zx, ko, 0, gI, Vc[0], Vc[1]);
           }
-          if (mz < mr) { if (slm) this.slRd(L, S, j0 + so + mz, mr - mz, ko + mz, r, 0, gB, Vo); else this.rd(S.ch, S.tot, S.pre + qs + mz * r, r, mr - mz, ko + mz, 0, gB, Vo[0], Vo[1]); }
-        } else if (slm) this.slRd(L, S, j0 + so, m, ko, r, g, gc ? null : gA, Vo);   // (step 2b: the pass in slices – Schnitt, Auslassen, Würfeln)
+          if (skp) { /* (silent: nothing read) */ } else if (mz < mr) { if (slm) this.slRd(L, S, j0 + so + mz, mr - mz, ko + mz, r, 0, gB, Vo); else this.rd(S.ch, S.tot, S.pre + qs + mz * r, r, mr - mz, ko + mz, 0, gB, Vo[0], Vo[1]); }
+        } else if (skp) { /* (silent: nothing read) */ } else if (slm) this.slRd(L, S, j0 + so, m, ko, r, g, gc ? null : gA, Vo);   // (step 2b: the pass in slices – Schnitt, Auslassen, Würfeln)
         else if (mr > 0 && !(sum && !ab && gc && mr === n && r !== 1 && this.grp(2 * S.out, S.ch, S.tot, S.pre + qs, r, g))) this.rd(S.ch, S.tot, S.pre + qs, r, mr, ko, g, gc ? null : gA, Vo[0], Vo[1]);
         if (S.old && !S.old.seam) {   // the version being swapped out mid-pass: at the same place, fading
           const O = S.old, gO = this.gB, oc = !this.env(O.xo, gO, ko, m), Vx = ab ? Vo : V[O.out];
@@ -1089,7 +1097,7 @@
           for (let k = ko; k < ko + m; k++) gO[k] *= gc ? g : gA[k];
           if (xn) for (let k = ko; k < ko + m; k++) gO[k] *= xn[k];
           const same = !!O.ddA === !!S.ddA;   // (a de-drifted version crossing a new one mid-pass: at the same place of the music)
-          if (slm) this.slRd(L, O, j0 + so, m, ko, same ? r : rX, 0, gO, Vx);
+          if (skp) { /* (silent: nothing read) */ } else if (slm) this.slRd(L, O, j0 + so, m, ko, same ? r : rX, 0, gO, Vx);
           else this.rd(O.ch, O.tot, same ? O.pre + qs : O.ddA ? this.ddInv(O.ddMap, O.pre, O.pre + qs) : O.pre + qs, same ? r : rX, m, ko, 0, gO, Vx[0], Vx[1]);   // (step 2a: each version from its own start – a Wuchs one has no margin)
         }
         if (ab) this.abApply(S, ab, ko, m, qs, r, V[S.out]);   // (step 2b: its wear, then into its output)
@@ -1111,8 +1119,8 @@
             ga = gE; if (N) S.tfI[t] += m2;
           }
           const to = S.tout[t], Vt = V[to];
-          used |= 1 << to;
-          if (m2 > 0 && !(sum && !ga && m2 === n && rt !== 1 && this.grp(2 * to + (fr ? 1 : 0), ch, lim, p0, rt, g))) this.rd(ch, lim, p0, rt, m2, k0, g, ga, fr ? Vt[2] : Vt[0], fr ? Vt[3] : Vt[1]);
+          used |= 1 << to; if (fr) fu = true;
+          if (m2 > 0 && !(skp && !fr) && !(sum && !ga && m2 === n && rt !== 1 && this.grp(2 * to + (fr ? 1 : 0), ch, lim, p0, rt, g))) this.rd(ch, lim, p0, rt, m2, k0, g, ga, fr ? Vt[2] : Vt[0], fr ? Vt[3] : Vt[1]);
           S.tq[t] += m2 * rt;
           if (S.tb[t] + S.tq[t] >= lim + RS_T || (N && S.tfI[t] >= N)) { const e = S.tn - 1; S.tq[t] = S.tq[e]; S.tb[t] = S.tb[e]; S.tc[t] = S.tc[e]; S.tl[t] = S.tl[e]; S.tfr[t] = S.tfr[e]; S.tfN[t] = S.tfN[e]; S.tfI[t] = S.tfI[e]; S.tsrc[t] = S.tsrc[e]; S.tout[t] = S.tout[e]; S.tsd[t] = S.tsd[e]; S.tst[t] = S.tst[e]; S.tc[e] = null; S.tn--; t--; }
         }
@@ -1137,8 +1145,9 @@
       const BG = bgS ? this.bG : null, AT = L.accTo && L.accTo.length ? L.accTo : null;   // (step 4: the Sammelschleifen it feeds)
       if (BG) for (let k = o, F = X; k < o + n; k++, F++) { const x = (F - bgS.f0) / bgS.T; BG[k] = x < 0.8 ? 1 : x >= 1 ? 0 : Math.cos(HP * (0.5 - 0.5 * Math.cos(Math.PI * (x - 0.8) / 0.2))); }   // (step 2b: a stop fades over its last fifth – the tape near standstill only hums)
       let ms = 0, mp = 0;
+      const nil = mute && !fu && !W;   // (silent, nothing free of the state rang: every sample below would add an exact 0)
       for (let c = 0; c < 2; c++) {
-        if (!(used & (1 << c))) continue;
+        if (!(used & (1 << c)) || nil) continue;
         const out = outs[c] || outs[0], v = V[c], bL = v[0], bR = v[1], tL = v[2], tR = v[3], OL = out[0], OR = out[1] || out[0];
         let zl = W ? L.lpS[2 * c] : 0, zr = W ? L.lpS[2 * c + 1] : 0;
         for (let k = o; k < o + n; k++) {
@@ -1343,11 +1352,15 @@
       this.CH = po.chunk || 8192; this.n = Math.max(1, po.n | 0); this.body = po.body | 0; this.from = Math.floor(Math.max(0, po.from | 0) / this.CH) * this.CH;
       this.F = 0; this.L = null; this.R = null; this.out = null; this.q = []; this.pk = 0; this.cpk = 0; this.done = false;
       this.fN = Math.min(Math.max(1, this.n - this.body), Math.round(0.03 * SR));   // (the last frames: the fade if it gets there)
-      this.port.onmessage = (e) => { const d = e.data; if (d && d.port) { this.out = d.port; for (const [m, tr] of this.q) this.out.postMessage(m, tr); this.q = []; } };
+      this.port.onmessage = (e) => { const d = e.data; if (d && d.port) { this.out = d.port; for (const [m, tr] of this.q) this.out.postMessage(m, tr); this.q = []; if (this.done) this.fin(); } };
     }
     send(m, tr) { if (this.out) this.out.postMessage(m, tr || []); else this.q.push([m, tr || []]); }
+    fin() { if (this.out) { try { this.out.close(); } catch (e) {} this.out = null; } }   // (after the end was posted: what was sent arrives)
+    // (Leistung, 23.10.2026: the owner's desktop report – memory filling while loops only played) once the pass is sent,
+    // the sink lets go: its port to the live ring closed, process() false – else Chromium kept every living pass's
+    // offline context alive (an AudioWorklet's persistent root), its graph and its buffers: ≈ 4 MB a pass, for good
     process(inputs) {
-      if (this.done) return true;
+      if (this.done) { this.fin(); return false; }
       const a = inputs[0], l = a && a[0], r = a && (a[1] || a[0]), n = l ? l.length : 128, CH = this.CH;
       let k = 0;
       while (k < n && this.F < this.n && !this.done) {
@@ -1370,11 +1383,11 @@
           const ci = Math.floor((this.F - 1) / CH), st = ci * CH;
           if (this.L) {
             if (st < this.body) this.pk = Math.max(this.pk, this.cpk);
-            if (st >= this.body && this.cpk <= this.pk * 3.2e-5) { this.send({ end: st }); this.done = true; this.L = this.R = null; break; }   // (−90 dB)
+            if (st >= this.body && this.cpk <= this.pk * 3.2e-5) { this.send({ end: st }); this.done = true; this.L = this.R = null; if (this.out) this.fin(); break; }   // (−90 dB)
             if (this.bad && !this.badT) { this.badT = 1; this.send({ nan: this.bad, i: ci }); }
             this.send({ i: ci, L: this.L, R: this.R }, [this.L.buffer, this.R.buffer]); this.L = this.R = null;
           }
-          if (this.F >= this.n) { this.send({ end: this.n }); this.done = true; }
+          if (this.F >= this.n) { this.send({ end: this.n }); this.done = true; if (this.out) this.fin(); }
         }
       }
       return true;

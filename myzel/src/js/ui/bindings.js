@@ -241,5 +241,6 @@ function updDevLive() {
   const load = voiceLoad();
   devEls.qLive.textContent = 'Jetzt: ' + A.voices.size + (A.voices.size === 1 ? ' Stimme klingt' : ' Stimmen klingen') + ' · ' + Math.round(100 * load / Math.max(1, VBUDGET)) + ' % der Grenze' +
     (A.grains ? ' · ' + A.grains + ' Körner' : '') + (A.budgetScale && A.budgetScale < 1 ? ' · nach Aussetzern auf ' + Math.round(A.budgetScale * 100) + ' % gesenkt' : '');
+  lmLive();   // (Leistung: the loops' share)
 }
 

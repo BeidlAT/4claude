@@ -10,10 +10,13 @@ const HX = { node: null, ctx: null, state: '', fR: 0, tR: 0, loops: new Map(), s
 const hxF = (t) => HX.fR + (t - HX.tR) * SR;   // audio time → the processor's frame (its own count, mapped by its reports)
 const hxT = (f) => HX.tR + (f - HX.fR) / SR;
 const hxLive = () => !!(A.ctx && !(typeof OfflineAudioContext !== 'undefined' && A.ctx instanceof OfflineAudioContext));
+// a Schleife that may sound now: playing, about to change, or a Sammelschleife (it records every frame)
+const hxSounds = () => { for (const L of HX.loops.values()) if (L.state === 'spielt' || L.pendTo || (L.acc && L.acc.on)) return true; return false; };
+const hxOut1Of = (id) => { const L = HX.loops.get(id); return !!L && L.sch.some((x) => { const S = HX.sch.get(x); return S && S.out; }); };
 function hxPost(m, tr) {
   if (!HX.node || HX.ctx !== A.ctx) return false;
-  if (HXF1.off) for (const k in m) { const v = m[k]; if (v && typeof v === 'object' && v.out) { hxF1Wake(); break; } }   // (phone report: whatever is sent to play on out 1 finds the chain copy awake)
-  if (m.loop) { if (IDLE.on) idleWake(); if (IDLE.hxOff) hxGates(true); IDLE.hxT = null; }   // Ruhe: a Schleife will sound
+  if (HXF1.off) for (const k in m) { const v = m[k]; if (v && typeof v === 'object' && (v.out || (k === 'state' && v.to === 'spielt' && hxOut1Of(v.loop)))) { hxF1Wake(); break; } }   // (phone report: whatever is sent to play on out 1 finds the chain copy awake; Leistung: a halted loop with a Schicht on out 1 that plays again)
+  if (m.loop || (m.state && m.state.to === 'spielt')) { if (IDLE.on) idleWake(); if (IDLE.hxOff) hxGates(true); IDLE.hxT = null; }   // Ruhe: a Schleife will sound (Leistung: or a halted one again)
   else if ((m.wst || m.replace || m.schicht) && (IDLE.on || IDLE.hxOff)) { if (IDLE.on) idleWake(); if (IDLE.hxOff) hxGates(true); IDLE.hxT = null; }   // (step 2a: a Wuchs pass, a version – it sounds through the same way)
   if (HX.batch) {   // (hxBatch: one message – a key twice sends what is there first)
     const B = HX.batch;
@@ -162,7 +165,10 @@ function hxOut1() { if (HXF1.off) hxF1Wake(); if (HX.node && !HX.out1) { if (IDL
 function hxF1Busy(now) {
   let busy = !!((HXN.feed && HXN.feed.size) || hxAntOn());
   const o1 = HXF1.o1 || (HXF1.o1 = new Map());
-  for (const S of HX.sch.values()) if (S.out) { busy = true; o1.set(S.id, S.loop); }
+  // (Leistung, 23.10.2026: a Schicht of a loop that is halted or muted plays nothing through it – the processor reads
+  // nothing of it then; its stop's Ausklang still ringing keeps the taps from seeing zeros. It wakes before the loop
+  // plays again: hxPost with a state „spielt“)
+  for (const S of HX.sch.values()) if (S.out) { const L = HX.loops.get(S.loop); if (L && L.state !== 'spielt' && !L.pendTo) continue; busy = true; o1.set(S.id, S.loop); }
   for (const [id, lp] of o1) {
     const S = HX.sch.get(id); if (S && S.out) continue;
     o1.delete(id); const L = HX.loops.get(lp); HXF1.useT = Math.max(HXF1.useT, now + (L ? Math.min(120, hxLen(L)) : 0));

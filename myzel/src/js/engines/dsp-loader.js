@@ -31,7 +31,9 @@ function ensureDSP(ctx = A.ctx, quiet) {   // idempotent per context; resolves t
     // a stale one would win); a sibling myzel-dsp.js is only the way out where a CSP forbids blob: (the tap's order is
     // the other way round – its file exists)
     const urls = [];
-    try { urls.push(URL.createObjectURL(new Blob([MYZEL_DSP_SRC], { type: 'text/javascript' }))); } catch (e) {}
+    // (Leistung, 23.10.2026: one Blob for every context of this page – the Werk-Rahmen loads the module into each render's
+    // context, and a Blob per render stayed in the browser's blob storage for the frame's life)
+    try { urls.push(DSP.url || (DSP.url = URL.createObjectURL(new Blob([MYZEL_DSP_SRC], { type: 'text/javascript' })))); } catch (e) {}
     try { urls.push(new URL('myzel-dsp.js', document.baseURI).href); } catch (e) {}
     for (const u of urls) {
       try { await ctx.audioWorklet.addModule(u); } catch (e) { continue; }

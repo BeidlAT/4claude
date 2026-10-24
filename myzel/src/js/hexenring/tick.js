@@ -96,6 +96,7 @@ function hxTick(horizon) {
   const R = HX.rec;
   if (R && R.phase === 'wait' && now >= R.t0) { R.phase = 'rec'; hxSay('Aufnahme läuft'); hxRailDirty(); }
   hxF1Tick(now);   // (the chain copy on out 1 rests while nothing plays through it)
+  if (HXK.cost && pnow - (HXK.costT || 0) > 1000 && HXK.cost.isConnected) { HXK.costT = pnow; hxCardSub(); }   // (Leistung: the loops' share, as it changes)
   if (R && R.loopKey && R.w1 && now >= R.w1) { HX.rec = null; if (HX.chips && HX.chips.kind === 'mult') HX.chips = null; hxRailDirty(); }   // (an auto-length recording closed at its end)
   hxPunchTick();
   hxAusWatch();

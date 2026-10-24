@@ -132,12 +132,14 @@ function watchUnderruns() {
     if (document.visibilityState !== 'visible' || !A.ctx || A.ctx.state !== 'running') { ck.p = 0; return; }   // (a pause stops the clock: counted afresh)
     const u = count(), now = performance.now();
     A.underruns = u;
-    if (u > last) hits.push(now);
+    if (u > last) { hits.push(now); hxWHoldKeep(now); }   // Hexenring: (Leistung) a phone's held Lebendig stays held while it lasts
     while (hits.length && now - hits[0] > 10000) hits.shift();
     if (u > last && hxWGuard()) { last = u; return; }   // Hexenring: (step 2a) the Wuchs gives way first – never the live budget, never A.lite for it
     if (u > last && hits.length >= 2 && hxTauGuard()) { last = u; return; }   // Hexenring: (phone report) then, on a phone and when it lasts, the loops' Taumeln
+    if (u > last && hxGuardGrenze()) { last = u; return; }   // Hexenring: (Leistung, report A) a phone with loops sounding: the live budget stays
     if (!ps) { last = u; return; }
     if (u > last && VBUDGET > 6) {
+      hxGuardLog('lite', Math.round(VBUDGET * 0.8));
       A.budgetScale = (A.budgetScale || 1) * 0.8;
       A.lite = true; applyQuality(); updDevUI();
       if (!A.liteHinted) {

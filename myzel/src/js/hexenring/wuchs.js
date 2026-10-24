@@ -5,7 +5,7 @@ function hxwPick() {
   let idle = null, fresh = null, least = null;
   for (let i = 1; i <= HX_WPOOL; i++) {
     const R = hxwRealm(i);
-    if (R.st === 'kein') continue;
+    if (R.st === 'kein' || R.old) continue;   // (Leistung: one being renewed takes no new pass)
     if (R.st === 'ok' && !R.n) { idle = R; break; }
     if (!R.st && !fresh) fresh = R;
     if (!least || R.n < least.n) least = R;
@@ -16,7 +16,8 @@ function hxwPick() {
 function hxwWport(R) {
   if (!HX.node || !R.port || R.st !== 'ok') return;
   const ch = new MessageChannel();
-  hxPost({ wport: ch.port1 }, [ch.port1]);
+  R.wid = (HXW.widN = (HXW.widN || 0) + 1);
+  hxPost({ wport: ch.port1, wid: R.wid }, [ch.port1]);
   try { R.port.postMessage({ job: 'wport', port: ch.port2 }, [ch.port2]); } catch (e) {}
 }
 function hxwWportAll() { for (const R of [HXW, ...HXW.pool]) if (R.st === 'ok') hxwWport(R); }
@@ -181,9 +182,9 @@ async function hxWRender(L, S, sig, key) {
   if (!job) return null;
   if (!S.wseed) S.wseed = ((Math.random() * 2147483646) | 0) + 1;   // (never a render without its own throw)
   const seed = S.anc ? S.anc.seed : S.wseed;
-  HX.wRen++; HX.wLast = performance.now(); hxCount();
-  const m = await hxwCall('wuchs', hxWJob(L, S, job, seed));
-  HX.wRen--; HX.wLast = performance.now(); hxCount();
+  HX.wRen++; HX.wLast = performance.now(); hxCount(); HX.wSt.n++;
+  const tw = performance.now(), m = await hxwCall('wuchs', hxWJob(L, S, job, seed));
+  HX.wRen--; HX.wLast = performance.now(); hxCount(); hxWStat(m, performance.now() - tw, job.dur);
   if (!m || m.err || !m.L) { if (m && m.err) console.warn('Hexenring: Wuchs', m.err); return null; }
   const n = hxWTrim(m.L, m.R, job.lenF), [aud] = hxChunks(n);
   hxWTailAdd(S, (n - job.lenF) / SR, n >= m.L.length);
@@ -262,11 +263,13 @@ function hxWSlot(L, S, k, o = {}) {
   hxPost({ wst: { schicht: S.id, k, len: job.lenF, cap: Math.ceil(job.dur * SR) + HX_CH, at: o.at, must: !!o.must, from, port: ch.port1 } }, [ch.port1]);
   const seed = o.treu ? (S.anc ? S.anc.seed : S.wseed) : hxWSeedK(S, k);
   const d = Object.assign(hxWJob(L, S, job, seed), { port: ch.port2, F0: a, lead: HX_WLEAD, from: from / SR, keep: S.key + ':' + k, feld: (L.klang || 'eigen') === 'feld' });
-  R.n++; HX.wJobs++; HX.wLast = performance.now(); hxCount();
+  R.n++; HX.wJobs++; HX.wLast = performance.now(); hxCount(); HX.wSt.n++; HX.wSt.q = Math.max(HX.wSt.q, HX.wJobs);
   const re = S.wRe || (S.wRe = {}); re[k] = R; for (const x in re) if (+x < k - 12) delete re[x];   // (✓ asks the realm that rendered a pass; it keeps its last ten)
   const t0 = performance.now();
+  (S.wPend || (S.wPend = new Set())).add(k);
   hxwCall('wuchs', d, [ch.port2], R).then((m) => {
-    R.n = Math.max(0, R.n - 1); HX.wJobs = Math.max(0, HX.wJobs - 1); HX.wLast = performance.now(); hxCount();
+    S.wPend.delete(k);
+    R.n = Math.max(0, R.n - 1); HX.wJobs = Math.max(0, HX.wJobs - 1); HX.wLast = performance.now(); hxCount(); hxWStat(m, performance.now() - t0, job.dur);
     if (!m || m.stopped) return;
     if (m.rms) { S.wMs = m.rms; S.wDur = m.dur; }
     if (m.tail != null) hxWTailAdd(S, m.tail, m.cut);
@@ -275,6 +278,20 @@ function hxWSlot(L, S, k, o = {}) {
   });
   S.wSeeds = Object.assign(S.wSeeds || {}, { [k]: seed });
   return true;
+}
+// (Leistung, 23.10.2026) the Werk-Rahmen's work, for „Leistung messen“: renders begun and done (stopped ones apart), the
+// render's own time (its offline context), the whole wait from the request (setup, the queue of its realm, the pacing),
+// the seconds of audio made, the most jobs waiting at once
+HX.wSt = { n: 0, done: 0, stop: 0, ms: 0, wall: 0, audio: 0, q: 0 };
+function hxWStat(m, wall, dur) { const W = HX.wSt; if (!m || m.err) return; if (m.stopped) { W.stop++; return; } W.done++; W.ms += +m.rms || +m.ms || 0; W.wall += wall; W.audio += +dur || 0; }
+// (Leistung, 23.10.2026) a living pass whose time has passed while its render still waits in its realm's queue – the
+// device falls behind – is never heard (its slot went at its pass's end): it is dropped before it begins. One that
+// began rendering goes on (what it streams may already sound, its Ausklang rings into the next pass)
+function hxWDropPast(S, kNow) {
+  if (!S.wPend || !S.wPend.size) return;
+  const sent = S.wDropS || (S.wDropS = new Set());
+  for (const k of S.wPend) if (k < kNow && !sent.has(k)) { sent.add(k); const R = S.wRe && S.wRe[k]; try { if (R && R.port) R.port.postMessage({ job: 'drop', keep: S.key + ':' + k }); } catch (e) {} }
+  for (const k of sent) if (!S.wPend.has(k)) sent.delete(k);
 }
 // a living Schicht's stream stops (its fixed version comes back, or it is gone): the processor drops the passes not yet
 // heard, and the realms rendering them stop streaming (all: the pass playing too – an undo, a clear)
@@ -295,20 +312,25 @@ function hxWTick(now, horizon) {
   if (HX.wKlang && performance.now() >= HX.wKlang) { HX.wKlang = 0; for (const L of hxLoopsLive()) if ((L.klang || 'eigen') === 'feld' && hxWAktiv(L)) hxWUpdate(L); }
   const fNow = hxF(now), pnow = performance.now(), G = HX.wGuard;
   if (G.max < Infinity && pnow - G.t > 60000) { G.t = pnow; G.max = G.max + 1 >= HX_WPOOL ? Infinity : G.max + 1; }   // (a minute without an underrun: one more at once again)
+  if (pnow - (HXW.renT || 0) > 1000) { HXW.renT = pnow; hxwRenew(); }   // (Leistung: realms renewed – their renders' memory freed)
+  if (G.hold && !(G.pause > pnow)) { G.hold = false; G.end = pnow; hxGuardLog('zurueck'); hxCardDirty(); }   // (phone: the pause's span clean – the loops live again from their next pass)
   for (const L of hxLoopsLive()) {
     if (L.bew || L.state === 'weg') continue;
     if (L.treuBis != null && tgBeat(now) >= L.treuBis) { L.treuBis = null; hxRailDirty(); hxCardDirty(); }
     if (L.wRefused && pnow > (L.wRetry || 0)) { L.wRetry = pnow + 4000; if (hxWCanLive(L)) { L.wRefused = false; hxCardDirty(); } }
-    const lebt = hxWLebt(L) && L.state === 'spielt';
+    const lebt = hxWLebt(L) && L.state === 'spielt', hold = !lebt && hxWHold(L);   // (phone: the guard holds – the last complete pass plays on)
     const k = hxPassK(L, Math.round(fNow)), k1 = k + 1, a1 = hxPassF(L, k1);
     for (const id of L.sch) {
       const S = HX.sch.get(id);
       if (!hxWCan(S)) continue;
-      if (!lebt) { if (S.wLive) { S.wLive = false; hxWStop(S); hxWUpdate(L, { re: true }); } continue; }
-      if (!S.wLive) { if (!hxMemOk(Math.round(1.5 * (hxWTailEst(S) + 4) * SR))) continue; S.wLive = true; S.wk = k; hxwWarm(2 * [...HX.sch.values()].filter((x) => x.wLive).length); }   // (final pass: its passes in the processor counted against the Speichergrenze before they stream)
+      if (S.wPend && S.wPend.size) hxWDropPast(S, k);
+      if (!lebt && !hold) { if (S.wLive) { S.wLive = false; hxWStop(S); hxWUpdate(L, { re: true }); } continue; }
+      if (!S.wLive) {
+        if (hold) continue; if (!hxMemOk(Math.round(1.5 * (hxWTailEst(S) + 4) * SR))) continue; S.wLive = true; S.wk = k; hxwWarm(2 * [...HX.sch.values()].filter((x) => x.wLive).length); }   // (final pass: its passes in the processor counted against the Speichergrenze before they stream)
       if ((S.wk == null ? -1 : S.wk) >= k1 || a1 - fNow > hxWStartS() * SR) continue;
       if (L.nein && L.nein.k === k1 && S.anc) { S.wk = k1; hxWPlay(S, 'anc', a1); continue; }   // (✕: the anchor plays that pass)
       if (L.frucht != null && L.frucht === k1 && (S.anc || S.wu)) { S.wk = k1; hxWPlay(S, S.anc ? 'anc' : 'wu', a1); continue; }   // (step 4: Fruchten – at a Treffen its anchor once)
+      if (hold) continue;   // (nothing renders: the processor plays the last complete pass at the seam – no slot comes)
       if (HX.wGuard.max < Infinity && HX.wJobs >= HX.wGuard.max) continue;   // (the guard: fewer at once)
       S.wk = k1;
       const key = HX.folge ? (a1 >= Math.round(hxF(HX.folge.t)) ? HX.folge.key : hxWScale(HX.folge.old['t.root'], HX.folge.old['t.scale'])) : null;   // (an announced key: from its bar line on)

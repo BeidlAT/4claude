@@ -558,7 +558,9 @@ async function wtools(page) {
   if (has('live')) {
     const q = await H.open({ init: () => { window.__noWerk = 1; } });
     const p2 = q.page;
-    await p2.route(/werk=1/, (route) => route.abort());
+    // (no Werk-Rahmen: its URL blocked, and – a realm boots from srcdoc with the page's script from a Blob since 24.10.2026 –
+    // the page's read of itself, so it falls back to the URL)
+    await p2.route('**/*', (route) => { const r = route.request(); if (/werk=1/.test(r.url()) || r.resourceType() === 'fetch') return route.abort(); return route.continue(); });
     await G.gtools(p2); await wtools(p2);
     r = await p2.evaluate(async () => {
       const M = window.__M, A = M.A, out = {};

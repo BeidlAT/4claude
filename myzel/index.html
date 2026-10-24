@@ -1881,7 +1881,8 @@ const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform ==
 // Hexenring: the Werk-Rahmen – this page in a hidden frame of itself (?werk=1) renders offline for the looper (SPEC
 // §8): no UI, no storage writes, no MIDI, no Gestik, no live context, no service worker. t/now: a recorded change set at
 // its own moment / a recorded state set at once (setP); dead: voices that end during a render, cleaned after it.
-const HXW = { on: (() => { try { return /[?&]werk=1(&|$)/.test(location.search); } catch (e) { return false; } })(), t: null, now: false, dead: null, ctx: null };
+// (Leistung, 23.10.2026: or a realm booted from srcdoc – its frame's name says it, hxwShell)
+const HXW = { on: (() => { try { return /[?&]werk=1(&|$)/.test(location.search) || window.name === 'myzel-werk'; } catch (e) { return false; } })(), t: null, now: false, dead: null, ctx: null };
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
   set(k, v) { if (HXW.on) return false; try { localStorage.setItem(k, v); return true; } catch (e) { return false; } },   // (Hexenring: the Werk-Rahmen writes nothing)
@@ -4033,7 +4034,9 @@ function idleBuild() {
   IDLE.taps = { links, g: [[e0, e1], [r0, r1], [m0, m1]], buf: new Float32Array(IDLE_FFT) };
 }
 // what can sound: a voice, a held finger, the Bordun, a frozen echo, the Puls, the rain, a Schleife, a web that rings
-const idleSrc = () => !!(A.voices.size || A.grainVoices.size || touches.size || A.bor || A.frozen || SEQ.on || rgSounds() || HX.loops.size || HXN.webs.size || (HXN.feed && HXN.feed.size) || HX.ws || (typeof preview !== 'undefined' && preview) ||
+// (Leistung, 23.10.2026: a Schleife that is halted or muted sounds no more – a loop played again wakes the graph first,
+// hxPost with a state „spielt“; its stop's Ausklang still ringing keeps the taps from seeing zeros)
+const idleSrc = () => !!(A.voices.size || A.grainVoices.size || touches.size || A.bor || A.frozen || SEQ.on || rgSounds() || hxSounds() || HXN.webs.size || (HXN.feed && HXN.feed.size) || HX.ws || (typeof preview !== 'undefined' && preview) ||
   (A.gsp && A.gsp.active) || RHZ.vs.size || RHZ.q.length || (A.revWant && !A.revActive));
 // the taps hear only the quiet after the last sound: while a source sounds nothing is counted, so they rest then (and
 // while the graph sleeps); plugged in, they are read once they hold a whole window of what came since
@@ -4063,8 +4066,8 @@ function idleTick(force) {
   // the Hexenring's processor without a Schleife (or a web of one) for 20 s: its way to the master, zeros, is closed –
   // its strip and its sends rest then even while other sound plays, where they may (whatever its strip's filters held
   // has died away; hxGates); a new Schleife opens it (hxPost)
-  if (HX.g0 && HX.ctx === A.ctx) { if (HX.loops.size || HXN.webs.size || (HXN.feed && HXN.feed.size) || hxAntOn() || IDLE.hxT == null) IDLE.hxT = now; else if (!IDLE.hxOff && now - IDLE.hxT >= 20) hxGates(false); }
-  if (idleSrc() || now < IDLE.autoT) { IDLE.qT = now; IDLE.z = null; idleTaps(false); if (IDLE.on) idleWake(!!(A.voices.size || A.bor || HX.loops.size)); return; }   // (those wake it themselves: late)
+  if (HX.g0 && HX.ctx === A.ctx) { if (hxSounds() || HXN.webs.size || (HXN.feed && HXN.feed.size) || hxAntOn() || IDLE.hxT == null) IDLE.hxT = now; else if (!IDLE.hxOff && now - IDLE.hxT >= 20) hxGates(false); }
+  if (idleSrc() || now < IDLE.autoT) { IDLE.qT = now; IDLE.z = null; idleTaps(false); if (IDLE.on) idleWake(!!(A.voices.size || A.bor || hxSounds())); return; }   // (those wake it themselves: late)
   if (IDLE.on) return;
   idleTaps(true);
   if (now - IDLE.tapT < (IDLE_FFT + 256) / SR) return;
@@ -9644,7 +9647,7 @@ function myzelDsp() {
       // Schichten of a loop share one rate. po.noSum / po.noDD: the step-1c paths (the tests' reference)
       this.gS = [0, 1, 2, 3].map(() => [[new Float32Array(this.CH), new Float32Array(this.CH)]]);
       this.gM = [0, 1, 2, 3].map(() => ({ n: 0, r: 0, p: 0, fr: 0, ch: [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], tot: new Float64Array(16), d: new Float64Array(16), g: new Float64Array(16) }));
-      this.noSum = !!po.noSum; this.noDD = !!po.noDD; this.ddPool = !!po.ddPool; this.gvQ = []; this.dvF = 1; this.ddT = null; this.ddBlk = Math.max(16, po.ddBlk | 0 || 64);
+      this.noSum = !!po.noSum; this.noDD = !!po.noDD; this.noMute = !!po.noMute; this.ddPool = !!po.ddPool; this.gvQ = []; this.dvF = 1; this.ddT = null; this.ddBlk = Math.max(16, po.ddBlk | 0 || 64);
       this.wA = new Float32Array(S); this.wG = new Float32Array(S); this.sgA = new Float32Array(S); this.sndW = false;
       this.bG = new Float32Array(S); this.gSl = new Float32Array(S); this.slQ = new Float64Array(3); this.AB = [new Float32Array(S), new Float32Array(S)];   // (step 2b: a stop's fade, a slice's gains, a worn Schicht's own sum)   // (step 1d: Schluss „welkend“, the sends to the loops' own webs)
       this.rep = 0; this.met = 0; this.nA = 0; this.late = 0; this.wpt = []; this.wrep = 0;   // (step 2a: the Werk-Rahmen's ports – the live frame every 0.1 s)
@@ -9692,7 +9695,8 @@ function myzelDsp() {
       if (m.rate) for (const R of [].concat(m.rate)) { const T = R.schicht != null ? this.sch(R.schicht) : this.lp(R.loop); if (T) { T.rt = Math.pow(2, Math.max(-20, Math.min(20, +R.cents || 0)) / 1200); T.rv = (T.rt - T.r) / Math.max(1, Math.round(R.ramp != null ? R.ramp : 0.05 * SR)); } }
       if (m.wst) this.wsMsg(m.wst, m.wst.port);   // (step 2a: a living Schicht's pass, streamed through its own port)
       if (m.wstop) { const S = this.sch(m.wstop.schicht); if (S) this.wsStop(S); }
-      if (m.wport) this.wpt.push(m.wport);   // (step 2a: a Werk-Rahmen's own port – the live frame every 0.1 s, for its pacing)
+      if (m.wport) { this.wpt.push(m.wport); m.wport.__id = m.wid; }   // (step 2a: a Werk-Rahmen's own port – the live frame every 0.1 s, for its pacing)
+      if (m.wportOff != null) for (let i = 0; i < this.wpt.length; i++) if (this.wpt[i].__id === m.wportOff) { try { this.wpt[i].close(); } catch (e) {} this.wpt.splice(i--, 1); }   // (Leistung: a realm renewed – its port goes)
       if (m.tau) for (const L of this.loops) if (L.id === m.tau.loop) for (const S of L.sch) { S.tau = !!m.tau.on; if (S.tau) this.ddAsk(S); }
       if (m.ddGo) this.ddStart(m.ddGo);   // (step 1d) the page's chunks for a de-drifted version
       // (step 1d) Nähren: a loop's output, post level and state, into its own pair of output 2 (ch: 0…7; −1 off) – the send
@@ -10566,7 +10570,7 @@ function myzelDsp() {
     span(L, X, Y, o, outs) {
       const n = Y - X, V = this.V;
       for (let c = 0; c < 2; c++) { const v = V[c], a = v[0], b = v[1], p = v[2], q = v[3]; for (let k = o; k < o + n; k++) { a[k] = 0; b[k] = 0; p[k] = 0; q[k] = 0; } }
-      let used = 0;
+      let used = 0, fu = false;   // (fu: a tail free of the state was read)
       // the read rate glides to its target in a straight line (Taumeln, MIDI clock): one step per span
       if (L.r !== L.rt) { L.r += L.rv * n; if (!(L.rv > 0 ? L.r < L.rt : L.r > L.rt)) L.r = L.rt; }
       // (step 2b) the tape's speed: its mean over these frames, exactly as the glide's position runs (so a step lands in
@@ -10578,6 +10582,12 @@ function myzelDsp() {
       const j0 = X - L.s0, q0 = L.q, sum = !this.noSum;
       if (sum) for (let k = 0; k < 4; k++) this.gM[k].n = 0;
       let any = false;
+      // (Leistung, 23.10.2026) a loop whose state is a settled silence (angehalten, stumm) is read for nothing: what it
+      // reads is multiplied by its state's 0 below. Its Schichten keep their place, their envelopes and their streams;
+      // only the reads under the state stop – the Ausklänge free of it (a stop's, a Schlafen's) ring on. The same samples
+      // as before (a worn Schicht is read on: its filter follows what it reads). Before, 8 halted loops cost as much on the
+      // audio thread as 8 playing ones, and nothing counted them (the owner's phone report A: 8 loops, none playing)
+      const mute = L.st.v === 0 && L.st.i >= L.st.N && !this.noMute;   // (po.noMute: read on – the tests' reference)
       for (let si = 0; si < L.sch.length; si++) {
         const S = L.sch[si];
         if (S.dead) continue;
@@ -10612,6 +10622,7 @@ function myzelDsp() {
         const so = S.f0 > X ? S.f0 - X : 0;
         if (so >= n) continue;
         const m = n - so, ko = o + so, qs = sq + so * r, ab = S.ab && S.ab.on && S.ab.age > 0 ? S.ab : null, Vo = ab ? this.AB : V[S.out];   // (step 2b: a worn Schicht is read into its own pair first)
+        const skp = mute && !ab;   // (its reads under the state are skipped)
         // (step 4) gap (Treffen setzen): the pass is the phrase and a silence of its own length – the Schicht's window is read
         // once from the pass start, then its Ausklang (its own continuation, to the first foreign onset) rings on as a tail;
         // a pass shorter than the window cuts only its silence, the rest rings on over the seam. Nothing is stretched.
@@ -10649,10 +10660,10 @@ function myzelDsp() {
             }
             const C = S.old && S.old.seam && (!S.old.tld || S.old.kS === L.k) ? S.old : S, co = C === S ? S.out : C.out, Vc = ab ? Vo : V[co];   // (the pass that ended: the version swapped out at this seam, out of its own output – at that seam only, step 2a)
             used |= 1 << co;
-            this.rd(C.ch, C.tot, C.pre + S.pe + qs, !!C.ddA === !!S.ddA ? r : rX, zx, ko, 0, gI, Vc[0], Vc[1]);
+            if (!skp) this.rd(C.ch, C.tot, C.pre + S.pe + qs, !!C.ddA === !!S.ddA ? r : rX, zx, ko, 0, gI, Vc[0], Vc[1]);
           }
-          if (mz < mr) { if (slm) this.slRd(L, S, j0 + so + mz, mr - mz, ko + mz, r, 0, gB, Vo); else this.rd(S.ch, S.tot, S.pre + qs + mz * r, r, mr - mz, ko + mz, 0, gB, Vo[0], Vo[1]); }
-        } else if (slm) this.slRd(L, S, j0 + so, m, ko, r, g, gc ? null : gA, Vo);   // (step 2b: the pass in slices – Schnitt, Auslassen, Würfeln)
+          if (skp) { /* (silent: nothing read) */ } else if (mz < mr) { if (slm) this.slRd(L, S, j0 + so + mz, mr - mz, ko + mz, r, 0, gB, Vo); else this.rd(S.ch, S.tot, S.pre + qs + mz * r, r, mr - mz, ko + mz, 0, gB, Vo[0], Vo[1]); }
+        } else if (skp) { /* (silent: nothing read) */ } else if (slm) this.slRd(L, S, j0 + so, m, ko, r, g, gc ? null : gA, Vo);   // (step 2b: the pass in slices – Schnitt, Auslassen, Würfeln)
         else if (mr > 0 && !(sum && !ab && gc && mr === n && r !== 1 && this.grp(2 * S.out, S.ch, S.tot, S.pre + qs, r, g))) this.rd(S.ch, S.tot, S.pre + qs, r, mr, ko, g, gc ? null : gA, Vo[0], Vo[1]);
         if (S.old && !S.old.seam) {   // the version being swapped out mid-pass: at the same place, fading
           const O = S.old, gO = this.gB, oc = !this.env(O.xo, gO, ko, m), Vx = ab ? Vo : V[O.out];
@@ -10661,7 +10672,7 @@ function myzelDsp() {
           for (let k = ko; k < ko + m; k++) gO[k] *= gc ? g : gA[k];
           if (xn) for (let k = ko; k < ko + m; k++) gO[k] *= xn[k];
           const same = !!O.ddA === !!S.ddA;   // (a de-drifted version crossing a new one mid-pass: at the same place of the music)
-          if (slm) this.slRd(L, O, j0 + so, m, ko, same ? r : rX, 0, gO, Vx);
+          if (skp) { /* (silent: nothing read) */ } else if (slm) this.slRd(L, O, j0 + so, m, ko, same ? r : rX, 0, gO, Vx);
           else this.rd(O.ch, O.tot, same ? O.pre + qs : O.ddA ? this.ddInv(O.ddMap, O.pre, O.pre + qs) : O.pre + qs, same ? r : rX, m, ko, 0, gO, Vx[0], Vx[1]);   // (step 2a: each version from its own start – a Wuchs one has no margin)
         }
         if (ab) this.abApply(S, ab, ko, m, qs, r, V[S.out]);   // (step 2b: its wear, then into its output)
@@ -10683,8 +10694,8 @@ function myzelDsp() {
             ga = gE; if (N) S.tfI[t] += m2;
           }
           const to = S.tout[t], Vt = V[to];
-          used |= 1 << to;
-          if (m2 > 0 && !(sum && !ga && m2 === n && rt !== 1 && this.grp(2 * to + (fr ? 1 : 0), ch, lim, p0, rt, g))) this.rd(ch, lim, p0, rt, m2, k0, g, ga, fr ? Vt[2] : Vt[0], fr ? Vt[3] : Vt[1]);
+          used |= 1 << to; if (fr) fu = true;
+          if (m2 > 0 && !(skp && !fr) && !(sum && !ga && m2 === n && rt !== 1 && this.grp(2 * to + (fr ? 1 : 0), ch, lim, p0, rt, g))) this.rd(ch, lim, p0, rt, m2, k0, g, ga, fr ? Vt[2] : Vt[0], fr ? Vt[3] : Vt[1]);
           S.tq[t] += m2 * rt;
           if (S.tb[t] + S.tq[t] >= lim + RS_T || (N && S.tfI[t] >= N)) { const e = S.tn - 1; S.tq[t] = S.tq[e]; S.tb[t] = S.tb[e]; S.tc[t] = S.tc[e]; S.tl[t] = S.tl[e]; S.tfr[t] = S.tfr[e]; S.tfN[t] = S.tfN[e]; S.tfI[t] = S.tfI[e]; S.tsrc[t] = S.tsrc[e]; S.tout[t] = S.tout[e]; S.tsd[t] = S.tsd[e]; S.tst[t] = S.tst[e]; S.tc[e] = null; S.tn--; t--; }
         }
@@ -10709,8 +10720,9 @@ function myzelDsp() {
       const BG = bgS ? this.bG : null, AT = L.accTo && L.accTo.length ? L.accTo : null;   // (step 4: the Sammelschleifen it feeds)
       if (BG) for (let k = o, F = X; k < o + n; k++, F++) { const x = (F - bgS.f0) / bgS.T; BG[k] = x < 0.8 ? 1 : x >= 1 ? 0 : Math.cos(HP * (0.5 - 0.5 * Math.cos(Math.PI * (x - 0.8) / 0.2))); }   // (step 2b: a stop fades over its last fifth – the tape near standstill only hums)
       let ms = 0, mp = 0;
+      const nil = mute && !fu && !W;   // (silent, nothing free of the state rang: every sample below would add an exact 0)
       for (let c = 0; c < 2; c++) {
-        if (!(used & (1 << c))) continue;
+        if (!(used & (1 << c)) || nil) continue;
         const out = outs[c] || outs[0], v = V[c], bL = v[0], bR = v[1], tL = v[2], tR = v[3], OL = out[0], OR = out[1] || out[0];
         let zl = W ? L.lpS[2 * c] : 0, zr = W ? L.lpS[2 * c + 1] : 0;
         for (let k = o; k < o + n; k++) {
@@ -10915,11 +10927,15 @@ function myzelDsp() {
       this.CH = po.chunk || 8192; this.n = Math.max(1, po.n | 0); this.body = po.body | 0; this.from = Math.floor(Math.max(0, po.from | 0) / this.CH) * this.CH;
       this.F = 0; this.L = null; this.R = null; this.out = null; this.q = []; this.pk = 0; this.cpk = 0; this.done = false;
       this.fN = Math.min(Math.max(1, this.n - this.body), Math.round(0.03 * SR));   // (the last frames: the fade if it gets there)
-      this.port.onmessage = (e) => { const d = e.data; if (d && d.port) { this.out = d.port; for (const [m, tr] of this.q) this.out.postMessage(m, tr); this.q = []; } };
+      this.port.onmessage = (e) => { const d = e.data; if (d && d.port) { this.out = d.port; for (const [m, tr] of this.q) this.out.postMessage(m, tr); this.q = []; if (this.done) this.fin(); } };
     }
     send(m, tr) { if (this.out) this.out.postMessage(m, tr || []); else this.q.push([m, tr || []]); }
+    fin() { if (this.out) { try { this.out.close(); } catch (e) {} this.out = null; } }   // (after the end was posted: what was sent arrives)
+    // (Leistung, 23.10.2026: the owner's desktop report – memory filling while loops only played) once the pass is sent,
+    // the sink lets go: its port to the live ring closed, process() false – else Chromium kept every living pass's
+    // offline context alive (an AudioWorklet's persistent root), its graph and its buffers: ≈ 4 MB a pass, for good
     process(inputs) {
-      if (this.done) return true;
+      if (this.done) { this.fin(); return false; }
       const a = inputs[0], l = a && a[0], r = a && (a[1] || a[0]), n = l ? l.length : 128, CH = this.CH;
       let k = 0;
       while (k < n && this.F < this.n && !this.done) {
@@ -10942,11 +10958,11 @@ function myzelDsp() {
           const ci = Math.floor((this.F - 1) / CH), st = ci * CH;
           if (this.L) {
             if (st < this.body) this.pk = Math.max(this.pk, this.cpk);
-            if (st >= this.body && this.cpk <= this.pk * 3.2e-5) { this.send({ end: st }); this.done = true; this.L = this.R = null; break; }   // (−90 dB)
+            if (st >= this.body && this.cpk <= this.pk * 3.2e-5) { this.send({ end: st }); this.done = true; this.L = this.R = null; if (this.out) this.fin(); break; }   // (−90 dB)
             if (this.bad && !this.badT) { this.badT = 1; this.send({ nan: this.bad, i: ci }); }
             this.send({ i: ci, L: this.L, R: this.R }, [this.L.buffer, this.R.buffer]); this.L = this.R = null;
           }
-          if (this.F >= this.n) { this.send({ end: this.n }); this.done = true; }
+          if (this.F >= this.n) { this.send({ end: this.n }); this.done = true; if (this.out) this.fin(); }
         }
       }
       return true;
@@ -11000,7 +11016,9 @@ function ensureDSP(ctx = A.ctx, quiet) {   // idempotent per context; resolves t
     // a stale one would win); a sibling myzel-dsp.js is only the way out where a CSP forbids blob: (the tap's order is
     // the other way round – its file exists)
     const urls = [];
-    try { urls.push(URL.createObjectURL(new Blob([MYZEL_DSP_SRC], { type: 'text/javascript' }))); } catch (e) {}
+    // (Leistung, 23.10.2026: one Blob for every context of this page – the Werk-Rahmen loads the module into each render's
+    // context, and a Blob per render stayed in the browser's blob storage for the frame's life)
+    try { urls.push(DSP.url || (DSP.url = URL.createObjectURL(new Blob([MYZEL_DSP_SRC], { type: 'text/javascript' })))); } catch (e) {}
     try { urls.push(new URL('myzel-dsp.js', document.baseURI).href); } catch (e) {}
     for (const u of urls) {
       try { await ctx.audioWorklet.addModule(u); } catch (e) { continue; }
@@ -24672,6 +24690,11 @@ function lmStart() {
   LM.ck = { p0: 0, c0: 0, p: 0, c: 0, p1: 0, c1: 0, n: 0, lagMs: 0 };
   LM.smp = { n: 0, load: 0, loadMax: 0, vMax: 0, gr: 0, idle: 0, panel: new Map(), hid: 0, loops: 0, spielt: 0, sch: 0, leb: 0, phLoad: 0 };
   LM.ps0 = lmStats(); LM.u0 = A.underruns || 0; LM.res = null;
+  // (the audio side in detail – 23.10.2026, after report A: each loop's share of the budget, the Werk-Rahmen's work, the
+  // guard's steps, the latency the context reports against the one asked for)
+  LM.lp = new Map(); LM.lsum = { n: 0, loops: 0, max: 0, hx: 0, cap: 0 }; LM.lat = { n: 0, out: 0, outMin: Infinity, outMax: 0, base: 0 };
+  if (typeof HX !== 'undefined' && HX.wSt) { HX.wSt.q = HX.wJobs || 0; LM.w0 = Object.assign({}, HX.wSt); }
+  LM.gT = performance.now();
   LM.rc = null;
   const rc = A.ctx.renderCapacity;
   if (rc && rc.start) try { LM.rc = { n: 0, avg: 0, peak: 0, und: 0 }; rc.onupdate = (e) => { const R = LM.rc; if (!R) return; R.n++; R.avg += e.averageLoad || 0; R.peak = Math.max(R.peak, e.peakLoad || 0); R.und = Math.max(R.und, e.underrunRatio || 0); }; rc.start({ updateInterval: 1 }); } catch (e) { LM.rc = null; }
@@ -24695,8 +24718,48 @@ function lmSample() {
   const live = hxLoopsLive();
   S.loops = Math.max(S.loops, live.length); S.spielt = Math.max(S.spielt, live.filter((L) => L.state === 'spielt').length); S.sch = Math.max(S.sch, HX.sch.size);
   S.leb = Math.max(S.leb, live.filter((L) => hxWAktiv(L)).length);
+  lmLoops(live);
+  const c = A.ctx, La = LM.lat, o = (c.outputLatency || 0) * 1000; La.n++; La.out += o; La.base += (c.baseLatency || 0) * 1000; if (o < La.outMin) La.outMin = o; if (o > La.outMax) La.outMax = o;
   lmClock();
   if (S.n % 4 === 0) lmUI();
+}
+// each loop's share of the budget (hxCostOf – what voiceLoad counts for it) and what it did: played, lived, held by the
+// guard, rested its Taumeln, played through the chain's copy on out 1
+function lmLoops(live) {
+  if (!HX.node) return;
+  const Z = LM.lsum; let sum = 0;
+  for (const L of live) {
+    const c = hxCostOf(L); sum += c;
+    let e = LM.lp.get(L.key); if (!e) LM.lp.set(L.key, (e = { slot: L.slot, n: 0, c: 0, max: 0, sp: 0, leb: 0, hold: 0, tau: 0, o1: 0 }));
+    e.n++; e.c += c; if (c > e.max) e.max = c;
+    if (L.state === 'spielt') e.sp++;
+    if (hxWLebt(L) && L.state === 'spielt') e.leb++;
+    if (hxWHold(L)) e.hold++;
+    if (!L.bew && !hxTauOn(L)) e.tau++;
+    if (L.sch.some((id) => { const S = HX.sch.get(id); return S && S.out; })) e.o1++;
+  }
+  const hx = hxLoad(); Z.n++; Z.loops += sum; if (sum > Z.max) Z.max = sum; Z.hx += hx;
+}
+function lmLoopsRes() {
+  const Z = LM.lsum, n = Math.max(1, Z.n), r2 = (x) => Math.round(x * 100) / 100;
+  const each = [...LM.lp.values()].sort((a, b) => a.slot - b.slot).map((e) => {
+    const f = [e.sp * 2 > e.n ? 'spielt' : e.sp ? 'teils' : 'halt', e.leb * 2 > e.n ? 'leb' : '', e.hold ? 'hold' : '', e.tau * 2 > e.n ? 'tau-ruht' : '', e.o1 * 2 > e.n ? 'out1' : ''].filter(Boolean).join(',');
+    return 'S' + (e.slot + 1) + '=' + r2(e.c / Math.max(1, e.n)) + '(' + f + ')';
+  });
+  return { sum: { loops: r2(Z.loops / n), max: r2(Z.max), hx: r2(Z.hx / n), rest: r2((Z.hx - Z.loops) / n), budget: VBUDGET, f1: HX.node && HX.o1 ? HX_COST.fx1 : 0 }, each };
+}
+// the Werk-Rahmen in the window: renders begun (living passes and Treu), done, stopped; their own render time (the offline
+// context's) per second of audio, the wait from the request, the most waiting at once
+function lmWerk(secs) {
+  const W = HX.wSt, W0 = LM.w0 || W, d = (k) => (W[k] || 0) - (W0[k] || 0), done = d('done');
+  return { st: HXW.st || '-', pool: (HXW.pool || []).filter((R) => R.st === 'ok').length, n: d('n'), perS: r1(d('n') / Math.max(1, secs)), done, stop: d('stop'), ms: done ? Math.round(d('ms') / done) : 0, wait: done ? Math.round(d('wall') / done) : 0,
+    xRT: d('audio') > 0 ? +(d('ms') / 1000 / d('audio')).toFixed(3) : 0, q: W.q || 0, jobs: HX.wJobs || 0 };
+}
+// the guard's steps in the window (which, at which second), and where it stands at the end
+function lmGuard() {
+  const steps = (HX.gLog || []).filter((e) => e.t >= LM.gT).map((e) => e.step + (e.v !== '' ? ':' + e.v : '') + '@' + Math.round((e.t - LM.t0) / 1000));
+  const G = HX.wGuard || {}, now = performance.now();
+  return { steps, now: { pause: G.pause > now ? Math.round((G.pause - now) / 1000) : 0, hold: !!(G.hold && G.pause > now), max: G.max === Infinity ? '-' : G.max, tau: !!HX.tauRest, lite: !!A.lite, scale: r1(A.budgetScale || 1) } };
 }
 function lmStop() {
   if (!LM.on) return;
@@ -24741,6 +24804,9 @@ function lmResult(ms) {
   R.audio = { sr: c.sampleRate, base: r1((c.baseLatency || 0) * 1000), out: r1((c.outputLatency || 0) * 1000), lat: P['dev.lat'], latCtx: A.latMode, q: P['dev.q'], budget: VBUDGET, scale: A.budgetScale || 1, lite: !!A.lite };
   R.voices = { load: S.n ? Math.round(100 * S.load / S.n) : 0, loadMax: Math.round(100 * S.loadMax), max: S.vMax, grains: S.gr, idle: S.n ? Math.round(100 * S.idle / S.n) : 0 };
   R.hx = { loops: S.loops, spielt: S.spielt, sch: S.sch, leb: S.leb, tau: !!HX.tauRest, f1: HXF1.off ? 'ruht' : 'an', werk: HXW.st || '-', wg: HX.wGuard ? HX.wGuard.n || 0 : 0, state: HX.state };
+  R.lp = lmLoopsRes(); R.werk = lmWerk(secs); R.guard = lmGuard();
+  const La = LM.lat, hint = P['dev.lat'] === 'min' ? '0' : P['dev.lat'] === 'safe' ? 'balanced' : 'interactive';
+  R.lat = { set: P['dev.lat'], hint, base: La.n ? r1(La.base / La.n) : 0, out: La.n ? r1(La.out / La.n) : 0, outMin: La.n ? r1(La.outMin) : 0, outMax: r1(La.outMax), buf: Math.round((c.baseLatency || 0) * c.sampleRate), avg: R.ps && R.ps.averageLatency != null ? R.ps.averageLatency : null };
   const nav = navigator, ua = nav.userAgent || '';
   const os = (ua.match(/Android [\d.]+/) || ua.match(/(iPhone|iPad|Mac) OS [\d_]+/) || [ANDROID ? 'Android' : IOS ? 'iOS' : 'Desktop'])[0].replace(/_/g, '.');
   const br = (ua.match(/(Chrome|CriOS|Firefox|FxiOS|Version)\/(\d+)/) || [])[0] || '?';
@@ -24767,6 +24833,10 @@ function lmText(R) {
   L.push('tick ' + kv(R.tick) + ' · lt ' + (R.lt ? kv(R.lt) : 'none') + ' · loaf ' + (R.loaf ? kv(Object.assign({}, R.loaf, { top: R.loaf.top.join(',') || '-' })) : 'none'));
   L.push('touch ' + (R.touch ? kv(R.touch) : 'none'));
   L.push('voices ' + kv(R.voices) + ' · hx ' + kv(R.hx));
+  L.push('loops ' + kv(R.lp.sum) + (R.lp.each.length ? ' · ' + R.lp.each.join(' ') : ''));
+  L.push('werk ' + kv(R.werk));
+  L.push('guard ' + (R.guard.steps.length ? R.guard.steps.join(' ') : 'none') + ' · ' + kv(R.guard.now));
+  L.push('latency ' + kv(R.lat));
   return L.join('\n');
 }
 // the short German summary: what was measured, then where the limit lies
@@ -24778,6 +24848,11 @@ function lmSummary(R) {
   S.push(R.under ? 'Klang: ' + R.under + ' Aussetzer in ' + Math.round(R.secs) + ' s' + (R.rc ? ' (Audio-Kern im Mittel ' + R.rc.avg + ' %, Spitze ' + R.rc.peak + ' %)' : '') + '.' : 'Klang: keine Aussetzer gemessen' + (R.rc ? ' (Audio-Kern im Mittel ' + R.rc.avg + ' %, Spitze ' + R.rc.peak + ' %)' : '') + '.');
   S.push(R.under && slow ? 'Ergebnis: Klang und Oberfläche sind beide ausgelastet.' : R.under ? 'Ergebnis: Der Klang setzt aus, obwohl die Oberfläche flüssig läuft – der Audio-Kern ist am Limit.'
     : slow ? 'Ergebnis: Die Oberfläche ist ausgelastet (Zeichnen und Rechnen auf dem Hauptthread); der Klang läuft sauber.' : 'Ergebnis: kein Engpass gemessen.');
+  if (R.hx.loops) S.push('Schleifen: ' + R.hx.loops + ', davon ' + R.hx.spielt + ' spielend – sie belegen im Mittel ' + d(R.lp.sum.loops) + ' von ' + R.lp.sum.budget + ' Einheiten (mit Humus und Effektkette ' + d(R.lp.sum.hx) + '); angehaltene kosten nichts.');
+  if (R.werk.n) S.push('Lebendige Schleifen: ' + R.werk.n + ' Durchgänge neu gerechnet, jeder etwa ' + R.werk.ms + ' ms (' + d(R.werk.xRT) + ' × Echtzeit).');
+  const GW = { lebendig: 'Lebendig hält an', weniger: 'weniger auf einmal gerechnet', taumeln: 'Taumeln ruht', grenze: 'Live-Spiel geschützt', lite: 'weniger Live-Stimmen', zurueck: 'Lebendig wieder an' };
+  if (R.guard.steps.length) S.push('Myzel hat entlastet: ' + [...new Set(R.guard.steps.map((x) => GW[x.split(/[:@]/)[0]] || x))].join(', ') + '.');
+  S.push('Latenz: eingestellt „' + ({ min: 'Minimal', safe: 'Sicher', std: 'Standard' }[R.lat.set] || R.lat.set) + '“ – das Gerät meldet ' + d(R.lat.base) + ' ms Puffer und ' + d(R.lat.out) + ' ms Ausgabe.');
   S.push('Handy-Modus war ' + (PH.on ? 'an' : 'aus') + (R.ph.load ? ' (davon ' + R.ph.load + ' % der Zeit mit 30 Bildern pro Sekunde)' : '') + '. „Kopieren“ und den Bericht an Claude schicken.');
   return S;
 }
@@ -24841,12 +24916,13 @@ function lmBuild() {
   U.auto = h('button', { type: 'button', class: 'btn ghost', id: 'phAuto', hidden: true, onclick: () => phSet('auto') }, 'Wieder automatisch');
   U.go = h('button', { type: 'button', class: 'btn primary', id: 'lmGo', onclick: lmStart }, 'Leistung messen');
   U.st = h('p', { class: 'note live', 'aria-live': 'polite' });
+  U.hx = h('p', { class: 'note', id: 'lmHx' });
   U.sum = h('ul', { class: 'help lm-sum', hidden: true });
   U.txt = h('textarea', { class: 'lm-txt', readonly: true, rows: 8, spellcheck: 'false', 'aria-label': 'Bericht' });
   U.copy = h('button', { type: 'button', class: 'btn', id: 'lmCopy', onclick: lmCopy }, 'Kopieren');
   U.rep = h('details', { class: 'plat lm-rep', hidden: true }, h('summary', null, 'Bericht (Text)'), U.txt);
   U.sec = section('Leistung', 'Wie flüssig Myzel auf diesem Gerät läuft',
-    h('div', { class: 'ctl wide' }, U.sw), U.phNote, h('div', { class: 'row' }, U.auto),
+    h('div', { class: 'ctl wide' }, U.sw), U.phNote, h('div', { class: 'row' }, U.auto), U.hx,
     h('p', { class: 'note' }, 'Leistung messen: ' + LM_SECS + ' Sekunden lang, während du ganz normal spielst (das Panel darf dabei zu sein). Danach steht hier, wo es eng wird, und ein kurzer Bericht zum Kopieren – gesendet wird nichts.'),
     h('div', { class: 'row' }, U.go, U.copy), U.st, U.sum, U.rep);
   lmUI();
@@ -24866,6 +24942,18 @@ function lmUI() {
   U.copy.hidden = !LM.res;
   U.sum.hidden = U.rep.hidden = !LM.res;
   if (LM.res && U.txt.value !== LM.txt) { U.txt.value = LM.txt; U.sum.replaceChildren(...LM.sum.map((x) => h('li', null, x))); }
+}
+// (Leistung, 23.10.2026) what the loops take now, live: their share of the budget and what the guard has eased
+function lmLive() {
+  const U = LM.ui; if (!U || !U.hx) return;
+  let t = '';
+  if (A.ctx && HX.node && hxLoopsLive().length) {
+    const live = hxLoopsLive(), sp = live.filter((L) => L.state === 'spielt').length, c = live.reduce((s, L) => s + hxCostOf(L), 0), G = HX.wGuard, now = performance.now();
+    t = 'Schleifen: ' + live.length + ', davon ' + sp + ' spielend – sie belegen ' + dec(c.toFixed(1)) + ' von ' + VBUDGET + ' Einheiten (dazu Humus und Effektkette ' + dec((hxLoad() - c).toFixed(1)) + '; angehaltene kosten nichts).' +
+      (G.hold && G.pause > now ? ' Lebendige spielen ihren letzten Durchgang, noch ' + Math.ceil((G.pause - now) / 1000) + ' s.' : G.pause > now ? ' Lebendig wartet, bis Rechenzeit frei ist.' : '') + (HX.tauRest ? ' Taumeln ruht.' : '');
+  }
+  if (U.hx.textContent !== t) U.hx.textContent = t;
+  U.hx.hidden = !t;
 }
 function lmCopy() {
   if (!LM.txt) return;
@@ -25613,6 +25701,7 @@ function updDevLive() {
   const load = voiceLoad();
   devEls.qLive.textContent = 'Jetzt: ' + A.voices.size + (A.voices.size === 1 ? ' Stimme klingt' : ' Stimmen klingen') + ' · ' + Math.round(100 * load / Math.max(1, VBUDGET)) + ' % der Grenze' +
     (A.grains ? ' · ' + A.grains + ' Körner' : '') + (A.budgetScale && A.budgetScale < 1 ? ' · nach Aussetzern auf ' + Math.round(A.budgetScale * 100) + ' % gesenkt' : '');
+  lmLive();   // (Leistung: the loops' share)
 }
 
 /* ---------- sheet + tabs ---------- */
@@ -26003,10 +26092,13 @@ const HX = { node: null, ctx: null, state: '', fR: 0, tR: 0, loops: new Map(), s
 const hxF = (t) => HX.fR + (t - HX.tR) * SR;   // audio time → the processor's frame (its own count, mapped by its reports)
 const hxT = (f) => HX.tR + (f - HX.fR) / SR;
 const hxLive = () => !!(A.ctx && !(typeof OfflineAudioContext !== 'undefined' && A.ctx instanceof OfflineAudioContext));
+// a Schleife that may sound now: playing, about to change, or a Sammelschleife (it records every frame)
+const hxSounds = () => { for (const L of HX.loops.values()) if (L.state === 'spielt' || L.pendTo || (L.acc && L.acc.on)) return true; return false; };
+const hxOut1Of = (id) => { const L = HX.loops.get(id); return !!L && L.sch.some((x) => { const S = HX.sch.get(x); return S && S.out; }); };
 function hxPost(m, tr) {
   if (!HX.node || HX.ctx !== A.ctx) return false;
-  if (HXF1.off) for (const k in m) { const v = m[k]; if (v && typeof v === 'object' && v.out) { hxF1Wake(); break; } }   // (phone report: whatever is sent to play on out 1 finds the chain copy awake)
-  if (m.loop) { if (IDLE.on) idleWake(); if (IDLE.hxOff) hxGates(true); IDLE.hxT = null; }   // Ruhe: a Schleife will sound
+  if (HXF1.off) for (const k in m) { const v = m[k]; if (v && typeof v === 'object' && (v.out || (k === 'state' && v.to === 'spielt' && hxOut1Of(v.loop)))) { hxF1Wake(); break; } }   // (phone report: whatever is sent to play on out 1 finds the chain copy awake; Leistung: a halted loop with a Schicht on out 1 that plays again)
+  if (m.loop || (m.state && m.state.to === 'spielt')) { if (IDLE.on) idleWake(); if (IDLE.hxOff) hxGates(true); IDLE.hxT = null; }   // Ruhe: a Schleife will sound (Leistung: or a halted one again)
   else if ((m.wst || m.replace || m.schicht) && (IDLE.on || IDLE.hxOff)) { if (IDLE.on) idleWake(); if (IDLE.hxOff) hxGates(true); IDLE.hxT = null; }   // (step 2a: a Wuchs pass, a version – it sounds through the same way)
   if (HX.batch) {   // (hxBatch: one message – a key twice sends what is there first)
     const B = HX.batch;
@@ -26155,7 +26247,10 @@ function hxOut1() { if (HXF1.off) hxF1Wake(); if (HX.node && !HX.out1) { if (IDL
 function hxF1Busy(now) {
   let busy = !!((HXN.feed && HXN.feed.size) || hxAntOn());
   const o1 = HXF1.o1 || (HXF1.o1 = new Map());
-  for (const S of HX.sch.values()) if (S.out) { busy = true; o1.set(S.id, S.loop); }
+  // (Leistung, 23.10.2026: a Schicht of a loop that is halted or muted plays nothing through it – the processor reads
+  // nothing of it then; its stop's Ausklang still ringing keeps the taps from seeing zeros. It wakes before the loop
+  // plays again: hxPost with a state „spielt“)
+  for (const S of HX.sch.values()) if (S.out) { const L = HX.loops.get(S.loop); if (L && L.state !== 'spielt' && !L.pendTo) continue; busy = true; o1.set(S.id, S.loop); }
   for (const [id, lp] of o1) {
     const S = HX.sch.get(id); if (S && S.out) continue;
     o1.delete(id); const L = HX.loops.get(lp); HXF1.useT = Math.max(HXF1.useT, now + (L ? Math.min(120, hxLen(L)) : 0));
@@ -26305,34 +26400,38 @@ function hxClear(loop, at, X) {
 }
 // Taumeln compensation, MIDI clock nachführen (SPEC §9): the loop read faster or slower by `cents` (±20), resampled
 function hxRate(loop, cents) { const L = HX.loops.get(loop); if (!L) return false; L.rate = +cents || 0; hxCount(); return hxPost({ rate: { loop, cents: L.rate } }); }
-// what plays, for the budget
-function hxCount() {
-  let p = 0, r = 0;
-  let o1 = 0;
-  const dr = A.ctx && P['mov.drift'] > 0;   // (Taumeln resamples while there is a drift to follow)
-  for (const L of HX.loops.values()) if (L.state === 'spielt') {
-    let g = 0;   // (step 1d: the reads of a loop at one rate are resampled once per output – a de-drifted Schicht, or the loop's own rate; one still read against its own drift alone)
-    for (const id of L.sch) {
-      p++; const S = HX.sch.get(id); if (!S) continue;
-      if (S.out) o1 = 1;
-      const tau = dr && S.dr && hxTauOn(L);
-      if (!(L.rate || S.rc || tau)) continue;
-      if (!tau || S.ddOn) g |= 1 << (S.out ? 1 : 0); else r++;
-    }
-    r += (g & 1) + (g >> 1);
+// what plays, for the budget – one loop's parts (Leistung, 23.10.2026: the same count per loop, for the card and
+// „Leistung messen“; a loop that does not play costs nothing – the processor reads nothing of it)
+function hxCountL(L, bpm, dr) {
+  const o = { p: 0, r: 0, o1: 0, ws: 0, bd: 0, sl: 0, ab: 0 };
+  if (L.state !== 'spielt') return o;
+  let g = 0;   // (step 1d: the reads of a loop at one rate are resampled once per output – a de-drifted Schicht, or the loop's own rate; one still read against its own drift alone)
+  for (const id of L.sch) {
+    o.p++; const S = HX.sch.get(id); if (!S) continue;
+    if (S.out) o.o1 = 1;
+    const tau = dr && S.dr && hxTauOn(L);
+    if (!(L.rate || S.rc || tau)) continue;
+    if (!tau || S.ddOn) g |= 1 << (S.out ? 1 : 0); else o.r++;
   }
-  let ws = 0; for (const L of HX.loops.values()) if (L.state === 'spielt' && hxEigN(L) >= 1) for (const id of L.sch) { const S = HX.sch.get(id); if (S && S.wLive) ws++; }   // (step 2a: the living Schichten's streams)
+  o.r += (g & 1) + (g >> 1);
+  if (hxEigN(L) >= 1) for (const id of L.sch) { const S = HX.sch.get(id); if (S && S.wLive) o.ws++; }   // (step 2a: the living Schichten's streams)
   // (step 2b) the tape: a loop at another speed reads through the wider kernel (once per output, as its rate's resampling);
   // a Schicht in slices (Schnitt at another tempo, Auslassen, Würfeln) reads each slice on its own; a worn one is filtered
-  let bd = 0, sl = 0, ab = 0;
-  const bpm = A.ctx ? tgBpm(hxNowT()) : 0;
-  for (const L of HX.loops.values()) {
-    if (L.state !== 'spielt' || L.bew) continue;
+  if (!L.bew) {
     const sp = L.sp || 1, n = L.sch.length;
-    if (sp !== 1) bd += sp > 1.6 ? HX_COST.k24 : sp > 1.03 ? HX_COST.k16 : HX_COST.rs;
-    else if ((L.slc && (L.slc.pd > 0 || L.slc.pw > 0)) || (L.ladung && L.ladQ > 0 && !hxWAktiv(L)) || (typeof hxSchnitt === 'function' && hxSchnitt(L) && hxTakt(L) && L.bpm && Math.abs(bpm / L.bpm - 1) > 1e-4)) sl += n;   // (step 4: Ladung's slices)
-    if (L.ab && L.ab.rate > 0) ab += n;
+    if (sp !== 1) o.bd = sp > 1.6 ? HX_COST.k24 : sp > 1.03 ? HX_COST.k16 : HX_COST.rs;
+    else if ((L.slc && (L.slc.pd > 0 || L.slc.pw > 0)) || (L.ladung && L.ladQ > 0 && !hxWAktiv(L)) || (typeof hxSchnitt === 'function' && hxSchnitt(L) && hxTakt(L) && L.bpm && Math.abs(bpm / L.bpm - 1) > 1e-4)) o.sl = n;   // (step 4: Ladung's slices)
+    if (L.ab && L.ab.rate > 0) o.ab = n;
   }
+  return o;
+}
+const hxCostL = (o) => o.p * HX_COST.schicht + o.r * HX_COST.rs + o.ws * HX_COST.stream + o.bd + o.sl * HX_COST.slice + o.ab * HX_COST.abr;
+// one loop's share of the budget (units), as hxCount counts it
+function hxCostOf(L) { return hxCostL(hxCountL(L, A.ctx ? tgBpm(hxNowT()) : 0, A.ctx && P['mov.drift'] > 0)); }
+function hxCount() {
+  let p = 0, r = 0, o1 = 0, ws = 0, bd = 0, sl = 0, ab = 0;
+  const dr = A.ctx && P['mov.drift'] > 0, bpm = A.ctx ? tgBpm(hxNowT()) : 0;   // (Taumeln resamples while there is a drift to follow)
+  for (const L of HX.loops.values()) { const o = hxCountL(L, bpm, dr); p += o.p; r += o.r; o1 |= o.o1; ws += o.ws; bd += o.bd; sl += o.sl; ab += o.ab; }
   let acN = 0; for (const L of HX.loops.values()) if (L.acc && L.acc.on && L.state !== 'weg') acN++;   // (step 4: a Sammelschleife records every frame, playing or not)
   HX.play = p; HX.rs = r; HX.o1 = o1; HX.dd = HX.ddRun.size ? 1 : 0; HX.ws = ws; HX.bd = bd; HX.sl = sl; HX.ab = ab; HX.acN = acN;   // (one de-drift job works at a time, the others wait)
 }
@@ -27559,6 +27658,7 @@ function hxTick(horizon) {
   const R = HX.rec;
   if (R && R.phase === 'wait' && now >= R.t0) { R.phase = 'rec'; hxSay('Aufnahme läuft'); hxRailDirty(); }
   hxF1Tick(now);   // (the chain copy on out 1 rests while nothing plays through it)
+  if (HXK.cost && pnow - (HXK.costT || 0) > 1000 && HXK.cost.isConnected) { HXK.costT = pnow; hxCardSub(); }   // (Leistung: the loops' share, as it changes)
   if (R && R.loopKey && R.w1 && now >= R.w1) { HX.rec = null; if (HX.chips && HX.chips.kind === 'mult') HX.chips = null; hxRailDirty(); }   // (an auto-length recording closed at its end)
   hxPunchTick();
   hxAusWatch();
@@ -28073,7 +28173,7 @@ function hxCardSec() {
   HXK.acts = h('div', { class: 'hx-acts' });
   HXK.list = h('div', { class: 'hx-cards' });
   HXK.grave = h('div', { class: 'hx-grave' });
-  HXK.mem = h('p', { class: 'note' });
+  HXK.mem = h('p', { class: 'note' }); HXK.cost = h('p', { class: 'note', id: 'hxCost' });
   HXK.form = h('div', { class: 'hx-form-sec' });   // (step 1d: Lichtungen, Kern, Lücke, Schluss)
   HXK.gd = h('div', { class: 'hx-form-sec hx-gd' });   // (Etappe 3: the Gärtner)
   const set = foldSec('hxset', 'Einstellungen', [
@@ -28090,7 +28190,7 @@ function hxCardSec() {
     HXK.mem,
     h('p', { class: 'note' }, 'Der Korb erntet, was du gespielt hast („Gespielt“: deine Klangquellen nach Stumm und Solo, ohne Echo und Hall); „Alles“ wählst du pro Schleife – es hört auch die Schleifen mit, wie ein Zusammenmischen. Die Humus-Länge gilt ab dem nächsten Klangstart.'),
   ]);
-  HXK.sec = h('div', { class: 'sec hx-sec', id: 'hxSec' }, h('div', { class: 'sec-h' }, h('h3', null, 'Hexenring'), HXK.sub), HXK.acts, HXK.list, HXK.gd, HXK.form, HXK.grave, set);
+  HXK.sec = h('div', { class: 'sec hx-sec', id: 'hxSec' }, h('div', { class: 'sec-h' }, h('h3', null, 'Hexenring'), HXK.sub), HXK.acts, HXK.cost, HXK.list, HXK.gd, HXK.form, HXK.grave, set);
   HXK.dirty = true; hxCardRender();
   return HXK.sec;
 }
@@ -28134,6 +28234,10 @@ function hxCardSub() {
   const n = hxLoopsLive().length, mb = Math.round(hxMemUsed() / 1048576);
   const t = (n ? n + (n === 1 ? ' Schleife' : ' Schleifen') + ' · ' : '') + mb + ' MB · Humus ' + P['hx.humus'] + ' s';
   if (HXK.sub.textContent !== t) HXK.sub.textContent = t;
+  // (Leistung, 23.10.2026) the share of the device's budget the loops take now – the same count that leaves the rest to the
+  // live playing (units: one simple voice each); a halted loop costs nothing
+  const c = hxLoad(), ct = HX.node ? 'Rechenzeit: Schleifen und Humus ' + dec(c.toFixed(1)) + ' von ' + VBUDGET + ' Einheiten' + (c >= VBUDGET ? ' – für dein Live-Spiel bleibt nur, was das Gerät darüber hinaus schafft' : ' – für dein Live-Spiel bleiben ' + dec((VBUDGET - c).toFixed(1))) + '.' : '';
+  if (HXK.cost && HXK.cost.textContent !== ct) HXK.cost.textContent = ct;
   const mt = 'Belegt: ' + mb + ' von ' + P['hx.mem'] + ' MB (Schleifen, ihre Kopien, Gelöschte, Verlauf, Aufnahmen, Humus).' + (HX.saveFail ? ' Der Gerätespeicher ist voll – neue Schichten werden nicht mehr gesichert.' : IDB.ok ? ' Schleifen werden auf diesem Gerät gesichert und kommen nach einem Neuladen zurück.' : ' Diese Ansicht kann Schleifen nicht sichern.') + (HX.est ? ' Gerätespeicher: ' + HX.est : '')
     + (HXW.st === 'kein' ? ' Einbrennen und der Ausklang aus den Noten gehen in dieser Ansicht nicht (kein Werk-Rahmen): Schleifen folgen der Effektkette.' : '');
   if (HXK.mem.textContent !== mt) HXK.mem.textContent = mt;
@@ -28557,12 +28661,31 @@ function hxChainRec(ta, tb) {
 // MessagePort (postMessage only – on file:// the frame is an origin of its own); booted at the first need. When it
 // cannot boot (a sandbox without frames, a blocked URL) the bake is off: loops follow the live chain, the card says so.
 Object.assign(HXW, { frame: null, port: null, st: '', p: null, wait: new Map(), id: 0, why: '', ver: 1, ms: [] });
+// (Leistung, 23.10.2026) a realm's document: this page's own HTML with its app script loaded from one Blob made once –
+// Chromium keeps ≈ 5 MB of every document it loaded whose 2.3 MB script was inline, also after the frame went (measured:
+// 40 loads, +4.8 MB each, no plateau; from a script file or a Blob, +0.5–1 MB): the realms are renewed (HX_WRENEW), so
+// each load counted. Not over http(s), or when the page cannot read itself: the frame loads ?werk=1 as before
+function hxwShell() {
+  if (HXW.shellP) return HXW.shellP;
+  return (HXW.shellP = (async () => {
+    try {
+      if (!/^https?:$/.test(location.protocol)) return null;
+      const sc = [...document.scripts].find((s) => !s.src && s.text.includes('function hxwBoot('));
+      if (!sc) return null;
+      const r = await fetch(location.href.split('#')[0]); if (!r.ok) return null;
+      const html = await r.text(), i = html.indexOf(sc.text); if (i < 0) return null;
+      const a = html.lastIndexOf('<script', i), b = html.indexOf('<\/script>', i + sc.text.length); if (a < 0 || b < 0) return null;
+      const url = URL.createObjectURL(new Blob([sc.text], { type: 'text/javascript' }));
+      return html.slice(0, a) + '<script src="' + url + '"><\/script>' + html.slice(b + 9);   // (escaped: this text sits in the page's own inline script)
+    } catch (e) { return null; }
+  })());
+}
 function hxWerk(R0) {
   const R = R0 || HXW;   // (step 2a: one of the realms – HXW, the first, or one of its pool)
   if (HXW.on) return Promise.resolve(false);
   if (R.p) return R.p;
   R.st = 'laden';
-  R.p = new Promise((res) => {
+  R.p = hxwShell().then((shell) => new Promise((res) => {
     let done = false, tA = 0;
     const fail = (why) => {
       if (done) return; done = true; clearTimeout(tA); R.st = 'kein'; R.why = why;
@@ -28594,17 +28717,94 @@ function hxWerk(R0) {
       clearTimeout(tA); tA = setTimeout(() => fail('antwort'), 4000);
     });
     f.addEventListener('error', () => fail('laden'));
-    f.src = url;
+    if (shell) { f.name = 'myzel-werk'; f.srcdoc = shell; } else f.src = url;
     try { document.body.appendChild(f); } catch (e) { fail('rahmen'); return; }
     R.frame = f;
-  });
+  }));
   return R.p;
 }
 const hxwOk = () => HXW.st !== 'kein';
+function hxwRenew() {
+  const now = performance.now();
+  for (const R of [HXW, ...HXW.pool]) {
+    if (R && !R.old && R.used && now - R.t0 > HX_WRENEW_S * 1000) { R.old = true; R.oldT = now; }   // (one used seldom fills slowly: renewed after a while too)
+    if (!R || !R.old || R.st !== 'ok' || R.n || R.wait.size || now - R.oldT < 3000) continue;
+    let still = false;   // (a pass it rendered that sounds now or comes: its stream reads its port, ✓ asks it for that pass)
+    for (const S of HX.sch.values()) {
+      if (!S.wRe) continue;
+      const L = HX.loops.get(S.loop), kNow = L ? hxPassK(L, Math.round(hxF(hxNowT()))) : -Infinity;
+      for (const k in S.wRe) if (S.wRe[k] === R && +k >= kNow) { still = true; break; }
+      if (still) break;
+    }
+    if (still) continue;
+    for (const S of HX.sch.values()) if (S.wRe) for (const k in S.wRe) if (S.wRe[k] === R) delete S.wRe[k];
+    try { if (R.port) R.port.close(); } catch (e) {}
+    try { if (R.frame) R.frame.remove(); } catch (e) {}
+    if (R.wid != null) hxPost({ wportOff: R.wid });   // (the live ring's port to it)
+    Object.assign(R, { st: '', p: null, frame: null, port: null, wait: new Map(), n: 0, used: 0, old: false, ms: [] });
+    HXW.renew = (HXW.renew || 0) + 1;
+    if (R !== HXW && [...HX.sch.values()].some((S) => S.wLive)) hxwCall('warm', { sr: SR }, [], R);   // (booted again before a pass needs it)
+  }
+}
+// (Leistung) the stream's sink without a worklet – WSend's rule, frame for frame: two analysers (one channel each, so no
+// downmix; fftSize = a chunk) hold the last chunk at each chunk's end, read at a suspend there; the tripwire, the end
+// 90 dB under the body's peak, the last 30 ms faded; the part after the last whole chunk comes from the render's buffer.
+// The analysers hear the pass one quantum late, through a delay of exactly 128 frames, and are read a quantum later: fed
+// directly they missed the render's first quantum in about one render of three (measured; the delay's own first output
+// is its zeros)
+const HXW_NS = true;
+function hxwNsPre(ctx) {
+  const up = ctx.createDelay(1); up.delayTime.value = 128 / SR; up.channelCount = 2; up.channelCountMode = 'explicit'; up.channelInterpretation = 'speakers';
+  const sp = ctx.createChannelSplitter(2), aL = ctx.createAnalyser(), aR = ctx.createAnalyser(), z = ctx.createGain(); z.gain.value = 0;
+  aL.fftSize = aR.fftSize = HX_CH; up.connect(sp); sp.connect(aL, 0); sp.connect(aR, 1); aL.connect(z); aR.connect(z); z.connect(ctx.destination);
+  return { up, aL, aR };
+}
+function hxwNs(ctx, pre, tap, port, n, body, from) {
+  const CH = HX_CH, { up, aL, aR } = pre;
+  const fN = Math.min(Math.max(1, n - body), Math.round(0.03 * SR)), f0 = n - fN;
+  const S = { c0: Math.floor(Math.max(0, from) / CH) * CH, pk: 0, done: false, bad: 0, badT: false, F: 0 };
+  // one chunk [st, st + m) of samples L/R: scrubbed, faded at the end, its peak; sent – or the end
+  const chunk = (st, L, R, m) => {
+    if (S.done) return;
+    let cp = 0;
+    for (let q = 0; q < m; q++) {
+      let x = L[q], y = R[q];
+      if (!(x - x === 0) || !(y - y === 0)) { if (!(x - x === 0)) x = 0; if (!(y - y === 0)) y = 0; S.bad++; }
+      const F = st + q; if (F >= f0) { const w = Math.cos(1.5707963267948966 * (0.5 - 0.5 * Math.cos(Math.PI * (F - f0 + 0.5) / fN))); x *= w; y *= w; }
+      L[q] = x; R[q] = y; const ax = x < 0 ? -x : x, ay = y < 0 ? -y : y; if (ax > cp) cp = ax; if (ay > cp) cp = ay;
+    }
+    if (st < body) S.pk = Math.max(S.pk, cp);
+    if (st >= body && cp <= S.pk * 3.2e-5) { try { port.postMessage({ end: st }); } catch (e) {} S.done = true; return; }   // (−90 dB)
+    if (S.bad && !S.badT) { S.badT = true; try { port.postMessage({ nan: S.bad, i: st / CH }); } catch (e) {} }
+    let Lc = L, Rc = R; if (m < CH) { Lc = new Float32Array(CH); Rc = new Float32Array(CH); Lc.set(L.subarray(0, m)); Rc.set(R.subarray(0, m)); }
+    try { port.postMessage({ i: st / CH, L: Lc, R: Rc }, [Lc.buffer, Rc.buffer]); } catch (e) {}
+  };
+  S.read = (F) => { if (S.done) return; const L = new Float32Array(CH), R = new Float32Array(CH); aL.getFloatTimeDomainData(L); aR.getFloatTimeDomainData(R); chunk(F - CH, L, R, CH); S.F = F; };
+  S.fin = (buf, stopped) => {
+    if (!stopped && !S.done) {
+      const st = Math.max(S.c0, S.F), bL = buf.getChannelData(0), bR = buf.getChannelData(1);
+      if (st < n) chunk(st, bL.slice(st, n), bR.slice(st, n), n - st);
+      if (!S.done) { try { port.postMessage({ end: n }); } catch (e) {} S.done = true; }
+    }
+    try { port.close(); } catch (e) {}
+    try { tap.disconnect(up); } catch (e) {}
+  };
+  return S;
+}
 // a job → Promise of its reply (null when there is no Werk-Rahmen); tr: buffers handed over (the caller keeps none);
 // R: the realm (step 2a; the first one unless told)
+// (Leistung, 23.10.2026 – the owner's desktop report: the memory filled while loops only played, the screen hitched in
+// the garbage collector's pauses) Chromium keeps every OfflineAudioContext that loaded an AudioWorklet module alive for
+// as long as its document lives – each render of a realm (a living pass ≈ 4 MB: its graph, its buffers) stayed for good;
+// measured, 8 % of a living pass's memory came back. Only the frame's going frees them: a realm is renewed after
+// HX_WRENEW renders or HX_WRENEW_S seconds – it takes no new living pass, and once nothing it rendered still sounds or may be kept (✓) and it
+// waits for nothing, its frame goes (hxwRenew, in hxWTick); the next job boots a fresh one. Every render is its own
+// (seeded, built afresh), so the sound does not change.
+const HX_WRENEW = +(window.__hxRenew || 0) || 12;   // (window.__hxRenew: tests only)
+const HX_WRENEW_S = 90;   // (… or this many seconds after its first render)
 function hxwCall(job, d, tr, R0) {
   const R = R0 || HXW;
+  if (job === 'wuchs' || job === 'bake' || job === 'tail') { if (!R.used) R.t0 = performance.now(); R.used = (R.used || 0) + 1; if (R.used >= HX_WRENEW && !R.old) { R.old = true; R.oldT = performance.now(); } }
   return hxWerk(R).then((ok) => new Promise((res) => {
     if (!ok || !R.port) { res(null); return; }
     const id = ++R.id;
@@ -28633,6 +28833,7 @@ function hxwBoot() {
       const d = ev.data;
       if (d && d.job === 'wport') { hxwPort(d.port); return; }   // (step 2a: the live frame, straight from myzel-ring)
       if (d && d.job === 'feld') { HXW.feld = d.P || null; return; }   // (a loop that follows the field: its sound's knobs, at the next suspend)
+      if (d && d.job === 'drop') { HXW.jobs = HXW.jobs.filter((j) => j.keep !== d.keep || (HXW.port.postMessage({ id: j.id, job: j.job, stopped: 1 }), false)); return; }   // (Leistung: a pass whose time has passed before its render began – nothing of it was heard)
       if (d && d.job === 'stop') { if (HXW.cur && HXW.cur.key === d.keep) HXW.cur.stop = true; HXW.jobs = HXW.jobs.filter((j) => j.keep !== d.keep || (HXW.port.postMessage({ id: j.id, job: j.job, stopped: 1 }), false)); return; }   // (step 2a: a stream no longer wanted)
       HXW.jobs.push(d); hxwNext();
     };
@@ -28699,14 +28900,22 @@ async function hxwNotes(d) {
   HX.mask = new Set(d.mask || ['fin', 'eb2', 'rgn', 'gsp']);
   const dur = Math.max(0.05, +d.dur || 1), len = Math.ceil(dur * SR), ctx = new OfflineAudioContext(2, len, SR), notes = d.notes || [];
   hxwSeed(HXW_FIX);   // (the graph's own noise and drift buffers: the same in every render)
+  const nsPre = d.port && HXW_NS ? hxwNsPre(ctx) : null;   // (Leistung: the worklet-free sink's analysers, made before the graph)
   HXW.ctx = ctx;
   try { initAudio(); } finally { HXW.ctx = null; }
   try { A.out.disconnect(); } catch (e) {}
-  const strm = !!d.port;
-  if (strm || d.chain || notes.some((n) => ENGINES[n.eng] && ENGINES[n.eng].needs) || notes.some((n) => n.eng === 'gsp')) await ensureDSP(ctx);
-  let tap = A.hxIn0, chainEv = [], snk = null;
+  if (nsPre) A.hxIn0.connect(nsPre.up);   // (the sink's analysers in the graph from its start)
+  const strm = !!d.port, needW = !!(d.chain || notes.some((n) => ENGINES[n.eng] && ENGINES[n.eng].needs) || notes.some((n) => n.eng === 'gsp'));
+  // (Leistung, 23.10.2026) a living pass whose sources and chain need no AudioWorklet streams without one (hxwNs): an
+  // OfflineAudioContext that loaded a worklet module leaves memory behind in Chromium even after its frame is gone
+  if (needW || (strm && !HXW_NS)) await ensureDSP(ctx);
+  let tap = A.hxIn0, chainEv = [], snk = null, ns = null;
   if (d.chain) { const k = hxwChain(d.chain); A.hxIn0.connect(k.c.in); tap = k.c.out; chainEv = k.ev; }
-  if (strm) {
+  if (strm && !needW && HXW_NS) {
+    ns = hxwNs(ctx, nsPre, tap, d.port, len, Math.round((+d.body || dur) * SR), Math.round((+d.from || 0) * SR));
+    tap.connect(ctx.destination);
+    if (d.keep) HXW.cur = { key: d.keep, stop: false };
+  } else if (strm) {
     snk = new AudioWorkletNode(ctx, 'myzel-wsend', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1], channelCount: 2, channelCountMode: 'explicit', channelInterpretation: 'speakers',
       processorOptions: { n: len, body: Math.round((+d.body || dur) * SR), from: Math.round((+d.from || 0) * SR), chunk: HX_CH } });
     tap.connect(snk); snk.connect(ctx.destination); tap.connect(ctx.destination); snk.port.postMessage({ port: d.port }, [d.port]);   // (the render's own buffer holds the pass too: ✓ keeps it, its tail is measured on it)
@@ -28737,6 +28946,7 @@ async function hxwNotes(d) {
   });
   if (notes.some((n) => n.eng === 'kor' || n.eng === 'rhz')) for (let t = 0; t < dur; t += 0.025) add(t, () => { const h = ctx.currentTime + 0.12; grainTick(h); if (RHZ.vs.size || RHZ.q.length) rhzRun(h); });
   for (const [t, fn] of chainEv) add(t, fn);
+  if (ns) for (let F = ns.c0 + HX_CH; F + 128 < len; F += HX_CH) { const b = F / 128 + 1; if (!work.has(b)) work.set(b, []); work.get(b).push(() => ns.read(F)); }   // (each whole chunk read a quantum after its end – the delay)
   for (const [t, id, v] of d.prm || []) add(t, () => { if (PD[id]) P[id] = v; });   // (step 2a: the engines' Bewegung lanes, as they were turned)
   // the pacing: a suspend every 0.25 s of the body from where it is heard (d.from) – each waits until its frame is at
   // most d.lead s ahead of the live one; the field's knobs (d.feld) are taken there too
@@ -28760,6 +28970,8 @@ async function hxwNotes(d) {
   Math.random = HXW_RND;
   const setup = (performance.now() - T0) / 1000;   // (graph, module, the notes scheduled: before a sample renders)
   const t0 = performance.now(), buf = await ctx.startRendering(), ms = performance.now() - t0;
+  if (snk) { try { snk.port.onmessage = null; snk.port.close(); snk.disconnect(); tap.disconnect(); } catch (e) {} }   // (Leistung: nothing of this render is kept but its buffer – see WSend)
+  if (ns) ns.fin(buf, C0 && C0.stop);
   const dead = HXW.dead; HXW.dead = null;
   for (const v of dead) v.cleanup();
   for (const v of A.voices) v.cleanup();
@@ -30321,7 +30533,7 @@ function hxwPick() {
   let idle = null, fresh = null, least = null;
   for (let i = 1; i <= HX_WPOOL; i++) {
     const R = hxwRealm(i);
-    if (R.st === 'kein') continue;
+    if (R.st === 'kein' || R.old) continue;   // (Leistung: one being renewed takes no new pass)
     if (R.st === 'ok' && !R.n) { idle = R; break; }
     if (!R.st && !fresh) fresh = R;
     if (!least || R.n < least.n) least = R;
@@ -30332,7 +30544,8 @@ function hxwPick() {
 function hxwWport(R) {
   if (!HX.node || !R.port || R.st !== 'ok') return;
   const ch = new MessageChannel();
-  hxPost({ wport: ch.port1 }, [ch.port1]);
+  R.wid = (HXW.widN = (HXW.widN || 0) + 1);
+  hxPost({ wport: ch.port1, wid: R.wid }, [ch.port1]);
   try { R.port.postMessage({ job: 'wport', port: ch.port2 }, [ch.port2]); } catch (e) {}
 }
 function hxwWportAll() { for (const R of [HXW, ...HXW.pool]) if (R.st === 'ok') hxwWport(R); }
@@ -30497,9 +30710,9 @@ async function hxWRender(L, S, sig, key) {
   if (!job) return null;
   if (!S.wseed) S.wseed = ((Math.random() * 2147483646) | 0) + 1;   // (never a render without its own throw)
   const seed = S.anc ? S.anc.seed : S.wseed;
-  HX.wRen++; HX.wLast = performance.now(); hxCount();
-  const m = await hxwCall('wuchs', hxWJob(L, S, job, seed));
-  HX.wRen--; HX.wLast = performance.now(); hxCount();
+  HX.wRen++; HX.wLast = performance.now(); hxCount(); HX.wSt.n++;
+  const tw = performance.now(), m = await hxwCall('wuchs', hxWJob(L, S, job, seed));
+  HX.wRen--; HX.wLast = performance.now(); hxCount(); hxWStat(m, performance.now() - tw, job.dur);
   if (!m || m.err || !m.L) { if (m && m.err) console.warn('Hexenring: Wuchs', m.err); return null; }
   const n = hxWTrim(m.L, m.R, job.lenF), [aud] = hxChunks(n);
   hxWTailAdd(S, (n - job.lenF) / SR, n >= m.L.length);
@@ -30578,11 +30791,13 @@ function hxWSlot(L, S, k, o = {}) {
   hxPost({ wst: { schicht: S.id, k, len: job.lenF, cap: Math.ceil(job.dur * SR) + HX_CH, at: o.at, must: !!o.must, from, port: ch.port1 } }, [ch.port1]);
   const seed = o.treu ? (S.anc ? S.anc.seed : S.wseed) : hxWSeedK(S, k);
   const d = Object.assign(hxWJob(L, S, job, seed), { port: ch.port2, F0: a, lead: HX_WLEAD, from: from / SR, keep: S.key + ':' + k, feld: (L.klang || 'eigen') === 'feld' });
-  R.n++; HX.wJobs++; HX.wLast = performance.now(); hxCount();
+  R.n++; HX.wJobs++; HX.wLast = performance.now(); hxCount(); HX.wSt.n++; HX.wSt.q = Math.max(HX.wSt.q, HX.wJobs);
   const re = S.wRe || (S.wRe = {}); re[k] = R; for (const x in re) if (+x < k - 12) delete re[x];   // (✓ asks the realm that rendered a pass; it keeps its last ten)
   const t0 = performance.now();
+  (S.wPend || (S.wPend = new Set())).add(k);
   hxwCall('wuchs', d, [ch.port2], R).then((m) => {
-    R.n = Math.max(0, R.n - 1); HX.wJobs = Math.max(0, HX.wJobs - 1); HX.wLast = performance.now(); hxCount();
+    S.wPend.delete(k);
+    R.n = Math.max(0, R.n - 1); HX.wJobs = Math.max(0, HX.wJobs - 1); HX.wLast = performance.now(); hxCount(); hxWStat(m, performance.now() - t0, job.dur);
     if (!m || m.stopped) return;
     if (m.rms) { S.wMs = m.rms; S.wDur = m.dur; }
     if (m.tail != null) hxWTailAdd(S, m.tail, m.cut);
@@ -30591,6 +30806,20 @@ function hxWSlot(L, S, k, o = {}) {
   });
   S.wSeeds = Object.assign(S.wSeeds || {}, { [k]: seed });
   return true;
+}
+// (Leistung, 23.10.2026) the Werk-Rahmen's work, for „Leistung messen“: renders begun and done (stopped ones apart), the
+// render's own time (its offline context), the whole wait from the request (setup, the queue of its realm, the pacing),
+// the seconds of audio made, the most jobs waiting at once
+HX.wSt = { n: 0, done: 0, stop: 0, ms: 0, wall: 0, audio: 0, q: 0 };
+function hxWStat(m, wall, dur) { const W = HX.wSt; if (!m || m.err) return; if (m.stopped) { W.stop++; return; } W.done++; W.ms += +m.rms || +m.ms || 0; W.wall += wall; W.audio += +dur || 0; }
+// (Leistung, 23.10.2026) a living pass whose time has passed while its render still waits in its realm's queue – the
+// device falls behind – is never heard (its slot went at its pass's end): it is dropped before it begins. One that
+// began rendering goes on (what it streams may already sound, its Ausklang rings into the next pass)
+function hxWDropPast(S, kNow) {
+  if (!S.wPend || !S.wPend.size) return;
+  const sent = S.wDropS || (S.wDropS = new Set());
+  for (const k of S.wPend) if (k < kNow && !sent.has(k)) { sent.add(k); const R = S.wRe && S.wRe[k]; try { if (R && R.port) R.port.postMessage({ job: 'drop', keep: S.key + ':' + k }); } catch (e) {} }
+  for (const k of sent) if (!S.wPend.has(k)) sent.delete(k);
 }
 // a living Schicht's stream stops (its fixed version comes back, or it is gone): the processor drops the passes not yet
 // heard, and the realms rendering them stop streaming (all: the pass playing too – an undo, a clear)
@@ -30611,20 +30840,25 @@ function hxWTick(now, horizon) {
   if (HX.wKlang && performance.now() >= HX.wKlang) { HX.wKlang = 0; for (const L of hxLoopsLive()) if ((L.klang || 'eigen') === 'feld' && hxWAktiv(L)) hxWUpdate(L); }
   const fNow = hxF(now), pnow = performance.now(), G = HX.wGuard;
   if (G.max < Infinity && pnow - G.t > 60000) { G.t = pnow; G.max = G.max + 1 >= HX_WPOOL ? Infinity : G.max + 1; }   // (a minute without an underrun: one more at once again)
+  if (pnow - (HXW.renT || 0) > 1000) { HXW.renT = pnow; hxwRenew(); }   // (Leistung: realms renewed – their renders' memory freed)
+  if (G.hold && !(G.pause > pnow)) { G.hold = false; G.end = pnow; hxGuardLog('zurueck'); hxCardDirty(); }   // (phone: the pause's span clean – the loops live again from their next pass)
   for (const L of hxLoopsLive()) {
     if (L.bew || L.state === 'weg') continue;
     if (L.treuBis != null && tgBeat(now) >= L.treuBis) { L.treuBis = null; hxRailDirty(); hxCardDirty(); }
     if (L.wRefused && pnow > (L.wRetry || 0)) { L.wRetry = pnow + 4000; if (hxWCanLive(L)) { L.wRefused = false; hxCardDirty(); } }
-    const lebt = hxWLebt(L) && L.state === 'spielt';
+    const lebt = hxWLebt(L) && L.state === 'spielt', hold = !lebt && hxWHold(L);   // (phone: the guard holds – the last complete pass plays on)
     const k = hxPassK(L, Math.round(fNow)), k1 = k + 1, a1 = hxPassF(L, k1);
     for (const id of L.sch) {
       const S = HX.sch.get(id);
       if (!hxWCan(S)) continue;
-      if (!lebt) { if (S.wLive) { S.wLive = false; hxWStop(S); hxWUpdate(L, { re: true }); } continue; }
-      if (!S.wLive) { if (!hxMemOk(Math.round(1.5 * (hxWTailEst(S) + 4) * SR))) continue; S.wLive = true; S.wk = k; hxwWarm(2 * [...HX.sch.values()].filter((x) => x.wLive).length); }   // (final pass: its passes in the processor counted against the Speichergrenze before they stream)
+      if (S.wPend && S.wPend.size) hxWDropPast(S, k);
+      if (!lebt && !hold) { if (S.wLive) { S.wLive = false; hxWStop(S); hxWUpdate(L, { re: true }); } continue; }
+      if (!S.wLive) {
+        if (hold) continue; if (!hxMemOk(Math.round(1.5 * (hxWTailEst(S) + 4) * SR))) continue; S.wLive = true; S.wk = k; hxwWarm(2 * [...HX.sch.values()].filter((x) => x.wLive).length); }   // (final pass: its passes in the processor counted against the Speichergrenze before they stream)
       if ((S.wk == null ? -1 : S.wk) >= k1 || a1 - fNow > hxWStartS() * SR) continue;
       if (L.nein && L.nein.k === k1 && S.anc) { S.wk = k1; hxWPlay(S, 'anc', a1); continue; }   // (✕: the anchor plays that pass)
       if (L.frucht != null && L.frucht === k1 && (S.anc || S.wu)) { S.wk = k1; hxWPlay(S, S.anc ? 'anc' : 'wu', a1); continue; }   // (step 4: Fruchten – at a Treffen its anchor once)
+      if (hold) continue;   // (nothing renders: the processor plays the last complete pass at the seam – no slot comes)
       if (HX.wGuard.max < Infinity && HX.wJobs >= HX.wGuard.max) continue;   // (the guard: fewer at once)
       S.wk = k1;
       const key = HX.folge ? (a1 >= Math.round(hxF(HX.folge.t)) ? HX.folge.key : hxWScale(HX.folge.old['t.root'], HX.folge.old['t.scale'])) : null;   // (an announced key: from its bar line on)
@@ -30840,7 +31074,7 @@ function hxWWord(L) {
   if (!hxWAktiv(L)) return '';
   if (HXW.st === 'kein') return 'live gespielt';   // (Live mode: no Werk-Rahmen)
   const S = L.sch.map((id) => HX.sch.get(id)).filter(hxWCan), busy = S.some((s) => s.wBusy), ready = S.every((s) => s.play === 'wu' || s.play === 'anc');
-  if (hxEigN(L) >= 1) { if (HX.wGuard.pause > performance.now() || L.wRefused) return 'lebt, sobald Rechenzeit frei ist'; if (L.treuBis != null) { const n = Math.max(1, Math.min(8, Math.floor((L.treuBis - tgBeat(hxNowT())) / 4 + 0.01))); return 'Treu noch ' + n + (n === 1 ? ' Takt' : ' Takte'); } return ['', 'lebt', 'variiert', 'wandert'][hxEigN(L)]; }
+  if (hxEigN(L) >= 1) { if (hxWHold(L)) return 'spielt den letzten Durchgang – das Handy ist ausgelastet'; if (HX.wGuard.pause > performance.now() || L.wRefused) return 'lebt, sobald Rechenzeit frei ist'; if (L.treuBis != null) { const n = Math.max(1, Math.min(8, Math.floor((L.treuBis - tgBeat(hxNowT())) / 4 + 0.01))); return 'Treu noch ' + n + (n === 1 ? ' Takt' : ' Takte'); } return ['', 'lebt', 'variiert', 'wandert'][hxEigN(L)]; }
   return busy ? 'wächst …' : ready ? 'Wuchs' : 'wächst …';
 }
 // can the device keep this loop living? its passes' predicted render time against what the pool can spend
@@ -30854,13 +31088,41 @@ function hxWCanLive(L) {
 // ---- the CPU guard (SPEC §10.5, owner rule): an underrun while Wuchs works first pauses the living passes (the loops
 // play their Treu or Abdruck), then lets fewer render at once – the live budget and A.lite are never touched for it.
 // → true when the Wuchs took the blame ----
+// On a phone (Leistung, 23.10.2026 – the owner's report A) the pause holds: a living loop plays its last complete pass on,
+// pass after pass, as a Treu loop would (its stream stays, no render starts – not even a Treu one), and the passes not
+// yet heard stop rendering at once; it lasts while the device keeps dropping audio (30 s after the last underrun, twice
+// as long when it comes back within two minutes, at most four) – then the loop lives again from its next pass.
+const HX_PHONE = MOBILE && !HX_TABLET;
 function hxWGuard() {
   const now = performance.now(), ran = HX.wJobs > 0 || HX.wRen > 0 || now - HX.wLast < 8000;
   if (!ran) return false;
   const G = HX.wGuard, lebt = hxLoopsLive().some((L) => hxEigN(L) >= 1 && hxWAktiv(L));
-  if (lebt && !(G.pause > now)) { G.pause = now + 30000; G.n++; hxSay('Schleifen leben gleich weiter – das Gerät ist gerade ausgelastet'); for (const L of hxLoopsLive()) hxCardDirty(); }
-  else G.max = Math.max(1, Math.min(G.max === Infinity ? HX_WPOOL : G.max, HX.wJobs || 1) - 1 || 1);
+  if (lebt && !(G.pause > now)) {
+    G.n++;
+    if (HX_PHONE) {
+      G.hold = true; G.span = now - (G.end || -1e9) < 120000 ? Math.min(240000, 2 * (G.span || 30000)) : 30000; G.pause = now + G.span;
+      for (const S of HX.sch.values()) if (S.wLive) hxWStop(S);   // (the passes not yet heard: dropped, their renders stopped – the one playing stays)
+      hxGuardLog('lebendig', Math.round(G.span / 1000));
+      hxSay('Lebendige Schleifen spielen ihren letzten Durchgang weiter – das Handy ist ausgelastet');
+    } else { G.pause = now + 30000; hxGuardLog('lebendig', 30); hxSay('Schleifen leben gleich weiter – das Gerät ist gerade ausgelastet'); }
+    hxCardDirty();
+  } else { G.max = Math.max(1, Math.min(G.max === Infinity ? HX_WPOOL : G.max, HX.wJobs || 1) - 1 || 1); hxGuardLog('weniger', G.max); }
   G.t = now;
+  return true;
+}
+// (phone) while the pause holds, every second with underruns keeps it: the loops live again only once the device has
+// been clean for the pause's span
+function hxWHoldKeep(now) { const G = HX.wGuard; if (G.hold && G.pause > now) G.pause = Math.max(G.pause, now + (G.span || 30000)); }
+// (phone) a living loop the guard holds: it plays its last complete pass on, no render starts
+const hxWHold = (L) => !!HX.wGuard.hold && HX.wGuard.pause > performance.now() && L.state === 'spielt' && hxEigN(L) >= 1 && !L.revW && !L.live && hxWAktiv(L) && !L.wRefused;
+// the guard's steps, kept for „Leistung messen“ (which, when, the underruns of that second)
+function hxGuardLog(step, v) { const a = HX.gLog || (HX.gLog = []); a.push({ t: performance.now(), step, v: v != null ? v : '' }); if (a.length > 200) a.shift(); }
+// (phone) the device drops audio while loops sound and their steps are taken: the live budget and A.lite stay – the
+// loops are what costs, and the owner's rule is that they give way, never the live playing. Said once
+function hxGuardGrenze() {
+  if (!HX_PHONE || !(hxBusy() || (HX.wLast > 0 && performance.now() - HX.wLast < 60000))) return false;
+  hxGuardLog('grenze');
+  if (!HX.grenzeSaid) { HX.grenzeSaid = true; hxCardDirty(); toast('Das Handy ist mit den Schleifen ausgelastet. Dein Live-Spiel behält alle Stimmen; hältst du eine Schleife an oder schaltest sie stumm, wird es wieder flüssig.', 8000); }
   return true;
 }
 
@@ -30874,7 +31136,7 @@ function hxTauGuard() {
   if (!MOBILE || HX_TABLET || HX.tauRest || !(P['mov.drift'] > 0)) return false;
   const list = hxLoopsLive().filter((L) => !L.bew && L.taumeln !== false);
   if (!list.some((L) => L.state === 'spielt')) return false;
-  HX.tauRest = true;
+  HX.tauRest = true; hxGuardLog('taumeln');
   for (const L of list) { hxPost({ tau: { loop: L.id, on: false } }); hxTauOrig(L); }
   hxCount(); hxCardDirty();
   hxSay('Schleifen bleiben in ihrer Stimmung – das Handy ist ausgelastet');
@@ -33673,12 +33935,14 @@ function watchUnderruns() {
     if (document.visibilityState !== 'visible' || !A.ctx || A.ctx.state !== 'running') { ck.p = 0; return; }   // (a pause stops the clock: counted afresh)
     const u = count(), now = performance.now();
     A.underruns = u;
-    if (u > last) hits.push(now);
+    if (u > last) { hits.push(now); hxWHoldKeep(now); }   // Hexenring: (Leistung) a phone's held Lebendig stays held while it lasts
     while (hits.length && now - hits[0] > 10000) hits.shift();
     if (u > last && hxWGuard()) { last = u; return; }   // Hexenring: (step 2a) the Wuchs gives way first – never the live budget, never A.lite for it
     if (u > last && hits.length >= 2 && hxTauGuard()) { last = u; return; }   // Hexenring: (phone report) then, on a phone and when it lasts, the loops' Taumeln
+    if (u > last && hxGuardGrenze()) { last = u; return; }   // Hexenring: (Leistung, report A) a phone with loops sounding: the live budget stays
     if (!ps) { last = u; return; }
     if (u > last && VBUDGET > 6) {
+      hxGuardLog('lite', Math.round(VBUDGET * 0.8));
       A.budgetScale = (A.budgetScale || 1) * 0.8;
       A.lite = true; applyQuality(); updDevUI();
       if (!A.liteHinted) {

@@ -2,6 +2,16 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-24",
+      "punkte": [
+        "Angehaltene Schleifen kosten keine Rechenzeit mehr. Vorher rechnete das Gerät sie im Hintergrund weiter, und das Live-Spiel kam auf dem Handy ins Stocken.",
+        "Kommt das Handy mit Schleifen an seine Grenze, spielen lebendige Schleifen ihren letzten Durchgang weiter, bis wieder Luft ist. Dein Live-Spiel behält dabei immer alle Stimmen.",
+        "In der Karte des Hexenrings und unter „Gerät“ → „Leistung“ steht, wie viel Rechenzeit die Schleifen gerade belegen.",
+        "Lebendige Schleifen füllen den Arbeitsspeicher nicht mehr – er bleibt auch bei langem Spiel gleich.",
+        "„Leistung messen“ zeigt jetzt auch, was jede Schleife kostet, wann Myzel entlastet hat und welche Latenz das Gerät wirklich meldet."
+      ]
+    },
+    {
       "id": "2026-10-23c",
       "punkte": [
         "Auf dem Handy spielt Myzel flüssiger: Der Handy-Modus zeichnet das Feld leichter und, wenn es eng wird, mit 30 statt 60 Bildern pro Sekunde. Am Klang ändert sich nichts.",

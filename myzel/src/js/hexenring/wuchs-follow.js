@@ -205,7 +205,7 @@ function hxWWord(L) {
   if (!hxWAktiv(L)) return '';
   if (HXW.st === 'kein') return 'live gespielt';   // (Live mode: no Werk-Rahmen)
   const S = L.sch.map((id) => HX.sch.get(id)).filter(hxWCan), busy = S.some((s) => s.wBusy), ready = S.every((s) => s.play === 'wu' || s.play === 'anc');
-  if (hxEigN(L) >= 1) { if (HX.wGuard.pause > performance.now() || L.wRefused) return 'lebt, sobald Rechenzeit frei ist'; if (L.treuBis != null) { const n = Math.max(1, Math.min(8, Math.floor((L.treuBis - tgBeat(hxNowT())) / 4 + 0.01))); return 'Treu noch ' + n + (n === 1 ? ' Takt' : ' Takte'); } return ['', 'lebt', 'variiert', 'wandert'][hxEigN(L)]; }
+  if (hxEigN(L) >= 1) { if (hxWHold(L)) return 'spielt den letzten Durchgang – das Handy ist ausgelastet'; if (HX.wGuard.pause > performance.now() || L.wRefused) return 'lebt, sobald Rechenzeit frei ist'; if (L.treuBis != null) { const n = Math.max(1, Math.min(8, Math.floor((L.treuBis - tgBeat(hxNowT())) / 4 + 0.01))); return 'Treu noch ' + n + (n === 1 ? ' Takt' : ' Takte'); } return ['', 'lebt', 'variiert', 'wandert'][hxEigN(L)]; }
   return busy ? 'wächst …' : ready ? 'Wuchs' : 'wächst …';
 }
 // can the device keep this loop living? its passes' predicted render time against what the pool can spend
@@ -219,13 +219,41 @@ function hxWCanLive(L) {
 // ---- the CPU guard (SPEC §10.5, owner rule): an underrun while Wuchs works first pauses the living passes (the loops
 // play their Treu or Abdruck), then lets fewer render at once – the live budget and A.lite are never touched for it.
 // → true when the Wuchs took the blame ----
+// On a phone (Leistung, 23.10.2026 – the owner's report A) the pause holds: a living loop plays its last complete pass on,
+// pass after pass, as a Treu loop would (its stream stays, no render starts – not even a Treu one), and the passes not
+// yet heard stop rendering at once; it lasts while the device keeps dropping audio (30 s after the last underrun, twice
+// as long when it comes back within two minutes, at most four) – then the loop lives again from its next pass.
+const HX_PHONE = MOBILE && !HX_TABLET;
 function hxWGuard() {
   const now = performance.now(), ran = HX.wJobs > 0 || HX.wRen > 0 || now - HX.wLast < 8000;
   if (!ran) return false;
   const G = HX.wGuard, lebt = hxLoopsLive().some((L) => hxEigN(L) >= 1 && hxWAktiv(L));
-  if (lebt && !(G.pause > now)) { G.pause = now + 30000; G.n++; hxSay('Schleifen leben gleich weiter – das Gerät ist gerade ausgelastet'); for (const L of hxLoopsLive()) hxCardDirty(); }
-  else G.max = Math.max(1, Math.min(G.max === Infinity ? HX_WPOOL : G.max, HX.wJobs || 1) - 1 || 1);
+  if (lebt && !(G.pause > now)) {
+    G.n++;
+    if (HX_PHONE) {
+      G.hold = true; G.span = now - (G.end || -1e9) < 120000 ? Math.min(240000, 2 * (G.span || 30000)) : 30000; G.pause = now + G.span;
+      for (const S of HX.sch.values()) if (S.wLive) hxWStop(S);   // (the passes not yet heard: dropped, their renders stopped – the one playing stays)
+      hxGuardLog('lebendig', Math.round(G.span / 1000));
+      hxSay('Lebendige Schleifen spielen ihren letzten Durchgang weiter – das Handy ist ausgelastet');
+    } else { G.pause = now + 30000; hxGuardLog('lebendig', 30); hxSay('Schleifen leben gleich weiter – das Gerät ist gerade ausgelastet'); }
+    hxCardDirty();
+  } else { G.max = Math.max(1, Math.min(G.max === Infinity ? HX_WPOOL : G.max, HX.wJobs || 1) - 1 || 1); hxGuardLog('weniger', G.max); }
   G.t = now;
+  return true;
+}
+// (phone) while the pause holds, every second with underruns keeps it: the loops live again only once the device has
+// been clean for the pause's span
+function hxWHoldKeep(now) { const G = HX.wGuard; if (G.hold && G.pause > now) G.pause = Math.max(G.pause, now + (G.span || 30000)); }
+// (phone) a living loop the guard holds: it plays its last complete pass on, no render starts
+const hxWHold = (L) => !!HX.wGuard.hold && HX.wGuard.pause > performance.now() && L.state === 'spielt' && hxEigN(L) >= 1 && !L.revW && !L.live && hxWAktiv(L) && !L.wRefused;
+// the guard's steps, kept for „Leistung messen“ (which, when, the underruns of that second)
+function hxGuardLog(step, v) { const a = HX.gLog || (HX.gLog = []); a.push({ t: performance.now(), step, v: v != null ? v : '' }); if (a.length > 200) a.shift(); }
+// (phone) the device drops audio while loops sound and their steps are taken: the live budget and A.lite stay – the
+// loops are what costs, and the owner's rule is that they give way, never the live playing. Said once
+function hxGuardGrenze() {
+  if (!HX_PHONE || !(hxBusy() || (HX.wLast > 0 && performance.now() - HX.wLast < 60000))) return false;
+  hxGuardLog('grenze');
+  if (!HX.grenzeSaid) { HX.grenzeSaid = true; hxCardDirty(); toast('Das Handy ist mit den Schleifen ausgelastet. Dein Live-Spiel behält alle Stimmen; hältst du eine Schleife an oder schaltest sie stumm, wird es wieder flüssig.', 8000); }
   return true;
 }
 
@@ -239,7 +267,7 @@ function hxTauGuard() {
   if (!MOBILE || HX_TABLET || HX.tauRest || !(P['mov.drift'] > 0)) return false;
   const list = hxLoopsLive().filter((L) => !L.bew && L.taumeln !== false);
   if (!list.some((L) => L.state === 'spielt')) return false;
-  HX.tauRest = true;
+  HX.tauRest = true; hxGuardLog('taumeln');
   for (const L of list) { hxPost({ tau: { loop: L.id, on: false } }); hxTauOrig(L); }
   hxCount(); hxCardDirty();
   hxSay('Schleifen bleiben in ihrer Stimmung – das Handy ist ausgelastet');

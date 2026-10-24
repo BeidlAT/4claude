@@ -78,6 +78,11 @@ function lmStart() {
   LM.ck = { p0: 0, c0: 0, p: 0, c: 0, p1: 0, c1: 0, n: 0, lagMs: 0 };
   LM.smp = { n: 0, load: 0, loadMax: 0, vMax: 0, gr: 0, idle: 0, panel: new Map(), hid: 0, loops: 0, spielt: 0, sch: 0, leb: 0, phLoad: 0 };
   LM.ps0 = lmStats(); LM.u0 = A.underruns || 0; LM.res = null;
+  // (the audio side in detail – 23.10.2026, after report A: each loop's share of the budget, the Werk-Rahmen's work, the
+  // guard's steps, the latency the context reports against the one asked for)
+  LM.lp = new Map(); LM.lsum = { n: 0, loops: 0, max: 0, hx: 0, cap: 0 }; LM.lat = { n: 0, out: 0, outMin: Infinity, outMax: 0, base: 0 };
+  if (typeof HX !== 'undefined' && HX.wSt) { HX.wSt.q = HX.wJobs || 0; LM.w0 = Object.assign({}, HX.wSt); }
+  LM.gT = performance.now();
   LM.rc = null;
   const rc = A.ctx.renderCapacity;
   if (rc && rc.start) try { LM.rc = { n: 0, avg: 0, peak: 0, und: 0 }; rc.onupdate = (e) => { const R = LM.rc; if (!R) return; R.n++; R.avg += e.averageLoad || 0; R.peak = Math.max(R.peak, e.peakLoad || 0); R.und = Math.max(R.und, e.underrunRatio || 0); }; rc.start({ updateInterval: 1 }); } catch (e) { LM.rc = null; }
@@ -101,8 +106,48 @@ function lmSample() {
   const live = hxLoopsLive();
   S.loops = Math.max(S.loops, live.length); S.spielt = Math.max(S.spielt, live.filter((L) => L.state === 'spielt').length); S.sch = Math.max(S.sch, HX.sch.size);
   S.leb = Math.max(S.leb, live.filter((L) => hxWAktiv(L)).length);
+  lmLoops(live);
+  const c = A.ctx, La = LM.lat, o = (c.outputLatency || 0) * 1000; La.n++; La.out += o; La.base += (c.baseLatency || 0) * 1000; if (o < La.outMin) La.outMin = o; if (o > La.outMax) La.outMax = o;
   lmClock();
   if (S.n % 4 === 0) lmUI();
+}
+// each loop's share of the budget (hxCostOf – what voiceLoad counts for it) and what it did: played, lived, held by the
+// guard, rested its Taumeln, played through the chain's copy on out 1
+function lmLoops(live) {
+  if (!HX.node) return;
+  const Z = LM.lsum; let sum = 0;
+  for (const L of live) {
+    const c = hxCostOf(L); sum += c;
+    let e = LM.lp.get(L.key); if (!e) LM.lp.set(L.key, (e = { slot: L.slot, n: 0, c: 0, max: 0, sp: 0, leb: 0, hold: 0, tau: 0, o1: 0 }));
+    e.n++; e.c += c; if (c > e.max) e.max = c;
+    if (L.state === 'spielt') e.sp++;
+    if (hxWLebt(L) && L.state === 'spielt') e.leb++;
+    if (hxWHold(L)) e.hold++;
+    if (!L.bew && !hxTauOn(L)) e.tau++;
+    if (L.sch.some((id) => { const S = HX.sch.get(id); return S && S.out; })) e.o1++;
+  }
+  const hx = hxLoad(); Z.n++; Z.loops += sum; if (sum > Z.max) Z.max = sum; Z.hx += hx;
+}
+function lmLoopsRes() {
+  const Z = LM.lsum, n = Math.max(1, Z.n), r2 = (x) => Math.round(x * 100) / 100;
+  const each = [...LM.lp.values()].sort((a, b) => a.slot - b.slot).map((e) => {
+    const f = [e.sp * 2 > e.n ? 'spielt' : e.sp ? 'teils' : 'halt', e.leb * 2 > e.n ? 'leb' : '', e.hold ? 'hold' : '', e.tau * 2 > e.n ? 'tau-ruht' : '', e.o1 * 2 > e.n ? 'out1' : ''].filter(Boolean).join(',');
+    return 'S' + (e.slot + 1) + '=' + r2(e.c / Math.max(1, e.n)) + '(' + f + ')';
+  });
+  return { sum: { loops: r2(Z.loops / n), max: r2(Z.max), hx: r2(Z.hx / n), rest: r2((Z.hx - Z.loops) / n), budget: VBUDGET, f1: HX.node && HX.o1 ? HX_COST.fx1 : 0 }, each };
+}
+// the Werk-Rahmen in the window: renders begun (living passes and Treu), done, stopped; their own render time (the offline
+// context's) per second of audio, the wait from the request, the most waiting at once
+function lmWerk(secs) {
+  const W = HX.wSt, W0 = LM.w0 || W, d = (k) => (W[k] || 0) - (W0[k] || 0), done = d('done');
+  return { st: HXW.st || '-', pool: (HXW.pool || []).filter((R) => R.st === 'ok').length, n: d('n'), perS: r1(d('n') / Math.max(1, secs)), done, stop: d('stop'), ms: done ? Math.round(d('ms') / done) : 0, wait: done ? Math.round(d('wall') / done) : 0,
+    xRT: d('audio') > 0 ? +(d('ms') / 1000 / d('audio')).toFixed(3) : 0, q: W.q || 0, jobs: HX.wJobs || 0 };
+}
+// the guard's steps in the window (which, at which second), and where it stands at the end
+function lmGuard() {
+  const steps = (HX.gLog || []).filter((e) => e.t >= LM.gT).map((e) => e.step + (e.v !== '' ? ':' + e.v : '') + '@' + Math.round((e.t - LM.t0) / 1000));
+  const G = HX.wGuard || {}, now = performance.now();
+  return { steps, now: { pause: G.pause > now ? Math.round((G.pause - now) / 1000) : 0, hold: !!(G.hold && G.pause > now), max: G.max === Infinity ? '-' : G.max, tau: !!HX.tauRest, lite: !!A.lite, scale: r1(A.budgetScale || 1) } };
 }
 function lmStop() {
   if (!LM.on) return;
@@ -147,6 +192,9 @@ function lmResult(ms) {
   R.audio = { sr: c.sampleRate, base: r1((c.baseLatency || 0) * 1000), out: r1((c.outputLatency || 0) * 1000), lat: P['dev.lat'], latCtx: A.latMode, q: P['dev.q'], budget: VBUDGET, scale: A.budgetScale || 1, lite: !!A.lite };
   R.voices = { load: S.n ? Math.round(100 * S.load / S.n) : 0, loadMax: Math.round(100 * S.loadMax), max: S.vMax, grains: S.gr, idle: S.n ? Math.round(100 * S.idle / S.n) : 0 };
   R.hx = { loops: S.loops, spielt: S.spielt, sch: S.sch, leb: S.leb, tau: !!HX.tauRest, f1: HXF1.off ? 'ruht' : 'an', werk: HXW.st || '-', wg: HX.wGuard ? HX.wGuard.n || 0 : 0, state: HX.state };
+  R.lp = lmLoopsRes(); R.werk = lmWerk(secs); R.guard = lmGuard();
+  const La = LM.lat, hint = P['dev.lat'] === 'min' ? '0' : P['dev.lat'] === 'safe' ? 'balanced' : 'interactive';
+  R.lat = { set: P['dev.lat'], hint, base: La.n ? r1(La.base / La.n) : 0, out: La.n ? r1(La.out / La.n) : 0, outMin: La.n ? r1(La.outMin) : 0, outMax: r1(La.outMax), buf: Math.round((c.baseLatency || 0) * c.sampleRate), avg: R.ps && R.ps.averageLatency != null ? R.ps.averageLatency : null };
   const nav = navigator, ua = nav.userAgent || '';
   const os = (ua.match(/Android [\d.]+/) || ua.match(/(iPhone|iPad|Mac) OS [\d_]+/) || [ANDROID ? 'Android' : IOS ? 'iOS' : 'Desktop'])[0].replace(/_/g, '.');
   const br = (ua.match(/(Chrome|CriOS|Firefox|FxiOS|Version)\/(\d+)/) || [])[0] || '?';
@@ -173,6 +221,10 @@ function lmText(R) {
   L.push('tick ' + kv(R.tick) + ' · lt ' + (R.lt ? kv(R.lt) : 'none') + ' · loaf ' + (R.loaf ? kv(Object.assign({}, R.loaf, { top: R.loaf.top.join(',') || '-' })) : 'none'));
   L.push('touch ' + (R.touch ? kv(R.touch) : 'none'));
   L.push('voices ' + kv(R.voices) + ' · hx ' + kv(R.hx));
+  L.push('loops ' + kv(R.lp.sum) + (R.lp.each.length ? ' · ' + R.lp.each.join(' ') : ''));
+  L.push('werk ' + kv(R.werk));
+  L.push('guard ' + (R.guard.steps.length ? R.guard.steps.join(' ') : 'none') + ' · ' + kv(R.guard.now));
+  L.push('latency ' + kv(R.lat));
   return L.join('\n');
 }
 // the short German summary: what was measured, then where the limit lies
@@ -184,6 +236,11 @@ function lmSummary(R) {
   S.push(R.under ? 'Klang: ' + R.under + ' Aussetzer in ' + Math.round(R.secs) + ' s' + (R.rc ? ' (Audio-Kern im Mittel ' + R.rc.avg + ' %, Spitze ' + R.rc.peak + ' %)' : '') + '.' : 'Klang: keine Aussetzer gemessen' + (R.rc ? ' (Audio-Kern im Mittel ' + R.rc.avg + ' %, Spitze ' + R.rc.peak + ' %)' : '') + '.');
   S.push(R.under && slow ? 'Ergebnis: Klang und Oberfläche sind beide ausgelastet.' : R.under ? 'Ergebnis: Der Klang setzt aus, obwohl die Oberfläche flüssig läuft – der Audio-Kern ist am Limit.'
     : slow ? 'Ergebnis: Die Oberfläche ist ausgelastet (Zeichnen und Rechnen auf dem Hauptthread); der Klang läuft sauber.' : 'Ergebnis: kein Engpass gemessen.');
+  if (R.hx.loops) S.push('Schleifen: ' + R.hx.loops + ', davon ' + R.hx.spielt + ' spielend – sie belegen im Mittel ' + d(R.lp.sum.loops) + ' von ' + R.lp.sum.budget + ' Einheiten (mit Humus und Effektkette ' + d(R.lp.sum.hx) + '); angehaltene kosten nichts.');
+  if (R.werk.n) S.push('Lebendige Schleifen: ' + R.werk.n + ' Durchgänge neu gerechnet, jeder etwa ' + R.werk.ms + ' ms (' + d(R.werk.xRT) + ' × Echtzeit).');
+  const GW = { lebendig: 'Lebendig hält an', weniger: 'weniger auf einmal gerechnet', taumeln: 'Taumeln ruht', grenze: 'Live-Spiel geschützt', lite: 'weniger Live-Stimmen', zurueck: 'Lebendig wieder an' };
+  if (R.guard.steps.length) S.push('Myzel hat entlastet: ' + [...new Set(R.guard.steps.map((x) => GW[x.split(/[:@]/)[0]] || x))].join(', ') + '.');
+  S.push('Latenz: eingestellt „' + ({ min: 'Minimal', safe: 'Sicher', std: 'Standard' }[R.lat.set] || R.lat.set) + '“ – das Gerät meldet ' + d(R.lat.base) + ' ms Puffer und ' + d(R.lat.out) + ' ms Ausgabe.');
   S.push('Handy-Modus war ' + (PH.on ? 'an' : 'aus') + (R.ph.load ? ' (davon ' + R.ph.load + ' % der Zeit mit 30 Bildern pro Sekunde)' : '') + '. „Kopieren“ und den Bericht an Claude schicken.');
   return S;
 }
@@ -247,12 +304,13 @@ function lmBuild() {
   U.auto = h('button', { type: 'button', class: 'btn ghost', id: 'phAuto', hidden: true, onclick: () => phSet('auto') }, 'Wieder automatisch');
   U.go = h('button', { type: 'button', class: 'btn primary', id: 'lmGo', onclick: lmStart }, 'Leistung messen');
   U.st = h('p', { class: 'note live', 'aria-live': 'polite' });
+  U.hx = h('p', { class: 'note', id: 'lmHx' });
   U.sum = h('ul', { class: 'help lm-sum', hidden: true });
   U.txt = h('textarea', { class: 'lm-txt', readonly: true, rows: 8, spellcheck: 'false', 'aria-label': 'Bericht' });
   U.copy = h('button', { type: 'button', class: 'btn', id: 'lmCopy', onclick: lmCopy }, 'Kopieren');
   U.rep = h('details', { class: 'plat lm-rep', hidden: true }, h('summary', null, 'Bericht (Text)'), U.txt);
   U.sec = section('Leistung', 'Wie flüssig Myzel auf diesem Gerät läuft',
-    h('div', { class: 'ctl wide' }, U.sw), U.phNote, h('div', { class: 'row' }, U.auto),
+    h('div', { class: 'ctl wide' }, U.sw), U.phNote, h('div', { class: 'row' }, U.auto), U.hx,
     h('p', { class: 'note' }, 'Leistung messen: ' + LM_SECS + ' Sekunden lang, während du ganz normal spielst (das Panel darf dabei zu sein). Danach steht hier, wo es eng wird, und ein kurzer Bericht zum Kopieren – gesendet wird nichts.'),
     h('div', { class: 'row' }, U.go, U.copy), U.st, U.sum, U.rep);
   lmUI();
@@ -272,6 +330,18 @@ function lmUI() {
   U.copy.hidden = !LM.res;
   U.sum.hidden = U.rep.hidden = !LM.res;
   if (LM.res && U.txt.value !== LM.txt) { U.txt.value = LM.txt; U.sum.replaceChildren(...LM.sum.map((x) => h('li', null, x))); }
+}
+// (Leistung, 23.10.2026) what the loops take now, live: their share of the budget and what the guard has eased
+function lmLive() {
+  const U = LM.ui; if (!U || !U.hx) return;
+  let t = '';
+  if (A.ctx && HX.node && hxLoopsLive().length) {
+    const live = hxLoopsLive(), sp = live.filter((L) => L.state === 'spielt').length, c = live.reduce((s, L) => s + hxCostOf(L), 0), G = HX.wGuard, now = performance.now();
+    t = 'Schleifen: ' + live.length + ', davon ' + sp + ' spielend – sie belegen ' + dec(c.toFixed(1)) + ' von ' + VBUDGET + ' Einheiten (dazu Humus und Effektkette ' + dec((hxLoad() - c).toFixed(1)) + '; angehaltene kosten nichts).' +
+      (G.hold && G.pause > now ? ' Lebendige spielen ihren letzten Durchgang, noch ' + Math.ceil((G.pause - now) / 1000) + ' s.' : G.pause > now ? ' Lebendig wartet, bis Rechenzeit frei ist.' : '') + (HX.tauRest ? ' Taumeln ruht.' : '');
+  }
+  if (U.hx.textContent !== t) U.hx.textContent = t;
+  U.hx.hidden = !t;
 }
 function lmCopy() {
   if (!LM.txt) return;
