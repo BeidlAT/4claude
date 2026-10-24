@@ -5,8 +5,9 @@
 // the OfflineAudioContexts still alive (CDP queryObjects in each frame's context – Chromium keeps one that loaded an
 // AudioWorklet module for as long as its document lives, so the realms are renewed: HX_WRENEW).
 //   1. the living loop renders on (passes done grow), every loop plays
-//   2. the heap and the renderer's memory reach a plateau: the last third's peak within 60 MB (heap) / 150 MB (resident)
-//      of the first third's peak after the warm-up, and no steady climb (the last third's mean under the middle's + 40 MB)
+//   2. the heap reaches a plateau: the last third's peak within 60 MB of the first third's after the warm-up, no steady
+//      climb (the last third's mean under the middle's + 40 MB); the renderer's resident memory rises at most 15 MB a
+//      minute (Chromium's own remainder per offline render with a worklet – see the row)
 //   3. no realm holds more than HX_WRENEW + 2 offline contexts; at least one realm was renewed
 //   node t-hx-soak.js        env SOAK_MIN (default 10), RENEW (renew realms after n renders – an experiment)
 const { chromium } = require('/opt/node22/lib/node_modules/playwright');
@@ -65,14 +66,22 @@ function rss(root) {
     const row = Object.assign({ m, rss: rss(process.pid), oac: await oac() }, s);
     rows.push(row); console.log('INFO ' + JSON.stringify(row));
   }
+  // (resident memory includes what the allocators keep for reuse: a memory-pressure signal – as the system sends when RAM
+  // runs short – asks them to give it back; what stays is held)
+  await cdp.send('Memory.simulatePressureNotification', { level: 'critical' }).catch(() => {}); await pg.evaluate(() => { if (window.gc) window.gc(); }); await cdp.send('HeapProfiler.collectGarbage').catch(() => {}); await pg.waitForTimeout(3000);
+  const rssP = rss(process.pid); console.log('INFO after a memory-pressure signal: ' + rssP + ' MB resident (before ' + rows[rows.length - 1].rss + ')');
   const third = Math.max(1, Math.floor((rows.length - 2) / 3)), warm = rows.slice(2), A1 = warm.slice(0, third), A2 = warm.slice(third, 2 * third), A3 = warm.slice(-third);
   const mx = (a, k) => Math.max(...a.map((r) => r[k])), mean = (a, k) => a.reduce((s, r) => s + r[k], 0) / a.length;
   const last = rows[rows.length - 1];
   ok(last.done > rows[1].done + 20 && last.spielt === 3, `1. ${MIN} min of playback: the living loop rendered ${last.done} passes, ${last.spielt} loops play`);
   ok(mx(A3, 'heap') <= mx(A1, 'heap') + 60 && mean(A3, 'heap') <= mean(A2, 'heap') + 40, `2. the heap reaches a plateau: ${rows.map((r) => r.heap).join(', ')} MB (peaks ${mx(A1, 'heap')} → ${mx(A3, 'heap')})`);
-  ok(mx(A3, 'rss') <= mx(A1, 'rss') + 150 && mean(A3, 'rss') <= mean(A2, 'rss') + 80, `2.   the renderer's resident memory too: ${rows.map((r) => r.rss).join(', ')} MB`);
+  // (the renderer's resident memory: what is left is Chromium's – an OfflineAudioContext that loaded an AudioWorklet
+  // module leaves ≈ 0.4–0.9 MB behind even after its frame is gone (min/frame.js in the HANDOFF); before the fix it rose
+  // 112 MB a minute. Bound: its slope over the last two thirds ≤ 15 MB a minute)
+  const slope = (mean(A3, 'rss') - mean(A2, 'rss')) / Math.max(1, A3[0].m - A2[0].m);
+  ok(slope <= 15, `2.   the renderer's resident memory: ${rows.map((r) => r.rss).join(', ')} MB – ${slope.toFixed(1)} MB a minute (before the fix ≈ 112)`);
   const most = Math.max(...rows.map((r) => Math.max(0, ...r.oac)));
-  ok(most <= 14 && last.renew >= 1, `3. offline contexts alive per realm at most ${most} (renewal after 12 renders), realms renewed ${last.renew} times`);
+  ok(most <= 14 && last.renew >= 1, `3. offline contexts alive per realm at most ${most} (renewal after 12 renders or 90 s), realms renewed ${last.renew} times`);
   ok(!errors.length, `no page errors (${errors.slice(0, 2).join(' | ')})`);
   await b.close();
   process.exit(H.summary() ? 1 : 0);

@@ -68,6 +68,7 @@ const hxwOk = () => HXW.st !== 'kein';
 function hxwRenew() {
   const now = performance.now();
   for (const R of [HXW, ...HXW.pool]) {
+    if (R && !R.old && R.used && now - R.t0 > HX_WRENEW_S * 1000) { R.old = true; R.oldT = now; }   // (one used seldom fills slowly: renewed after a while too)
     if (!R || !R.old || R.st !== 'ok' || R.n || R.wait.size || now - R.oldT < 3000) continue;
     let still = false;   // (a pass it rendered that sounds now or comes: its stream reads its port, ✓ asks it for that pass)
     for (const S of HX.sch.values()) {
@@ -92,13 +93,14 @@ function hxwRenew() {
 // the garbage collector's pauses) Chromium keeps every OfflineAudioContext that loaded an AudioWorklet module alive for
 // as long as its document lives – each render of a realm (a living pass ≈ 4 MB: its graph, its buffers) stayed for good;
 // measured, 8 % of a living pass's memory came back. Only the frame's going frees them: a realm is renewed after
-// HX_WRENEW renders – it takes no new living pass, and once nothing it rendered still sounds or may be kept (✓) and it
+// HX_WRENEW renders or HX_WRENEW_S seconds – it takes no new living pass, and once nothing it rendered still sounds or may be kept (✓) and it
 // waits for nothing, its frame goes (hxwRenew, in hxWTick); the next job boots a fresh one. Every render is its own
 // (seeded, built afresh), so the sound does not change.
 const HX_WRENEW = +(window.__hxRenew || 0) || 12;   // (window.__hxRenew: tests only)
+const HX_WRENEW_S = 90;   // (… or this many seconds after its first render)
 function hxwCall(job, d, tr, R0) {
   const R = R0 || HXW;
-  if (job === 'wuchs' || job === 'bake' || job === 'tail') { R.used = (R.used || 0) + 1; if (R.used >= HX_WRENEW && !R.old) { R.old = true; R.oldT = performance.now(); } }
+  if (job === 'wuchs' || job === 'bake' || job === 'tail') { if (!R.used) R.t0 = performance.now(); R.used = (R.used || 0) + 1; if (R.used >= HX_WRENEW && !R.old) { R.old = true; R.oldT = performance.now(); } }
   return hxWerk(R).then((ok) => new Promise((res) => {
     if (!ok || !R.port) { res(null); return; }
     const id = ++R.id;
