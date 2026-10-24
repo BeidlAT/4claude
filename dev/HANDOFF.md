@@ -9,6 +9,16 @@ Netz hält nichts den Start auf; gespielt wird nie unterbrochen. Nach dem Aktual
 Version“. Einmalig, beim Sprung von der jetzigen Version auf diese, kommt noch der alte kurze Hinweis „Neu laden“ – beim
 nächsten Öffnen ist die neue Version da. Was neu ist, steht in `myzel/CHANGELOG.json`.
 
+## Für den Besitzer – der volle Arbeitsspeicher am PC (24.10.2026)
+
+**Was los war:** Jeder neu gerechnete Durchgang einer lebendigen Schleife blieb im Speicher – der Browser (Chrome) gibt
+eine bestimmte Art von Rechenraum erst frei, wenn die ganze unsichtbare Rechen-Seite geschlossen wird. Nachgestellt: in
+10 Minuten von 0,4 auf 1,6 GB, gut 100 MB pro Minute; das häufige Aufräumen des Speichers ist sehr wahrscheinlich das
+Ruckeln. **Behoben:** Die Rechen-Seiten werden jetzt regelmäßig erneuert, laden schlanker, und lebendige Schleifen mit
+Myzels eingebauten Klängen brauchen diesen Rechenraum gar nicht mehr. Nachgemessen 15 Minuten: der Speicher bleibt
+flach (etwa 0,5 GB). Bei Klangquellen mit eigenem Rechenkern (Harz, Halm u. a.) bleibt pro Durchgang noch ein kleiner Rest
+im Browser (unter 1 MB) – deutlich weniger als vorher, aber nicht null. Am Klang ändert sich nichts.
+
 ## Für den Besitzer – deine zwei Messberichte (23.10.2026, nachts)
 
 **Was los war:** In Bericht A spielte keine der 8 Schleifen (sie waren angehalten, etwa nach dem Neuladen) – trotzdem
@@ -149,6 +159,12 @@ slows only the main thread). Built: the out-1 chain copy rests (`HXF1`, `hxF1Tic
 each part of `tick()` and the frame loop (`frameBody`); the recorder's tap renewed when it stops (`capDrop`); the bar
 info's tempo (`barGrid`). Suite `hexenring/t-hx-phone.js` (in run-all; its part 8 needs root for the cgroup).
 `v2/mk.sh` exports the phone-report names (guarded line `hxF1Tick`).
+
+**Memory – the desktop report (built, 24.10.2026):** SPEC §8 „As built (memory)“. Realms renewed (`hxwRenew`,
+`HX_WRENEW`/`HX_WRENEW_S`, `R.used/t0/old`), booted from srcdoc (`hxwShell`), one DSP Blob (`DSP.url`), WSend `fin`, the
+worklet-free sink `hxwNs`. Test `hexenring/t-hx-soak.js` (in run-all; `SOAK_MIN`, `RENEW`); harnesses (not in the repo)
+`scratchpad/x8/mem.js` (heap, RSS, objects per frame context via CDP queryObjects, `--snap`), `x8/dump.js` (memory-infra
+allocator diff), `x8/min/*.js` (the Chromium reproductions). `v2/mk.sh` exports `hxwRenew/hxwRealm/hxwCall`.
 
 **Report A – loops on a phone (built, 23.10.2026, night):** SPEC §10.5 and §21 „As built (report A)“. Root cause: the
 8 loops did not play (`spielt=0`, restored or halted) yet `span()` read every Schicht of a halted/muted loop (Taumeln's

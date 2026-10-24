@@ -590,6 +590,24 @@ folgen der Effektkette.“
 
 ---
 
+**As built (memory, 24.10.2026).** The owner's desktop report: memory filling while loops only played (80 % after 10
+min), the screen hitching. Measured (`t-hx-soak`, desktop, three loops – Lebendig, Treu, Abdruck – 10 min, nothing
+played): the page's heap 66 → 534 MB, the renderer 444 → 1567 MB (+112 MB a minute), 69 offline contexts alive per realm.
+Cause: Chromium keeps every OfflineAudioContext that loaded an AudioWorklet module alive while its document lives (a C++
+persistent root through its AudioWorklet) – every living pass's render with its graph and buffers; after the frame goes,
+≈ 0.4–0.9 MB of each still stays (both reproduced with a ten-line page). Loading the app's 2.3 MB inline script into a
+frame left ≈ 5 MB per load; a Blob of the 475 kB DSP module per render stayed in the browser's blob storage. Built:
+realms renewed (`hxwRenew`: after `HX_WRENEW` 12 renders or `HX_WRENEW_S` 90 s – no new living pass, dropped once
+nothing it rendered sounds or may be kept by ✓ and it waits for nothing, its port to the live ring closed (`wportOff`),
+booted again warm); a realm boots from srcdoc with the app script from one Blob (`hxwShell`, `window.name` 'myzel-werk';
+?werk=1 stays the fallback); one DSP Blob URL per page (`DSP.url`); the stream sink lets go when done (WSend `fin`);
+and a living pass whose sources and chain need no worklet streams without one (`hxwNs`/`hxwNsPre`: two analysers read at
+each chunk's end – WSend's rule frame for frame; made before the render's graph, else they missed its first quantum).
+After (same soak, 15 min): heap 107–172 MB, renderer 450–526 MB – flat; offline contexts per realm ≤ 2. Left: a living
+pass of a source that needs the worklet (Harz, Halm, …) still loads the module, so Chromium's remainder (≈ 0.4–0.9 MB a
+pass) stays for those – the realms' renewal bounds everything else. t-hx-wuchs: streams equal the renders (−143 dB),
+✓ exact.
+
 ## 9. Abdruck bake and Taumeln
 
 - **Chain state recording:** the main thread logs, in the Humus timebase, the chain-relevant values: `fx.*` params of
