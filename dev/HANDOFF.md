@@ -1,8 +1,9 @@
 # Übergabe: Myzel (Stand 22.10.2026 – Klangquellen, Ruhe und der Hexenring fertig, Schlussprüfung grün)
 
-## Nächste Sitzung – hier weitermachen (Stand 24.10.2026, abends)
+## Nächste Sitzung – hier weitermachen (Stand 24.10.2026, nachts)
 
-Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`). Offen, in dieser Reihenfolge:
+Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`); Punkt 3 und 4 liegen auf dem Branch
+`claude/handoff-ideen-review-5ca6uj` und warten auf die Veröffentlichung (Pull Request, wenn der Besitzer es sagt). Offen, in dieser Reihenfolge:
 
 1. **Ausrichtung – entschieden (24.10.2026):** der **PC mit Keyboard ist Hauptgerät** (dafür entwickeln, messen,
    optimieren); das iPad läuft über die Web-App mit (MIDI dort evtl. über eine iPad-Browser-App wie „Web MIDI Browser“
@@ -15,12 +16,16 @@ Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`)
    neue Schleife an und fragt „als Schicht auf Schleife 1?“); E3 entfällt (Handy). **E4–E8 bleiben offen – nichts bauen**,
    bis der Besitzer es sagt. Beim Umbau: zuerst Maus, Tastatur, Tastenkürzel und MIDI, Touch zweitrangig.
    B1 (Doppeltipp) ist behoben; B2–B13 gehören in den Umbau.
-3. **Restliche kurze Aussetzer am PC:** die Last des einen Audio-Kerns; bei Schleifen kostet Taumelns Resampler ≈ 80 %.
-   Nächster Schritt: Taumeln ohne Klangänderung schneller rechnen. Danach evtl. Schleifen in Workern vorausrechnen
-   (SharedArrayBuffer über einen Service-Worker-Umweg) und WebAssembly für die teuersten Kerne. Der Besitzer schickt evtl.
-   einen neuen „Leistung messen“-Bericht (Zeilen `ulog`, `nichtLeb`).
-4. **Lastwächter:** `baseline.json` neu messen – die Mehrlast in der Android-Nachbildung kommt vom Standard „Minimal“
-   (Entscheidung des Besitzers), nicht von einem Fehler.
+3. **Restliche kurze Aussetzer am PC – Taumeln gebaut (24.10.2026, Branch `claude/handoff-ideen-review-5ca6uj`, noch nicht
+   veröffentlicht):** Resampler und Entdriften laufen bitgleich in WebAssembly (SPEC §10.5 „As built (Taumeln faster)“).
+   Live kosten 6 Schleifen mit Taumeln 3,3 statt 4,7 Punkte eines Kerns (Grundlast der App ohne Schleifen ≈ 20,7) – Taumeln
+   war live ein kleinerer Teil als gedacht. **Rückmeldung des Besitzers (24.10.2026, vor diesem Schritt):** am PC
+   „weitgehend stabil“, viele Schleifen und gleichzeitiges Spielen gut; einmal musste er die Qualität auf „Mittel“
+   stellen. Nächste Kandidaten, wenn es weiter aussetzt: ein „Leistung messen“-Bericht vom PC (Zeilen `ulog`, `loops`
+   mit `rs=wasm`), dann die Grundlast der Live-Kette und der Stimmen messen (das ist jetzt der größte Teil), Schleifen in
+   Workern vorausrechnen (SharedArrayBuffer über einen Service-Worker-Umweg), WebAssembly für weitere teure Kerne.
+4. **Lastwächter:** `baseline.json` neu gemessen (24.10.2026, Referenz = der Stand mit WebAssembly) – die Mehrlast in der
+   Android-Nachbildung kam vom Standard „Minimal“ (Entscheidung des Besitzers), nicht von einem Fehler.
 5. **Offene Fragen ans Ohr:** Schale spricht wie früher das Harz-Glas manchmal spät an (soll sie immer sofort?);
    Bandträgheit, Gärtner-Bass, Musikalität der Antworten (siehe `dev/IDEEN.md`).
 6. **Danach** die Liste in `dev/IDEEN.md` (Sample-Bibliothek, Stimme als Instrument, neue Klangerzeugung, native App).
@@ -551,6 +556,18 @@ Then use these:
   (`sh run.sh baseline`) once the owner accepts that cost.
 - Open: Taumeln's resampler (`rd`, 32 taps per frame and Schicht) is 80 % of the ring processor's time – an exact speed-up
   would cut the loops' audio load most.
+
+### Notes from the Taumeln step (24.10.2026, session on `claude/handoff-ideen-review-5ca6uj`)
+- SPEC §10.5 „As built (Taumeln faster)“. The WebAssembly source is `dev/tools/wasm/rs.c`; `sh dev/tools/wasm/build.sh`
+  (clang 18, wasm-ld – both in the container) regenerates `myzel/src/js/dsp/rs-wasm.js` (base64; decoded without atob –
+  the AudioWorklet scope may lack it). Any change to `rd`'s or `ddJob`'s arithmetic must change rs.c alike; the proofs:
+  `hexenring/t-hx-rsw.js` (in run-all) and the Node harnesses in the session's scratchpad (`rs/bench.js`, `rs/edge.js`
+  old vs new reads with `Object.is`, `rs/whole.js` the processor with six loops – not in the repo; rebuild them from SPEC's
+  description if needed). Live comparison: `node hexenring/live-tau.js <slotA> <slotB> [rounds]` (6 harvested loops, drift 8 ct, guard held
+  back, /proc CPU of the render threads, builds alternating; not in run-all).
+- Bit-exactness rules learned: the read position must run in the same doubles (pass the absolute p and a base offset –
+  `p − base` then `+= r` rounds differently); no FMA; a skipped frame is −0 (adding −0 is the identity; a sum that starts
+  at +0 is never −0, so ddJob writes `+ 0`).
 
 ### Owner's calls (open)
 - **Handy und Schleifen (report A, 23.10.2026) – options that change the sound on a phone, not built:** (1) Wuchs on
