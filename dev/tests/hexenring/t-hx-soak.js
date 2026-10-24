@@ -7,7 +7,7 @@
 //   1. the living loop renders on (passes done grow), every loop plays
 //   2. the heap reaches a plateau: the last third's peak within 60 MB of the first third's after the warm-up, no steady
 //      climb (the last third's mean under the middle's + 40 MB); the renderer's resident memory rises at most 15 MB a
-//      minute (Chromium's own remainder per offline render with a worklet – see the row)
+//      minute (flat: the living pass streams without a worklet)
 //   3. no realm holds more than HX_WRENEW + 2 offline contexts; at least one realm was renewed
 //   node t-hx-soak.js        env SOAK_MIN (default 10), RENEW (renew realms after n renders – an experiment)
 const { chromium } = require('/opt/node22/lib/node_modules/playwright');
@@ -75,11 +75,11 @@ function rss(root) {
   const last = rows[rows.length - 1];
   ok(last.done > rows[1].done + 20 && last.spielt === 3, `1. ${MIN} min of playback: the living loop rendered ${last.done} passes, ${last.spielt} loops play`);
   ok(mx(A3, 'heap') <= mx(A1, 'heap') + 60 && mean(A3, 'heap') <= mean(A2, 'heap') + 40, `2. the heap reaches a plateau: ${rows.map((r) => r.heap).join(', ')} MB (peaks ${mx(A1, 'heap')} → ${mx(A3, 'heap')})`);
-  // (the renderer's resident memory: what is left is Chromium's – an OfflineAudioContext that loaded an AudioWorklet
-  // module leaves ≈ 0.4–0.9 MB behind even after its frame is gone (min/frame.js in the HANDOFF); before the fix it rose
-  // 112 MB a minute. Bound: its slope over the last two thirds ≤ 15 MB a minute)
+  // (the renderer's resident memory: before the fix it rose 112 MB a minute; with these native sources the living pass
+  // streams without a worklet and it stays flat. A source that needs the worklet still leaves Chromium's ≈ 0.4–0.9 MB per
+  // pass behind – SPEC §8 „As built (memory)“. Bound: its slope from the middle to the last third ≤ 5 MB a minute)
   const slope = (mean(A3, 'rss') - mean(A2, 'rss')) / Math.max(1, A3[0].m - A2[0].m);
-  ok(slope <= 15, `2.   the renderer's resident memory: ${rows.map((r) => r.rss).join(', ')} MB – ${slope.toFixed(1)} MB a minute (before the fix ≈ 112)`);
+  ok(slope <= 5, `2.   the renderer's resident memory: ${rows.map((r) => r.rss).join(', ')} MB – ${slope.toFixed(1)} MB a minute (before the fix ≈ 112)`);
   const most = Math.max(...rows.map((r) => Math.max(0, ...r.oac)));
   ok(most <= 14 && last.renew >= 1, `3. offline contexts alive per realm at most ${most} (renewal after 12 renders or 90 s), realms renewed ${last.renew} times`);
   ok(!errors.length, `no page errors (${errors.slice(0, 2).join(' | ')})`);
