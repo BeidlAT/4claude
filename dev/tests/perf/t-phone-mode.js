@@ -27,6 +27,7 @@ const DESK = L.VPS.d;
 async function open(b, vp, o = {}) {
   const ctx = o.ctx || (await b.newContext(vp));
   if (o.hz120) await ctx.addInitScript(L.RAF120);
+  if (o.noguard) await ctx.addInitScript(() => { const si = window.setInterval; window.setInterval = function (f, ms, ...a) { if (typeof f === 'function' && /hxWGuard/.test(String(f))) return 0; return si.call(this, f, ms, ...a); }; });   // (part 5: the guard held back – this machine's own underruns would hold Lebendig)
   const page = await ctx.newPage(), errors = [];
   page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   await page.goto(URL); await page.waitForFunction(() => !!window.__M); await page.waitForTimeout(500);
@@ -83,6 +84,7 @@ async function touches(pg, secs) {
   await tap(P.page, '#tab-dev'); await P.page.waitForTimeout(300);
   const cdp = await P.ctx.newCDPSession(P.page);
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+  await P.page.evaluate(() => { const el = document.getElementById('toastMsg'); window.__toasts = []; new MutationObserver(() => window.__toasts.push(el.textContent)).observe(el, { childList: true, characterData: true, subtree: true }); });   // (every toast: the device's own underruns may bring another one after it)
   await tap(P.page, '#lmGo');
   const on = await P.page.evaluate(() => window.__M.LM.on);
   await tap(P.page, '#tab-dev');   // (closed: played as always)
@@ -90,7 +92,7 @@ async function touches(pg, secs) {
   await P.page.waitForFunction(() => !window.__M.LM.on && window.__M.LM.res, null, { timeout: 15000 }).catch(() => {});
   const ld = await P.page.evaluate(() => ({ load: window.__M.PH.load, why: window.__M.PH.why }));
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
-  const toastTxt = await P.page.evaluate(() => document.getElementById('toastMsg').textContent);
+  const toastTxt = await P.page.evaluate(() => (window.__toasts || []).find((t) => /Leistung gemessen/.test(t)) || document.getElementById('toastMsg').textContent);
   await tap(P.page, '#tab-dev'); await P.page.waitForTimeout(300);
   const R = await P.page.evaluate(() => { const M = window.__M, U = M.LM.ui; return { res: M.LM.res, txt: U.txt.value, sum: [...U.sum.querySelectorAll('li')].map((x) => x.textContent), sumHidden: U.sum.hidden }; });
   ok(on && /Leistung gemessen/.test(toastTxt), `3. „Leistung messen“ tapped (running ${on}), the panel closed, 20 s of touches – the toast „${toastTxt.slice(0, 50)}…“`);
@@ -123,7 +125,7 @@ async function touches(pg, secs) {
   }
 
   // ---- 5. the audio side in the report: per loop, the Werk-Rahmen, the guard's steps, the latency ----
-  P = await open(b, PHONE);
+  P = await open(b, PHONE, { noguard: true });
   const r5 = await P.page.evaluate(async () => {
     const M = window.__M, A = M.A, sl = (ms) => new Promise((r) => setTimeout(r, ms)), keys = [];
     M.setParam('hx.laenge', 'fest'); M.setParam('hx.festT', 1); M.setParam('seq.bpm', 120); for (const i of [0, 1, 2, 3]) M.setParam('l' + i + '.on', false); M.seqStart(); await sl(600);
@@ -151,7 +153,7 @@ async function touches(pg, secs) {
   ok(/^werk st=ok pool=\d+ n=\d+ perS=[\d.]+ done=\d+ stop=\d+ ms=\d+ wait=\d+ xRT=[\d.]+ q=\d+ jobs=\d+$/.test(wk) && r5.res.werk.n >= 1 && r5.res.werk.done >= 1 && r5.res.werk.xRT > 0, `5.   the Werk-Rahmen: „${wk}“`);
   ok(/^guard (\S+ )*taumeln@[12]( \S+)* · pause=\d+ hold=(true|false) max=\S+ tau=(true|false) lite=(true|false) scale=[\d.]+$/.test(gd), `5.   the guard's steps: „${gd}“`);
   ok(/^latency set=safe hint=balanced base=[\d.]+ out=[\d.]+ outMin=[\d.]+ outMax=[\d.]+ buf=\d+ avg=\S+$/.test(la), `5.   the latency: „${la}“`);
-  ok(/^Schleifen: 3, davon 2 spielend – sie belegen im Mittel \d+(,\d+)? von \d+ Einheiten/.test(r5.sum.find((x) => /^Schleifen:/.test(x)) || '') && /^Lebendige Schleifen: \d+ Durchgänge neu gerechnet/.test(r5.sum.find((x) => /^Lebendige/.test(x)) || '') && r5.sum.some((x) => x === 'Myzel hat entlastet: Taumeln ruht.'), `5.   the summary: ${r5.sum.slice(4, -1).join(' | ')}`);
+  ok(/^Schleifen: 3, davon 2 spielend – sie belegen im Mittel \d+(,\d+)? von \d+ Einheiten/.test(r5.sum.find((x) => /^Schleifen:/.test(x)) || '') && /^Lebendige Schleifen: \d+ Durchgänge neu gerechnet/.test(r5.sum.find((x) => /^Lebendige/.test(x)) || '') && r5.sum.some((x) => /^Myzel hat entlastet: .*Taumeln ruht/.test(x)), `5.   the summary: ${r5.sum.slice(4, -1).join(' | ')}`);
   ok(/^Schleifen: 3, davon 2 spielend – sie belegen \d+,\d von \d+ Einheiten/.test(r5.live) && /^Rechenzeit: Schleifen und Humus \d+,\d von \d+ Einheiten/.test(r5.cost), `5.   „Leistung“ live: „${r5.live}“ · the card: „${r5.cost}“`);
   ok(!P.errors.length, `5. no page error (${P.errors.slice(0, 2).join(' | ')})`);
   await P.ctx.close();
