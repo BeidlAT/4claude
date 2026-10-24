@@ -90,17 +90,18 @@ function hxwRenew() {
 // (Leistung) the stream's sink without a worklet – WSend's rule, frame for frame: two analysers (one channel each, so no
 // downmix; fftSize = a chunk) hold the last chunk at each chunk's end, read at a suspend there; the tripwire, the end
 // 90 dB under the body's peak, the last 30 ms faded; the part after the last whole chunk comes from the render's buffer.
-// The analysers are made before the render's graph: made after it, they missed its first quantum (measured)
-const HXW_NS = false;   // (off: its analysers miss a pass's first quantum now and then – being fixed)
+// The analysers hear the pass one quantum late, through a delay of exactly 128 frames, and are read a quantum later: fed
+// directly they missed the render's first quantum in about one render of three (measured; the delay's own first output
+// is its zeros)
+const HXW_NS = true;
 function hxwNsPre(ctx) {
-  const up = ctx.createGain(); up.channelCount = 2; up.channelCountMode = 'explicit'; up.channelInterpretation = 'speakers';
+  const up = ctx.createDelay(1); up.delayTime.value = 128 / SR; up.channelCount = 2; up.channelCountMode = 'explicit'; up.channelInterpretation = 'speakers';
   const sp = ctx.createChannelSplitter(2), aL = ctx.createAnalyser(), aR = ctx.createAnalyser(), z = ctx.createGain(); z.gain.value = 0;
   aL.fftSize = aR.fftSize = HX_CH; up.connect(sp); sp.connect(aL, 0); sp.connect(aR, 1); aL.connect(z); aR.connect(z); z.connect(ctx.destination);
   return { up, aL, aR };
 }
 function hxwNs(ctx, pre, tap, port, n, body, from) {
   const CH = HX_CH, { up, aL, aR } = pre;
-  tap.connect(up);
   const fN = Math.min(Math.max(1, n - body), Math.round(0.03 * SR)), f0 = n - fN;
   const S = { c0: Math.floor(Math.max(0, from) / CH) * CH, pk: 0, done: false, bad: 0, badT: false, F: 0 };
   // one chunk [st, st + m) of samples L/R: scrubbed, faded at the end, its peak; sent – or the end
@@ -244,6 +245,7 @@ async function hxwNotes(d) {
   HXW.ctx = ctx;
   try { initAudio(); } finally { HXW.ctx = null; }
   try { A.out.disconnect(); } catch (e) {}
+  if (nsPre) A.hxIn0.connect(nsPre.up);   // (the sink's analysers in the graph from its start)
   const strm = !!d.port, needW = !!(d.chain || notes.some((n) => ENGINES[n.eng] && ENGINES[n.eng].needs) || notes.some((n) => n.eng === 'gsp'));
   // (Leistung, 23.10.2026) a living pass whose sources and chain need no AudioWorklet streams without one (hxwNs): an
   // OfflineAudioContext that loaded a worklet module leaves memory behind in Chromium even after its frame is gone
@@ -285,7 +287,7 @@ async function hxwNotes(d) {
   });
   if (notes.some((n) => n.eng === 'kor' || n.eng === 'rhz')) for (let t = 0; t < dur; t += 0.025) add(t, () => { const h = ctx.currentTime + 0.12; grainTick(h); if (RHZ.vs.size || RHZ.q.length) rhzRun(h); });
   for (const [t, fn] of chainEv) add(t, fn);
-  if (ns) for (let F = ns.c0 + HX_CH; F < len; F += HX_CH) { const b = F / 128; if (!work.has(b)) work.set(b, []); work.get(b).push(() => ns.read(F)); }   // (each whole chunk read at its end)
+  if (ns) for (let F = ns.c0 + HX_CH; F + 128 < len; F += HX_CH) { const b = F / 128 + 1; if (!work.has(b)) work.set(b, []); work.get(b).push(() => ns.read(F)); }   // (each whole chunk read a quantum after its end – the delay)
   for (const [t, id, v] of d.prm || []) add(t, () => { if (PD[id]) P[id] = v; });   // (step 2a: the engines' Bewegung lanes, as they were turned)
   // the pacing: a suspend every 0.25 s of the body from where it is heard (d.from) – each waits until its frame is at
   // most d.lead s ahead of the live one; the field's knobs (d.feld) are taken there too

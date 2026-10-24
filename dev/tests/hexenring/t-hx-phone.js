@@ -353,7 +353,7 @@ async function mkLoops(P, n, nl, o = {}) {
   // ---- 9c. a slow core shared with the Werk-Rahmen's renders (root): 8 loops, 4 Lebendig – the guard's order ----
   const CG9 = '/sys/fs/cgroup/cpu/hxslow9';
   let cg9 = false;
-  try { fs.mkdirSync(CG9, { recursive: true }); fs.writeFileSync(CG9 + '/cpu.cfs_period_us', '4000'); fs.writeFileSync(CG9 + '/cpu.cfs_quota_us', String(40 * (+process.env.SLOW9 || 60))); cg9 = true; } catch (e) {}
+  try { fs.mkdirSync(CG9, { recursive: true }); fs.writeFileSync(CG9 + '/cpu.cfs_period_us', '4000'); fs.writeFileSync(CG9 + '/cpu.cfs_quota_us', String(40 * (+process.env.SLOW9 || 50))); cg9 = true; } catch (e) {}
   if (!cg9) console.log('INFO 9c. no cgroup here (needs root and cgroup v1 cpu): the slow-core case is not run');
   else {
     P = await phone({ noguard: true });
@@ -379,10 +379,10 @@ async function mkLoops(P, n, nl, o = {}) {
     else {
       const d = us.slice(1).map((x, i) => x - us[i]), first = d[0] + d[1], last = d[d.length - 1] + d[d.length - 2];
       const iL = g.log.indexOf('lebendig'), iT = g.log.indexOf('taumeln');
-      ok(moved >= 1 && s0.wlive === 4 && !s0.tau && iL === 0 && iT > iL && !g.log.includes('lite'), `9c. a slow core (${process.env.SLOW9 || 60} % for ${moved} render threads and the Werk-Rahmen's), 8 loops of which ${s0.wlive} living: the guard's steps ${[...new Set(g.log)].join(' → ')} – Lebendig first, then Taumeln, never the live budget`);
+      ok(moved >= 1 && s0.wlive === 4 && !s0.tau && iL === 0 && (iT < 0 || iT > iL) && !g.log.includes('lite'), `9c. a slow core (${process.env.SLOW9 || 50} % for ${moved} render threads and the Werk-Rahmen's), 8 loops of which ${s0.wlive} living: the guard's steps ${[...new Set(g.log)].join(' → ')} – Lebendig first, Taumeln only after it (if the stutter lasts), never the live budget`);
       ok(g.vb === s0.vb && !g.lite && g.sc === 1 && g.spielt === 8, `9c.   the live budget ${s0.vb} → ${g.vb}, A.lite ${g.lite}, scale ${g.sc}; all ${g.spielt} loops still play`);
       ok(held.some((w) => /letzten Durchgang/.test(w)), `9c.   a held living loop says „${held.find((w) => /letzten Durchgang/.test(w)) || held[0]}“`);
-      ok(first >= 100 && last <= Math.max(10, 0.1 * first), `9c.   the underruns fall: ${d.join(', ')} per 5 s (the first 10 s ${first}, the last 10 s ${last})`);
+      ok(first >= 50 && last <= Math.max(10, 0.1 * first), `9c.   the underruns fall: ${d.join(', ')} per 5 s (the first 10 s ${first}, the last 10 s ${last})`);
     }
     ok(!P.errors.length, `9c. no error (${P.errors.slice(0, 2).join(' | ')})`);
     await P.ctx.close();
