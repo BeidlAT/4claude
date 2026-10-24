@@ -975,7 +975,7 @@
       if (pos < n) this.play(outs, F, pos, n);
       this.done += n;
       // reports: the clock pair, the meters
-      if ((this.rep -= n) <= 0) { this.rep += Math.round(0.25 * SR); this.port.postMessage({ frame: F, t: currentTime }); }
+      if ((this.rep -= n) <= 0) { this.rep += Math.round(0.25 * SR); this.port.postMessage({ frame: F, t: currentTime, rsw: this.rsW ? 1 : 0 }); }   // (rsw: the resampler in WebAssembly)
       if (this.wpt.length && (this.wrep -= n) <= 0) { this.wrep += Math.round(0.1 * SR); for (const p of this.wpt) p.postMessage({ fr: F + n }); }
       if ((this.loops.length || this.hOK) && (this.met -= n) <= 0) {   // (and the two rings' input level: what the Humus holds)
         this.met += Math.round(SR / 15);
