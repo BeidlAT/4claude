@@ -91,7 +91,7 @@ function hxwRenew() {
 // downmix; fftSize = a chunk) hold the last chunk at each chunk's end, read at a suspend there; the tripwire, the end
 // 90 dB under the body's peak, the last 30 ms faded; the part after the last whole chunk comes from the render's buffer.
 // The analysers are made before the render's graph: made after it, they missed its first quantum (measured)
-const HXW_NS = true;
+const HXW_NS = false;   // (off: its analysers miss a pass's first quantum now and then – being fixed)
 function hxwNsPre(ctx) {
   const up = ctx.createGain(); up.channelCount = 2; up.channelCountMode = 'explicit'; up.channelInterpretation = 'speakers';
   const sp = ctx.createChannelSplitter(2), aL = ctx.createAnalyser(), aR = ctx.createAnalyser(), z = ctx.createGain(); z.gain.value = 0;
