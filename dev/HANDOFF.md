@@ -1,5 +1,32 @@
 # Übergabe: Myzel (Stand 22.10.2026 – Klangquellen, Ruhe und der Hexenring fertig, Schlussprüfung grün)
 
+## Nächste Sitzung – hier weitermachen (Stand 24.10.2026, abends)
+
+Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`). Offen, in dieser Reihenfolge:
+
+1. **Ausrichtung bestätigen lassen (Vorschlag, noch nicht entschieden):** der **PC mit Keyboard wird Hauptgerät**
+   (dafür entwickeln, messen, optimieren); iPad läuft über die Web-App mit (MIDI dort evtl. über eine iPad-Browser-App wie
+   „Web MIDI Browser“ oder „Bluefy“ – ungetestet, Besitzer probiert), Handy nebenher ohne eigene Arbeit. Grund: Apple
+   verlangt 99 €/Jahr für eigene Apps; am PC mit Keyboard macht es dem Besitzer am meisten Spaß. Native App später zuerst
+   für Windows (siehe `dev/IDEEN.md`).
+2. **Looper-Bedienung neu:** Audit, Konzept und klickbares Mockup liegen in `dev/looper/bedienung/` (AUDIT.md, KONZEPT.md,
+   mockup.html; privates Artifact: https://claude.ai/artifact/UDuaiAtuLNikwVvJ6NuRnu). Der Besitzer entscheidet E1–E8
+   aus KONZEPT.md, erst dann umbauen. Bei PC-Schwerpunkt: zuerst Maus, Tastatur, Tastenkürzel und MIDI, Touch zweitrangig.
+   B1 (Doppeltipp) ist behoben; B2–B13 gehören in den Umbau.
+3. **Restliche kurze Aussetzer am PC:** die Last des einen Audio-Kerns; bei Schleifen kostet Taumelns Resampler ≈ 80 %.
+   Nächster Schritt: Taumeln ohne Klangänderung schneller rechnen. Danach evtl. Schleifen in Workern vorausrechnen
+   (SharedArrayBuffer über einen Service-Worker-Umweg) und WebAssembly für die teuersten Kerne. Der Besitzer schickt evtl.
+   einen neuen „Leistung messen“-Bericht (Zeilen `ulog`, `nichtLeb`).
+4. **Lastwächter:** `baseline.json` neu messen – die Mehrlast in der Android-Nachbildung kommt vom Standard „Minimal“
+   (Entscheidung des Besitzers), nicht von einem Fehler.
+5. **Offene Fragen ans Ohr:** Schale spricht wie früher das Harz-Glas manchmal spät an (soll sie immer sofort?);
+   Bandträgheit, Gärtner-Bass, Musikalität der Antworten (siehe `dev/IDEEN.md`).
+6. **Danach** die Liste in `dev/IDEEN.md` (Sample-Bibliothek, Stimme als Instrument, neue Klangerzeugung, native App).
+
+**Arbeitsweise, die der Besitzer will:** ein Thema pro Bauabschnitt, lange Prüfungen (Gesamtprüfung, Lastwächter) nur
+einmal vor der Veröffentlichung, kurz und ehrlich berichten, keine Gerätemodelle oder E-Mails ins (öffentliche) Repo.
+Neue Klang-Logik als reiner DSP-Code schreiben (leicht nach C++ portierbar).
+
 ## Für den Besitzer – dein Bericht vom Rechner (24.10.2026, abends)
 
 **Was los war:** Nach den ersten Aussetzern hatte Myzel am Rechner noch die alte Notbremse gezogen: sechsmal weniger
