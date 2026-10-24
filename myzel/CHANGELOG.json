@@ -2,6 +2,15 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-24b",
+      "punkte": [
+        "Auf Android-Handys klingt Myzel jetzt viel schneller nach dem Antippen: Die Latenz steht dort von selbst auf „Minimal“.",
+        "Setzt der Klang damit immer wieder aus, stellt Myzel ab dem nächsten Start auf „Standard“, danach auf „Sicher“, und sagt es dir einmal. Was du unter „Gerät“ selbst gewählt hast, bleibt.",
+        "Die Verzerrung klingt in „Minimal“ jetzt genauso voll wie in den anderen Stufen.",
+        "Braucht der Weg zum Lautsprecher über 100 ms, schlagen „Gerät“ und „Leistung messen“ vor, was hilft."
+      ]
+    },
+    {
       "id": "2026-10-24",
       "punkte": [
         "Angehaltene Schleifen kosten keine Rechenzeit mehr. Vorher rechnete das Gerät sie im Hintergrund weiter, und das Live-Spiel kam auf dem Handy ins Stocken.",

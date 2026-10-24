@@ -1,5 +1,24 @@
 # Übergabe: Myzel (Stand 22.10.2026 – Klangquellen, Ruhe und der Hexenring fertig, Schlussprüfung grün)
 
+## Für den Besitzer – Latenz am Handy (24.10.2026)
+
+**Gebaut, wie du entschieden hast:** Auf Android steht die Latenz jetzt von selbst auf **„Minimal“** – bei neuen
+Installationen und bei allen, die sie nie selbst umgestellt haben (wer „Standard“ oder „Minimal“ selbst gewählt hat,
+behält das; ein gespeichertes „Sicher“ war bisher immer die Voreinstellung und wird jetzt „Minimal“). Setzt der Klang damit
+immer wieder aus (nicht bei ein paar winzigen Aussetzern wie in deiner Messung), stellt Myzel ab dem nächsten Klangstart auf
+„Standard“, danach auf „Sicher“, und sagt es einmal – mit „Jetzt neu starten“. Sofort geht es nicht: der Browser legt den
+Puffer beim Klangstart fest, ein Wechsel mitten im Spiel hieße neu laden. Was du unter „Gerät“ selbst wählst, fasst Myzel
+nie an; „Wieder automatisch“ dort macht es rückgängig. Rechner und iPad wie bisher. **Die Verzerrung behält in „Minimal“
+ihre Überabtastung** (gleicher Klang wie in den anderen Stufen, Sample für Sample geprüft; 2–4 ms mehr). Schleifen, die
+vorher in „Minimal“ aufgenommen wurden, klingen beim Neurechnen weiter so, wie sie aufgenommen wurden. Über 100 ms bis zum
+Lautsprecher schlagen „Gerät“ und „Leistung messen“ „Minimal“ vor, auf Android auch Firefox (sehr kurz, aber ohne MIDI).
+**Das Audio-Herz (AudioWorklet) kostet keine messbare Latenz:** in Chromium mit Android-Nachbildung gleiche Puffer- und
+Ausgabewerte mit und ohne, gleiche Zeitstempel (±0,5 ms), vom Antippen bis zum Ton im Rauschen der Messung. Am echten Handy
+bitte einmal „Leistung messen“ in der neuen Version – dort steht es endgültig.
+**Zum Entscheiden:** In „Minimal“ darf Myzel auf Stufe 2 und 3 nur 40 % statt 50 % eines Kerns für Stimmen nutzen (mehr
+Reserve gegen Aussetzer beim kleinsten Puffer). Das war schon immer so und gilt jetzt auf Android standardmäßig – es kann
+dort weniger gleichzeitige Stimmen bedeuten, nie anderen Klang. Lassen oder auf 50 % angleichen?
+
 ## Für den Besitzer – Updates beim Start (23.10.2026)
 
 Die installierte App fragt jetzt gleich auf dem Startbildschirm nach einer neuen Version, bevor der Klang startet. Gibt
@@ -159,6 +178,21 @@ slows only the main thread). Built: the out-1 chain copy rests (`HXF1`, `hxF1Tic
 each part of `tick()` and the frame loop (`frameBody`); the recorder's tap renewed when it stops (`capDrop`); the bar
 info's tempo (`barGrid`). Suite `hexenring/t-hx-phone.js` (in run-all; its part 8 needs root for the cgroup).
 `v2/mk.sh` exports the phone-report names (guarded line `hxF1Tick`).
+
+**Latency (built, 24.10.2026):** `ui/leistung.js` section „the latency's default on Android“: `LAT` {own, auto},
+`myzel.lat.v1`, `latRestore` (from `restoreState`; a stored 'safe' on Android without the mark = the old default),
+`latChosen` (from `onDeviceChanged`, skipped under `LAT.quiet`), `latSet`, `latAutoAgain` (#latAuto), `latWatch` (from
+`watchUnderruns`: 100 ms missing or 12 s with underruns within 30 s, clock-only 4; not in the first 5 s; one step per
+session, from the next start; guard log step `latenz`), `latHint(ms)` (Gerät's `updLatText`, the LM summary's „Tipp:“).
+`dev.lat` default `MOBILE && !ANDROID ? 'std' : 'min'`. `updDrive`: oversampling never depends on dev.lat; `HX_CHAIN`
+lost 'dev.lat', a record that still has it renders 'min' as 'none' (`HXW.latOld`, set in `hxwChain`/`hxwBake`'s `all`).
+`applyQuality`'s cap reads `A.latMode` while a context runs. LM latency line `set ctx own step hint …`. Tests
+`perf/t-phone-mode.js` part 6 (51 rows in all). Worklet latency, headless Chromium, Android emulation (`scratchpad/wl/wl.js`,
+not in the repo): bare page hint 0 / interactive / balanced → base 2.9 / 10 / 10 ms, out 8 / 32 / 32, `currentTime −
+getOutputTimestamp().contextTime` 11.6 / 41.3 / 41.3 ms – identical with a worklet node in the path; the app with the
+module vs addModule blocked: same base/out, ts lag 11.6 vs 11.6 (min), 36–38 vs 38 (std/safe), touch → sound 59/59 vs 53/57
+(min), 75/77 vs 76/77 (std) – noise (the main-thread wait, ≈ 40 ms headless, dominates). The headless sink is not
+AAudio: the phone's own report decides.
 
 **Memory – the desktop report (built, 24.10.2026):** SPEC §8 „As built (memory)“. Realms renewed (`hxwRenew`,
 `HX_WRENEW`/`HX_WRENEW_S`, `R.used/t0/old`), booted from srcdoc (`hxwShell`), one DSP Blob (`DSP.url`), WSend `fin`, the
