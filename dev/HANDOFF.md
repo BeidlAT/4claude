@@ -513,6 +513,13 @@ Then use these:
 - This container cannot show 0 underruns: live notes alone already drop (headless output, 4 cores shared with other
   sessions' browsers); compare B against A of the same run. Chrome traces (`webaudio.audionode`) stall the render thread
   every 0.5 s while they flush – do not read their periodic 70–110 ms „peaks“ as the app's.
+- Final checks (24.10.2026): v2 all green, `t-pwa-update` 37, `t-phone-mode` 51 (one earlier run lost 2 rows to the latency's
+  automatic step back under load – green again alone), Hexenring all green except `t-hx-taps` „the loops sound“ (−30.7
+  dBFS against −30 – exactly the same on the build before this session) and `t-hx-phone` 8's „the underruns fall“ ratio
+  (fails the same on the build before; on this loaded machine). The perf guard 145 PASS, 1 FAIL: tiefsee/a audio 50.9 vs
+  41.3 against `baseline.json`'s 7f226e7 – the build at 66e17bf (before this session) measures the same (37.5 vs 35.5 now,
+  5 runs each): it came with Android's „Minimal“ default (50d653e, the smaller buffer), not from here. Re-baseline
+  (`sh run.sh baseline`) once the owner accepts that cost.
 - Open: Taumeln's resampler (`rd`, 32 taps per frame and Schicht) is 80 % of the ring processor's time – an exact speed-up
   would cut the loops' audio load most.
 
