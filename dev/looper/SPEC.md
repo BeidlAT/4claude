@@ -601,9 +601,11 @@ realms renewed (`hxwRenew`: after `HX_WRENEW` 12 renders or `HX_WRENEW_S` 90 s �
 nothing it rendered sounds or may be kept by ✓ and it waits for nothing, its port to the live ring closed (`wportOff`),
 booted again warm); a realm boots from srcdoc with the app script from one Blob (`hxwShell`, `window.name` 'myzel-werk';
 ?werk=1 stays the fallback); one DSP Blob URL per page (`DSP.url`); the stream sink lets go when done (WSend `fin`);
-and a living pass whose sources and chain need no worklet streams without one (`hxwNs`/`hxwNsPre`: two analysers read at
-each chunk's end – WSend's rule frame for frame; made before the render's graph, else they missed its first quantum).
-After (same soak, 15 min): heap 107–172 MB, renderer 450–526 MB – flat; offline contexts per realm ≤ 2. Left: a living
+and a living pass whose sources and chain need no worklet streams without one (`hxwNs`/`hxwNsPre`: two analysers behind a delay of
+exactly 128 frames, read a quantum after each chunk's end – WSend's rule frame for frame; fed directly they missed the
+render's first quantum in about one render of three, a click at the pass start – first quantum exact in 23 of 23 since).
+After (same soak, 10 and 15 min): heap 107–172 MB, renderer 450–531 MB – flat (its lowest +8 MB from the first
+third to the last); offline contexts per realm ≤ 2; a memory-pressure signal gives nothing more back. Left: a living
 pass of a source that needs the worklet (Harz, Halm, …) still loads the module, so Chromium's remainder (≈ 0.4–0.9 MB a
 pass) stays for those – the realms' renewal bounds everything else. t-hx-wuchs: streams equal the renders (−143 dB),
 ✓ exact.
