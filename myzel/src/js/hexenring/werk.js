@@ -87,6 +87,50 @@ function hxwRenew() {
     if (R !== HXW && [...HX.sch.values()].some((S) => S.wLive)) hxwCall('warm', { sr: SR }, [], R);   // (booted again before a pass needs it)
   }
 }
+// (Leistung) the stream's sink without a worklet – WSend's rule, frame for frame: two analysers (one channel each, so no
+// downmix; fftSize = a chunk) hold the last chunk at each chunk's end, read at a suspend there; the tripwire, the end
+// 90 dB under the body's peak, the last 30 ms faded; the part after the last whole chunk comes from the render's buffer.
+// The analysers are made before the render's graph: made after it, they missed its first quantum (measured)
+const HXW_NS = true;
+function hxwNsPre(ctx) {
+  const up = ctx.createGain(); up.channelCount = 2; up.channelCountMode = 'explicit'; up.channelInterpretation = 'speakers';
+  const sp = ctx.createChannelSplitter(2), aL = ctx.createAnalyser(), aR = ctx.createAnalyser(), z = ctx.createGain(); z.gain.value = 0;
+  aL.fftSize = aR.fftSize = HX_CH; up.connect(sp); sp.connect(aL, 0); sp.connect(aR, 1); aL.connect(z); aR.connect(z); z.connect(ctx.destination);
+  return { up, aL, aR };
+}
+function hxwNs(ctx, pre, tap, port, n, body, from) {
+  const CH = HX_CH, { up, aL, aR } = pre;
+  tap.connect(up);
+  const fN = Math.min(Math.max(1, n - body), Math.round(0.03 * SR)), f0 = n - fN;
+  const S = { c0: Math.floor(Math.max(0, from) / CH) * CH, pk: 0, done: false, bad: 0, badT: false, F: 0 };
+  // one chunk [st, st + m) of samples L/R: scrubbed, faded at the end, its peak; sent – or the end
+  const chunk = (st, L, R, m) => {
+    if (S.done) return;
+    let cp = 0;
+    for (let q = 0; q < m; q++) {
+      let x = L[q], y = R[q];
+      if (!(x - x === 0) || !(y - y === 0)) { if (!(x - x === 0)) x = 0; if (!(y - y === 0)) y = 0; S.bad++; }
+      const F = st + q; if (F >= f0) { const w = Math.cos(1.5707963267948966 * (0.5 - 0.5 * Math.cos(Math.PI * (F - f0 + 0.5) / fN))); x *= w; y *= w; }
+      L[q] = x; R[q] = y; const ax = x < 0 ? -x : x, ay = y < 0 ? -y : y; if (ax > cp) cp = ax; if (ay > cp) cp = ay;
+    }
+    if (st < body) S.pk = Math.max(S.pk, cp);
+    if (st >= body && cp <= S.pk * 3.2e-5) { try { port.postMessage({ end: st }); } catch (e) {} S.done = true; return; }   // (−90 dB)
+    if (S.bad && !S.badT) { S.badT = true; try { port.postMessage({ nan: S.bad, i: st / CH }); } catch (e) {} }
+    let Lc = L, Rc = R; if (m < CH) { Lc = new Float32Array(CH); Rc = new Float32Array(CH); Lc.set(L.subarray(0, m)); Rc.set(R.subarray(0, m)); }
+    try { port.postMessage({ i: st / CH, L: Lc, R: Rc }, [Lc.buffer, Rc.buffer]); } catch (e) {}
+  };
+  S.read = (F) => { if (S.done) return; const L = new Float32Array(CH), R = new Float32Array(CH); aL.getFloatTimeDomainData(L); aR.getFloatTimeDomainData(R); chunk(F - CH, L, R, CH); S.F = F; };
+  S.fin = (buf, stopped) => {
+    if (!stopped && !S.done) {
+      const st = Math.max(S.c0, S.F), bL = buf.getChannelData(0), bR = buf.getChannelData(1);
+      if (st < n) chunk(st, bL.slice(st, n), bR.slice(st, n), n - st);
+      if (!S.done) { try { port.postMessage({ end: n }); } catch (e) {} S.done = true; }
+    }
+    try { port.close(); } catch (e) {}
+    try { tap.disconnect(up); } catch (e) {}
+  };
+  return S;
+}
 // a job → Promise of its reply (null when there is no Werk-Rahmen); tr: buffers handed over (the caller keeps none);
 // R: the realm (step 2a; the first one unless told)
 // (Leistung, 23.10.2026 – the owner's desktop report: the memory filled while loops only played, the screen hitched in
@@ -196,14 +240,21 @@ async function hxwNotes(d) {
   HX.mask = new Set(d.mask || ['fin', 'eb2', 'rgn', 'gsp']);
   const dur = Math.max(0.05, +d.dur || 1), len = Math.ceil(dur * SR), ctx = new OfflineAudioContext(2, len, SR), notes = d.notes || [];
   hxwSeed(HXW_FIX);   // (the graph's own noise and drift buffers: the same in every render)
+  const nsPre = d.port && HXW_NS ? hxwNsPre(ctx) : null;   // (Leistung: the worklet-free sink's analysers, made before the graph)
   HXW.ctx = ctx;
   try { initAudio(); } finally { HXW.ctx = null; }
   try { A.out.disconnect(); } catch (e) {}
-  const strm = !!d.port;
-  if (strm || d.chain || notes.some((n) => ENGINES[n.eng] && ENGINES[n.eng].needs) || notes.some((n) => n.eng === 'gsp')) await ensureDSP(ctx);
-  let tap = A.hxIn0, chainEv = [], snk = null;
+  const strm = !!d.port, needW = !!(d.chain || notes.some((n) => ENGINES[n.eng] && ENGINES[n.eng].needs) || notes.some((n) => n.eng === 'gsp'));
+  // (Leistung, 23.10.2026) a living pass whose sources and chain need no AudioWorklet streams without one (hxwNs): an
+  // OfflineAudioContext that loaded a worklet module leaves memory behind in Chromium even after its frame is gone
+  if (needW || (strm && !HXW_NS)) await ensureDSP(ctx);
+  let tap = A.hxIn0, chainEv = [], snk = null, ns = null;
   if (d.chain) { const k = hxwChain(d.chain); A.hxIn0.connect(k.c.in); tap = k.c.out; chainEv = k.ev; }
-  if (strm) {
+  if (strm && !needW && HXW_NS) {
+    ns = hxwNs(ctx, nsPre, tap, d.port, len, Math.round((+d.body || dur) * SR), Math.round((+d.from || 0) * SR));
+    tap.connect(ctx.destination);
+    if (d.keep) HXW.cur = { key: d.keep, stop: false };
+  } else if (strm) {
     snk = new AudioWorkletNode(ctx, 'myzel-wsend', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1], channelCount: 2, channelCountMode: 'explicit', channelInterpretation: 'speakers',
       processorOptions: { n: len, body: Math.round((+d.body || dur) * SR), from: Math.round((+d.from || 0) * SR), chunk: HX_CH } });
     tap.connect(snk); snk.connect(ctx.destination); tap.connect(ctx.destination); snk.port.postMessage({ port: d.port }, [d.port]);   // (the render's own buffer holds the pass too: ✓ keeps it, its tail is measured on it)
@@ -234,6 +285,7 @@ async function hxwNotes(d) {
   });
   if (notes.some((n) => n.eng === 'kor' || n.eng === 'rhz')) for (let t = 0; t < dur; t += 0.025) add(t, () => { const h = ctx.currentTime + 0.12; grainTick(h); if (RHZ.vs.size || RHZ.q.length) rhzRun(h); });
   for (const [t, fn] of chainEv) add(t, fn);
+  if (ns) for (let F = ns.c0 + HX_CH; F < len; F += HX_CH) { const b = F / 128; if (!work.has(b)) work.set(b, []); work.get(b).push(() => ns.read(F)); }   // (each whole chunk read at its end)
   for (const [t, id, v] of d.prm || []) add(t, () => { if (PD[id]) P[id] = v; });   // (step 2a: the engines' Bewegung lanes, as they were turned)
   // the pacing: a suspend every 0.25 s of the body from where it is heard (d.from) – each waits until its frame is at
   // most d.lead s ahead of the live one; the field's knobs (d.feld) are taken there too
@@ -258,6 +310,7 @@ async function hxwNotes(d) {
   const setup = (performance.now() - T0) / 1000;   // (graph, module, the notes scheduled: before a sample renders)
   const t0 = performance.now(), buf = await ctx.startRendering(), ms = performance.now() - t0;
   if (snk) { try { snk.port.onmessage = null; snk.port.close(); snk.disconnect(); tap.disconnect(); } catch (e) {} }   // (Leistung: nothing of this render is kept but its buffer – see WSend)
+  if (ns) ns.fin(buf, C0 && C0.stop);
   const dead = HXW.dead; HXW.dead = null;
   for (const v of dead) v.cleanup();
   for (const v of A.voices) v.cleanup();
