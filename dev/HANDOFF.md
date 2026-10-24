@@ -164,7 +164,12 @@ info's tempo (`barGrid`). Suite `hexenring/t-hx-phone.js` (in run-all; its part 
 `HX_WRENEW`/`HX_WRENEW_S`, `R.used/t0/old`), booted from srcdoc (`hxwShell`), one DSP Blob (`DSP.url`), WSend `fin`, the
 worklet-free sink `hxwNs`. Test `hexenring/t-hx-soak.js` (in run-all; `SOAK_MIN`, `RENEW`); harnesses (not in the repo)
 `scratchpad/x8/mem.js` (heap, RSS, objects per frame context via CDP queryObjects, `--snap`), `x8/dump.js` (memory-infra
-allocator diff), `x8/min/*.js` (the Chromium reproductions). `v2/mk.sh` exports `hxwRenew/hxwRealm/hxwCall`.
+allocator diff), `x8/min/*.js` (the Chromium reproductions). `v2/mk.sh` exports `hxwRenew/hxwRealm/hxwCall`. Regression (24.10.2026): Hexenring
+27 suites + t-hx-soak green (single rows that scattered in the full run passed alone and fail alike on 62d0c4a: t-hx-wuchs
+„late blocks“ and „✓“, t-hx-form „Schluss am Ende“, t-hx-clock's device rows); reg.sh green but three Gestik timing/heap rows,
+green alone; klang run-all and smoke-all green (t-eng-native's 6-s hold scattered once, green alone); t-pwa-update 37/37;
+the perf guard: every CPU row PASS (idle audio 19.3 / 10.2 against the reference's 36.0 / 26.1 – loops halted cost
+nothing, Ruhe sleeps), t-phone-mode 29/29.
 
 **Report A – loops on a phone (built, 23.10.2026, night):** SPEC §10.5 and §21 „As built (report A)“. Root cause: the
 8 loops did not play (`spielt=0`, restored or halted) yet `span()` read every Schicht of a halted/muted loop (Taumeln's
