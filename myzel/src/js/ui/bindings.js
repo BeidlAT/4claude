@@ -225,13 +225,16 @@ function updLatText() {
     if (out > 0.04) lt += ' Das Ausgabegerät meldet viel Verzögerung – meist ein großer Puffer im Audiotreiber (in dessen Einstellungen verkleinern), Bluetooth (100 bis 300 ms) oder Lautsprecher am Monitor.';
   }
   const mode = P['dev.lat'];
-  lt += mode === 'min' ? ' Minimal: kleinster Puffer, den das System erlaubt; die Verzerrung läuft ohne Überabtastung (minimal rauer).'
-    : mode === 'std' ? ' Standard: üblicher Puffer der Plattform, Verzerrung mit Überabtastung.'
-      : ' Sicher: größerer Puffer gegen Aussetzer bei hoher Last (Standard auf Android).';
+  lt += mode === 'min' ? ' Minimal: der kleinste Puffer, den das System erlaubt.' : mode === 'std' ? ' Standard: der übliche Puffer der Plattform.' : ' Sicher: ein größerer Puffer gegen Aussetzer bei hoher Last.';
+  lt += ' Der Klang ist in allen drei gleich (die Verzerrung mit Überabtastung nach der Qualitätsstufe, 2–4 ms).';
+  // (Android, 24.10.2026: „Minimal“ by default, stepping back by itself – ui/leistung.js)
+  if (ANDROID) lt += LAT.own ? ' Von dir eingestellt.' : LAT.auto ? ' Automatisch: nach wiederholten Aussetzern auf „' + LAT_NAME[LAT.auto] + '“ gestellt.' : ' Automatisch: setzt der Klang immer wieder aus, nimmt Myzel ab dem nächsten Start „Standard“, danach „Sicher“.';
   if (IOS) lt += ' iPhone und iPad wählen den Puffer selbst.';
   if (A.ctx) lt += A.latMode !== mode ? ' Der neue Puffer gilt nach einem Neustart des Klangs.' : ' Nach Änderungen am Audiotreiber den Klang neu starten, dann misst der Browser neu.';
+  if (A.ctx) { const tip = latHint(((A.ctx.baseLatency || 0) + (A.ctx.outputLatency || 0)) * 1000); if (tip) lt += ' ' + tip; }
   if (devEls.latInfo.textContent !== lt) devEls.latInfo.textContent = lt;
   devEls.latBtn.hidden = !A.ctx;
+  if (devEls.latAuto) devEls.latAuto.hidden = !(ANDROID && LAT.own);
 }
 function updDevLive() {
   if (!devEls || !devEls.qInfo) return;

@@ -63,10 +63,11 @@ function buildDev() {
   box.append(section('Qualität', 'Wie viele und wie reiche Stimmen gleichzeitig', grid(ctl('dev.q', { label: 'Stufe' })), qInfo, qLive));
   const latInfo = h('p', { class: 'note' });
   const latBtn = h('button', { type: 'button', class: 'btn primary', hidden: true, onclick: restartAudio }, 'Klang neu starten');
-  box.append(section('Latenz', 'Zeit vom Anschlag bis zum Ton', grid(ctl('dev.lat', { label: 'Ausgabe' })), latInfo, h('div', { class: 'row' }, latBtn)));
+  const latAutoB = h('button', { type: 'button', class: 'btn ghost', id: 'latAuto', hidden: true, onclick: latAutoAgain }, 'Wieder automatisch');
+  box.append(section('Latenz', 'Zeit vom Anschlag bis zum Ton', grid(ctl('dev.lat', { label: 'Ausgabe' })), latInfo, h('div', { class: 'row' }, latBtn, latAutoB)));
   box.append(lmBuild());   // Leistung: the Handy-Modus and „Leistung messen“ (ui/leistung.js)
   box.append(section('Computertastatur', null, h('p', { class: 'note' }, 'Ohne Keyboard spielen die Tasten A bis Ö (Grundreihe) die ersten Töne der Spielfläche, mit Umschalt weiter oben.')));
-  Object.assign(devEls, { qInfo, qLive, latInfo, latBtn });
+  Object.assign(devEls, { qInfo, qLive, latInfo, latBtn, latAuto: latAutoB });
   updDevUI();
   return box;
 }

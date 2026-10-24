@@ -17,7 +17,7 @@ const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform ==
 // §8): no UI, no storage writes, no MIDI, no Gestik, no live context, no service worker. t/now: a recorded change set at
 // its own moment / a recorded state set at once (setP); dead: voices that end during a render, cleaned after it.
 // (Leistung, 23.10.2026: or a realm booted from srcdoc – its frame's name says it, hxwShell)
-const HXW = { on: (() => { try { return /[?&]werk=1(&|$)/.test(location.search) || window.name === 'myzel-werk'; } catch (e) { return false; } })(), t: null, now: false, dead: null, ctx: null };
+const HXW = { on: (() => { try { return /[?&]werk=1(&|$)/.test(location.search) || window.name === 'myzel-werk'; } catch (e) { return false; } })(), t: null, now: false, dead: null, ctx: null, latOld: false };
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
   set(k, v) { if (HXW.on) return false; try { localStorage.setItem(k, v); return true; } catch (e) { return false; } },   // (Hexenring: the Werk-Rahmen writes nothing)

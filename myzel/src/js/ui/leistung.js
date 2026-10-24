@@ -193,8 +193,8 @@ function lmResult(ms) {
   R.voices = { load: S.n ? Math.round(100 * S.load / S.n) : 0, loadMax: Math.round(100 * S.loadMax), max: S.vMax, grains: S.gr, idle: S.n ? Math.round(100 * S.idle / S.n) : 0 };
   R.hx = { loops: S.loops, spielt: S.spielt, sch: S.sch, leb: S.leb, tau: !!HX.tauRest, f1: HXF1.off ? 'ruht' : 'an', werk: HXW.st || '-', wg: HX.wGuard ? HX.wGuard.n || 0 : 0, state: HX.state };
   R.lp = lmLoopsRes(); R.werk = lmWerk(secs); R.guard = lmGuard();
-  const La = LM.lat, hint = P['dev.lat'] === 'min' ? '0' : P['dev.lat'] === 'safe' ? 'balanced' : 'interactive';
-  R.lat = { set: P['dev.lat'], hint, base: La.n ? r1(La.base / La.n) : 0, out: La.n ? r1(La.out / La.n) : 0, outMin: La.n ? r1(La.outMin) : 0, outMax: r1(La.outMax), buf: Math.round((c.baseLatency || 0) * c.sampleRate), avg: R.ps && R.ps.averageLatency != null ? R.ps.averageLatency : null };
+  const La = LM.lat, hint = A.latMode === 'min' ? '0' : A.latMode === 'safe' ? 'balanced' : 'interactive';
+  R.lat = { set: P['dev.lat'], ctx: A.latMode, own: LAT.own ? 1 : 0, step: LAT.auto || '-', hint, base: La.n ? r1(La.base / La.n) : 0, out: La.n ? r1(La.out / La.n) : 0, outMin: La.n ? r1(La.outMin) : 0, outMax: r1(La.outMax), buf: Math.round((c.baseLatency || 0) * c.sampleRate), avg: R.ps && R.ps.averageLatency != null ? R.ps.averageLatency : null };
   const nav = navigator, ua = nav.userAgent || '';
   const os = (ua.match(/Android [\d.]+/) || ua.match(/(iPhone|iPad|Mac) OS [\d_]+/) || [ANDROID ? 'Android' : IOS ? 'iOS' : 'Desktop'])[0].replace(/_/g, '.');
   const br = (ua.match(/(Chrome|CriOS|Firefox|FxiOS|Version)\/(\d+)/) || [])[0] || '?';
@@ -238,11 +238,65 @@ function lmSummary(R) {
     : slow ? 'Ergebnis: Die Oberfläche ist ausgelastet (Zeichnen und Rechnen auf dem Hauptthread); der Klang läuft sauber.' : 'Ergebnis: kein Engpass gemessen.');
   if (R.hx.loops) S.push('Schleifen: ' + R.hx.loops + ', davon ' + R.hx.spielt + ' spielend – sie belegen im Mittel ' + d(R.lp.sum.loops) + ' von ' + R.lp.sum.budget + ' Einheiten (mit Humus und Effektkette ' + d(R.lp.sum.hx) + '); angehaltene kosten nichts.');
   if (R.werk.n) S.push('Lebendige Schleifen: ' + R.werk.n + ' Durchgänge neu gerechnet, jeder etwa ' + R.werk.ms + ' ms (' + d(R.werk.xRT) + ' × Echtzeit).');
-  const GW = { lebendig: 'Lebendig hält an', weniger: 'weniger auf einmal gerechnet', taumeln: 'Taumeln ruht', grenze: 'Live-Spiel geschützt', lite: 'weniger Live-Stimmen', zurueck: 'Lebendig wieder an' };
+  const GW = { lebendig: 'Lebendig hält an', weniger: 'weniger auf einmal gerechnet', taumeln: 'Taumeln ruht', grenze: 'Live-Spiel geschützt', lite: 'weniger Live-Stimmen', zurueck: 'Lebendig wieder an', latenz: 'Latenz ab dem nächsten Start zurückgestellt' };
   if (R.guard.steps.length) S.push('Myzel hat entlastet: ' + [...new Set(R.guard.steps.map((x) => GW[x.split(/[:@]/)[0]] || x))].join(', ') + '.');
-  S.push('Latenz: eingestellt „' + ({ min: 'Minimal', safe: 'Sicher', std: 'Standard' }[R.lat.set] || R.lat.set) + '“ – das Gerät meldet ' + d(R.lat.base) + ' ms Puffer und ' + d(R.lat.out) + ' ms Ausgabe.');
+  S.push('Latenz: eingestellt „' + (LAT_NAME[R.lat.set] || R.lat.set) + '“' + (R.lat.ctx !== R.lat.set ? ' (gemessen mit „' + (LAT_NAME[R.lat.ctx] || R.lat.ctx) + '“ – das neue gilt nach einem Neustart)' : '') + ' – das Gerät meldet ' + d(R.lat.base) + ' ms Puffer und ' + d(R.lat.out) + ' ms Ausgabe.');
+  const tip = latHint(R.lat.base + R.lat.out); if (tip) S.push('Tipp: ' + tip);
   S.push('Handy-Modus war ' + (PH.on ? 'an' : 'aus') + (R.ph.load ? ' (davon ' + R.ph.load + ' % der Zeit mit 30 Bildern pro Sekunde)' : '') + '. „Kopieren“ und den Bericht an Claude schicken.');
   return S;
+}
+
+/* ---------- the latency's default on Android, its step back, the hint (24.10.2026) ---------- */
+// Chrome on Android opens its fast output only for the numeric hint („Minimal“, latencyHint 0 – measured on the owner's
+// phone: 2.7 ms buffer + 64 ms output, touch → sound 125 ms; „Standard“ and „Sicher“ alike there: 128 + 260–300 ms, 400–
+// 500 ms). So Android starts in „Minimal“; where the device keeps dropping audio in it, Myzel steps back – „Standard“, then
+// „Sicher“ – from the next sound start, and says so once. A choice made in „Gerät“ is never touched.
+// myzel.lat.v1 {own, auto}: own – chosen by hand; auto – the step this device took. Before the mark every device setting was
+// stored with its default, so a stored „Sicher“ on Android (its default until then, from the start) counts as not chosen,
+// anything else as chosen (elsewhere: anything but today's default).
+const LAT = { own: false, auto: '', quiet: false, said: false, hits: [], dur: null, t0: 0 };
+const latAuto = () => ANDROID && !LAT.own;
+const LAT_NAME = { min: 'Minimal', std: 'Standard', safe: 'Sicher' };
+function latRestore(dv) {
+  let m = null; try { m = JSON.parse(store.get('myzel.lat.v1') || 'null'); } catch (e) {}
+  const def = PD['dev.lat'].d, was = dv && dv['dev.lat'];
+  if (m && typeof m === 'object') { LAT.own = !!m.own; LAT.auto = m.auto === 'std' || m.auto === 'safe' ? m.auto : ''; }
+  else LAT.own = !!was && was !== (ANDROID ? 'safe' : def);
+  if (!LAT.own) P['dev.lat'] = (ANDROID && LAT.auto) || def;
+  if (!HXW.on) latSave();   // (a Werk-Rahmen boots the same page: it only reads)
+}
+function latSave() { store.set('myzel.lat.v1', JSON.stringify({ own: LAT.own ? 1 : 0, auto: LAT.auto })); }
+function latSet(v) { LAT.quiet = true; try { setParam('dev.lat', v); } finally { LAT.quiet = false; } saveState(); }
+// (onDeviceChanged: the chips in „Gerät“)
+function latChosen() { if (LAT.quiet) return; LAT.own = true; LAT.auto = ''; latSave(); saveState(); }   // (both at once: a reload right after keeps the pair)
+function latAutoAgain() { LAT.own = false; LAT.auto = ''; latSave(); latSet(PD['dev.lat'].d); updDevUI(); }
+// lasting: within 30 s, 100 ms of audio missing (where the browser tells the duration) or 12 seconds with new underruns
+// (by the audio clock only: 4 seconds, each a lag of 25 ms or more); never in the first 5 s after the start – a few
+// tiny events at many voices (that phone in „Minimal“: 8 in 20 s at 28 voices and 80 grains, duration ≈ 0) are not
+function latWatch(ps, u, last, now) {
+  let d = null;
+  if (ps) { const x = ps.underrunDuration != null ? ps.underrunDuration * 1000 : ps.fallbackFramesDuration != null ? ps.fallbackFramesDuration : null; if (x != null) { d = LAT.dur != null ? Math.max(0, x - LAT.dur) : 0; LAT.dur = x; } }
+  if (!latAuto() || A.latMode === 'safe' || P['dev.lat'] !== A.latMode || now - LAT.t0 < 5000) return false;
+  const H = LAT.hits;
+  if (u > last) H.push([now, d]);
+  while (H.length && now - H[0][0] > 30000) H.shift();
+  const ms = H.reduce((a, x) => a + (x[1] || 0), 0);
+  if (!(ms >= 100 || H.length >= (ps ? 12 : 4))) return false;
+  const to = A.latMode === 'min' ? 'std' : 'safe';
+  H.length = 0; LAT.auto = to; latSave(); latSet(to);
+  hxGuardLog('latenz', to);
+  if (!LAT.said) { LAT.said = true; toast('Der Klang setzte immer wieder aus – ab dem nächsten Klangstart nimmt Myzel die Latenz „' + LAT_NAME[to] + '“ (mehr Reserve, etwas mehr Verzögerung).', 9000, { label: 'Jetzt neu starten', fn: restartAudio }); }
+  updDevUI();
+  return true;
+}
+// over ≈ 100 ms from the context to the speaker: „Minimal“ where it is not set, and on Android Firefox (its output path is
+// very short there – but it has no MIDI)
+function latHint(ms) {
+  if (!(ms > 100)) return '';
+  let t = '';
+  if (P['dev.lat'] !== 'min') t += 'Stell die Latenz auf „Minimal“' + (ANDROID ? ' – auf vielen Android-Handys öffnet erst sie den schnellen Weg.' : '.');
+  if (ANDROID && !/Firefox\//.test(navigator.userAgent || '')) t += (t ? ' ' : '') + 'Sehr kurz ist der Weg auch in Firefox – dort aber ohne MIDI.';
+  return t ? 'Über 100 ms bis zum Lautsprecher (' + Math.round(ms) + ' ms). ' + t : '';
 }
 
 /* ---------- the Handy-Modus: on phones the drawing gets lighter – never the sound ---------- */

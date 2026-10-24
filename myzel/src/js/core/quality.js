@@ -6,7 +6,9 @@
 const CAL = { unit: Number(store.get('myzel.cal.v1')) || 0, running: false };
 function applyQuality() {
   Q = QP[P['dev.q']] || QP[1];
-  const cap = CAL.unit ? Math.floor((P['dev.lat'] === 'min' ? 0.4 : 0.5) / CAL.unit) : 0;
+  // (the smallest buffer leaves less slack per callback: 40 % of the core instead of 50 – the context's own buffer, which a
+  // new setting changes only at the next sound start)
+  const cap = CAL.unit ? Math.floor(((A.ctx ? A.latMode : P['dev.lat']) === 'min' ? 0.4 : 0.5) / CAL.unit) : 0;
   if (Q === QP[2]) Q.budget = cap ? clamp(cap, 14, Q.base) : Q.base;
   if (Q === QP[3]) {
     Q.budget = cap ? clamp(cap, 24, 360) : 48;

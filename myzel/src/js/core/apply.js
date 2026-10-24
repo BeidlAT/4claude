@@ -2,12 +2,14 @@
 function updDrive(only) {
   if (!A.ctx) return;
   const type = P['drv.type'], amt = P['drv.amt'], mix = P['drv.mix'];
-  const key = type + ':' + amt.toFixed(3) + ':' + mix.toFixed(3) + ':' + P['dev.lat'] + ':' + Q.os + ':' + !!A.lite;
+  const key = type + ':' + amt.toFixed(3) + ':' + mix.toFixed(3) + ':' + Q.os + ':' + !!A.lite;
   if (!only && A.drvKey === key) return;
   if (!only) A.drvKey = key;
   const curve = driveCurve(type, amt, mix);
-  // oversampling costs latency (2x: 128 frames, 4x: 192 frames on the whole voice path), so "Minimal" plays without it
-  const os = mix < 0.001 || type === 'crush' || P['dev.lat'] === 'min' ? 'none' : A.lite ? '2x' : Q.os;
+  // the oversampling follows the quality level in every latency mode (owner, 24.10.2026: the full sound, and the 2–4 ms it
+  // adds – 2x 128, 4x 192 frames – in „Minimal“ too). Hexenring: a loop recorded before that, in „Minimal“, renders as it
+  // was recorded – without (HXW.latOld: its chain record still carries dev.lat)
+  const os = mix < 0.001 || type === 'crush' || (HXW.latOld && P['dev.lat'] === 'min') ? 'none' : A.lite ? '2x' : Q.os;
   for (const [c] of chainsOf(only)) {
     c.drv.curve = curve;
     if (c.drv.oversample !== os) c.drv.oversample = os;
