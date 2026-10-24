@@ -1,0 +1,15 @@
+const out = {};
+await S.btn('✕', '#hxRail'); 
+await S.tap('#tab-rec', { mouse: 1 }); await page.waitForTimeout(600);
+const f = page.locator('#hxSec').getByText('Einstellungen', { exact: true }).first();
+out.fold = await S.tap(f, { mouse: 1 }); await page.waitForTimeout(500);
+out.settings = (await page.locator('#hxSec').innerText()).split('EINSTELLUNGEN')[1]?.replace(/\n/g, ' | ').slice(0, 3000);
+await S.shot('d70-settings');
+const t = page.locator('#hxSec').getByText('Bühnenansicht', { exact: true }).first();
+out.t = await S.tap(t, { mouse: 1 }); await page.waitForTimeout(800);
+out.panelOpen = await page.evaluate(() => document.querySelector('#hxSec')?.offsetParent !== null);
+await S.shot('d71-buehne');
+out.rail = await S.rail();
+out.said = await S.said();
+out.dump = await S.dump();
+return out;

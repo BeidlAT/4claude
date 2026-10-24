@@ -1,5 +1,23 @@
 # Übergabe: Myzel (Stand 22.10.2026 – Klangquellen, Ruhe und der Hexenring fertig, Schlussprüfung grün)
 
+## Für den Besitzer – dein Bericht vom Rechner (24.10.2026, abends)
+
+**Was los war:** Nach den ersten Aussetzern hatte Myzel am Rechner noch die alte Notbremse gezogen: sechsmal weniger
+Stimmen (am Ende 29 statt 110) und eine einfachere Verzerrung – beides blieb bis zum Neuladen. Das war gegen deine Regel.
+Dass „Lebendig“ nichts rechnete, lag nicht an den weniger Stimmen, sondern an derselben Notbremse: Sie schaltete die
+lebendigen Schleifen bei jedem Aussetzer 30 Sekunden auf ihren festen Durchgang und fing immer wieder von vorn an.
+**Gebaut:** Am Rechner und iPad wird nie mehr etwas einfacher. Bei Aussetzern geben zuerst die Schleifen nach (lebendige
+spielen ihren letzten Durchgang weiter, das Taumeln ruht) und kommen nach einer ruhigen halben Minute von selbst zurück;
+erst wenn das nicht reicht, spielt Myzel kurz weniger Stimmen gleichzeitig (höchstens bis zur Hälfte, gleicher Klang) und
+gibt sie nach 30 s ohne Aussetzer Schritt für Schritt zurück. Am Handy bleibt alles wie bisher, nur kommen die Stimmen dort
+jetzt auch zurück. Dazu: Ein Tipp auf die Knöpfe der Ringleiste löst am Handy nur noch eine Aktion aus (Korb, Hauptknopf
+und ↶ feuerten doppelt – aus der Bedienungs-Prüfung).
+**Die restlichen kurzen Aussetzer:** Nachgestellt (Schleifen wie bei dir, Latenz „Sicher“): Sie hängen mit nichts
+Bestimmtem zusammen, das Myzel tut (kein Umstecken, keine Nachrichten, kein Aufräumen des Speichers) – es ist die Last des
+Audio-Kerns, und den größten Teil bei den Schleifen kostet das Taumeln. Das schneller zu rechnen, ohne den Klang zu ändern,
+wäre ein eigener Schritt. **Bitte** noch einmal „Leistung messen“ am Rechner: Der Bericht zeigt jetzt jeden Aussetzer mit
+Zeitpunkt und was gerade geschah (Zeile `ulog`), und warum lebendige Schleifen nicht rechnen (`nichtLeb`).
+
 ## Für den Besitzer – Latenz am Handy (24.10.2026)
 
 **Gebaut, wie du entschieden hast:** Auf Android steht die Latenz jetzt von selbst auf **„Minimal“** – bei neuen
@@ -15,9 +33,9 @@ Lautsprecher schlagen „Gerät“ und „Leistung messen“ „Minimal“ vor, 
 **Das Audio-Herz (AudioWorklet) kostet keine messbare Latenz:** in Chromium mit Android-Nachbildung gleiche Puffer- und
 Ausgabewerte mit und ohne, gleiche Zeitstempel (±0,5 ms), vom Antippen bis zum Ton im Rauschen der Messung. Am echten Handy
 bitte einmal „Leistung messen“ in der neuen Version – dort steht es endgültig.
-**Zum Entscheiden:** In „Minimal“ darf Myzel auf Stufe 2 und 3 nur 40 % statt 50 % eines Kerns für Stimmen nutzen (mehr
-Reserve gegen Aussetzer beim kleinsten Puffer). Das war schon immer so und gilt jetzt auf Android standardmäßig – es kann
-dort weniger gleichzeitige Stimmen bedeuten, nie anderen Klang. Lassen oder auf 50 % angleichen?
+**Entschieden (24.10.2026, „so lassen“):** In „Minimal“ nutzt Myzel auf Stufe 2 und 3 weiter 40 % statt 50 % eines Kerns
+für Stimmen (mehr Reserve beim kleinsten Puffer; auf Android jetzt der Normalfall – höchstens weniger gleichzeitige
+Stimmen, nie anderer Klang).
 
 ## Für den Besitzer – Updates beim Start (23.10.2026)
 
@@ -485,6 +503,25 @@ Then use these:
 | Kompostgarten | Android | 28.3 / 5.8 / 61.1 | 30.3 / 6.0 / 61.5 | 28.0 / 5.7 / 60.9 |
 
   Figures are audio / conv / main. While sound plays the runs scatter by ±2–4 points; there the new build equals the one before within that (Ruhe does not apply; only the Hexenring's resting strip and the taps' rest save, ≈ 1 point). At idle the audio threads are back at the published build's level, except the device thread's hand-over to the worklet thread (3 points on the desktop, 1.3 in the Android emulation – any worklet costs it; the Hexenring's processor must record from the first note). The compositor and the GPU process are unchanged (≈ 5 and 28–31). With a 120-Hz display emulated (`--hz120`, Android, idle / play): main thread 46.3 → 35.9 and 97.5 → 89.7 (the old build managed 76 of 120 frames while playing, the new one draws its 60). The owner's options at idle (live, medians of 3; audio + conv): desktop 26.1 default → echo asleep 23.8, hall asleep 12.8, both 11.3; Android 20.9 → 19.6 / 8.3 / 7.0.
+
+### Notes from the desktop report (24.10.2026, session `ccr-183ec81a-rkp3np`)
+- The guard per device class, the underrun log (`ulog`), the realms' states and `nichtLeb` in „Leistung messen“: SPEC §10.5
+  „As built (desktop report)“. Tests: `t-hx-guard` (13 rows: computer, computer with loops, iPad, phone) and `t-hx-tap` (one
+  touch tap, one action – UI audit B1; `hxKeyClick`) in `run-all.sh`; `t-hx-dsoak` (the desktop soak, ≈ 6 min, not in
+  `run-all.sh`: A live notes only against B 8 loops / 6 playing / 4 Lebendig, underruns, the worklet's gaps, CPU per thread,
+  what coincides).
+- This container cannot show 0 underruns: live notes alone already drop (headless output, 4 cores shared with other
+  sessions' browsers); compare B against A of the same run. Chrome traces (`webaudio.audionode`) stall the render thread
+  every 0.5 s while they flush – do not read their periodic 70–110 ms „peaks“ as the app's.
+- Final checks (24.10.2026): v2 all green, `t-pwa-update` 37, `t-phone-mode` 51 (one earlier run lost 2 rows to the latency's
+  automatic step back under load – green again alone), Hexenring all green except `t-hx-taps` „the loops sound“ (−30.7
+  dBFS against −30 – exactly the same on the build before this session) and `t-hx-phone` 8's „the underruns fall“ ratio
+  (fails the same on the build before; on this loaded machine). The perf guard 145 PASS, 1 FAIL: tiefsee/a audio 50.9 vs
+  41.3 against `baseline.json`'s 7f226e7 – the build at 66e17bf (before this session) measures the same (37.5 vs 35.5 now,
+  5 runs each): it came with Android's „Minimal“ default (50d653e, the smaller buffer), not from here. Re-baseline
+  (`sh run.sh baseline`) once the owner accepts that cost.
+- Open: Taumeln's resampler (`rd`, 32 taps per frame and Schicht) is 80 % of the ring processor's time – an exact speed-up
+  would cut the loops' audio load most.
 
 ### Owner's calls (open)
 - **Handy und Schleifen (report A, 23.10.2026) – options that change the sound on a phone, not built:** (1) Wuchs on

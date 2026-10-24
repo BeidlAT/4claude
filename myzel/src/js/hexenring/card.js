@@ -35,7 +35,7 @@ function hxKlopfRender() {
   if (K) {
     const pad = h('button', { type: 'button', class: 'btn primary hx-kpad', 'aria-label': 'Hier auf jeden Klick tippen' }, 'Tipp mit dem Klick · ' + K.taps.length + ' von ' + HX_KLOPF);
     pad.addEventListener('pointerdown', (e) => { if (e.button > 0) return; e.preventDefault(); hxKlopfTap(e); });
-    pad.addEventListener('click', (e) => { if (e.detail === 0) hxKlopfTap(null); });
+    hxKeyClick(pad, () => hxKlopfTap(null));
     const stop = h('button', { type: 'button', class: 'btn ghost' }, 'Abbrechen'); stop.addEventListener('click', () => { HX.klopf = null; hxCardDirty(); });
     box.replaceChildren(h('div', { class: 'hx-row' }, h('span', { class: 'lab' }, 'Spielverzögerung'), h('div', { class: 'hx-kb' }, pad, stop)));
     return;

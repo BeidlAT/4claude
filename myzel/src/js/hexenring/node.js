@@ -15,6 +15,7 @@ const hxSounds = () => { for (const L of HX.loops.values()) if (L.state === 'spi
 const hxOut1Of = (id) => { const L = HX.loops.get(id); return !!L && L.sch.some((x) => { const S = HX.sch.get(x); return S && S.out; }); };
 function hxPost(m, tr) {
   if (!HX.node || HX.ctx !== A.ctx) return false;
+  if (LM.on) { let n = 0; if (tr) for (const b of tr) n += b.byteLength || 0; if (n > 65536 || m.replace || m.tau) lmEv(Object.keys(m)[0] + (n > 65536 ? ':' + Math.round(n / 1048576 * 10) / 10 + 'MB' : '')); }   // (Leistung messen: what the processor is sent, beside the underruns)
   if (HXF1.off) for (const k in m) { const v = m[k]; if (v && typeof v === 'object' && (v.out || (k === 'state' && v.to === 'spielt' && hxOut1Of(v.loop)))) { hxF1Wake(); break; } }   // (phone report: whatever is sent to play on out 1 finds the chain copy awake; Leistung: a halted loop with a Schicht on out 1 that plays again)
   if (m.loop || (m.state && m.state.to === 'spielt')) { if (IDLE.on) idleWake(); if (IDLE.hxOff) hxGates(true); IDLE.hxT = null; }   // Ruhe: a Schleife will sound (Leistung: or a halted one again)
   else if ((m.wst || m.replace || m.schicht) && (IDLE.on || IDLE.hxOff)) { if (IDLE.on) idleWake(); if (IDLE.hxOff) hxGates(true); IDLE.hxT = null; }   // (step 2a: a Wuchs pass, a version – it sounds through the same way)
@@ -196,7 +197,7 @@ function hxF1Taps(on) {
 }
 function hxF1Wake() {
   const c = HXF1.c;
-  HXF1.off = false;
+  HXF1.off = false; lmEv('f1-wach');
   if (!c || c.ctx !== A.ctx) return;
   if (IDLE.on) idleWake();
   try { c.out.connect(stripIn('hxr')); } catch (e) {}
@@ -220,7 +221,7 @@ function hxF1Tick(now) {
   if (now - HXF1.z < 2) return;
   hxF1Taps(false);
   try { c.out.disconnect(stripIn('hxr')); } catch (e) { return; }
-  HXF1.off = true; HXF1.n++;
+  HXF1.off = true; HXF1.n++; lmEv('f1-ruht');
 }
 const hxSrcText = () => { const n = HX.loops.size; return n ? n + (n === 1 ? ' Schleife' : ' Schleifen') : 'aus'; };
 // the mixer shows the strip from the first Schleife on (or once something of it was set)

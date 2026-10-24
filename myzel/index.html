@@ -4100,13 +4100,14 @@ function idleEnter() {
     hxGates(false);
   }
   idleTaps(false);
-  IDLE.cut = cut; IDLE.on = true; IDLE.n++;
+  IDLE.cut = cut; IDLE.on = true; IDLE.n++; lmEv('ruhe');
 }
 // the gates on the Hexenring's way (zeros while no Schleife exists): values, read by the very quantum that plays. At
 // the processor's outputs while its strip goes straight to the master and no loop has used out 1 (the strip rests too);
 // else at the master's input only (hxGateM): a copy of the chain runs on behind it – its chorus, delays that move,
 // would come back with their rounding moved, as the echo's
 function hxGates(on) {
+  if (IDLE.hxOff === on) lmEv(on ? 'tor-auf' : 'tor-zu');
   IDLE.hxOff = !on;
   const deep = P['xhxr.route'] === 'dir' && !HX.out1;
   for (const g of [HX.g0, HX.g1]) if (g && HX.ctx === A.ctx) g.gain.value = on || !deep ? 1 : 0;
@@ -4115,7 +4116,7 @@ function hxGates(on) {
 // before anything sounds (and before the graph around the cut links changes): every link back, in the order taken
 function idleWake(late) {
   if (!IDLE.on) return;
-  IDLE.on = false;
+  IDLE.on = false; lmEv('wach');
   for (const [a, b, ...x] of IDLE.cut) { try { if (x[0] === 'feed') a.disconnect(b); else a.connect(b, ...x); } catch (e) {} }
   IDLE.cut = []; IDLE.z = null; IDLE.qT = A.ctx ? A.ctx.currentTime : 0;
   if (late) { IDLE.late++; console.warn('Ruhe: zu spät geweckt'); }
@@ -6581,6 +6582,9 @@ function applyQuality() {
   if (A.bor && A.bor.rich !== Q.rich) { stopBordun(); startBordun(); }
   if (A.gsp) { if (A.gsp.rich !== !!Q.rich) gspDrop(); else A.gsp.node.port.postMessage({ lite: A.lite ? 1 : 0 }); }   // (the web: rebuilt at the next note with 8 or 12 strings)
 }
+// the live budget alone (the guard's voice limit and its way back): nothing in the chains is rebuilt and nothing that
+// sounds is cut – new notes respect it (playNote steals a fading voice first)
+function budgetApply() { VBUDGET = Math.max(6, Math.round(Q.budget * (A.budgetScale || 1))); }
 async function calibrate() {
   if (CAL.running || !A.ctx || typeof OfflineAudioContext === 'undefined') return;
   CAL.running = true;
@@ -24635,10 +24639,28 @@ const LM_SECS = 20;
 const LM_PART = { 0: 'takt', 1: 'jahresring', 2: 'puls', 3: 'clockOut', 4: 'wirbel', 5: 'koerner', 6: 'vorschau', 7: 'faehrte', 8: 'regen', 9: 'mod', 10: 'gespinst', 11: 'rhizom', 12: 'hxTick', 13: 'ruhe',
   20: 'frame', 21: 'hxFeld', 22: 'meter', 23: 'panel', 24: 'ctl', 25: 'devLive', 26: 'rail', 30: 'tick', 31: 'hxMsg', 32: 'onDown' };
 const LM = { on: false, t0: 0, pMs: new Float64Array(40), pN: new Uint32Array(40), pMax: new Float64Array(40), raf: new Float32Array(4096), nR: 0, fb: new Float32Array(2048), nF: 0,
-  gap: new Float32Array(2048), nG: 0, lastT: 0, tch: [], lt: null, loaf: null, ps0: null, ck: null, rc: null, smp: null, timer: 0, res: null, txt: '', sum: null, ui: null, obs: [] };
+  gap: new Float32Array(2048), nG: 0, lastT: 0, ev: [], ul: [], up: {}, ut: 0, tch: [], lt: null, loaf: null, ps0: null, ck: null, rc: null, smp: null, timer: 0, res: null, txt: '', sum: null, ui: null, obs: [] };
 function lmPart(k, ms) {
   LM.pMs[k] += ms; LM.pN[k]++; if (ms > LM.pMax[k]) LM.pMax[k] = ms;
   if (k === 20 && FR.drew && LM.nF < LM.fb.length) LM.fb[LM.nF++] = ms;   // (a drawn frame's own time)
+}
+// (desktop report 24.10.2026) what happened when the sound dropped: the underruns' moments (polled every 100 ms while
+// measuring) beside the moments of what could cause one – Ruhe and the chain copy waking or resting (links in the graph),
+// the Hexenring's gates, big messages to the processor (a version, a Schicht; Taumeln on/off), a living pass begun, the
+// guard's steps, the main thread's long tasks and its garbage collections (the heap falling)
+function lmEv(k) { if (LM.on && LM.ev.length < 4000) LM.ev.push([performance.now(), k]); }
+function lmUPoll() {
+  const ps = A.ctx && (A.ctx.playbackStats || A.ctx.playoutStats); if (!ps) return;
+  const u = (ps.underrunEvents != null ? ps.underrunEvents : ps.fallbackFramesEvents) || 0, d = ps.underrunDuration != null ? ps.underrunDuration * 1000 : ps.fallbackFramesDuration != null ? ps.fallbackFramesDuration : null, U = LM.up;
+  if (U.u != null && u > U.u && LM.ul.length < 400) LM.ul.push([performance.now(), u - U.u, d != null && U.d != null ? Math.max(0, d - U.d) : null]);
+  U.u = u; U.d = d;
+  const m = performance.memory; if (m) { const h = m.usedJSHeapSize; if (U.h && h < U.h - 2e6) lmEv('gc:' + Math.round((U.h - h) / 1e6)); U.h = h; }
+}
+function lmUlog(R0) {
+  return LM.ul.slice(0, 24).map(([t, n, ms]) => {
+    const near = new Map(); for (const [te, k] of LM.ev) if (te >= t - 1100 && te <= t + 100) { const kk = k.replace(/:[\d.]+(MB)?$/, (x) => (/MB/.test(x) ? x : '')); near.set(kk, (near.get(kk) || 0) + 1); }
+    return '+' + ((t - LM.t0) / 1000).toFixed(1) + (n > 1 ? 'x' + n : '') + (ms != null ? '/' + r1(ms) + 'ms' : '') + '[' + ([...near].map(([k, c]) => k + (c > 1 ? '*' + c : '')).join(',') || '-') + ']';
+  });
 }
 function lmGap(t) { if (LM.lastT && LM.nG < LM.gap.length) LM.gap[LM.nG++] = t - LM.lastT; LM.lastT = t; }
 // a touch: its wait in the queue (the event's time → its handler), the handler, and when the voice it started reaches the
@@ -24676,7 +24698,7 @@ function lmObserve(on) {
   LM.obs = [];
   if (!on || !window.PerformanceObserver) return;
   const sup = PerformanceObserver.supportedEntryTypes || [];
-  if (sup.includes('longtask')) { const o = new PerformanceObserver((l) => { for (const e of l.getEntries()) { const L = LM.lt; L.n++; L.ms += e.duration; if (e.duration > L.max) L.max = e.duration; } }); o.observe({ type: 'longtask' }); LM.obs.push(o); LM.lt.ok = true; }
+  if (sup.includes('longtask')) { const o = new PerformanceObserver((l) => { for (const e of l.getEntries()) { lmEv('lang:' + Math.round(e.duration)); const L = LM.lt; L.n++; L.ms += e.duration; if (e.duration > L.max) L.max = e.duration; } }); o.observe({ type: 'longtask' }); LM.obs.push(o); LM.lt.ok = true; }
   // a long animation frame (≥ 50 ms): how much was rendering (style, layout, paint, the canvases' hand-over) and which
   // scripts ran in it
   if (sup.includes('long-animation-frame')) {
@@ -24701,14 +24723,16 @@ function lmStart() {
   LM.ps0 = lmStats(); LM.u0 = A.underruns || 0; LM.res = null;
   // (the audio side in detail – 23.10.2026, after report A: each loop's share of the budget, the Werk-Rahmen's work, the
   // guard's steps, the latency the context reports against the one asked for)
-  LM.lp = new Map(); LM.lsum = { n: 0, loops: 0, max: 0, hx: 0, cap: 0 }; LM.lat = { n: 0, out: 0, outMin: Infinity, outMax: 0, base: 0 };
+  LM.why = new Map(); LM.lp = new Map(); LM.lsum = { n: 0, loops: 0, max: 0, hx: 0, cap: 0 }; LM.lat = { n: 0, out: 0, outMin: Infinity, outMax: 0, base: 0 };
   if (typeof HX !== 'undefined' && HX.wSt) { HX.wSt.q = HX.wJobs || 0; LM.w0 = Object.assign({}, HX.wSt); }
   LM.gT = performance.now();
   LM.rc = null;
   const rc = A.ctx.renderCapacity;
   if (rc && rc.start) try { LM.rc = { n: 0, avg: 0, peak: 0, und: 0 }; rc.onupdate = (e) => { const R = LM.rc; if (!R) return; R.n++; R.avg += e.averageLoad || 0; R.peak = Math.max(R.peak, e.peakLoad || 0); R.und = Math.max(R.und, e.underrunRatio || 0); }; rc.start({ updateInterval: 1 }); } catch (e) { LM.rc = null; }
   lmObserve(true);
+  LM.ev = []; LM.ul = []; LM.up = {};
   LM.t0 = performance.now(); LM.on = true;
+  lmUPoll(); LM.ut = setInterval(lmUPoll, 100);
   lmClock();
   LM.timer = setInterval(lmSample, 250);
   toast('Leistung messen: spiel jetzt ' + LM_SECS + ' Sekunden wie immer – das Panel darf zu.', 5000);
@@ -24743,6 +24767,7 @@ function lmLoops(live) {
     e.n++; e.c += c; if (c > e.max) e.max = c;
     if (L.state === 'spielt') e.sp++;
     if (hxWLebt(L) && L.state === 'spielt') e.leb++;
+    else if (hxEigN(L) >= 1 && hxWAktiv(L) && L.state === 'spielt') { const w = hxWHold(L) ? 'hold' : HX.wGuard.pause > performance.now() ? 'pause' : L.wRefused ? 'refused' : L.wMemT ? 'mem' : L.treuBis != null ? 'treu8' : L.revW ? 'rev' : L.live ? 'live' : '?'; LM.why.set(w, (LM.why.get(w) || 0) + 1); }
     if (hxWHold(L)) e.hold++;
     if (!L.bew && !hxTauOn(L)) e.tau++;
     if (L.sch.some((id) => { const S = HX.sch.get(id); return S && S.out; })) e.o1++;
@@ -24761,18 +24786,19 @@ function lmLoopsRes() {
 // context's) per second of audio, the wait from the request, the most waiting at once
 function lmWerk(secs) {
   const W = HX.wSt, W0 = LM.w0 || W, d = (k) => (W[k] || 0) - (W0[k] || 0), done = d('done');
-  return { st: HXW.st || '-', pool: (HXW.pool || []).filter((R) => R.st === 'ok').length, n: d('n'), perS: r1(d('n') / Math.max(1, secs)), done, stop: d('stop'), ms: done ? Math.round(d('ms') / done) : 0, wait: done ? Math.round(d('wall') / done) : 0,
+  const rs = [HXW, ...(HXW.pool || [])].map((R) => (R.st === 'ok' ? (R.old ? 'o' : R.n ? 'r' : 'i') : R.st === 'laden' ? 'l' : R.st === 'kein' ? 'x' : '-')).join('');   // (each realm: i idle, r rendering, o being renewed, l loading, x none, - not booted)
+  return { st: HXW.st || '-', realms: rs, pool: (HXW.pool || []).filter((R) => R.st === 'ok').length, n: d('n'), perS: r1(d('n') / Math.max(1, secs)), done, stop: d('stop'), ms: done ? Math.round(d('ms') / done) : 0, wait: done ? Math.round(d('wall') / done) : 0,
     xRT: d('audio') > 0 ? +(d('ms') / 1000 / d('audio')).toFixed(3) : 0, q: W.q || 0, jobs: HX.wJobs || 0 };
 }
 // the guard's steps in the window (which, at which second), and where it stands at the end
 function lmGuard() {
-  const steps = (HX.gLog || []).filter((e) => e.t >= LM.gT).map((e) => e.step + (e.v !== '' ? ':' + e.v : '') + '@' + Math.round((e.t - LM.t0) / 1000));
+  const steps = (HX.gLog || []).filter((e) => e.t >= LM.gT).map((e) => e.step + (e.v !== '' ? ':' + e.v : '') + '@' + r1((e.t - LM.t0) / 1000));
   const G = HX.wGuard || {}, now = performance.now();
-  return { steps, now: { pause: G.pause > now ? Math.round((G.pause - now) / 1000) : 0, hold: !!(G.hold && G.pause > now), max: G.max === Infinity ? '-' : G.max, tau: !!HX.tauRest, lite: !!A.lite, scale: r1(A.budgetScale || 1) } };
+  return { steps, now: { pause: G.pause > now ? Math.round((G.pause - now) / 1000) : 0, hold: !!(G.hold && G.pause > now), max: G.max === Infinity ? '-' : G.max, tau: !!HX.tauRest, lite: !!A.lite, scale: Math.round(100 * (A.budgetScale || 1)) / 100, budget: VBUDGET } };
 }
 function lmStop() {
   if (!LM.on) return;
-  LM.on = false; clearInterval(LM.timer); lmObserve(false);
+  lmUPoll(); LM.on = false; clearInterval(LM.timer); clearInterval(LM.ut); lmObserve(false);
   lmClock();
   try { if (A.ctx.renderCapacity && LM.rc) A.ctx.renderCapacity.stop(); } catch (e) {}
   LM.res = lmResult(performance.now() - LM.t0);
@@ -24812,8 +24838,8 @@ function lmResult(ms) {
   R.rc = LM.rc && LM.rc.n ? { avg: Math.round(100 * LM.rc.avg / LM.rc.n), peak: Math.round(100 * LM.rc.peak), und: r1(100 * LM.rc.und) } : null;
   R.audio = { sr: c.sampleRate, base: r1((c.baseLatency || 0) * 1000), out: r1((c.outputLatency || 0) * 1000), lat: P['dev.lat'], latCtx: A.latMode, q: P['dev.q'], budget: VBUDGET, scale: A.budgetScale || 1, lite: !!A.lite };
   R.voices = { load: S.n ? Math.round(100 * S.load / S.n) : 0, loadMax: Math.round(100 * S.loadMax), max: S.vMax, grains: S.gr, idle: S.n ? Math.round(100 * S.idle / S.n) : 0 };
-  R.hx = { loops: S.loops, spielt: S.spielt, sch: S.sch, leb: S.leb, tau: !!HX.tauRest, f1: HXF1.off ? 'ruht' : 'an', werk: HXW.st || '-', wg: HX.wGuard ? HX.wGuard.n || 0 : 0, state: HX.state };
-  R.lp = lmLoopsRes(); R.werk = lmWerk(secs); R.guard = lmGuard();
+  R.hx = { loops: S.loops, spielt: S.spielt, sch: S.sch, leb: S.leb, tau: !!HX.tauRest, f1: HXF1.off ? 'ruht' : 'an', werk: HXW.st || '-', wg: HX.wGuard ? HX.wGuard.n || 0 : 0, state: HX.state, nichtLeb: [...LM.why].map(([k, v]) => k + ':' + Math.round(100 * v / Math.max(1, LM.lsum.n)) + '%').join(',') || '-' };
+  R.lp = lmLoopsRes(); R.werk = lmWerk(secs); R.guard = lmGuard(); R.ulog = lmUlog();
   const La = LM.lat, hint = A.latMode === 'min' ? '0' : A.latMode === 'safe' ? 'balanced' : 'interactive';
   R.lat = { set: P['dev.lat'], ctx: A.latMode, own: LAT.own ? 1 : 0, step: LAT.auto || '-', hint, base: La.n ? r1(La.base / La.n) : 0, out: La.n ? r1(La.out / La.n) : 0, outMin: La.n ? r1(La.outMin) : 0, outMax: r1(La.outMax), buf: Math.round((c.baseLatency || 0) * c.sampleRate), avg: R.ps && R.ps.averageLatency != null ? R.ps.averageLatency : null };
   const nav = navigator, ua = nav.userAgent || '';
@@ -24844,6 +24870,7 @@ function lmText(R) {
   L.push('voices ' + kv(R.voices) + ' · hx ' + kv(R.hx));
   L.push('loops ' + kv(R.lp.sum) + (R.lp.each.length ? ' · ' + R.lp.each.join(' ') : ''));
   L.push('werk ' + kv(R.werk));
+  L.push('ulog ' + (R.ulog.length ? R.ulog.join(' ') : 'none'));
   L.push('guard ' + (R.guard.steps.length ? R.guard.steps.join(' ') : 'none') + ' · ' + kv(R.guard.now));
   L.push('latency ' + kv(R.lat));
   return L.join('\n');
@@ -24859,7 +24886,7 @@ function lmSummary(R) {
     : slow ? 'Ergebnis: Die Oberfläche ist ausgelastet (Zeichnen und Rechnen auf dem Hauptthread); der Klang läuft sauber.' : 'Ergebnis: kein Engpass gemessen.');
   if (R.hx.loops) S.push('Schleifen: ' + R.hx.loops + ', davon ' + R.hx.spielt + ' spielend – sie belegen im Mittel ' + d(R.lp.sum.loops) + ' von ' + R.lp.sum.budget + ' Einheiten (mit Humus und Effektkette ' + d(R.lp.sum.hx) + '); angehaltene kosten nichts.');
   if (R.werk.n) S.push('Lebendige Schleifen: ' + R.werk.n + ' Durchgänge neu gerechnet, jeder etwa ' + R.werk.ms + ' ms (' + d(R.werk.xRT) + ' × Echtzeit).');
-  const GW = { lebendig: 'Lebendig hält an', weniger: 'weniger auf einmal gerechnet', taumeln: 'Taumeln ruht', grenze: 'Live-Spiel geschützt', lite: 'weniger Live-Stimmen', zurueck: 'Lebendig wieder an', latenz: 'Latenz ab dem nächsten Start zurückgestellt' };
+  const GW = { lebendig: 'Lebendig hält an', weniger: 'weniger auf einmal gerechnet', taumeln: 'Taumeln ruht', grenze: 'Live-Spiel geschützt', lite: 'weniger Live-Stimmen', stimmen: 'kurz weniger Live-Stimmen', mehr: 'Stimmen wieder frei', taumelt: 'Taumeln wieder an', zurueck: 'Lebendig wieder an', latenz: 'Latenz ab dem nächsten Start zurückgestellt' };
   if (R.guard.steps.length) S.push('Myzel hat entlastet: ' + [...new Set(R.guard.steps.map((x) => GW[x.split(/[:@]/)[0]] || x))].join(', ') + '.');
   S.push('Latenz: eingestellt „' + (LAT_NAME[R.lat.set] || R.lat.set) + '“' + (R.lat.ctx !== R.lat.set ? ' (gemessen mit „' + (LAT_NAME[R.lat.ctx] || R.lat.ctx) + '“ – das neue gilt nach einem Neustart)' : '') + ' – das Gerät meldet ' + d(R.lat.base) + ' ms Puffer und ' + d(R.lat.out) + ' ms Ausgabe.');
   const tip = latHint(R.lat.base + R.lat.out); if (tip) S.push('Tipp: ' + tip);
@@ -25776,7 +25803,7 @@ function buildUI() {
   const tabs = $('#tabs');
   for (const p of PANELS) {
     const b = h('button', { type: 'button', class: 'tab', id: 'tab-' + p.key, 'aria-expanded': 'false', 'aria-controls': 'sheet', html: p.icon + '<span>' + p.title + '</span>' + (p.key === 'dev' ? '<i id="midiDot" class="mdot" aria-hidden="true"></i>' : '') });
-    b.addEventListener('click', (e) => { if (P['hx.buehne'] && e.detail !== 0) { if (b.held) { b.held = false; return; } hxSay('Bühne: lange drücken öffnet ' + p.title); hxBuehneHint(b); return; } openPanel(p.key); });   // Hexenring (step 2b): on stage the sheet opens only on a long press (the keyboard opens it at once)
+    b.addEventListener('pointerdown', () => { b.hxPdT = performance.now(); }, true); b.addEventListener('click', (e) => { if (P['hx.buehne'] && (e.detail !== 0 || performance.now() - (b.hxPdT || -1e9) < 800)) { if (b.held) { b.held = false; return; } hxSay('Bühne: lange drücken öffnet ' + p.title); hxBuehneHint(b); return; } openPanel(p.key); });   // Hexenring (step 2b): on stage the sheet opens only on a long press (the keyboard opens it at once)
     b.addEventListener('pointerdown', () => { if (!P['hx.buehne']) return; clearTimeout(b.hT); b.held = false; b.hT = setTimeout(() => { b.held = true; openPanel(p.key); }, 500); });
     for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, () => clearTimeout(b.hT));
     tabs.append(b);
@@ -26163,6 +26190,7 @@ const hxSounds = () => { for (const L of HX.loops.values()) if (L.state === 'spi
 const hxOut1Of = (id) => { const L = HX.loops.get(id); return !!L && L.sch.some((x) => { const S = HX.sch.get(x); return S && S.out; }); };
 function hxPost(m, tr) {
   if (!HX.node || HX.ctx !== A.ctx) return false;
+  if (LM.on) { let n = 0; if (tr) for (const b of tr) n += b.byteLength || 0; if (n > 65536 || m.replace || m.tau) lmEv(Object.keys(m)[0] + (n > 65536 ? ':' + Math.round(n / 1048576 * 10) / 10 + 'MB' : '')); }   // (Leistung messen: what the processor is sent, beside the underruns)
   if (HXF1.off) for (const k in m) { const v = m[k]; if (v && typeof v === 'object' && (v.out || (k === 'state' && v.to === 'spielt' && hxOut1Of(v.loop)))) { hxF1Wake(); break; } }   // (phone report: whatever is sent to play on out 1 finds the chain copy awake; Leistung: a halted loop with a Schicht on out 1 that plays again)
   if (m.loop || (m.state && m.state.to === 'spielt')) { if (IDLE.on) idleWake(); if (IDLE.hxOff) hxGates(true); IDLE.hxT = null; }   // Ruhe: a Schleife will sound (Leistung: or a halted one again)
   else if ((m.wst || m.replace || m.schicht) && (IDLE.on || IDLE.hxOff)) { if (IDLE.on) idleWake(); if (IDLE.hxOff) hxGates(true); IDLE.hxT = null; }   // (step 2a: a Wuchs pass, a version – it sounds through the same way)
@@ -26344,7 +26372,7 @@ function hxF1Taps(on) {
 }
 function hxF1Wake() {
   const c = HXF1.c;
-  HXF1.off = false;
+  HXF1.off = false; lmEv('f1-wach');
   if (!c || c.ctx !== A.ctx) return;
   if (IDLE.on) idleWake();
   try { c.out.connect(stripIn('hxr')); } catch (e) {}
@@ -26368,7 +26396,7 @@ function hxF1Tick(now) {
   if (now - HXF1.z < 2) return;
   hxF1Taps(false);
   try { c.out.disconnect(stripIn('hxr')); } catch (e) { return; }
-  HXF1.off = true; HXF1.n++;
+  HXF1.off = true; HXF1.n++; lmEv('f1-ruht');
 }
 const hxSrcText = () => { const n = HX.loops.size; return n ? n + (n === 1 ? ' Schleife' : ' Schleifen') : 'aus'; };
 // the mixer shows the strip from the first Schleife on (or once something of it was set)
@@ -27810,6 +27838,14 @@ const HXU = { rail: null, cv: null, cx: null, korb: null, haupt: null, mid: null
   dirty: true, per: 4, w: 0, h: 0, dpr: 1, g: null, say: '', sayT: 0, uHold: null, sig: '' };
 function hxSay(msg) { if (!HXU.live) return; HXU.live.textContent = ''; clearTimeout(HXU.sayT); HXU.sayT = setTimeout(() => { if (HXU.live) HXU.live.textContent = msg; }, 30); }
 function hxRailDirty() { HXU.dirty = true; }
+// a keyboard press (Enter or Space: a click without a pointer, detail 0) acts on click – the buttons that act at the press
+// act on pointerdown. Chromium also sends a click with detail 0 after a touch tap that changed the layout (UI audit B1,
+// 24.10.2026: Korb harvested and cancelled, the Hauptknopf closed a loop and began a new recording, ↶ undid two steps):
+// a click within 800 ms of the element's own pointerdown is that tap's, never a key's
+function hxKeyClick(el, fn) {
+  el.addEventListener('pointerdown', () => { el.hxPdT = performance.now(); }, true);
+  el.addEventListener('click', (e) => { if (e.detail === 0 && !(performance.now() - (el.hxPdT || -1e9) < 800)) fn(e); });
+}
 function hxRailBuild() {
   const rail = $('#hxRail');
   if (!rail || HXU.rail) return;
@@ -27820,7 +27856,7 @@ function hxRailBuild() {
   for (let i = 0; i < HX_SLOTS; i++) {
     const b = h('button', { type: 'button', class: 'hxb hx-ring', 'data-slot': i, tabindex: '-1', 'aria-label': 'Schleife ' + (i + 1) + ', leer' }, h('span', { class: 'w' }, 'aufnehmen'));
     b.addEventListener('pointerdown', (e) => hxRingDown(i, e));
-    b.addEventListener('click', (e) => { if (e.detail === 0) hxRingTap(i, null); });
+    hxKeyClick(b, () => hxRingTap(i, null));
     b.addEventListener('contextmenu', (e) => e.preventDefault());
     HXU.rings.push(b); ringBox.append(b);
   }
@@ -27829,7 +27865,7 @@ function hxRailBuild() {
   HXU.mid.append(ringBox, HXU.chips);
   const press = (el, down, key) => {
     el.addEventListener('pointerdown', (e) => { if (e.button > 0) return; e.preventDefault(); down(e); });
-    el.addEventListener('click', (e) => { if (e.detail === 0) key(); });
+    hxKeyClick(el, key);
     el.addEventListener('contextmenu', (e) => e.preventDefault());
   };
   press(HXU.korb, (e) => hxKorb(e), () => hxKorb(null));
@@ -27843,7 +27879,7 @@ function hxRailBuild() {
   });
   const uUp = (e) => { const u = HXU.uHold; if (!u || u.pid !== e.pointerId) return; clearTimeout(u.tm); HXU.uHold = null; if (!u.fired && e.type === 'pointerup') hxUndoStep(); hxRailDirty(); };
   for (const ev of ['pointerup', 'pointercancel']) HXU.undo.addEventListener(ev, uUp);
-  HXU.undo.addEventListener('click', (e) => { if (e.detail === 0) hxUndoStep(); });
+  hxKeyClick(HXU.undo, hxUndoStep);
   HXU.redo.addEventListener('click', () => hxRedoStep());
   // the form button (step 1d): a tap at the press (the next Lichtung, pending); held 0.5 s the row instead
   HXU.form.addEventListener('pointerdown', (e) => {
@@ -27854,7 +27890,7 @@ function hxRailBuild() {
     const up = (ev) => { if (ev.pointerId !== G.pid) return; clearTimeout(G.tm); HXU.form.removeEventListener('pointerup', up); HXU.form.removeEventListener('pointercancel', up); };
     HXU.form.addEventListener('pointerup', up); HXU.form.addEventListener('pointercancel', up);
   });
-  HXU.form.addEventListener('click', (e) => { if (e.detail === 0) hxFormTap(); });
+  hxKeyClick(HXU.form, hxFormTap);
   HXU.form.addEventListener('contextmenu', (e) => e.preventDefault());
   HXU.pg.addEventListener('click', () => { HX.page = HX.page ? 0 : 1; hxRailDirty(); });
   HXU.fold.addEventListener('click', () => {
@@ -28267,7 +28303,7 @@ function hxKlopfRender() {
   if (K) {
     const pad = h('button', { type: 'button', class: 'btn primary hx-kpad', 'aria-label': 'Hier auf jeden Klick tippen' }, 'Tipp mit dem Klick · ' + K.taps.length + ' von ' + HX_KLOPF);
     pad.addEventListener('pointerdown', (e) => { if (e.button > 0) return; e.preventDefault(); hxKlopfTap(e); });
-    pad.addEventListener('click', (e) => { if (e.detail === 0) hxKlopfTap(null); });
+    hxKeyClick(pad, () => hxKlopfTap(null));
     const stop = h('button', { type: 'button', class: 'btn ghost' }, 'Abbrechen'); stop.addEventListener('click', () => { HX.klopf = null; hxCardDirty(); });
     box.replaceChildren(h('div', { class: 'hx-row' }, h('span', { class: 'lab' }, 'Spielverzögerung'), h('div', { class: 'hx-kb' }, pad, stop)));
     return;
@@ -30859,7 +30895,7 @@ function hxWSlot(L, S, k, o = {}) {
   hxPost({ wst: { schicht: S.id, k, len: job.lenF, cap: Math.ceil(job.dur * SR) + HX_CH, at: o.at, must: !!o.must, from, port: ch.port1 } }, [ch.port1]);
   const seed = o.treu ? (S.anc ? S.anc.seed : S.wseed) : hxWSeedK(S, k);
   const d = Object.assign(hxWJob(L, S, job, seed), { port: ch.port2, F0: a, lead: HX_WLEAD, from: from / SR, keep: S.key + ':' + k, feld: (L.klang || 'eigen') === 'feld' });
-  R.n++; HX.wJobs++; HX.wLast = performance.now(); hxCount(); HX.wSt.n++; HX.wSt.q = Math.max(HX.wSt.q, HX.wJobs);
+  R.n++; HX.wJobs++; HX.wLast = performance.now(); lmEv('durchgang'); hxCount(); HX.wSt.n++; HX.wSt.q = Math.max(HX.wSt.q, HX.wJobs);
   const re = S.wRe || (S.wRe = {}); re[k] = R; for (const x in re) if (+x < k - 12) delete re[x];   // (✓ asks the realm that rendered a pass; it keeps its last ten)
   const t0 = performance.now();
   (S.wPend || (S.wPend = new Set())).add(k);
@@ -30909,7 +30945,7 @@ function hxWTick(now, horizon) {
   const fNow = hxF(now), pnow = performance.now(), G = HX.wGuard;
   if (G.max < Infinity && pnow - G.t > 60000) { G.t = pnow; G.max = G.max + 1 >= HX_WPOOL ? Infinity : G.max + 1; }   // (a minute without an underrun: one more at once again)
   if (pnow - (HXW.renT || 0) > 1000) { HXW.renT = pnow; hxwRenew(); }   // (Leistung: realms renewed – their renders' memory freed)
-  if (G.hold && !(G.pause > pnow)) { G.hold = false; G.end = pnow; hxGuardLog('zurueck'); hxCardDirty(); }   // (phone: the pause's span clean – the loops live again from their next pass)
+  if (G.hold && !(G.pause > pnow)) { G.hold = false; G.end = pnow; hxGuardLog('zurueck'); hxCardDirty(); }   // (the hold's span clean – the loops live again from their next pass)
   for (const L of hxLoopsLive()) {
     if (L.bew || L.state === 'weg') continue;
     if (L.treuBis != null && tgBeat(now) >= L.treuBis) { L.treuBis = null; hxRailDirty(); hxCardDirty(); }
@@ -30922,7 +30958,7 @@ function hxWTick(now, horizon) {
       if (S.wPend && S.wPend.size) hxWDropPast(S, k);
       if (!lebt && !hold) { if (S.wLive) { S.wLive = false; hxWStop(S); hxWUpdate(L, { re: true }); } continue; }
       if (!S.wLive) {
-        if (hold) continue; if (!hxMemOk(Math.round(1.5 * (hxWTailEst(S) + 4) * SR))) continue; S.wLive = true; S.wk = k; hxwWarm(2 * [...HX.sch.values()].filter((x) => x.wLive).length); }   // (final pass: its passes in the processor counted against the Speichergrenze before they stream)
+        if (hold) continue; if (!hxMemOk(Math.round(1.5 * (hxWTailEst(S) + 4) * SR))) { L.wMemT = pnow; continue; } L.wMemT = 0; S.wLive = true; S.wk = k; hxwWarm(2 * [...HX.sch.values()].filter((x) => x.wLive).length); }   // (final pass: its passes in the processor counted against the Speichergrenze before they stream)
       if ((S.wk == null ? -1 : S.wk) >= k1 || a1 - fNow > hxWStartS() * SR) continue;
       if (L.nein && L.nein.k === k1 && S.anc) { S.wk = k1; hxWPlay(S, 'anc', a1); continue; }   // (✕: the anchor plays that pass)
       if (L.frucht != null && L.frucht === k1 && (S.anc || S.wu)) { S.wk = k1; hxWPlay(S, S.anc ? 'anc' : 'wu', a1); continue; }   // (step 4: Fruchten – at a Treffen its anchor once)
@@ -31142,7 +31178,7 @@ function hxWWord(L) {
   if (!hxWAktiv(L)) return '';
   if (HXW.st === 'kein') return 'live gespielt';   // (Live mode: no Werk-Rahmen)
   const S = L.sch.map((id) => HX.sch.get(id)).filter(hxWCan), busy = S.some((s) => s.wBusy), ready = S.every((s) => s.play === 'wu' || s.play === 'anc');
-  if (hxEigN(L) >= 1) { if (hxWHold(L)) return 'spielt den letzten Durchgang – das Handy ist ausgelastet'; if (HX.wGuard.pause > performance.now() || L.wRefused) return 'lebt, sobald Rechenzeit frei ist'; if (L.treuBis != null) { const n = Math.max(1, Math.min(8, Math.floor((L.treuBis - tgBeat(hxNowT())) / 4 + 0.01))); return 'Treu noch ' + n + (n === 1 ? ' Takt' : ' Takte'); } return ['', 'lebt', 'variiert', 'wandert'][hxEigN(L)]; }
+  if (hxEigN(L) >= 1) { if (hxWHold(L)) return 'spielt den letzten Durchgang – ' + hxGeraet() + ' ist ausgelastet'; if (HX.wGuard.pause > performance.now() || L.wRefused) return 'lebt, sobald Rechenzeit frei ist'; if (L.wMemT && performance.now() - L.wMemT < 5000) return 'lebt, sobald Speicher frei ist (Speichergrenze)'; if (L.treuBis != null) { const n = Math.max(1, Math.min(8, Math.floor((L.treuBis - tgBeat(hxNowT())) / 4 + 0.01))); return 'Treu noch ' + n + (n === 1 ? ' Takt' : ' Takte'); } return ['', 'lebt', 'variiert', 'wandert'][hxEigN(L)]; }
   return busy ? 'wächst …' : ready ? 'Wuchs' : 'wächst …';
 }
 // can the device keep this loop living? its passes' predicted render time against what the pool can spend
@@ -31153,38 +31189,37 @@ function hxWCanLive(L) {
   return need <= 0.6 * Math.max(1, HX_WPOOL);
 }
 
-// ---- the CPU guard (SPEC §10.5, owner rule): an underrun while Wuchs works first pauses the living passes (the loops
-// play their Treu or Abdruck), then lets fewer render at once – the live budget and A.lite are never touched for it.
-// → true when the Wuchs took the blame ----
-// On a phone (Leistung, 23.10.2026 – the owner's report A) the pause holds: a living loop plays its last complete pass on,
-// pass after pass, as a Treu loop would (its stream stays, no render starts – not even a Treu one), and the passes not
-// yet heard stop rendering at once; it lasts while the device keeps dropping audio (30 s after the last underrun, twice
-// as long when it comes back within two minutes, at most four) – then the loop lives again from its next pass.
-const HX_PHONE = MOBILE && !HX_TABLET;
+// ---- the CPU guard (SPEC §10.5, owner rule): an underrun while Wuchs works first holds the living passes, then lets
+// fewer render at once – the live budget and A.lite are never touched for it. → true when the Wuchs took the blame ----
+// The hold (Leistung, 23.10.2026 – the owner's report A; since the desktop report 24.10.2026 on every device: the pause
+// before switched each living Schicht back to its Treu version at once – a burst of whole versions to the processor while
+// it was already late – and stayed, re-armed by every later underrun): a living loop plays its last complete pass on, pass
+// after pass, as a Treu loop would (its stream stays, no render starts – not even a Treu one), and the passes not yet heard
+// stop rendering at once; it lasts while the device keeps dropping audio (30 s after the last underrun, twice as long when
+// it comes back within two minutes, at most four) – then the loop lives again from its next pass.
+const HX_PHONE = MOBILE && !HX_TABLET, hxGeraet = () => (HX_PHONE ? 'das Handy' : 'das Gerät');
 function hxWGuard() {
-  const now = performance.now(), ran = HX.wJobs > 0 || HX.wRen > 0 || now - HX.wLast < 8000;
+  const now = performance.now(), ran = HX.wJobs > 0 || HX.wRen > 0 || (HX.wLast > 0 && now - HX.wLast < 8000);   // (wLast 0: none yet – before, the first 8 s after loading counted as Wuchs work)
   if (!ran) return false;
   const G = HX.wGuard, lebt = hxLoopsLive().some((L) => hxEigN(L) >= 1 && hxWAktiv(L));
   if (lebt && !(G.pause > now)) {
     G.n++;
-    if (HX_PHONE) {
-      G.hold = true; G.span = now - (G.end || -1e9) < 120000 ? Math.min(240000, 2 * (G.span || 30000)) : 30000; G.pause = now + G.span;
-      for (const S of HX.sch.values()) if (S.wLive) hxWStop(S);   // (the passes not yet heard: dropped, their renders stopped – the one playing stays)
-      hxGuardLog('lebendig', Math.round(G.span / 1000));
-      hxSay('Lebendige Schleifen spielen ihren letzten Durchgang weiter – das Handy ist ausgelastet');
-    } else { G.pause = now + 30000; hxGuardLog('lebendig', 30); hxSay('Schleifen leben gleich weiter – das Gerät ist gerade ausgelastet'); }
+    G.hold = true; G.span = now - (G.end || -1e9) < 120000 ? Math.min(240000, 2 * (G.span || 30000)) : 30000; G.pause = now + G.span;
+    for (const S of HX.sch.values()) if (S.wLive) hxWStop(S);   // (the passes not yet heard: dropped, their renders stopped – the one playing stays)
+    hxGuardLog('lebendig', Math.round(G.span / 1000));
+    hxSay('Lebendige Schleifen spielen ihren letzten Durchgang weiter – ' + hxGeraet() + ' ist ausgelastet');
     hxCardDirty();
   } else { G.max = Math.max(1, Math.min(G.max === Infinity ? HX_WPOOL : G.max, HX.wJobs || 1) - 1 || 1); hxGuardLog('weniger', G.max); }
   G.t = now;
   return true;
 }
-// (phone) while the pause holds, every second with underruns keeps it: the loops live again only once the device has
+// while the hold lasts, every second with underruns keeps it: the loops live again only once the device has
 // been clean for the pause's span
 function hxWHoldKeep(now) { const G = HX.wGuard; if (G.hold && G.pause > now) G.pause = Math.max(G.pause, now + (G.span || 30000)); }
-// (phone) a living loop the guard holds: it plays its last complete pass on, no render starts
+// a living loop the guard holds: it plays its last complete pass on, no render starts
 const hxWHold = (L) => !!HX.wGuard.hold && HX.wGuard.pause > performance.now() && L.state === 'spielt' && hxEigN(L) >= 1 && !L.revW && !L.live && hxWAktiv(L) && !L.wRefused;
 // the guard's steps, kept for „Leistung messen“ (which, when, the underruns of that second)
-function hxGuardLog(step, v) { const a = HX.gLog || (HX.gLog = []); a.push({ t: performance.now(), step, v: v != null ? v : '' }); if (a.length > 200) a.shift(); }
+function hxGuardLog(step, v) { lmEv('guard:' + step); const a = HX.gLog || (HX.gLog = []); a.push({ t: performance.now(), step, v: v != null ? v : '' }); if (a.length > 200) a.shift(); }
 // (phone) the device drops audio while loops sound and their steps are taken: the live budget and A.lite stay – the
 // loops are what costs, and the owner's rule is that they give way, never the live playing. Said once
 function hxGuardGrenze() {
@@ -31194,22 +31229,33 @@ function hxGuardGrenze() {
   return true;
 }
 
-// ---- the guard's second step on a phone (phone report 22.10.2026): the device still drops audio while loops play and
-// the Wuchs is not (or no longer) to blame – Taumeln rests: every Schicht is read as recorded, frame for frame, instead
-// of through the resampler (its 32 taps per frame and Schicht are the dearest part of a loop on the audio thread:
-// measured 0.8 % of a desktop core per loop, on a phone four to six times that). The loops keep the tuning they were
-// played in (a few cents against a live note that drifts); said once, shown in the card; a tap on „mit“ there brings it
-// back for all of them (and the guard may step again). Never on an iPad or a computer: there it stays. ----
+// ---- the guard's second step (phone report 22.10.2026; every device since the desktop report 24.10.2026): the device
+// still drops audio while loops play and the Wuchs is not (or no longer) to blame – Taumeln rests: every Schicht is read
+// as recorded, frame for frame, instead of through the resampler (its 32 taps per frame and Schicht are the dearest part
+// of a loop on the audio thread: measured 0.8 % of a desktop core per loop, on a phone four to six times that; offline, 6
+// loops of 2 Schichten: 0.45 → 0.08 ms of the processor per quantum). The loops keep the tuning they were played in (a few
+// cents against a live note that drifts); said once, shown in the card; a tap on „mit“ there brings it back for all of
+// them (and the guard may step again). On a computer or an iPad it also comes back by itself once the device has been
+// clean for the span (30 s, doubled when it returns within two minutes, ≤ 4 min – hxTauBack); on a phone it stays. ----
 function hxTauGuard() {
-  if (!MOBILE || HX_TABLET || HX.tauRest || !(P['mov.drift'] > 0)) return false;
+  if (HX.tauRest || !(P['mov.drift'] > 0)) return false;
   const list = hxLoopsLive().filter((L) => !L.bew && L.taumeln !== false);
   if (!list.some((L) => L.state === 'spielt')) return false;
   HX.tauRest = true; hxGuardLog('taumeln');
   for (const L of list) { hxPost({ tau: { loop: L.id, on: false } }); hxTauOrig(L); }
   hxCount(); hxCardDirty();
-  hxSay('Schleifen bleiben in ihrer Stimmung – das Handy ist ausgelastet');
-  toast('Das Handy kam beim Abspielen der Schleifen an seine Grenze: Sie bleiben jetzt in ihrer Stimmung (Taumeln ruht). In der Karte unter „Aufnahme“ holt „mit“ es zurück.', 7000);
+  const T = HX.tauG || (HX.tauG = { span: 0, end: -1e9 }), now = performance.now();
+  if (!HX_PHONE) T.span = now - T.end < 120000 ? Math.min(240000, 2 * (T.span || 30000)) : 30000;
+  hxSay('Schleifen bleiben in ihrer Stimmung – ' + hxGeraet() + ' ist ausgelastet');
+  if (HX_PHONE || !HX.tauSaid) { HX.tauSaid = true; toast((HX_PHONE ? 'Das Handy' : 'Das Gerät') + ' kam beim Abspielen der Schleifen an seine Grenze: Sie bleiben ' + (HX_PHONE ? 'jetzt' : 'eine Weile') + ' in ihrer Stimmung (Taumeln ruht). In der Karte unter „Aufnahme“ holt „mit“ es zurück.', 7000); }
   return true;
+}
+// (a computer or an iPad) Taumeln back by itself once the device has been clean for the span – as „mit“ does it
+function hxTauBack(now) {
+  if (HX_PHONE || !HX.tauRest || !HX.tauG || now - GD.uT < HX.tauG.span) return;
+  HX.tauRest = false; HX.tauG.end = now; hxGuardLog('taumelt');
+  for (const X of hxLoopsLive()) if (!X.bew && X.taumeln !== false) hxPost({ tau: { loop: X.id, on: true } });
+  hxCount(); hxCardDirty();
 }
 const hxTauOn = (L) => L.taumeln !== false && !HX.tauRest;   // (what the processor is told: the loop's choice, unless the guard let it rest)
 
@@ -33978,11 +34024,21 @@ function start() {
 // the browser builds an oscillator type's wave tables at its first use in a context (≈ 1–3 ms each): at sound start,
 // not inside the first note (whose sound waits for the task that makes it)
 function oscWarm() { if (!A.ctx) return; try { for (const t of ['sine', 'sawtooth', 'square', 'triangle']) { const o = A.ctx.createOscillator(); o.type = t; } } catch (e) {} }
-// Chrome 146+ reports output underruns. If the device drops audio, play fewer voices at once and lighten the drive.
+// Chrome 146+ reports output underruns. What gives way, in this order (owner's rule: the loops first, the live playing
+// last; on a computer or an iPad Myzel never plays simpler – desktop report 24.10.2026, where the old last step had cut the
+// live budget six times to 26 % and set A.lite for the rest of the session):
+//   1. Lebendig holds (the last complete pass plays on), then fewer renders at once (hxWGuard) – every device;
+//   2. Taumeln rests (hxTauGuard) – every device; on a computer or an iPad it comes back by itself after the quiet;
+//   3. a phone with loops sounding: the live budget stays (hxGuardGrenze);
+//   4. the live voices: on a phone the old step (budget × 0.8 and A.lite – it lightens the worklet sources and the drive);
+//      on a computer or an iPad only a voice limit (budget × 0.8, at most every 5 s, never under half) – never A.lite.
+// Everywhere the budget comes back a step after 30 s without underruns (gdRecover), the guard's own steps are logged with
+// the underruns' times for „Leistung messen“.
 // Hexenring (phone report 22.10.2026): where the browser counts none, the audio clock tells – a render that falls behind
 // lets the context's time run slower than the page's (the device plays the frames that were not ready as silence, the
 // graph renders them later): a second in which the clock lost 25 ms or more counts. That count serves the loops' steps on
 // a phone only (the Wuchs, Taumeln) – never the live budget or A.lite, which wait for the browser's own figures.
+const GD = { uT: 0, upT: 0, stepT: 0, said: false };
 function watchUnderruns() {
   const ps = A.ctx.playbackStats || A.ctx.playoutStats;
   if (!ps && !(MOBILE && !HX_TABLET)) return;
@@ -34005,23 +34061,42 @@ function watchUnderruns() {
     const u = count(), now = performance.now();
     A.underruns = u;
     latWatch(ps, u, last, now);   // (Android's „Minimal“ by default: lasting underruns step the latency back from the next start)
-    if (u > last) { hits.push(now); hxWHoldKeep(now); }   // Hexenring: (Leistung) a phone's held Lebendig stays held while it lasts
+    if (u > last && now - LAT.t0 < 8000) { last = u; return; }   // (the sound's start – modules, wave tables, the first renders – is no lasting stutter: before, hxWGuard's wLast 0 took these by accident)
+    if (u > last) { hits.push(now); hxWHoldKeep(now); GD.uT = now; }   // Hexenring: (Leistung) a held Lebendig stays held while it lasts
     while (hits.length && now - hits[0] > 10000) hits.shift();
-    if (u > last && hxWGuard()) { last = u; return; }   // Hexenring: (step 2a) the Wuchs gives way first – never the live budget, never A.lite for it
-    if (u > last && hits.length >= 2 && hxTauGuard()) { last = u; return; }   // Hexenring: (phone report) then, on a phone and when it lasts, the loops' Taumeln
-    if (u > last && hxGuardGrenze()) { last = u; return; }   // Hexenring: (Leistung, report A) a phone with loops sounding: the live budget stays
-    if (!ps) { last = u; return; }
-    if (u > last && VBUDGET > 6) {
+    gdRecover(now);
+    if (!(u > last)) return;
+    last = u;
+    if (hxWGuard()) return;   // Hexenring: (step 2a) the Wuchs gives way first – never the live budget, never A.lite for it
+    if (hits.length >= 2 && hxTauGuard()) return;   // Hexenring: (phone report) then, when it lasts, the loops' Taumeln
+    if (hxGuardGrenze()) return;   // Hexenring: (Leistung, report A) a phone with loops sounding: the live budget stays
+    if (!ps || VBUDGET <= 6) return;
+    if (HX_PHONE) {
       hxGuardLog('lite', Math.round(VBUDGET * 0.8));
-      A.budgetScale = (A.budgetScale || 1) * 0.8;
+      A.budgetScale = (A.budgetScale || 1) * 0.8; GD.stepT = now;
       A.lite = true; applyQuality(); updDevUI();
       if (!A.liteHinted) {
         A.liteHinted = true;
         toast('Das Gerät kam kurz an seine Grenze – Myzel spielt jetzt etwas weniger Stimmen gleichzeitig.' + (A.latMode === 'min' && !latAuto() ? ' Knackt es weiter, stelle unter „Gerät“ die Latenz auf „Standard“.' : ''), 7000);
       }
+      return;
     }
-    last = u;
+    // a computer or an iPad: only when it lasts, a step at most every 5 s, never under half the budget – the same sound
+    if (hits.length < 2 || now - GD.stepT < 5000 || (A.budgetScale || 1) <= 0.5) return;
+    A.budgetScale = Math.max(0.5, (A.budgetScale || 1) * 0.8); GD.stepT = now; budgetApply();
+    hxGuardLog('stimmen', VBUDGET); updDevUI();
+    if (!GD.said) { GD.said = true; toast('Das Gerät kam an seine Grenze – Myzel spielt kurz weniger Stimmen gleichzeitig (der Klang bleibt gleich). Nach einer halben Minute ohne Aussetzer sind wieder alle da.', 8000); }
   }, 1000);
+}
+// the budget back, a step at a time: 30 s without underruns, then every 30 s one step (× 1.25) up to the full budget – on
+// every device (A.lite on a phone stays, as before); a computer's or an iPad's Taumeln comes back after its quiet span
+function gdRecover(now) {
+  const sc = A.budgetScale || 1;
+  if (sc < 1 && now - GD.uT >= 30000 && now - Math.max(GD.upT, GD.stepT) >= 30000) {
+    A.budgetScale = sc / 0.8 > 0.99 ? 1 : sc / 0.8; GD.upT = now; budgetApply();
+    hxGuardLog('mehr', VBUDGET); updDevUI();
+  }
+  hxTauBack(now);
 }
 
 function boot() {

@@ -1,0 +1,14 @@
+const out = {};
+await S.tap('#tab-rec', { mouse: 1 }); await page.waitForTimeout(500);
+out.a0 = await S.rms(2000);
+const m2 = [[0.75,0.3,150,150],[0.85,0.3,150,150],[0.65,0.3,150,150],[0.9,0.3,150,150],[0.75,0.3,150,150],[0.85,0.3,150,150],[0.65,0.3,150,150],[0.9,0.3,150,150]];
+await S.playField([...m2, ...m2]);
+out.k = await S.rail();
+await S.tap('#hxKorb', { mouse: 1 }); await page.waitForTimeout(300);
+out.k1 = await S.rail(); await S.shot('d90-chips');
+const to = await S.btn('→ 1', '#hxRail'); out.to = to; await page.waitForTimeout(3500);
+out.k2 = await S.rail(); out.a1 = await S.rms(3000);
+await S.tap('#tab-rec', { mouse: 1 }); await page.waitForTimeout(500);
+out.card = (await S.cardTxt(0) || '').slice(0, 260); out.card2 = (await S.cardTxt(1) || '').slice(0, 160);
+out.said = await S.said();
+return out;

@@ -107,11 +107,21 @@ function start() {
 // the browser builds an oscillator type's wave tables at its first use in a context (≈ 1–3 ms each): at sound start,
 // not inside the first note (whose sound waits for the task that makes it)
 function oscWarm() { if (!A.ctx) return; try { for (const t of ['sine', 'sawtooth', 'square', 'triangle']) { const o = A.ctx.createOscillator(); o.type = t; } } catch (e) {} }
-// Chrome 146+ reports output underruns. If the device drops audio, play fewer voices at once and lighten the drive.
+// Chrome 146+ reports output underruns. What gives way, in this order (owner's rule: the loops first, the live playing
+// last; on a computer or an iPad Myzel never plays simpler – desktop report 24.10.2026, where the old last step had cut the
+// live budget six times to 26 % and set A.lite for the rest of the session):
+//   1. Lebendig holds (the last complete pass plays on), then fewer renders at once (hxWGuard) – every device;
+//   2. Taumeln rests (hxTauGuard) – every device; on a computer or an iPad it comes back by itself after the quiet;
+//   3. a phone with loops sounding: the live budget stays (hxGuardGrenze);
+//   4. the live voices: on a phone the old step (budget × 0.8 and A.lite – it lightens the worklet sources and the drive);
+//      on a computer or an iPad only a voice limit (budget × 0.8, at most every 5 s, never under half) – never A.lite.
+// Everywhere the budget comes back a step after 30 s without underruns (gdRecover), the guard's own steps are logged with
+// the underruns' times for „Leistung messen“.
 // Hexenring (phone report 22.10.2026): where the browser counts none, the audio clock tells – a render that falls behind
 // lets the context's time run slower than the page's (the device plays the frames that were not ready as silence, the
 // graph renders them later): a second in which the clock lost 25 ms or more counts. That count serves the loops' steps on
 // a phone only (the Wuchs, Taumeln) – never the live budget or A.lite, which wait for the browser's own figures.
+const GD = { uT: 0, upT: 0, stepT: 0, said: false };
 function watchUnderruns() {
   const ps = A.ctx.playbackStats || A.ctx.playoutStats;
   if (!ps && !(MOBILE && !HX_TABLET)) return;
@@ -134,22 +144,41 @@ function watchUnderruns() {
     const u = count(), now = performance.now();
     A.underruns = u;
     latWatch(ps, u, last, now);   // (Android's „Minimal“ by default: lasting underruns step the latency back from the next start)
-    if (u > last) { hits.push(now); hxWHoldKeep(now); }   // Hexenring: (Leistung) a phone's held Lebendig stays held while it lasts
+    if (u > last && now - LAT.t0 < 8000) { last = u; return; }   // (the sound's start – modules, wave tables, the first renders – is no lasting stutter: before, hxWGuard's wLast 0 took these by accident)
+    if (u > last) { hits.push(now); hxWHoldKeep(now); GD.uT = now; }   // Hexenring: (Leistung) a held Lebendig stays held while it lasts
     while (hits.length && now - hits[0] > 10000) hits.shift();
-    if (u > last && hxWGuard()) { last = u; return; }   // Hexenring: (step 2a) the Wuchs gives way first – never the live budget, never A.lite for it
-    if (u > last && hits.length >= 2 && hxTauGuard()) { last = u; return; }   // Hexenring: (phone report) then, on a phone and when it lasts, the loops' Taumeln
-    if (u > last && hxGuardGrenze()) { last = u; return; }   // Hexenring: (Leistung, report A) a phone with loops sounding: the live budget stays
-    if (!ps) { last = u; return; }
-    if (u > last && VBUDGET > 6) {
+    gdRecover(now);
+    if (!(u > last)) return;
+    last = u;
+    if (hxWGuard()) return;   // Hexenring: (step 2a) the Wuchs gives way first – never the live budget, never A.lite for it
+    if (hits.length >= 2 && hxTauGuard()) return;   // Hexenring: (phone report) then, when it lasts, the loops' Taumeln
+    if (hxGuardGrenze()) return;   // Hexenring: (Leistung, report A) a phone with loops sounding: the live budget stays
+    if (!ps || VBUDGET <= 6) return;
+    if (HX_PHONE) {
       hxGuardLog('lite', Math.round(VBUDGET * 0.8));
-      A.budgetScale = (A.budgetScale || 1) * 0.8;
+      A.budgetScale = (A.budgetScale || 1) * 0.8; GD.stepT = now;
       A.lite = true; applyQuality(); updDevUI();
       if (!A.liteHinted) {
         A.liteHinted = true;
         toast('Das Gerät kam kurz an seine Grenze – Myzel spielt jetzt etwas weniger Stimmen gleichzeitig.' + (A.latMode === 'min' && !latAuto() ? ' Knackt es weiter, stelle unter „Gerät“ die Latenz auf „Standard“.' : ''), 7000);
       }
+      return;
     }
-    last = u;
+    // a computer or an iPad: only when it lasts, a step at most every 5 s, never under half the budget – the same sound
+    if (hits.length < 2 || now - GD.stepT < 5000 || (A.budgetScale || 1) <= 0.5) return;
+    A.budgetScale = Math.max(0.5, (A.budgetScale || 1) * 0.8); GD.stepT = now; budgetApply();
+    hxGuardLog('stimmen', VBUDGET); updDevUI();
+    if (!GD.said) { GD.said = true; toast('Das Gerät kam an seine Grenze – Myzel spielt kurz weniger Stimmen gleichzeitig (der Klang bleibt gleich). Nach einer halben Minute ohne Aussetzer sind wieder alle da.', 8000); }
   }, 1000);
+}
+// the budget back, a step at a time: 30 s without underruns, then every 30 s one step (× 1.25) up to the full budget – on
+// every device (A.lite on a phone stays, as before); a computer's or an iPad's Taumeln comes back after its quiet span
+function gdRecover(now) {
+  const sc = A.budgetScale || 1;
+  if (sc < 1 && now - GD.uT >= 30000 && now - Math.max(GD.upT, GD.stepT) >= 30000) {
+    A.budgetScale = sc / 0.8 > 0.99 ? 1 : sc / 0.8; GD.upT = now; budgetApply();
+    hxGuardLog('mehr', VBUDGET); updDevUI();
+  }
+  hxTauBack(now);
 }
 

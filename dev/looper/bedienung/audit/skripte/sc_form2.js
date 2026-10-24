@@ -1,0 +1,15 @@
+const out = {};
+await S.btn('✕', '#hxRail'); await page.waitForTimeout(300);
+await S.tap(page.locator('.hx-ring').first(), { mouse: 1 }); await page.waitForTimeout(3000);
+out.a0 = await S.rms(1000);
+await S.tap('#hxForm', { hold: 900 }); await page.waitForTimeout(300);
+await S.btn('merken', '#hxRail'); await page.waitForTimeout(300);
+await S.btn('✕', '#hxRail'); await page.waitForTimeout(300);
+out.r = await S.rail();
+await S.said();
+out.go = await S.tap('#hxForm', { mouse: 1 }); await page.waitForTimeout(200); out.r1 = (await S.rail()).split('  ').filter((x) => /Form|ring/.test(x)).join(' ');
+out.s1 = await S.said();
+await page.waitForTimeout(3500); out.a1 = await S.rms(1500); out.r2 = (await S.rail()).split('  ').filter((x) => /Form|ring\[/.test(x)).slice(0,2).join(' ');
+out.s2 = await S.said();
+await S.tap('#hxForm', { mouse: 1 }); await page.waitForTimeout(4000); out.a2 = await S.rms(1500); out.s3 = await S.said();
+return out;

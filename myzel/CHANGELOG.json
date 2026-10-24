@@ -2,6 +2,16 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-24c",
+      "punkte": [
+        "Am Rechner und am iPad spielt Myzel nie mehr einfacher, wenn der Klang kurz aussetzt. Zuerst geben die Schleifen nach; nur wenn das nicht reicht, spielt Myzel kurz weniger Stimmen gleichzeitig – nach einer halben Minute ohne Aussetzer sind wieder alle da.",
+        "Auch am Handy kommen die Stimmen nach einer ruhigen halben Minute schrittweise zurück.",
+        "Lebendige Schleifen spielen bei Engpässen ihren letzten Durchgang weiter, statt lange auszusetzen, und leben danach von selbst wieder.",
+        "Auf dem Handy löst ein Tippen auf die Knöpfe der Ringleiste nur noch eine Aktion aus – vorher brach der Korb die Ernte gleich wieder ab, und ↶ nahm zwei Schritte zurück.",
+        "„Leistung messen“ zeigt jetzt, wann genau der Klang aussetzte und was in dem Moment geschah."
+      ]
+    },
+    {
       "id": "2026-10-24b",
       "punkte": [
         "Auf Android-Handys klingt Myzel jetzt viel schneller nach dem Antippen: Die Latenz steht dort von selbst auf „Minimal“.",

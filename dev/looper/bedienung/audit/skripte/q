@@ -1,0 +1,2 @@
+#!/bin/sh
+curl -s --data-binary @- localhost:8791

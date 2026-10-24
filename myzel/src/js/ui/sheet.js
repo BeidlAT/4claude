@@ -4,7 +4,7 @@ function buildUI() {
   const tabs = $('#tabs');
   for (const p of PANELS) {
     const b = h('button', { type: 'button', class: 'tab', id: 'tab-' + p.key, 'aria-expanded': 'false', 'aria-controls': 'sheet', html: p.icon + '<span>' + p.title + '</span>' + (p.key === 'dev' ? '<i id="midiDot" class="mdot" aria-hidden="true"></i>' : '') });
-    b.addEventListener('click', (e) => { if (P['hx.buehne'] && e.detail !== 0) { if (b.held) { b.held = false; return; } hxSay('Bühne: lange drücken öffnet ' + p.title); hxBuehneHint(b); return; } openPanel(p.key); });   // Hexenring (step 2b): on stage the sheet opens only on a long press (the keyboard opens it at once)
+    b.addEventListener('pointerdown', () => { b.hxPdT = performance.now(); }, true); b.addEventListener('click', (e) => { if (P['hx.buehne'] && (e.detail !== 0 || performance.now() - (b.hxPdT || -1e9) < 800)) { if (b.held) { b.held = false; return; } hxSay('Bühne: lange drücken öffnet ' + p.title); hxBuehneHint(b); return; } openPanel(p.key); });   // Hexenring (step 2b): on stage the sheet opens only on a long press (the keyboard opens it at once)
     b.addEventListener('pointerdown', () => { if (!P['hx.buehne']) return; clearTimeout(b.hT); b.held = false; b.hT = setTimeout(() => { b.held = true; openPanel(p.key); }, 500); });
     for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, () => clearTimeout(b.hT));
     tabs.append(b);

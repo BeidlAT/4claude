@@ -4,6 +4,14 @@ const HXU = { rail: null, cv: null, cx: null, korb: null, haupt: null, mid: null
   dirty: true, per: 4, w: 0, h: 0, dpr: 1, g: null, say: '', sayT: 0, uHold: null, sig: '' };
 function hxSay(msg) { if (!HXU.live) return; HXU.live.textContent = ''; clearTimeout(HXU.sayT); HXU.sayT = setTimeout(() => { if (HXU.live) HXU.live.textContent = msg; }, 30); }
 function hxRailDirty() { HXU.dirty = true; }
+// a keyboard press (Enter or Space: a click without a pointer, detail 0) acts on click – the buttons that act at the press
+// act on pointerdown. Chromium also sends a click with detail 0 after a touch tap that changed the layout (UI audit B1,
+// 24.10.2026: Korb harvested and cancelled, the Hauptknopf closed a loop and began a new recording, ↶ undid two steps):
+// a click within 800 ms of the element's own pointerdown is that tap's, never a key's
+function hxKeyClick(el, fn) {
+  el.addEventListener('pointerdown', () => { el.hxPdT = performance.now(); }, true);
+  el.addEventListener('click', (e) => { if (e.detail === 0 && !(performance.now() - (el.hxPdT || -1e9) < 800)) fn(e); });
+}
 function hxRailBuild() {
   const rail = $('#hxRail');
   if (!rail || HXU.rail) return;
@@ -14,7 +22,7 @@ function hxRailBuild() {
   for (let i = 0; i < HX_SLOTS; i++) {
     const b = h('button', { type: 'button', class: 'hxb hx-ring', 'data-slot': i, tabindex: '-1', 'aria-label': 'Schleife ' + (i + 1) + ', leer' }, h('span', { class: 'w' }, 'aufnehmen'));
     b.addEventListener('pointerdown', (e) => hxRingDown(i, e));
-    b.addEventListener('click', (e) => { if (e.detail === 0) hxRingTap(i, null); });
+    hxKeyClick(b, () => hxRingTap(i, null));
     b.addEventListener('contextmenu', (e) => e.preventDefault());
     HXU.rings.push(b); ringBox.append(b);
   }
@@ -23,7 +31,7 @@ function hxRailBuild() {
   HXU.mid.append(ringBox, HXU.chips);
   const press = (el, down, key) => {
     el.addEventListener('pointerdown', (e) => { if (e.button > 0) return; e.preventDefault(); down(e); });
-    el.addEventListener('click', (e) => { if (e.detail === 0) key(); });
+    hxKeyClick(el, key);
     el.addEventListener('contextmenu', (e) => e.preventDefault());
   };
   press(HXU.korb, (e) => hxKorb(e), () => hxKorb(null));
@@ -37,7 +45,7 @@ function hxRailBuild() {
   });
   const uUp = (e) => { const u = HXU.uHold; if (!u || u.pid !== e.pointerId) return; clearTimeout(u.tm); HXU.uHold = null; if (!u.fired && e.type === 'pointerup') hxUndoStep(); hxRailDirty(); };
   for (const ev of ['pointerup', 'pointercancel']) HXU.undo.addEventListener(ev, uUp);
-  HXU.undo.addEventListener('click', (e) => { if (e.detail === 0) hxUndoStep(); });
+  hxKeyClick(HXU.undo, hxUndoStep);
   HXU.redo.addEventListener('click', () => hxRedoStep());
   // the form button (step 1d): a tap at the press (the next Lichtung, pending); held 0.5 s the row instead
   HXU.form.addEventListener('pointerdown', (e) => {
@@ -48,7 +56,7 @@ function hxRailBuild() {
     const up = (ev) => { if (ev.pointerId !== G.pid) return; clearTimeout(G.tm); HXU.form.removeEventListener('pointerup', up); HXU.form.removeEventListener('pointercancel', up); };
     HXU.form.addEventListener('pointerup', up); HXU.form.addEventListener('pointercancel', up);
   });
-  HXU.form.addEventListener('click', (e) => { if (e.detail === 0) hxFormTap(); });
+  hxKeyClick(HXU.form, hxFormTap);
   HXU.form.addEventListener('contextmenu', (e) => e.preventDefault());
   HXU.pg.addEventListener('click', () => { HX.page = HX.page ? 0 : 1; hxRailDirty(); });
   HXU.fold.addEventListener('click', () => {
