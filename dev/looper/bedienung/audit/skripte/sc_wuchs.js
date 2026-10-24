@@ -1,0 +1,12 @@
+const out = {};
+out.w0 = await S.rowTxt('Wiedergabe');
+out.a0 = await S.rms(2000);
+out.c1 = await S.rowBtn('Wiedergabe','Wuchs');
+await page.waitForTimeout(2500); out.w1 = await S.rowTxt('Wiedergabe'); out.a1 = await S.rms(3000);
+out.c2 = await S.rowBtn('Eigensinn','Lebendig');
+await page.waitForTimeout(1500); out.e2 = await S.rowTxt('Eigensinn'); out.w2 = await S.rowTxt('Wiedergabe');
+out.a2 = await S.rms(5000);
+await S.shot('d20-lebendig');
+out.ends = await page.evaluate(() => [...document.querySelectorAll('#hxc-0 .hx-row.end')].map((r) => r.innerText.replace(/\n/g, ' | ')));
+out.said = await S.said();
+return out;

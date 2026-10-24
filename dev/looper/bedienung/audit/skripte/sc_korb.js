@@ -1,0 +1,10 @@
+const mouse = !!globalThis.MOUSE;
+const m=[[0.15,0.5,200,300],[0.35,0.4,200,300],[0.55,0.5,200,300],[0.45,0.6,200,300]];
+await page.waitForTimeout(3000); const quiet = await S.rms(800);
+await S.playField([...m,...m,...m]);
+const k0 = await S.rail();
+await S.tap('#hxKorb',{mouse});
+await page.waitForTimeout(150); const k1 = await S.rail(); await S.shot((mouse?'d':'p')+'-korb1');
+await page.waitForTimeout(3500);
+const a = await S.rms(5000); const k2 = await S.rail(); await S.shot((mouse?'d':'p')+'-korb2');
+return {quiet, k0: k0.split('  ').slice(0,3).join(' '), k1, a, k2, said: await S.said()};

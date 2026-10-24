@@ -1,0 +1,16 @@
+const out = {};
+const f = page.locator('#hxSec').getByText('Einstellungen', { exact: true }).first();
+await S.tap(f, { mouse: 1 }); await page.waitForTimeout(400);
+out.c = await S.btn('Dieselbe Schleife', '#hxSec'); await page.waitForTimeout(300);
+await S.tap('#tab-rec', { mouse: 1 }); await page.waitForTimeout(400);
+out.h = (await S.rail()).split('  ')[1];
+await S.tap('#hxHaupt', { mouse: 1 }); await page.waitForTimeout(200); out.h1 = (await S.rail()).split('  ').slice(1,3).join(' '); await S.shot('d91-dub');
+const m3 = [[0.3,0.8,150,150],[0.2,0.8,150,150],[0.3,0.8,150,150],[0.25,0.8,150,350]];
+await S.playField([...m3, ...m3]);
+await S.tap('#hxHaupt', { mouse: 1 }); await page.waitForTimeout(3000);
+out.h2 = (await S.rail()).split('  ').slice(1,3).join(' ');
+out.a = await S.rms(2500);
+await S.tap('#tab-rec', { mouse: 1 }); await page.waitForTimeout(500);
+out.card = (await S.cardTxt(0) || '').slice(0, 300);
+out.said = await S.said();
+return out;

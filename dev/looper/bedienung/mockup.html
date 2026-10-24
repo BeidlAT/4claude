@@ -1,0 +1,686 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Hexenring Bedienmodell</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one screen like the app – field on top, the Looper-Leiste in the thumb zone (status line, loops, controls);
+   the Schleifen-Blatt slides up from below on a phone and becomes a right-hand column from 900 px. Single dark look, like Myzel. */
+:root {
+  --bg: #120e0c; --field: #1a1411; --panel: #1f1814; --line: #3d312a;
+  --fg: #f0e6d8; --dim: #a8988a; --spore: #ffb35c; --lumen: #86f0d0; --rec: #ff5b4d;
+  --f-ui: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  --f-num: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.4 var(--f-ui); overflow: hidden; -webkit-tap-highlight-color: transparent; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; touch-action: manipulation; }
+button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--lumen); outline-offset: 2px; border-radius: 10px; }
+.app { height: 100%; display: grid; grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; }
+@media (min-width: 900px) { .app.sheet-on { grid-template-columns: 1fr 380px; } }
+
+/* top bar */
+.top { display: flex; align-items: center; gap: 8px; padding-block: 8px; padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: max(12px, env(safe-area-inset-right, 0px)); border-bottom: 1px solid var(--line); grid-column: 1; }
+.logo { letter-spacing: .32em; font-weight: 400; font-size: 15px; color: var(--fg); margin-right: 4px; }
+.pill { border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; font-size: 13px; color: var(--fg); white-space: nowrap; }
+.pill.on { border-color: var(--spore); color: var(--spore); }
+.top .sp { flex: 1; }
+.mock { font-size: 11px; color: var(--dim); border: 1px dashed var(--line); border-radius: 6px; padding: 2px 6px; white-space: nowrap; }
+
+/* field */
+.field { position: relative; background: var(--field); overflow: hidden; grid-column: 1; touch-action: none; user-select: none; }
+.field .col { position: absolute; top: 0; bottom: 0; border-left: 1px solid rgba(240,230,216,.05); }
+.field .col.root { background: rgba(255,179,92,.05); }
+.field .keys { position: absolute; left: 0; right: 0; bottom: 6px; display: flex; font: 11px var(--f-num); color: var(--dim); }
+.field .keys span { flex: 1; text-align: center; }
+.field .keys span.root { color: var(--spore); }
+.field .hint-txt { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); color: rgba(240,230,216,.28); font-size: 14px; text-align: center; pointer-events: none; width: 80%; }
+.spark { position: absolute; width: 10px; height: 10px; margin: -5px; border-radius: 50%; background: var(--lumen); pointer-events: none; animation: spark 900ms ease-out forwards; }
+@keyframes spark { from { transform: scale(1); opacity: .9; } to { transform: scale(5); opacity: 0; } }
+
+/* the Leiste */
+.leiste { grid-column: 1; background: var(--panel); border-top: 1px solid var(--line); padding-left: max(10px, env(safe-area-inset-left, 0px)); padding-right: max(10px, env(safe-area-inset-right, 0px)); padding-bottom: max(8px, env(safe-area-inset-bottom, 0px)); }
+.status { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; align-items: center; padding: 8px 2px 6px; min-height: 52px; }
+.takt { display: flex; gap: 3px; align-items: center; }
+.takt i { display: block; width: 18px; height: 3px; border-radius: 2px; background: var(--line); }
+.takt i.one { background: rgba(255,179,92,.45); }
+.takt i.now { background: var(--fg); height: 5px; }
+.takt i.one.now { background: var(--spore); }
+.takt.frei i { width: 4px; background: var(--line); }
+.taktw { font: 12px var(--f-num); color: var(--dim); white-space: nowrap; }
+.say { grid-column: 1 / -1; font-size: 14px; color: var(--fg); min-height: 20px; display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
+.say .sub { color: var(--dim); }
+.say.rec { color: #ffb0a8; }
+.lnk { color: var(--lumen); border: 1px solid rgba(134,240,208,.4); border-radius: 999px; padding: 2px 10px; font-size: 13px; }
+.lnk.x { color: var(--dim); border-color: var(--line); }
+
+.loops { display: flex; align-items: flex-start; gap: 4px; padding: 4px 0 2px; border-top: 1px solid rgba(61,49,42,.6); }
+.loops .rings { display: flex; gap: 4px; flex: 1; min-width: 0; }
+.ring { width: 64px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 0; position: relative; }
+.ring svg { width: 44px; height: 44px; overflow: visible; }
+.ring .w { font-size: 12px; color: var(--dim); white-space: nowrap; }
+.ring.act .w { color: var(--fg); }
+.ring .db { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); font: 11px var(--f-num); background: rgba(18,14,12,.9); padding: 1px 4px; border-radius: 4px; pointer-events: none; }
+.side { display: flex; gap: 2px; }
+.side button { padding: 6px 8px; font-size: 13px; color: var(--dim); display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 52px; }
+.side button b { font-size: 20px; line-height: 26px; font-weight: 400; color: var(--fg); }
+
+.ctl { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding-top: 6px; }
+.ctl .b { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; font-size: 13px; color: var(--fg); position: relative; }
+.ctl .b .ic { font-size: 26px; line-height: 30px; }
+.ctl .b small { font-size: 11px; color: var(--dim); }
+.ctl .b.dim { opacity: .45; }
+.haupt { width: 84px; height: 84px; position: relative; display: grid; place-items: center; }
+.haupt svg { position: absolute; inset: 0; width: 84px; height: 84px; overflow: visible; }
+.haupt .core { width: 60px; height: 60px; border-radius: 50%; background: #2a211c; border: 2px solid var(--dim); display: grid; place-items: center; font: 600 22px var(--f-num); color: var(--fg); transition: background .15s; }
+.haupt .core .dot { width: 20px; height: 20px; border-radius: 50%; background: var(--fg); }
+.haupt.rec .core { background: var(--rec); border-color: var(--rec); color: #160d0b; }
+.haupt.dub .core { border-color: var(--rec); }
+.haupt.count .core { border-style: dashed; border-color: var(--rec); color: var(--rec); background: transparent; }
+.hw { text-align: center; font-size: 13px; margin-top: 2px; min-height: 18px; }
+
+/* the sheet */
+.sheet { position: fixed; left: 0; right: 0; bottom: var(--leiste-h, 0px); max-height: calc(100% - var(--leiste-h, 0px) - 64px); background: var(--panel); border-top: 1px solid var(--line); border-radius: 16px 16px 0 0; transform: translateY(102%); transition: transform .22s ease; display: flex; flex-direction: column; z-index: 20; box-shadow: 0 -10px 40px rgba(0,0,0,.5); }
+.sheet.open { transform: none; }
+.sheet:not(.open) { visibility: hidden; transition: transform .22s ease, visibility 0s .22s; }
+.leiste { position: relative; z-index: 25; }
+@media (min-width: 900px) { .sheet { position: static; grid-column: 2; grid-row: 1 / 4; max-height: none; border-radius: 0; border-top: 0; border-left: 1px solid var(--line); transform: none; display: none; box-shadow: none; } .sheet.open { display: flex; } }
+.sh-h { display: flex; align-items: center; gap: 6px; padding: 10px max(12px, env(safe-area-inset-right, 0px)) 6px max(12px, env(safe-area-inset-left, 0px)); }
+.tabs { display: flex; gap: 4px; flex: 1; overflow-x: auto; scrollbar-width: none; }
+.tab { border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; font-size: 13px; white-space: nowrap; color: var(--dim); }
+.tab.on { border-color: var(--fg); color: var(--fg); }
+.round { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); flex: none; }
+.sh-b { overflow-y: auto; padding: 4px max(14px, env(safe-area-inset-right, 0px)) 24px max(14px, env(safe-area-inset-left, 0px)); }
+.sh-b h3 { margin: 6px 0 2px; font-size: 18px; font-weight: 600; text-wrap: balance; }
+.meta { font: 12px var(--f-num); color: var(--dim); }
+.row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 10px 0; }
+.row .lab { width: 100%; font-size: 12px; color: var(--dim); letter-spacing: .04em; }
+.chip { border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; font-size: 14px; }
+.chip.on { background: var(--fg); color: #160d0b; border-color: var(--fg); }
+.chip.big { padding: 10px 16px; }
+.chip.warn { border-color: rgba(255,91,77,.6); color: #ffb0a8; }
+.chip.ok { border-color: rgba(134,240,208,.5); color: var(--lumen); }
+.note { font-size: 13px; color: var(--dim); margin: 2px 0 8px; max-width: 60ch; }
+input[type=range] { width: 100%; accent-color: var(--spore); }
+.grp { border-top: 1px solid var(--line); }
+.grp > button { width: 100%; text-align: left; padding: 12px 0; display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; }
+.grp > button b { font-weight: 600; font-size: 15px; }
+.grp > button span { grid-column: 1; font-size: 13px; color: var(--dim); }
+.grp > button i { grid-row: 1 / 3; grid-column: 2; font-style: normal; color: var(--dim); align-self: center; transition: transform .15s; }
+.grp.open > button i { transform: rotate(90deg); }
+.grp .in { display: none; padding-bottom: 10px; }
+.grp.open .in { display: block; }
+.myz { font-size: 11px; color: var(--dim); font-style: italic; }
+.lay { display: flex; gap: 8px; align-items: center; font-size: 14px; padding: 4px 0; }
+.lay span { flex: 1; }
+
+/* hints and toasts */
+.bubble { pointer-events: none; position: fixed; z-index: 30; max-width: 260px; background: var(--fg); color: #160d0b; border-radius: 12px; padding: 10px 12px; font-size: 14px; box-shadow: 0 6px 24px rgba(0,0,0,.5); }
+.bubble::after { content: ""; position: absolute; left: var(--ax, 50%); bottom: -7px; width: 14px; height: 14px; margin-left: -7px; background: var(--fg); transform: rotate(45deg); }
+.bubble button { pointer-events: auto; margin-top: 6px; font-size: 13px; text-decoration: underline; color: #160d0b; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); top: calc(64px + env(safe-area-inset-top, 0px)); z-index: 40; background: #2b221d; border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; display: flex; gap: 12px; align-items: center; font-size: 14px; max-width: calc(100% - 32px); }
+.toast button { color: var(--lumen); font-weight: 600; }
+.help { position: fixed; inset: 0; z-index: 50; background: rgba(10,8,7,.82); display: grid; place-items: center; padding: 16px; }
+.help > div { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; max-width: 520px; max-height: 86%; overflow-y: auto; padding: 16px 18px; }
+.help h2 { margin: 0 0 8px; font-size: 20px; }
+.help dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 14px; }
+.help dt { font: 13px var(--f-num); color: var(--spore); }
+.help dd { margin: 0; }
+@media (prefers-reduced-motion: reduce) { .spark { animation: none; opacity: 0; } .sheet { transition: none; } }
+@media (max-width: 380px) { .ring { width: 54px; } .side button { min-width: 44px; padding: 6px 4px; } .mock { display: none; } }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="top">
+    <span class="logo">MYZEL</span>
+    <span class="pill">≋ Nebel</span>
+    <span class="sp"></span>
+    <span class="mock" title="Nur die Bedienung, kein Klang">Mockup · ohne Ton</span>
+    <button type="button" class="pill" id="puls" aria-pressed="false" title="Puls an/aus (gibt einen Takt)">▶ Puls</button>
+  </header>
+
+  <main class="field" id="field" aria-label="Spielfeld: tippen spielt einen Ton (hier nur sichtbar)">
+    <div class="hint-txt" id="fieldHint">Spielfeld · tippen = ein Ton (im Mockup nur ein Lichtpunkt)</div>
+    <div class="keys" id="keys"></div>
+  </main>
+
+  <section class="leiste" aria-label="Looper">
+    <div class="status" id="status">
+      <div class="takt" id="takt" aria-hidden="true"></div>
+      <div class="taktw" id="taktw"></div>
+      <div class="say" id="say" role="status" aria-live="polite"></div>
+    </div>
+    <div class="loops">
+      <div class="rings" id="rings"></div>
+      <div class="side">
+        <button type="button" id="formBtn" title="Form: Abschnitte (F)"><b><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="12" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 5l2-3 2 3zM10 3l1-2.5 1 2.5zM17 5l2-3 2 3z" fill="#a8988a"/></svg></b>Form</button>
+        <button type="button" id="moreBtn" title="Alle Einstellungen der Schleifen (Umschalt + Zahl)"><b>☰</b>Mehr</button>
+      </div>
+    </div>
+    <div class="ctl">
+      <button type="button" class="b" id="undo" title="Zurück (Strg+Z) · halten: alles leeren"><span class="ic">↶</span>Zurück<small id="undoSub">&nbsp;</small></button>
+      <div>
+        <button type="button" class="haupt" id="haupt" title="Aufnehmen (Leertaste)">
+          <svg viewBox="0 0 84 84" aria-hidden="true"><circle cx="42" cy="42" r="38" fill="none" stroke="#3d312a" stroke-width="3"/><circle id="hRing" cx="42" cy="42" r="38" fill="none" stroke="#ff5b4d" stroke-width="4" stroke-linecap="round" transform="rotate(-90 42 42)" stroke-dasharray="0 999"/><circle id="hHead" cx="42" cy="4" r="4" fill="#ffb35c" opacity="0"/></svg>
+          <span class="core" id="hCore"><span class="dot"></span></span>
+        </button>
+        <div class="hw" id="hw">Aufnehmen</div>
+      </div>
+      <button type="button" class="b" id="korb" title="Übernehmen, was du gerade gespielt hast (E)"><span class="ic">⤓</span>Übernehmen<small id="korbSub">nichts gespielt</small></button>
+    </div>
+  </section>
+
+  <aside class="sheet" id="sheet" aria-label="Schleifen-Blatt">
+    <div class="sh-h"><div class="tabs" id="tabs" role="tablist"></div><button type="button" class="round" id="helpBtn" title="Hilfe (?)">?</button><button type="button" class="round" id="closeBtn" title="Schließen (Esc)">✕</button></div>
+    <div class="sh-b" id="sheetBody"></div>
+  </aside>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = (s) => document.querySelector(s);
+const now = () => performance.now() / 1000;
+const RED = '#ff5b4d', SPORE = '#ffb35c', LUMEN = '#86f0d0', HYPHA = '#f0e6d8', DIM = '#a8988a', LINE = '#3d312a';
+const store = { get(k) { try { return JSON.parse(localStorage.getItem('hxMock.' + k)); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem('hxMock.' + k, JSON.stringify(v)); } catch (e) {} } };
+
+// ---- state ----
+const S = {
+  puls: false, bpm: 96, T0: 0, bar: 2.5,          // the grid: origin and bar length (4 beats)
+  takt: false,                                     // a grid exists (Puls on, or the first loop gave one)
+  loops: [], nextId: 1, active: 0,                 // loops: {id, n, start, len, layers, state, pend, db, o}
+  R: null,                                         // a recording: {kind:'new'|'dub', loop, phase:'count'|'rec'|'close', at, t0, closeAt, auto}
+  plays: [],                                       // field taps (times) – what Übernehmen could take
+  hist: [], redo: [], lich: [], lichCur: null, lichPend: null, schluss: null,
+  msg: null, offer: null, sheet: null, tab: 'loop', grp: {}, seen: store.get('seen') || {},
+};
+const MAXR = () => (innerWidth >= 700 ? 8 : 4);
+
+// ---- the field ----
+const NOTES = ['D3','F3','G3','A3','C4','D4','F4','G4','A4','C5','D5'];
+const field = $('#field');
+NOTES.forEach((n, i) => { const c = document.createElement('div'); c.className = 'col' + (n[0] === 'D' ? ' root' : ''); c.style.left = (i / NOTES.length * 100) + '%'; c.style.width = (100 / NOTES.length) + '%'; field.append(c); const k = document.createElement('span'); k.textContent = n; if (n[0] === 'D') k.className = 'root'; $('#keys').append(k); });
+field.addEventListener('pointerdown', (e) => {
+  const r = field.getBoundingClientRect(), d = document.createElement('div');
+  d.className = 'spark'; d.style.left = (e.clientX - r.left) + 'px'; d.style.top = (e.clientY - r.top) + 'px'; field.append(d); setTimeout(() => d.remove(), 950);
+  S.plays.push(now()); $('#fieldHint').hidden = true;
+  if (!S.loops.length && !S.R && S.plays.length === 4) hint('korb');
+});
+
+// ---- the clock ----
+function gridOn() { return S.puls || S.takt; }
+function nextOne(t, min = 0.35) { if (!gridOn()) return t; let k = Math.ceil((t - S.T0 + min) / S.bar); return S.T0 + k * S.bar; }
+function barNo(t) { return Math.floor((t - S.T0) / S.bar) + 1; }
+function beatIn(t) { return Math.floor(((t - S.T0) % S.bar + S.bar) % S.bar / (S.bar / 4)); }
+function lenText(L) { if (L.bars) return L.bars + (L.bars === 1 ? ' Takt' : ' Takte'); return L.len.toFixed(1).replace('.', ',') + ' s'; }
+
+// ---- saying things: always visible in the status line (4 s), and to screen readers ----
+function say(text, o = {}) { S.msg = { text, until: now() + (o.s || 4), act: o.act || null, cls: o.cls || '' }; drawStatus(true); }
+function toast(text, act) {
+  document.querySelectorAll('.toast').forEach((x) => x.remove());
+  const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status');
+  const s = document.createElement('span'); s.textContent = text; t.append(s);
+  if (act) { const b = document.createElement('button'); b.type = 'button'; b.textContent = act.label; b.onclick = () => { t.remove(); act.fn(); }; t.append(b); }
+  document.body.append(t); setTimeout(() => t.remove(), 5000);
+}
+
+// ---- history: every step can be taken back ----
+function hist(label, undo, redo) { S.hist.push({ label, undo, redo }); S.redo.length = 0; }
+function undoStep() {
+  if (S.R) { const k = S.R.kind; S.R = null; say(k === 'dub' ? 'Schicht abgebrochen' : 'Aufnahme abgebrochen'); return; }
+  const p = S.loops.find((L) => L.pend); if (p) { p.pend = null; say('Abgebrochen: Schleife ' + p.n + ' bleibt, wie sie ist'); return; }
+  const h = S.hist.pop(); if (!h) { say('Nichts zum Zurücknehmen'); return; }
+  h.undo(); S.redo.push(h);
+  toast('Zurückgenommen: ' + h.label, { label: 'Wiederholen', fn: redoStep }); say('Zurückgenommen: ' + h.label);
+  renderAll();
+}
+function redoStep() { const h = S.redo.pop(); if (!h) return; h.redo(); S.hist.push(h); say('Wiederholt: ' + h.label); renderAll(); }
+
+// ---- loops ----
+function freeSlot() { const used = new Set(S.loops.map((L) => L.n)); for (let n = 1; n <= 8; n++) if (!used.has(n)) return n; return 0; }
+function addLoop(L) { S.loops.push(L); S.loops.sort((a, b) => a.n - b.n); S.active = L.id; }
+function dropLoop(L) { S.loops = S.loops.filter((x) => x !== L); if (S.active === L.id) S.active = S.loops.length ? S.loops[S.loops.length - 1].id : 0; if (!S.loops.length && !S.puls) S.takt = false; }
+function makeLoop(start, len, kind) {
+  const n = freeSlot(); if (!n) { say('Alle acht Plätze sind belegt – lösche eine Schleife im Blatt'); return null; }
+  const first = !S.loops.length;
+  if (first && !S.puls) { const bars = Math.max(1, Math.round(len / 2.5)); S.takt = true; S.T0 = start; S.bar = len / bars; S.bpm = Math.round(240 / S.bar * 10) / 10; }
+  const bars = gridOn() ? Math.max(1, Math.round(len / S.bar)) : 0;
+  const L = { id: S.nextId++, n, start, len: bars ? bars * S.bar : len, bars, layers: [kind], state: 'spielt', pend: null, db: 0, o: { wied: 'genau', leb: 0, ton: 'folgt', eff: 'fest', tau: 'mit', band: '1', naehr: {}, rolle: 'auto', platz: true, wk: false } };
+  addLoop(L);
+  hist('Schleife ' + n + ' aufgenommen', () => dropLoop(L), () => addLoop(L));
+  return L;
+}
+function activeLoop() { return S.loops.find((L) => L.id === S.active) || null; }
+
+// ---- the big button ----
+function haupt() {
+  const t = now();
+  if (S.R) {
+    const R = S.R;
+    if (R.phase === 'count') { S.R = null; say('Einzählen abgebrochen'); return; }
+    if (R.phase === 'rec') {
+      if (R.kind === 'new' && !S.loops.length && !S.puls) { closeRec(t); return; }
+      R.phase = 'close'; R.closeAt = gridOn() ? nextOne(t, 0.1) : t; say(gridOn() ? 'Schließt auf der 1 (Takt ' + barNo(R.closeAt) + ')' : 'Schließt'); return;
+    }
+    if (R.phase === 'close') { R.phase = 'rec'; R.closeAt = null; say('Nimmt weiter auf'); return; }
+  }
+  const A = activeLoop();
+  if (!A) { startRec('new'); hint('first-close'); return; }
+  startRec('dub', A);
+}
+function startRec(kind, L) {
+  const t = now(), at = gridOn() ? nextOne(t, 0.6) : t;
+  S.R = { kind, loop: L ? L.id : 0, phase: at > t ? 'count' : 'rec', at, t0: at, closeAt: null, mult: 1 };
+  if (kind === 'new' && S.loops.length) S.R.auto = true;   // a second loop closes after the first's length
+  if (S.R.phase === 'count') say(kind === 'dub' ? 'Schicht auf Schleife ' + L.n + ' beginnt auf der 1' : 'Aufnahme beginnt auf der 1');
+  else say(kind === 'dub' ? 'Schicht auf Schleife ' + L.n + ' läuft' : 'Nimmt auf');
+  if (kind === 'new' && S.loops.length && S.R.phase === 'count') say('Schleife ' + freeSlot() + ' beginnt auf der 1');
+}
+function closeRec(t) {
+  const R = S.R; S.R = null;
+  if (R.kind === 'dub') {
+    const L = S.loops.find((x) => x.id === R.loop); if (!L) return;
+    L.layers.push('überspielt');
+    hist('Schicht ' + L.layers.length + ' auf Schleife ' + L.n, () => L.layers.pop(), () => L.layers.push('überspielt'));
+    say('Schicht ' + L.layers.length + ' auf Schleife ' + L.n);
+    renderAll(); return;
+  }
+  const len = Math.max(0.8, t - R.t0), L = makeLoop(t, len, 'Aufnahme');
+  if (!L) return;
+  const first = S.loops.length === 1;
+  say('Schleife ' + L.n + ' spielt · ' + lenText(L) + (first ? ' · ' + S.bpm.toString().replace('.', ',') + ' BPM' : ''), { s: 8, act: first ? { label: 'Passt nicht?', fn: () => openSheet('loop', L.id, 'fein') } : null });
+  hint('first-loop'); renderAll();
+}
+function plus() {
+  if (S.R) { say('Erst die laufende Aufnahme beenden – ● tippen'); return; }
+  if (!freeSlot()) { say('Alle acht Plätze sind belegt'); return; }
+  startRec('new'); hint('plus-done');
+}
+
+// ---- Übernehmen (Korb) ----
+function korbWord() {
+  const t = now(), recent = S.plays.filter((x) => t - x < 10);
+  if (!recent.length) return 'nichts gespielt';
+  const span = t - recent[0];
+  if (gridOn()) { const b = Math.max(1, Math.min(8, Math.round(span / S.bar))); return 'letzte ' + b + (b === 1 ? ' Takt' : ' Takte'); }
+  return 'letzte ' + Math.max(1, Math.round(span)) + ' s';
+}
+function korb() {
+  const t = now(), recent = S.plays.filter((x) => t - x < 10);
+  if (!recent.length) { say('Noch nichts gespielt – spiel etwas, dann tippe Übernehmen'); return; }
+  if (S.R) { say('Erst die laufende Aufnahme beenden – ● tippen'); return; }
+  const span = Math.max(1, t - recent[0]), at = gridOn() ? nextOne(t, 0.05) : t;
+  const go = () => {
+    const before = S.loops.filter((L) => L.state === 'spielt').map((L) => L.id);
+    const L = makeLoop(at, gridOn() ? Math.max(1, Math.round(span / S.bar)) * S.bar : span, 'übernommen'); if (!L) return;
+    S.plays = [];
+    const host = S.loops.find((x) => before.includes(x.id) && x !== L);
+    if (host) say('Schleife ' + L.n + ' übernommen', { s: 8, act: { label: 'als Schicht auf Schleife ' + host.n + '?', fn: () => { dropLoop(L); host.layers.push('übernommen'); S.hist.pop(); hist('Schicht auf Schleife ' + host.n, () => host.layers.pop(), () => host.layers.push('übernommen')); say('Schicht ' + host.layers.length + ' auf Schleife ' + host.n); renderAll(); } } });
+    else say('Schleife ' + L.n + ' übernommen · ' + lenText(L), { s: 8, act: S.loops.length === 1 ? { label: 'Passt nicht?', fn: () => openSheet('loop', L.id, 'fein') } : null });
+    renderAll();
+  };
+  if (at - t > 0.1) { S.korbPend = { at, go }; say('Übernimmt auf der 1 (Takt ' + barNo(at) + ')', { act: { label: '✕', fn: () => { S.korbPend = null; say('Übernehmen abgebrochen'); } } }); }
+  else go();
+}
+
+// ---- a ring: tap = stumm/an (at the next 1 with a grid), hold = its sheet, drag = level ----
+function ringTap(L) {
+  if (L.pend) { L.pend = null; say('Abgebrochen'); return; }
+  const to = L.state === 'spielt' ? 'stumm' : 'spielt', t = now();
+  if (gridOn()) { L.pend = { to, at: nextOne(t, 0.05) }; say('Schleife ' + L.n + (to === 'stumm' ? ' verstummt' : ' kommt') + ' auf der 1 (Takt ' + barNo(L.pend.at) + ')', { act: { label: '✕', fn: () => { L.pend = null; say('Abgebrochen'); } } }); }
+  else { L.state = to; say('Schleife ' + L.n + ' ' + (to === 'stumm' ? 'stumm' : 'an')); }
+  hint('ring-done');
+}
+function bindHold(el, { tap, hold, drag, holdMs = 500, onPress }) {
+  let G = null;
+  el.addEventListener('pointerdown', (e) => {
+    if (e.button > 0) return; e.preventDefault(); try { el.setPointerCapture(e.pointerId); } catch (x) {}
+    G = { pid: e.pointerId, y0: e.clientY, t0: now(), mode: 'tap' };
+    if (onPress) onPress(G);
+    G.tm = setTimeout(() => { if (G && G.mode === 'tap' && hold) { G.mode = 'held'; hold(); } }, holdMs);
+  });
+  el.addEventListener('pointermove', (e) => { if (!G || e.pointerId !== G.pid || !drag) return; const dy = G.y0 - e.clientY; if (G.mode === 'tap' && Math.abs(dy) > 12) { G.mode = 'drag'; clearTimeout(G.tm); } if (G.mode === 'drag') drag(dy, G); });
+  const up = (e) => { if (!G || e.pointerId !== G.pid) return; clearTimeout(G.tm); const g = G; G = null; if (g.mode === 'tap' && e.type === 'pointerup') tap(); };
+  el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+  // the keyboard: Enter/Space on a focused button (never a second action from a click – the lesson of AUDIT B1)
+  el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); tap(); } });
+  el.addEventListener('click', (e) => e.preventDefault());
+  return () => G;
+}
+
+// ---- the rings ----
+const ringsEl = $('#rings');
+function renderRings() {
+  ringsEl.replaceChildren();
+  const max = MAXR();
+  const shown = S.loops.slice(0, max);
+  for (const L of shown) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'ring' + (L.id === S.active ? ' act' : ''); b.dataset.id = L.id;
+    b.innerHTML = '<svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="17" fill="none" stroke="' + LINE + '" stroke-width="2"/><g class="sp"></g><path class="wedge" fill="rgba(168,152,138,.3)"/><circle class="hold" cx="22" cy="22" r="20" fill="none" stroke="' + LUMEN + '" stroke-width="2.5" stroke-dasharray="0 999" transform="rotate(-90 22 22)"/><circle class="head" r="3" fill="' + SPORE + '"/><text x="22" y="26" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="12" fill="' + HYPHA + '">' + L.n + '</text><line class="slash" x1="12" y1="32" x2="32" y2="12" stroke="' + DIM + '" stroke-width="2"/></svg><span class="w"></span>';
+    b.setAttribute('aria-label', 'Schleife ' + L.n);
+    const getG = bindHold(b, {
+      tap: () => ringTap(L),
+      hold: () => { openSheet('loop', L.id); hint('hold-done'); },
+      drag: (dy, G) => { if (G.db0 == null) G.db0 = L.db; L.db = Math.max(-40, Math.min(6, Math.round(G.db0 + dy / 4))); L.lvT = now(); },
+    });
+    b._g = getG;
+    ringsEl.append(b);
+  }
+  if (S.loops.length > max) { const m = document.createElement('div'); m.className = 'ring'; m.innerHTML = '<span class="w" style="margin-top:14px">+' + (S.loops.length - max) + ' weitere</span>'; ringsEl.append(m); }
+  if (freeSlot() && S.loops.length < max) {
+    const p = document.createElement('button'); p.type = 'button'; p.className = 'ring'; p.id = 'plus'; p.setAttribute('aria-label', 'Neue Schleife aufnehmen');
+    p.innerHTML = '<svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="17" fill="none" stroke="' + (S.loops.length ? SPORE : DIM) + '" stroke-width="1.6" stroke-dasharray="3 4"/><text x="22" y="27" text-anchor="middle" font-size="18" fill="' + (S.loops.length ? SPORE : DIM) + '">+</text></svg><span class="w">neue</span>';
+    bindHold(p, { tap: plus });
+    ringsEl.append(p);
+  }
+}
+function drawRings(t) {
+  for (const b of ringsEl.querySelectorAll('.ring[data-id]')) {
+    const L = S.loops.find((x) => x.id === +b.dataset.id); if (!L) continue;
+    const ph = ((t - L.start) % L.len + L.len) % L.len / L.len, a = -Math.PI / 2 + ph * Math.PI * 2;
+    const head = b.querySelector('.head'); head.setAttribute('cx', 22 + Math.cos(a) * 17); head.setAttribute('cy', 22 + Math.sin(a) * 17);
+    b.querySelector('.slash').style.display = L.state === 'stumm' ? '' : 'none';
+    head.setAttribute('fill', L.state === 'stumm' ? DIM : SPORE);
+    // spores: the layers as small dots; a living loop breathes
+    const sp = b.querySelector('.sp'), br = L.o.leb > 0 && L.state === 'spielt' ? 1 + 0.07 * Math.sin(t * 2.4) : 1;
+    let s = ''; for (let k = 0; k < L.layers.length * 4; k++) { const aa = k / (L.layers.length * 4) * Math.PI * 2 + L.n, rr = (6 + (k * 7 % 9)) * br; s += '<circle cx="' + (22 + Math.cos(aa) * rr).toFixed(1) + '" cy="' + (22 + Math.sin(aa) * rr).toFixed(1) + '" r="1.3" fill="' + (L.state === 'stumm' ? DIM : (L.o.leb > 0 ? LUMEN : HYPHA)) + '" opacity=".8"/>'; }
+    if (sp.dataset.s !== s) { sp.innerHTML = s; sp.dataset.s = s; }
+    // waiting for the 1: a grey wedge from the head to the bar line
+    const w = b.querySelector('.wedge');
+    if (L.pend) { const left = Math.max(0, L.pend.at - t) / L.len, a1 = a + Math.min(1, left) * Math.PI * 2, big = left > 0.5 ? 1 : 0; w.setAttribute('d', 'M22 22 L' + (22 + Math.cos(a) * 16) + ' ' + (22 + Math.sin(a) * 16) + ' A16 16 0 ' + big + ' 1 ' + (22 + Math.cos(a1) * 16) + ' ' + (22 + Math.sin(a1) * 16) + ' Z'); } else w.setAttribute('d', '');
+    const g = b._g && b._g(), hold = b.querySelector('.hold');
+    hold.setAttribute('stroke-dasharray', g && g.mode === 'tap' && t - g.t0 > 0.12 ? (Math.min(1, (t - g.t0) / 0.5) * 125.7) + ' 999' : '0 999');
+    const word = L.pend ? (L.pend.to === 'stumm' ? 'verstummt' : 'kommt') : L.state === 'spielt' ? 'spielt' : 'stumm';
+    const wEl = b.querySelector('.w'); if (wEl.textContent !== word) wEl.textContent = word;
+    let db = b.querySelector('.db'); if (L.lvT && t - L.lvT < 1) { if (!db) { db = document.createElement('span'); db.className = 'db'; b.append(db); } db.textContent = (L.db > 0 ? '+' : '') + L.db + ' dB'; } else if (db) db.remove();
+    b.setAttribute('aria-label', 'Schleife ' + L.n + ', ' + lenText(L) + ', ' + word + ' – tippen: ' + (L.state === 'spielt' ? 'stumm' : 'an') + ', halten: Einstellungen');
+  }
+}
+
+// ---- the big button's look ----
+function drawHaupt(t) {
+  const R = S.R, h = $('#haupt'), core = $('#hCore'), ring = $('#hRing'), head = $('#hHead'), C = 2 * Math.PI * 38;
+  let cls = '', word = 'Aufnehmen', inner = '<span class="dot"></span>', dash = '0 999', col = RED, headOn = false;
+  const A = activeLoop();
+  if (R && R.phase === 'count') {
+    const beats = Math.max(1, Math.ceil((R.at - t) / (S.bar / 4) - 1e-6)); cls = 'count'; inner = String(Math.min(beats, 4)); word = R.kind === 'dub' ? 'Schicht auf der 1' : 'auf der 1 …';
+    dash = ((1 - ((R.at - t) % (S.bar / 4)) / (S.bar / 4)) * C / 4).toFixed(1) + ' 999';
+  } else if (R && (R.phase === 'rec' || R.phase === 'close')) {
+    cls = R.kind === 'dub' ? 'dub' : 'rec'; inner = R.kind === 'dub' ? '+' : ''; word = R.phase === 'close' ? 'schließt …' : 'Fertig';
+    const L = R.kind === 'dub' ? S.loops.find((x) => x.id === R.loop) : null, base = L ? L.len : R.auto ? S.loops[0].len * R.mult : gridOn() ? S.bar : 8;
+    dash = (((t - R.t0) % base) / base * C).toFixed(1) + ' 999'; if (R.phase === 'close') col = SPORE;
+  } else if (A) {
+    word = '+ Schicht'; col = SPORE; headOn = true;
+    const ph = ((t - A.start) % A.len + A.len) % A.len / A.len; dash = '0 999';
+    head.setAttribute('cx', 42 + Math.cos(-Math.PI / 2 + ph * 2 * Math.PI) * 38); head.setAttribute('cy', 42 + Math.sin(-Math.PI / 2 + ph * 2 * Math.PI) * 38);
+    inner = '<span class="dot" style="background:transparent;border:2px solid #f0e6d8;width:24px;height:24px"></span>';
+  }
+  h.className = 'haupt ' + cls;
+  if (core.dataset.i !== inner) { core.innerHTML = inner; core.dataset.i = inner; }
+  ring.setAttribute('stroke-dasharray', dash); ring.setAttribute('stroke', col); head.setAttribute('opacity', headOn ? 1 : 0);
+  $('#hw').textContent = word;
+  h.setAttribute('aria-label', word === 'Aufnehmen' ? 'Aufnehmen' : word === '+ Schicht' ? 'Schicht auf Schleife ' + A.n + ' aufnehmen' : word);
+}
+
+// ---- the status line ----
+function stateText(t) {
+  const R = S.R, A = activeLoop();
+  if (R) {
+    if (R.phase === 'count') return { text: (R.kind === 'dub' ? 'Schicht auf Schleife ' + S.loops.find((x) => x.id === R.loop).n : (R.auto ? 'Schleife ' + freeSlot() : 'Aufnahme')) + ' beginnt auf der 1', sub: '↶ bricht ab', act: R.auto ? multAct() : null, cls: 'rec' };
+    if (R.phase === 'close') return { text: 'Schließt auf der 1 (Takt ' + barNo(R.closeAt) + ')', sub: '● nimmt weiter auf', cls: 'rec' };
+    if (R.kind === 'dub') return { text: 'Schicht auf Schleife ' + S.loops.find((x) => x.id === R.loop).n + ' · ● beendet', cls: 'rec' };
+    if (R.auto) { const end = R.t0 + S.loops[0].len * R.mult, left = Math.max(1, Math.ceil((end - t) / S.bar)); return { text: 'Nimmt auf · schließt von selbst in ' + left + (left === 1 ? ' Takt' : ' Takten'), act: multAct(), cls: 'rec' }; }
+    return { text: 'Nimmt auf' + (gridOn() ? ' · Takt ' + (barNo(t) - barNo(R.t0) + 1) : ' · ' + (t - R.t0).toFixed(1).replace('.', ',') + ' s') + ' · ● schließt', cls: 'rec' };
+  }
+  if (S.lichPend) return { text: 'Wechselt zu ' + S.lichPend.L.name + ' auf der 1 (Takt ' + barNo(S.lichPend.at) + ')', act: { label: '✕', fn: () => { S.lichPend = null; say('Wechsel abgebrochen'); } } };
+  if (S.schluss) return { text: 'Schluss · ' + S.schluss.art + ' · noch ' + Math.max(0, Math.ceil((S.schluss.end - t) / S.bar)) + ' Takte', act: { label: '✕ abbrechen', fn: () => { S.schluss = null; say('Schluss abgebrochen'); } } };
+  if (!S.loops.length) return { text: 'Spiel los. ● nimmt auf, ⤓ übernimmt, was du gespielt hast.' };
+  if (S.loops.every((L) => L.state === 'stumm')) return { text: 'Alle Schleifen stumm · Tipp auf einen Ring schaltet ihn an' };
+  return { text: 'Schleife ' + A.n + ' ist aktiv · ● legt eine Schicht darüber', sub: '+ beginnt eine neue' };
+}
+function multAct() { return { label: '×' + (S.R.mult === 1 ? 2 : S.R.mult === 2 ? 4 : 1) + ' Länge', fn: () => { S.R.mult = S.R.mult === 1 ? 2 : S.R.mult === 2 ? 4 : 1; } }; }
+let lastSay = '';
+function drawStatus(force) {
+  const t = now(), m = S.msg && S.msg.until > t ? S.msg : null, st = m || stateText(t);
+  const key = st.text + '|' + (st.sub || '') + '|' + (st.act ? st.act.label : '') + '|' + (st.cls || '');
+  if (key !== lastSay || force) {
+    lastSay = key; const el = $('#say'); el.className = 'say ' + (st.cls || ''); el.replaceChildren();
+    const s = document.createElement('span'); s.textContent = st.text; el.append(s);
+    if (st.sub) { const u = document.createElement('span'); u.className = 'sub'; u.textContent = st.sub; el.append(u); }
+    if (st.act) { const b = document.createElement('button'); b.type = 'button'; b.className = 'lnk' + (st.act.label.startsWith('✕') ? ' x' : ''); b.textContent = st.act.label; b.onclick = () => { st.act.fn(); if (S.msg === m) S.msg = null; drawStatus(true); renderAll(); }; el.append(b); }
+  }
+  // the Takt line
+  const tk = $('#takt');
+  if (gridOn()) { const b = beatIn(t); tk.className = 'takt'; let h = ''; for (let i = 0; i < 4; i++) h += '<i class="' + (i === 0 ? 'one ' : '') + (i === b ? 'now' : '') + '"></i>'; if (tk.innerHTML !== h) tk.innerHTML = h; const w = 'Takt ' + Math.max(1, barNo(t)) + ' · ' + String(S.bpm).replace('.', ',') + ' BPM'; if ($('#taktw').textContent !== w) $('#taktw').textContent = w; }
+  else { tk.className = 'takt frei'; const h = '<i></i><i></i><i></i><i></i><i></i><i></i>'; if (tk.innerHTML !== h) tk.innerHTML = h; if ($('#taktw').textContent !== 'frei – noch kein Takt') $('#taktw').textContent = 'frei – noch kein Takt'; }
+}
+
+// ---- the frame: time moves things ----
+function tick() {
+  const t = now(), R = S.R;
+  if (R && R.phase === 'count' && t >= R.at) { R.phase = 'rec'; R.t0 = R.at; say(R.kind === 'dub' ? 'Schicht läuft' : 'Nimmt auf', { s: 1.5, cls: 'rec' }); }
+  if (R && R.auto && R.phase === 'rec' && t >= R.t0 + S.loops[0].len * R.mult) { const t0 = R.t0, len = S.loops[0].len * R.mult; S.R = null; const L = makeLoop(t0 + len, len, 'Aufnahme'); if (L) { L.start = t0; say('Schleife ' + L.n + ' spielt · ' + lenText(L)); renderAll(); } }
+  if (R && R.phase === 'close' && t >= R.closeAt) closeRec(R.closeAt);
+  for (const L of S.loops) if (L.pend && t >= L.pend.at) { const from = L.state; L.state = L.pend.to; L.pend = null; void from; }
+  if (S.korbPend && t >= S.korbPend.at) { const g = S.korbPend.go; S.korbPend = null; g(); }
+  if (S.lichPend && t >= S.lichPend.at) { applyLich(S.lichPend.L); S.lichPend = null; }
+  if (S.schluss && t >= S.schluss.end) { S.loops.forEach((L) => (L.state = 'stumm')); S.schluss = null; say('Ende. Alle Schleifen stumm – ↶ holt sie zurück'); }
+  const kw = korbWord(); if ($('#korbSub').textContent !== kw) { $('#korbSub').textContent = kw; $('#korb').classList.toggle('dim', kw === 'nichts gespielt'); }
+  const us = S.hist.length ? S.hist[S.hist.length - 1].label : ' '; if ($('#undoSub').textContent !== us) $('#undoSub').textContent = us.length > 22 ? us.slice(0, 21) + '…' : us;
+  drawHaupt(t); drawRings(t); drawStatus(false);
+  if (undoHold) { const f = Math.min(1, (t - undoHold.t0) / 1.5); $('#undo').style.boxShadow = 'inset 0 -' + Math.round(f * 60) + 'px 0 rgba(255,91,77,.25)'; }
+  requestAnimationFrame(tick);
+}
+
+// ---- controls ----
+bindHold($('#haupt'), { tap: haupt });
+bindHold($('#korb'), { tap: korb });
+let undoHold = null;
+bindHold($('#undo'), { tap: undoStep, holdMs: 1500, onPress: (G) => { undoHold = G; }, hold: () => { undoHold = null; $('#undo').style.boxShadow = ''; clearAll(); } });
+['pointerup', 'pointercancel'].forEach((ev) => $('#undo').addEventListener(ev, () => { undoHold = null; $('#undo').style.boxShadow = ''; }));
+function clearAll() {
+  if (!S.loops.length) { say('Keine Schleifen da'); return; }
+  const was = S.loops.slice(), takt = S.takt; S.loops = []; S.active = 0; S.R = null; if (!S.puls) S.takt = false;
+  hist('alle ' + was.length + ' geleert', () => { S.loops = was.slice(); S.active = was[was.length - 1].id; S.takt = takt; }, () => { S.loops = []; S.active = 0; });
+  toast(was.length === 1 ? 'Die Schleife geleert' : 'Alle ' + was.length + ' Schleifen geleert', { label: 'Rückgängig', fn: undoStep }); say('Alles geleert'); renderAll();
+}
+$('#puls').addEventListener('click', () => {
+  S.puls = !S.puls; $('#puls').setAttribute('aria-pressed', String(S.puls)); $('#puls').classList.toggle('on', S.puls);
+  if (S.puls && !S.takt) { S.T0 = now(); S.bar = 2.5; S.bpm = 96; }
+  if (!S.puls && !S.loops.length) S.takt = false;
+  say(S.puls ? 'Puls an · gibt den Takt (96 BPM)' : 'Puls aus');
+});
+$('#moreBtn').addEventListener('click', () => openSheet(S.loops.length ? 'loop' : 'allg', S.active));
+$('#formBtn').addEventListener('click', () => openSheet('form'));
+$('#closeBtn').addEventListener('click', closeSheet);
+$('#helpBtn').addEventListener('click', showHelp);
+document.addEventListener('keydown', (e) => {
+  if (e.target.closest && e.target.closest('input')) return;
+  const k = e.key;
+  if (k === ' ' && !(e.target.closest && e.target.closest('button'))) { e.preventDefault(); haupt(); }
+  else if (k === 'e' || k === 'E' || k === 'ü' || k === 'Ü') korb();
+  else if ((e.ctrlKey || e.metaKey) && (k === 'z' || k === 'Z')) { e.preventDefault(); e.shiftKey ? redoStep() : undoStep(); }
+  else if (/^[1-8]$/.test(k) || (e.shiftKey && /^Digit[1-8]$/.test(e.code))) { const n = +(k.match(/[1-8]/) ? k : e.code.slice(5)), L = S.loops.find((x) => x.n === n); if (L) e.shiftKey ? openSheet('loop', L.id) : ringTap(L); }
+  else if (k === 'f' || k === 'F') openSheet('form');
+  else if (k === '?') showHelp();
+  else if (k === 'Escape') { document.querySelector('.help') ? document.querySelector('.help').remove() : closeSheet(); }
+});
+
+// ---- the sheet ----
+function openSheet(tab, id, grp) { S.sheet = true; S.tab = tab; if (id) S.active = id; if (grp) S.grp[grp] = true; $('#sheet').classList.add('open'); $('#app').classList.add('sheet-on'); renderSheet(); hint('sheet-open'); }
+function closeSheet() { S.sheet = false; $('#sheet').classList.remove('open'); $('#app').classList.remove('sheet-on'); }
+const el = (tag, attrs, ...kids) => { const e = document.createElement(tag); for (const k in attrs || {}) { if (k === 'on') e.addEventListener('click', attrs.on); else if (k === 'cls') e.className = attrs[k]; else e.setAttribute(k, attrs[k]); } for (const c of kids) if (c != null && c !== false) e.append(c); return e; };
+function chips(lab, opts, cur, set, note) {
+  return el('div', { cls: 'row' }, el('span', { cls: 'lab' }, lab), ...opts.map(([v, t, sub]) => { const b = el('button', { type: 'button', cls: 'chip' + (cur === v ? ' on' : ''), 'aria-pressed': String(cur === v), on: () => { set(v); renderSheet(); } }, t); if (sub) b.title = sub; return b; }), note ? el('p', { cls: 'note', style: 'width:100%;margin:0' }, note) : null);
+}
+function group(key, title, line, myz, body) {
+  const g = el('div', { cls: 'grp' + (S.grp[key] ? ' open' : '') });
+  const head = el('button', { type: 'button', 'aria-expanded': String(!!S.grp[key]), on: () => { S.grp[key] = !S.grp[key]; renderSheet(); } }, el('b', null, title), el('span', null, line), el('i', null, '›'));
+  g.append(head, el('div', { cls: 'in' }, myz ? el('div', { cls: 'myz' }, 'in Myzel: ' + myz) : null, ...body));
+  return g;
+}
+function renderTabs() {
+  const tabs = $('#tabs'); tabs.replaceChildren();
+  for (const L of S.loops) tabs.append(el('button', { type: 'button', role: 'tab', cls: 'tab' + (S.tab === 'loop' && S.active === L.id ? ' on' : ''), on: () => { S.tab = 'loop'; S.active = L.id; renderSheet(); } }, 'Schleife ' + L.n));
+  tabs.append(el('button', { type: 'button', role: 'tab', cls: 'tab' + (S.tab === 'form' ? ' on' : ''), on: () => { S.tab = 'form'; renderSheet(); } }, 'Form'));
+  tabs.append(el('button', { type: 'button', role: 'tab', cls: 'tab' + (S.tab === 'allg' ? ' on' : ''), on: () => { S.tab = 'allg'; renderSheet(); } }, 'Allgemein'));
+}
+function renderSheet() {
+  if (!S.sheet) return;
+  renderTabs();
+  const B = $('#sheetBody'), top = B.scrollTop; B.replaceChildren();
+  if (S.tab === 'loop' && activeLoop()) B.append(...loopSheet(activeLoop()));
+  else if (S.tab === 'form') B.append(...formSheet());
+  else { S.tab = 'allg'; renderTabs(); B.append(...allgSheet()); }
+  B.scrollTop = top;
+}
+function loopSheet(L) {
+  const o = L.o, set = (k) => (v) => { o[k] = v; say('Schleife ' + L.n + ': ' + v); };
+  const vol = el('input', { type: 'range', min: '-40', max: '6', step: '1', id: 'vol' + L.id, 'aria-label': 'Lautstärke' }); vol.value = L.db; vol.addEventListener('input', () => { L.db = +vol.value; L.lvT = now(); });
+  const LEB = [['Gleich', 'jede Runde genau gleich', 'Treu'], ['Atmet', 'gleiche Noten, jede Runde ein wenig anders gespielt', 'Lebendig'], ['Spielt um', 'leichte Noten ändern sich, die Eins bleibt', 'Variieren'], ['Wandert', 'Takte tauschen, kehrt immer zurück', 'Wandern']];
+  const leb = el('input', { type: 'range', min: '0', max: '3', step: '1', id: 'leb' + L.id, 'aria-label': 'Lebendigkeit' }); leb.value = o.leb;
+  leb.addEventListener('change', () => { o.leb = +leb.value; if (o.leb > 0 && o.wied === 'genau') o.wied = 'neu'; say('Schleife ' + L.n + ': ' + LEB[o.leb][0] + (o.leb ? ' – wird neu gespielt' : '')); renderSheet(); });
+  const out = [
+    el('h3', null, 'Schleife ' + L.n + ' · Nebel'),
+    el('div', { cls: 'meta' }, lenText(L) + ' · ' + L.layers.length + (L.layers.length === 1 ? ' Schicht' : ' Schichten') + (L.id === S.active ? ' · aktiv: ● legt hier Schichten an' : '')),
+    el('div', { cls: 'row' }, ...[['spielt', 'spielt'], ['stumm', 'stumm']].map(([v, t]) => el('button', { type: 'button', cls: 'chip big' + (L.state === v ? ' on' : ''), on: () => { if (L.state !== v) ringTap(L); renderSheet(); } }, t))),
+    el('div', { cls: 'row' }, el('span', { cls: 'lab' }, 'Lautstärke (auch: auf dem Ring hoch- und runterziehen)'), vol),
+    el('div', { cls: 'row', style: 'display:block' }, el('span', { cls: 'lab' }, 'Schichten'), ...L.layers.map((k, i) => el('div', { cls: 'lay' }, el('span', null, 'Schicht ' + (i + 1) + ' · ' + k), el('button', { type: 'button', cls: 'chip', on: () => say('Schicht ' + (i + 1) + ' stumm (im Mockup nur angesagt)') }, 'stumm'), el('button', { type: 'button', cls: 'chip warn', on: () => { if (L.layers.length === 1) { delLoop(L); return; } const was = L.layers.splice(i, 1)[0]; hist('Schicht ' + (i + 1) + ' gelöscht', () => L.layers.splice(i, 0, was), () => L.layers.splice(i, 1)); toast('Schicht ' + (i + 1) + ' gelöscht', { label: 'Rückgängig', fn: undoStep }); renderSheet(); } }, L.layers.length === 1 ? 'Schicht und Schleife löschen' : 'Schicht löschen')))),
+    el('div', { cls: 'row' }, el('button', { type: 'button', cls: 'chip', on: () => { S.active = L.id; say('Schleife ' + L.n + ' ist aktiv'); renderSheet(); } }, L.id === S.active ? 'ist aktiv' : 'aktiv machen'), el('button', { type: 'button', cls: 'chip', on: () => toast('Schleife ' + L.n + ' als WAV gespeichert (Mockup)') }, 'Als WAV speichern'), el('button', { type: 'button', cls: 'chip', on: () => toast('Noten als MIDI gespeichert (Mockup)') }, 'Noten als MIDI'), el('button', { type: 'button', cls: 'chip warn', on: () => delLoop(L) }, 'Löschen')),
+    group('klang', 'Klang der Schleife', 'Wie sie klingt · ' + (o.wied === 'genau' ? 'genau wie gespielt' : o.wied === 'neu' ? 'neu gespielt' : 'echte Stimmen'), 'Abdruck · Wuchs · Live, Effektkette, Taumeln', [
+      chips('Wiedergabe', [['genau', 'Genau wie gespielt', 'Abdruck'], ['neu', 'Neu gespielt', 'Wuchs'], ['live', 'Mit echten Stimmen', 'Live']], o.wied, (v) => { if (v === 'genau' && o.leb > 0) { say('Lebendige Schleifen werden neu gespielt – erst Lebendigkeit auf „Gleich“'); return; } o.wied = v; say('Schleife ' + L.n + ': ' + { genau: 'genau wie gespielt', neu: 'wird neu gespielt', live: 'mit echten Stimmen' }[v]); }, 'Neu gespielt folgt Tonart, Tempo und Klang; es klingt wie dieselben Noten, noch einmal gespielt.'),
+      chips('Tonart', [['folgt', 'folgt'], ['transp', 'transponiert'], ['bleibt', 'bleibt']], o.ton, set('ton')),
+      chips('Effekte', [['fest', 'festgehalten, wie gehört'], ['folgt', 'folgen deinen Reglern']], o.eff, set('eff')),
+      chips('Stimmung', [['mit', 'schwebt mit'], ['eigen', 'bleibt, wie aufgenommen']], o.tau, set('tau')),
+      el('div', { cls: 'row' }, el('button', { type: 'button', cls: 'chip', on: () => say('Das Spielfeld spielt jetzt den Klang von Schleife ' + L.n) }, 'Diesen Klang aufs Spielfeld')),
+    ]),
+    group('leb', 'Lebendigkeit', 'Wie sehr sie sich von selbst verändert · ' + LEB[o.leb][0], 'Eigensinn: Treu · Lebendig · Variieren · Wandern', [
+      el('div', { cls: 'row' }, el('span', { cls: 'lab' }, LEB[o.leb][0] + ': ' + LEB[o.leb][1] + ' (' + LEB[o.leb][2] + ')'), leb),
+      o.leb > 0 ? el('div', { cls: 'row' }, el('button', { type: 'button', cls: 'chip ok big', on: () => say('Behalten – diese Runde gilt ab der nächsten') }, '✓ Diese Runde behalten'), el('button', { type: 'button', cls: 'chip big', on: () => say('Zurück zur behaltenen Runde – ab der nächsten') }, '✕ Zurück zur behaltenen'), el('button', { type: 'button', cls: 'chip big', on: () => { o.leb = 0; o.wied = 'genau'; say('Zurück zur Aufnahme – Lebendigkeit steht auf „Gleich“'); renderSheet(); } }, '⚓ Zurück zur Aufnahme'), el('button', { type: 'button', cls: 'chip', on: () => say('Neu gewürfelt – ab der nächsten Runde') }, 'Neu würfeln')) : el('p', { cls: 'note' }, 'Ab „Atmet“ kannst du eine schöne Runde behalten.'),
+    ]),
+    group('mit', 'Mitspielen', 'Was sie tut, wenn du spielst', 'Gärtner, Rolle, Wiederkehr, Begleiten', [
+      chips('Rolle', [['auto', 'erkannt: Melodie'], ['bass', 'Bass'], ['akk', 'Akkorde'], ['mel', 'Melodie'], ['fl', 'Fläche'], ['sch', 'Schlag']], o.rolle, set('rolle')),
+      chips('Platz machen', [[true, 'darf leiser werden, wenn du spielst'], [false, 'bleibt, wie sie ist']], o.platz, (v) => { o.platz = v; say(v ? 'Schleife ' + L.n + ' darf Platz machen' : 'Schleife ' + L.n + ' bleibt, wie sie ist'); }),
+      chips('Wiederkehr', [[true, 'kommt wieder, wenn du ihr Motiv spielst'], [false, 'nein']], o.wk, (v) => { o.wk = v; say(v ? 'Schleife ' + L.n + ' kommt wieder, wenn du ihr Motiv spielst' : 'Wiederkehr aus'); }),
+      el('div', { cls: 'row' }, el('button', { type: 'button', cls: 'chip', on: () => say('Begleitung: zwei Vorschläge als gestrichelte, stumme Schleifen – ein Tipp schaltet sie ein (Mockup)') }, 'Begleitung vorschlagen')),
+      el('p', { cls: 'note' }, 'Wie sehr die Mitspieler überhaupt eingreifen, stellst du einmal für alle ein: Allgemein → Mitspieler.'),
+    ]),
+    group('verw', 'Verwandeln', 'Die Schleife umformen – das Original bleibt' + (o.band !== '1' ? ' · Band ' + o.band : ''), 'Band, Trimmen, Auslassen, Würfeln, Verblassen, Abrieb, Einwurzeln, Moder, Noten', [
+      chips('Wie ein Tonband: langsamer / schneller', [['½', '½'], ['⅔', '⅔'], ['1', '1'], ['1½', '1½'], ['2', '2']], o.band, (v) => { o.band = v; say('Schleife ' + L.n + ': Band ' + v); }),
+      el('div', { cls: 'row' }, ...['rückwärts', 'Band auslaufen lassen', 'Hälfte', 'Viertel', 'Verdoppeln'].map((t) => el('button', { type: 'button', cls: 'chip', on: () => say('Schleife ' + L.n + ': ' + t + (t === 'Band auslaufen lassen' ? ' – Tipp auf den Ring startet sie wieder' : '')) }, t))),
+      el('div', { cls: 'row' }, el('span', { cls: 'lab' }, 'Lücken und Altern'), ...['Anschläge weglassen', 'Anschläge tauschen', 'leiser werden', 'abnutzen', 'in die Tonleiter wachsen', 'zerfallen'].map((t) => el('button', { type: 'button', cls: 'chip', on: () => say('Schleife ' + L.n + ': ' + t) }, t))),
+      el('div', { cls: 'row' }, el('span', { cls: 'lab' }, 'Noten'), ...['Stufe tiefer', 'Stufe höher', 'dünner', 'dichter', 'rückwärts (Krebs)', 'gespiegelt', 'Groove straffen'].map((t) => el('button', { type: 'button', cls: 'chip', on: () => say('Schleife ' + L.n + ': ' + t) }, t))),
+      el('div', { cls: 'row' }, el('button', { type: 'button', cls: 'chip', on: () => say('So festgehalten') }, 'So festhalten'), el('button', { type: 'button', cls: 'chip ok', on: () => { o.band = '1'; say('Schleife ' + L.n + ': alles zurück zum Original'); renderSheet(); } }, 'Alles zurück zum Original')),
+    ]),
+    group('naehr', 'Nähren', 'Sie spielt in andere Teile von Myzel hinein' + (Object.values(o.naehr).some(Boolean) ? ' · ' + Object.keys(o.naehr).filter((k) => o.naehr[k]).join(', ') : ''), 'Nähren, Schleife in Schleife', [
+      el('div', { cls: 'row' }, ...[['Gespinst', 'Saitennetz schwingt mit'], ['Körner', 'wird Kornmaterial'], ['Rhizom', 'stößt Lawinen an'], ['Sporenregen', 'Noten werden Keime'], ['Glut', 'wird ihr Zunder'], ['Sehne', 'Saiten schwingen mit']].map(([k, t]) => el('button', { type: 'button', cls: 'chip' + (o.naehr[k] ? ' on' : ''), title: t, on: () => { o.naehr[k] = !o.naehr[k]; say('Schleife ' + L.n + (o.naehr[k] ? ' nährt ' + k + ': ' + t : ': ' + k + ' aus')); renderSheet(); } }, k))),
+      el('p', { cls: 'note' }, 'Ladung (Schütteln) erscheint hier nur, wenn Gestik an ist.'),
+    ]),
+    group('fein', 'Feinarbeit', 'Wenn etwas nicht sitzt: Länge, Tempo, Eins, Verschieben', 'Korrigieren, Phase, Quelle', [
+      el('div', { cls: 'row' }, el('span', { cls: 'lab' }, 'Passt nicht?'), ...['Halb so schnell', 'Doppelt so schnell', 'Ein Takt kürzer', 'Ein Takt länger', 'Eins früher', 'Eins später', 'Dreiertakt', 'Die Runde davor nehmen'].map((t) => el('button', { type: 'button', cls: 'chip', on: () => say('Schleife ' + L.n + ': ' + t + ' – neu geschnitten, die Musik läuft weiter') }, t))),
+      el('div', { cls: 'row' }, el('span', { cls: 'lab' }, 'Verschieben'), ...['1 Schlag früher', '−5 ms', '+5 ms', '1 Schlag später'].map((t) => el('button', { type: 'button', cls: 'chip', on: () => say('Schleife ' + L.n + ' ' + t) }, t))),
+      chips('Woher', [['gesp', 'was du gespielt hast'], ['alles', 'alles, was klang'], ['mikro', 'Mikrofon']], o.quelle || 'gesp', set('quelle')),
+    ]),
+  ];
+  return out;
+}
+function delLoop(L) {
+  dropLoop(L); hist('Schleife ' + L.n + ' gelöscht', () => addLoop(L), () => dropLoop(L));
+  toast('Schleife ' + L.n + ' gelöscht', { label: 'Rückgängig', fn: undoStep }); say('Schleife ' + L.n + ' gelöscht');
+  renderAll(); if (!S.loops.length) S.tab = 'allg'; renderSheet();
+}
+function applyLich(Li) { for (const L of S.loops) L.state = Li.on.includes(L.id) ? 'spielt' : 'stumm'; S.lichCur = Li.id; say(Li.name + ' klingt'); renderSheet(); }
+function formSheet() {
+  const out = [el('h3', null, 'Form'), el('p', { cls: 'note' }, 'Abschnitte halten fest, welche Schleifen klingen. Ein Tipp auf einen Abschnitt wechselt auf der nächsten 1.'), el('div', { cls: 'myz' }, 'in Myzel: Lichtungen, Kern, Lücke, Schluss, Folge, Treffen')];
+  out.push(el('div', { cls: 'row' }, el('button', { type: 'button', cls: 'chip big ok', on: () => {
+    if (!S.loops.length) { say('Erst eine Schleife aufnehmen'); return; }
+    const names = ['Strophe', 'Refrain', 'Brücke', 'Abschnitt 4', 'Abschnitt 5', 'Abschnitt 6'];
+    const Li = { id: Date.now(), name: names[S.lich.length] || 'Abschnitt ' + (S.lich.length + 1), on: S.loops.filter((L) => L.state === 'spielt').map((L) => L.id) };
+    S.lich.push(Li); S.lichCur = Li.id; hist(Li.name + ' gemerkt', () => { S.lich = S.lich.filter((x) => x !== Li); }, () => S.lich.push(Li));
+    toast(Li.name + ' gemerkt · ' + Li.on.length + (Li.on.length === 1 ? ' Schleife' : ' Schleifen'), { label: 'Rückgängig', fn: undoStep }); renderSheet();
+  } }, '+ Abschnitt merken')));
+  if (!S.lich.length) out.push(el('p', { cls: 'note' }, 'Noch kein Abschnitt. Schalte die Schleifen so, wie es klingen soll, und tippe „Abschnitt merken“.'));
+  for (const Li of S.lich) out.push(el('div', { cls: 'lay' }, el('span', null, Li.name + ' · ' + Li.on.length + (Li.on.length === 1 ? ' Schleife' : ' Schleifen') + (S.lichCur === Li.id ? ' · klingt jetzt' : '')), el('button', { type: 'button', cls: 'chip' + (S.lichCur === Li.id ? ' on' : ''), on: () => { if (gridOn()) { S.lichPend = { L: Li, at: nextOne(now(), 0.05) }; drawStatus(true); } else applyLich(Li); } }, 'hin'), el('button', { type: 'button', cls: 'chip', on: () => { Li.on = S.loops.filter((L) => L.state === 'spielt').map((L) => L.id); say(Li.name + ' neu gemerkt'); renderSheet(); } }, 'neu merken')));
+  out.push(chips('Wechsel', gridOn() ? [['takt', 'am Takt'], ['ende', 'am Schleifenende']] : [['frei', 'sofort (noch kein Takt)']], gridOn() ? (S.wechsel || 'takt') : 'frei', (v) => { S.wechsel = v; }));
+  out.push(el('div', { cls: 'row' }, el('span', { cls: 'lab' }, 'Im Stück'), el('button', { type: 'button', cls: 'chip', on: () => say('Kern: nur die markierten Schleifen, auf der 1') }, 'Kern'), el('button', { type: 'button', cls: 'chip', on: () => say('Lücke: der letzte Schlag vor der 1 setzt aus') }, 'Lücke · ein Schlag'), el('button', { type: 'button', cls: 'chip', on: () => say('Lücke: der letzte Takt vor der 1 setzt aus') }, 'Lücke · ein Takt')));
+  out.push(el('div', { cls: 'row', style: 'border:1px solid rgba(255,91,77,.35);border-radius:12px;padding:8px' }, el('span', { cls: 'lab' }, 'Schluss – beendet das Stück, ↶ bricht ab'), ...[['am Ende', 1], ['welkend', 8], ['abbauend', 4]].map(([t, n]) => el('button', { type: 'button', cls: 'chip warn', on: () => { if (!S.loops.length) { say('Keine Schleifen da'); return; } S.schluss = { art: t, end: now() + n * (gridOn() ? S.bar : 2.5) }; closeSheet(); } }, 'Schluss · ' + t))));
+  out.push(group('folge', 'Folge und Treffen', 'Abschnitte nacheinander · wann sich Schleifen wieder treffen', 'Folge, Treffen', [el('p', { cls: 'note' }, 'Im Mockup nur angedeutet.')]));
+  out.push(group('auftritt', 'Auftritt', 'Setliste und Bühnenansicht', 'Setliste, Bühnenansicht', [el('div', { cls: 'row' }, el('button', { type: 'button', cls: 'chip', on: () => say('Lied 1 in der Setliste') }, 'Dieses Lied in die Setliste'), el('button', { type: 'button', cls: 'chip', on: () => toast('Lied 2 – 3 Schleifen beiseitegelegt', { label: 'Zurückholen', fn: () => say('Zurückgeholt') }) }, 'Nächstes Lied'), el('button', { type: 'button', cls: 'chip', on: () => say('Bühnenansicht: große Ringe, „Nächster Abschnitt“ als großer Knopf (Mockup)') }, 'Bühnenansicht'))]));
+  return out;
+}
+function allgSheet() {
+  return [el('h3', null, 'Allgemein'), el('p', { cls: 'note' }, 'Gilt für alle Schleifen.'),
+    group('auf', 'Aufnehmen', 'Einzählen, Klick, Beginn, Länge', null, [
+      chips('Beginn', [['takt', 'am Takt'], ['ton', 'beim ersten Ton'], ['sofort', 'sofort']], S.beginn || 'takt', (v) => { S.beginn = v; }),
+      chips('Einzählen', [['sicht', 'sichtbar'], ['vib', 'Vibration'], ['ton', 'hörbar'], ['aus', 'aus']], S.ein || 'sicht', (v) => { S.ein = v; }),
+      chips('Länge einer neuen Schleife', [['auto', 'automatisch'], ['wie1', 'wie Schleife 1'], ['fest', 'fest']], S.laenge || 'wie1', (v) => { S.laenge = v; }),
+      el('div', { cls: 'row' }, el('button', { type: 'button', cls: 'chip', on: () => say('Spielverzögerung: tippe achtmal zum Klick (Mockup)') }, 'Spielverzögerung messen')),
+    ]),
+    group('mitsp', 'Mitspieler', 'Wie sehr die Schleifen auf dich hören · ' + ({ zu: 'hören nur zu', platz: 'machen Platz', antw: 'antworten' }[S.gd || 'zu']), 'Gärtner: schaut zu · pflegt · antwortet; Handschrift', [
+      chips('Mitspieler', [['zu', 'hören nur zu'], ['platz', 'machen Platz'], ['antw', 'antworten']], S.gd || 'zu', (v) => { S.gd = v; say({ zu: 'Mitspieler hören nur zu', platz: 'Mitspieler machen Platz, wenn du dicht oder im Bass spielst', antw: 'Mitspieler antworten auf deine Phrasen – noch 37 Töne bis zur ersten Antwort' }[v]); }),
+    ]),
+    group('mik', 'Mikrofon', 'Aus · Stimme, Pfeifen, ein Instrument aufnehmen', null, [el('div', { cls: 'row' }, el('button', { type: 'button', cls: 'chip', on: () => say('Mikrofon an – „● Mikro“ steht im Feld') }, 'Mikrofon an'))]),
+    group('ger', 'Gerät', 'Gedächtnis, Speicher, Rechenzeit, Gelöschtes', 'Humus', [el('p', { cls: 'note' }, 'Gedächtnis: die letzten 64 s. Die Schleifen brauchen gerade 3 von 40 Teilen der Rechenkraft. Gelöscht: 0 Schleifen.')]),
+    el('div', { cls: 'row' }, el('button', { type: 'button', cls: 'chip', on: () => { S.seen = {}; store.set('seen', {}); say('Die ersten Hinweise kommen wieder'); hint('start'); } }, 'Hinweise wieder zeigen'), el('button', { type: 'button', cls: 'chip warn', on: () => { clearAll(); } }, 'Alle Schleifen leeren')),
+  ];
+}
+function showHelp() {
+  const h = el('div', { cls: 'help', role: 'dialog', 'aria-label': 'Hilfe' }); const box = el('div');
+  box.append(el('h2', null, 'So geht der Looper'),
+    el('dl', null, el('dt', null, '●'), el('dd', null, 'Aufnehmen. Noch einmal: fertig. Läuft eine Schleife: eine Schicht darüber.'), el('dt', null, '+'), el('dd', null, 'Eine neue Schleife (mit Takt: zählt ein, schließt nach der Länge der ersten).'), el('dt', null, '⤓'), el('dd', null, 'Übernehmen: nimmt, was du gerade gespielt hast, ohne vorher zu drücken (Korb).'), el('dt', null, 'Ring'), el('dd', null, 'Tippen: stumm/an (mit Takt auf der 1). Ziehen: lauter/leiser. Halten: Einstellungen.'), el('dt', null, '↶'), el('dd', null, 'Zurück, Schritt für Schritt. Halten: alles leeren (auch das ist zurückzuholen).'), el('dt', null, 'Form'), el('dd', null, 'Abschnitte merken und wechseln, Schluss.'), el('dt', null, '☰ Mehr'), el('dd', null, 'Klang, Lebendigkeit, Mitspielen, Verwandeln, Nähren, Feinarbeit – je Schleife.'),
+      el('dt', null, 'Tasten'), el('dd', null, 'Leertaste ●, E Übernehmen, 1–8 stumm/an, Umschalt+1–8 Einstellungen, Strg+Z zurück, F Form, ? Hilfe, Esc schließen.')),
+    el('p', { cls: 'note', style: 'margin-top:12px' }, 'Dies ist ein Mockup ohne Ton: Es zeigt nur, wie sich die Bedienung anfühlen soll. Der Puls oben gibt einen Takt (96 BPM).'),
+    el('button', { type: 'button', cls: 'chip big', on: () => h.remove() }, 'Verstanden'));
+  h.append(box); h.addEventListener('click', (e) => { if (e.target === h) h.remove(); }); document.body.append(h);
+}
+
+// ---- first-use hints: one per function, once, at the place ----
+const HINTS = {
+  start: ['#haupt', 'Tippe ●, spiel etwas auf dem Feld, tippe wieder – fertig ist die Schleife.'],
+  korb: ['#korb', 'Gerade etwas Schönes gespielt? Übernehmen nimmt es nachträglich.'],
+  'first-loop': ['#haupt', 'Noch einmal ● legt eine Schicht darüber.'],
+  ring: ['.ring[data-id]', 'Tipp: stumm oder an. Ziehen: lauter oder leiser. Halten: Einstellungen.'],
+  plus: ['#plus', '+ beginnt eine neue Schleife – mit Takt zählt sie ein.'],
+  more: ['#moreBtn', 'Hier kannst du jede Schleife verwandeln und lebendig machen.'],
+};
+const ORDER = { 'first-close': null, 'first-loop': ['first-loop', 'ring'], 'ring-done': ['plus'], 'plus-done': ['more'], 'hold-done': null, 'sheet-open': null };
+let bubble = null, queue = [];
+function hint(k) {
+  const list = ORDER[k] !== undefined ? ORDER[k] : [k];
+  if (k === 'sheet-open') { S.seen.more = 1; store.set('seen', S.seen); if (bubble && bubble.k === 'more') killBubble(); return; }
+  if (k === 'ring-done') { S.seen.ring = 1; store.set('seen', S.seen); if (bubble && bubble.k === 'ring') killBubble(); }
+  if (k === 'first-close') { S.seen.start = 1; store.set('seen', S.seen); if (bubble && bubble.k === 'start') killBubble(); return; }
+  if (k === 'plus-done') { S.seen.plus = 1; store.set('seen', S.seen); if (bubble && bubble.k === 'plus') killBubble(); }
+  if (!list) return;
+  for (const x of list) if (!S.seen[x] && !queue.includes(x)) queue.push(x);
+  setTimeout(nextBubble, 400);
+}
+function killBubble() { if (bubble) { bubble.el.remove(); bubble = null; } setTimeout(nextBubble, 300); }
+function nextBubble() {
+  if (bubble || !queue.length) return;
+  const k = queue.shift(); if (S.seen[k]) return nextBubble();
+  const target = document.querySelector(HINTS[k][0]); if (!target) return;
+  S.seen[k] = 1; store.set('seen', S.seen);
+  const b = el('div', { cls: 'bubble', role: 'note' }, HINTS[k][1], el('br'), el('button', { type: 'button', on: killBubble }, 'Verstanden'));
+  document.body.append(b);
+  const r = target.getBoundingClientRect(), bw = Math.min(260, innerWidth - 24), x = Math.max(12, Math.min(innerWidth - bw - 12, r.left + r.width / 2 - bw / 2));
+  b.style.width = bw + 'px'; b.style.left = x + 'px'; b.style.top = Math.max(8, r.top - b.offsetHeight - 12) + 'px'; b.style.setProperty('--ax', (r.left + r.width / 2 - x) + 'px');
+  bubble = { k, el: b }; setTimeout(() => { if (bubble && bubble.k === k) killBubble(); }, 9000);
+}
+
+function renderAll() { renderRings(); renderSheet(); const lh = document.querySelector('.leiste').offsetHeight; document.documentElement.style.setProperty('--leiste-h', (innerWidth >= 900 ? 0 : lh) + 'px'); }
+renderAll();
+addEventListener('resize', renderAll);
+requestAnimationFrame(tick);
+hint('start');
+})();
+</script>
+</body>
+</html>

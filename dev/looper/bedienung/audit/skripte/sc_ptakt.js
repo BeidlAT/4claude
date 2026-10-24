@@ -1,0 +1,18 @@
+const out = {};
+await S.tap('#btnStart'); await page.waitForTimeout(1500); await S.watch();
+await S.tap('#btnPuls'); await page.waitForTimeout(2000);
+out.r0 = (await S.rail()).split('  ').slice(0,3).join(' ');
+await S.tap('#hxHaupt'); await page.waitForTimeout(150);
+out.r1 = (await S.rail()).split('  ').slice(0,3).join(' '); await S.shot('p30-einzaehlen');
+const st = await page.locator('#hxRail').boundingBox(); await page.screenshot({ path: 'shots/p30-einz-rail.png', clip: { x: 0, y: st.y - 30, width: 412, height: st.height + 40 } });
+await page.waitForTimeout(700); out.r1b = (await S.rail()).split('  ').slice(0,3).join(' ');
+const m=[[0.15,0.5,200,300],[0.35,0.4,200,300],[0.55,0.5,200,300],[0.45,0.6,200,300]];
+await page.waitForTimeout(1500);
+out.r2 = (await S.rail()).split('  ').slice(0,3).join(' ');
+await S.playField(m);
+out.r3 = (await S.rail()).split('  ').slice(0,3).join(' ');
+await page.waitForTimeout(2500);
+out.r4 = (await S.rail()).split('  ').slice(0,4).join(' ');
+await S.shot('p31-after');
+out.said = await S.said();
+return out;
