@@ -2,6 +2,13 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-25d",
+      "punkte": [
+        "Schleifen, die gerade spielen, leuchten in der Leiste unter dem Spielfeld jetzt deutlich auf – im Takt pulsierend. Stumme bleiben dunkel.",
+        "Jeder Knopf des Loopers erklärt sich: Fährst du mit der Maus darüber, steht in einfachen Worten da, wofür er ist – in der Leiste, in der Karte jeder Schleife und bei den Einstellungen."
+      ]
+    },
+    {
       "id": "2026-10-25c",
       "punkte": [
         "In Firefox bleibt Myzel jetzt auch in Spielpausen ganz wach – das soll verhindern, dass nach einer langen Sitzung das Keyboard keinen Ton mehr gibt. Am Klang ändert sich nichts.",

@@ -44,6 +44,12 @@ Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`)
    Speicher stabil – `scratchpad/soak/long.js`, nicht im Repo). Verdacht: Ruhe (auf Chromiums Regeln gebaut). Gebaut:
    Ruhe bleibt in Firefox aus (`FIREFOX`, `IDLE.auto`), veröffentlicht. Kommt es wieder: Firefox-Konsole (Strg+Umschalt+K)
    und „Leistung messen“ vom Besitzer; nächster Verdacht die Ruhe der Kettenkopie (`HXF1`, Hexenring) – gleiche Bauart.
+4e. **Looper klarer (Besitzer, 25.10.2026, veröffentlicht):** Spielende Schleifen leuchten (lumen-Scheibe und Glühen,
+   pulsierend auf jedem Schlag, `hxDrawRing`; Wort in lumen, `.hx-ring.spielt`). Tooltips überall: `js/hexenring/tips.js`
+   (`HX_TIP` nach Zeile|Text, Abschnitt|Text, Text, sonst aria-label; `@Zeile` am Zeilennamen; `HX_TIP_P` für die
+   Einstellungen; `hxTipsWatch` hält sie nach jedem Render aktuell; die Ringleiste setzt ihre in `hxRailTips`). Neue
+   Knöpfe brauchen einen Eintrag – `t-hx-tips` prüft, dass jedes sichtbare Element einen hat. Offen fürs Gespräch: Unter
+   einem spielenden Ring steht „stumm“ (was ein Tipp tut) – das kann verwirren (Konzept E4–E8, noch offen).
 5. **Offene Fragen ans Ohr:** Schale spricht wie früher das Harz-Glas manchmal spät an (soll sie immer sofort?);
    Bandträgheit, Gärtner-Bass, Musikalität der Antworten (siehe `dev/IDEEN.md`).
 6. **Danach** die Liste in `dev/IDEEN.md` (Sample-Bibliothek, Stimme als Instrument, neue Klangerzeugung, native App).

@@ -78,6 +78,7 @@ function hxRailBuild() {
   rail.addEventListener('pointerup', () => { if (rail.contains(document.activeElement)) document.activeElement.blur(); });
   if (window.ResizeObserver) new ResizeObserver(() => { HXU.w = 0; hxRailDirty(); }).observe(rail);
   hxRailShow();
+  hxTipsWatch(HXU.chips);   // (25.10.2026: the chips explain themselves on hover)
 }
 // with a panel open the rail folds to its 24-px form only where the field would otherwise be shorter than 260 px – read
 // from the layout (the field's height now, as it would be with the rail open), not from the screen's size (step 1d;
@@ -206,6 +207,7 @@ function hxRailState() {
       const sw = pend ? '' : hxStance(L); b.classList.toggle('g', !!sw); if (sw) word = sw;   // (Etappe 3: the stance – a tap on it takes the Gärtner's change back)
       aria = hxName(L) + ', ' + hxEngName(L) + ', ' + hxLenText(L) + ', ' + (L.state === 'spielt' ? 'spielt' : L.state) + (pend ? ', ' + pend.label : '') + (HX.fokus === L.id ? ', Fokus' : '') + ' – ' + (hxStance(L) && !pend ? hxStance(L) + ', tippen: ' + (L.mi && L.mi.sugg ? 'einschalten' : 'zurücknehmen') : word);
     }
+    b.classList.toggle('spielt', !!(L && L.state === 'spielt') && !(R && R.slot === i));   // (25.10.2026: its word lit too)
     if (w.textContent !== word) w.textContent = word;
     if (b.getAttribute('aria-label') !== aria) b.setAttribute('aria-label', aria);
   }
@@ -228,6 +230,7 @@ function hxRailState() {
   if (HXU.form.firstChild.textContent !== fw) HXU.form.firstChild.textContent = fw;
   const nx = HX.lich.length ? HX.lich[(fi + 1) % HX.lich.length] : null;
   HXU.form.setAttribute('aria-label', 'Form: ' + (fp ? fp.label + ' – abbrechen' : nx ? 'nächste Lichtung, ' + nx.name : 'noch keine Lichtung') + (li ? ' (jetzt ' + li.name + ')' : '') + ' – halten: Form-Zeile');
+  hxRailTips(hw);   // (25.10.2026: the tooltips)
   HXU.undo.setAttribute('aria-label', HX.pend.length ? 'Abbrechen: ' + HX.pend[HX.pend.length - 1].label : 'Zurück' + (HX.hist.length ? ': ' + HX.hist[HX.hist.length - 1].label : '') + ' (halten: alle leeren)');
 }
 function hxChipsRender() {
@@ -245,7 +248,7 @@ function hxChipsRender() {
     chip('✕', () => { hxWTonAb(); HXU.sig = ''; hxRailDirty(); }, { cls: 'pri', aria: 'Tonartwechsel abbrechen' });
     return;
   }
-  if (C.kind === 'mult') for (const m of [1, 2, 4]) chip('×' + m, () => { if (HX.rec) { HX.rec.mult = m; hxRecAuto(); hxRailDirty(); } }, { cls: HX.rec && HX.rec.mult === m ? 'on' : '' });
+  if (C.kind === 'mult') for (const m of [1, 2, 4]) chip('×' + m, () => { if (HX.rec) { HX.rec.mult = m; hxRecAuto(); hxRailDirty(); } }, { cls: HX.rec && HX.rec.mult === m ? 'on' : '', aria: m === 1 ? 'Die neue Schleife wird so lang wie die erste' : 'Die neue Schleife wird ' + m + '-mal so lang wie die erste' });
   if (C.kind === 'form') {   // (step 1d) the row: the Lichtungen (their rule on the chip), merken, Kern, Lücke, Schluss
     const wait = HX.pend.find((p) => p.kind === 'licht');
     HX.lich.forEach((Li, i) => chip((i + 1) + ' · ' + (Li.rule === 'ende' ? 'Ende' : 'Takt') + (Li.kern ? ' · Kern' : ''), () => { hxLichGo(Li); HXU.sig = ''; hxRailDirty(); },
@@ -371,6 +374,16 @@ function hxDrawRing(c, i, r, y, fold, ts) {
   const ph = hxPhase(L, REDUCED ? hxBeatStep(L, now) : now), ang = (p) => -Math.PI / 2 + p * Math.PI * 2;
   // track, bar ticks outside, one thin ring per Schicht inside
   c.strokeStyle = 'rgba(168,152,138,' + (0.55 * dimA).toFixed(2) + ')'; c.beginPath(); c.arc(x, y, R0, 0, Math.PI * 2); c.stroke();
+  // (25.10.2026, owner) a playing loop lights up: a light disc and a glowing ring in lumen, brighter on every beat (a loop
+  // without a Takt: four times a pass); with reduced motion steady
+  if (st === 'spielt') {
+    const bt = hxTakt(L) && A.ctx ? tgBeat(now) % 1 : (ph * 4) % 1, pu = REDUCED ? 0.4 : Math.exp(-5 * (bt < 0 ? bt + 1 : bt));
+    c.save();
+    c.fillStyle = 'rgba(134,240,208,' + (0.10 + 0.12 * pu).toFixed(3) + ')'; c.beginPath(); c.arc(x, y, R0, 0, Math.PI * 2); c.fill();
+    c.shadowColor = HXC.lumen; c.shadowBlur = fold ? 4 : 7 + 9 * pu; c.strokeStyle = 'rgba(134,240,208,' + (0.7 + 0.3 * pu).toFixed(3) + ')'; c.lineWidth = fold ? 1.6 : 2.2;
+    c.beginPath(); c.arc(x, y, R0, 0, Math.PI * 2); c.stroke();
+    c.restore(); c.lineWidth = 1.4;
+  }
   if (!fold) {
     const bars = hxTakt(L) ? Math.max(1, Math.round(L.d.beats / (L.bpb || 4))) : 0;
     c.strokeStyle = HXC.dim; c.lineWidth = 1.2;

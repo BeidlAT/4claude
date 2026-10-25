@@ -26,6 +26,7 @@ function hxCardSec() {
   ]);
   HXK.sec = h('div', { class: 'sec hx-sec', id: 'hxSec' }, h('div', { class: 'sec-h' }, h('h3', null, 'Hexenring'), HXK.sub), HXK.acts, HXK.cost, HXK.list, HXK.gd, HXK.form, HXK.grave, set);
   HXK.dirty = true; hxCardRender();
+  hxTipsWatch(HXK.sec);   // (25.10.2026: every control explains itself on hover)
   return HXK.sec;
 }
 // Spielverzögerung in the card: „Klopf mit“ – while it runs, a big pad to tap (press-acting) with the taps counted
@@ -163,8 +164,8 @@ function hxCardWuchs(L, sch, chip, row, btn) {
     row('Folgen', ...[['diatonisch', 'diatonisch'], ['transponieren', 'transp.'], ['fest', 'fest']].map(([k, t]) => chip(t, (L.ton || 'diatonisch') === k, () => hxWSet(L, 'ton', k), 'Tonart: ' + k))),
     row('Klang', chip('eigener', klang === 'eigen', () => hxWSet(L, 'klang', 'eigen'), 'Klang: der eigene'), chip('Spielfeld', klang === 'feld', () => hxWSet(L, 'klang', 'feld'), 'Klang: folgt dem Spielfeld'), sel),
     h('div', { class: 'hx-row end' }, btn('Neuer Wurf', () => hxWSet(L, 'wurf'), { aria: 'Neuer Wurf: die Noten mit neuem Zufall' }),
-      lebt && !no ? btn('✓', () => hxWLob(L), { aria: 'Behalten: dieser Durchgang wird der Anker' }) : null, lebt && !no ? btn('✕', () => hxWNein(L), { aria: 'Ablehnen: zurück zum Anker' }) : null,
-      on ? btn('⚓', () => hxWAnker(L), { aria: 'Anker: zurück zum Original' }) : null),
+      lebt && !no ? btn('✓', () => hxWLob(L), { aria: 'Behalten: diese Runde gefällt dir – sie wird die neue Grundlage' }) : null, lebt && !no ? btn('✕', () => hxWNein(L), { aria: 'Ablehnen: zurück zur Runde, die du behalten hast' }) : null,
+      on ? btn('⚓', () => hxWAnker(L), { aria: 'Zurück zur ursprünglichen Aufnahme' }) : null),
   ];
 }
 // the loop's chain: burnt in (the bake) or following the live chain – and where its Schichten are
