@@ -40,7 +40,8 @@ function onDown(e) {
   if (e.pointerType && SLP.down) return;   // Gestik: the screen lies on the table – no phantom touches
   if (NA.q.length) noteAfterRun();   // (the last note's own work first: in order)
   ensureRunning();
-  if (touches.has(e.pointerId)) onUp({ pointerId: e.pointerId });   // never leave a note hanging on a reused pointer id
+  if (HOLD.on && holdNew()) holdRelease();   // Halten: a new stroke from an empty hand lets the held ones go
+  if (touches.has(e.pointerId)) onUp({ pointerId: e.pointerId, force: true });   // never leave a note hanging on a reused pointer id
   if (e.pointerType) { try { cvFx.setPointerCapture(e.pointerId); } catch (err) {} }
   const pt = e.pt || stagePoint(e), n = e.note || noteAt(pt.x), now = A.ctx.currentTime;
   const tt = { id: e.pointerId, x: pt.x, y: pt.y, px: pt.px, py: pt.py, col: n.idx, f: n.f, name: n.name, layers: layers(), voices: [], rollNext: null, hue: VIS.hueAt(pt.x), vel: e.vel, bend: e.bend || false, vn: e.vn, mb: e.mb || 0, mpe: e.mpe, seq: ++MOD.seq, stk: modStroke(e.stkT), ptype: e.pointerType || null };
@@ -101,6 +102,7 @@ function onUp(e) {
   if (NA.q.length) noteAfterRun();   // (the press's own work before its release)
   const tt = touches.get(e.pointerId);
   if (!tt) return;
+  if (HOLD.on && !e.force) { if (!tt.hold) { tt.hold = true; holdUI(); } return; }   // Halten: it sounds on, the field shows it as held
   if (GK.on && GK.p.tragen && gaCarry(tt, e)) return;   // Tragen: the lean carries the note on
   touches.delete(e.pointerId);
   if (GK.on) gkNote(tt, false, e);
@@ -108,7 +110,29 @@ function onUp(e) {
   for (const { v } of tt.voices) if (v.alive && v.release) v.release(e.relK);
   VIS.touchEnd(tt);
 }
-function releaseAllTouches() { for (const id of Array.from(touches.keys())) onUp({ pointerId: id }); }
+function releaseAllTouches() { for (const id of Array.from(touches.keys())) onUp({ pointerId: id, force: true }); holdUI(); }
+
+/* ---------- Halten (owner, 25.10.2026: „unser Baby braucht einen simplen Hold-Knopf“) ----------
+   A latch: while it is on, a note let go (finger, key, MIDI) sounds on and the field keeps drawing it as held. Playing
+   again from an empty hand – every note that sounds is a held one – lets them go: the new stroke takes their place;
+   notes struck while another is still down join the chord. Off lets all go. The button (a fermata) beside Freeze,
+   the Enter key, any learned control („Halten“). */
+const HOLD = { on: false };
+const holdNew = () => { for (const tt of touches.values()) if (!tt.hold) return false; return touches.size > 0; };
+function holdRelease() { for (const [id, tt] of Array.from(touches)) if (tt.hold) onUp({ pointerId: id, force: true }); holdUI(); }
+function holdSet(on) {
+  on = !!on; if (HOLD.on === on) return;
+  HOLD.on = on;
+  if (!on) holdRelease();
+  holdUI();
+}
+function holdUI() {
+  const b = document.getElementById('btnHold'); if (!b) return;
+  b.setAttribute('aria-pressed', String(HOLD.on));
+  let n = 0; for (const tt of touches.values()) if (tt.hold) n++;
+  b.classList.toggle('carries', HOLD.on && n > 0);
+  b.setAttribute('aria-label', HOLD.on ? 'Halten an' + (n ? ', ' + n + (n === 1 ? ' Ton klingt' : ' Töne klingen') + ' weiter' : '') : 'Halten');
+}
 
 // desktop / hardware keyboard: the home row plays the notes from the left edge
 const KEYROW = ['KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyG', 'KeyH', 'KeyJ', 'KeyK', 'KeyL', 'Semicolon', 'Quote', 'Backslash'];
@@ -118,7 +142,7 @@ function keyNote(e, down) {
   e.preventDefault();
   const id = 'key-' + e.code;
   if (!down) { onUp({ pointerId: id }); return; }
-  if (e.repeat || touches.has(id) || !A.started) return;
+  if (e.repeat || (touches.has(id) && !touches.get(id).hold) || !A.started) return;   // (a held one is struck anew)
   const len = N.free ? 12 * P['t.range'] + 1 : N.notes.length;
   const x = noteX(Math.min(i, len - 1));
   onDown({ pointerId: id, pt: { x, y: e.shiftKey ? 0.85 : 0.55, px: x * VIS.w, py: (e.shiftKey ? 0.15 : 0.45) * VIS.h } });

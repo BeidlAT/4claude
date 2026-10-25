@@ -69,6 +69,11 @@ input[type=text], select { -webkit-user-select: text; user-select: text; }
 .iconbtn svg { width: 18px; height: 18px; }
 .iconbtn[aria-pressed="true"] { background: var(--spore); border-color: var(--spore); color: var(--ink); }
 #btnFreeze[aria-pressed="true"] { background: var(--lumen); border-color: var(--lumen); }
+/* Halten (25.10.2026): lit like Freeze; while it carries notes it breathes slowly */
+#btnHold[aria-pressed="true"] { background: var(--lumen); border-color: var(--lumen); color: var(--ink); }
+#btnHold.carries { animation: holdBreath 2.6s ease-in-out infinite; }
+@keyframes holdBreath { 0%, 100% { box-shadow: 0 0 0 0 rgba(134, 240, 208, 0.0); } 50% { box-shadow: 0 0 0 5px rgba(134, 240, 208, 0.28); } }
+@media (prefers-reduced-motion: reduce) { #btnHold.carries { animation: none; box-shadow: 0 0 0 3px rgba(134, 240, 208, 0.28); } }
 .recbtn {
   flex: none; display: flex; align-items: center; justify-content: center; gap: 7px; height: 38px; min-width: 84px; padding: 0 12px;
   border-radius: 999px; border: 1px solid var(--line); background: var(--bark);
@@ -1793,6 +1798,7 @@ body.mlearn #stage::after { content: ""; position: absolute; inset: 0; backgroun
     <button id="engChip" class="eng-chip" type="button" aria-controls="sheet" aria-label="Klangquelle: Nebel. Einstellungen öffnen"><span class="lbl">Klang</span><span id="engGlyph" class="eng-g" aria-hidden="true"></span><span id="engName">Nebel</span></button>
     <button id="btnPuls" class="iconbtn" type="button" aria-pressed="false" aria-label="Puls" title="Puls starten oder anhalten" data-act="puls"></button>
     <button id="btnFreeze" class="iconbtn" type="button" aria-pressed="false" aria-label="Echo einfrieren" title="Echo einfrieren" data-act="freeze"></button>
+    <button id="btnHold" class="iconbtn" type="button" aria-pressed="false" aria-label="Halten" title="Halten: was du loslässt, klingt weiter – bis du neu anspielst oder Halten ausschaltest (Taste: Eingabe)" data-act="hold"></button>
     <button id="btnGk" class="gk-ico" type="button" hidden aria-label="Gestik" title="Gestik" data-st="aus"><svg viewBox="0 0 32 32" aria-hidden="true"><circle class="trk" cx="16" cy="16" r="13"/><circle class="lad" cx="16" cy="16" r="13" pathLength="100" stroke-dasharray="0 100"/><g class="spo"><circle cx="16" cy="16" r="3.3"/><path d="M16 11.2V8.4M16 20.8v2.8M11.2 16H8.4M20.8 16h2.8M12.6 12.6l-2-2M19.4 19.4l2 2M19.4 12.6l2-2M12.6 19.4l-2 2"/></g><text class="zz" x="22.5" y="10.5">z</text></svg></button>
     <button id="btnRec" class="recbtn" type="button" data-state="idle" aria-label="Aufnahme starten" data-act="rec"><span class="dot"></span><span id="recLabel">REC</span></button>
     <div class="meter" aria-hidden="true"><i id="outMeter"></i></div>
@@ -1912,6 +1918,7 @@ function h(tag, attrs, ...kids) {
 const ICON = {
   play: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>',
   stop: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6.5" y="6.5" width="11" height="11" rx="1.5"/></svg>',
+  hold: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4.5 15.5a7.5 7.5 0 0 1 15 0"/><circle cx="12" cy="14.6" r="1.7" fill="currentColor" stroke="none"/></svg>',   // (a fermata: hold)
   freeze: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9M9.5 4.5 12 7l2.5-2.5M9.5 19.5 12 17l2.5 2.5"/></svg>',
   close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>',
   klang: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M2 12h2.5l2-6 3 13 3-15 3 12 2-4H22"/></svg>',
@@ -12519,7 +12526,8 @@ function onDown(e) {
   if (e.pointerType && SLP.down) return;   // Gestik: the screen lies on the table – no phantom touches
   if (NA.q.length) noteAfterRun();   // (the last note's own work first: in order)
   ensureRunning();
-  if (touches.has(e.pointerId)) onUp({ pointerId: e.pointerId });   // never leave a note hanging on a reused pointer id
+  if (HOLD.on && holdNew()) holdRelease();   // Halten: a new stroke from an empty hand lets the held ones go
+  if (touches.has(e.pointerId)) onUp({ pointerId: e.pointerId, force: true });   // never leave a note hanging on a reused pointer id
   if (e.pointerType) { try { cvFx.setPointerCapture(e.pointerId); } catch (err) {} }
   const pt = e.pt || stagePoint(e), n = e.note || noteAt(pt.x), now = A.ctx.currentTime;
   const tt = { id: e.pointerId, x: pt.x, y: pt.y, px: pt.px, py: pt.py, col: n.idx, f: n.f, name: n.name, layers: layers(), voices: [], rollNext: null, hue: VIS.hueAt(pt.x), vel: e.vel, bend: e.bend || false, vn: e.vn, mb: e.mb || 0, mpe: e.mpe, seq: ++MOD.seq, stk: modStroke(e.stkT), ptype: e.pointerType || null };
@@ -12580,6 +12588,7 @@ function onUp(e) {
   if (NA.q.length) noteAfterRun();   // (the press's own work before its release)
   const tt = touches.get(e.pointerId);
   if (!tt) return;
+  if (HOLD.on && !e.force) { if (!tt.hold) { tt.hold = true; holdUI(); } return; }   // Halten: it sounds on, the field shows it as held
   if (GK.on && GK.p.tragen && gaCarry(tt, e)) return;   // Tragen: the lean carries the note on
   touches.delete(e.pointerId);
   if (GK.on) gkNote(tt, false, e);
@@ -12587,7 +12596,29 @@ function onUp(e) {
   for (const { v } of tt.voices) if (v.alive && v.release) v.release(e.relK);
   VIS.touchEnd(tt);
 }
-function releaseAllTouches() { for (const id of Array.from(touches.keys())) onUp({ pointerId: id }); }
+function releaseAllTouches() { for (const id of Array.from(touches.keys())) onUp({ pointerId: id, force: true }); holdUI(); }
+
+/* ---------- Halten (owner, 25.10.2026: „unser Baby braucht einen simplen Hold-Knopf“) ----------
+   A latch: while it is on, a note let go (finger, key, MIDI) sounds on and the field keeps drawing it as held. Playing
+   again from an empty hand – every note that sounds is a held one – lets them go: the new stroke takes their place;
+   notes struck while another is still down join the chord. Off lets all go. The button (a fermata) beside Freeze,
+   the Enter key, any learned control („Halten“). */
+const HOLD = { on: false };
+const holdNew = () => { for (const tt of touches.values()) if (!tt.hold) return false; return touches.size > 0; };
+function holdRelease() { for (const [id, tt] of Array.from(touches)) if (tt.hold) onUp({ pointerId: id, force: true }); holdUI(); }
+function holdSet(on) {
+  on = !!on; if (HOLD.on === on) return;
+  HOLD.on = on;
+  if (!on) holdRelease();
+  holdUI();
+}
+function holdUI() {
+  const b = document.getElementById('btnHold'); if (!b) return;
+  b.setAttribute('aria-pressed', String(HOLD.on));
+  let n = 0; for (const tt of touches.values()) if (tt.hold) n++;
+  b.classList.toggle('carries', HOLD.on && n > 0);
+  b.setAttribute('aria-label', HOLD.on ? 'Halten an' + (n ? ', ' + n + (n === 1 ? ' Ton klingt' : ' Töne klingen') + ' weiter' : '') : 'Halten');
+}
 
 // desktop / hardware keyboard: the home row plays the notes from the left edge
 const KEYROW = ['KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyG', 'KeyH', 'KeyJ', 'KeyK', 'KeyL', 'Semicolon', 'Quote', 'Backslash'];
@@ -12597,7 +12628,7 @@ function keyNote(e, down) {
   e.preventDefault();
   const id = 'key-' + e.code;
   if (!down) { onUp({ pointerId: id }); return; }
-  if (e.repeat || touches.has(id) || !A.started) return;
+  if (e.repeat || (touches.has(id) && !touches.get(id).hold) || !A.started) return;   // (a held one is struck anew)
   const len = N.free ? 12 * P['t.range'] + 1 : N.notes.length;
   const x = noteX(Math.min(i, len - 1));
   onDown({ pointerId: id, pt: { x, y: e.shiftKey ? 0.85 : 0.55, px: x * VIS.w, py: (e.shiftKey ? 0.15 : 0.45) * VIS.h } });
@@ -13502,6 +13533,7 @@ midiTarget('macro.b', 'Klang-Makro B', null, { group: 'Klang', cont: true, pidf:
 // but from any control and channel)
 midiTarget('up', 'Klangfarbe heller (Höhe auf der Spielfläche)', null, { group: 'Spielweise', cont: true, noTake: true, get: (cx) => cx.src.up || 0, set: (n, cx) => { if (cx.src.up !== n) { cx.src.up = n; midiRecolor(); } } });
 midiTarget('dark', 'Klangfarbe dunkler', null, { group: 'Spielweise', cont: true, noTake: true, get: (cx) => cx.src.dark || 0, set: (n, cx) => { if (cx.src.dark !== n) { cx.src.dark = n; midiRecolor(); } } });
+midiTarget('hold', 'Halten (losgelassene Töne klingen weiter)', null, { group: 'Spielweise', bool: true, get: () => (HOLD.on ? 1 : 0), set: (n) => holdSet(n >= 0.5) });   // (25.10.2026)
 // pedals from any control: they hold the notes of the whole device
 for (const [key, cc, label] of [['sus', 64, 'Haltepedal'], ['sost', 66, 'Sostenuto-Pedal'], ['soft', 67, 'Leisepedal (leiser und dunkler)']]) {
   midiTarget(key, label, null, { group: 'Spielweise', bool: true, get: (cx) => { const cs = chState(cx.src, Math.max(0, cx.ev.ch)); return (cc === 64 ? cs.sus : cc === 66 ? cs.sost : cs.soft) ? 1 : 0; }, set: (n, cx) => srcPedal(cx.src, cc, n >= 0.5, cx.ev.ch) });
@@ -26179,6 +26211,7 @@ function buildUI() {
     h('button', { type: 'button', class: 'iconbtn', id: 'btnPanic2', 'data-act': 'stille', 'aria-label': 'Stille: alles sofort stoppen', title: 'Stille: alles sofort stoppen', html: ICON.hush, onclick: panic }));
   $('#btnClose').innerHTML = ICON.close;
   $('#btnFreeze').innerHTML = ICON.freeze;
+  $('#btnHold').innerHTML = ICON.hold;
   $('#btnClose').addEventListener('click', closePanel);
   $('#btnPanic').addEventListener('click', panic);
   const chip = $('#engChip'), chipLib = () => { if (UI.panel !== 'klang') openPanel('klang'); kqOpen(kqTarget('v.eng'), { opener: chip, where: 'Spielfläche', focusTile: true }); };
@@ -26196,6 +26229,13 @@ function buildUI() {
   $('#startFingerLine').textContent = 'Mehrere gleichzeitig; Wischen schlägt ' + listDe(famPlay().strike) + ' an';
   $('#btnPuls').addEventListener('click', () => { if (!A.started) return; SEQ.on ? seqStop() : seqStart(); });
   $('#btnFreeze').addEventListener('click', () => { if (A.started) setFreeze(!A.frozen); });
+  $('#btnHold').addEventListener('click', () => holdSet(!HOLD.on));
+  // Halten from the computer keyboard: Enter, where it would press nothing else (the field, the page)
+  window.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || e.repeat || e.ctrlKey || e.altKey || e.metaKey || e.shiftKey || LEARN.on) return;
+    const t = e.target; if (t && t !== document.body && t !== document.documentElement && !(t.id === 'cvFx' || (t.closest && t.closest('#stage')))) return;
+    e.preventDefault(); holdSet(!HOLD.on);
+  });
   $('#btnGk').addEventListener('click', gkIcoTap);
   $('#btnRec').addEventListener('click', recToggle);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && UI.panel) closePanel(); });

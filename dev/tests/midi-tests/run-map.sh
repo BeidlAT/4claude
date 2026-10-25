@@ -5,7 +5,7 @@ D=$(cd "$(dirname "$0")" && pwd)
 sh "$D/../v2/mk.sh" /home/user/4claude/myzel mm >/dev/null
 cd "$D" || exit 1
 rc=0
-for t in t-map-nks t-map-mk t-map-nk2 t-map-rel t-map-learn t-map-touche; do
+for t in t-map-nks t-map-mk t-map-nk2 t-map-rel t-map-learn t-map-touche t-hold; do
   echo "== $t"
   node "$t.js" > "out/$t.log" 2>&1 || rc=1
   grep -c '^PASS' "out/$t.log" | sed 's/^/   PASS: /'

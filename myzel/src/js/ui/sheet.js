@@ -17,6 +17,7 @@ function buildUI() {
     h('button', { type: 'button', class: 'iconbtn', id: 'btnPanic2', 'data-act': 'stille', 'aria-label': 'Stille: alles sofort stoppen', title: 'Stille: alles sofort stoppen', html: ICON.hush, onclick: panic }));
   $('#btnClose').innerHTML = ICON.close;
   $('#btnFreeze').innerHTML = ICON.freeze;
+  $('#btnHold').innerHTML = ICON.hold;
   $('#btnClose').addEventListener('click', closePanel);
   $('#btnPanic').addEventListener('click', panic);
   const chip = $('#engChip'), chipLib = () => { if (UI.panel !== 'klang') openPanel('klang'); kqOpen(kqTarget('v.eng'), { opener: chip, where: 'Spielfläche', focusTile: true }); };
@@ -34,6 +35,13 @@ function buildUI() {
   $('#startFingerLine').textContent = 'Mehrere gleichzeitig; Wischen schlägt ' + listDe(famPlay().strike) + ' an';
   $('#btnPuls').addEventListener('click', () => { if (!A.started) return; SEQ.on ? seqStop() : seqStart(); });
   $('#btnFreeze').addEventListener('click', () => { if (A.started) setFreeze(!A.frozen); });
+  $('#btnHold').addEventListener('click', () => holdSet(!HOLD.on));
+  // Halten from the computer keyboard: Enter, where it would press nothing else (the field, the page)
+  window.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || e.repeat || e.ctrlKey || e.altKey || e.metaKey || e.shiftKey || LEARN.on) return;
+    const t = e.target; if (t && t !== document.body && t !== document.documentElement && !(t.id === 'cvFx' || (t.closest && t.closest('#stage')))) return;
+    e.preventDefault(); holdSet(!HOLD.on);
+  });
   $('#btnGk').addEventListener('click', gkIcoTap);
   $('#btnRec').addEventListener('click', recToggle);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && UI.panel) closePanel(); });

@@ -20,6 +20,11 @@
 .iconbtn svg { width: 18px; height: 18px; }
 .iconbtn[aria-pressed="true"] { background: var(--spore); border-color: var(--spore); color: var(--ink); }
 #btnFreeze[aria-pressed="true"] { background: var(--lumen); border-color: var(--lumen); }
+/* Halten (25.10.2026): lit like Freeze; while it carries notes it breathes slowly */
+#btnHold[aria-pressed="true"] { background: var(--lumen); border-color: var(--lumen); color: var(--ink); }
+#btnHold.carries { animation: holdBreath 2.6s ease-in-out infinite; }
+@keyframes holdBreath { 0%, 100% { box-shadow: 0 0 0 0 rgba(134, 240, 208, 0.0); } 50% { box-shadow: 0 0 0 5px rgba(134, 240, 208, 0.28); } }
+@media (prefers-reduced-motion: reduce) { #btnHold.carries { animation: none; box-shadow: 0 0 0 3px rgba(134, 240, 208, 0.28); } }
 .recbtn {
   flex: none; display: flex; align-items: center; justify-content: center; gap: 7px; height: 38px; min-width: 84px; padding: 0 12px;
   border-radius: 999px; border: 1px solid var(--line); background: var(--bark);
