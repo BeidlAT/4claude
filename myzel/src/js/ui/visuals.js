@@ -227,7 +227,7 @@ function frameBody(ts) {
       c.fillStyle = (tt.gaT && ts - tt.gaT < 250) || (bd && g.snap) ? COL.lumen : COL.hypha; c.fillText(nm, tt.px, ly);
     }
   }
-  tickTry(21, () => hxVisFrame(c, w, h)); tickTry(26, () => hxRailFrame(ts));   // Hexenring: its rings on the field, the Ringleiste
+  tickTry(21, () => hxVisFrame(c, w, h)); tickTry(26, () => hxRailFrame(ts)); if (HXE.ed && !HXE.ed.hidden) tickTry(27, hxEdFrame);   // Hexenring: its rings on the field, the Ringleiste
   tickTry(22, () => updateMeters(dt));
   const pan = UI.panel && panelOf(UI.panel);
   if (pan && pan.frame) tickTry(23, () => pan.frame(dt, ts));

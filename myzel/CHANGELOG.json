@@ -2,6 +2,16 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-25p",
+      "punkte": [
+        "Looper: Rechtsklick auf eine Schleife öffnet ihr Menü – Ansehen und bearbeiten, Karte, Stumm, Solo, als Aufnahme, MIDI, Löschen.",
+        "„Ansehen und bearbeiten“ (auch Umschalt + 1 bis 8 oder der Name im Schleifen-Mixer) zeigt die Schleife groß: Wellenform mit Takten und Schlägen, ihre Noten, wo sie gerade spielt, und jede Schicht mit eigener Wellenform.",
+        "Ziehe über die Wellenform, um einen Teil zu wählen (auf ganze Schläge) – „Nur die Auswahl spielen“ schneidet die Schleife darauf zu; „Wieder ganz“ und ↶ holen alles zurück.",
+        "Im selben Fenster: Band, Trimmen, Zeit und Eins verschieben, Lücken, Noten umformen, Schichten leiser, stumm oder löschen, zusammenlegen, exportieren.",
+        "Behoben: ↶ nach dem ersten Trimmen gab nicht alle Noten der Schleife zurück."
+      ]
+    },
+    {
       "id": "2026-10-25o",
       "punkte": [
         "Mixer: neue Ansicht „Schleifen“ neben Pult und Geflecht – jede Schleife hat dort ihren eigenen Kanal.",

@@ -44,7 +44,8 @@ function hxRailBuild() {
     const b = h('button', { type: 'button', class: 'hxb hx-ring', 'data-slot': i, tabindex: '-1', 'aria-label': 'Schleife ' + (i + 1) + ', leer' }, h('span', { class: 'w' }, 'aufnehmen'));
     b.addEventListener('pointerdown', (e) => hxRingDown(i, e));
     hxKeyClick(b, () => hxRingTap(i, null));
-    b.addEventListener('contextmenu', (e) => e.preventDefault());
+    b.addEventListener('pointerdown', (e) => { b.hxPt = e.pointerType; }, true);
+    b.addEventListener('contextmenu', (e) => { e.preventDefault(); if (b.hxPt === 'touch' || (e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents)) return; const r0 = b.getBoundingClientRect(); hxCtxMenu(i, e.button === 2 || e.clientX ? e.clientX : r0.left, e.button === 2 || e.clientY ? e.clientY : r0.top); });   // (owner, 25.10.2026: a right click – its menu, bearbeiten.js)
     HXU.rings.push(b); ringBox.append(b);
   }
   HXU.ringBox = ringBox; HXU.chips = h('div', { class: 'hx-chips', role: 'group', 'aria-label': 'Nach der Ernte' });

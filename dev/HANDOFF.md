@@ -1,6 +1,14 @@
 # Übergabe: Myzel (Stand 22.10.2026 – Klangquellen, Ruhe und der Hexenring fertig, Schlussprüfung grün)
 
-## Nächste Sitzung – zuerst lesen (Stand 25.10.2026, abends)
+## Nächste Sitzung – zuerst lesen (Stand 26.10.2026, nachts)
+
+Neu seit dem Stand unten (Wunsch des Besitzers, 25.10.2026 nachts – „Länge fehlt, wo bin ich beim Einspielen, Bearbeiten
+und Mixer für Schleifen nicht gefunden“), je eine Etappe, jede getestet und veröffentlicht: **4j** Länge an der
+Ringleiste + Positionsanzeige (#28), **4k** Mixer-Ansicht „Schleifen“ (#29), **4l** Rechtsklick-Menü und Fenster
+„Ansehen und bearbeiten“ (#30). Rückmeldung des Besitzers dazu abwarten (nur in Chromium geprüft). Die Gesamtprüfung
+(reg.sh, Lastwächter) lief für diese drei nicht – nur die betroffenen Suiten; einmal nachholen.
+
+### Davor (Stand 25.10.2026, abends)
 
 Veröffentlicht ist alles bis Pull-Request #26 (Pages aus `ccr-c7c5d0a6-cus3ip`, jede Veröffentlichung auf GitHub
 erfolgreich geprüft). Am 25.10.2026 dazugekommen (Einzelheiten unter 4c–4i): Überlast/Harz in WebAssembly, Firefox-Ruhe
@@ -134,6 +142,17 @@ Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`)
    (`L.pan`, in `hxSnap`/`hxRebuild`/`hxRecOf`/Wiederherstellen und `hxLoopMake` → `hxLoopNew`); der Prozessor kannte
    `pan` schon. MIDI-Ziele `hx.ring.N.stumm`, `hx.ring.N.balance` (dazu wie bisher `.pegel`, `.solo`). Test
    `t-hx-mixer` (10, in run-all).
+4l. **Ansehen und bearbeiten (Besitzer, 25.10.2026, nachts – „Die Editiermöglichkeit hab ich nicht gefunden“):**
+   `js/hexenring/bearbeiten.js` (`HXE`). Rechtsklick auf einen Ring (Maus; ein langer Touch öffnet weiter die Karte):
+   Menü `hxCtxMenu` (Ansehen und bearbeiten · Karte · Stumm/An bzw. Weiterspielen · Solo · Als Aufnahme · MIDI · Löschen;
+   leerer Ring: „Hier aufnehmen“), Pfeiltasten, Esc. Fenster `hxEdOpen` (auch Umschalt+1…8 in `hxKeyDown`, Kopf eines
+   Streifens im Schleifen-Mixer) über dem Feld (`hxEdPlace` aus `#stage`): Wellenform aller hörbaren Schichten
+   (`hxEdPeaks` aus `S.aud`, Fenster `pre…pre+len`, mit Pegel), Takt-/Schlaglinien, Noten (`L.notes`), Spielkopf
+   (`hxEdFrame`, Teil 27 in „Leistung messen“), Auswahl durch Ziehen auf ganze Schläge (frei: 1/16) →
+   `hxBandTrimTo(L, a, f)`; `hxBandTrim` rechnet jetzt mit Beginn `a` (`hxTrA`, alte Einträge mit `i` gelten weiter),
+   ½/¼/◀▶/ganz wie vorher. Schichten mit eigener Wellenform, Pegel, stumm, löschen; Werkzeugzeilen wie die Karte.
+   Behoben: `hxBandFl` merkt die ungetrimmten Noten (↶ nach dem ersten Trimmen ließ nur die getrimmten). Test
+   `t-hx-bearbeiten` (9, in run-all).
 5. **Offene Fragen ans Ohr:** Schale spricht wie früher das Harz-Glas manchmal spät an (soll sie immer sofort?);
    Bandträgheit, Gärtner-Bass, Musikalität der Antworten (siehe `dev/IDEEN.md`).
 6. **Danach** die Liste in `dev/IDEEN.md` (Sample-Bibliothek, Stimme als Instrument, neue Klangerzeugung, native App).

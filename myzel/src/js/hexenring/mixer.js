@@ -97,8 +97,8 @@ const hxmDbTxt = (db) => (db > -60 ? mxDbTxt(db) + ' dB' : MX_MINUS + '∞');
 function hxmStrip(L0) {
   const key = L0.key, slot = L0.slot, n = slot + 1, nm = 'Schleife ' + n;
   const S = hxmStripOf({ name: nm, key, slot, aria: nm,
-    headTip: 'Schleife ' + n + ': antippen öffnet ihre Karte mit allen Einstellungen',
-    open: () => hxCardOpen(slot),
+    headTip: 'Schleife ' + n + ': antippen öffnet sie zum Ansehen und Bearbeiten (Wellenform, Schichten, Schnitt)',
+    open: () => { const L = hxmL(S); if (L) hxEdOpen(L); },
     db: { get: () => { const L = hxmL(S); return L ? hxmDb(L.gain) : -Infinity; }, set: (db) => { const L = hxmL(S); if (L) { hxLevel(L, db > -60 ? dbToGain(db) : 0); L.lvT = performance.now(); hxRailDirty(); } } },
     pan: { get: () => { const L = hxmL(S); return L ? L.pan || 0 : 0; }, set: (v) => { const L = hxmL(S); if (L) hxPan(L, v); } },
     mute: { get: () => { const L = hxmL(S); return !!L && (L.pendTo || L.state) === 'stumm'; }, set: (on) => { const L = hxmL(S); if (L) hxmMute(L, on); } },
