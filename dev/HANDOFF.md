@@ -125,6 +125,15 @@ Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`)
    `hxPosWords`, `hxPosDraw` oben im Feld (aus `hxVisFrame`; `HXLEN.box` für die Tests), die Taktlinie der Leiste zeigt
    während einer Aufnahme deren Schläge (`hxDrawTakt`). MIDI-Ziele `hx.len` (Drehknopf, `step`), `hx.len.next/prev`.
    Hauptknopf ab 480 px 56 px breit (Wörter ganz). Test `t-hx-laenge` (19, in run-all). Nur in Chromium geprüft.
+4k. **Schleifen im Mixer (Besitzer, 25.10.2026, nachts – „separater Mixer für Schleifen“):** dritte Ansicht des Mixers
+   `MXV.views.schleifen` (`js/hexenring/mixer.js`, `HXM`, `hxmBuild/hxmSync/hxmFrame`): pro Schleife (Platz-Reihenfolge,
+   ohne Bewegung) Kopf (Tipp: Karte), Zustand, Balance-Knopf, M und S sofort (`hxmMute`, `hxmSolo` – ein auf die Eins
+   wartender Wechsel wird zu seinem Zeitpunkt überschrieben; S merkt die Zustände in `HX.solo` wie `hxRingSolo`), Fader
+   auf dem Gesetz des Pults (`mxDrag`, `mxStemBody`/`mxMeter` auf einem Stellvertreter-Streifen, Farbe `MXK.hxr`),
+   Pegelanzeige aus `HX.meter` (nach Gain und Balance); „Alle“ = `xhxr.vol`/`xhxr.mute`. Balance pro Schleife: `hxPan`
+   (`L.pan`, in `hxSnap`/`hxRebuild`/`hxRecOf`/Wiederherstellen und `hxLoopMake` → `hxLoopNew`); der Prozessor kannte
+   `pan` schon. MIDI-Ziele `hx.ring.N.stumm`, `hx.ring.N.balance` (dazu wie bisher `.pegel`, `.solo`). Test
+   `t-hx-mixer` (10, in run-all).
 5. **Offene Fragen ans Ohr:** Schale spricht wie früher das Harz-Glas manchmal spät an (soll sie immer sofort?);
    Bandträgheit, Gärtner-Bass, Musikalität der Antworten (siehe `dev/IDEEN.md`).
 6. **Danach** die Liste in `dev/IDEEN.md` (Sample-Bibliothek, Stimme als Instrument, neue Klangerzeugung, native App).

@@ -42,8 +42,9 @@ optimiert. Das iPad läuft über die Web-App mit. Das Handy wird nicht weiter ve
 
 ## Looper – für später (Besitzer, 25.10.2026)
 
-- **Schleifen im Mixer:** jede Schleife gezielt steuern, mindestens ihre Lautstärke (heute: ein Streifen „Hexenring“
-  für alle; Pegel je Schleife nur über Ziehen am Ring oder die Karte).
+- **Schleifen im Mixer:** *gebaut 25.10.2026* – Mixer-Ansicht „Schleifen“ (Pegel, Balance, Stumm, Solo, Anzeige je
+  Schleife; „Alle“). Offen, falls gewünscht: Echo/Hall-Anteil und Klangregelung je Schleife (bräuchte eigene Ausgänge
+  des Prozessors).
 - **Rechtsklick auf eine Schleife:** ein Menü, um sie näher zu betrachten – und, soweit die Engine es hergibt, zu
   bearbeiten (Wellenform/Noten, Schichten, Schnitt, Band-Werkzeuge; heute öffnet Halten die Karte, Rechtsklick ist
   gesperrt).
