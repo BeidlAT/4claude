@@ -188,6 +188,7 @@ function onParamChanged(id) {
 function onDeviceChanged(id) {
   if (id === 'dev.q') {
     A.budgetScale = 1; A.lite = false;
+    if (A.ctx) gdLearned();   // (Leistung, 25.10.2026: the scale this device learned for the new level)
     applyQuality();
     kqSyncAll();
     if (P['dev.q'] !== '1' && A.ctx && !CAL.fresh) calibrate();

@@ -1,8 +1,11 @@
 // The guard's rules per device class (desktop report 24.10.2026: on a computer the old last step had cut the live budget
 // six times to 26 % and set A.lite for the rest of the session). The device's underrun counter is faked (playbackStats on
 // the context, raised by the test), watchUnderruns started from a known state; everything else is the app's own.
-//   1. a computer, no loops: lasting underruns give a voice limit (budget × 0.8, at most every 5 s, never under half),
-//      never A.lite; 30 s quiet → the budget a step back up, then the next, to the full budget; said once
+//   1. a computer, no loops: lasting underruns give a voice limit (budget × 0.8, at most every 2 s, never under 30 % –
+//      owner, 25.10.2026), never A.lite; 30 s quiet → the budget a step back up, then the next, to the full budget; said
+//      once; the device remembers the scale it came down to (myzel.guard.v1) and starts there after a reload
+//   5. a computer, held notes with a second layer: one second that lost 30 ms steps at once, and what is over the new
+//      budget fades out – the second layer's voices first, the oldest first (owner, 25.10.2026)
 //   2. a computer, loops playing (one Lebendig): Lebendig holds first, Taumeln rests next, never A.lite, the live budget
 //      only after the loops' steps; after the quiet span Taumeln is back by itself and Lebendig lives again
 //   3. an iPad: as a computer (a voice limit, never A.lite)
@@ -14,7 +17,7 @@ const { chromium } = require('/opt/node22/lib/node_modules/playwright');
 const H = require('./hx-h');
 const { ok } = H;
 const URL = process.env.HX_URL || 'http://127.0.0.1:8790/hx-inst/index.html';
-const PARTS = (process.env.PARTS || '1,2,3,4').split(',');
+const PARTS = (process.env.PARTS || '1,2,3,4,5').split(',');
 const DESK = { viewport: { width: 1280, height: 800 } };
 const IPAD = { viewport: { width: 820, height: 1180 }, screen: { width: 820, height: 1180 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2, userAgent: 'Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1' };
 const PHONE = { viewport: { width: 412, height: 915 }, screen: { width: 412, height: 915 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2.625, userAgent: 'Mozilla/5.0 (Linux; Android 14; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36' };
@@ -25,7 +28,7 @@ async function open(dev) {
   await ctx.addInitScript(() => {
     // the device's figures, raised by the test; the app's own guard timer held back until the test starts it
     window.__fu = { underrunEvents: 0, underrunDuration: 0 };
-    Object.defineProperty(BaseAudioContext.prototype, 'playbackStats', { configurable: true, get() { return window.__fu; } });
+    for (const C of [BaseAudioContext, AudioContext]) Object.defineProperty(C.prototype, 'playbackStats', { configurable: true, get() { return window.__fu; } });   // (newer Chromium has its own on AudioContext)
     const si = window.setInterval; window.setInterval = function (f, ms, ...a) { if (typeof f === 'function' && /hxWGuard/.test(String(f)) && !window.__guardOk) return 0; return si.call(this, f, ms, ...a); };
   });
   const page = await ctx.newPage(), errors = [];
@@ -71,9 +74,11 @@ async function mkLoops(P, n, nl) {
     await guardOn(P);
     await drop(P, 14);
     const s1 = await st(P);
-    ok(!s1.lite && s1.sc < 1 && s1.sc >= 0.5 && s1.log.every((x) => /^stimmen/.test(x)) && s1.log.length >= 2 && s1.log.length <= 3, `1. a computer, 14 s of underruns, no loops: a voice limit in steps at most every 5 s (${s1.log.join(' → ')}; budget ${s0.vb} → ${s1.vb}, scale ${s1.sc.toFixed(2)}), A.lite ${s1.lite}`);
+    ok(!s1.lite && s1.sc < 1 && s1.sc >= 0.3 - 1e-9 && s1.log.every((x) => /^stimmen/.test(x)) && s1.log.length >= 4 && s1.log.length <= 7, `1. a computer, 14 s of underruns, no loops: a voice limit in steps at most every 2 s, never under 30 % (${s1.log.join(' → ')}; budget ${s0.vb} → ${s1.vb}, scale ${s1.sc.toFixed(2)}), A.lite ${s1.lite}`);
     ok(/weniger Stimmen gleichzeitig/.test(s1.toasts), `1.   said once: „${(s1.toasts.match(/Das Gerät kam an seine Grenze[^|]*/) || [''])[0].slice(0, 70)}…“`);
-    await drop(P, 1);   // (one more: the 5-s rule)
+    const learn = await P.page.evaluate(() => JSON.parse(localStorage.getItem('myzel.guard.v1') || '{}'));
+    ok(Math.abs((learn['3'] || 1) - s1.sc) < 0.002, `1.   remembered for this device and level 3: ${JSON.stringify(learn)} (scale ${s1.sc.toFixed(3)})`);
+    await drop(P, 1);   // (one more)
     await P.page.waitForTimeout(31500);
     const s2 = await st(P);
     ok(s2.sc > s1.sc - 1e-9 && s2.log.filter((x) => /^mehr/.test(x)).length === 1, `1.   30 s quiet: a step back up (scale ${s2.sc.toFixed(2)}, budget ${s2.vb}; ${s2.log.slice(-2).join(' → ')})`);
@@ -81,6 +86,35 @@ async function mkLoops(P, n, nl) {
     const s3 = await st(P);
     ok(s3.sc === 1 && s3.vb === s0.vb && !s3.lite, `1.   and on, a step each 30 s, to the full budget (${s0.vb} → ${s3.vb}, scale ${s3.sc}; ${s3.log.join(' → ')})`);
     ok(!P.errors.length, `1. no error (${P.errors.slice(0, 2).join(' | ')})`);
+    await P.ctx.close();
+  }
+  if (PARTS.includes('1')) {
+    // ---- 1b. the learned scale after a reload: the guard starts there ----
+    const P = await open(DESK);
+    await P.page.evaluate(() => localStorage.setItem('myzel.guard.v1', JSON.stringify({ 3: 0.64 })));
+    const s0 = await st(P);
+    await guardOn(P);
+    const s1 = await st(P);
+    ok(Math.abs(s1.sc - 0.64) < 1e-9 && s1.log[0] && /^gelernt/.test(s1.log[0]) && s1.vb < s0.vb, `1b. a reload: the device starts at the scale it learned (0.64 → ${s1.sc}; budget ${s0.vb} → ${s1.vb}; ${s1.log.join(' → ')})`);
+    await P.ctx.close();
+  }
+  if (PARTS.includes('5')) {
+    // ---- 5. held notes with a second layer, overload: a step at once, the excess fades – Ebene 2 first ----
+    const P = await open(DESK);
+    const r = await P.page.evaluate(async () => {
+      const M = window.__M, A = M.A, eb2 = M.stripIn('eb2'), fin = M.stripIn('fin');
+      const vs = [];
+      for (let i = 0; i < 8; i++) { const f = M.N.notes[(3 + i) % M.N.notes.length].f; vs.push(M.playNote('neb', A.ctx.currentTime + 0.01 * i, f, 0.5, 0.7, { bus: fin })); vs.push(M.playNote('neb', A.ctx.currentTime + 0.01 * i + 0.005, f * 2, 0.5, 0.5, { bus: eb2 })); }
+      await new Promise((res) => setTimeout(res, 300));
+      return { n: A.voices.size, load: M.voiceLoad() };
+    });
+    await P.page.evaluate(() => { const M = window.__M; M.A.budgetScale = 1; M.QP['3'].budget = Math.ceil(M.voiceLoad()) + 1; M.budgetApply(); });   // (a budget the 16 voices just fit)
+    await guardOn(P);
+    await P.page.evaluate(() => { window.__fu.underrunEvents += 20; window.__fu.underrunDuration += 0.2; });   // (one second: 200 ms missing)
+    await P.page.waitForTimeout(1300);
+    const o = await P.page.evaluate(() => { const M = window.__M, eb2 = M.stripIn('eb2'); let e = 0, f = 0; for (const v of M.A.voices) { if (v.bus === eb2) e++; else f++; } return { e, f, load: M.voiceLoad(), vb: M.vbudget(), log: (M.HX.gLog || []).filter((x) => x.t >= window.__gT).map((x) => x.step + ':' + x.v) }; });
+    ok(r.n === 16 && o.log.some((x) => /^stimmen/.test(x)) && o.log.some((x) => /^aus:\d/.test(x)) && o.load <= o.vb && o.f === 8 && o.e < 8, `5. 16 held voices (8 + 8 on Ebene 2), one second with 200 ms missing: a step at once and the excess fades, Ebene 2 first (${o.log.join(' → ')}; left ${o.f} + ${o.e}, load ${o.load.toFixed(1)} of ${o.vb})`);
+    ok(!P.errors.length, `5. no error (${P.errors.slice(0, 2).join(' | ')})`);
     await P.ctx.close();
   }
   if (PARTS.includes('2')) {
