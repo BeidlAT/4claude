@@ -19,6 +19,12 @@ const { open, ok, close } = require('./hm');
     K([0x80, 60, 0]); await sl(50);
     return o;
   });
+  // the held note's glow follows on the field (a picture each: at rest, pushed away and to the right)
+  await page.evaluate(async () => { window.__send([0x90, 60, 100], 'k2'); await window.__sleep(400); });
+  await page.screenshot({ path: 'out/touche-0.png' });
+  await page.evaluate(async () => { window.__send([0xb0, 17, 127], 'k1'); window.__send([0xb0, 19, 127], 'k1'); window.__M.mapFlush(); await window.__sleep(400); });
+  await page.screenshot({ path: 'out/touche-1.png' });
+  await page.evaluate(async () => { window.__send([0xb0, 17, 0], 'k1'); window.__send([0xb0, 19, 0], 'k1'); window.__send([0x80, 60, 0], 'k2'); await window.__sleep(100); });
   ok(/^Expressive E Touché erkannt/.test(r.txt) && /^Expressive E Touché erkannt/.test(r.txt2) && r.kb === '', `recognised by name (${r.txt}; „TOUCHE“ too; a plain keyboard not)`);
   ok(r.note, 'a key held on another keyboard');
   ok(r.weg.h === 1 && r.weg.dy > 0.2, `pushed away: the height goes up (${JSON.stringify(r.weg)})`);

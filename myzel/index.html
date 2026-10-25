@@ -18145,10 +18145,13 @@ function frameBody(ts) {
   }
   // touches keep sprouting hyphae; while Anlehnen shapes them their glow leans with the hand (a carried note's hangs
   // on the lean, away from where the finger was)
-  const gnw = GA.vis ? modNewest() : null;
+  // (owner, 25.10.2026: a Touché – any control on Formen · Höhe or Tonhöhe – moves the held note's glow with it: up the
+  // field with its height, sideways with its bend)
+  const mv = !GA.vis && (MOD.t.hoehe.s.size > 0 || MOD.t.bend.s.size > 0), gnw = GA.vis || mv ? modNewest() : null, mt = mv && A.ctx ? A.ctx.currentTime : 0;
   for (const tt of touches.values()) {
-    for (let i = 0; i < k; i++) if (Math.random() < 0.6) VIS.burst(tt.px, tt.py, tt.hue, 1, 0.5);
-    const rr = 26 + 6 * Math.sin(ts / 140), q = GA.vis ? gaGlow(tt, gnw) : null, gx = q ? q[0] : tt.px, gy = q ? q[1] : tt.py;
+    const q = GA.vis ? gaGlow(tt, gnw) : mv ? [tt.px + (modCents(tt, gnw, mt) / 100) * (w / (12 * P['t.range'])), (1 - modY(tt, gnw, mt)) * h] : null, gx = q ? q[0] : tt.px, gy = q ? q[1] : tt.py;
+    for (let i = 0; i < k; i++) if (Math.random() < 0.6) VIS.burst(mv ? gx : tt.px, mv ? gy : tt.py, tt.hue, 1, 0.5);
+    const rr = 26 + 6 * Math.sin(ts / 140);
     const g = c.createRadialGradient(gx, gy, 0, gx, gy, rr * 1.8);
     g.addColorStop(0, 'hsla(' + tt.hue + ',90%,72%,0.35)'); g.addColorStop(1, 'hsla(' + tt.hue + ',90%,60%,0)');
     c.fillStyle = g; c.beginPath(); c.arc(gx, gy, rr * 1.8, 0, Math.PI * 2); c.fill();
