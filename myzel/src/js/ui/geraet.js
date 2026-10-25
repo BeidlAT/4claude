@@ -317,6 +317,11 @@ function kcCard(it) {
       const hx = hxPadsHx(s), pc = (t, on, v, aria) => h('button', { type: 'button', class: 'chip', 'aria-pressed': String(on), 'data-kc': it.key + ':pads' + v, 'aria-label': aria, onclick: () => hxPadsSet(s, v === 'hx') }, t);
       el.append(h('div', { class: 'kc-pads' }, h('span', { class: 'lab' }, 'Pads:'), h('div', { class: 'chips small', role: 'group', 'aria-label': 'Pads' }, pc('Spuren', !hx, 'sp', 'Pads: Spur 1–4, Puls, Bordun, Freeze, Stille'), pc('Hexenring', hx, 'hx', 'Pads: Schleife 1–4, Korb, Zurück, nächste Lichtung, Stille'))));
     }
+    if (p && p.id === 'tch' && po) {   // (Touché, 25.10.2026: its Spielweise – the knob on the device sends nothing)
+      const tip = { finger: 'weg/heran: Höhe · links/rechts: Tonhöhe', atem: 'in Ruhe leise · weg: anschwellen · heran: dunkel · links/rechts: Vibrato', raum: 'weg: Hall · heran: Echo · links/rechts: Panorama', verw: 'weg/heran: Mixer-Szene B/A · links/rechts: Filter' };
+      el.append(h('div', { class: 'kc-pads' }, h('span', { class: 'lab' }, 'Spielweise:'), h('div', { class: 'chips small', role: 'group', 'aria-label': 'Touché-Spielweise' },
+        ...TCH_W.map(([w, nm], i) => h('button', { type: 'button', class: 'chip', 'aria-pressed': String(P['midi.tch'] === w), 'data-kc': it.key + ':tch' + w, title: nm + ' (F' + (i + 1) + '): ' + tip[w], onclick: () => tchWeise(w, true) }, nm + ' · F' + (i + 1))))));
+    }
     if (p && p.id === 'nk2' && po) el.append(h('p', { class: 'kc-hint' }, s.nkHx ? 'Seite Hexenring (SET leuchtet) – SET noch einmal: Mixer.' : 'SET: Seite Hexenring (Schleifen statt Mixer).'));
     const more = [];
     if (p && p.ctrls) { const dl = h('dl', { class: 'kc-ctrls' }); for (const [a, b] of p.ctrls) dl.append(h('dt', null, a), h('dd', null, b)); more.push(dl); }

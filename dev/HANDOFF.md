@@ -59,11 +59,14 @@ Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`)
 4g. **Touché SE (Besitzer, 25.10.2026, veröffentlicht; er hat eins):** Profil `tch` in `js/midi/profiles.js` (Name
    `/Touch[eé](?![a-z])/i`), „wie ein Finger“: Werks-CCs des Standalone-Modus (Expressive-E-Hilfe) 17 weg → `mod.hoehe` +,
    16 heran → `mod.hoehe` − (inv), 18/19 → `mod.bend` ∓/± ±1 Halbton (min/max 0.5) – über Formen, also auf alle gehaltenen
-   Töne (Tasten und Feld), Preset unberührt. Test `midi-tests/t-map-touche.js` (9, in run-map; Slot mm). Am echten Gerät
-   noch nicht geprüft: Portname und CC-Nummern; wenn Lié andere CCs eingestellt hat, unter „Zuweisen“ neu legen.
-   Am Gerät geprüft (Besitzer, Chrome): geht. Danach: das Leuchten des Tons folgt Formen · Höhe/Tonhöhe auf dem Feld
+   Töne (Tasten und Feld), Preset unberührt. Test `midi-tests/t-map-touche.js` (18, in run-map; Slot mm). Am Gerät
+   geprüft (Besitzer, Chrome): geht. Danach: das Leuchten des Tons folgt Formen · Höhe/Tonhöhe auf dem Feld
    (`visuals.js`, wie `gaGlow`; Bilder `out/touche-0/1.png`). Der Drehknopf des SE sendet kein MIDI (Empfindlichkeit, 8
-   Stufen auf 4 LEDs; Drücken = Freeze) – Spielweisen müssen in Myzel gewählt werden (offen, Besitzer fragen).
+   Stufen auf 4 LEDs; Drücken = Freeze) – darum die Spielweisen in Myzel (`js/midi/touche.js`, `midi.tch`, F1–F4 nur mit
+   Touché, Chips in der Geräte-Karte, Ziele `tch.weg/her/li/re`, `tch.1–4`, `tch.next`): Finger, Atem (Ruhe Ausdruck −0.55,
+   weg schwillt an, heran Filter dunkel, links/rechts Vibrato auf allen Tönen), Raum (Hall, Echo, Panorama), Verwandlung
+   (Morph A/B, Filter). Quellen `map:tch:*` (die Fährte/Bewegung schreibt sie mit); ohne Touché bleibt nichts (Prüfung je
+   Sekunde). t-ui hatte schon vorher 5 Fehler (Abschnitt-Reihenfolge, viewer/ios, 44-px-Pads) – nicht von hier.
 5. **Offene Fragen ans Ohr:** Schale spricht wie früher das Harz-Glas manchmal spät an (soll sie immer sofort?);
    Bandträgheit, Gärtner-Bass, Musikalität der Antworten (siehe `dev/IDEEN.md`).
 6. **Danach** die Liste in `dev/IDEEN.md` (Sample-Bibliothek, Stimme als Instrument, neue Klangerzeugung, native App).
