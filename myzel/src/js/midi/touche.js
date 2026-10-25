@@ -4,20 +4,23 @@
 // the sources 'map:tch:…' – never the preset, and the Fährte and the Hexenring's Bewegung write them down like any
 // controller's; a switch carries what the hand holds over into the new Spielweise.
 //   Finger       away/toward Höhe ±, left/right the newest note's pitch ±1 semitone
-//   Atem         at rest soft; away swells (Ausdruck up to full, a little Höhe), toward damps dark (Filter); left/right a
-//                vibrato on every held note, deeper the harder – left slower, right faster
+//   Atem         away swells (Ausdruck, Höhe), toward damps dark (Ausdruck, Filter); left/right a vibrato on every held
+//                note, deeper the harder – left slower, right faster
+// At rest every Spielweise is exactly the sound as it was (owner, 25.10.2026: only the hand on the Touché changes it).
+// Each direction is measured against the hardest press seen on it (tchCal): its sides travel far less than away and
+// toward, so without it they reached only a little of their range – now each covers all of it, like a finger the field.
 //   Raum         away Hall, toward Echo, left/right Panorama
 //   Verwandlung  away toward scene B, toward you toward scene A (the A/B-Morph), left/right the Filter
 const TCH_W = [['finger', 'Finger'], ['atem', 'Atem'], ['raum', 'Raum'], ['verw', 'Verwandlung']];
 const TCH = { v: { weg: 0, her: 0, li: 0, re: 0 }, ph: 0, t: 0, raf: 0, vib: 0, rate: 5.5 };
 const TCH_SRC = [['h', 'hoehe'], ['b', 'bend'], ['e', 'expr'], ['f', 'flt'], ['r', 'rev'], ['d', 'dly'], ['p', 'pan'], ['m', 'morph']];
-// only while a Touché is there: unplugged (or its profile off), nothing of it stays – Atem's soft rest neither
+// only while a Touché is there: unplugged (or its profile off), nothing of it stays
 const tchLive = () => { for (const s of MIDI.srcs.values()) if (s.enabled && !s.dup && (mapOf(s), s.prof && s.prof.id === 'tch' && profOn(s))) return true; return false; };
 function tchApply() {
   const live = tchLive(); TCH.live = live;
   const { weg, her, li, re } = TCH.v, w = live ? P['midi.tch'] : '', o = {};
   if (w === 'finger') { o.h = weg - her; o.b = 0.5 * (re - li); }
-  else if (w === 'atem') { o.e = clamp(-0.55 + 0.95 * weg - 0.45 * her, -1, 1); o.h = 0.35 * weg; o.f = -0.85 * her; }
+  else if (w === 'atem') { o.e = clamp(weg - 0.6 * her, -1, 1); o.h = 0.5 * weg; o.f = -0.85 * her; }
   else if (w === 'raum') { o.r = 0.85 * weg; o.d = 0.85 * her; o.p = re - li; }
   else if (w === 'verw') { o.m = weg - her; o.f = re - li; }
   for (const [n, k] of TCH_SRC) modSet('map:tch:' + n, k, o[n] || 0);
@@ -34,17 +37,26 @@ function tchVibFrame(ts) {
   modSet('map:tch:v', 'bend', 0.25 * TCH.vib * Math.sin(TCH.ph), { older: 1 });
   TCH.raf = requestAnimationFrame(tchVibFrame);
 }
-function tchSet(dir, n) { if (TCH.v[dir] === n) return; TCH.v[dir] = n; tchApply(); }
+// the hardest press seen per direction (stored on this device; „Neu einmessen“ forgets it): a value is its share of it.
+// It starts at a quarter of the range and never goes below an eighth (the skin's noise must not become a gesture).
+const TCH_PK0 = 0.25;
+TCH.pk = (() => { try { const o = JSON.parse(store.get('myzel.tch.pk') || 'null'); if (o && typeof o === 'object') return Object.assign({ weg: TCH_PK0, her: TCH_PK0, li: TCH_PK0, re: TCH_PK0 }, o); } catch (e) {} return { weg: TCH_PK0, her: TCH_PK0, li: TCH_PK0, re: TCH_PK0 }; })();
+function tchCal(dir, raw) {
+  if (raw > TCH.pk[dir]) { TCH.pk[dir] = raw; clearTimeout(TCH.pkT); TCH.pkT = setTimeout(() => store.set('myzel.tch.pk', JSON.stringify(TCH.pk)), 800); }
+  return clamp(raw / Math.max(0.125, TCH.pk[dir]), 0, 1);
+}
+function tchEinmessen() { TCH.pk = { weg: TCH_PK0, her: TCH_PK0, li: TCH_PK0, re: TCH_PK0 }; store.set('myzel.tch.pk', JSON.stringify(TCH.pk)); toast('Touché neu einmessen: drück jede Richtung einmal kräftig – weg, heran, links, rechts.', 4000); }
+function tchSet(dir, raw) { TCH.raw = TCH.raw || {}; TCH.raw[dir] = raw; const n = tchCal(dir, raw); if (TCH.v[dir] === n) return; TCH.v[dir] = n; tchApply(); }
 function tchWeise(w, say) {
   if (!TCH_W.some((x) => x[0] === w)) return;
   if (P['midi.tch'] !== w) setParam('midi.tch', w);
   tchApply();
-  if (say) toast('Touché: ' + TCH_W.find((x) => x[0] === w)[1] + (w === 'atem' ? ' – in Ruhe leise, weg drücken lässt den Ton anschwellen' : w === 'verw' && !((MX.snap.a || (mxSnapLoad(), MX.snap.a)) && MX.snap.b) ? ' – speichere im Mixer Szene A und B, dann verwandelt es zwischen ihnen' : ''), 2400);
+  if (say) toast('Touché: ' + TCH_W.find((x) => x[0] === w)[1] + (w === 'verw' && !((MX.snap.a || (mxSnapLoad(), MX.snap.a)) && MX.snap.b) ? ' – speichere im Mixer Szene A und B, dann verwandelt es zwischen ihnen' : ''), 2400);
   for (const b of document.querySelectorAll('[data-kc*=":tch"]')) b.setAttribute('aria-pressed', String(b.dataset.kc.endsWith(':tch' + w)));   // (the card's chips)
 }
 const tchStep = (d) => { const i = TCH_W.findIndex((x) => x[0] === P['midi.tch']); tchWeise(TCH_W[(i + d + TCH_W.length) % TCH_W.length][0], true); };
 for (const [dir, nm] of [['weg', 'weg drücken'], ['her', 'heran ziehen'], ['li', 'nach links'], ['re', 'nach rechts']])
-  midiTarget('tch.' + dir, 'Touché: ' + nm + ' (je nach Spielweise)', null, { group: 'Spielweise', cont: true, noTake: true, get: () => TCH.v[dir], set: (n) => tchSet(dir, n) });
+  midiTarget('tch.' + dir, 'Touché: ' + nm + ' (je nach Spielweise)', null, { group: 'Spielweise', cont: true, noTake: true, get: () => (TCH.raw && TCH.raw[dir]) || 0, set: (n) => tchSet(dir, n) });
 TCH_W.forEach(([w, nm], i) => midiTarget('tch.' + (i + 1), 'Touché: Spielweise ' + nm, (v) => { if (v >= 0.5) tchWeise(w, true); }, { group: 'Spielweise', button: true }));
 midiTarget('tch.next', 'Touché: nächste Spielweise', (v) => { if (v >= 0.5) tchStep(1); }, { group: 'Spielweise', button: true });
 // F1–F4 on the computer keyboard, while a Touché is there (not while typing, not while learning)

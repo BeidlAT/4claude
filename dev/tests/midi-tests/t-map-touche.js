@@ -39,6 +39,10 @@ const { open, ok, close } = require('./hm');
     T([0xb0, 17, 127]); T([0xb0, 16, 64]); T([0xb0, 18, 127]); M.mapFlush(); await sl(60); o.raum = mv(); T([0xb0, 17, 0]); T([0xb0, 16, 0]); T([0xb0, 18, 0]);
     key('F4'); await sl(60);
     T([0xb0, 17, 127]); T([0xb0, 19, 127]); M.mapFlush(); await sl(60); o.verw = mv(); T([0xb0, 17, 0]); T([0xb0, 19, 0]); M.mapFlush(); await sl(60); o.verw0 = mv();
+    // einmessen: a side that travels only a quarter of the range covers all of it
+    M.tchEinmessen(); T([0xb0, 18, 32]); M.mapFlush(); await sl(30); T([0xb0, 18, 0]); key('F1'); M.mapFlush(); await sl(30);
+    T([0xb0, 18, 32]); M.mapFlush(); await sl(60); o.cal = mv(); T([0xb0, 18, 16]); M.mapFlush(); await sl(60); o.cal2 = mv(); T([0xb0, 18, 0]); M.mapFlush();
+    T([0xb0, 17, 127]); M.mapFlush(); await sl(30); T([0xb0, 17, 0]); M.mapFlush();
     // a switch carries what the hand holds over
     key('F1'); T([0xb0, 17, 127]); M.mapFlush(); await sl(40); key('F3'); await sl(60); o.carry = mv(); T([0xb0, 17, 0]); M.mapFlush();
     // the card: a chip per Spielweise
@@ -51,12 +55,13 @@ const { open, ok, close } = require('./hm');
     await sl(1500); o.gone = mv(); o.live = M.TCH.live;
     return o;
   });
-  ok(w.atemW === 'atem' && w.atem0.e < -0.5 && w.atem0.h === 0, `F2 → Atem: at rest soft (Ausdruck ${w.atem0.e})`);
-  ok(w.atemWeg.e > 0.3 && w.atemWeg.h > 0.3, `Atem, away: it swells and brightens (${JSON.stringify(w.atemWeg)})`);
-  ok(w.atemHer.f < -0.8 && w.atemHer.e < -0.9, `Atem, toward you: damped dark (${JSON.stringify(w.atemHer)})`);
+  ok(w.atemW === 'atem' && Object.values(w.atem0).every((x) => x === 0), `F2 → Atem: at rest nothing changes (${JSON.stringify(w.atem0)}) – only the hand on the Touché shapes the sound`);
+  ok(w.atemWeg.e === 1 && w.atemWeg.h === 0.5, `Atem, away: it swells and brightens (${JSON.stringify(w.atemWeg)})`);
+  ok(w.atemHer.f < -0.8 && w.atemHer.e < -0.5, `Atem, toward you: damped dark (${JSON.stringify(w.atemHer)})`);
   ok(w.vib[0] < -0.15 && w.vib[1] > 0.15 && w.vib0.b === 0, `Atem, right: a vibrato (${w.vib.map((x) => x.toFixed(2)).join(' … ')}), gone at rest`);
-  ok(w.raum0.e === 0 && w.raum.r === 0.85 && Math.abs(w.raum.d - 0.43) < 0.01 && w.raum.p === -1, `F3 → Raum: Hall, Echo, Panorama; Atem's rest gone (${JSON.stringify(w.raum)})`);
+  ok(w.raum.r === 0.85 && Math.abs(w.raum.d - 0.43) < 0.01 && w.raum.p === -1, `F3 → Raum: Hall, Echo, Panorama; Atem's rest gone (${JSON.stringify(w.raum)})`);
   ok(w.verw.m === 1 && w.verw.f === 1 && w.verw0.m === 0 && w.verw0.f === 0, `F4 → Verwandlung: toward scene B, Filter open (${JSON.stringify(w.verw)})`);
+  ok(w.cal.b === -0.5 && Math.abs(w.cal2.b + 0.25) < 0.01, `einmessen: a side pressed only a quarter of the way bends the whole semitone (${w.cal.b}, half of it ${w.cal2.b})`);
   ok(w.carry.r === 0.85 && w.carry.h === 0, `a switch carries what is held into the new Spielweise (${JSON.stringify(w.carry)})`);
   ok(w.chip && w.chipW === 'atem' && /true/.test(w.pressed), `the device card's chips choose it (${w.chipW}, ${w.pressed})`);
   ok(Object.values(w.gone).every((x) => x === 0) && w.live === false, `unplugged: nothing stays (${JSON.stringify(w.gone)})`);

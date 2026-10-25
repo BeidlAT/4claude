@@ -91,10 +91,10 @@ const MPROF = [
     binds: [PB('cc', -1, 17, 'tch.weg', 'abs', { name: 'Weg drücken' }), PB('cc', -1, 16, 'tch.her', 'abs', { name: 'Heran ziehen' }),
       PB('cc', -1, 18, 'tch.li', 'abs', { name: 'Links' }), PB('cc', -1, 19, 'tch.re', 'abs', { name: 'Rechts' })],
     ctrls: [['Finger (F1)', 'weg/heran: Höhe hinauf/hinunter · links/rechts: Tonhöhe des neuesten Tons bis ±1 Halbton – wie Pitchbend'],
-      ['Atem (F2)', 'in Ruhe leise · weg: anschwellen und heller · heran: dunkel dämpfen · links/rechts: Vibrato, tiefer je fester (links langsam, rechts schnell)'],
+      ['Atem (F2)', 'weg: anschwellen und heller · heran: dunkel dämpfen · links/rechts: Vibrato, tiefer je fester (links langsam, rechts schnell)'],
       ['Raum (F3)', 'weg: Hall · heran: Echo · links/rechts: Panorama'],
       ['Verwandlung (F4)', 'weg: zur Mixer-Szene B · heran: zu Szene A · links/rechts: Filter'],
-      ['Immer', 'auf alle gehaltenen Töne (Tasten und Feld); das Preset bleibt, wie es ist']] },
+      ['Immer', 'nur die Hand auf dem Touché formt – in Ruhe klingt alles wie ohne; auf alle gehaltenen Töne (Tasten und Feld); das Preset bleibt'], ['Einmessen', 'Myzel lernt, wie weit du jede Richtung drückst – auch die kurzen Wege links und rechts reichen dann über den ganzen Bereich']] },
   // MPE controllers that do not announce their zone (the RISE gets its MCM from the DAW): with MPE on Auto they play in
   // the usual lower zone (members 2–16, range 48) – an MCM still overrides, and in single-channel mode (all on channel 1,
   // the manager) nothing changes

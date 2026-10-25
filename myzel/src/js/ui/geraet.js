@@ -318,9 +318,10 @@ function kcCard(it) {
       el.append(h('div', { class: 'kc-pads' }, h('span', { class: 'lab' }, 'Pads:'), h('div', { class: 'chips small', role: 'group', 'aria-label': 'Pads' }, pc('Spuren', !hx, 'sp', 'Pads: Spur 1–4, Puls, Bordun, Freeze, Stille'), pc('Hexenring', hx, 'hx', 'Pads: Schleife 1–4, Korb, Zurück, nächste Lichtung, Stille'))));
     }
     if (p && p.id === 'tch' && po) {   // (Touché, 25.10.2026: its Spielweise – the knob on the device sends nothing)
-      const tip = { finger: 'weg/heran: Höhe · links/rechts: Tonhöhe', atem: 'in Ruhe leise · weg: anschwellen · heran: dunkel · links/rechts: Vibrato', raum: 'weg: Hall · heran: Echo · links/rechts: Panorama', verw: 'weg/heran: Mixer-Szene B/A · links/rechts: Filter' };
+      const tip = { finger: 'weg/heran: Höhe · links/rechts: Tonhöhe', atem: 'weg: anschwellen · heran: dunkel · links/rechts: Vibrato', raum: 'weg: Hall · heran: Echo · links/rechts: Panorama', verw: 'weg/heran: Mixer-Szene B/A · links/rechts: Filter' };
       el.append(h('div', { class: 'kc-pads' }, h('span', { class: 'lab' }, 'Spielweise:'), h('div', { class: 'chips small', role: 'group', 'aria-label': 'Touché-Spielweise' },
-        ...TCH_W.map(([w, nm], i) => h('button', { type: 'button', class: 'chip', 'aria-pressed': String(P['midi.tch'] === w), 'data-kc': it.key + ':tch' + w, title: nm + ' (F' + (i + 1) + '): ' + tip[w], onclick: () => tchWeise(w, true) }, nm + ' · F' + (i + 1))))));
+        ...TCH_W.map(([w, nm], i) => h('button', { type: 'button', class: 'chip', 'aria-pressed': String(P['midi.tch'] === w), 'data-kc': it.key + ':tch' + w, title: nm + ' (F' + (i + 1) + '): ' + tip[w], onclick: () => tchWeise(w, true) }, nm + ' · F' + (i + 1)))),
+        h('button', { type: 'button', class: 'chip', 'data-kc': it.key + ':tchcal', title: 'Myzel misst, wie weit du jede Richtung drückst – danach reicht jede über ihren ganzen Weg. Neu einmessen: jede Richtung einmal kräftig drücken.', onclick: () => tchEinmessen() }, 'Neu einmessen')));
     }
     if (p && p.id === 'nk2' && po) el.append(h('p', { class: 'kc-hint' }, s.nkHx ? 'Seite Hexenring (SET leuchtet) – SET noch einmal: Mixer.' : 'SET: Seite Hexenring (Schleifen statt Mixer).'));
     const more = [];
