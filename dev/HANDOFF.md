@@ -565,6 +565,18 @@ Then use these:
   old vs new reads with `Object.is`, `rs/whole.js` the processor with six loops – not in the repo; rebuild them from SPEC's
   description if needed). Live comparison: `node hexenring/live-tau.js <slotA> <slotB> [rounds]` (6 harvested loops, drift 8 ct, guard held
   back, /proc CPU of the render threads, builds alternating; not in run-all).
+- Final checks (24./25.10.2026, after the cloned repo was unshallowed – `git fetch --unshallow`: the guard's parity base
+  e341c1b and the Gestik references fae609a/4d6d233 need the history): Hexenring run-all – t-hx-rsw 4/4, t-hx-taumeln
+  14/14, t-hx-bake 13/13 and the rest green except rows that fail alike on the build before (69af6f4, where this session
+  started), each re-run alone and on it: t-hx-taps „the loops sound“ (known), t-hx-werk Gong's
+  level-3 determinism −87.7 dB (same), t-hx-bew „device speeds up to 110 BPM“ (same), t-hx-guard 8 / old 7 rows (the
+  container's own underruns), t-hx-wuchs „late blocks“, „an underrun while Wuchs works“ and a fatal row (same; its
+  Lebendig rows scatter with the guard's hold – green on the second run), t-hx-form and t-hx-live green alone; t-hx-soak
+  „the living loop rendered 4 passes“ (not compared – 10 min; the guard holding Lebendig, likely the same cause).
+  reg.sh: v2 green but func's load rows (old build alike), mixfunc, mixui, MIDI, t-pwa-update 37 green; Gestik: t-gk-perm,
+  t-gk-learn, t-gu-ui, t-gx-live fail identically on the old build (sensor permission in this Chromium); perf: the
+  guard's check against the new reference green, t-idle-parity all green against e341c1b, t-phone-mode one phone row
+  (frames under load – the phone is not pursued).
 - Bit-exactness rules learned: the read position must run in the same doubles (pass the absolute p and a base offset –
   `p − base` then `+= r` rounds differently); no FMA; a skipped frame is −0 (adding −0 is the identity; a sum that starts
   at +0 is never −0, so ddJob writes `+ 0`).
