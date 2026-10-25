@@ -35,6 +35,14 @@ optimiert. Das iPad läuft über die Web-App mit. Das Handy wird nicht weiter ve
    - *Kompost-Synthese:* ein Klang zerfällt in Teiltöne, aus den Resten wächst Neues.
    Die ersten beiden gelten als die aussichtsreichsten.
 
+## Looper – für später (Besitzer, 25.10.2026)
+
+- **Schleifen im Mixer:** jede Schleife gezielt steuern, mindestens ihre Lautstärke (heute: ein Streifen „Hexenring“
+  für alle; Pegel je Schleife nur über Ziehen am Ring oder die Karte).
+- **Rechtsklick auf eine Schleife:** ein Menü, um sie näher zu betrachten – und, soweit die Engine es hergibt, zu
+  bearbeiten (Wellenform/Noten, Schichten, Schnitt, Band-Werkzeuge; heute öffnet Halten die Karte, Rechtsklick ist
+  gesperrt).
+
 ## Touché SE – neues Terrain (Brainstorming 25.10.2026, Besitzer: „merk dir alle“)
 
 Das Touché liefert vier Richtungen (weg, heran, links, rechts; die Seiten des SE haben viel kürzeren Weg – eingemessen
