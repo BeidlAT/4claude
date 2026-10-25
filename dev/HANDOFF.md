@@ -67,6 +67,9 @@ Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`)
    weg schwillt an, heran Filter dunkel, links/rechts Vibrato auf allen Tönen), Raum (Hall, Echo, Panorama), Verwandlung
    (Morph A/B, Filter). Quellen `map:tch:*` (die Fährte/Bewegung schreibt sie mit); ohne Touché bleibt nichts (Prüfung je
    Sekunde). t-ui hatte schon vorher 5 Fehler (Abschnitt-Reihenfolge, viewer/ios, 44-px-Pads) – nicht von hier.
+   Danach (Besitzer): in Ruhe darf keine Spielweise den Klang ändern (Atem nicht mehr leise in Ruhe); jede Richtung wird
+   an ihrem stärksten Druck gemessen (`tchCal`, `TCH.pk`, gespeichert `myzel.tch.pk`, „Neu einmessen“) – die Seiten des
+   SE haben kurzen Weg. Offen: neue Klangformung mit dem Touché (Brainstorming an den Besitzer, 25.10.2026).
 5. **Offene Fragen ans Ohr:** Schale spricht wie früher das Harz-Glas manchmal spät an (soll sie immer sofort?);
    Bandträgheit, Gärtner-Bass, Musikalität der Antworten (siehe `dev/IDEEN.md`).
 6. **Danach** die Liste in `dev/IDEEN.md` (Sample-Bibliothek, Stimme als Instrument, neue Klangerzeugung, native App).
