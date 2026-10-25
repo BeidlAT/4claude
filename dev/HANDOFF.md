@@ -39,6 +39,11 @@ Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`)
    Firefox meldet keine Aussetzer, der Lastwächter bleibt dort untätig – so lassen (ein Wächter über die Audio-Uhr war
    gebaut, 734b79f, und ist wieder herausgenommen: nur in Chromium prüfbar, und nicht nötig). **Als Nächstes laut
    Besitzer: Unklarheiten im Looper bereinigen** (er nennt die Punkte), danach die Standalone-App (Windows) als Prototyp.
+4d. **Firefox: keyboard stumm nach langer Sitzung (Bericht 25.10.2026):** MIDI kam an, kein Ton, bis zum Neustart des
+   Browsers. In Chromium nicht nachstellbar (25 min, 16 Presetwechsel, MIDI-Akkorde und Läufe: immer Ton, 0 Stimmen übrig,
+   Speicher stabil – `scratchpad/soak/long.js`, nicht im Repo). Verdacht: Ruhe (auf Chromiums Regeln gebaut). Gebaut:
+   Ruhe bleibt in Firefox aus (`FIREFOX`, `IDLE.auto`), veröffentlicht. Kommt es wieder: Firefox-Konsole (Strg+Umschalt+K)
+   und „Leistung messen“ vom Besitzer; nächster Verdacht die Ruhe der Kettenkopie (`HXF1`, Hexenring) – gleiche Bauart.
 5. **Offene Fragen ans Ohr:** Schale spricht wie früher das Harz-Glas manchmal spät an (soll sie immer sofort?);
    Bandträgheit, Gärtner-Bass, Musikalität der Antworten (siehe `dev/IDEEN.md`).
 6. **Danach** die Liste in `dev/IDEEN.md` (Sample-Bibliothek, Stimme als Instrument, neue Klangerzeugung, native App).
