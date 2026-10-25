@@ -45,9 +45,9 @@ optimiert. Das iPad läuft über die Web-App mit. Das Handy wird nicht weiter ve
 - **Schleifen im Mixer:** *gebaut 25.10.2026* – Mixer-Ansicht „Schleifen“ (Pegel, Balance, Stumm, Solo, Anzeige je
   Schleife; „Alle“). Offen, falls gewünscht: Echo/Hall-Anteil und Klangregelung je Schleife (bräuchte eigene Ausgänge
   des Prozessors).
-- **Rechtsklick auf eine Schleife:** ein Menü, um sie näher zu betrachten – und, soweit die Engine es hergibt, zu
-  bearbeiten (Wellenform/Noten, Schichten, Schnitt, Band-Werkzeuge; heute öffnet Halten die Karte, Rechtsklick ist
-  gesperrt).
+- **Rechtsklick auf eine Schleife:** *gebaut 25.10.2026* – Menü und Fenster „Ansehen und bearbeiten“ (Wellenform,
+  Noten, Schichten, Schnitt auf ganze Schläge, Band, Zeit, Noten-Werkzeuge). Denkbar später: Noten einzeln verschieben
+  oder löschen, Schichten gegeneinander verschieben, Ein-/Ausblenden zeichnen.
 
 ## Touché SE – neues Terrain (Brainstorming 25.10.2026, Besitzer: „merk dir alle“)
 

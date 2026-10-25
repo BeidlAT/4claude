@@ -42,7 +42,7 @@ function hxBandReady(L, what) {
   return sch;
 }
 // the step for a content change of the tape: ↶ gives back what was (its geometry, its Schichten), ↷ again
-const hxBandFl = (L) => ({ rev: !!L.rev, revW: !!L.revW, trim: L.trim || null, tr0: L.tr0 || null, dbl: L.dbl || 1, notes0: L.notes0 || null, aon0: L.aon0 || null });
+const hxBandFl = (L) => ({ rev: !!L.rev, revW: !!L.revW, trim: L.trim || null, tr0: L.tr0 || null, dbl: L.dbl || 1, notes0: L.notes0 || L.notes || null, aon0: L.aon0 || L.aon || null });   // (25.10.2026: the notes as played – ↶ after a first trim gave back only the trimmed ones)
 function hxBandStep(L, label, before, f0) {
   const key = L.key, after = {}, f1 = hxBandFl(L);
   hxHist({ kind: 'band', label: hxName(L) + ': ' + label,
@@ -53,11 +53,11 @@ function hxBandStep(L, label, before, f0) {
 function hxBandNotesFix(L) {
   const base = L.notes0 || (L.notes0 = L.notes);
   let ns = base.map((n) => Object.assign({}, n));
-  const tr = L.trim; if (tr && tr.f < 1) { const a = tr.i * tr.f; ns = ns.filter((n) => n.ph >= a - 1e-9 && n.ph < a + tr.f - 1e-9).map((n) => Object.assign(n, { ph: (n.ph - a) / tr.f, d: n.d })); }
+  const tr = L.trim; if (tr && tr.f < 1) { const a = hxTrA(tr); ns = ns.filter((n) => n.ph >= a - 1e-9 && n.ph < a + tr.f - 1e-9).map((n) => Object.assign(n, { ph: (n.ph - a) / tr.f, d: n.d })); }
   for (let i = 1; i < (L.dbl || 1); i *= 2) ns = ns.map((n) => Object.assign({}, n, { ph: n.ph / 2 })).concat(ns.map((n) => Object.assign({}, n, { ph: 0.5 + n.ph / 2 })));
   if (L.rev) { const D = Math.max(0.05, hxLen(L)); ns = ns.map((n) => Object.assign(n, { ph: clamp(1 - n.ph - Math.min(n.d || 0, D) / D, 0, 0.9999) })); }
   L.notes = ns;
-  if (L.aon0 || L.aon) { const a0 = L.aon0 || (L.aon0 = L.aon); let u = a0.slice(); if (tr && tr.f < 1) { const a = tr.i * tr.f; u = u.filter((p) => p >= a && p < a + tr.f).map((p) => (p - a) / tr.f); } for (let i = 1; i < (L.dbl || 1); i *= 2) u = u.map((p) => p / 2).concat(u.map((p) => 0.5 + p / 2)); if (L.rev) u = u.map((p) => (1 - p) % 1).sort((a, b) => a - b); L.aon = u; }
+  if (L.aon0 || L.aon) { const a0 = L.aon0 || (L.aon0 = L.aon); let u = a0.slice(); if (tr && tr.f < 1) { const a = hxTrA(tr); u = u.filter((p) => p >= a && p < a + tr.f).map((p) => (p - a) / tr.f); } for (let i = 1; i < (L.dbl || 1); i *= 2) u = u.map((p) => p / 2).concat(u.map((p) => 0.5 + p / 2)); if (L.rev) u = u.map((p) => (1 - p) % 1).sort((a, b) => a - b); L.aon = u; }
   hxBandSend(L); hxRailDirty(); hxCardDirty();
 }
 const hxRevArr = (ch, n) => { const [a] = hxChunks(n); for (let i = 0; i < n; i++) { const s = ch[Math.floor((n - 1 - i) / HX_CH)], j = (n - 1 - i) % HX_CH, d = a[Math.floor(i / HX_CH)], k = i % HX_CH; d[0][k] = s ? s[0][j] : 0; d[1][k] = s ? s[1][j] : 0; } return a; };
@@ -80,30 +80,44 @@ function hxRev(L) {
   return true;
 }
 // Trimmen: a loop in the loop – ½ or ¼ of it, from its start or shifted by its own length (◀ ▶); „ganz“ the whole again
+const hxTrA = (tr) => (!tr ? 0 : tr.a != null ? tr.a : tr.i * tr.f);   // (where a trim starts, a share of the whole: ½ and ¼ by their index, a stretch chosen in the editor by its own start)
 function hxBandTrim(L, what) {
+  const cur = L.trim || { f: 1, i: 0 }, a0 = hxTrA(cur);
+  let f = cur.f, a = a0;
+  if (what === 'h') f = cur.f / 2; else if (what === 'v') f = cur.f / 4;
+  else if (what === '<' || what === '>') { a = a0 + (what === '<' ? -cur.f : cur.f); if (a < -1e-9) a = 1 - cur.f; else if (a > 1 - cur.f + 1e-9) a = 0; }
+  else if (what === 'ganz') { f = 1; a = 0; }
+  if (f < 0.25 - 1e-9 && (what === 'h' || what === 'v')) { toast('Kürzer als ein Viertel lässt sich nicht trimmen – oder wähle im Bearbeiten-Fenster einen Teil.'); return false; }
+  if (what === 'h' || what === 'v') { const n = Math.round(1 / f); a = Math.min(Math.floor(a / f + 1e-9), n - 1) * f; }   // (½ and ¼ on their own grid, from where it stood)
+  return hxBandTrimDo(L, f, a);
+}
+// (owner, 25.10.2026) any stretch: start a and length f as shares of the whole (the editor snaps them to whole beats)
+function hxBandTrimTo(L, a, f) {
+  if (!(f > 0) || !(a >= -1e-9) || a + f > 1 + 1e-9) return false;
+  const T0 = L.tr0 || hxGeo(L), whole = hxTakt(L) ? (T0.d.beats * 60) / tgBpm(hxNowT()) : T0.d.L / SR;
+  if (f * whole < 0.1 || (hxTakt(L) && f * T0.d.beats < 1 - 1e-6)) { toast('So kurz lässt sich nicht trimmen – mindestens ein Schlag.'); return false; }
+  return hxBandTrimDo(L, Math.min(1, f), clamp(a, 0, 1 - f));
+}
+function hxBandTrimDo(L, f, a) {
   const sch = hxBandReady(L); if (!sch) return false;
   const T0 = L.tr0 || hxGeo(L), cur = L.trim || { f: 1, i: 0 };
-  let f = cur.f, i = cur.i;
-  if (what === 'h') { f = cur.f / 2; i = cur.i * 2; } else if (what === 'v') { f = cur.f / 4; i = cur.i * 4; }
-  else if (what === '<') i = cur.i - 1; else if (what === '>') i = cur.i + 1; else if (what === 'ganz') { f = 1; i = 0; }
-  if (f < 0.25 - 1e-9) { toast('Kürzer als ein Viertel lässt sich nicht trimmen.'); return false; }
-  i = ((i % Math.round(1 / f)) + Math.round(1 / f)) % Math.round(1 / f);
-  if (f === cur.f && i === cur.i) return false;
-  const before = hxGeo(L), sw = hxNextSeam(L), tk = hxTakt(L);
+  if (Math.abs(f - cur.f) < 1e-9 && Math.abs(a - hxTrA(cur)) < 1e-9) return false;
+  const before = hxGeo(L), sw = hxNextSeam(L), tk = hxTakt(L), whole = f > 1 - 1e-9;
   T0.sch.forEach((s, j) => {
     const S = hxSchByKey(s.key); if (!S || !s.aud) return;
-    const len = Math.max(1, Math.round(s.len * f)), pre = s.pre + Math.round(s.len * f * i), X = Math.round(0.01 * SR);
-    const c = Object.assign({}, s.cut, { pre, len, post: s.n - pre - len, n: s.n, aus: f === 1 && s.aus ? Object.assign({}, s.aus) : null, stale: true });
+    const len = Math.max(1, Math.round(s.len * f)), pre = s.pre + Math.round(s.len * a), X = Math.round(0.01 * SR);
+    const c = Object.assign({}, s.cut, { pre, len, post: s.n - pre - len, n: s.n, aus: whole && s.aus ? Object.assign({}, s.aus) : null, stale: true });
     const geom = j === 0 ? (tk ? { beats: T0.d.beats * f } : { L: Math.round(T0.d.L * f) }) : null;
-    hxSchSwap(S, c, { aud: s.aud, bak: s.bak, f: sw.f, join: f === 1 ? s.join : 'xf', X: f === 1 ? s.X : X, rho: f === 1 ? s.rho : hxRho(s.bak && S.chain && !L.folgt ? s.bak : s.aud, s.n, pre, len, X), zo: f === 1 ? s.zo : 0, kc: f === 1 ? s.kc : hxSeamOf({ pre, len, X, zo: 0 }, s.aud), kcB: f === 1 ? s.kcB : s.bak ? hxSeamOf({ pre, len, X, zo: 0 }, s.bak) : null, dr: s.dr, geom,
-      fade: f === 1 && s.aus ? Math.min(Math.round(0.03 * SR), s.aus.len) : 0 });
-    S.wn = s.wn ? hxWnWin(s.wn, f * i, f) : S.wn;
+    hxSchSwap(S, c, { aud: s.aud, bak: s.bak, f: sw.f, join: whole ? s.join : 'xf', X: whole ? s.X : X, rho: whole ? s.rho : hxRho(s.bak && S.chain && !L.folgt ? s.bak : s.aud, s.n, pre, len, X), zo: whole ? s.zo : 0, kc: whole ? s.kc : hxSeamOf({ pre, len, X, zo: 0 }, s.aud), kcB: whole ? s.kcB : s.bak ? hxSeamOf({ pre, len, X, zo: 0 }, s.bak) : null, dr: s.dr, geom,
+      fade: whole && s.aus ? Math.min(Math.round(0.03 * SR), s.aus.len) : 0 });
+    S.wn = s.wn ? hxWnWin(s.wn, a, f) : S.wn;
   });
-  const fl0 = hxBandFl(L);
-  L.trim = f === 1 ? null : { f, i }; L.tr0 = f === 1 ? null : T0;
-  hxBandStep(L, f === 1 ? 'ganz' : 'getrimmt auf ' + (f === 0.5 ? '½' : f === 0.25 ? '¼' : f) + (i ? ' · ' + (i + 1) + '.' : ''), before, fl0);
+  const fl0 = hxBandFl(L), i = Math.abs(a / f - Math.round(a / f)) < 1e-9 ? Math.round(a / f) : null;
+  L.trim = whole ? null : { f, i: i != null ? i : 0, a }; L.tr0 = whole ? null : T0;
+  const fw = f === 0.5 ? '½' : f === 0.25 ? '¼' : tk ? dec(+(T0.d.beats * f).toFixed(2)) + ' Schläge' : Math.round(f * 100) + ' %';
+  hxBandStep(L, whole ? 'ganz' : 'getrimmt auf ' + fw + (i ? ' · ' + (i + 1) + '.' : ''), before, fl0);
   hxBandNotesFix(L); if (hxWAktiv(L)) hxWUpdate(L);
-  hxSay(hxName(L) + (f === 1 ? ': ganz' : ': getrimmt')); hxSaveLoop(L);
+  hxSay(hxName(L) + (whole ? ': ganz' : ': getrimmt')); hxSaveLoop(L);
   return true;
 }
 // the notes of a window of a Wuchs record (start a, length f, as shares of it): times from the window's start

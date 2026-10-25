@@ -12,7 +12,7 @@ const LM_SECS = 20;
 // tickTry's keys: the tick's parts 0–13, the frame 20 and its parts 21–26, the whole tick 30, the processor's messages 31,
 // a touch's handler 32
 const LM_PART = { 0: 'takt', 1: 'jahresring', 2: 'puls', 3: 'clockOut', 4: 'wirbel', 5: 'koerner', 6: 'vorschau', 7: 'faehrte', 8: 'regen', 9: 'mod', 10: 'gespinst', 11: 'rhizom', 12: 'hxTick', 13: 'ruhe',
-  20: 'frame', 21: 'hxFeld', 22: 'meter', 23: 'panel', 24: 'ctl', 25: 'devLive', 26: 'rail', 30: 'tick', 31: 'hxMsg', 32: 'onDown' };
+  20: 'frame', 21: 'hxFeld', 22: 'meter', 23: 'panel', 24: 'ctl', 25: 'devLive', 26: 'rail', 27: 'hxEdit', 30: 'tick', 31: 'hxMsg', 32: 'onDown' };
 const LM = { on: false, t0: 0, pMs: new Float64Array(40), pN: new Uint32Array(40), pMax: new Float64Array(40), raf: new Float32Array(4096), nR: 0, fb: new Float32Array(2048), nF: 0,
   gap: new Float32Array(2048), nG: 0, lastT: 0, ev: [], ul: [], up: {}, ut: 0, tch: [], lt: null, loaf: null, ps0: null, ck: null, rc: null, smp: null, timer: 0, res: null, txt: '', sum: null, ui: null, obs: [] };
 function lmPart(k, ms) {
