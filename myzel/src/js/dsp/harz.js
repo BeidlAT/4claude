@@ -25,6 +25,38 @@
     zunge: { r: [1, 6.27, 17.55, 34.39], ring: 0.35, k1: 3, k3: 4, hp: 60 },
     teich: { r: [1, 6.27, 17.55, 34.39], ring: 2, k1: 3, k3: 4, hp: 500 },
   };
+  // (Leistung, 25.10.2026) the bowed bands' per-sample loop in WebAssembly (BOW_WASM, from dev/tools/wasm/bow.c): the
+  // same doubles in the same order, bit for bit, where the browser has WebAssembly. Its state – the bands' rings and
+  // what the loop reads and writes per band – lives in one memory per scope, a slot per voice (views: the JS code
+  // around the loop is unchanged); a slot comes back when the voice ends (process false, or the voice collected). The
+  // memory grows by slots (gen: views made before a growth are rebound before the next block)
+  const BOWW = { m: null };
+  function bowWasm() {
+    if (BOWW.m !== null) return BOWW.m;
+    BOWW.m = false;
+    try {
+      if (typeof WebAssembly !== 'object' || typeof BOW_WASM !== 'string') return false;
+      const b = wasmBytes(BOW_WASM);
+      if (!WebAssembly.validate(b)) return false;
+      const mem = new WebAssembly.Memory({ initial: 32 });
+      const ex = new WebAssembly.Instance(new WebAssembly.Module(b), { env: { memory: mem } }).exports;
+      new Float32Array(mem.buffer, 0, 65536).set(NOISE);   // (the noise table at 0)
+      const W = { bow: ex.bow, mem, gen: 0, top: 4 * 65536, free: new Map() };
+      W.fin = typeof FinalizationRegistry === 'function' ? new FinalizationRegistry((h) => bowFree(W, h)) : null;
+      BOWW.m = W;
+    } catch (e) { BOWW.m = false; }
+    return BOWW.m;
+  }
+  function bowAlloc(W, size) {
+    const L = W.free.get(size);
+    if (L && L.length) return L.pop();
+    const off = (W.top + 15) & ~15, end = off + size;
+    if (end > W.mem.buffer.byteLength) { W.mem.grow(Math.ceil((end - W.mem.buffer.byteLength) / 65536) + 16); W.gen++; }
+    W.top = end;
+    return off;
+  }
+  function bowFree(W, h) { let L = W.free.get(h.size); if (!L) W.free.set(h.size, (L = [])); L.push(h.off); }
+  const BOW_F64 = ['lg', 'pc', 'wi', 'r', 'b0', 'a1', 'a2', 'z1', 'z2', 'D', 'dD', 'oL', 'oR', 'mL', 'mR', 'dmL', 'dmR', 'qL', 'qR'], BOW_CH = 256;
   class Bow extends MyzelProc {
     constructor(o) {
       super(o);
@@ -42,6 +74,9 @@
       this.b0 = new Float64Array(J); this.a1 = new Float64Array(J); this.a2 = new Float64Array(J); this.z1 = new Float64Array(J); this.z2 = new Float64Array(J);
       this.lg = new Float64Array(J); this.gr = new Float64Array(J); this.rw = new Float64Array(J); this.pc = new Float64Array(J); this.mL = new Float64Array(J); this.mR = new Float64Array(J); this.qL = new Float64Array(J); this.qR = new Float64Array(J); this.sd = new Int8Array(J); this.dmL = new Float64Array(J); this.dmR = new Float64Array(J); this.r = new Float64Array(J);
       this.fs = [new Float64Array(4), new Float64Array(4)]; this.lp = new Float64Array(2); this.ap = new Float64Array(4);
+      this.ww = this.po.bowJs ? null : bowWasm() || null;   // (po.bowJs: the JavaScript loop – the tests' reference)
+      if (this.ww) { const W = this.ww; this.wsz = J * n * 4 + (BOW_F64.length * J + 4 * J + 4 + 18) * 8 + 2 * BOW_CH * 4 + 4 * J + 2 * J + 16; this.wo = bowAlloc(W, this.wsz); this.wh = { off: this.wo, size: this.wsz }; if (W.fin) W.fin.register(this, this.wh, this); this.bind(); }
+      if (this.po.tellW) this.port.postMessage({ bowW: this.ww ? 1 : 0 });   // (tests: which loop runs)
       this.p = { koerper: 'glas', druck: 0.5, bogen: 0.5, daempfung: 0.6, schwebung: 0.3, harz: 0.3 };
       this.rng = new PRNG(po.seed || 11);
       if (po.prm) this.set(po.prm);
@@ -52,6 +87,26 @@
       this.buf.fill(0); this.z1.fill(0); this.z2.fill(0); this.D.fill(0);
       this.vb = 0; this.kc = 0; this.kt = 0; this.phi = 0; this.psi = 0; this.fh = 0; this.rn = 0; this.ni = 0; this.gp = 0; this.gf = 35;
       this.wx = 0; this.wv = 0; this.fs[0].fill(0); this.fs[1].fill(0); this.lp.fill(0);
+    }
+    // the slot's views (again after the memory grew): the ring, the kernel's per-band arrays, its scalars and output
+    bind() {
+      const W = this.ww, B = W.mem.buffer, J = this.Jx, N = this.N;
+      let o = this.wo;
+      const keep = this.bufW ? null : { buf: this.buf, h: this.h, ap: this.ap, di: this.di, kd: this.kd, sd: this.sd };   // (the first time: what the constructor made moves in)
+      this.buf = new Float32Array(B, o, J * N); o += J * N * 4;
+      for (const k of BOW_F64) { const v = new Float64Array(B, o, J); if (keep) v.set(this[k]); this[k] = v; o += 8 * J; }
+      this.h = new Float64Array(B, o, 4 * J); o += 32 * J; this.ap = new Float64Array(B, o, 4); o += 32; this.wS = new Float64Array(B, o, 18); o += 144;
+      this.wLo = new Float32Array(B, o, BOW_CH); o += 4 * BOW_CH; this.wRo = new Float32Array(B, o, BOW_CH); o += 4 * BOW_CH;
+      this.di = new Int32Array(B, o, J); o += 4 * J; this.kd = new Int8Array(B, o, J); o += J; this.sd = new Int8Array(B, o, J);
+      if (keep) { this.buf.set(keep.buf); this.h.set(keep.h); this.ap.set(keep.ap); this.di.set(keep.di); this.kd.set(keep.kd); this.sd.set(keep.sd); }
+      this.bufW = true; this.wg = W.gen;
+    }
+    process(inputs, outputs, params) {
+      const W = this.ww;
+      if (W && this.wg !== W.gen) this.bind();
+      const r = super.process(inputs, outputs, params);
+      if (!r && W) { this.ww = null; if (W.fin) W.fin.unregister(this); bowFree(W, this.wh); }   // (the voice ends: its slot back)
+      return r;
     }
     set(p) { for (const k in p) if (k in this.p) this.p[k] = k === 'koerper' ? String(p[k]) : +p[k] || 0; if (this.body && this.p.koerper !== this.body) this.build(); }
     // the bands of the body, level 1 or 3
@@ -194,6 +249,20 @@
       const ap = this.ap;
       const kStep = 1 / (0.02 * SR), kt = this.kt, nAmt = BOW_N * (1.5 - pr);
       let w = this.w, vb = this.vb, kc = this.kc, ni = this.ni, gp = this.gp, fh = this.fh, rn = this.rn;
+      if (this.ww && gd === 0) {   // (WebAssembly: the same loop; the tongue's growl – Math.sin each sample – stays in JavaScript)
+        const W = this.ww, S = this.wS, Lo = this.wLo, Ro = this.wRo, Bf = this.buf.byteOffset;
+        S[0] = w; S[1] = vb; S[2] = kc; S[3] = ni; S[4] = gp; S[5] = fh; S[6] = rn;
+        S[7] = vt; S[8] = gInc; S[9] = kStep; S[10] = kt; S[11] = nAmt; S[12] = pr; S[13] = rough; S[14] = rc; S[15] = fo; S[16] = hc; S[17] = sqw;
+        for (let s0 = a; s0 < b; s0 += BOW_CH) {
+          const m = Math.min(BOW_CH, b - s0);
+          W.bow(J, N, Bf, S.byteOffset, 0, m, two ? 1 : 0, glide ? 1 : 0, sq, g.byteOffset, pc.byteOffset, wi.byteOffset, rr.byteOffset, b0.byteOffset, a1.byteOffset, a2.byteOffset,
+            z1.byteOffset, z2.byteOffset, D.byteOffset, dD.byteOffset, hh.byteOffset, di.byteOffset, kd.byteOffset, sd.byteOffset, oL.byteOffset, oR.byteOffset, mL.byteOffset, mR.byteOffset,
+            dmL.byteOffset, dmR.byteOffset, this.qL.byteOffset, this.qR.byteOffset, ap.byteOffset, Lo.byteOffset, Ro.byteOffset);
+          for (let i = 0; i < m; i++) L[s0 + i] = Lo[i];
+          if (two) for (let i = 0; i < m; i++) R[s0 + i] = Ro[i];
+        }
+        w = S[0]; vb = S[1]; kc = S[2]; ni = S[3]; gp = S[4]; fh = S[5]; rn = S[6];
+      } else
       for (let i = a; i < b; i++) {
         vb += 0.0005 * ((gd > 0 ? vt * (1 + gd * Math.sin(gp)) : vt) - vb); gp += gInc;
         if (kc !== kt) { kc += kc < kt ? kStep : -kStep; if (Math.abs(kc - kt) < kStep) kc = kt; }

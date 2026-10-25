@@ -38,3 +38,9 @@
   const flush = (x) => (x < 1e-18 && x > -1e-18 ? 0 : x);
   const pd1 = (c, f) => { const p = 1 - c, w = 2 * Math.PI * f / SR; return Math.atan2(p * Math.sin(w), 1 - p * Math.cos(w)) / w; };   // phase delay (samples) of y += c·(x − y) at f
 
+  // (Leistung, 24./25.10.2026) a WebAssembly module's bytes from base64 (the AudioWorklet scope may lack atob)
+  function wasmBytes(s) {
+    const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/', t = s.replace(/=+$/, ''), b = new Uint8Array(Math.floor(t.length * 3 / 4));
+    for (let i = 0, j = 0, v = 0, q = 0; i < t.length; i++) { v = (v << 6) | A.indexOf(t[i]); q += 6; if (q >= 8) { q -= 8; b[j++] = (v >> q) & 255; } }
+    return b;
+  }

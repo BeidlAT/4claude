@@ -25,6 +25,16 @@ Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`)
    Workern vorausrechnen (SharedArrayBuffer über einen Service-Worker-Umweg), WebAssembly für weitere teure Kerne.
 4. **Lastwächter:** `baseline.json` neu gemessen (24.10.2026, Referenz = der Stand mit WebAssembly) – die Mehrlast in der
    Android-Nachbildung kam vom Standard „Minimal“ (Entscheidung des Besitzers), nicht von einem Fehler.
+4b. **Überlast am PC (25.10.2026, veröffentlicht):** Bericht des Besitzers: Aussetzer beim Halten mehrerer Tasten mit
+   Stimme + Schale (Ebene 2) und Regen „Membran“ auf Qualität 3 – nicht die Schleifen (alle angehalten). Die Startmessung
+   erlaubte 114 Einheiten, es setzte bei 94 % davon aus; der Wächter griff erst nach 2 s, und gehaltene Töne liefen weiter.
+   Gebaut (Entscheidungen des Besitzers): Am Rechner/iPad ein Schritt sofort, wenn eine Sekunde ≥ 30 ms verlor, höchstens
+   alle 2 s, bis 30 %; was über dem neuen Limit liegt, blendet aus (älteste gehaltene, Ebene 2 zuerst – `vShed`); das Limit
+   pro Gerät und Stufe wird gemerkt (`myzel.guard.v1`, `gdLearned`/`gdlSet`), alle 10 min ohne Aussetzer eine Stufe höher.
+   Harz rechnet in WebAssembly (bitgleich, ≈ 1,4×). **Achtung:** Die „Schale“ des Besitzers ist die native Klangquelle
+   `sch` (Browser-Bausteine), nicht Harz – sie lässt sich nicht in WebAssembly beschleunigen, ohne sie als eigenen
+   DSP-Code neu zu schreiben (dann nicht mehr bitgleich: Entscheidung des Besitzers). Das spricht für die eigene Engine
+   (Mehrkern im Browser oder Standalone, siehe Gespräch 25.10.2026 und `dev/IDEEN.md`).
 5. **Offene Fragen ans Ohr:** Schale spricht wie früher das Harz-Glas manchmal spät an (soll sie immer sofort?);
    Bandträgheit, Gärtner-Bass, Musikalität der Antworten (siehe `dev/IDEEN.md`).
 6. **Danach** die Liste in `dev/IDEEN.md` (Sample-Bibliothek, Stimme als Instrument, neue Klangerzeugung, native App).
