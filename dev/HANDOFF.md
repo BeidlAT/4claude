@@ -402,7 +402,9 @@ updates (the card then says „Verbesserungen und Korrekturen.“). The version 
 - **Publishing (owner, 25.10.2026):** a finished, tested stage is published by Claude itself – pull request into the default
   branch, merge – without asking; ask first only when the step changes the sound audibly or checks are still open.
 - **Backups (owner, 25.10.2026):** a backup is never updated; each larger development step gets a new private repository
-  (`myzelbackup` = 18.10.2026, before the Hexenring; next `myzelbackup2` …). Claude cannot create repositories (the
+  (`myzelbackup` = 18.10.2026, before the Hexenring; `myzelbackup251026` = 25.10.2026, every branch after PR #13 – the
+  Hexenring complete, the modules, Taumeln in WebAssembly; its default branch shows as `IpadMuzika`, the app's is
+  `ccr-c7c5d0a6-cus3ip`). Claude cannot create repositories (the
   GitHub integration is refused) – the owner creates the empty one, Claude pushes every branch and tag into it.
 - Report to the owner in German, briefly.
 - **Best sound quality first (owner, 17.10.2026, for the whole project):** cost targets in SPEC and in the bench are measured and reported, never a reason to simplify a sound. Build every engine with its full planned sound (and better where possible); enter the measured VCOST honestly. If two goals of the plan conflict, ask the owner before deciding.
@@ -609,4 +611,4 @@ Then use these:
 - The claude.ai artifact is still stage 1 (see above).
 
 ### Other open items
-- Backup: the private repo `BeidlAT/myzelbackup` holds a full copy of every branch (made 18.10.2026); it does not update itself – on „Backup aktualisieren“ push the new state there (add the repo to the session first).
+- Backups: `BeidlAT/myzelbackup` (18.10.2026) and `BeidlAT/myzelbackup251026` (25.10.2026) – full copies of every branch. Never update one; a new step gets a new repository (the owner creates it, add it to the session, push `refs/remotes/origin/*:refs/heads/*`).
