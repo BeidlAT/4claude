@@ -322,7 +322,7 @@ function hxRedoStep() {
 // corrections, for 8 s in the Ringleiste where the rings are – never over the field ----
 function hxChipsAfter(L, plan, T) {
   const to = hxLoopsLive().filter((x) => x.id !== L.id && x.state === 'spielt' && hxRetroPlan(x, T)).map((x) => x.slot);
-  HX.chips = { kind: 'ernte', key: L.key, T, to, until: performance.now() + HX_CHIP_S * 1000, kor: hxCorrs(L), bew: hxBewHas(L) };
+  HX.chips = { kind: 'ernte', key: L.key, T, to, until: Infinity, kor: hxCorrs(L), bew: hxBewHas(L) };   // (owner, 25.10.2026: the row after a harvest stays until you close it – ✕ – or the next harvest takes its place)
   hxRailDirty();
 }
 function hxChipTo(slot) {

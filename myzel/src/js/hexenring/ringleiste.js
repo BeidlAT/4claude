@@ -203,7 +203,7 @@ function hxRailState() {
     if (R && R.slot === i) { word = R.phase === 'rec' ? 'schließen' : 'abbrechen'; aria = 'Schleife ' + (i + 1) + (R.phase === 'rec' ? ', nimmt auf – schließen' : ', wartet – abbrechen'); }
     else if (!L) { word = 'aufnehmen'; aria = 'Schleife ' + (i + 1) + ', leer' + (hxZiel() === i ? ', Ziel' : '') + ' – aufnehmen'; }
     else {
-      word = pend ? 'abbrechen' : L.state === 'spielt' ? 'stumm' : L.state === 'stumm' ? 'an' : 'weiter';
+      word = pend ? 'abbrechen' : '';   // (owner, 25.10.2026: no word under a loop – it glows while it plays; what a tap does is in its tooltip)
       const sw = pend ? '' : hxStance(L); b.classList.toggle('g', !!sw); if (sw) word = sw;   // (Etappe 3: the stance – a tap on it takes the Gärtner's change back)
       aria = hxName(L) + ', ' + hxEngName(L) + ', ' + hxLenText(L) + ', ' + (L.state === 'spielt' ? 'spielt' : L.state) + (pend ? ', ' + pend.label : '') + (HX.fokus === L.id ? ', Fokus' : '') + ' – ' + (hxStance(L) && !pend ? hxStance(L) + ', tippen: ' + (L.mi && L.mi.sugg ? 'einschalten' : 'zurücknehmen') : word);
     }
@@ -238,7 +238,7 @@ function hxChipsRender() {
   if (HXU.sig === sig) return;
   HXU.sig = sig;
   const box = HXU.chips; box.replaceChildren();
-  const chip = (t, fn, o = {}) => { const b = h('button', { type: 'button', class: 'hx-chip' + (o.cls ? ' ' + o.cls : ''), 'aria-label': o.aria || t }, t); b.addEventListener('click', (e) => { e.preventDefault(); if (HX.chips) HX.chips.until = performance.now() + HX_CHIP_S * 1000; fn(); }); box.append(b); return b; };
+  const chip = (t, fn, o = {}) => { const b = h('button', { type: 'button', class: 'hx-chip' + (o.cls ? ' ' + o.cls : ''), 'aria-label': o.aria || t }, t); b.addEventListener('click', (e) => { e.preventDefault(); if (HX.chips) HX.chips.until = Math.max(HX.chips.until, performance.now() + HX_CHIP_S * 1000); fn(); }); box.append(b); return b; };
   const sep = () => box.append(h('span', { class: 'hx-sep', 'aria-hidden': 'true' }, '│'));
   if (hxChipsMach(chip, box)) return;   // (Etappe 3: what the Gärtner plans – ✕ per loop · ✓)
   if (C.kind === 'tempo') chip('Tempo behalten · ' + dec(Math.round(TG.hx * 10) / 10), hxTempoKeep, { cls: 'pri' });

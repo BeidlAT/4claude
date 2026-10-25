@@ -48,8 +48,9 @@ Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`)
    pulsierend auf jedem Schlag, `hxDrawRing`; Wort in lumen, `.hx-ring.spielt`). Tooltips überall: `js/hexenring/tips.js`
    (`HX_TIP` nach Zeile|Text, Abschnitt|Text, Text, sonst aria-label; `@Zeile` am Zeilennamen; `HX_TIP_P` für die
    Einstellungen; `hxTipsWatch` hält sie nach jedem Render aktuell; die Ringleiste setzt ihre in `hxRailTips`). Neue
-   Knöpfe brauchen einen Eintrag – `t-hx-tips` prüft, dass jedes sichtbare Element einen hat. Offen fürs Gespräch: Unter
-   einem spielenden Ring steht „stumm“ (was ein Tipp tut) – das kann verwirren (Konzept E4–E8, noch offen).
+   Knöpfe brauchen einen Eintrag – `t-hx-tips` prüft, dass jedes sichtbare Element einen hat. Danach (Besitzer): kein Wort mehr unter
+   einem Schleifen-Ring (nur „abbrechen“, wenn etwas wartet), und die Zeile nach einer Ernte bleibt, bis man sie mit ✕
+   schließt (`until: Infinity`).
 5. **Offene Fragen ans Ohr:** Schale spricht wie früher das Harz-Glas manchmal spät an (soll sie immer sofort?);
    Bandträgheit, Gärtner-Bass, Musikalität der Antworten (siehe `dev/IDEEN.md`).
 6. **Danach** die Liste in `dev/IDEEN.md` (Sample-Bibliothek, Stimme als Instrument, neue Klangerzeugung, native App).
