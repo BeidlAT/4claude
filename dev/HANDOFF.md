@@ -112,6 +112,19 @@ Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`)
    `hxUnit(R)` in `grammar.js`): Beginn (`hx.start` am Takt/sofort/erster Ton) und Schluss auf der Einheit; ohne Takt setzt
    `hxRecStart` ihn mit `hxTaktSet(seq.bpm)` einen Takt nach dem Druck (`TG.keep`), Phase `wait` = Einzählen. „Frei“ ist
    wie vorher (Einheit 4 nur mit Takt). Gnade: ⅛ der Einheit, mindestens 0.1 s. Test `t-hx-raster` (8, in run-all).
+4j. **Länge und Position (Besitzer, 25.10.2026, nachts):** „Beim Looper fehlt die Einstellung für die Taktlänge … und als
+   Spieler sollte man sehen, wo man im Takt ist, wo man in der Schleife ist, wenn man sie einspielt.“ Die Einstellung gab
+   es (`hx.laenge`/`hx.festT`), aber nur tief in der Karte, und ohne Takt galt sie nicht. Gebaut (`js/hexenring/laenge.js`):
+   Knopf `#hxLen` rechts neben dem Hauptknopf (Zahl groß, „Takte“ darunter; unter 480 px Breite ausgeblendet), Fenster
+   `#hxLenPop` (`hxLenOpen/hxLenRender/hxLenPlace`, `HXLEN`): Länge auto · 1 2 3 4 6 8 12 16 (ein anderer Wert aus der
+   Karte erscheint dazwischen; „wie 1“ nur wenn gesetzt), Tempo (ohne Takt `seq.bpm` mit −/+, gehalten wiederholt; mit Takt
+   nur angezeigt), Einzählen, Klick, „Alle Einstellungen …“ (öffnet die Karte samt Einstellungen). Eine feste Länge zählt
+   ohne Takt wie das Raster einen Takt im Puls-Tempo ein (`hxRecStart`: `fest` wie `ra`); `hxBase` zählt die eben
+   aufgenommene Schleife nicht mehr als Schleife 1; eine geänderte Länge gilt für die wartende oder laufende Aufnahme, wenn
+   ihr neues Ende noch vor uns liegt (`hxLenLive`). Position: `hxRecPos(t)` (ein · ton · rec · frei · ueber),
+   `hxPosWords`, `hxPosDraw` oben im Feld (aus `hxVisFrame`; `HXLEN.box` für die Tests), die Taktlinie der Leiste zeigt
+   während einer Aufnahme deren Schläge (`hxDrawTakt`). MIDI-Ziele `hx.len` (Drehknopf, `step`), `hx.len.next/prev`.
+   Hauptknopf ab 480 px 56 px breit (Wörter ganz). Test `t-hx-laenge` (19, in run-all). Nur in Chromium geprüft.
 5. **Offene Fragen ans Ohr:** Schale spricht wie früher das Harz-Glas manchmal spät an (soll sie immer sofort?);
    Bandträgheit, Gärtner-Bass, Musikalität der Antworten (siehe `dev/IDEEN.md`).
 6. **Danach** die Liste in `dev/IDEEN.md` (Sample-Bibliothek, Stimme als Instrument, neue Klangerzeugung, native App).

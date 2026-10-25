@@ -38,6 +38,7 @@ function hxRailBuild() {
   HXU.rail = rail; HXU.cv = $('#hxCv'); HXU.cx = HXU.cv.getContext('2d');
   HXU.korb = $('#hxKorb'); HXU.haupt = $('#hxHaupt'); HXU.mid = $('#hxMid'); HXU.pg = $('#hxPg'); HXU.undo = $('#hxUndo'); HXU.redo = $('#hxRedo'); HXU.fold = $('#hxFold'); HXU.live = $('#hxLive'); HXU.coach = $('#hxCoach'); HXU.msg = $('#hxMsg');
   HXU.form = $('#hxForm');   // (step 1d)
+  HXU.len = $('#hxLen'); HXU.lenPop = $('#hxLenPop'); hxLenBuild();   // (owner, 25.10.2026: the length of a new loop)
   const ringBox = h('div', { class: 'hx-rings' });
   for (let i = 0; i < HX_SLOTS; i++) {
     const b = h('button', { type: 'button', class: 'hxb hx-ring', 'data-slot': i, tabindex: '-1', 'aria-label': 'Schleife ' + (i + 1) + ', leer' }, h('span', { class: 'w' }, 'aufnehmen'));
@@ -88,7 +89,8 @@ function hxRailBuild() {
   // the toolbar: ← → move between its buttons (one tab stop)
   rail.addEventListener('keydown', (e) => {
     if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
-    const all = [...rail.querySelectorAll('button')].filter((b) => !b.hidden && b.offsetParent);
+    if (HXU.lenPop && HXU.lenPop.contains(e.target)) return;   // (the length's popover: its own buttons, Tab between them)
+    const all = [...rail.querySelectorAll('button')].filter((b) => !b.hidden && b.offsetParent && !(HXU.lenPop && HXU.lenPop.contains(b)));
     const i = all.indexOf(document.activeElement); if (i < 0) return;
     e.preventDefault();
     const n = all[(i + (e.key === 'ArrowRight' ? 1 : -1) + all.length) % all.length];
@@ -301,7 +303,16 @@ function hxChipsRender() {
   chip('✕', () => { HX.chips = null; HXU.sig = ''; hxRailDirty(); }, { aria: 'Schließen' });
 }
 function hxDrawTakt(c, w) {
-  const grid = hxGrid();
+  const grid = hxGrid(), p = (HX.rec || HX.punch) && A.ctx ? hxRecPos(heardT()) : null;
+  if (p && p.beats && (p.kind === 'rec' || p.kind === 'ein' || p.kind === 'ueber')) {   // (owner, 25.10.2026) a recording: its beats across the rail, red as they pass – the bars' ones in orange
+    const n = Math.ceil(p.beats - 1e-9), seg = w / n, bpb = p.bpb || 4, cur = p.kind === 'ein' ? -1 : Math.floor(p.b + 1e-9);
+    for (let i = 0; i < n; i++) {
+      const on = i === cur, one = i % bpb === 0;
+      c.fillStyle = on ? HXC.rec : i < cur ? 'rgba(255,91,77,0.6)' : one ? 'rgba(255,179,92,0.55)' : 'rgba(168,152,138,0.4)';
+      c.fillRect(i * seg + (one ? 3 : 1), 0, seg - (one ? 4 : 2), on ? 4 : 2);
+    }
+    return;
+  }
   if (!grid) {   // dotted: frei – no Takt yet
     c.fillStyle = HXC.dim; for (let x = 6; x < w - 4; x += 7) c.fillRect(x, 0, 2, 2);
     return;
