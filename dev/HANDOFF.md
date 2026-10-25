@@ -1,6 +1,21 @@
 # Übergabe: Myzel (Stand 22.10.2026 – Klangquellen, Ruhe und der Hexenring fertig, Schlussprüfung grün)
 
-## Nächste Sitzung – hier weitermachen (Stand 24.10.2026, nachts)
+## Nächste Sitzung – zuerst lesen (Stand 25.10.2026, abends)
+
+Veröffentlicht ist alles bis Pull-Request #26 (Pages aus `ccr-c7c5d0a6-cus3ip`, jede Veröffentlichung auf GitHub
+erfolgreich geprüft). Am 25.10.2026 dazugekommen (Einzelheiten unter 4c–4i): Überlast/Harz in WebAssembly, Firefox-Ruhe
+aus, Looper leuchtet + Tooltips + Rückmeldung bei jedem Klick, Ernte-Zeile bleibt, Touché SE mit acht Spielweisen
+(4g), Halten-Knopf (4h), Raster für Aufnahmen von Hand (4i). Nichts liegt halb fertig. Offen:
+
+- **Rückmeldung des Besitzers abwarten** zu Touché (Streichen, Vokal, Platte, Gleiten – Stärken nach seinem Ohr
+  nachstellen), Halten und Raster; alles nur in Chromium geprüft, sein Hauptbrowser ist Firefox.
+- **Testfehler klären** (unter 4g notiert): `v2/func` Lastzeilen und mehrere `motion-tests` – auf dem Stand vor #24
+  laufen lassen und vergleichen, dann beheben oder als vorbestehend markieren. Testserver losgelöst starten
+  (`setsid nohup python3 -m http.server 8790` in `<scratch>/v2`).
+- **Vorgemerkt, erst auf Zuruf bauen:** Naturaufnahmen (alle vier Verwendungen, Quelle offen), Schleifen einzeln im
+  Mixer, Rechtsklick-Menü einer Schleife, übrige Touché-Ideen, Looper E4–E8 (`dev/IDEEN.md`).
+
+## Davor (Stand 24.10.2026, nachts)
 
 Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`); Punkt 3 und 4 (Branch
 `claude/handoff-ideen-review-5ca6uj`) wurden am 25.10.2026 veröffentlicht. Offen, in dieser Reihenfolge:
@@ -100,6 +115,11 @@ Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`)
 5. **Offene Fragen ans Ohr:** Schale spricht wie früher das Harz-Glas manchmal spät an (soll sie immer sofort?);
    Bandträgheit, Gärtner-Bass, Musikalität der Antworten (siehe `dev/IDEEN.md`).
 6. **Danach** die Liste in `dev/IDEEN.md` (Sample-Bibliothek, Stimme als Instrument, neue Klangerzeugung, native App).
+   **Für später vermerkt (Besitzer, 25.10.2026):** Naturaufnahmen/Feldaufnahmen – alle vier Verwendungen gewünscht
+   (spielbar auf dem Feld, Körnerwolke, Atmosphäre im Hintergrund, echte Räume für den Hall), Quelle noch offen; die
+   Dateien muss der Besitzer hochladen (Freesound/Archive/Wikimedia sind aus der Claude-Umgebung gesperrt). Ebenfalls
+   vorgemerkt: Schleifen einzeln im Mixer, Rechtsklick-Menü für eine Schleife, die übrigen Touché-Ideen
+   (alle in `dev/IDEEN.md`).
 
 **Arbeitsweise, die der Besitzer will:** ein Thema pro Bauabschnitt, lange Prüfungen (Gesamtprüfung, Lastwächter) nur
 einmal vor der Veröffentlichung, kurz und ehrlich berichten, keine Gerätemodelle oder E-Mails ins (öffentliche) Repo.

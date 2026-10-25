@@ -20,6 +20,11 @@ optimiert. Das iPad läuft über die Web-App mit. Das Handy wird nicht weiter ve
    - Impulsantworten echter Räume für den Hall (Kirche, Höhle, Treppenhaus, Wald);
    - Resonanzkörper und Anregungen für die physikalischen Modelle (Holzkasten, Schale, Decke, Anschläge).
    Nur frei verwendbare Lizenzen (z. B. CC0) – das Repository ist öffentlich. Qualität vor Menge.
+   *Stand 25.10.2026 (Besitzer):* noch nicht gebaut, das Projekt bleibt vorerst offen. Gewünscht sind alle vier
+   Verwendungen: spielbar auf dem Feld (eigene Klangquelle), als Körnerwolke, als Atmosphäre im Hintergrund (wie der
+   Bordun, mit Formen/Touché beweglich) und echte Räume für den Hall. Woher die Aufnahmen kommen, ist offen (eigene,
+   CC0, Import in der App). Hinweis: aus der Claude-Umgebung sind Freesound, Archive.org und Wikimedia gesperrt – die
+   Dateien müsste der Besitzer hochladen.
 4. **Stimme als Instrument (Ausdruck, nicht Noten).** Der Verlauf der Stimme – Tonhöhe, Lautstärke, Helligkeit, Moment
    für Moment – steuert ein Instrument fortlaufend, z. B. die Fingerhöhe von Halm, Harz oder Sehne (ohne neuronales Netz
    möglich). Später vielleicht ein kleines neuronales Modell nach Art von DDSP („sing, und es klingt wie Harz“) – im
