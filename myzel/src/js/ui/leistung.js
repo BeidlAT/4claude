@@ -25,9 +25,8 @@ function lmPart(k, ms) {
 // guard's steps, the main thread's long tasks and its garbage collections (the heap falling)
 function lmEv(k) { if (LM.on && LM.ev.length < 4000) LM.ev.push([performance.now(), k]); }
 function lmUPoll() {
-  const ps = A.ctx && (A.ctx.playbackStats || A.ctx.playoutStats);
-  // (Firefox: no figures – the guard's count by the audio clock, A.underruns, once a second)
-  const u = ps ? (ps.underrunEvents != null ? ps.underrunEvents : ps.fallbackFramesEvents) || 0 : A.underruns || 0, d = !ps ? null : ps.underrunDuration != null ? ps.underrunDuration * 1000 : ps.fallbackFramesDuration != null ? ps.fallbackFramesDuration : null, U = LM.up;
+  const ps = A.ctx && (A.ctx.playbackStats || A.ctx.playoutStats); if (!ps) return;
+  const u = (ps.underrunEvents != null ? ps.underrunEvents : ps.fallbackFramesEvents) || 0, d = ps.underrunDuration != null ? ps.underrunDuration * 1000 : ps.fallbackFramesDuration != null ? ps.fallbackFramesDuration : null, U = LM.up;
   if (U.u != null && u > U.u && LM.ul.length < 400) LM.ul.push([performance.now(), u - U.u, d != null && U.d != null ? Math.max(0, d - U.d) : null]);
   U.u = u; U.d = d;
   const m = performance.memory; if (m) { const h = m.usedJSHeapSize; if (U.h && h < U.h - 2e6) lmEv('gc:' + Math.round((U.h - h) / 1e6)); U.h = h; }

@@ -24848,9 +24848,8 @@ function lmPart(k, ms) {
 // guard's steps, the main thread's long tasks and its garbage collections (the heap falling)
 function lmEv(k) { if (LM.on && LM.ev.length < 4000) LM.ev.push([performance.now(), k]); }
 function lmUPoll() {
-  const ps = A.ctx && (A.ctx.playbackStats || A.ctx.playoutStats);
-  // (Firefox: no figures – the guard's count by the audio clock, A.underruns, once a second)
-  const u = ps ? (ps.underrunEvents != null ? ps.underrunEvents : ps.fallbackFramesEvents) || 0 : A.underruns || 0, d = !ps ? null : ps.underrunDuration != null ? ps.underrunDuration * 1000 : ps.fallbackFramesDuration != null ? ps.fallbackFramesDuration : null, U = LM.up;
+  const ps = A.ctx && (A.ctx.playbackStats || A.ctx.playoutStats); if (!ps) return;
+  const u = (ps.underrunEvents != null ? ps.underrunEvents : ps.fallbackFramesEvents) || 0, d = ps.underrunDuration != null ? ps.underrunDuration * 1000 : ps.fallbackFramesDuration != null ? ps.fallbackFramesDuration : null, U = LM.up;
   if (U.u != null && u > U.u && LM.ul.length < 400) LM.ul.push([performance.now(), u - U.u, d != null && U.d != null ? Math.max(0, d - U.d) : null]);
   U.u = u; U.d = d;
   const m = performance.memory; if (m) { const h = m.usedJSHeapSize; if (U.h && h < U.h - 2e6) lmEv('gc:' + Math.round((U.h - h) / 1e6)); U.h = h; }
@@ -34249,8 +34248,7 @@ function gdlSet(q, v) { if (HX_PHONE) return; const m = gdlAll(); m[q] = Math.ro
 function gdLearned() { const v = gdlGet(P['dev.q']); if (v < 1) { A.budgetScale = v; budgetApply(); hxGuardLog('gelernt', VBUDGET); } }
 function watchUnderruns() {
   const ps = A.ctx.playbackStats || A.ctx.playoutStats;
-  // (Firefox, 25.10.2026: the owner's main browser now – it reports no underruns; there the audio clock tells, on every
-  // device: a computer's live budget steps on it as on Chrome's figures)
+  if (!ps && !(MOBILE && !HX_TABLET)) return;
   const ck = { p: 0, c: 0, lag: 0, n: 0 };
   const clock = () => {
     const ctx = A.ctx, ts = ctx.getOutputTimestamp ? ctx.getOutputTimestamp() : null;
@@ -34262,7 +34260,7 @@ function watchUnderruns() {
     return ck.n;
   };
   const count = ps ? () => (ps.underrunEvents != null ? ps.underrunEvents : ps.fallbackFramesEvents) || 0 : clock;
-  const missT = () => (ps ? +(ps.underrunDuration != null ? ps.underrunDuration : ps.fallbackFramesDuration) || 0 : ck.lag);   // (seconds of audio missing, all told – by the clock: how far it fell behind)   // (seconds of audio missing, all told)
+  const missT = () => (ps ? +(ps.underrunDuration != null ? ps.underrunDuration : ps.fallbackFramesDuration) || 0 : 0);   // (seconds of audio missing, all told)
   let last = count(), lastM = missT();
   gdLearned();
   LAT.t0 = performance.now(); LAT.dur = null;
@@ -34281,7 +34279,7 @@ function watchUnderruns() {
     if (hxWGuard()) return;   // Hexenring: (step 2a) the Wuchs gives way first – never the live budget, never A.lite for it
     if (hits.length >= 2 && hxTauGuard()) return;   // Hexenring: (phone report) then, when it lasts, the loops' Taumeln
     if (hxGuardGrenze()) return;   // Hexenring: (Leistung, report A) a phone with loops sounding: the live budget stays
-    if ((!ps && HX_PHONE) || VBUDGET <= 6) return;   // (a phone without figures: the loops' steps only, as before)
+    if (!ps || VBUDGET <= 6) return;
     if (HX_PHONE) {
       hxGuardLog('lite', Math.round(VBUDGET * 0.8));
       A.budgetScale = (A.budgetScale || 1) * 0.8; GD.stepT = now;

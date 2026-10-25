@@ -35,15 +35,6 @@ Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`)
    `sch` (Browser-Bausteine), nicht Harz – sie lässt sich nicht in WebAssembly beschleunigen, ohne sie als eigenen
    DSP-Code neu zu schreiben (dann nicht mehr bitgleich: Entscheidung des Besitzers). Das spricht für die eigene Engine
    (Mehrkern im Browser oder Standalone, siehe Gespräch 25.10.2026 und `dev/IDEEN.md`).
-4c. **Firefox ist die Basis (Besitzer, 25.10.2026):** Myzel läuft dort besser als in Chrome. Gebaut: Der Lastwächter
-   erkennt Aussetzer ohne `playbackStats` an der Audio-Uhr (`getOutputTimestamp`), auf jedem Gerät – auch das Limit
-   der Live-Stimmen –, „Leistung messen“ zählt dort die Aussetzer der Uhr (`A.underruns`). Test `t-hx-guard` Teil 6
-   (Chromium ohne `playbackStats`, die Uhr künstlich zurückfallend). **Offen:** Firefox selbst testen – Playwrights
-   Firefox lässt sich hier nicht laden (Netz sperrt `cdn.playwright.dev`, `playwright.download.prss.microsoft.com`,
-   `archive.mozilla.org`; der Besitzer kann sie in den Umgebungs-Einstellungen freigeben). Danach: die Suiten mit
-   `BROWSER=firefox` laufen lassen (Harness erweitern) und Firefox-Eigenheiten prüfen (MIDI nur mit Erlaubnis-Add-on,
-   kein `MIDI_AUTO`; `performance.memory`, `longtask`, LoAF fehlen – geschützt). **Danach laut Besitzer: Unklarheiten
-   im Looper bereinigen** (er nennt die Punkte), dann die Standalone-App (Windows) als Prototyp.
 5. **Offene Fragen ans Ohr:** Schale spricht wie früher das Harz-Glas manchmal spät an (soll sie immer sofort?);
    Bandträgheit, Gärtner-Bass, Musikalität der Antworten (siehe `dev/IDEEN.md`).
 6. **Danach** die Liste in `dev/IDEEN.md` (Sample-Bibliothek, Stimme als Instrument, neue Klangerzeugung, native App).
