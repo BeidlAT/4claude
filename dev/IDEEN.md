@@ -3,6 +3,9 @@
 Gesammelt aus den Gesprächen mit dem Besitzer (Oktober 2026). Reihenfolge = vereinbarte Priorität. Diese Datei ist das
 Gedächtnis dafür; jede neue Sitzung liest sie zusammen mit `dev/HANDOFF.md`.
 
+**Ausrichtung (entschieden 24.10.2026):** Hauptgerät ist der PC mit Keyboard – dafür wird entwickelt, gemessen und
+optimiert. Das iPad läuft über die Web-App mit. Das Handy wird nicht weiter verfolgt (keine eigene Arbeit dafür).
+
 ## Vereinbarte Reihenfolge
 
 1. **Looper (Hexenring) fertig bauen, alle Testzeilen grün, veröffentlichen.** Erst wenn alles fertig ist; der Besitzer

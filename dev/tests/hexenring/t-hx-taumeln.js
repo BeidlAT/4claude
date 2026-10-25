@@ -71,7 +71,7 @@ const { ok } = H;
   ok(!errors.length, 'no page errors (offline)');
   await H.close();
   // ---- live: a harvest with Taumeln on; the page lends the chunks; the cost ----
-  ({ page, errors } = await G.open({ w: 1280, h: 800 }));
+  ({ page, errors } = await G.open({ w: 1280, h: 800, init: () => { const si = window.setInterval; window.setInterval = function (f, ms, ...a) { if (typeof f === 'function' && /hxWGuard/.test(String(f))) return 0; return si.call(this, f, ms, ...a); }; } }));   // (the underrun guard held back: on a loaded test machine it lets Taumeln rest – t-hx-guard tests it)
   const L = await page.evaluate(async () => {
     const M = window.__M, A = M.A, o = {};
     await window.__reset(); window.__grid(120); M.setParam('mov.drift', 8); await window.__sleep(400);

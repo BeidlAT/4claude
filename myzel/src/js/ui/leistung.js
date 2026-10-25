@@ -243,7 +243,7 @@ function lmText(R) {
   L.push('tick ' + kv(R.tick) + ' · lt ' + (R.lt ? kv(R.lt) : 'none') + ' · loaf ' + (R.loaf ? kv(Object.assign({}, R.loaf, { top: R.loaf.top.join(',') || '-' })) : 'none'));
   L.push('touch ' + (R.touch ? kv(R.touch) : 'none'));
   L.push('voices ' + kv(R.voices) + ' · hx ' + kv(R.hx));
-  L.push('loops ' + kv(R.lp.sum) + (R.lp.each.length ? ' · ' + R.lp.each.join(' ') : ''));
+  L.push('loops ' + kv(Object.assign({}, R.lp.sum, { rs: HX.rsw ? 'wasm' : HX.rsw === 0 ? 'js' : '-' })) + (R.lp.each.length ? ' · ' + R.lp.each.join(' ') : ''));
   L.push('werk ' + kv(R.werk));
   L.push('ulog ' + (R.ulog.length ? R.ulog.join(' ') : 'none'));
   L.push('guard ' + (R.guard.steps.length ? R.guard.steps.join(' ') : 'none') + ' · ' + kv(R.guard.now));

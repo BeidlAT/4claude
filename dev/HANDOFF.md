@@ -1,24 +1,30 @@
 # Übergabe: Myzel (Stand 22.10.2026 – Klangquellen, Ruhe und der Hexenring fertig, Schlussprüfung grün)
 
-## Nächste Sitzung – hier weitermachen (Stand 24.10.2026, abends)
+## Nächste Sitzung – hier weitermachen (Stand 24.10.2026, nachts)
 
-Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`). Offen, in dieser Reihenfolge:
+Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`); Punkt 3 und 4 (Branch
+`claude/handoff-ideen-review-5ca6uj`) wurden am 25.10.2026 veröffentlicht. Offen, in dieser Reihenfolge:
 
-1. **Ausrichtung bestätigen lassen (Vorschlag, noch nicht entschieden):** der **PC mit Keyboard wird Hauptgerät**
-   (dafür entwickeln, messen, optimieren); iPad läuft über die Web-App mit (MIDI dort evtl. über eine iPad-Browser-App wie
-   „Web MIDI Browser“ oder „Bluefy“ – ungetestet, Besitzer probiert), Handy nebenher ohne eigene Arbeit. Grund: Apple
-   verlangt 99 €/Jahr für eigene Apps; am PC mit Keyboard macht es dem Besitzer am meisten Spaß. Native App später zuerst
-   für Windows (siehe `dev/IDEEN.md`).
+1. **Ausrichtung – entschieden (24.10.2026):** der **PC mit Keyboard ist Hauptgerät** (dafür entwickeln, messen,
+   optimieren); das iPad läuft über die Web-App mit (MIDI dort evtl. über eine iPad-Browser-App wie „Web MIDI Browser“
+   oder „Bluefy“ – ungetestet, Besitzer probiert). **Das Handy wird nicht weiter verfolgt** (keine eigene Arbeit, keine
+   Fragen mehr dazu – so war es besprochen). Grund: Apple verlangt 99 €/Jahr für eigene Apps; am PC mit Keyboard macht es
+   dem Besitzer am meisten Spaß. Native App später zuerst für Windows (siehe `dev/IDEEN.md`).
 2. **Looper-Bedienung neu:** Audit, Konzept und klickbares Mockup liegen in `dev/looper/bedienung/` (AUDIT.md, KONZEPT.md,
-   mockup.html; privates Artifact: https://claude.ai/artifact/UDuaiAtuLNikwVvJ6NuRnu). Der Besitzer entscheidet E1–E8
-   aus KONZEPT.md, erst dann umbauen. Bei PC-Schwerpunkt: zuerst Maus, Tastatur, Tastenkürzel und MIDI, Touch zweitrangig.
+   mockup.html; privates Artifact: https://claude.ai/artifact/UDuaiAtuLNikwVvJ6NuRnu). **Entschieden (24.10.2026):**
+   E1 ja (● legt Schichten auf die aktive Schleife, „+“ beginnt eine neue), E2 (a) (⤓ über laufenden Schleifen legt eine
+   neue Schleife an und fragt „als Schicht auf Schleife 1?“); E3 entfällt (Handy). **E4–E8 bleiben offen – nichts bauen**,
+   bis der Besitzer es sagt. Beim Umbau: zuerst Maus, Tastatur, Tastenkürzel und MIDI, Touch zweitrangig.
    B1 (Doppeltipp) ist behoben; B2–B13 gehören in den Umbau.
-3. **Restliche kurze Aussetzer am PC:** die Last des einen Audio-Kerns; bei Schleifen kostet Taumelns Resampler ≈ 80 %.
-   Nächster Schritt: Taumeln ohne Klangänderung schneller rechnen. Danach evtl. Schleifen in Workern vorausrechnen
-   (SharedArrayBuffer über einen Service-Worker-Umweg) und WebAssembly für die teuersten Kerne. Der Besitzer schickt evtl.
-   einen neuen „Leistung messen“-Bericht (Zeilen `ulog`, `nichtLeb`).
-4. **Lastwächter:** `baseline.json` neu messen – die Mehrlast in der Android-Nachbildung kommt vom Standard „Minimal“
-   (Entscheidung des Besitzers), nicht von einem Fehler.
+3. **Restliche kurze Aussetzer am PC – Taumeln gebaut (24.10.2026, veröffentlicht 25.10.2026):** Resampler und Entdriften laufen bitgleich in WebAssembly (SPEC §10.5 „As built (Taumeln faster)“).
+   Live kosten 6 Schleifen mit Taumeln 3,3 statt 4,7 Punkte eines Kerns (Grundlast der App ohne Schleifen ≈ 20,7) – Taumeln
+   war live ein kleinerer Teil als gedacht. **Rückmeldung des Besitzers (24.10.2026, vor diesem Schritt):** am PC
+   „weitgehend stabil“, viele Schleifen und gleichzeitiges Spielen gut; einmal musste er die Qualität auf „Mittel“
+   stellen. Nächste Kandidaten, wenn es weiter aussetzt: ein „Leistung messen“-Bericht vom PC (Zeilen `ulog`, `loops`
+   mit `rs=wasm`), dann die Grundlast der Live-Kette und der Stimmen messen (das ist jetzt der größte Teil), Schleifen in
+   Workern vorausrechnen (SharedArrayBuffer über einen Service-Worker-Umweg), WebAssembly für weitere teure Kerne.
+4. **Lastwächter:** `baseline.json` neu gemessen (24.10.2026, Referenz = der Stand mit WebAssembly) – die Mehrlast in der
+   Android-Nachbildung kam vom Standard „Minimal“ (Entscheidung des Besitzers), nicht von einem Fehler.
 5. **Offene Fragen ans Ohr:** Schale spricht wie früher das Harz-Glas manchmal spät an (soll sie immer sofort?);
    Bandträgheit, Gärtner-Bass, Musikalität der Antworten (siehe `dev/IDEEN.md`).
 6. **Danach** die Liste in `dev/IDEEN.md` (Sample-Bibliothek, Stimme als Instrument, neue Klangerzeugung, native App).
@@ -393,6 +399,11 @@ updates (the card then says „Verbesserungen und Korrekturen.“). The version 
 
 **Workflow etiquette:**
 - Build stage by stage, as the owner chose. Each stage is built, tested, committed, pushed and published before the next one starts.
+- **Publishing (owner, 25.10.2026):** a finished, tested stage is published by Claude itself – pull request into the default
+  branch, merge – without asking; ask first only when the step changes the sound audibly or checks are still open.
+- **Backups (owner, 25.10.2026):** a backup is never updated; each larger development step gets a new private repository
+  (`myzelbackup` = 18.10.2026, before the Hexenring; next `myzelbackup2` …). Claude cannot create repositories (the
+  GitHub integration is refused) – the owner creates the empty one, Claude pushes every branch and tag into it.
 - Report to the owner in German, briefly.
 - **Best sound quality first (owner, 17.10.2026, for the whole project):** cost targets in SPEC and in the bench are measured and reported, never a reason to simplify a sound. Build every engine with its full planned sound (and better where possible); enter the measured VCOST honestly. If two goals of the plan conflict, ask the owner before deciding.
 - The earlier usage-limit trouble came from the model in use then; there is no need to economise on tokens or subagents.
@@ -549,6 +560,30 @@ Then use these:
   (`sh run.sh baseline`) once the owner accepts that cost.
 - Open: Taumeln's resampler (`rd`, 32 taps per frame and Schicht) is 80 % of the ring processor's time – an exact speed-up
   would cut the loops' audio load most.
+
+### Notes from the Taumeln step (24.10.2026, session on `claude/handoff-ideen-review-5ca6uj`)
+- SPEC §10.5 „As built (Taumeln faster)“. The WebAssembly source is `dev/tools/wasm/rs.c`; `sh dev/tools/wasm/build.sh`
+  (clang 18, wasm-ld – both in the container) regenerates `myzel/src/js/dsp/rs-wasm.js` (base64; decoded without atob –
+  the AudioWorklet scope may lack it). Any change to `rd`'s or `ddJob`'s arithmetic must change rs.c alike; the proofs:
+  `hexenring/t-hx-rsw.js` (in run-all) and the Node harnesses in the session's scratchpad (`rs/bench.js`, `rs/edge.js`
+  old vs new reads with `Object.is`, `rs/whole.js` the processor with six loops – not in the repo; rebuild them from SPEC's
+  description if needed). Live comparison: `node hexenring/live-tau.js <slotA> <slotB> [rounds]` (6 harvested loops, drift 8 ct, guard held
+  back, /proc CPU of the render threads, builds alternating; not in run-all).
+- Final checks (24./25.10.2026, after the cloned repo was unshallowed – `git fetch --unshallow`: the guard's parity base
+  e341c1b and the Gestik references fae609a/4d6d233 need the history): Hexenring run-all – t-hx-rsw 4/4, t-hx-taumeln
+  14/14, t-hx-bake 13/13 and the rest green except rows that fail alike on the build before (69af6f4, where this session
+  started), each re-run alone and on it: t-hx-taps „the loops sound“ (known), t-hx-werk Gong's
+  level-3 determinism −87.7 dB (same), t-hx-bew „device speeds up to 110 BPM“ (same), t-hx-guard 8 / old 7 rows (the
+  container's own underruns), t-hx-wuchs „late blocks“, „an underrun while Wuchs works“ and a fatal row (same; its
+  Lebendig rows scatter with the guard's hold – green on the second run), t-hx-form and t-hx-live green alone; t-hx-soak
+  „the living loop rendered 4 passes“ (not compared – 10 min; the guard holding Lebendig, likely the same cause).
+  reg.sh: v2 green but func's load rows (old build alike), mixfunc, mixui, MIDI, t-pwa-update 37 green; Gestik: t-gk-perm,
+  t-gk-learn, t-gu-ui, t-gx-live fail identically on the old build (sensor permission in this Chromium); perf: the
+  guard's check against the new reference green, t-idle-parity all green against e341c1b, t-phone-mode one phone row
+  (frames under load – the phone is not pursued).
+- Bit-exactness rules learned: the read position must run in the same doubles (pass the absolute p and a base offset –
+  `p − base` then `+= r` rounds differently); no FMA; a skipped frame is −0 (adding −0 is the identity; a sum that starts
+  at +0 is never −0, so ddJob writes `+ 0`).
 
 ### Owner's calls (open)
 - **Handy und Schleifen (report A, 23.10.2026) – options that change the sound on a phone, not built:** (1) Wuchs on
