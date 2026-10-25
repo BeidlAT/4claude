@@ -2,7 +2,7 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
-      "id": "2026-10-24d",
+      "id": "2026-10-25",
       "punkte": [
         "Schleifen, die mit deinem Spiel mitschweben, brauchen weniger Rechenzeit – der Klang ist Sample für Sample derselbe. Am Rechner sollte der Klang damit seltener aussetzen, auch mit vielen Schleifen.",
         "Auch eine Schleife, die du schneller laufen lässt, und eine frisch aufgenommene Schicht belasten das Gerät jetzt deutlich weniger.",

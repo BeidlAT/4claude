@@ -2,8 +2,8 @@
 
 ## Nächste Sitzung – hier weitermachen (Stand 24.10.2026, nachts)
 
-Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`); Punkt 3 und 4 liegen auf dem Branch
-`claude/handoff-ideen-review-5ca6uj` und warten auf die Veröffentlichung (Pull Request, wenn der Besitzer es sagt). Offen, in dieser Reihenfolge:
+Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`); Punkt 3 und 4 (Branch
+`claude/handoff-ideen-review-5ca6uj`) wurden am 25.10.2026 veröffentlicht. Offen, in dieser Reihenfolge:
 
 1. **Ausrichtung – entschieden (24.10.2026):** der **PC mit Keyboard ist Hauptgerät** (dafür entwickeln, messen,
    optimieren); das iPad läuft über die Web-App mit (MIDI dort evtl. über eine iPad-Browser-App wie „Web MIDI Browser“
@@ -16,8 +16,7 @@ Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`)
    neue Schleife an und fragt „als Schicht auf Schleife 1?“); E3 entfällt (Handy). **E4–E8 bleiben offen – nichts bauen**,
    bis der Besitzer es sagt. Beim Umbau: zuerst Maus, Tastatur, Tastenkürzel und MIDI, Touch zweitrangig.
    B1 (Doppeltipp) ist behoben; B2–B13 gehören in den Umbau.
-3. **Restliche kurze Aussetzer am PC – Taumeln gebaut (24.10.2026, Branch `claude/handoff-ideen-review-5ca6uj`, noch nicht
-   veröffentlicht):** Resampler und Entdriften laufen bitgleich in WebAssembly (SPEC §10.5 „As built (Taumeln faster)“).
+3. **Restliche kurze Aussetzer am PC – Taumeln gebaut (24.10.2026, veröffentlicht 25.10.2026):** Resampler und Entdriften laufen bitgleich in WebAssembly (SPEC §10.5 „As built (Taumeln faster)“).
    Live kosten 6 Schleifen mit Taumeln 3,3 statt 4,7 Punkte eines Kerns (Grundlast der App ohne Schleifen ≈ 20,7) – Taumeln
    war live ein kleinerer Teil als gedacht. **Rückmeldung des Besitzers (24.10.2026, vor diesem Schritt):** am PC
    „weitgehend stabil“, viele Schleifen und gleichzeitiges Spielen gut; einmal musste er die Qualität auf „Mittel“
@@ -400,6 +399,11 @@ updates (the card then says „Verbesserungen und Korrekturen.“). The version 
 
 **Workflow etiquette:**
 - Build stage by stage, as the owner chose. Each stage is built, tested, committed, pushed and published before the next one starts.
+- **Publishing (owner, 25.10.2026):** a finished, tested stage is published by Claude itself – pull request into the default
+  branch, merge – without asking; ask first only when the step changes the sound audibly or checks are still open.
+- **Backups (owner, 25.10.2026):** a backup is never updated; each larger development step gets a new private repository
+  (`myzelbackup` = 18.10.2026, before the Hexenring; next `myzelbackup2` …). Claude cannot create repositories (the
+  GitHub integration is refused) – the owner creates the empty one, Claude pushes every branch and tag into it.
 - Report to the owner in German, briefly.
 - **Best sound quality first (owner, 17.10.2026, for the whole project):** cost targets in SPEC and in the bench are measured and reported, never a reason to simplify a sound. Build every engine with its full planned sound (and better where possible); enter the measured VCOST honestly. If two goals of the plan conflict, ask the owner before deciding.
 - The earlier usage-limit trouble came from the model in use then; there is no need to economise on tokens or subagents.
