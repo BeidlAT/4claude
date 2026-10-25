@@ -2,6 +2,15 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-25i",
+      "punkte": [
+        "Touché SE: vier Spielweisen, umschaltbar mit F1–F4 oder in der Geräte-Karte.",
+        "Finger (F1): Höhe und Tonhöhe wie bisher. Atem (F2): in Ruhe leise, weg drücken lässt den Ton anschwellen, heran dämpft ihn dunkel, links/rechts Vibrato.",
+        "Raum (F3): weg Hall, heran Echo, links/rechts Panorama. Verwandlung (F4): zwischen den Mixer-Szenen A und B, links/rechts Filter.",
+        "Der Drehknopf am Touché stellt nur seine Empfindlichkeit ein – die Spielweise wählst du in Myzel."
+      ]
+    },
+    {
       "id": "2026-10-25h",
       "punkte": [
         "Formt das Touché SE (oder ein anderer Regler auf „Höhe“ oder „Tonhöhe“) einen gehaltenen Ton, wandert sein Leuchten auf dem Spielfeld mit – nach oben mit der Höhe, zur Seite mit der Tonhöhe."

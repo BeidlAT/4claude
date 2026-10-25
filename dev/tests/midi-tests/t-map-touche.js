@@ -25,6 +25,41 @@ const { open, ok, close } = require('./hm');
   await page.evaluate(async () => { window.__send([0xb0, 17, 127], 'k1'); window.__send([0xb0, 19, 127], 'k1'); window.__M.mapFlush(); await window.__sleep(400); });
   await page.screenshot({ path: 'out/touche-1.png' });
   await page.evaluate(async () => { window.__send([0xb0, 17, 0], 'k1'); window.__send([0xb0, 19, 0], 'k1'); window.__send([0x80, 60, 0], 'k2'); await window.__sleep(100); });
+  // the Spielweisen (the knob on the device sends nothing): Atem, Raum, Verwandlung – F1–F4, the card's chips
+  const w = await page.evaluate(async () => {
+    const M = window.__M, T = (b) => window.__send(b, 'k1'), sl = window.__sleep, mv = () => ({ h: +M.modVal('hoehe').toFixed(3), b: +M.modVal('bend').toFixed(3), e: +M.modVal('expr').toFixed(3), f: +M.modVal('flt').toFixed(3), r: +M.modVal('rev').toFixed(3), d: +M.modVal('dly').toFixed(3), p: +M.modVal('pan').toFixed(3), m: +M.modVal('morph').toFixed(3) });
+    const key = (k) => { document.body.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true })); };
+    const o = {};
+    window.__send([0x90, 60, 100], 'k2'); await sl(60);
+    key('F2'); await sl(60); o.atemW = M.P['midi.tch']; o.atem0 = mv();
+    T([0xb0, 17, 127]); M.mapFlush(); await sl(60); o.atemWeg = mv(); T([0xb0, 17, 0]);
+    T([0xb0, 16, 127]); M.mapFlush(); await sl(60); o.atemHer = mv(); T([0xb0, 16, 0]);
+    T([0xb0, 19, 127]); M.mapFlush(); const bs = []; for (let i = 0; i < 12; i++) { await sl(25); bs.push(M.modVal('bend')); } o.vib = [Math.min(...bs), Math.max(...bs)]; T([0xb0, 19, 0]); M.mapFlush(); await sl(80); o.vib0 = mv();
+    key('F3'); await sl(60); o.raum0 = mv();
+    T([0xb0, 17, 127]); T([0xb0, 16, 64]); T([0xb0, 18, 127]); M.mapFlush(); await sl(60); o.raum = mv(); T([0xb0, 17, 0]); T([0xb0, 16, 0]); T([0xb0, 18, 0]);
+    key('F4'); await sl(60);
+    T([0xb0, 17, 127]); T([0xb0, 19, 127]); M.mapFlush(); await sl(60); o.verw = mv(); T([0xb0, 17, 0]); T([0xb0, 19, 0]); M.mapFlush(); await sl(60); o.verw0 = mv();
+    // a switch carries what the hand holds over
+    key('F1'); T([0xb0, 17, 127]); M.mapFlush(); await sl(40); key('F3'); await sl(60); o.carry = mv(); T([0xb0, 17, 0]); M.mapFlush();
+    // the card: a chip per Spielweise
+    M.openPanel('dev'); await sl(500);
+    const ch = [...document.querySelectorAll('[data-kc$=":tchatem"]')][0]; o.chip = !!ch; if (ch) ch.click(); await sl(300);
+    o.chipW = M.P['midi.tch']; o.pressed = [...document.querySelectorAll('[data-kc$=":tchatem"]')].map((b) => b.getAttribute('aria-pressed')).join();
+    // unplugged (both Touchés): nothing of it stays, not even Atem's soft rest; F keys free again
+    window.__send([0x80, 60, 0], 'k2');
+    window.__midi.unplug('k1'); window.__midi.unplug('k3');
+    await sl(1500); o.gone = mv(); o.live = M.TCH.live;
+    return o;
+  });
+  ok(w.atemW === 'atem' && w.atem0.e < -0.5 && w.atem0.h === 0, `F2 → Atem: at rest soft (Ausdruck ${w.atem0.e})`);
+  ok(w.atemWeg.e > 0.3 && w.atemWeg.h > 0.3, `Atem, away: it swells and brightens (${JSON.stringify(w.atemWeg)})`);
+  ok(w.atemHer.f < -0.8 && w.atemHer.e < -0.9, `Atem, toward you: damped dark (${JSON.stringify(w.atemHer)})`);
+  ok(w.vib[0] < -0.15 && w.vib[1] > 0.15 && w.vib0.b === 0, `Atem, right: a vibrato (${w.vib.map((x) => x.toFixed(2)).join(' … ')}), gone at rest`);
+  ok(w.raum0.e === 0 && w.raum.r === 0.85 && Math.abs(w.raum.d - 0.43) < 0.01 && w.raum.p === -1, `F3 → Raum: Hall, Echo, Panorama; Atem's rest gone (${JSON.stringify(w.raum)})`);
+  ok(w.verw.m === 1 && w.verw.f === 1 && w.verw0.m === 0 && w.verw0.f === 0, `F4 → Verwandlung: toward scene B, Filter open (${JSON.stringify(w.verw)})`);
+  ok(w.carry.r === 0.85 && w.carry.h === 0, `a switch carries what is held into the new Spielweise (${JSON.stringify(w.carry)})`);
+  ok(w.chip && w.chipW === 'atem' && /true/.test(w.pressed), `the device card's chips choose it (${w.chipW}, ${w.pressed})`);
+  ok(Object.values(w.gone).every((x) => x === 0) && w.live === false, `unplugged: nothing stays (${JSON.stringify(w.gone)})`);
   ok(/^Expressive E Touché erkannt/.test(r.txt) && /^Expressive E Touché erkannt/.test(r.txt2) && r.kb === '', `recognised by name (${r.txt}; „TOUCHE“ too; a plain keyboard not)`);
   ok(r.note, 'a key held on another keyboard');
   ok(r.weg.h === 1 && r.weg.dy > 0.2, `pushed away: the height goes up (${JSON.stringify(r.weg)})`);
