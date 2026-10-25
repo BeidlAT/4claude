@@ -25,6 +25,7 @@
 .hx-mid { flex: 1 1 auto; min-width: 0; display: flex; }
 .hx-rings { flex: 1 1 auto; min-width: 0; display: flex; gap: 2px; }
 .hx-ring { flex: 0 1 66px; min-width: 38px; }
+.hx-ring.spielt .w { color: #86f0d0; }   /* (25.10.2026: a playing loop lights up – its word too) */
 .hx-ring.g .w { color: #86f0d0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .hx-ring .w, .hx-haupt .w, .hx-pg { font: 500 10px/1.05 var(--font-ui); }
 @media (max-width: 400px) { .hx-ring .w { font-size: 9.5px; letter-spacing: -0.02em; } }
