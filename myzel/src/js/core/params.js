@@ -415,6 +415,7 @@ PD['xhxr.route'].d = 'dir';
 NUM('hx.humus', 'Humus-Länge', 16, 300, 64, 's', { step: 1, rec: 1 });
 SEL('hx.modus', 'Hauptknopf', [['neu', 'Neue Schleife'], ['dieselbe', 'Dieselbe Schleife']], 'neu', { chips: 1, small: 1, rec: 1 });
 SEL('hx.start', 'Aufnahme beginnt', [['takt', 'Am Takt'], ['ton', 'Beim ersten Ton'], ['sofort', 'Sofort']], 'takt', { chips: 1, small: 1, rec: 1 });
+SEL('hx.raster', 'Raster', [['frei', 'Frei'], ['takt', 'Takt'], ['halb', '½ Takt'], ['viertel', '¼']], 'frei', { chips: 1, small: 1, rec: 1 });   // (25.10.2026: where a recording by hand begins and ends – grammar.js HX_RASTER)
 SEL('hx.laenge', 'Länge', [['auto', 'Automatisch'], ['wie1', 'Wie Schleife 1'], ['fest', 'Fest']], 'auto', { chips: 1, small: 1, rec: 1 });
 NUM('hx.festT', 'Feste Länge', 1, 16, 4, '', { step: 1, rec: 1, fmt: (v) => v + (v === 1 ? ' Takt' : ' Takte') });
 NUM('hx.mem', 'Speichergrenze', 100, 4000, MOBILE ? (IOS && !/iPhone|iPod/.test(navigator.userAgent) ? 600 : 300) : 1500, 'MB', { step: 50, rec: 1, fmt: (v) => v + ' MB' });

@@ -93,6 +93,10 @@ Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`)
    `onUp` hält bei `HOLD.on` (außer `force`), `onDown` löst die gehaltenen, wenn nur gehaltene klingen (neuer Anschlag aus
    leerer Hand); Knopf `#btnHold` (Fermate, `ICON.hold`, leuchtet, `.carries` atmet), Eingabetaste, Ziel `hold`. Test
    `midi-tests/t-hold.js` (9, in run-map).
+4i. **Raster (Besitzer, 25.10.2026, veröffentlicht):** `hx.raster` frei/takt/halb/viertel (`HX_RASTER`, `hxUnitOf`,
+   `hxUnit(R)` in `grammar.js`): Beginn (`hx.start` am Takt/sofort/erster Ton) und Schluss auf der Einheit; ohne Takt setzt
+   `hxRecStart` ihn mit `hxTaktSet(seq.bpm)` einen Takt nach dem Druck (`TG.keep`), Phase `wait` = Einzählen. „Frei“ ist
+   wie vorher (Einheit 4 nur mit Takt). Gnade: ⅛ der Einheit, mindestens 0.1 s. Test `t-hx-raster` (8, in run-all).
 5. **Offene Fragen ans Ohr:** Schale spricht wie früher das Harz-Glas manchmal spät an (soll sie immer sofort?);
    Bandträgheit, Gärtner-Bass, Musikalität der Antworten (siehe `dev/IDEEN.md`).
 6. **Danach** die Liste in `dev/IDEEN.md` (Sample-Bibliothek, Stimme als Instrument, neue Klangerzeugung, native App).

@@ -184,6 +184,7 @@ const HX_TIP = {
 const HX_TIP_P = {
   'hx.modus': 'Was der runde Knopf tut: jedes Mal eine neue Schleife aufnehmen oder über die Fokus-Schleife spielen.',
   'hx.start': 'Wann eine Aufnahme beginnt: auf der nächsten Eins, mit deinem ersten Ton oder sofort.',
+  'hx.raster': 'Worauf eine Aufnahme beginnt und endet: Frei – du bestimmst es selbst; Takt, ½ Takt oder ¼ – genau auf diesem Raster, auch die erste Schleife (ohne Takt zählt Myzel einen Takt im Puls-Tempo ein).',
   'hx.ein': 'Ob vor der Aufnahme eingezählt wird – sichtbar, mit Vibration oder hörbar.',
   'hx.klick': 'Ein hörbarer Klick zum Mitspielen: nur beim Einzählen oder durchgehend.',
   'hx.laenge': 'Wie lang neue Schleifen werden: automatisch erkannt, so lang wie Schleife 1 oder fest.',
