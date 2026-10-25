@@ -1,4 +1,15 @@
 /* ---------- insert chain ---------- */
+// the Vokal's formants at rest (Hz: the centre of the vowel space, between a, e, o) and how far its directions move them
+// (cents at ±1: F1 300 … 750 Hz for i/u … a, F2 800 … 2300 Hz for u … i, F3 a little with F2); the wet path's level
+const VOK_F = [470, 1350, 2550], VOK_C = [800, 910, 150], VOK_MAKEUP = 3.2;
+// a Formen source on the Vokal (live: its ConstantSource; a bake: the recorded line): 'vok' opens the mouth (wet up, dry
+// down to 8 %), 'vokO' the jaw (F1), 'vokV' front–back (F2, F3 a little)
+function vokConnect(c, k, src) {
+  if (!c.vokOn) { c.vokOn = true; for (const b of c.vokF) c.flt.connect(b); }
+  if (k === 'vok') { src.connect(c.vokWet.gain); src.connect(G(-0.92)).connect(c.vokDry.gain); }
+  else if (k === 'vokO') src.connect(c.vokF[0].detune);
+  else if (k === 'vokV') { src.connect(c.vokF[1].detune); src.connect(G(VOK_C[2] / VOK_C[1])).connect(c.vokF[2].detune); }
+}
 function makeChain() {
   const ctx = A.ctx, c = { in: G(1) };
   // drive: one shaper whose curve already contains the dry/wet blend
@@ -14,10 +25,17 @@ function makeChain() {
   A.fltLfoG.connect(c.flt.detune);
   c.rngOut.connect(c.flt);
   // phaser: six swept allpass stages summed with the dry signal (no feedback loop: a loop would need a 128-frame delay = static comb)
+  // (25.10.2026, the Touché's Vokal) a mouth after the filter: three formants (F1 opens with the jaw, F2 moves front–back,
+  // F3 the singer's ring) in parallel with the dry path. Until the Vokal is first used its formants are not even fed; at
+  // rest the wet path is ×0 and the dry ×1 – exactly the chain as before; only Formen · Vokal (and its two directions)
+  // open it, glide the formants by detune, and bake into a loop
+  c.vokDry = G(1); c.vokWet = G(0); c.vokOut = G(1);
+  c.vokF = [[VOK_F[0], 9, 1], [VOK_F[1], 13, 0.7], [VOK_F[2], 16, 0.4]].map(([f, q, g]) => { const b = BQ('bandpass', f, q); b.connect(G(g * VOK_MAKEUP)).connect(c.vokWet); return b; });   // (fed only once the Vokal is first used: vokConnect – until then they cost nothing)
+  c.flt.connect(c.vokDry).connect(c.vokOut); c.vokWet.connect(c.vokOut);
   c.phaDry = G(1); c.phaWet = G(0); c.phaOut = G(1);
   c.phaAps = [180, 360, 720, 1440, 2600, 4200].map((f) => BQ('allpass', f, 0.6));
-  c.flt.connect(c.phaDry).connect(c.phaOut);
-  let node = c.flt;
+  c.vokOut.connect(c.phaDry).connect(c.phaOut);
+  let node = c.vokOut;
   for (const ap of c.phaAps) { node.connect(ap); node = ap; A.phaLfoG.connect(ap.detune); }
   node.connect(c.phaWet).connect(c.phaOut);
   // chorus

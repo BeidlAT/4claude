@@ -86,15 +86,19 @@ const MPROF = [
   // Expressive E Touché SE (owner, 25.10.2026): a hand on a wooden skin – four directions, factory standalone CC 17 rear
   // (pushed away), 16 front (pulled toward you), 18 left, 19 right, each resting at 0. What they do depends on the
   // Spielweise (js/midi/touche.js): Finger, Atem, Raum, Verwandlung – the card's chips, F1–F4.
-  { id: 'tch', name: 'Expressive E Touché', re: /Touch[eé](?![a-z])/i, what: 'formt gehaltene Töne – vier Spielweisen (F1–F4)',
-    hint: 'Ab Werk sendet es CC 16–19. Hast du in Lié andere Nummern eingestellt, leg die vier Richtungen unter „Zuweisen“ neu. Der Drehknopf am Gerät stellt nur die Empfindlichkeit ein (drücken friert ein); die Spielweise wählst du hier oder mit F1–F4.',
+  { id: 'tch', name: 'Expressive E Touché', re: /Touch[eé](?![a-z])/i, what: 'formt und spielt Töne – acht Spielweisen (F1–F4, Umschalt+F1–F4)',
+    hint: 'Ab Werk sendet es CC 16–19. Hast du in Lié andere Nummern eingestellt, leg die vier Richtungen unter „Zuweisen“ neu. Der Drehknopf am Gerät stellt nur die Empfindlichkeit ein (drücken friert ein); die Spielweise wählst du hier oder mit F1–F4 und Umschalt+F1–F4.',
     binds: [PB('cc', -1, 17, 'tch.weg', 'abs', { name: 'Weg drücken' }), PB('cc', -1, 16, 'tch.her', 'abs', { name: 'Heran ziehen' }),
       PB('cc', -1, 18, 'tch.li', 'abs', { name: 'Links' }), PB('cc', -1, 19, 'tch.re', 'abs', { name: 'Rechts' })],
     ctrls: [['Finger (F1)', 'weg/heran: Höhe hinauf/hinunter · links/rechts: Tonhöhe des neuesten Tons bis ±1 Halbton – wie Pitchbend'],
       ['Atem (F2)', 'weg: anschwellen und heller · heran: dunkel dämpfen · links/rechts: Vibrato, tiefer je fester (links langsam, rechts schnell)'],
       ['Raum (F3)', 'weg: Hall · heran: Echo · links/rechts: Panorama'],
       ['Verwandlung (F4)', 'weg: zur Mixer-Szene B · heran: zu Szene A · links/rechts: Filter'],
-      ['Immer', 'nur die Hand auf dem Touché formt – in Ruhe klingt alles wie ohne; auf alle gehaltenen Töne (Tasten und Feld); das Preset bleibt'], ['Einmessen', 'Myzel lernt, wie weit du jede Richtung drückst – auch die kurzen Wege links und rechts reichen dann über den ganzen Bereich']] },
+      ['Gleiten (Umschalt+F1)', 'wie Finger, aber links/rechts gleitet der Ton bis eine Quinte – die Hand quer über das Feld'],
+      ['Streichen (Umschalt+F2)', 'ohne Druck still · weg: Bogen- oder Atemdruck (Halm, Harz, Kehlchen, Böe, Glut sprechen an wie gestrichen oder geblasen) · heran: leicht und luftig · links/rechts: Intonation'],
+      ['Platte (Umschalt+F3)', 'die Hand auf dem Band der Fokus-Schleife: weg bremst bis fast zum Stehen · heran schiebt bis doppelt so schnell · links/rechts kleine Schübe · loslassen: sie läuft wieder'],
+      ['Vokal (Umschalt+F4)', 'Druck öffnet einen Mund über dem Klang · weg/heran: a ↔ i/u · links/rechts: u/o ↔ e/i'],
+      ['Immer', 'nur die Hand auf dem Touché formt – in Ruhe klingt alles wie ohne (nur Streichen ist in Ruhe still: dort gibt die Hand den Ton); auf alle gehaltenen Töne (Tasten und Feld); das Preset bleibt'], ['Einmessen', 'Myzel lernt, wie weit du jede Richtung drückst – auch die kurzen Wege links und rechts reichen dann über den ganzen Bereich']] },
   // MPE controllers that do not announce their zone (the RISE gets its MCM from the DAW): with MPE on Auto they play in
   // the usual lower zone (members 2–16, range 48) – an MCM still overrides, and in single-channel mode (all on channel 1,
   // the manager) nothing changes

@@ -382,6 +382,7 @@ function hxwChain(C) {
     else if (k === 'pha') for (const ap of c.phaAps) cs.connect(ap.detune);
     else if (k === 'pan') { if (c.apan.pan) cs.connect(c.apan.pan); }
     else if (k === 'cho') { const w = G(0.7), dr = G(-0.4); cs.connect(w).connect(c.choWet.gain); cs.connect(dr).connect(c.choDry.gain); }
+    else if (k.startsWith('vok')) vokConnect(c, k, cs);   // (the Touché's Vokal, baked as it was heard)
   }
   const ev = C.ev.map((e) => [e[0], () => { C.ids.forEach((id, i) => { P[id] = e[1][i]; }); HXW.t = e[0]; try { all(e[2], e[3]); } finally { HXW.t = null; } }]);
   Q = keepQ; A.lite = keepLite;
@@ -419,6 +420,7 @@ async function hxwBake(d) {
     else if (k === 'pha') for (const ap of c.phaAps) cs.connect(ap.detune);
     else if (k === 'pan') { if (c.apan.pan) cs.connect(c.apan.pan); }
     else if (k === 'cho') { const w = G(0.7), dr = G(-0.4); cs.connect(w).connect(c.choWet.gain); cs.connect(dr).connect(c.choDry.gain); }
+    else if (k.startsWith('vok')) vokConnect(c, k, cs);   // (the Touché's Vokal, baked as it was heard)
   }
   // the recorded changes, each at its moment (its block's suspend; the glides start at the exact time)
   const work = new Map();

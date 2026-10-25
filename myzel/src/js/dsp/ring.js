@@ -674,6 +674,7 @@
         const L = this.lp(d.loop); if (!L || L.dying) return;
         const r0 = L.vg ? this.vsRate(L.vg, x) : L.vs;
         if (d.stop) L.vg = { f0: x, T: Math.max(1, Math.round(d.T)), r0, r1: 0, stop: 1, back: L.vsT || L.vs };
+        else if (d.lin) { const r1 = Math.max(0.03, Math.min(2.4, +d.vs || 1)); L.vsT = r1; L.vg = { f0: x, T: Math.max(1, Math.round(d.T || 1)), r0, r1, stop: 0, lin: 1 }; }   // (25.10.2026, the Touché's Platte: a hand on the tape – a straight glide, no servo overshoot, down to nearly standing)
         else { const r1 = Math.max(0.2, Math.min(4, +d.vs || 1)); L.vsT = r1; L.vg = { f0: x, T: Math.max(1, Math.round(d.T || 1)), r0, r1, stop: 0 }; }
       } else if (e.kind === 'state') {
         const L = this.lp(d.loop); if (!L || L.dying) return;   // (step 1d: a change scheduled before the loop was cleared – a Lichtung's, the Kern's – never brings it back)
@@ -1294,11 +1295,12 @@
     // of the step and settles); a stop runs down exponentially to standstill (e^−5x, to 0 at its end)
     vsPos(G, F) {
       const u = F - G.f0; if (u <= 0) return G.r0 * u;
+      if (G.lin) return u < G.T ? G.r0 * u + ((G.r1 - G.r0) * u * u) / (2 * G.T) : G.r0 * G.T + ((G.r1 - G.r0) * G.T) / 2 + G.r1 * (u - G.T);   // (a hand's straight glide)
       const x = Math.min(1, u / G.T);
       if (G.stop) { const k = 5, ek = Math.exp(-k), c = (G.r0 * G.T) / (1 - ek); return c * ((1 - Math.exp(-k * x)) / k - x * ek); }
       return G.r1 * u + (G.r0 - G.r1) * G.T * (x - 4 * x * x + 6 * x * x * x - 4 * x * x * x * x + x * x * x * x * x);
     }
-    vsRate(G, F) { const x = Math.max(0, Math.min(1, (F - G.f0) / G.T)); if (G.stop) { const ek = Math.exp(-5); return G.r0 * (Math.exp(-5 * x) - ek) / (1 - ek); } const y = 1 - x; return G.r1 + (G.r0 - G.r1) * y * y * y * (1 - 5 * x); }
+    vsRate(G, F) { const x = Math.max(0, Math.min(1, (F - G.f0) / G.T)); if (G.lin) return G.r0 + (G.r1 - G.r0) * x; if (G.stop) { const ek = Math.exp(-5); return G.r0 * (Math.exp(-5 * x) - ek) / (1 - ek); } const y = 1 - x; return G.r1 + (G.r0 - G.r1) * y * y * y * (1 - 5 * x); }
     vsEnd(L) {
       const G = L.vg; L.vg = null;
       if (!G.stop) { L.vs = G.r1; return; }
