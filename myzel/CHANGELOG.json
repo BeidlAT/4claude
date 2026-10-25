@@ -2,6 +2,14 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-25g",
+      "punkte": [
+        "Expressive E Touché SE wird erkannt und formt gehaltene Töne wie ein Finger auf dem Feld.",
+        "Weg drücken hebt die Höhe, heran ziehen senkt sie; links und rechts biegen die Tonhöhe des neuesten Tons bis einen Halbton – sanft hin und her ist Vibrato.",
+        "Das Preset bleibt dabei unverändert; jede Richtung lässt sich unter „Zuweisen“ umlegen."
+      ]
+    },
+    {
       "id": "2026-10-25f",
       "punkte": [
         "Jeder Klick im Looper gibt jetzt Rückmeldung: der Knopf blitzt kurz auf.",
