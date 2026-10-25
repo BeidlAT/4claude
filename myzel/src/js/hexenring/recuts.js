@@ -118,7 +118,7 @@ function hxKorr(L, what) {
   }
   if (!step) return;
   hxHist(Object.assign({ kind: 'recut', label: hxName(L) + ': ' + label }, step));
-  if (HX.chips && HX.chips.key === key) { HX.chips.until = performance.now() + HX_CHIP_S * 1000; HX.chips.kor = hxCorrs(L); }
+  if (HX.chips && HX.chips.key === key) { HX.chips.until = Math.max(HX.chips.until, performance.now() + HX_CHIP_S * 1000); HX.chips.kor = hxCorrs(L); }
   hxSay(hxName(L) + ': ' + label); hxSaveLoop(L); hxRailDirty(); hxCardDirty();
 }
 // a re-cut asked for by a second Korb tap or the card (a new window for a one-Schicht loop)
