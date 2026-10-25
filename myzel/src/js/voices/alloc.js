@@ -19,6 +19,22 @@ function steal(fadingOnly, soft, loopOnly) {
   if (best) { if (soft) vFade(best); else best.kill(); A.voices.delete(best); }
   return !!best;
 }
+// (Leistung, 25.10.2026, owner) after the guard lowered the budget: what is over it fades out (vFade, the voice's own
+// release) – voices already fading first, then the loops' Live voices, then the oldest held ones, the second layer
+// (Ebene 2) before the first. Returns how many
+function vShed() {
+  let n = 0;
+  const eb2 = stripIn('eb2');
+  while (A.voices.size && voiceLoad() > VBUDGET) {
+    if (steal(true, true)) { n++; continue; }
+    const now = A.ctx.currentTime;
+    let best = null, bs = -Infinity;
+    for (const v of A.voices) { const sc = (v.loop ? 2e6 : v.bus === eb2 ? 1e6 : 0) + (now - v.t0); if (sc > bs) { bs = sc; best = v; } }
+    if (!best) break;
+    vFade(best); A.voices.delete(best); n++;
+  }
+  return n;
+}
 function voiceLoad() { let c = (A.gsp && A.gsp.active ? A.gsp.cost : 0) + hxLoad(); for (const v of A.voices) c += v.cost; return c; }   // (Gespinst's web counts while it rings; Hexenring: its processor and Schichten)
 function playNote(eng, t, f, y, vel, o = {}) {
   if (!A.ctx || !ENGINES[eng]) return null;
@@ -26,7 +42,7 @@ function playNote(eng, t, f, y, vel, o = {}) {
   const cost = Q.cost[as] || 1;
   while (A.voices.size && (A.voices.size >= MAXV || voiceLoad() + cost > VBUDGET)) if (!steal(false, false, !!o.loop)) { if (o.loop) return null; break; }   // Hexenring: (step 2a) a loop's note that does not fit is not played
   const v = new Voice(eng);
-  v.cost = cost; v.bend = o.bend || false; v.as = as; if (o.loop) v.loop = true;
+  v.cost = cost; v.bend = o.bend || false; v.as = as; v.bus = o.bus || null; if (o.loop) v.loop = true;
   const pan = v.n(PAN(o.pan || 0));
   v.out.connect(pan); pan.connect(o.bus || stripIn('fin'));
   A.voices.add(v);

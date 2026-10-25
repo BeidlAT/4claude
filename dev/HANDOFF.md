@@ -25,6 +25,16 @@ Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`)
    Workern vorausrechnen (SharedArrayBuffer über einen Service-Worker-Umweg), WebAssembly für weitere teure Kerne.
 4. **Lastwächter:** `baseline.json` neu gemessen (24.10.2026, Referenz = der Stand mit WebAssembly) – die Mehrlast in der
    Android-Nachbildung kam vom Standard „Minimal“ (Entscheidung des Besitzers), nicht von einem Fehler.
+4b. **Überlast am PC (25.10.2026, veröffentlicht):** Bericht des Besitzers: Aussetzer beim Halten mehrerer Tasten mit
+   Stimme + Schale (Ebene 2) und Regen „Membran“ auf Qualität 3 – nicht die Schleifen (alle angehalten). Die Startmessung
+   erlaubte 114 Einheiten, es setzte bei 94 % davon aus; der Wächter griff erst nach 2 s, und gehaltene Töne liefen weiter.
+   Gebaut (Entscheidungen des Besitzers): Am Rechner/iPad ein Schritt sofort, wenn eine Sekunde ≥ 30 ms verlor, höchstens
+   alle 2 s, bis 30 %; was über dem neuen Limit liegt, blendet aus (älteste gehaltene, Ebene 2 zuerst – `vShed`); das Limit
+   pro Gerät und Stufe wird gemerkt (`myzel.guard.v1`, `gdLearned`/`gdlSet`), alle 10 min ohne Aussetzer eine Stufe höher.
+   Harz rechnet in WebAssembly (bitgleich, ≈ 1,4×). **Achtung:** Die „Schale“ des Besitzers ist die native Klangquelle
+   `sch` (Browser-Bausteine), nicht Harz – sie lässt sich nicht in WebAssembly beschleunigen, ohne sie als eigenen
+   DSP-Code neu zu schreiben (dann nicht mehr bitgleich: Entscheidung des Besitzers). Das spricht für die eigene Engine
+   (Mehrkern im Browser oder Standalone, siehe Gespräch 25.10.2026 und `dev/IDEEN.md`).
 5. **Offene Fragen ans Ohr:** Schale spricht wie früher das Harz-Glas manchmal spät an (soll sie immer sofort?);
    Bandträgheit, Gärtner-Bass, Musikalität der Antworten (siehe `dev/IDEEN.md`).
 6. **Danach** die Liste in `dev/IDEEN.md` (Sample-Bibliothek, Stimme als Instrument, neue Klangerzeugung, native App).
@@ -402,7 +412,9 @@ updates (the card then says „Verbesserungen und Korrekturen.“). The version 
 - **Publishing (owner, 25.10.2026):** a finished, tested stage is published by Claude itself – pull request into the default
   branch, merge – without asking; ask first only when the step changes the sound audibly or checks are still open.
 - **Backups (owner, 25.10.2026):** a backup is never updated; each larger development step gets a new private repository
-  (`myzelbackup` = 18.10.2026, before the Hexenring; next `myzelbackup2` …). Claude cannot create repositories (the
+  (`myzelbackup` = 18.10.2026, before the Hexenring; `myzelbackup251026` = 25.10.2026, every branch after PR #13 – the
+  Hexenring complete, the modules, Taumeln in WebAssembly; its default branch shows as `IpadMuzika`, the app's is
+  `ccr-c7c5d0a6-cus3ip`). Claude cannot create repositories (the
   GitHub integration is refused) – the owner creates the empty one, Claude pushes every branch and tag into it.
 - Report to the owner in German, briefly.
 - **Best sound quality first (owner, 17.10.2026, for the whole project):** cost targets in SPEC and in the bench are measured and reported, never a reason to simplify a sound. Build every engine with its full planned sound (and better where possible); enter the measured VCOST honestly. If two goals of the plan conflict, ask the owner before deciding.
@@ -609,4 +621,4 @@ Then use these:
 - The claude.ai artifact is still stage 1 (see above).
 
 ### Other open items
-- Backup: the private repo `BeidlAT/myzelbackup` holds a full copy of every branch (made 18.10.2026); it does not update itself – on „Backup aktualisieren“ push the new state there (add the repo to the session first).
+- Backups: `BeidlAT/myzelbackup` (18.10.2026) and `BeidlAT/myzelbackup251026` (25.10.2026) – full copies of every branch. Never update one; a new step gets a new repository (the owner creates it, add it to the session, push `refs/remotes/origin/*:refs/heads/*`).

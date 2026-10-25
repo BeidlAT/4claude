@@ -47,8 +47,7 @@
   function rsWasmMake() {
     try {
       if (typeof WebAssembly !== 'object' || typeof RS_WASM !== 'string') return false;
-      const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/', s = RS_WASM.replace(/=+$/, ''), b = new Uint8Array(Math.floor(s.length * 3 / 4));
-      for (let i = 0, j = 0, v = 0, q = 0; i < s.length; i++) { v = (v << 6) | A.indexOf(s[i]); q += 6; if (q >= 8) { q -= 8; b[j++] = (v >> q) & 255; } }
+      const b = wasmBytes(RS_WASM);
       if (!WebAssembly.validate(b)) return false;
       const K = [RSK.k0, RSK.k16, RSK.k24], SN = 16384, ON = 2048, PN = 4096;
       let at = 0;

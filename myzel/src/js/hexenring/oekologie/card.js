@@ -122,6 +122,15 @@ function oscWarm() { if (!A.ctx) return; try { for (const t of ['sine', 'sawtoot
 // graph renders them later): a second in which the clock lost 25 ms or more counts. That count serves the loops' steps on
 // a phone only (the Wuchs, Taumeln) – never the live budget or A.lite, which wait for the browser's own figures.
 const GD = { uT: 0, upT: 0, stepT: 0, said: false };
+// (Leistung, 25.10.2026, owner) a computer or an iPad remembers where it came to its limit: the budget's scale per quality
+// level, stored at every step down and raised by one step at most every 10 minutes without underruns – a new start
+// begins there instead of at the start measurement's figure (that one overrated the owner's PC: underruns at 94 % of it)
+const GDL = { k: 'myzel.guard.v1', t: 0 };
+function gdlAll() { try { return JSON.parse(store.get(GDL.k) || '{}') || {}; } catch (e) { return {}; } }
+function gdlGet(q) { if (HX_PHONE) return 1; const v = +gdlAll()[q]; return v > 0 && v < 1 ? Math.max(0.3, v) : 1; }
+function gdlSet(q, v) { if (HX_PHONE) return; const m = gdlAll(); m[q] = Math.round(Math.min(1, v) * 1000) / 1000; store.set(GDL.k, JSON.stringify(m)); GDL.t = performance.now(); }
+// the scale learned for the level now (from the start and after a change of level)
+function gdLearned() { const v = gdlGet(P['dev.q']); if (v < 1) { A.budgetScale = v; budgetApply(); hxGuardLog('gelernt', VBUDGET); } }
 function watchUnderruns() {
   const ps = A.ctx.playbackStats || A.ctx.playoutStats;
   if (!ps && !(MOBILE && !HX_TABLET)) return;
@@ -136,12 +145,14 @@ function watchUnderruns() {
     return ck.n;
   };
   const count = ps ? () => (ps.underrunEvents != null ? ps.underrunEvents : ps.fallbackFramesEvents) || 0 : clock;
-  let last = count();
+  const missT = () => (ps ? +(ps.underrunDuration != null ? ps.underrunDuration : ps.fallbackFramesDuration) || 0 : 0);   // (seconds of audio missing, all told)
+  let last = count(), lastM = missT();
+  gdLearned();
   LAT.t0 = performance.now(); LAT.dur = null;
   const hits = [];   // (the seconds with new underruns, the last ten: a lasting stutter, not one glitch)
   setInterval(() => {
     if (document.visibilityState !== 'visible' || !A.ctx || A.ctx.state !== 'running') { ck.p = 0; return; }   // (a pause stops the clock: counted afresh)
-    const u = count(), now = performance.now();
+    const u = count(), now = performance.now(), mT = missT(), dM = mT - lastM; lastM = mT;
     A.underruns = u;
     latWatch(ps, u, last, now);   // (Android's „Minimal“ by default: lasting underruns step the latency back from the next start)
     if (u > last && now - LAT.t0 < 8000) { last = u; return; }   // (the sound's start – modules, wave tables, the first renders – is no lasting stutter: before, hxWGuard's wLast 0 took these by accident)
@@ -164,10 +175,15 @@ function watchUnderruns() {
       }
       return;
     }
-    // a computer or an iPad: only when it lasts, a step at most every 5 s, never under half the budget – the same sound
-    if (hits.length < 2 || now - GD.stepT < 5000 || (A.budgetScale || 1) <= 0.5) return;
-    A.budgetScale = Math.max(0.5, (A.budgetScale || 1) * 0.8); GD.stepT = now; budgetApply();
-    hxGuardLog('stimmen', VBUDGET); updDevUI();
+    // a computer or an iPad: when it lasts – or at once when a second lost 30 ms or more (the owner's PC: 460 ms in the
+    // first second, the step came 2 s later) –, a step at most every 2 s, never under 30 % of the budget; then what is
+    // over the new budget fades out, the oldest held voices first and the second layer before the first (owner,
+    // 25.10.2026: held notes kept the overload going – a new budget held only new notes back)
+    if ((hits.length < 2 && dM < 0.03) || now - GD.stepT < 2000 || (A.budgetScale || 1) <= 0.3) return;
+    A.budgetScale = Math.max(0.3, (A.budgetScale || 1) * 0.8); GD.stepT = now; budgetApply();
+    const shed = vShed();
+    gdlSet(P['dev.q'], A.budgetScale);
+    hxGuardLog('stimmen', VBUDGET); if (shed) hxGuardLog('aus', shed); updDevUI();
     if (!GD.said) { GD.said = true; toast('Das Gerät kam an seine Grenze – Myzel spielt kurz weniger Stimmen gleichzeitig (der Klang bleibt gleich). Nach einer halben Minute ohne Aussetzer sind wieder alle da.', 8000); }
   }, 1000);
 }
@@ -178,6 +194,11 @@ function gdRecover(now) {
   if (sc < 1 && now - GD.uT >= 30000 && now - Math.max(GD.upT, GD.stepT) >= 30000) {
     A.budgetScale = sc / 0.8 > 0.99 ? 1 : sc / 0.8; GD.upT = now; budgetApply();
     hxGuardLog('mehr', VBUDGET); updDevUI();
+  }
+  // the learned scale: one step up after 10 minutes without underruns (and never above what plays now)
+  if (!HX_PHONE && now - GD.uT >= 600000 && now - GDL.t >= 600000) {
+    const q = P['dev.q'], v = gdlGet(q);
+    if (v < 1) gdlSet(q, Math.min(A.budgetScale || 1, v / 0.8 > 0.99 ? 1 : v / 0.8)); else GDL.t = now;
   }
   hxTauBack(now);
 }
