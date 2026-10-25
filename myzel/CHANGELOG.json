@@ -2,6 +2,14 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-25m",
+      "punkte": [
+        "Looper: neue Einstellung „Raster“ in der Karte – Frei (wie bisher, du bestimmst Anfang und Ende selbst), Takt, ½ Takt oder ¼.",
+        "Mit Raster beginnt und endet jede Aufnahme genau darauf: ein Tippen kurz nach dem Schlag gilt noch für ihn, sonst für den nächsten.",
+        "Gibt es noch keinen Takt, setzt Myzel ihn im Puls-Tempo und zählt einen Takt ein – so sitzt auch die erste Schleife im Raster."
+      ]
+    },
+    {
       "id": "2026-10-25l",
       "punkte": [
         "Neu: Halten – der Knopf mit der Fermate oben neben dem Einfrieren (oder die Eingabetaste).",

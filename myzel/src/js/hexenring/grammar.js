@@ -25,15 +25,29 @@ function hxBase() {
   const L1 = hxLoopsLive().filter((L) => hxTakt(L)).sort((a, b) => a.made - b.made)[0];
   return L1 ? L1.d.beats : 0;
 }
+// (owner, 25.10.2026) the Raster of a recording by hand: Frei – as it always was (on a Takt its bar lines, without one
+// free, the tempo found from the notes); Takt, ½ Takt, ¼ – it begins and ends exactly on that grid, also the first
+// loop: without a Takt yet one is set at the Puls's tempo, one bar counted in (as the Einzählen shows it)
+const HX_RASTER = { takt: 4, halb: 2, viertel: 1 };
+const hxUnit = (R) => (R && R.u) || 4;
+// the grid point a press at T means: the one just passed when it came within ⅛ of the unit (≥ 0.1 s, ≤ grace s), else the next
+function hxUnitOf(T, u, grace) {
+  const b = tgBeat(T), prev = Math.floor(b / u + 1e-9) * u, tp = tgTime(prev);
+  return T - tp <= Math.min(Math.max((u * 60) / tgBpm(hxNowT()) / 8, 0.1), grace) ? { b: prev, t: tp, now: true } : { b: prev + u, t: tgTime(prev + u), now: false };   // (at least 0.1 s: a beat's ⅛ is too short for a hand)
+}
 function hxRecStart(T, slot, e) {
   if (slot == null) slot = hxZiel();
   if (slot < 0) { toast('Alle ' + HX_SLOTS + ' Plätze sind belegt.'); return; }
   if (!hxMemOk(Math.round(8 * SR))) return;
-  const grid = hxGrid(), st = P['hx.start'], R = { slot, phase: 'rec', t0: T, grid, mult: 1, base: grid ? hxBase() : 0, hold: e ? { pid: e.pointerId, T, ptt: true } : null, made: hxNowT() };
-  if (grid) {
+  const ra = HX_RASTER[P['hx.raster']] || 0;
+  let grid = hxGrid(), cin = false;
+  if (ra && !grid) { hxTaktSet(P['seq.bpm'], T + (4 * 60) / P['seq.bpm']); TG.keep = true; grid = true; cin = true; }   // (a Takt from here: bar 1 one bar after the press)
+  const u = ra || 4, st = P['hx.start'], R = { slot, phase: 'rec', t0: T, grid, u, mult: 1, base: grid ? hxBase() : 0, hold: e ? { pid: e.pointerId, T, ptt: true } : null, made: hxNowT() };
+  if (cin) { const b = Math.round(tgBeat(T + (4 * 60) / P['seq.bpm'])); R.b0 = b; R.t0 = tgTime(b); R.phase = 'wait'; R.base = hxBase(); }   // (counted in: it begins on the new bar 1)
+  else if (grid) {
     if (st === 'ton') { R.phase = 'listen'; }
-    else if (st === 'sofort') { const b = Math.floor(tgBeat(T) / 4 + 1e-9) * 4; R.b0 = b; R.t0 = tgTime(b); }
-    else { const B = hxBarOf(T, HX_GRACE); R.b0 = B.b; R.t0 = B.t; if (!B.now) R.phase = 'wait'; }
+    else if (st === 'sofort') { const b = Math.floor(tgBeat(T) / u + 1e-9) * u; R.b0 = b; R.t0 = tgTime(b); }
+    else { const B = hxUnitOf(T, u, HX_GRACE); R.b0 = B.b; R.t0 = B.t; if (!B.now) R.phase = 'wait'; }
   } else if (st === 'ton') R.phase = 'listen';
   HX.rec = R;
   if (R.base && R.phase !== 'listen') hxRecAuto();
@@ -67,7 +81,7 @@ function hxRecCancel(quiet) {
 function hxRecNote(t) {   // „beim ersten Ton“: the first note of a captured source starts it (with a Takt: on its bar line)
   const R = HX.rec;
   if (!R || R.phase !== 'listen') return;
-  if (R.grid) { const b = tgBeat(t), n = Math.round(b / 4) * 4, bb = Math.abs(tgTime(n) - t) <= Math.min(hxBar() / 8, HX_GRACE) ? n : Math.floor(b / 4 + 1e-9) * 4; R.b0 = bb; R.t0 = tgTime(bb); R.phase = tgTime(bb) > hxNowT() ? 'wait' : 'rec'; if (R.base) hxRecAuto(); }
+  if (R.grid) { const u = hxUnit(R), b = tgBeat(t), n = Math.round(b / u) * u, bb = Math.abs(tgTime(n) - t) <= Math.min((u * 60) / tgBpm(hxNowT()) / 8, HX_GRACE) ? n : Math.floor(b / u + 1e-9) * u; R.b0 = bb; R.t0 = tgTime(bb); R.phase = tgTime(bb) > hxNowT() ? 'wait' : 'rec'; if (R.base) hxRecAuto(); }
   else { R.t0 = t - 0.02; R.phase = 'rec'; }
   hxSay('Aufnahme läuft'); hxRailDirty();
 }
@@ -75,15 +89,16 @@ function hxRecClose(T, ptt) {
   const R = HX.rec; if (!R) return;
   if (R.grid) {
     let e;
-    if (ptt) { const b = tgBeat(T), p = Math.floor(b / 4 + 1e-9) * 4; e = b - p < 2 ? p : p + 4; }   // released: the nearest bar line
-    else e = hxBarOf(T, HX_GRACE).b;   // a tap: this bar line (just passed) or the next
-    if (e <= R.b0) e = R.b0 + 4;   // (at least a bar)
+    const u = hxUnit(R);   // (the Raster: a bar, half of one, a beat)
+    if (ptt) { const b = tgBeat(T), p = Math.floor(b / u + 1e-9) * u; e = b - p < u / 2 ? p : p + u; }   // released: the nearest grid point
+    else e = hxUnitOf(T, u, HX_GRACE).b;   // a tap: this grid point (just passed) or the next
+    if (e <= R.b0) e = R.b0 + u;   // (at least one unit)
     if (R.loopKey && R.close == null && Math.abs(e - (R.b0 + R.base * R.mult)) < 1e-6) { HX.rec = null; hxRailDirty(); return; }   // (it closes there anyway)
     R.close = e; hxRecAuto();
     HX.rec = null;
     if (HX.chips && HX.chips.kind === 'mult') HX.chips = null;
     const L = R.loopKey && hxByKey(R.loopKey);
-    if (L) hxSay(hxName(L) + ' schließt mit Takt ' + hxBarNo(e));
+    if (L) hxSay(hxName(L) + ' schließt ' + (e % 4 ? 'auf Schlag ' + (Math.round(e - 4 * Math.floor(e / 4 + 1e-9)) + 1) + ' von Takt ' : 'mit Takt ') + hxBarNo(e));
   } else {
     HX.rec = null;
     // (the window starts with the first note after the press – a player starts a moment after tapping; its attack's
