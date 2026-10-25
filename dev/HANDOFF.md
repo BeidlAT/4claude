@@ -56,6 +56,11 @@ Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`)
    das Neuzeichnen). Was `hxSay` sagt, steht jetzt auch sichtbar über der Leiste (`#hxMsg`, `hxMsgShow`, 2–4,5 s); ein
    Toast im selben Moment gewinnt (`toast.at`, `hxMsgHide`). Ein auf die Eins wartender Stumm/An-Wechsel hat einen
    gestrichelten Ring (lumen: kommt, hypha: verstummt). Test `t-hx-rueck` (7 Zeilen, in run-all).
+4g. **Touché SE (Besitzer, 25.10.2026, veröffentlicht; er hat eins):** Profil `tch` in `js/midi/profiles.js` (Name
+   `/Touch[eé](?![a-z])/i`), „wie ein Finger“: Werks-CCs des Standalone-Modus (Expressive-E-Hilfe) 17 weg → `mod.hoehe` +,
+   16 heran → `mod.hoehe` − (inv), 18/19 → `mod.bend` ∓/± ±1 Halbton (min/max 0.5) – über Formen, also auf alle gehaltenen
+   Töne (Tasten und Feld), Preset unberührt. Test `midi-tests/t-map-touche.js` (9, in run-map; Slot mm). Am echten Gerät
+   noch nicht geprüft: Portname und CC-Nummern; wenn Lié andere CCs eingestellt hat, unter „Zuweisen“ neu legen.
 5. **Offene Fragen ans Ohr:** Schale spricht wie früher das Harz-Glas manchmal spät an (soll sie immer sofort?);
    Bandträgheit, Gärtner-Bass, Musikalität der Antworten (siehe `dev/IDEEN.md`).
 6. **Danach** die Liste in `dev/IDEEN.md` (Sample-Bibliothek, Stimme als Instrument, neue Klangerzeugung, native App).

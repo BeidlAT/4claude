@@ -83,6 +83,16 @@ const MPROF = [
     binds: [...range(12, 19).map((n, i) => PB('cc', 15, n, S8('vol')[i], 'abs', { name: 'Fader ' + (i + 1) })), PB('cc', 15, 20, 'mst.vol', 'abs', { name: 'Master' }),
       ...range(21, 28).map((n, i) => PB('cc', 15, n, 'x' + STRIP8[i] + '.mute', 'toggle', { name: 'Taste ' + (i + 1) })),
       ...range(30, 37).map((n, i) => PB('cc', 15, n, BANK8[i], 'abs', { name: 'Regler ' + (i + 1) }))] },
+  // Expressive E Touché SE (owner, 25.10.2026): a hand on a wooden skin – four directions, factory standalone CC 17 rear
+  // (pushed away), 16 front (pulled toward you), 18 left, 19 right, each resting at 0. It plays like a finger on the
+  // field, on every held note (keys and field): away/toward = the height up/down, left/right = the newest note's pitch
+  // (±1 semitone; „von/bis“ in Zuweisen widens it to ±2). Through Formen, so it never changes the preset.
+  { id: 'tch', name: 'Expressive E Touché', re: /Touch[eé](?![a-z])/i, what: 'formt gehaltene Töne wie ein Finger auf dem Feld',
+    hint: 'Ab Werk sendet es CC 16–19. Hast du in Lié andere Nummern eingestellt, leg die vier Richtungen unter „Zuweisen“ neu.',
+    binds: [PB('cc', -1, 17, 'mod.hoehe', 'abs', { name: 'Weg drücken' }), PB('cc', -1, 16, 'mod.hoehe', 'abs', { name: 'Heran ziehen', inv: true }),
+      PB('cc', -1, 18, 'mod.bend', 'abs', { name: 'Links', inv: true, min: 0.5 }), PB('cc', -1, 19, 'mod.bend', 'abs', { name: 'Rechts', max: 0.5 })],
+    ctrls: [['Weg drücken (CC 17)', 'Höhe hinauf – wie der Finger auf dem Feld nach oben'], ['Heran ziehen (CC 16)', 'Höhe hinunter'],
+      ['Links / rechts (CC 18 / 19)', 'Tonhöhe des neuesten Tons, bis ±1 Halbton – sanft hin und her ist Vibrato'], ['Alle gehaltenen Töne', 'von den Tasten und vom Feld; das Preset bleibt, wie es ist']] },
   // MPE controllers that do not announce their zone (the RISE gets its MCM from the DAW): with MPE on Auto they play in
   // the usual lower zone (members 2–16, range 48) – an MCM still overrides, and in single-channel mode (all on channel 1,
   // the manager) nothing changes
