@@ -4,6 +4,7 @@
 //   1. a computer, no loops: lasting underruns give a voice limit (budget × 0.8, at most every 2 s, never under 30 % –
 //      owner, 25.10.2026), never A.lite; 30 s quiet → the budget a step back up, then the next, to the full budget; said
 //      once; the device remembers the scale it came down to (myzel.guard.v1) and starts there after a reload
+//   6. a computer without the browser's figures (Firefox): the audio clock falling behind steps the voice limit
 //   5. a computer, held notes with a second layer: one second that lost 30 ms steps at once, and what is over the new
 //      budget fades out – the second layer's voices first, the oldest first (owner, 25.10.2026)
 //   2. a computer, loops playing (one Lebendig): Lebendig holds first, Taumeln rests next, never A.lite, the live budget
@@ -17,12 +18,12 @@ const { chromium } = require('/opt/node22/lib/node_modules/playwright');
 const H = require('./hx-h');
 const { ok } = H;
 const URL = process.env.HX_URL || 'http://127.0.0.1:8790/hx-inst/index.html';
-const PARTS = (process.env.PARTS || '1,2,3,4,5').split(',');
+const PARTS = (process.env.PARTS || '1,2,3,4,5,6').split(',');
 const DESK = { viewport: { width: 1280, height: 800 } };
 const IPAD = { viewport: { width: 820, height: 1180 }, screen: { width: 820, height: 1180 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2, userAgent: 'Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1' };
 const PHONE = { viewport: { width: 412, height: 915 }, screen: { width: 412, height: 915 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2.625, userAgent: 'Mozilla/5.0 (Linux; Android 14; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36' };
 let browser = null;
-async function open(dev) {
+async function open(dev, noPS) {
   if (!browser) browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
   const ctx = await browser.newContext(dev);
   await ctx.addInitScript(() => {
@@ -30,6 +31,12 @@ async function open(dev) {
     window.__fu = { underrunEvents: 0, underrunDuration: 0 };
     for (const C of [BaseAudioContext, AudioContext]) Object.defineProperty(C.prototype, 'playbackStats', { configurable: true, get() { return window.__fu; } });   // (newer Chromium has its own on AudioContext)
     const si = window.setInterval; window.setInterval = function (f, ms, ...a) { if (typeof f === 'function' && /hxWGuard/.test(String(f)) && !window.__guardOk) return 0; return si.call(this, f, ms, ...a); };
+  });
+  if (noPS) await ctx.addInitScript(() => {
+    // (Firefox: no playbackStats – the guard reads the audio clock; the test makes the clock fall behind by window.__lag)
+    for (const C of [BaseAudioContext, AudioContext]) Object.defineProperty(C.prototype, 'playbackStats', { configurable: true, get() { return undefined; } });
+    window.__lag = 0;
+    AudioContext.prototype.getOutputTimestamp = function () { return { contextTime: this.currentTime - window.__lag, performanceTime: performance.now() }; };
   });
   const page = await ctx.newPage(), errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -115,6 +122,17 @@ async function mkLoops(P, n, nl) {
     const o = await P.page.evaluate(() => { const M = window.__M, eb2 = M.stripIn('eb2'); let e = 0, f = 0; for (const v of M.A.voices) { if (v.bus === eb2) e++; else f++; } return { e, f, load: M.voiceLoad(), vb: M.vbudget(), log: (M.HX.gLog || []).filter((x) => x.t >= window.__gT).map((x) => x.step + ':' + x.v) }; });
     ok(r.n === 16 && o.log.some((x) => /^stimmen/.test(x)) && o.log.some((x) => /^aus:\d/.test(x)) && o.load <= o.vb && o.f === 8 && o.e < 8, `5. 16 held voices (8 + 8 on Ebene 2), one second with 200 ms missing: a step at once and the excess fades, Ebene 2 first (${o.log.join(' → ')}; left ${o.f} + ${o.e}, load ${o.load.toFixed(1)} of ${o.vb})`);
     ok(!P.errors.length, `5. no error (${P.errors.slice(0, 2).join(' | ')})`);
+    await P.ctx.close();
+  }
+  if (PARTS.includes('6')) {
+    // ---- 6. no playbackStats (Firefox): the clock falls 50 ms behind each second ----
+    const P = await open(DESK, true);
+    const s0 = await st(P);
+    await guardOn(P);
+    for (let i = 0; i < 7; i++) { await P.page.evaluate(() => { window.__lag += 0.05; }); await P.page.waitForTimeout(1000); }
+    const s1 = await st(P);
+    ok(!s1.lite && s1.sc < 1 && s1.log.filter((x) => /^stimmen/.test(x)).length >= 2 && s1.log.every((x) => /^stimmen|^aus/.test(x)), `6. a computer without the browser's figures (Firefox): the audio clock 50 ms behind each second steps the voice limit (${s1.log.join(' → ')}; budget ${s0.vb} → ${s1.vb}), A.lite ${s1.lite}`);
+    ok(!P.errors.length, `6. no error (${P.errors.slice(0, 2).join(' | ')})`);
     await P.ctx.close();
   }
   if (PARTS.includes('2')) {

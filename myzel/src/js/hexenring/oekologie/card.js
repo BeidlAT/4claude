@@ -133,7 +133,8 @@ function gdlSet(q, v) { if (HX_PHONE) return; const m = gdlAll(); m[q] = Math.ro
 function gdLearned() { const v = gdlGet(P['dev.q']); if (v < 1) { A.budgetScale = v; budgetApply(); hxGuardLog('gelernt', VBUDGET); } }
 function watchUnderruns() {
   const ps = A.ctx.playbackStats || A.ctx.playoutStats;
-  if (!ps && !(MOBILE && !HX_TABLET)) return;
+  // (Firefox, 25.10.2026: the owner's main browser now – it reports no underruns; there the audio clock tells, on every
+  // device: a computer's live budget steps on it as on Chrome's figures)
   const ck = { p: 0, c: 0, lag: 0, n: 0 };
   const clock = () => {
     const ctx = A.ctx, ts = ctx.getOutputTimestamp ? ctx.getOutputTimestamp() : null;
@@ -145,7 +146,7 @@ function watchUnderruns() {
     return ck.n;
   };
   const count = ps ? () => (ps.underrunEvents != null ? ps.underrunEvents : ps.fallbackFramesEvents) || 0 : clock;
-  const missT = () => (ps ? +(ps.underrunDuration != null ? ps.underrunDuration : ps.fallbackFramesDuration) || 0 : 0);   // (seconds of audio missing, all told)
+  const missT = () => (ps ? +(ps.underrunDuration != null ? ps.underrunDuration : ps.fallbackFramesDuration) || 0 : ck.lag);   // (seconds of audio missing, all told – by the clock: how far it fell behind)   // (seconds of audio missing, all told)
   let last = count(), lastM = missT();
   gdLearned();
   LAT.t0 = performance.now(); LAT.dur = null;
@@ -164,7 +165,7 @@ function watchUnderruns() {
     if (hxWGuard()) return;   // Hexenring: (step 2a) the Wuchs gives way first – never the live budget, never A.lite for it
     if (hits.length >= 2 && hxTauGuard()) return;   // Hexenring: (phone report) then, when it lasts, the loops' Taumeln
     if (hxGuardGrenze()) return;   // Hexenring: (Leistung, report A) a phone with loops sounding: the live budget stays
-    if (!ps || VBUDGET <= 6) return;
+    if ((!ps && HX_PHONE) || VBUDGET <= 6) return;   // (a phone without figures: the loops' steps only, as before)
     if (HX_PHONE) {
       hxGuardLog('lite', Math.round(VBUDGET * 0.8));
       A.budgetScale = (A.budgetScale || 1) * 0.8; GD.stepT = now;

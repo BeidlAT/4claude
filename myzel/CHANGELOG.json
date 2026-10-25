@@ -2,6 +2,13 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-25c",
+      "punkte": [
+        "In Firefox merkt Myzel jetzt, wenn der Klang aussetzt, und spielt dann kurz weniger Stimmen gleichzeitig – vorher griff dort kein Schutz.",
+        "„Leistung messen“ zählt auch in Firefox die Aussetzer."
+      ]
+    },
+    {
       "id": "2026-10-25b",
       "punkte": [
         "Am Rechner reagiert Myzel schneller, wenn der Klang aussetzt: schon in der ersten Sekunde spielen weniger Stimmen gleichzeitig, statt mehrere Sekunden zu knacken.",
