@@ -49,6 +49,12 @@
 .hx-eng { min-height: 36px; max-width: 9.5em; padding: 2px 6px; border-radius: 999px; border: 1px solid var(--line); background: var(--bark-2); color: var(--hypha); font: 600 12px/1 var(--font-ui); }
 .hxr[data-fold="1"] .w, .hxr[data-fold="1"] .hx-chips { display: none; }
 .hxr[data-fold="1"] .hxb { padding: 0; }
+/* (25.10.2026, owner: a press often seemed to do nothing) what happened, shown over the rail; every press flashes */
+.hx-msg { position: absolute; left: 50%; bottom: calc(100% + 6px); max-width: min(440px, calc(100% - 16px)); padding: 6px 12px; border-radius: 10px; background: rgba(17, 13, 11, .94); border: 1px solid var(--lumen); color: var(--hypha); font: 500 13px/1.3 var(--font-ui); text-align: center; pointer-events: none; opacity: 0; transform: translate(-50%, 4px); transition: opacity .18s, transform .18s; z-index: 3; box-shadow: 0 4px 18px rgba(0, 0, 0, .45); }
+.hx-msg.an { opacity: 1; transform: translate(-50%, 0); }
+.hx-blitz { position: fixed; z-index: 60; pointer-events: none; background: rgba(134, 240, 208, .26); box-shadow: 0 0 0 2px rgba(134, 240, 208, .8), 0 0 16px rgba(134, 240, 208, .55); animation: hxBlitz .45s ease-out forwards; }
+@keyframes hxBlitz { from { opacity: 1; } to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .hx-msg { transition: none; transform: translate(-50%, 0); } }
 .hx-vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .hx-coach {
   position: absolute; left: 10px; bottom: 30px; max-width: 250px; padding: 9px 12px; border-radius: 12px; background: var(--hypha); color: var(--ink);

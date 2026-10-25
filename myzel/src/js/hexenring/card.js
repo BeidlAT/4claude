@@ -27,6 +27,7 @@ function hxCardSec() {
   HXK.sec = h('div', { class: 'sec hx-sec', id: 'hxSec' }, h('div', { class: 'sec-h' }, h('h3', null, 'Hexenring'), HXK.sub), HXK.acts, HXK.cost, HXK.list, HXK.gd, HXK.form, HXK.grave, set);
   HXK.dirty = true; hxCardRender();
   hxTipsWatch(HXK.sec);   // (25.10.2026: every control explains itself on hover)
+  hxBlitzOn(HXK.sec);   // (25.10.2026: every press flashes)
   return HXK.sec;
 }
 // Spielverzögerung in the card: „Klopf mit“ – while it runs, a big pad to tap (press-acting) with the taps counted

@@ -51,6 +51,11 @@ Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`)
    Knöpfe brauchen einen Eintrag – `t-hx-tips` prüft, dass jedes sichtbare Element einen hat. Danach (Besitzer): kein Wort mehr unter
    einem Schleifen-Ring (nur „abbrechen“, wenn etwas wartet), und die Zeile nach einer Ernte bleibt, bis man sie mit ✕
    schließt (`until: Infinity`).
+4f. **Rückmeldung bei jedem Klick (Besitzer, 25.10.2026, veröffentlicht):** „man hat oft das Gefühl, es war ohne Wirkung“.
+   Jeder Druck in Ringleiste und Karte blitzt (`hxBlitz`/`hxBlitzOn`, ein fixiertes `.hx-blitz` über dem Knopf – überlebt
+   das Neuzeichnen). Was `hxSay` sagt, steht jetzt auch sichtbar über der Leiste (`#hxMsg`, `hxMsgShow`, 2–4,5 s); ein
+   Toast im selben Moment gewinnt (`toast.at`, `hxMsgHide`). Ein auf die Eins wartender Stumm/An-Wechsel hat einen
+   gestrichelten Ring (lumen: kommt, hypha: verstummt). Test `t-hx-rueck` (7 Zeilen, in run-all).
 5. **Offene Fragen ans Ohr:** Schale spricht wie früher das Harz-Glas manchmal spät an (soll sie immer sofort?);
    Bandträgheit, Gärtner-Bass, Musikalität der Antworten (siehe `dev/IDEEN.md`).
 6. **Danach** die Liste in `dev/IDEEN.md` (Sample-Bibliothek, Stimme als Instrument, neue Klangerzeugung, native App).

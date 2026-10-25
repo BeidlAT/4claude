@@ -75,6 +75,7 @@ function toast(msg, ms = 3200, action) {
   if (UPD.mode) { UPD.q.push([msg, ms, action]); if (UPD.q.length > 4) UPD.q.shift(); return; }   // the update card is answered first (updClose shows them)
   const t = $('#toast'), b = $('#toastAct'), b2 = $('#toastAct2'), acts = Array.isArray(action) ? action : action ? [action] : [];   // (Hexenring: „Weiter · Leeren“ – two)
   if (P['hx.buehne'] && !acts.length && ms < 5000) { if (typeof hxSay === 'function') hxSay(msg); return; }   // Hexenring (step 2b): the Bühnenansicht shows few toasts – the rest is said
+  toast.at = performance.now(); if (typeof hxMsgHide === 'function') hxMsgHide();   // (Hexenring, 25.10.2026: the rail's line for the same moment gives way)
   $('#toastMsg').textContent = msg;
   b.hidden = !acts[0]; b2.hidden = !acts[1];
   b.onclick = b2.onclick = null;
