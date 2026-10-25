@@ -149,6 +149,7 @@ midiTarget('macro.b', 'Klang-Makro B', null, { group: 'Klang', cont: true, pidf:
 // but from any control and channel)
 midiTarget('up', 'Klangfarbe heller (Höhe auf der Spielfläche)', null, { group: 'Spielweise', cont: true, noTake: true, get: (cx) => cx.src.up || 0, set: (n, cx) => { if (cx.src.up !== n) { cx.src.up = n; midiRecolor(); } } });
 midiTarget('dark', 'Klangfarbe dunkler', null, { group: 'Spielweise', cont: true, noTake: true, get: (cx) => cx.src.dark || 0, set: (n, cx) => { if (cx.src.dark !== n) { cx.src.dark = n; midiRecolor(); } } });
+midiTarget('hold', 'Halten (losgelassene Töne klingen weiter)', null, { group: 'Spielweise', bool: true, get: () => (HOLD.on ? 1 : 0), set: (n) => holdSet(n >= 0.5) });   // (25.10.2026)
 // pedals from any control: they hold the notes of the whole device
 for (const [key, cc, label] of [['sus', 64, 'Haltepedal'], ['sost', 66, 'Sostenuto-Pedal'], ['soft', 67, 'Leisepedal (leiser und dunkler)']]) {
   midiTarget(key, label, null, { group: 'Spielweise', bool: true, get: (cx) => { const cs = chState(cx.src, Math.max(0, cx.ev.ch)); return (cc === 64 ? cs.sus : cc === 66 ? cs.sost : cs.soft) ? 1 : 0; }, set: (n, cx) => srcPedal(cx.src, cc, n >= 0.5, cx.ev.ch) });

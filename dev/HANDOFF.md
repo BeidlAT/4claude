@@ -81,6 +81,18 @@ Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`)
      Filter drei Bandpässe (`VOK_F`, `VOK_C`, `VOK_MAKEUP`, `vokConnect`), erst beim ersten Gebrauch gespeist – vorher
      kosten sie nichts, in Ruhe ist die Kette exakt wie vorher. t-map-touche misst a/i/u an weißem Rauschen.
    Klang nur in Chromium geprüft; Stärken (Formant-Q, Makeup, Platte-Bremse) nach dem Ohr des Besitzers nachstellen.
+   **Offene Testfehler (25.10.2026, Besitzer: „notier dir den Fehler“):** im Regressionslauf nach #24 rot – `v2/func`
+   (Last-Zeilen: q2 kor/glo/sai, q3 neb/hau/mem/sch – „load 39.98/32 …“, das Stimmenbudget) und `motion-tests` (Gestik-
+   Erlaubnis/requestPermission, Ansicht gedreht, Pad „Gestik an/aus“, „nothing saved … myzel.guard.v1“, Dorisch-Nachbarstufe,
+   „the patch is never written“, Sporenregen fällt links, scharfe Aufnahme startet mit dem Regen, Aufnahme in Takten). Ob
+   sie schon vor #24 rot waren, ist nicht geprüft (der Vergleich auf `origin` vor #24 wurde angehalten); mindestens
+   „myzel.guard.v1“ kommt von der gelernten Grenze (Etappe 4c), die Lastzeilen vermutlich vom Wächter/Budget. Nächster
+   Schritt: `v2/func.js` und `motion-tests/run-all.sh` auf dem Stand vor #24 laufen lassen und vergleichen; den Testserver
+   losgelöst starten (`setsid nohup python3 -m http.server 8790`) – als Hintergrundaufgabe stirbt er nach 2 h.
+4h. **Halten (Besitzer, 25.10.2026, veröffentlicht):** ein Latch – `HOLD`, `holdSet/holdRelease/holdUI` in `play/touch.js`:
+   `onUp` hält bei `HOLD.on` (außer `force`), `onDown` löst die gehaltenen, wenn nur gehaltene klingen (neuer Anschlag aus
+   leerer Hand); Knopf `#btnHold` (Fermate, `ICON.hold`, leuchtet, `.carries` atmet), Eingabetaste, Ziel `hold`. Test
+   `midi-tests/t-hold.js` (9, in run-map).
 5. **Offene Fragen ans Ohr:** Schale spricht wie früher das Harz-Glas manchmal spät an (soll sie immer sofort?);
    Bandträgheit, Gärtner-Bass, Musikalität der Antworten (siehe `dev/IDEEN.md`).
 6. **Danach** die Liste in `dev/IDEEN.md` (Sample-Bibliothek, Stimme als Instrument, neue Klangerzeugung, native App).
