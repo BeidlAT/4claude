@@ -27,8 +27,8 @@ const { open, ok, close } = require('./hm');
   await page.evaluate(async () => { window.__send([0xb0, 17, 0], 'k1'); window.__send([0xb0, 19, 0], 'k1'); window.__send([0x80, 60, 0], 'k2'); await window.__sleep(100); });
   // the Spielweisen (the knob on the device sends nothing): Atem, Raum, Verwandlung – F1–F4, the card's chips
   const w = await page.evaluate(async () => {
-    const M = window.__M, T = (b) => window.__send(b, 'k1'), sl = window.__sleep, mv = () => ({ h: +M.modVal('hoehe').toFixed(3), b: +M.modVal('bend').toFixed(3), e: +M.modVal('expr').toFixed(3), f: +M.modVal('flt').toFixed(3), r: +M.modVal('rev').toFixed(3), d: +M.modVal('dly').toFixed(3), p: +M.modVal('pan').toFixed(3), m: +M.modVal('morph').toFixed(3) });
-    const key = (k) => { document.body.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true })); };
+    const M = window.__M, T = (b) => window.__send(b, 'k1'), sl = window.__sleep, mv = () => ({ h: +M.modVal('hoehe').toFixed(3), b: +M.modVal('bend').toFixed(3), e: +M.modVal('expr').toFixed(3), f: +M.modVal('flt').toFixed(3), r: +M.modVal('rev').toFixed(3), d: +M.modVal('dly').toFixed(3), p: +M.modVal('pan').toFixed(3), m: +M.modVal('morph').toFixed(3), w: +M.modVal('vok').toFixed(3), o: +M.modVal('vokO').toFixed(3), u: +M.modVal('vokV').toFixed(3) });
+    const key = (k, sh) => { document.body.dispatchEvent(new KeyboardEvent('keydown', { key: k, shiftKey: !!sh, bubbles: true, cancelable: true })); };
     const o = {};
     window.__send([0x90, 60, 100], 'k2'); await sl(60);
     key('F2'); await sl(60); o.atemW = M.P['midi.tch']; o.atem0 = mv();
@@ -45,6 +45,15 @@ const { open, ok, close } = require('./hm');
     T([0xb0, 17, 127]); M.mapFlush(); await sl(30); T([0xb0, 17, 0]); M.mapFlush();
     // a switch carries what the hand holds over
     key('F1'); T([0xb0, 17, 127]); M.mapFlush(); await sl(40); key('F3'); await sl(60); o.carry = mv(); T([0xb0, 17, 0]); M.mapFlush();
+    // Gleiten (⇧F1): the newest note a fifth; Streichen (⇧F2): silent at rest, the hand's pressure sets the height; Vokal (⇧F4)
+    const tt = M.touches.get('midi-k2-0-60'), cents = () => Math.round(M.modCents(tt, M.modNewest(), M.A.ctx.currentTime)), yy = () => +M.modY(tt, M.modNewest()).toFixed(2);
+    key('F1', 1); await sl(40); o.glW = M.P['midi.tch']; T([0xb0, 19, 127]); M.mapFlush(); await sl(60); o.gl = cents(); T([0xb0, 19, 0]); M.mapFlush(); await sl(40); o.gl0 = cents();
+    key('F2', 1); await sl(60); o.stW = M.P['midi.tch']; o.st0 = mv();
+    T([0xb0, 17, 127]); M.mapFlush(); await sl(60); o.stWeg = mv(); o.stY = yy(); T([0xb0, 17, 0]);
+    T([0xb0, 16, 127]); M.mapFlush(); await sl(60); o.stHer = mv(); o.stY2 = yy(); T([0xb0, 16, 0]); M.mapFlush(); await sl(40);
+    key('F4', 1); await sl(60); o.voW = M.P['midi.tch']; o.vo0 = mv();
+    T([0xb0, 17, 127]); T([0xb0, 18, 127]); M.mapFlush(); await sl(60); o.vo = mv(); T([0xb0, 17, 0]); T([0xb0, 18, 0]); M.mapFlush(); await sl(60); o.vo1 = mv();
+    key('F1'); await sl(40);
     // the card: a chip per Spielweise
     M.openPanel('dev'); await sl(500);
     const ch = [...document.querySelectorAll('[data-kc$=":tchatem"]')][0]; o.chip = !!ch; if (ch) ch.click(); await sl(300);
@@ -64,7 +73,34 @@ const { open, ok, close } = require('./hm');
   ok(w.cal.b === -0.5 && Math.abs(w.cal2.b + 0.25) < 0.01, `einmessen: a side pressed only a quarter of the way bends the whole semitone (${w.cal.b}, half of it ${w.cal2.b})`);
   ok(w.carry.r === 0.85 && w.carry.h === 0, `a switch carries what is held into the new Spielweise (${JSON.stringify(w.carry)})`);
   ok(w.chip && w.chipW === 'atem' && /true/.test(w.pressed), `the device card's chips choose it (${w.chipW}, ${w.pressed})`);
+  ok(w.glW === 'gleiten' && w.gl === 700 && w.gl0 === 0, `⇧F1 → Gleiten: right glides the newest note a fifth (${w.gl} cents)`);
+  ok(w.stW === 'streichen' && w.st0.e === -1, `⇧F2 → Streichen: without pressure silent (Ausdruck ${w.st0.e})`);
+  ok(w.stWeg.e === 0 && w.stY === 1, `Streichen, away: full sound, the height the bow's pressure (${w.stWeg.e}, height ${w.stY})`);
+  ok(w.stHer.e === 0 && w.stY2 < 0.15, `Streichen, toward you: sounding, light and airy (height ${w.stY2})`);
+  ok(w.voW === 'vokal' && w.vo0.w === 0 && w.vo.w === 1 && w.vo.o === 1 && w.vo.u === -1 && w.vo1.w === 0 && w.vo1.e === 0, `⇧F4 → Vokal: pressure opens the mouth, away the jaw (a), left the tongue back; at rest closed and Streichen's silence gone (${JSON.stringify(w.vo)})`);
   ok(Object.values(w.gone).every((x) => x === 0) && w.live === false, `unplugged: nothing stays (${JSON.stringify(w.gone)})`);
+  // Vokal in the insert chain: white noise through a chain – a, i, u put their formants where they belong; at rest flat
+  const v = await page.evaluate(async () => {
+    const M = window.__M, A = M.A, ctx = A.ctx, sl = window.__sleep;
+    const c = M.makeChain(), n = ctx.sampleRate * 2, buf = ctx.createBuffer(1, n, ctx.sampleRate), d = buf.getChannelData(0); for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true; src.connect(c.in); src.start();
+    const an = ctx.createAnalyser(); an.fftSize = 4096; an.smoothingTimeConstant = 0; c.out.connect(an);
+    const hz = ctx.sampleRate / an.fftSize;
+    const db = async () => { await sl(300); const a = new Float32Array(an.frequencyBinCount), t = new Float32Array(an.frequencyBinCount);
+      for (let k = 0; k < 20; k++) { an.getFloatFrequencyData(t); for (let i = 0; i < a.length; i++) a[i] += Math.pow(10, t[i] / 10) / 20; await sl(30); }
+      const band = (f) => { let s = 0, k = 0; for (let i = Math.round(f * 0.93 / hz); i < f * 1.07 / hz; i++) { s += a[i]; k++; } return 10 * Math.log10(s / k); };
+      return { f300: band(300), f750: band(750), f800: band(800), f1350: band(1350), f2300: band(2300) }; };
+    const set = (w, o, u) => { M.modSet('t:w', 'vok', w); M.modSet('t:o', 'vokO', o); M.modSet('t:u', 'vokV', u); };
+    const o = { rest: await db() };
+    set(1, 1, 0); o.a = await db(); set(1, -1, 1); o.i = await db(); set(1, -1, -1); o.u = await db(); set(0, 0, 0); o.back = await db();
+    src.stop(); return o;
+  });
+  const rd = (x) => Object.values(x).map((y) => y.toFixed(0)).join(' ');
+  ok(v.a.f750 - v.a.f300 > 8 && v.a.f1350 - v.a.f2300 > 8, `Vokal a: the energy at 750–1350 Hz (${rd(v.a)} dB at 300/750/800/1350/2300)`);
+  ok(v.i.f300 - v.i.f750 > 12 && v.i.f2300 - v.i.f1350 > 12, `Vokal i: 300 and 2300 Hz (${rd(v.i)})`);
+  ok(v.u.f300 - v.u.f1350 > 12 && v.u.f800 - v.u.f1350 > 12, `Vokal u: 300 and 800 Hz (${rd(v.u)})`);
+  const flat = (x) => Math.max(...Object.values(x)) - Math.min(...Object.values(x));
+  ok(flat(v.rest) < 3 && flat(v.back) < 3 && Math.abs(v.back.f800 - v.rest.f800) < 2, `at rest the chain is flat as before, and again after (${rd(v.rest)} → ${rd(v.back)})`);
   ok(/^Expressive E Touché erkannt/.test(r.txt) && /^Expressive E Touché erkannt/.test(r.txt2) && r.kb === '', `recognised by name (${r.txt}; „TOUCHE“ too; a plain keyboard not)`);
   ok(r.note, 'a key held on another keyboard');
   ok(r.weg.h === 1 && r.weg.dy > 0.2, `pushed away: the height goes up (${JSON.stringify(r.weg)})`);

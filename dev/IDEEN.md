@@ -35,6 +35,49 @@ optimiert. Das iPad läuft über die Web-App mit. Das Handy wird nicht weiter ve
    - *Kompost-Synthese:* ein Klang zerfällt in Teiltöne, aus den Resten wächst Neues.
    Die ersten beiden gelten als die aussichtsreichsten.
 
+## Looper – für später (Besitzer, 25.10.2026)
+
+- **Schleifen im Mixer:** jede Schleife gezielt steuern, mindestens ihre Lautstärke (heute: ein Streifen „Hexenring“
+  für alle; Pegel je Schleife nur über Ziehen am Ring oder die Karte).
+- **Rechtsklick auf eine Schleife:** ein Menü, um sie näher zu betrachten – und, soweit die Engine es hergibt, zu
+  bearbeiten (Wellenform/Noten, Schichten, Schnitt, Band-Werkzeuge; heute öffnet Halten die Karte, Rechtsklick ist
+  gesperrt).
+
+## Touché SE – neues Terrain (Brainstorming 25.10.2026, Besitzer: „merk dir alle“)
+
+Das Touché liefert vier Richtungen (weg, heran, links, rechts; die Seiten des SE haben viel kürzeren Weg – eingemessen
+wird je Richtung, die rohe, feine Seite bleibt als eigener Modus). Daraus drei Achsen: links↔rechts, weg↔heran, Druck.
+Gebaut (25.10.2026): Finger, Atem, Raum, Verwandlung, dazu 1, 5, 10 (siehe `dev/HANDOFF.md`). Offen sind die übrigen.
+
+*A. Das Touché gibt den Klang, statt ihn nur zu formen*
+1. **Streichen und Anblasen** – die Tasten wählen den Ton, erst die Hand bringt ihn zum Klingen (Bogen: Druck, Tempo,
+   Kontaktstelle; Atem: Luftdruck, Lippenspannung); ohne Druck still. *(gebaut)*
+2. **Trommelfell** – kurz antippen ist ein Schlag, die Stärke aus der Geschwindigkeit des Drucks; vier Richtungen vier
+   Klänge oder Mitte/Rand des Fells; liegen bleiben dämpft.
+3. **Bebung aus der Hand** – zitternder Druck wird zum Beben von Lautstärke und Tonhöhe, wie am Clavichord, ohne LFO.
+
+*B. Mit der Zeit spielen*
+4. **Durch den Humus fahren** – die Hand fährt wie ein Tonkopf durch das eben Gespielte (seitlich Stelle und Richtung,
+   Druck Lautstärke), auch als Körnerwolke an der Stelle.
+5. **Schleife wie eine Platte** – weg bremst bis zum Bandstopp, heran beschleunigt, seitlich vor und zurück schieben
+   wie Scratchen. *(gebaut)*
+6. **Einfrieren und Malen** – Druck friert den Klang ein und verschmiert ihn; seitlich zieht man ihn in der Tonhöhe.
+
+*C. Räume und Netze*
+7. **Echter Ort im Raum** – weg = fern und verhallt (gedämpft), heran = nah und trocken, seitlich wandert er; eine
+   Bewegung im Raum statt zwei Regler.
+8. **Gespinst und Rhizom reizen** – Druck regt das Klangnetz an, seitlich die Kopplung.
+9. **Sporenregen neigen** – das Touché als Wasserwaage für den Regen, Druck = Dichte.
+
+*D. Neue Klangfarben*
+10. **Vokalraum** – die Handposition wählt den Vokal (a–e–i–o–u), Druck öffnet den Mund. *(gebaut)*
+11. **Zwischen zwei Klangquellen** – Druck blendet Ebene 2 ein, seitlich wird gemischt.
+12. **Obertöne kneten** – seitlich gerade/ungerade Obertöne betonen, weg macht den Klang rauer.
+
+*E. Aus einem Ton wird mehr*
+13. **Auffächern** – Druck fächert einen Ton in verstimmte Stimmen oder Oktaven auf.
+14. **Arpeggio aus der Hand** – die Handposition bestimmt Tempo und Richtung eines Arpeggios über den gehaltenen Akkord.
+
 ## Längerfristig
 
 - **Eigenständige App mit nativer Klang-Engine.** Mischform: Oberfläche bleibt Web, die Klang-Engine wird nativ (C++,

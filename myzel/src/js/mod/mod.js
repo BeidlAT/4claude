@@ -35,6 +35,9 @@ const MODT = {
   rgx: { label: 'Sporenregen: Neigung ↔', js: 1 },
   rgy: { label: 'Sporenregen: Neigung ↕', js: 1 },
   gspK: { label: 'Gespinst-Kopplung', js: 1 },
+  vok: { label: 'Vokal: Mund öffnen (Formanten)', lo: 0, u: (v) => v },   // (25.10.2026, the Touché's Vokal – js/core/chain.js)
+  vokO: { label: 'Vokal: Kiefer (i/u ↔ a)', u: (v) => v * VOK_C[0] },
+  vokV: { label: 'Vokal: Zunge (u/o ↔ e/i)', u: (v) => v * VOK_C[1] },
   rhzR: { label: 'Rhizom-Reiz', js: 1 },
 };
 // t: per target { s: Map(source → { v (live) | p: [[audio time, v] …] (set ahead), o: opts }), cs (its ConstantSource,
@@ -42,7 +45,7 @@ const MODT = {
 // A/B-Morph's deflection applied to the mixer's sound; fbs: the finger buses (Tonhöhe pro Finger); seq: notes counted, so
 // the newest is known; bs/bn: the bindings that feed the layer (to forget them when they go) and their last value
 const MOD = { t: {}, n: 0, due: 0, ctx: null, eg: 1, mx: 0, mxT: 0, mxIds: null, fbs: new Set(), seq: 0, stkN: 0, stkT: -1e9, fr: 0, bs: new Map(), bn: new Map(), mapV: 0, sweep: 0, tm: 0 };
-for (const k in MODT) MOD.t[k] = { k, d: MODT[k], s: new Map(), cs: null, x: null, last: 0, was: false, pv: 0, sch: null, hx: ['flt', 'pha', 'rng', 'pan', 'cho'].includes(k) };   // (hx: a deflection of the insert chain – Hexenring bakes it)
+for (const k in MODT) MOD.t[k] = { k, d: MODT[k], s: new Map(), cs: null, x: null, last: 0, was: false, pv: 0, sch: null, hx: ['flt', 'pha', 'rng', 'pan', 'cho', 'vok', 'vokO', 'vokV'].includes(k) };   // (hx: a deflection of the insert chain – Hexenring bakes it)
 // The Fährte (see there) writes down what reaches this layer – declared here, since the layer reports to it from the
 // start: its clock (t0/b0/bpm; d: its distance to the Puls's beat, ph: where its bars begin), the lanes it writes, the
 // loop that plays, a recording window, a tap waiting to be taken, the gesture on its button, the stored settings
@@ -271,6 +274,7 @@ function modChain(c, only) {
     else if (T.k === 'pha') for (const ap of c.phaAps) T.cs.connect(ap.detune);
     else if (T.k === 'pan') { if (c.apan.pan) T.cs.connect(c.apan.pan); }
     else if (T.k === 'cho') { T.x[0].connect(c.choWet.gain); T.x[1].connect(c.choDry.gain); }
+    else if (T.k.startsWith('vok') && c.vokWet) vokConnect(c, T.k, T.cs);
   }
 }
 // Ausdruck: quieter down to silence below rest, up to +3 dB above, on top of the expression pedal. The strip's input

@@ -69,7 +69,18 @@ Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`)
    Sekunde). t-ui hatte schon vorher 5 Fehler (Abschnitt-Reihenfolge, viewer/ios, 44-px-Pads) – nicht von hier.
    Danach (Besitzer): in Ruhe darf keine Spielweise den Klang ändern (Atem nicht mehr leise in Ruhe); jede Richtung wird
    an ihrem stärksten Druck gemessen (`tchCal`, `TCH.pk`, gespeichert `myzel.tch.pk`, „Neu einmessen“) – die Seiten des
-   SE haben kurzen Weg. Offen: neue Klangformung mit dem Touché (Brainstorming an den Besitzer, 25.10.2026).
+   SE haben kurzen Weg. Brainstorming (14 Ideen) in `dev/IDEEN.md` „Touché SE – neues Terrain“; der Besitzer ließ die drei
+   empfohlenen bauen, „Finger“ bleibt fein (sein Wunsch):
+   - **Gleiten** (⇧F1): wie Finger, Seiten ±700 Cent am neuesten Ton (`TCH_OPT.g`, per).
+   - **Streichen** (⇧F2): ohne Druck still (`expr` = Druck − 1), die Höhe aller Töne absolut aus dem Druck (`TCH_OPT.s`,
+     per: (TCH.sy − tt.y)/MOD_HSPAN) – bei Halm/Harz/Kehlchen/Böe/Glut ist die Höhe die Erregung; Seiten ±1 Halbton.
+   - **Platte** (⇧F3): `tchPlatte` schickt `band {vs, T, lin:1}` an die Fokus-Schleife (sonst die neueste, die spielt);
+     `ring.js` kennt dafür `G.lin` (gerades Gleiten, `vsPos`/`vsRate`) und 0.03 … 2.4 – das Bisherige bitgleich.
+     Test `hexenring/t-hx-touche.js` (6, in run-all).
+   - **Vokal** (⇧F4): Formen-Ziele `vok`, `vokO`, `vokV` (hx: in die Schleife gebacken, `werk.js`); in `makeChain` nach dem
+     Filter drei Bandpässe (`VOK_F`, `VOK_C`, `VOK_MAKEUP`, `vokConnect`), erst beim ersten Gebrauch gespeist – vorher
+     kosten sie nichts, in Ruhe ist die Kette exakt wie vorher. t-map-touche misst a/i/u an weißem Rauschen.
+   Klang nur in Chromium geprüft; Stärken (Formant-Q, Makeup, Platte-Bremse) nach dem Ohr des Besitzers nachstellen.
 5. **Offene Fragen ans Ohr:** Schale spricht wie früher das Harz-Glas manchmal spät an (soll sie immer sofort?);
    Bandträgheit, Gärtner-Bass, Musikalität der Antworten (siehe `dev/IDEEN.md`).
 6. **Danach** die Liste in `dev/IDEEN.md` (Sample-Bibliothek, Stimme als Instrument, neue Klangerzeugung, native App).
