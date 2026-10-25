@@ -174,5 +174,6 @@ function hxVisFrame(c, w, h) {
     c.fillText('Schleife ' + (R.slot + 1) + ' beginnt mit Takt ' + hxBarNo(R.b0), w / 2, h / 2 + Math.min(w, h) * 0.2);
   }
   c.restore();
+  hxPosDraw(c, w, h);   // (owner, 25.10.2026: where you are while you play a loop in – laenge.js)
 }
 

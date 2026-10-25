@@ -86,6 +86,7 @@ function hxParam(id) {
   if (id === 'hx.stufe') for (const L of hxLoopsLive()) if (hxWAktiv(L)) hxWUpdate(L);   // (step 2a)
   if ((id === 'hx.pulsMit' || id === 'hx.borMit') && A.ctx) hxMaskSync();
   if (id === 'hx.laenge') for (const w of CTLWRAP['hx.festT'] || []) w.classList.toggle('inactive', P['hx.laenge'] !== 'fest');
+  if (id === 'hx.laenge' || id === 'hx.festT') hxLenLive();   // (owner, 25.10.2026: a recording waiting or running takes the new length)
   hxRailDirty(); hxCardDirty();
 }
 function hxMsg(m) {

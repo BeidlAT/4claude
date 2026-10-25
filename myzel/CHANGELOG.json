@@ -2,6 +2,15 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-25n",
+      "punkte": [
+        "Looper: Neben dem Aufnahmeknopf steht jetzt „Länge“ – ein Klick wählt, wie lang die nächste Schleife wird: automatisch oder 1 bis 16 Takte.",
+        "Mit fester Länge zählt Myzel einen Takt ein (gibt es noch keinen Takt, im Tempo des Pulses) und schließt die Aufnahme nach genau so vielen Takten von selbst – die Schleife spielt sofort weiter.",
+        "Im selben Fenster: das Tempo fürs Einzählen, ob sichtbar oder hörbar eingezählt wird, und ein Klick zum Mitspielen.",
+        "Beim Einspielen zeigt oben im Feld eine Anzeige, wo du bist: „Takt 2 / 4“, der Schlag und alle Takte der Schleife als Kästchen, die sich füllen – auch beim Einzählen und beim Überspielen."
+      ]
+    },
+    {
       "id": "2026-10-25m",
       "punkte": [
         "Looper: neue Einstellung „Raster“ in der Karte – Frei (wie bisher, du bestimmst Anfang und Ende selbst), Takt, ½ Takt oder ¼.",

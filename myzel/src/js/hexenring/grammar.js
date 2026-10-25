@@ -22,7 +22,7 @@ function hxHauptUp(e) {
 }
 function hxBase() {
   if (P['hx.laenge'] === 'fest') return 4 * P['hx.festT'];
-  const L1 = hxLoopsLive().filter((L) => hxTakt(L)).sort((a, b) => a.made - b.made)[0];
+  const R = HX.rec, L1 = hxLoopsLive().filter((L) => hxTakt(L) && !(R && R.loopKey === L.key)).sort((a, b) => a.made - b.made)[0];   // (not the loop being recorded: its own length follows the setting – laenge.js)
   return L1 ? L1.d.beats : 0;
 }
 // (owner, 25.10.2026) the Raster of a recording by hand: Frei – as it always was (on a Takt its bar lines, without one
@@ -39,9 +39,10 @@ function hxRecStart(T, slot, e) {
   if (slot == null) slot = hxZiel();
   if (slot < 0) { toast('Alle ' + HX_SLOTS + ' Plätze sind belegt.'); return; }
   if (!hxMemOk(Math.round(8 * SR))) return;
-  const ra = HX_RASTER[P['hx.raster']] || 0;
+  const ra = HX_RASTER[P['hx.raster']] || 0, fest = P['hx.laenge'] === 'fest';   // (owner, 25.10.2026: a fixed length – N bars, closing by itself)
   let grid = hxGrid(), cin = false;
-  if (ra && !grid) { hxTaktSet(P['seq.bpm'], T + (4 * 60) / P['seq.bpm']); TG.keep = true; grid = true; cin = true; }   // (a Takt from here: bar 1 one bar after the press)
+  if ((ra || fest) && !grid) { hxTaktSet(P['seq.bpm'], T + (4 * 60) / P['seq.bpm']); TG.keep = true; grid = true; cin = true; }   // (a Takt from here: bar 1 one bar after the press)
+  if (HXLEN.open) hxLenOpen(false);
   const u = ra || 4, st = P['hx.start'], R = { slot, phase: 'rec', t0: T, grid, u, mult: 1, base: grid ? hxBase() : 0, hold: e ? { pid: e.pointerId, T, ptt: true } : null, made: hxNowT() };
   if (cin) { const b = Math.round(tgBeat(T + (4 * 60) / P['seq.bpm'])); R.b0 = b; R.t0 = tgTime(b); R.phase = 'wait'; R.base = hxBase(); }   // (counted in: it begins on the new bar 1)
   else if (grid) {
@@ -51,7 +52,7 @@ function hxRecStart(T, slot, e) {
   } else if (st === 'ton') R.phase = 'listen';
   HX.rec = R;
   if (R.base && R.phase !== 'listen') hxRecAuto();
-  hxSay(R.phase === 'wait' ? 'Aufnahme beginnt mit Takt ' + hxBarNo(R.b0) : R.phase === 'listen' ? 'Aufnahme wartet auf deinen ersten Ton' : 'Aufnahme läuft');
+  hxSay((R.phase === 'wait' ? 'Aufnahme beginnt mit Takt ' + hxBarNo(R.b0) : R.phase === 'listen' ? 'Aufnahme wartet auf deinen ersten Ton' : 'Aufnahme läuft') + (fest && R.base ? ' – ' + hxTakteA(R.base / 4) : ''));
   hxCoachDone();
   hxRailDirty();
 }

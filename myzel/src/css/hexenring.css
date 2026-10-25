@@ -22,6 +22,28 @@
 .hx-korb .w { color: var(--hypha); font: 500 9.5px/1.05 var(--font-ui); letter-spacing: -0.01em; }
 .hx-korb.lit .w { color: var(--lumen); }
 .hx-haupt { width: 42px; }
+@media (min-width: 480px) { .hx-haupt { width: 56px; } }   /* (its words „schließen“, „abbrechen“ whole) */
+/* (owner, 25.10.2026) the length of a new loop beside the Hauptknopf: the bars big, „Takte“ under them; its popover */
+.hx-len { width: 46px; color: var(--hypha); }
+.hx-len b { position: absolute; left: 0; right: 0; top: 11px; text-align: center; font: 600 15px/1 var(--font-num); color: var(--spore); pointer-events: none; }
+.hx-len[data-l="auto"] b, .hx-len[data-l="wie1"] b { top: 13px; font: 600 11px/1 var(--font-ui); color: var(--hypha); }
+.hx-len .w { font: 500 10px/1.05 var(--font-ui); color: var(--dim); }
+.hx-len[aria-expanded="true"] { background: var(--bark-2); }
+.hx-len:hover b { color: var(--hypha); }
+.hxr[data-fold="1"] .hx-len { display: none; }
+.hxr[data-buehne="1"] .hx-len .w { font-size: 12px; }
+@media (max-width: 479px) { .hx-len { display: none; } }   /* (phones: in the card's settings – the rings keep their room) */
+.hx-lenpop { position: absolute; bottom: calc(100% + 6px); left: 60px; z-index: 5; width: 446px; max-width: calc(100% - 12px); padding: 10px 12px 8px; border-radius: 12px; background: rgba(17, 13, 11, .97); border: 1px solid var(--line); box-shadow: 0 6px 24px rgba(0, 0, 0, .5); color: var(--hypha); font: 500 12px/1.3 var(--font-ui); touch-action: manipulation; }
+.hx-lenpop[hidden] { display: none; }
+.hx-lh { font: 600 10.5px/1.2 var(--font-ui); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+.hx-lrw { display: grid; grid-template-columns: 66px 1fr; align-items: center; gap: 4px 8px; margin-top: 8px; }
+.hx-lrw .lab { color: var(--dim); font-size: 12px; }
+.hx-lrw .chips { padding: 0; gap: 4px; align-items: center; }
+.hx-lrw .chip { min-height: 30px; min-width: 30px; padding: 3px 8px; font-size: 12px; }
+.hx-lrw .chip[aria-pressed="true"] { background: var(--spore); border-color: var(--spore); color: var(--ink); }
+.hx-bpmv { min-width: 66px; text-align: center; font: 600 13px/1 var(--font-num); color: var(--hypha); }
+.hx-lenpop .note { margin: 10px 0 0; color: var(--dim); font-size: 11.5px; line-height: 1.35; }
+.hx-lenmore { margin-top: 6px; padding: 4px 0; background: none; border: 0; color: var(--lumen); font: 500 12px/1.2 var(--font-ui); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 .hx-mid { flex: 1 1 auto; min-width: 0; display: flex; }
 .hx-rings { flex: 1 1 auto; min-width: 0; display: flex; gap: 2px; }
 .hx-ring { flex: 0 1 66px; min-width: 38px; }
