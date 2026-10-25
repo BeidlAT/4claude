@@ -100,6 +100,11 @@ Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`)
 5. **Offene Fragen ans Ohr:** Schale spricht wie früher das Harz-Glas manchmal spät an (soll sie immer sofort?);
    Bandträgheit, Gärtner-Bass, Musikalität der Antworten (siehe `dev/IDEEN.md`).
 6. **Danach** die Liste in `dev/IDEEN.md` (Sample-Bibliothek, Stimme als Instrument, neue Klangerzeugung, native App).
+   **Für später vermerkt (Besitzer, 25.10.2026):** Naturaufnahmen/Feldaufnahmen – alle vier Verwendungen gewünscht
+   (spielbar auf dem Feld, Körnerwolke, Atmosphäre im Hintergrund, echte Räume für den Hall), Quelle noch offen; die
+   Dateien muss der Besitzer hochladen (Freesound/Archive/Wikimedia sind aus der Claude-Umgebung gesperrt). Ebenfalls
+   vorgemerkt: Schleifen einzeln im Mixer, Rechtsklick-Menü für eine Schleife, die übrigen Touché-Ideen
+   (alle in `dev/IDEEN.md`).
 
 **Arbeitsweise, die der Besitzer will:** ein Thema pro Bauabschnitt, lange Prüfungen (Gesamtprüfung, Lastwächter) nur
 einmal vor der Veröffentlichung, kurz und ehrlich berichten, keine Gerätemodelle oder E-Mails ins (öffentliche) Repo.
