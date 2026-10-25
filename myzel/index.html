@@ -684,6 +684,12 @@ body.mlearn #stage::after { content: ""; position: absolute; inset: 0; backgroun
 .hx-eng { min-height: 36px; max-width: 9.5em; padding: 2px 6px; border-radius: 999px; border: 1px solid var(--line); background: var(--bark-2); color: var(--hypha); font: 600 12px/1 var(--font-ui); }
 .hxr[data-fold="1"] .w, .hxr[data-fold="1"] .hx-chips { display: none; }
 .hxr[data-fold="1"] .hxb { padding: 0; }
+/* (25.10.2026, owner: a press often seemed to do nothing) what happened, shown over the rail; every press flashes */
+.hx-msg { position: absolute; left: 50%; bottom: calc(100% + 6px); max-width: min(440px, calc(100% - 16px)); padding: 6px 12px; border-radius: 10px; background: rgba(17, 13, 11, .94); border: 1px solid var(--lumen); color: var(--hypha); font: 500 13px/1.3 var(--font-ui); text-align: center; pointer-events: none; opacity: 0; transform: translate(-50%, 4px); transition: opacity .18s, transform .18s; z-index: 3; box-shadow: 0 4px 18px rgba(0, 0, 0, .45); }
+.hx-msg.an { opacity: 1; transform: translate(-50%, 0); }
+.hx-blitz { position: fixed; z-index: 60; pointer-events: none; background: rgba(134, 240, 208, .26); box-shadow: 0 0 0 2px rgba(134, 240, 208, .8), 0 0 16px rgba(134, 240, 208, .55); animation: hxBlitz .45s ease-out forwards; }
+@keyframes hxBlitz { from { opacity: 1; } to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .hx-msg { transition: none; transform: translate(-50%, 0); } }
 .hx-vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .hx-coach {
   position: absolute; left: 10px; bottom: 30px; max-width: 250px; padding: 9px 12px; border-radius: 12px; background: var(--hypha); color: var(--ink);
@@ -1814,6 +1820,7 @@ body.mlearn #stage::after { content: ""; position: absolute; inset: 0; backgroun
       <button type="button" class="hxb hx-form" id="hxForm" aria-label="Form: nächste Lichtung (halten: Form-Zeile)" tabindex="-1"><span class="w">Form</span></button>
       <button type="button" class="hxb hx-fold" id="hxFold" aria-label="Ringleiste einklappen" tabindex="-1"></button>
       <div class="hx-vh" id="hxLive" aria-live="polite"></div>
+      <div class="hx-msg" id="hxMsg" aria-hidden="true"></div>
     </div>
     </div>
     <section id="sheet" class="sheet" hidden aria-labelledby="sheetTitle">
@@ -26077,6 +26084,7 @@ function toast(msg, ms = 3200, action) {
   if (UPD.mode) { UPD.q.push([msg, ms, action]); if (UPD.q.length > 4) UPD.q.shift(); return; }   // the update card is answered first (updClose shows them)
   const t = $('#toast'), b = $('#toastAct'), b2 = $('#toastAct2'), acts = Array.isArray(action) ? action : action ? [action] : [];   // (Hexenring: „Weiter · Leeren“ – two)
   if (P['hx.buehne'] && !acts.length && ms < 5000) { if (typeof hxSay === 'function') hxSay(msg); return; }   // Hexenring (step 2b): the Bühnenansicht shows few toasts – the rest is said
+  toast.at = performance.now(); if (typeof hxMsgHide === 'function') hxMsgHide();   // (Hexenring, 25.10.2026: the rail's line for the same moment gives way)
   $('#toastMsg').textContent = msg;
   b.hidden = !acts[0]; b2.hidden = !acts[1];
   b.onclick = b2.onclick = null;
@@ -28039,7 +28047,27 @@ function hxVisFrame(c, w, h) {
 // every change said once in a polite live region (never the beats) ----
 const HXU = { rail: null, cv: null, cx: null, korb: null, haupt: null, mid: null, rings: [], chips: null, pg: null, undo: null, redo: null, fold: null, live: null, coach: null,
   dirty: true, per: 4, w: 0, h: 0, dpr: 1, g: null, say: '', sayT: 0, uHold: null, sig: '' };
-function hxSay(msg) { if (!HXU.live) return; HXU.live.textContent = ''; clearTimeout(HXU.sayT); HXU.sayT = setTimeout(() => { if (HXU.live) HXU.live.textContent = msg; }, 30); }
+function hxSay(msg) { if (!HXU.live) return; HXU.live.textContent = ''; clearTimeout(HXU.sayT); HXU.sayT = setTimeout(() => { if (HXU.live) HXU.live.textContent = msg; }, 30); hxMsgShow(msg); }
+// (owner, 25.10.2026: a press often seemed to do nothing) what is said is also shown – a line over the rail for a few
+// seconds („Schleife 2 verstummt mit Takt 9“); a toast saying the same moment wins. Every press flashes its button.
+function hxMsgShow(msg) {
+  const m = HXU.msg; if (!m || !msg || performance.now() - (toast.at || -1e9) < 250) return;
+  m.textContent = msg; m.classList.remove('an'); void m.offsetWidth; m.classList.add('an'); HXU.msgAt = performance.now();
+  clearTimeout(HXU.msgT); HXU.msgT = setTimeout(() => m.classList.remove('an'), Math.min(4500, 1800 + 40 * msg.length));
+}
+function hxMsgHide() { if (HXU.msg && performance.now() - (HXU.msgAt || -1e9) < 250) { clearTimeout(HXU.msgT); HXU.msg.classList.remove('an'); } }
+function hxBlitz(el) {
+  if (!el || el.disabled || el.hidden) return;
+  const r = el.getBoundingClientRect(); if (!r.width || !r.height) return;
+  const d = h('div', { class: 'hx-blitz', 'aria-hidden': 'true' });
+  d.style.cssText = 'left:' + r.left + 'px;top:' + r.top + 'px;width:' + r.width + 'px;height:' + r.height + 'px;border-radius:' + (getComputedStyle(el).borderRadius || '10px');
+  document.body.append(d); setTimeout(() => d.remove(), 500);
+}
+// the flash at the press (a pointer) or at the click (a key: detail 0)
+function hxBlitzOn(box) {
+  box.addEventListener('pointerdown', (e) => { if (e.button > 0) return; hxBlitz(e.target.closest && e.target.closest('button')); }, true);
+  box.addEventListener('click', (e) => { if (e.detail === 0) hxBlitz(e.target.closest && e.target.closest('button')); }, true);
+}
 function hxRailDirty() { HXU.dirty = true; }
 // a keyboard press (Enter or Space: a click without a pointer, detail 0) acts on click – the buttons that act at the press
 // act on pointerdown. Chromium also sends a click with detail 0 after a touch tap that changed the layout (UI audit B1,
@@ -28053,7 +28081,7 @@ function hxRailBuild() {
   const rail = $('#hxRail');
   if (!rail || HXU.rail) return;
   HXU.rail = rail; HXU.cv = $('#hxCv'); HXU.cx = HXU.cv.getContext('2d');
-  HXU.korb = $('#hxKorb'); HXU.haupt = $('#hxHaupt'); HXU.mid = $('#hxMid'); HXU.pg = $('#hxPg'); HXU.undo = $('#hxUndo'); HXU.redo = $('#hxRedo'); HXU.fold = $('#hxFold'); HXU.live = $('#hxLive'); HXU.coach = $('#hxCoach');
+  HXU.korb = $('#hxKorb'); HXU.haupt = $('#hxHaupt'); HXU.mid = $('#hxMid'); HXU.pg = $('#hxPg'); HXU.undo = $('#hxUndo'); HXU.redo = $('#hxRedo'); HXU.fold = $('#hxFold'); HXU.live = $('#hxLive'); HXU.coach = $('#hxCoach'); HXU.msg = $('#hxMsg');
   HXU.form = $('#hxForm');   // (step 1d)
   const ringBox = h('div', { class: 'hx-rings' });
   for (let i = 0; i < HX_SLOTS; i++) {
@@ -28116,6 +28144,7 @@ function hxRailBuild() {
   if (window.ResizeObserver) new ResizeObserver(() => { HXU.w = 0; hxRailDirty(); }).observe(rail);
   hxRailShow();
   hxTipsWatch(HXU.chips);   // (25.10.2026: the chips explain themselves on hover)
+  hxBlitzOn(rail);
 }
 // with a panel open the rail folds to its 24-px form only where the field would otherwise be shorter than 260 px – read
 // from the layout (the field's height now, as it would be with the rail open), not from the screen's size (step 1d;
@@ -28458,6 +28487,7 @@ function hxDrawRing(c, i, r, y, fold, ts) {
     const left = Math.max(0, pend.t - hxNowT()), frac = clamp(left / Math.max(0.1, hxLen(L)), 0, 1), a0 = ang(ph);
     c.fillStyle = 'rgba(168,152,138,0.32)'; c.beginPath(); c.moveTo(x, y); c.arc(x, y, R0 - 1, a0, a0 + frac * Math.PI * 2); c.closePath(); c.fill();
     if (pend.kind === 'ernte' || pend.kind === 'weiter') { c.strokeStyle = HXC.spore; c.setLineDash([2, 3]); c.beginPath(); c.arc(x, y, R0 + 2.5, 0, Math.PI * 2); c.stroke(); c.setLineDash([]); }
+    else if (pend.kind === 'state') { c.strokeStyle = L.pendTo === 'spielt' ? HXC.lumen : HXC.hypha; c.lineWidth = 1.6; c.setLineDash([2, 3]); c.beginPath(); c.arc(x, y, R0 + 2.5, 0, Math.PI * 2); c.stroke(); c.setLineDash([]); c.lineWidth = 1.4; }   // (25.10.2026: a change waiting for its bar line shows – lumen on, hypha off)
   }
   // the Fokus: a bright bracket on both sides
   if (HX.fokus === L.id && !fold) { c.strokeStyle = HXC.hypha; c.lineWidth = 1.6; for (const s of [-1, 1]) { c.beginPath(); c.arc(x, y, R0 + 6, (s < 0 ? Math.PI : 0) - 0.55, (s < 0 ? Math.PI : 0) + 0.55); c.stroke(); } }
@@ -28511,6 +28541,7 @@ function hxCardSec() {
   HXK.sec = h('div', { class: 'sec hx-sec', id: 'hxSec' }, h('div', { class: 'sec-h' }, h('h3', null, 'Hexenring'), HXK.sub), HXK.acts, HXK.cost, HXK.list, HXK.gd, HXK.form, HXK.grave, set);
   HXK.dirty = true; hxCardRender();
   hxTipsWatch(HXK.sec);   // (25.10.2026: every control explains itself on hover)
+  hxBlitzOn(HXK.sec);   // (25.10.2026: every press flashes)
   return HXK.sec;
 }
 // Spielverzögerung in the card: „Klopf mit“ – while it runs, a big pad to tap (press-acting) with the taps counted

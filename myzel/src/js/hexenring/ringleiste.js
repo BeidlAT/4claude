@@ -2,7 +2,27 @@
 // every change said once in a polite live region (never the beats) ----
 const HXU = { rail: null, cv: null, cx: null, korb: null, haupt: null, mid: null, rings: [], chips: null, pg: null, undo: null, redo: null, fold: null, live: null, coach: null,
   dirty: true, per: 4, w: 0, h: 0, dpr: 1, g: null, say: '', sayT: 0, uHold: null, sig: '' };
-function hxSay(msg) { if (!HXU.live) return; HXU.live.textContent = ''; clearTimeout(HXU.sayT); HXU.sayT = setTimeout(() => { if (HXU.live) HXU.live.textContent = msg; }, 30); }
+function hxSay(msg) { if (!HXU.live) return; HXU.live.textContent = ''; clearTimeout(HXU.sayT); HXU.sayT = setTimeout(() => { if (HXU.live) HXU.live.textContent = msg; }, 30); hxMsgShow(msg); }
+// (owner, 25.10.2026: a press often seemed to do nothing) what is said is also shown – a line over the rail for a few
+// seconds („Schleife 2 verstummt mit Takt 9“); a toast saying the same moment wins. Every press flashes its button.
+function hxMsgShow(msg) {
+  const m = HXU.msg; if (!m || !msg || performance.now() - (toast.at || -1e9) < 250) return;
+  m.textContent = msg; m.classList.remove('an'); void m.offsetWidth; m.classList.add('an'); HXU.msgAt = performance.now();
+  clearTimeout(HXU.msgT); HXU.msgT = setTimeout(() => m.classList.remove('an'), Math.min(4500, 1800 + 40 * msg.length));
+}
+function hxMsgHide() { if (HXU.msg && performance.now() - (HXU.msgAt || -1e9) < 250) { clearTimeout(HXU.msgT); HXU.msg.classList.remove('an'); } }
+function hxBlitz(el) {
+  if (!el || el.disabled || el.hidden) return;
+  const r = el.getBoundingClientRect(); if (!r.width || !r.height) return;
+  const d = h('div', { class: 'hx-blitz', 'aria-hidden': 'true' });
+  d.style.cssText = 'left:' + r.left + 'px;top:' + r.top + 'px;width:' + r.width + 'px;height:' + r.height + 'px;border-radius:' + (getComputedStyle(el).borderRadius || '10px');
+  document.body.append(d); setTimeout(() => d.remove(), 500);
+}
+// the flash at the press (a pointer) or at the click (a key: detail 0)
+function hxBlitzOn(box) {
+  box.addEventListener('pointerdown', (e) => { if (e.button > 0) return; hxBlitz(e.target.closest && e.target.closest('button')); }, true);
+  box.addEventListener('click', (e) => { if (e.detail === 0) hxBlitz(e.target.closest && e.target.closest('button')); }, true);
+}
 function hxRailDirty() { HXU.dirty = true; }
 // a keyboard press (Enter or Space: a click without a pointer, detail 0) acts on click – the buttons that act at the press
 // act on pointerdown. Chromium also sends a click with detail 0 after a touch tap that changed the layout (UI audit B1,
@@ -16,7 +36,7 @@ function hxRailBuild() {
   const rail = $('#hxRail');
   if (!rail || HXU.rail) return;
   HXU.rail = rail; HXU.cv = $('#hxCv'); HXU.cx = HXU.cv.getContext('2d');
-  HXU.korb = $('#hxKorb'); HXU.haupt = $('#hxHaupt'); HXU.mid = $('#hxMid'); HXU.pg = $('#hxPg'); HXU.undo = $('#hxUndo'); HXU.redo = $('#hxRedo'); HXU.fold = $('#hxFold'); HXU.live = $('#hxLive'); HXU.coach = $('#hxCoach');
+  HXU.korb = $('#hxKorb'); HXU.haupt = $('#hxHaupt'); HXU.mid = $('#hxMid'); HXU.pg = $('#hxPg'); HXU.undo = $('#hxUndo'); HXU.redo = $('#hxRedo'); HXU.fold = $('#hxFold'); HXU.live = $('#hxLive'); HXU.coach = $('#hxCoach'); HXU.msg = $('#hxMsg');
   HXU.form = $('#hxForm');   // (step 1d)
   const ringBox = h('div', { class: 'hx-rings' });
   for (let i = 0; i < HX_SLOTS; i++) {
@@ -79,6 +99,7 @@ function hxRailBuild() {
   if (window.ResizeObserver) new ResizeObserver(() => { HXU.w = 0; hxRailDirty(); }).observe(rail);
   hxRailShow();
   hxTipsWatch(HXU.chips);   // (25.10.2026: the chips explain themselves on hover)
+  hxBlitzOn(rail);
 }
 // with a panel open the rail folds to its 24-px form only where the field would otherwise be shorter than 260 px – read
 // from the layout (the field's height now, as it would be with the rail open), not from the screen's size (step 1d;
@@ -421,6 +442,7 @@ function hxDrawRing(c, i, r, y, fold, ts) {
     const left = Math.max(0, pend.t - hxNowT()), frac = clamp(left / Math.max(0.1, hxLen(L)), 0, 1), a0 = ang(ph);
     c.fillStyle = 'rgba(168,152,138,0.32)'; c.beginPath(); c.moveTo(x, y); c.arc(x, y, R0 - 1, a0, a0 + frac * Math.PI * 2); c.closePath(); c.fill();
     if (pend.kind === 'ernte' || pend.kind === 'weiter') { c.strokeStyle = HXC.spore; c.setLineDash([2, 3]); c.beginPath(); c.arc(x, y, R0 + 2.5, 0, Math.PI * 2); c.stroke(); c.setLineDash([]); }
+    else if (pend.kind === 'state') { c.strokeStyle = L.pendTo === 'spielt' ? HXC.lumen : HXC.hypha; c.lineWidth = 1.6; c.setLineDash([2, 3]); c.beginPath(); c.arc(x, y, R0 + 2.5, 0, Math.PI * 2); c.stroke(); c.setLineDash([]); c.lineWidth = 1.4; }   // (25.10.2026: a change waiting for its bar line shows – lumen on, hypha off)
   }
   // the Fokus: a bright bracket on both sides
   if (HX.fokus === L.id && !fold) { c.strokeStyle = HXC.hypha; c.lineWidth = 1.6; for (const s of [-1, 1]) { c.beginPath(); c.arc(x, y, R0 + 6, (s < 0 ? Math.PI : 0) - 0.55, (s < 0 ? Math.PI : 0) + 0.55); c.stroke(); } }

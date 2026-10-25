@@ -2,6 +2,14 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-25f",
+      "punkte": [
+        "Jeder Klick im Looper gibt jetzt Rückmeldung: der Knopf blitzt kurz auf.",
+        "Über der Leiste steht für ein paar Sekunden, was passiert ist oder worauf es wartet – z. B. „Schleife 2 verstummt mit Takt 9“.",
+        "Wartet eine Schleife auf die nächste Eins, ist ihr Ring gestrichelt umrandet (hell: kommt, matt: verstummt)."
+      ]
+    },
+    {
       "id": "2026-10-25e",
       "punkte": [
         "Unter den Schleifen in der Leiste steht kein Wort mehr – eine spielende Schleife leuchtet, eine stumme nicht.",
