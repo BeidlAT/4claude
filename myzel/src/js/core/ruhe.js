@@ -50,7 +50,10 @@ const HXF1 = { c: null, off: false, p: new Set(), autoT: 0, useT: 0, taps: null,
 })();
 function idleBuild() {
   const ctx = A.ctx;
-  Object.assign(IDLE, { on: false, ctx, cut: [], qT: ctx.currentTime, z: null, pT: -1, auto: hxLive(), tapOn: false, autoT: 0 });
+  // (25.10.2026) not in Firefox: Ruhe rests on Chromium's rules, measured there (what a silent node does, how a link taken
+  // out comes back); in Firefox the owner's keyboard once fell silent after a long session (MIDI arrived, no sound, until
+  // the browser restarted) – the graph stays plugged in there: the same sound, only more work in the pauses
+  Object.assign(IDLE, { on: false, ctx, cut: [], qT: ctx.currentTime, z: null, pT: -1, auto: hxLive() && !FIREFOX, tapOn: false, autoT: 0 });
   IDLE.keeper = G(0); IDLE.keeper.connect(ctx.destination);
   for (const o of [A.rngOsc, A.fltLfo, A.phaLfo, A.choL1, A.choL2, A.panLfo, A.wowLfo, A.flutLfo]) o.connect(IDLE.keeper.gain);
   A.revRet.connect(IDLE.keeper.gain); A.dlyRet.connect(IDLE.keeper.gain);   // (the hall and the echo: pulled while the master sleeps)

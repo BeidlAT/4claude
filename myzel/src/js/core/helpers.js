@@ -12,6 +12,7 @@ const dec = (s) => String(s).replace('.', ',');
 const gauss = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
 const MOBILE = (() => { try { return matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } })();
 const ANDROID = /Android/i.test(navigator.userAgent);
+const FIREFOX = /Firefox\//.test(navigator.userAgent);   // (25.10.2026: the owner's main browser – Ruhe stays off there, see ruhe.js)
 const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 // Hexenring: the Werk-Rahmen – this page in a hidden frame of itself (?werk=1) renders offline for the looper (SPEC
 // §8): no UI, no storage writes, no MIDI, no Gestik, no live context, no service worker. t/now: a recorded change set at
