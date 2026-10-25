@@ -35,6 +35,10 @@ Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`)
    `sch` (Browser-Bausteine), nicht Harz – sie lässt sich nicht in WebAssembly beschleunigen, ohne sie als eigenen
    DSP-Code neu zu schreiben (dann nicht mehr bitgleich: Entscheidung des Besitzers). Das spricht für die eigene Engine
    (Mehrkern im Browser oder Standalone, siehe Gespräch 25.10.2026 und `dev/IDEEN.md`).
+4c. **Firefox ist die Basis (Besitzer, 25.10.2026):** Dort läuft Myzel beim Besitzer einwandfrei, besser als in Chrome.
+   Firefox meldet keine Aussetzer, der Lastwächter bleibt dort untätig – so lassen (ein Wächter über die Audio-Uhr war
+   gebaut, 734b79f, und ist wieder herausgenommen: nur in Chromium prüfbar, und nicht nötig). **Als Nächstes laut
+   Besitzer: Unklarheiten im Looper bereinigen** (er nennt die Punkte), danach die Standalone-App (Windows) als Prototyp.
 5. **Offene Fragen ans Ohr:** Schale spricht wie früher das Harz-Glas manchmal spät an (soll sie immer sofort?);
    Bandträgheit, Gärtner-Bass, Musikalität der Antworten (siehe `dev/IDEEN.md`).
 6. **Danach** die Liste in `dev/IDEEN.md` (Sample-Bibliothek, Stimme als Instrument, neue Klangerzeugung, native App).
