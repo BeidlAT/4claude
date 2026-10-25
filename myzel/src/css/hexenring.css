@@ -120,3 +120,35 @@
 .hx-sub { margin: 10px 0 2px; font-size: 12px; color: var(--dim); }
 .toast .act2 { margin-left: 0; }
 @media (prefers-reduced-motion: reduce) { .hx-card.flash { box-shadow: none; } }
+/* (owner, 25.10.2026) the mixer's view „Schleifen“: a strip per loop – head, state, Balance, M S, the stem with its cap, the value */
+.hxm-row { flex: 1 1 auto; min-height: 0; display: flex; align-items: stretch; gap: 4px; padding: 10px 12px 8px; overflow-x: auto; overscroll-behavior-x: contain; }
+.hxm-row[hidden] { display: none; }
+.hxm-empty { margin: 24px 16px; max-width: 46ch; color: var(--dim); font: 400 13px/1.45 var(--font-ui); }
+.hxm-empty[hidden] { display: none; }
+.hxm-st { position: relative; flex: 0 0 86px; min-height: 300px; display: flex; flex-direction: column; align-items: stretch; border-radius: 12px; padding-bottom: 4px; }
+.hxm-st.spielt { background: linear-gradient(to bottom, color-mix(in srgb, var(--c) 9%, transparent), transparent 40%); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 22%, transparent); }
+.hxm-st + .hxm-st::before { content: ""; position: absolute; left: -2.5px; top: 44px; bottom: 24px; width: 1px; background: rgba(240, 230, 216, .06); }
+.hxm-sep { flex: 0 0 1px; margin: 30px 6px; background: var(--line); }
+.hxm-sh { height: 40px; margin: 2px 2px 0; padding: 2px 3px; border: 0; background: none; border-radius: 10px; display: grid; justify-items: center; align-content: center; gap: 3px; color: var(--hypha); cursor: pointer; }
+.hxm-sh:hover { background: rgba(240, 230, 216, .05); }
+.hxm-nm { display: flex; align-items: center; gap: 5px; max-width: 100%; font: 600 12px/1.1 var(--font-ui); white-space: nowrap; }
+.hxm-nm > i { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); }
+.hxm-src { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 400 9.5px/1.1 var(--font-num); color: var(--dim); }
+.hxm-state { min-height: 14px; text-align: center; font: 500 10px/1.3 var(--font-ui); color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hxm-st.spielt .hxm-state { color: var(--lumen); }
+.hxm-st.dormant .hxm-nm > i { background: #6f6157; box-shadow: none; }
+.hxm-st.dormant .hxm-cap svg { filter: saturate(.15); opacity: .82; }
+.hxm-kw { display: grid; justify-items: center; margin-top: 4px; min-height: 62px; }
+.hxm-kn { width: 38px; height: 38px; border-radius: 50%; touch-action: pan-x; cursor: ns-resize; }
+.hxm-kn canvas { display: block; width: 34px; height: 34px; margin: 2px; pointer-events: none; }
+.hxm-kn:focus-visible, .hxm-stem:focus-visible { outline: 2px solid var(--lumen); outline-offset: -1px; }
+.hxm-kv { font: 500 10px/1.2 var(--font-num); color: var(--hypha); }
+.hxm-kl { font: 500 9px/1.2 var(--font-ui); color: var(--dim); }
+.hxm-ms { display: grid; grid-template-columns: 1fr 1fr; padding: 0 4px; }
+.hxm-ms .mx-m, .hxm-ms .mx-s { height: 38px; }
+.hxm-stem { position: relative; flex: 1 1 auto; min-height: 150px; touch-action: none; cursor: ns-resize; }
+.hxm-stem canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.hxm-cap { position: absolute; top: 0; left: 50%; width: 46px; height: 44px; z-index: 1; pointer-events: none; will-change: transform; }
+.hxm-cap svg { position: absolute; left: 1px; top: 3px; width: calc(100% - 2px); height: auto; overflow: visible; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .6)) drop-shadow(0 0 7px color-mix(in srgb, var(--c) 35%, transparent)); }
+.hxm-stem.drag .hxm-cap svg, .hxm-stem:focus-visible .hxm-cap svg { filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .6)) drop-shadow(0 0 12px var(--c)); }
+.hxm-val { height: 22px; border: 0; background: none; color: var(--hypha); font: 500 10.5px/1 var(--font-num); }

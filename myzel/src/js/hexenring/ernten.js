@@ -48,10 +48,10 @@ function hxSchNew(loop, c, o = {}) {
 }
 // ---- Schleifen: a new one in a slot, with its notes, its Bewegung and how it was cut ----
 function hxLoopMake(o) {
-  const id = hxLoopNew(o.lock === 'frei' ? { lock: 'frei', len: o.Lf, f0: o.ph0, gain: o.gain, out: o.out, state: o.state, gap: o.gap } : { lock: 'takt', b0: o.b0, beats: o.beats, gain: o.gain, out: o.out, state: o.state });
+  const id = hxLoopNew(o.lock === 'frei' ? { lock: 'frei', len: o.Lf, f0: o.ph0, gain: o.gain, pan: o.pan, out: o.out, state: o.state, gap: o.gap } : { lock: 'takt', b0: o.b0, beats: o.beats, gain: o.gain, pan: o.pan, out: o.out, state: o.state });
   const L = HX.loops.get(id);
   Object.assign(L, { slot: o.slot, key: o.key || hxKey('l'), bpb: o.bpb || 4, notes: o.notes || [], mv: o.mv || null, cut: o.cut || null, eng: o.eng || 'neb', setTG: !!o.setTG,
-    gain: o.gain != null ? o.gain : 1, made: Date.now(), ps: [], src: o.src || 0, bpm: o.bpm || tgBpm(hxNowT()), lv: [0, 0], taumeln: o.taumeln !== false, folgt: !!o.folgt, eig: HX_EIG.includes(o.eig) ? o.eig : 'treu',
+    gain: o.gain != null ? o.gain : 1, pan: o.pan || 0, made: Date.now(), ps: [], src: o.src || 0, bpm: o.bpm || tgBpm(hxNowT()), lv: [0, 0], taumeln: o.taumeln !== false, folgt: !!o.folgt, eig: HX_EIG.includes(o.eig) ? o.eig : 'treu',
     // (step 2a) Wuchs: why it grows (wahl: hx.beginn for a new one), how it follows, the level it was played at, the patch
     wwhy: o.wwhy ? Object.assign({}, o.wwhy) : { wahl: !o.key && o.eng !== 'bew' && P['hx.beginn'] === 'wuchs' }, ton: o.ton || 'diatonisch', klang: o.klang || 'eigen', stufe: o.stufe || null, q: o.q || P['dev.q'], P: o.P || (o.key ? null : Object.assign({}, P)), mask: o.mask || [...HX.mask], chainRec: o.chainRec || null, jrg: o.jrg || { age: A.jrgAge || 0, season: A.season || 0 } });   // (jrg: the Jahresring's year as it was played – a Wuchs pass hits that bar, not today's)
   HX.slot[o.slot] = id;

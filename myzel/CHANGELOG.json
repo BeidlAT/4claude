@@ -2,6 +2,15 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-25o",
+      "punkte": [
+        "Mixer: neue Ansicht „Schleifen“ neben Pult und Geflecht – jede Schleife hat dort ihren eigenen Kanal.",
+        "Pro Schleife: Pegel mit eigener Pegelanzeige, Balance, Stumm und Solo – beides wirkt sofort; ein Tipp auf den Namen öffnet ihre Karte.",
+        "Ganz rechts „Alle“: der gemeinsame Kanal aller Schleifen, derselbe wie im Pult.",
+        "Die Balance einer Schleife bleibt gespeichert; Stumm, Balance, Pegel und Solo jeder Schleife lassen sich unter „Zuweisen“ auf Regler und Knöpfe legen."
+      ]
+    },
+    {
       "id": "2026-10-25n",
       "punkte": [
         "Looper: Neben dem Aufnahmeknopf steht jetzt „Länge“ – ein Klick wählt, wie lang die nächste Schleife wird: automatisch oder 1 bis 16 Takte.",
