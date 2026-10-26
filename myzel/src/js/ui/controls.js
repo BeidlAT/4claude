@@ -169,7 +169,7 @@ function onParamChanged(id) {
       if (id === 'neb.cut' || id === 'neb.ymod' || id === 'neb.res') for (const t of touches.values()) for (const { v } of t.voices) if (v.alive && v.eng === 'neb') { v.setY(modY(t)); setP(v.filt.Q, P['neb.res']); }
       break;
     case 'hlm': case 'rnk': case 'hrz': case 'shn': case 'zpf': case 'glt': case 'khl': case 'mdr': case 'boe': case 'amo': case 'nrd': case 'sht': case 'ond': case 'wal': case 'stp': case 'atr': case 'tnl': case 'wkg': case 'bnt': case 'kas': case 'bit': case 'gbs': case 'hht': case 'vox': case 'spu': case 'kto': case 'hng': case 'gml': case 'sit': case 'tbl': case 'did': case 'mtr':   // the sounding voices follow at once (the processor reads its knobs per block; Moder's body, mallet and Nachklang at the next strike)
-      for (const v of A.voices) if (v.alive && v.as === pre) { if (v.wk) v.wk.port.postMessage({ set: wkPrm(pre) }); else if (v.upd) v.upd(); }
+      for (const v of A.voices) if (v.alive && v.as === pre && !v.hxOwn) { if (v.wk) v.wk.port.postMessage({ set: wkPrm(pre) }); else if (v.upd) v.upd(); }
       if (id === 'zpf.koerper') for (const fn of CTL['zpf.klang'] || []) fn(P['zpf.klang'], null);   // (its Nachklang is the body's)
       if (id === 'hrz.koerper') for (const fn of CTL['hrz.daempfung'] || []) fn(P['hrz.daempfung'], null);   // (its Nachklang is the body's)
       if (id === 'hlm.rohr') {   // each pipe names the knobs its own way, and says how it plays
