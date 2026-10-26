@@ -149,7 +149,9 @@ function costRow(okf, what, tab, cur, env, f) {
     mtr: { f0: [110, 220, 440, 880], ys: [0.3, 0.7], tol: 3, costMax: 1.0 },   // (the default body, Glas; every body below)
     // ---- Etappe 2/3 (Sphäre, Psyche) ----
     nrd: { f0: [55, 110, 220, 440, 880], ys: [0.5], tol: 5, costMax: 3.09 },   // (48 partials, 64 at level 3: the price of the surface – sound first)
-    sht: { f0: [110, 220, 440, 880], ys: [0.3], tol: 8, costMax: 2.13, cYs: [0, 0.5, 1] },
+    // Schimmer: its room is the instrument – a halo that rings for seconds: pitch and glide with the room small and no
+    // shimmer (else the tail still sings the last note), the release and the Puls hits measured to their end
+    sht: { f0: [110, 220, 440, 880], ys: [0.3], tol: 8, costMax: 2.13, pp: { 'sht.raum': 0, 'sht.schimmer': 0 }, rel: { dur: 6.5, t60max: 5200, quiet: [5.9, 6.5] }, burstDur: (g) => g + 2.0 },
     ond: { f0: [110, 220, 440, 880, 1760], ys: [0.3, 0.7], tol: 5, costMax: 1.51, pp: { 'ond.vibrato': 0 } },
     wal: { f0: [55, 110, 220, 440], ys: [0.5], tol: 15, costMax: 2.33, line: true, lineAt: 1.4, pp: { 'wal.knarren': 0 } },   // (the cry arrives on the note in its arc: measured on the line after it)
     stp: { pitchless: 'a Shepard tone has no single pitch (its octave voices glide forever)', costMax: 1.51 },

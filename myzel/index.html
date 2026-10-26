@@ -12604,7 +12604,7 @@ function myzelDsp() {
       if (this.burst) { this.gate -= n; if (this.gate <= 0) this.off = true; }
       const sh = Math.min(1, this.ys * (0.3 + 1.0 * p.schimmer)), size = 0.6 + p.raum, t60 = 1.5 + 9 * p.raum;
       const len = SHT_D.map((d) => Math.round(d * size * SR)), gfb = len.map((l) => Math.pow(0.001, l / (t60 * SR)));
-      const damp = 1 - Math.exp(-2 * Math.PI * (2500 + 7000 * p.farbe) / SR), cut = 1 - Math.exp(-2 * Math.PI * Math.min(0.4 * SR, f * (2 + 10 * p.farbe) * (0.6 + 0.9 * this.ys)) / SR);
+      const damp = 1 - Math.exp(-2 * Math.PI * (2500 + 7000 * p.farbe) / SR), cut = 1 - Math.exp(-2 * Math.PI * Math.min(0.4 * SR, f * (2 + 10 * p.farbe) * (0.4 + 2.6 * this.ys * this.ys)) / SR);   // (Höhe opens the surface too: dark below, glassy above)
       const dt1 = f * 1.0035 / SR, dt2 = f * 0.9965 / SR, dt3 = f * 0.5 / SR, att = 1 - Math.exp(-1 / ((this.burst ? 0.01 : 0.25) * SR)), rel = 1 - Math.exp(-1 / (0.5 * SR));
       const W = 2048, PM = this.ps.length - 1, q = p.quinte, wet = 0.25 + 0.65 * sh, fbs = 0.24 * sh;
       const dl = this.dl, ps = this.ps, og = R ? SHT_OUT * 0.51 : SHT_OUT, envT = this.off ? 0 : 1;
@@ -12614,7 +12614,7 @@ function myzelDsp() {
         // the source: two saws and a sub, softened
         p1 += dt1; if (p1 >= 1) p1 -= 1; p2 += dt2; if (p2 >= 1) p2 -= 1; p3 += dt3; if (p3 >= 1) p3 -= 1;
         let s = (2 * p1 - 1 - blep(p1, dt1)) + (2 * p2 - 1 - blep(p2, dt2)) + 0.6 * Math.sin(2 * Math.PI * p3);
-        lp1 += cut * (s - lp1); lp2 += cut * (lp1 - lp2); s = lp2 * 0.35 * env * this.vel;
+        lp1 += cut * (s - lp1); lp2 += cut * (lp1 - lp2); s = lp2 * 0.35 * (1.5 - 0.6 * this.ys) * env * this.vel;   // (the darker surface below loses its top: its level held)
         // the room: four lines, Hadamard
         const o0 = dl[0].b[(dl[0].w - len[0]) & (dl[0].b.length - 1)], o1 = dl[1].b[(dl[1].w - len[1]) & (dl[1].b.length - 1)], o2 = dl[2].b[(dl[2].w - len[2]) & (dl[2].b.length - 1)], o3 = dl[3].b[(dl[3].w - len[3]) & (dl[3].b.length - 1)];
         // the shimmer: the room's sum an octave (and a fifth) up, back into it
