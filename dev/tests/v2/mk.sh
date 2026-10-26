@@ -59,7 +59,7 @@ if 'function hxGuardLog(' in s: extra += ['hxGuardLog', 'hxGuardGrenze', 'hxWHol
 if 'function latWatch(' in s: extra += ['LAT', 'latWatch', 'latHint', 'latRestore', 'latAuto', 'latAutoAgain', 'latSet', 'updDrive', 'updLatText', 'updDevUI', 'devEls: () => devEls', 'restoreState', 'saveState', 'initAudio', 'ANDROID', 'IOS', 'applyQuality', 'Q', 'stripIn', 'PD', 'hxwChain', 'hxChainRec', 'makeChain', 'HXW']
 if 'function hxRecPos(' in s: extra += ['hxRecPos', 'hxPosWords', 'hxPosDraw', 'hxLenOpen', 'hxLenSet', 'hxLenRender', 'hxLenLive', 'hxLenFace', 'hxLenStep', 'HXLEN', 'HX_LEN_Q', 'HX_LEN_K', 'hxBase', 'MTARGETS', 'hxTakteA', 'hxTakteD']
 if 'function hxmBuild(' in s: extra += ['HXM', 'hxmSync', 'hxmMute', 'hxmSolo', 'hxPan', 'hxRecOf', 'hxSnap', 'hxDelete', 'MTARGETS', 'mxSetView']
-if 'function hxEdOpen(' in s: extra += ['HXE', 'hxEdOpen', 'hxEdClose', 'hxEdRender', 'hxEdTrimSel', 'hxEdPeaks', 'hxCtxMenu', 'hxCtxClose', 'hxBandTrim', 'hxBandTrimTo', 'hxTrA', 'hxDefaults', 'hxRev', 'hxVbSet', 'hxAbSet', 'hxSlcSet', 'hxNtSet', 'hxSpeed', 'hxRedoStep', 'hxUndoStep', 'hxPhase', 'hxLen']
+if 'function hxEdOpen(' in s: extra += ['HXE', 'hxEdOpen', 'hxEdClose', 'hxEdRender', 'hxEdTrimSel', 'hxEdPeaks', 'hxCtxMenu', 'hxCtxClose', 'hxBandTrim', 'hxBandTrimTo', 'hxTrA', 'hxDefaults', 'hxRev', 'hxVbSet', 'hxAbSet', 'hxSlcSet', 'hxNtSet', 'hxSpeed', 'hxRedoStep', 'hxRegionEdit', 'hxEdWf', 'hxUndoStep', 'hxPhase', 'hxLen']
 if 'function gdRecover(' in s: extra += ['GD', 'gdRecover', 'budgetApply', 'hxTauBack', 'hxGeraet', 'lmEv', 'lmUPoll', 'lmUlog', 'HX_PHONE']
 import re as _re
 def _defined(n):

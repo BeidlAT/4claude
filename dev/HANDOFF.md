@@ -161,7 +161,16 @@ Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`)
    stehen). Wellenform: `hxEdRenderPass` rendert offline drei Durchgänge mit dem Prozessor (gespielte Version je Schicht,
    Pegel, Band, `hxBandSliceOf`, Verblassen, Abrieb), gezeichnet der dritte, Maßstab = Spitze der Aufnahme; bis dahin
    die rohe Aufnahme mit „Klang wird berechnet …“. Abrieb zeigt den dritten Durchgang, nicht den Verschleiß seit Beginn.
-   `t-hx-bearbeiten` 15.
+   `t-hx-bearbeiten` 15. Nachtrag 3 (26.10.2026, Besitzer: „einzelne Abschnitte separat editieren“; Entscheidung: ein
+   Abschnitt behält seine Länge): `js/hexenring/abschnitt.js` – `hxRegionEdit(L, a, b, op, v)` schreibt in die Audio jeder
+   Schicht (trocken und eingebrannt, dieselben Frames; `tr0` bekommt sie mit): `band` (Kaiser-Sinc 32 Taps `hxRsRead`,
+   Grenzfrequenz bei schneller gesenkt; ×2 wiederholt mit 5-ms-Überblendung, ½ spielt die erste Hälfte), `rev`, `weg`/
+   `tausch` an den Anschlägen (`hxBandU`), `gain`; 5-ms-Überblendung an den Rändern; ein Schritt (`hxBandStep`, ↶ tauscht
+   die vorige Audio zurück). Bei Wuchs abgelehnt (es spielt dann nicht die Aufnahme). Im Fenster der Kasten „Abschnitt
+   bearbeiten“, sobald eine Auswahl steht; Wellenform mit `hxEdWf` (Band der ganzen Schleife: kürzer/Länge bei ×1).
+   Die Noten (Ring, Notenbalken) folgen einem Abschnitt-Band nicht. Wellenform-Rendern mit der Länge aus `L.d` (der kommende
+   Durchgang – eine Änderung wartet bis zur Naht, `L.prev`; vorher wurde mit der alten Länge gerechnet: Bild abgeschnitten),
+   Hinweis `.hx-ed-wait` mit den Sekunden bis zur Naht. `t-hx-bearbeiten` 20.
 5. **Offene Fragen ans Ohr:** Schale spricht wie früher das Harz-Glas manchmal spät an (soll sie immer sofort?);
    Bandträgheit, Gärtner-Bass, Musikalität der Antworten (siehe `dev/IDEEN.md`).
 6. **Danach** die Liste in `dev/IDEEN.md` (Sample-Bibliothek, Stimme als Instrument, neue Klangerzeugung, native App).
