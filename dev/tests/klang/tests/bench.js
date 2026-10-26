@@ -156,7 +156,8 @@ function costRow(okf, what, tab, cur, env, f) {
     wal: { f0: [55, 110, 220, 440], ys: [0.5], tol: 15, costMax: 2.33, line: true, lineAt: 1.4, pp: { 'wal.knarren': 0 } },   // (the cry arrives on the note in its arc: measured on the line after it)
     stp: { pitchless: 'a Shepard tone has no single pitch (its octave voices glide forever)', costMax: 1.51 },
     atr: { f0: [110, 220, 440], ys: [0.1], pY: 0.1, tol: 10, costMax: 0.95 },   // (the lock on the note: low on the field the orbit is periodic)
-    tnl: { f0: [110, 220, 440, 880], ys: [0.8], tol: 8, costMax: 1.05, line: true },
+    // Tunnel: every note's sweep starts at its own phase, one 85-ms window reads where the notch stood – eight notes
+    tnl: { cAvg: 8, f0: [110, 220, 440, 880], ys: [0.8], tol: 8, costMax: 1.05, line: true },
     // ---- Etappe 4 (Strom, Trap, LoFi, Welt) ----
     wkg: { f0: [55, 110, 220, 440, 880], ys: [0.2, 0.7], tol: 5, costMax: 1.49 },
     bnt: { f0: [110, 220, 440, 880], ys: [0.05], tol: 6, costMax: 0.95 },   // (low on the field the clean toy; up the field it jumps – by design)
