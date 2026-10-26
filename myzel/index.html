@@ -12888,7 +12888,7 @@ function myzelDsp() {
         // the source: a saw (PolyBLEP) and pinkish noise
         ph += dt; if (ph >= 1) ph -= 1;
         const w = rng.next() * 2 - 1; pk1 = 0.97 * pk1 + 0.03 * w; pk2 = 0.6 * pk2 + 0.4 * w;
-        const src = ((2 * ph - 1 - blep(ph, dt)) * (1 - nz) * 0.5 + (pk1 * 3 + pk2) * nz * 0.5) * env * this.vel;
+        const src = ((2 * ph - 1 - blep(ph, dt)) * (1 - nz) * 0.5 + (pk1 * (3 - 2 * sog) + pk2 * (0.4 + 1.8 * sog)) * nz * 0.5) * env * this.vel;   // (the pull draws a brighter jet)
         // the comb, tuned to the note (a damped loop: the tube)
         const o = this.rdF(cb, cbW - per); cz += damp * (o - cz);
         cb[cbW & CM] = src + cz * g; cbW++;
