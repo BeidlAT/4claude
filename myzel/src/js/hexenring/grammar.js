@@ -240,7 +240,7 @@ function hxSchRebuild(loop, s, o = {}) {
 }
 // a loop back from a snapshot: phase-correct where it would be (its geometry is its own beat or frame), fading in
 function hxRebuild(sn, o = {}) {
-  const slot = sn.slot != null && !HX.slot[sn.slot] ? sn.slot : hxZiel();
+  const slot = sn.slot != null && sn.slot < HX_SLOTS && !HX.slot[sn.slot] ? sn.slot : hxZiel();   // (a slot beyond this device's places: a free one)
   if (slot < 0) { toast('Kein freier Platz für ' + 'Schleife ' + ((sn.slot || 0) + 1) + '.'); return null; }
   const L = hxLoopMake({ slot, key: sn.key, lock: sn.d.lock, b0: sn.d.b0 - TG.o, beats: sn.d.beats, Lf: sn.d.L, ph0: sn.d.ph0, gap: !!sn.d.gap, gain: sn.gain, pan: sn.pan || 0, bpb: sn.bpb, notes: sn.notes, mv: sn.mv, cut: sn.cut, eng: sn.eng, setTG: sn.setTG, src: sn.src, bpm: sn.bpm, state: o.state || (sn.state === 'stumm' ? 'stumm' : 'spielt'), fokus: o.fokus, eig: sn.eig,
     wwhy: sn.wwhy || {}, ton: sn.ton, klang: sn.klang, stufe: sn.stufe, q: sn.q, P: sn.P, mask: sn.mask, chainRec: sn.chainRec, jrg: sn.jrg });   // (step 2a: its Wuchs)

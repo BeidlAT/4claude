@@ -43,7 +43,7 @@ function hxNode() {
   const ctx = A.ctx, hum = P['hx.humus'];
   let node;
   try {
-    node = new AudioWorkletNode(ctx, 'myzel-ring', { numberOfInputs: 4, numberOfOutputs: 3, outputChannelCount: [2, 2, 2 * HX_SLOTS], channelCount: 2, channelCountMode: 'explicit',
+    node = new AudioWorkletNode(ctx, 'myzel-ring', { numberOfInputs: 4, numberOfOutputs: 3, outputChannelCount: [2, 2, 2 * HX_SENDS], channelCount: 2, channelCountMode: 'explicit',
       channelInterpretation: 'speakers', processorOptions: { humusS: hum, chunk: HX_CH, rid: (HX.rid = (HX.rid || 0) + 1), drift: 1, rings: 4, mic: 1 } });   // (step 4: in 3 and a fourth ring – the Mikro's, its chunks when it is first switched on)   // (step 1d: out 2 – the sends of Nähren, a pair per slot; step 2b: in 2 and a third ring – the Puls's lanes)
   } catch (e) { console.warn(e); HX.state = 'kein'; return; }
   // „Alles“ = what is heard, the Schleifen included: the master's input, into a node of its own downstream of it

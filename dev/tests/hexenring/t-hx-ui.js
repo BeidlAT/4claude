@@ -21,13 +21,13 @@ const SHOTS = process.env.SHOTS || __dirname + '/out';
       const r = (el) => { const b = el.getBoundingClientRect(); return { x: b.left, y: b.top, w: b.width, h: b.height, b: b.bottom, r: b.right }; };
       const M = window.__M, rail = document.getElementById('hxRail'), st = document.getElementById('stage'), sh = document.getElementById('sheet');
       const vis = (el) => !el.hidden && el.offsetParent !== null;
-      return { rail: r(rail), stage: r(st), sheet: sh.hidden ? null : r(sh), shown: vis(rail), rings: M.HXU.rings.filter(vis).length, chips: vis(M.HXU.chips) ? r(M.HXU.chips) : null,
+      return { rail: r(rail), stage: r(st), sheet: sh.hidden ? null : r(sh), shown: vis(rail), rings: M.HXU.rings.filter(vis).length, slots: M.HX.slot.length, chips: vis(M.HXU.chips) ? r(M.HXU.chips) : null,
         korb: vis(M.HXU.korb), haupt: vis(M.HXU.haupt), form: vis(document.getElementById('hxForm')) ? r(document.getElementById('hxForm')) : null, formAria: document.getElementById('hxForm').getAttribute('aria-label'), role: rail.getAttribute('role'), coach: !document.getElementById('hxCoach').hidden, vw: innerWidth, sw: document.documentElement.scrollWidth };
     });
     let g = await geo();
     ok(g.shown && g.role === 'toolbar' && Math.abs(g.rail.h - 56) < 1, `${name}: the Ringleiste is there after the start (a toolbar, ${g.rail.h} px)`);
     ok(g.rail.y >= g.stage.b - 1 && g.rail.x >= g.stage.x - 1 && g.rail.r <= g.stage.r + 1, `${name}:   under the field, in its column, never over it (field ${Math.round(g.stage.y)}–${Math.round(g.stage.b)}, rail from ${Math.round(g.rail.y)})`);
-    ok(g.rings === (w >= 700 ? 8 : 4) && g.sw <= g.vw, `${name}:   ${g.rings} rings on a page; no sideways scrolling (${g.sw}/${g.vw})`);
+    ok((g.slots > 8 ? g.rings >= Math.min(g.slots, 4) && g.rings * 40 <= w : g.rings === (w >= 700 ? 8 : 4)) && g.sw <= g.vw, `${name}:   ${g.rings} rings on a page; no sideways scrolling (${g.sw}/${g.vw})`);
     ok(g.coach, `${name}:   the coach mark on the first start`);
     ok(g.form && g.form.r >= g.rail.r - 8 && g.form.r <= g.rail.r + 1 && /Form|Lichtung/.test(g.formAria), `${name}:   the form button at the rail's right end (${g.form && Math.round(g.rail.r - g.form.r)} px from it, „${g.formAria}“)`);
     await page.screenshot({ path: SHOTS + '/ui-' + name + '-1.png' });

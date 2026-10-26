@@ -5,12 +5,22 @@
 const HXN = { webs: new Map(), split: null, kor: null };
 function hxSplit() {
   if (HXN.split && HXN.split.context === A.ctx) return HXN.split;
-  const sp = A.ctx.createChannelSplitter(2 * HX_SLOTS); HX.node.connect(sp, 2); return (HXN.split = sp);
+  const sp = A.ctx.createChannelSplitter(2 * HX_SENDS); HX.node.connect(sp, 2); return (HXN.split = sp);
+}
+// (26.10.2026: 24 places – an output has at most 32 channels) a feeding loop's send pair: its own while it feeds, the
+// first free of HX_SENDS otherwise; -1 when all are taken
+const HX_SENDS = 16;
+function hxSendCh(L) {
+  if (L.sendCh != null && L.sendCh >= 0) return L.sendCh;
+  const used = new Set(); for (const X of HX.loops.values()) if (X !== L && X.sendCh != null && X.sendCh >= 0 && X.state !== 'weg') used.add(X.sendCh);
+  for (let c = 0; c < HX_SENDS; c++) if (!used.has(c)) return (L.sendCh = c);
+  toast('Höchstens ' + HX_SENDS + ' Schleifen nähren gleichzeitig.'); return -1;
 }
 function hxWebMake(L) {
   if (!A.ctx || !A.ctx.__dspOK || !HX.node || A.workletBroken.has('gsp')) return null;
   try {
-    const sp = hxSplit(), mg = A.ctx.createChannelMerger(2), i = L.slot;
+    const i = hxSendCh(L); if (i < 0) return null;
+    const sp = hxSplit(), mg = A.ctx.createChannelMerger(2);
     sp.connect(mg, 2 * i, 0); sp.connect(mg, 2 * i + 1, 1);
     const node = new AudioWorkletNode(A.ctx, 'myzel-web', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit',
       processorOptions: { rich: !!Q.rich, lite: A.lite ? 1 : 0, prm: gspPrm(), freqs: gspFreqs(), seed: wkSeed() } });

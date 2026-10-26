@@ -4,21 +4,43 @@
 // Länge ±, Eins ← →, Runde davor, the window moved in the editor – and every undo of one takes its audio from there,
 // however long ago the Schleife was harvested; the editor shows the Ernte whole with the loop's window in it, its
 // edges and the window itself dragged on the beats (heard at the next seam, ↶ ↷ and Grundeinstellung as always).
-// Kept while the session lives (not stored – a few hundred MB per Schleife), counted against the Speichergrenze. ----
+// Kept while the session lives (not stored), counted against the Speichergrenze; several Ernten share their audio. ----
+// (owner, 26.10.2026: „geteiltes Lager“) the Ernten share one store per Humus ring: its chunks (HX_CH frames, aligned on
+// the ring's absolute frames – the same number is the same audio) each held once; an Ernte is a list of references to
+// them. A new harvest copies out of the ring only the chunks the store does not hold yet (a chunk an earlier grab
+// filled only in part is taken again). The store holds them weakly: a chunk no Ernte refers to any more is freed by
+// the browser's garbage collection.
+const HX_LAGER = [new Map(), new Map(), new Map(), new Map()];
+const hxLagerGet = (inp, k) => { const r = HX_LAGER[inp] && HX_LAGER[inp].get(k), c = r && r.deref(); if (!c && r) HX_LAGER[inp].delete(k); return c || null; };
 function hxHumKeep(L, S) {
-  if (!L || L.hum || L.humBusy || L.bew || !S || !S.cut || S.cut.stale || !HX.node) return;
-  const c = S.cut, f1 = c.f0 + S.n, f0 = Math.max(Math.ceil(hxOldestF()), f1 - Math.round(P['hx.humus'] * SR));
+  if (!L || L.hum || L.humBusy || L.bew || !S || !S.cut || S.cut.stale || !HX.node || typeof WeakRef === 'undefined') return;
+  const c = S.cut, inp = c.in, f1 = c.f0 + S.n, k0 = Math.ceil(Math.max(Math.ceil(hxOldestF()), f1 - Math.round(P['hx.humus'] * SR)) / HX_CH), f0 = k0 * HX_CH;
   if (f1 - f0 <= S.n + SR) return;   // (the Humus held nothing beyond its own window)
-  if (hxMemUsed() + hxBytes(f1 - f0) > P['hx.mem'] * 1048576) {
+  const k1 = Math.ceil(f1 / HX_CH);   // (chunks k0 … k1 − 1; the last one up to f1)
+  // the first chunk the store lacks (or holds only in part) – from there on it is copied
+  let km = k0; while (km < k1) { const ch = hxLagerGet(inp, km); if (!ch || ch.end < Math.min(HX_CH, f1 - km * HX_CH)) break; km++; }
+  if (km < k1 && hxMemUsed() + hxBytes(f1 - km * HX_CH) > P['hx.mem'] * 1048576) {
     if (!(HX.humToastT > performance.now())) { HX.humToastT = performance.now() + 60000; toast('Speichergrenze: die ganze Ernte wird nicht mehr mit der Schleife behalten (' + P['hx.mem'] + ' MB, unter Einstellungen erhöhbar).', 6000); }
     return;
   }
+  const done = () => {
+    const aud = []; for (let k = k0; k < k1; k++) { const ch = hxLagerGet(inp, k); if (!ch) { hxEdTouch(L); return; } aud.push(ch); }
+    L.hum = { in: inp, f0, n: f1 - f0, aud, w0: c.w0, w1: c.w1, beats: L.d.beats, Lf: L.d.L };   // (w0, w1, beats: the window as harvested – Grundeinstellung)
+    hxEdTouch(L);
+  };
+  if (km >= k1) { done(); return; }   // (all there already: the Ernte is references only)
   L.humBusy = true; hxEdTouch(L);
-  hxGrab({ in: c.in, f0, f1, dr: true }).then((g) => {
+  hxGrab({ in: inp, f0: km * HX_CH, f1, dr: true }).then((g) => {
     L.humBusy = false;
     if (!g || !g.chunks || HX.loops.get(L.id) !== L || L.hum) { hxEdTouch(L); return; }
-    L.hum = { in: c.in, f0: g.f0 != null ? g.f0 : f0, n: g.n || f1 - f0, aud: g.chunks, dr: g.dr || null, w0: c.w0, w1: c.w1, beats: L.d.beats, Lf: L.d.L };   // (w0, w1, beats: the window as harvested – Grundeinstellung)
-    hxEdTouch(L);
+    const st = HX_LAGER[inp], per = HX_CH / 128;
+    g.chunks.forEach((ch, j) => {
+      const k = km + j, end = Math.min(HX_CH, f1 - k * HX_CH); if (end <= 0) return;
+      ch.end = end; ch.dr = g.dr ? g.dr.subarray(j * per, (j + 1) * per) : null;
+      const old = hxLagerGet(inp, k); if (old && old.end >= end) return;   // (a chunk filled meanwhile by another grab)
+      st.set(k, new WeakRef(ch));
+    });
+    done();
   });
 }
 const hxEdTouch = (L) => { if (HXE.ed && !HXE.ed.hidden && hxEdL() === L) HXE.rsig = ''; };
@@ -37,8 +59,9 @@ function hxHumSlice(H, c) {
     if (src) { dst[0].set(src[0].subarray(so, so + k), dO); dst[1].set(src[1].subarray(so, so + k), dO); }
     i += k;
   }
+  // the drift, chunk by chunk (each chunk keeps the drift it was played with, 64 values)
   let dr = null;
-  if (H.dr) { const b = Math.floor(off / 128); dr = new Float32Array(Math.ceil(c.n / 128) + 1); for (let k = 0; k < dr.length; k++) dr[k] = H.dr[Math.min(H.dr.length - 1, b + k)]; }
+  if (H.aud[0] && H.aud[0].dr) { const per = HX_CH / 128, b = Math.floor(off / 128), mx = H.aud.length * per - 1; dr = new Float32Array(Math.ceil(c.n / 128) + 1); for (let k = 0; k < dr.length; k++) { const q = Math.min(mx, b + k), ch = H.aud[Math.floor(q / per)]; dr[k] = ch && ch.dr ? ch.dr[q % per] : 0; } }
   return { aud, dr };
 }
 // the loop's window moved or resized in its Ernte (frames, absolute): heard at once when its length stays, else from the

@@ -272,7 +272,7 @@ function hxRailTips(hw) {
   set(HXU.undo, 'Zurück: nimmt den letzten Schritt zurück (oder bricht ab, was gerade wartet). 1,5 Sekunden halten: alle Schleifen leeren.');
   set(HXU.redo, 'Wiederholen: den zurückgenommenen Schritt wiederherstellen.');
   set(HXU.form, 'Form: wechselt zur nächsten Lichtung – einem gemerkten Teil deines Stücks. Halten: die Zeile mit Merken, Kern, Lücke und Schluss.');
-  set(HXU.pg, 'Die anderen vier Plätze zeigen (Schleifen 1–4 oder 5–8).');
+  set(HXU.pg, 'Die nächsten Plätze zeigen – die Zahl sagt welche, „+2 spielen“: zwei Schleifen auf den anderen Seiten spielen.');
   set(HXU.fold, 'Die Leiste ein- oder ausklappen.');
   for (let i = 0; i < HX_SLOTS; i++) {
     const b = HXU.rings[i], L = HX.loops.get(HX.slot[i]), R = HX.rec;
