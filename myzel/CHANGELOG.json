@@ -2,6 +2,13 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-26k",
+      "punkte": [
+        "Behoben: „Nur die Auswahl spielen“ und andere Band-Werkzeuge meldeten immer wieder „eine Schicht wird noch eingebrannt“ – sie warten jetzt nur noch, solange das Einbrennen wirklich läuft (ein paar Sekunden).",
+        "Gelingt das Einbrennen einmal nicht, spielt die Schicht über die laufende Effektkette weiter – die Werkzeuge bleiben benutzbar."
+      ]
+    },
+    {
       "id": "2026-10-26j",
       "punkte": [
         "Ganze Ernte: Jede Schleife behält alles, was der Humus beim Ernten hielt. Im Fenster „Ansehen und bearbeiten“ verschiebst du ihren Ausschnitt darin frei – Ränder ziehen, Takt- und Schlag-Schritte –, ↶ und Grundeinstellung holen ihn zurück, auch lange nach dem Ernten.",

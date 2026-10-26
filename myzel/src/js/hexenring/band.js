@@ -42,7 +42,7 @@ function hxBandReady(L, what) {
   const sch = L.sch.map((id) => HX.sch.get(id)).filter(Boolean);
   if (!sch.length || L.bew) return null;
   if (sch.some((S) => !S.aud)) { toast('Einen Moment – die Schleife wird noch aufgenommen.'); return null; }
-  if (!L.folgt && sch.some((S) => S.chain && !S.baked)) { toast('Einen Moment – eine Schicht wird noch eingebrannt.'); return null; }
+  if (!L.folgt && sch.some((S) => S.chain && !S.baked && S.baking)) { toast('Einen Moment – eine Schicht wird noch eingebrannt.'); return null; }
   if (what && L.sch.some((id) => { const S = HX.sch.get(id); return S && S.play && S.play !== 'ab'; }) && what !== 'wuchs') { /* (a Wuchs version plays: the tool acts on its Abdruck, heard again when it plays it) */ }
   return sch;
 }

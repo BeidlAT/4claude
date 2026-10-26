@@ -30777,7 +30777,7 @@ async function hxMerge(L) {
   if (sch.length < 2) { toast('Zum Zusammenlegen braucht es zwei hörbare Schichten.'); return false; }
   if (sch.some((S) => !S.aud)) { toast('Einen Moment – eine Schicht wird noch aufgenommen.'); return false; }
   // (step 1c: each as it plays – baked, or dry where it follows the chain; a dry one that waits for its bake waits)
-  if (!L.folgt && sch.some((S) => S.chain && !S.baked)) { toast('Einen Moment – eine Schicht wird noch eingebrannt.'); return false; }
+  if (!L.folgt && sch.some((S) => S.chain && !S.baked && S.baking)) { toast('Einen Moment – eine Schicht wird noch eingebrannt.'); return false; }
   const ver = (S) => (S.baked && S.bak ? S.bak : S.aud), dry = L.folgt && sch.some((S) => S.chain);
   const k = hxPassK(L, Math.round(hxF(hxNowT()))), Lf = hxPassF(L, k + 1) - hxPassF(L, k), tail = Math.max(0, ...sch.map((S) => (S.aus ? S.aus.len : 0)));
   const passes = Math.ceil(tail / Lf) + 2, ctx = new OfflineAudioContext(2, Lf * (passes + 2), SR);
@@ -33684,7 +33684,8 @@ async function hxAfterFill(S) {
   let changed = false;
   if (S.cutAus && !S.spliced && L.notes.length && S.cut.in === 0) { const r = await hxTail(S); if (!ok()) return; if (r) changed = true; }
   if (S.chain && !L.folgt && hxwOk()) {
-    const r = await hxBake(S);
+    S.baking = (S.baking || 0) + 1;   // (26.10.2026: the tools wait only while a bake really runs – one that fails leaves the Schicht dry through the live chain, never stuck)
+    let r = false; try { r = await hxBake(S); } finally { S.baking--; }
     if (!ok()) return;
     if (r) { hxSchPlay(S, true, hxNextSeam(L).f); if (changed) hxSaveSch(S); hxSaveSch(S, 'b'); return; }
   }
@@ -36001,7 +36002,7 @@ function hxBandReady(L, what) {
   const sch = L.sch.map((id) => HX.sch.get(id)).filter(Boolean);
   if (!sch.length || L.bew) return null;
   if (sch.some((S) => !S.aud)) { toast('Einen Moment – die Schleife wird noch aufgenommen.'); return null; }
-  if (!L.folgt && sch.some((S) => S.chain && !S.baked)) { toast('Einen Moment – eine Schicht wird noch eingebrannt.'); return null; }
+  if (!L.folgt && sch.some((S) => S.chain && !S.baked && S.baking)) { toast('Einen Moment – eine Schicht wird noch eingebrannt.'); return null; }
   if (what && L.sch.some((id) => { const S = HX.sch.get(id); return S && S.play && S.play !== 'ab'; }) && what !== 'wuchs') { /* (a Wuchs version plays: the tool acts on its Abdruck, heard again when it plays it) */ }
   return sch;
 }
