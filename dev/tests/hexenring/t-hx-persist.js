@@ -102,6 +102,7 @@ const ORIGIN = 'http://127.0.0.1:8790/';
       IDBObjectStore.prototype.put = function (v, k) { if (this.name === 'ringsegs') throw new DOMException('voll', 'QuotaExceededError'); return put.call(this, v, k); };
       window.__grid(120); await window.__sleep(300);
       const B0 = Math.ceil(M.tgBeat(A.ctx.currentTime + 0.4) / 4) * 4;
+      M.P['hx.ernte'] = false;   // (these blocks measure the loops' own audio against the cap – the whole Ernte, kept after the first fill, is t-hx-vorrat's)
       window.__riff(M.tgTime(B0), 0.5, [0, 4, 2, 7], 1, { eng: 'mem' });
       await window.__until(M.tgTime(B0 + 4) + 0.05 + lat);
       M.hxKorb(null);
@@ -133,7 +134,7 @@ const ORIGIN = 'http://127.0.0.1:8790/';
       o.graveKeeps = again < 12 && g0 === 4 && M.hxMemUsed() < mb0 - 4e6;   // (full again; the graveyard's audio counted until removed)
       o.afterClear = harvest(); o.again = again;
       await window.__sleep(100);
-      M.setParam('hx.mem', 1500);
+      M.setParam('hx.mem', 1500); M.P['hx.ernte'] = true;
       return o;
     });
     ok(r.quota.fail && /voll/.test(r.quota.toast) && r.quota.act === 'Aufräumen' && r.quota.aud && r.quota.state === 'spielt' && r.quota.lvl > 1e-4, `device storage full: „${r.quota.toast}“ · ${r.quota.act} – the Schleife plays on, its audio kept`);
