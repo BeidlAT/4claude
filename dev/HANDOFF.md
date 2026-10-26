@@ -152,7 +152,16 @@ Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`)
    `hxBandTrimTo(L, a, f)`; `hxBandTrim` rechnet jetzt mit Beginn `a` (`hxTrA`, alte Einträge mit `i` gelten weiter),
    ½/¼/◀▶/ganz wie vorher. Schichten mit eigener Wellenform, Pegel, stumm, löschen; Werkzeugzeilen wie die Karte.
    Behoben: `hxBandFl` merkt die ungetrimmten Noten (↶ nach dem ersten Trimmen ließ nur die getrimmten). Test
-   `t-hx-bearbeiten` (10, in run-all). Nachtrag 26.10.2026 (Besitzer: „weg 15 %“ blieb auf „weg aus“ markiert): `hxEdSig` beobachtet jetzt auch `slc`, `vb`, `ab`.
+   `t-hx-bearbeiten` (10, in run-all). Nachtrag 26.10.2026 (Besitzer: „weg 15 %“ blieb auf „weg aus“ markiert): `hxEdSig` beobachtet jetzt auch `slc`, `vb`, `ab`. Nachtrag 2 (26.10.2026, Besitzer: Tauschen ließ sich nicht abschalten; alles sofort rückgängig; Grundeinstellung;
+   Wellenform exakt): Zeilen Weglassen/Tauschen/Altern mit eigenem „aus“; `hxSpeed`, `hxVbSet`, `hxAbSet`, `hxSlcSet` legen
+   einen Schritt in den Verlauf (`o.noHist` beim Zurückspielen; ein noch wartender Bandwechsel nimmt seinen Schritt mit,
+   `hxAbPut`, `hxSlcPut`), Schicht-Pegel/-Stumm im Fenster ebenso (`hxEdSchStep`); ↶ ↷ im Fensterkopf;
+   `hxDefaults(L)` + `hxHistGroup` (ein Schritt; Pegel, Balance, Schichten und Verdoppeln bleiben), auch in der Karte;
+   `T0.rev/revW` beim ersten Trimmen – „ganz“ setzt die Richtung passend zur Aufnahme (vorher konnte sie danach falsch
+   stehen). Wellenform: `hxEdRenderPass` rendert offline drei Durchgänge mit dem Prozessor (gespielte Version je Schicht,
+   Pegel, Band, `hxBandSliceOf`, Verblassen, Abrieb), gezeichnet der dritte, Maßstab = Spitze der Aufnahme; bis dahin
+   die rohe Aufnahme mit „Klang wird berechnet …“. Abrieb zeigt den dritten Durchgang, nicht den Verschleiß seit Beginn.
+   `t-hx-bearbeiten` 15.
 5. **Offene Fragen ans Ohr:** Schale spricht wie früher das Harz-Glas manchmal spät an (soll sie immer sofort?);
    Bandträgheit, Gärtner-Bass, Musikalität der Antworten (siehe `dev/IDEEN.md`).
 6. **Danach** die Liste in `dev/IDEEN.md` (Sample-Bibliothek, Stimme als Instrument, neue Klangerzeugung, native App).
