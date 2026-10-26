@@ -460,6 +460,7 @@ NUM('dly.pp', 'Ping-Pong', 0, 1, 0.7, '%');
 NUM('dly.tone', 'Bandfarbe', 300, 18000, 3800, 'Hz', { curve: 'exp' });
 NUM('dly.wow', 'Leiern', 0, 1, 0.2, '%');
 NUM('dly.mix', 'Anteil', 0, 1, 0.35, '%');
+SEL('rev.raum', 'Raum', [['nebel', 'Nebel'], ['holz', 'Holzsaal'], ['stein', 'Steinkuppel']], 'nebel', { chips: 1, small: 1 });   // (Handpan-Pilot: genRoom)
 NUM('rev.size', 'Nachhallzeit', 0.3, 14, 5, 's', { curve: 'exp' });
 NUM('rev.damp', 'Dämpfung', 0, 1, 0.5, '%');
 NUM('rev.pre', 'Vorverzögerung', 0, 0.25, 0.03, 's');

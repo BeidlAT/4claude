@@ -2720,6 +2720,7 @@ NUM('dly.pp', 'Ping-Pong', 0, 1, 0.7, '%');
 NUM('dly.tone', 'Bandfarbe', 300, 18000, 3800, 'Hz', { curve: 'exp' });
 NUM('dly.wow', 'Leiern', 0, 1, 0.2, '%');
 NUM('dly.mix', 'Anteil', 0, 1, 0.35, '%');
+SEL('rev.raum', 'Raum', [['nebel', 'Nebel'], ['holz', 'Holzsaal'], ['stein', 'Steinkuppel']], 'nebel', { chips: 1, small: 1 });   // (Handpan-Pilot: genRoom)
 NUM('rev.size', 'Nachhallzeit', 0.3, 14, 5, 's', { curve: 'exp' });
 NUM('rev.damp', 'Dämpfung', 0, 1, 0.5, '%');
 NUM('rev.pre', 'Vorverzögerung', 0, 0.25, 0.03, 's');
@@ -3016,8 +3017,8 @@ let SR = 48000;
 // Tiefe, Stimme, Schwarm, Nebel L3: the median), two runs each and every body, bridge and syllable – the highest + 15 %
 // (elm with its arc built, jrg while its modes ring, mdr its first 4 s with the crackle, boe held at y 0.6, amo across
 // the field at y 0.6; all with their full planned sound, the owner's rule is best sound first)
-const VCOST1 = { neb: 1, kor: 0.6, hau: 0.3, glo: 0.7, mem: 0.4, sai: 0.35, sch: 0.9, gng: 1.55, klb: 1.25, obt: 0.75, stm: 1.05, swm: 1.2, tie: 0.75, trp: 0.7, hlm: 0.68, rnk: 0.63, elm: 1.09, jrg: 1.13, hrz: 1.71, mdr: 0.84, boe: 0.69, amo: 0.47, gsp: 0.34, rhz: 1.08, shn: 0.78, khl: 0.84, hng: 0.69, gml: 0.54, sit: 0.96, tbl: 0.7, did: 0.91, mtr: 0.91, nrd: 2.25, sht: 1.54, ond: 1.08, wal: 1.69, stp: 1.08, atr: 0.67, tnl: 0.74, wkg: 1.07, bnt: 0.67, kas: 0.82, bit: 0.82, gbs: 0.93, hht: 0.66, vox: 0.82, spu: 0.76, kto: 0.56 };
-const VCOST3 = { neb: 1.9, kor: 1.1, hau: 0.75, glo: 1.4, mem: 0.75, sai: 1.2, sch: 2, gng: 2.8, klb: 2.2, obt: 1.85, stm: 2.4, swm: 2.7, tie: 1.5, trp: 1.5, hlm: 1.15, rnk: 1.07, elm: 2.51, jrg: 2.67, hrz: 3.85, mdr: 1.67, boe: 1.11, amo: 1.34, gsp: 1.01, rhz: 2.82, shn: 1.49, khl: 1.53, hng: 1.3, gml: 1.07, sit: 1.42, tbl: 0.92, did: 1.43, mtr: 1.36, nrd: 3.02, sht: 2.18, ond: 1.82, wal: 2.24, stp: 1.68, atr: 1.13, tnl: 1.37, wkg: 1.57, bnt: 1.08, kas: 1.14, bit: 1.19, gbs: 1.67, hht: 1.17, vox: 1.7, spu: 1.03, kto: 0.98 };   // measured: level-1 cost × (level 3 / level 1)
+const VCOST1 = { neb: 1, kor: 0.6, hau: 0.3, glo: 0.7, mem: 0.4, sai: 0.35, sch: 0.9, gng: 1.55, klb: 1.25, obt: 0.75, stm: 1.05, swm: 1.2, tie: 0.75, trp: 0.7, hlm: 0.68, rnk: 0.63, elm: 1.09, jrg: 1.13, hrz: 1.71, mdr: 0.84, boe: 0.69, amo: 0.47, gsp: 0.34, rhz: 1.08, shn: 0.78, khl: 0.84, hng: 1.33, gml: 0.54, sit: 0.96, tbl: 0.7, did: 0.91, mtr: 0.91, nrd: 2.25, sht: 1.54, ond: 1.08, wal: 1.69, stp: 1.08, atr: 0.67, tnl: 0.74, wkg: 1.07, bnt: 0.67, kas: 0.82, bit: 0.82, gbs: 0.93, hht: 0.66, vox: 0.82, spu: 0.76, kto: 0.56 };
+const VCOST3 = { neb: 1.9, kor: 1.1, hau: 0.75, glo: 1.4, mem: 0.75, sai: 1.2, sch: 2, gng: 2.8, klb: 2.2, obt: 1.85, stm: 2.4, swm: 2.7, tie: 1.5, trp: 1.5, hlm: 1.15, rnk: 1.07, elm: 2.51, jrg: 2.67, hrz: 3.85, mdr: 1.67, boe: 1.11, amo: 1.34, gsp: 1.01, rhz: 2.82, shn: 1.49, khl: 1.53, hng: 2.12, gml: 1.07, sit: 1.42, tbl: 0.92, did: 1.43, mtr: 1.36, nrd: 3.02, sht: 2.18, ond: 1.82, wal: 2.24, stp: 1.68, atr: 1.13, tnl: 1.37, wkg: 1.57, bnt: 1.08, kas: 1.14, bit: 1.19, gbs: 1.67, hht: 1.17, vox: 1.7, spu: 1.03, kto: 0.98 };   // measured: level-1 cost × (level 3 / level 1)
 // Sehne: the table holds the plucked string (jawari the dearer bridge: 0.68 / 1.29 measured at the most); under the
 // E-Bow (its pickup, limiter, band and push) a voice costs 0.94 / 1.84 with the jawari (flat 0.75 / 1.49) – it is
 // priced so while its hand is in the E-Bow's zone
@@ -3152,7 +3153,8 @@ function cmpGainCurve() {
 }
 
 /* ---------- heavy buffers (reverb IR, grain textures) are rendered off the main thread ---------- */
-function genIR(sec, damp, sr, nch) {
+function genIR(sec, damp, sr, nch, room) {
+  if (room && room !== 'nebel' && typeof genRoom === 'function') return genRoom(room, sec, damp, sr, nch || 2);
   const len = Math.max(256, Math.floor(sec * sr));
   const tau = sec / 6.9, fadeIn = Math.floor(sr * 0.004);
   const c0 = 0.97, c1 = 0.03 + (1 - damp) * 0.85;
@@ -3174,6 +3176,72 @@ function genIR(sec, damp, sr, nch) {
     }
     out.push(d);
   }
+  return out;
+}
+// (Handpan-Pilot, 26.10.2026; Konzept „Effekte“ §3.1) a room instead of the fog: a box of real size, its early
+// reflections from image sources (up to the third order) at both microphones – each wall takes highs by its material,
+// the later the darker – then a dense tail in three bands, each with its own decay (low longer in stone, highs by
+// Dämpfung), building up as the echoes thicken. Nachhallzeit sets the middle band; the walls' absorption follows from
+// it (Sabine), so a longer hall also reflects more. The direct sound stays the dry path (no order 0); times are counted
+// from it, so Vorverzögerung keeps its meaning. Its energy matches the fog's at the same settings (Anteil means the same).
+// Two channels: left source → left mic, right → right; four (level 3): LL, LR, RL, RR – true stereo.
+const ROOMS = {
+  holz: { n: 'Holzsaal', dim: [17, 11, 7.5], wall: 5200, lo: 1.15, hi: [0.95, 0.45], build: 0.022, er: 1 },
+  stein: { n: 'Steinkuppel', dim: [22, 20, 15], wall: 11000, lo: 1.3, hi: [1.05, 0.6], build: 0.045, er: 0.85 },
+};
+function genRoom(room, sec, damp, sr, nch) {
+  const R = ROOMS[room] || ROOMS.holz, [W, D, H] = R.dim, len = Math.max(256, Math.floor(sec * 1.15 * sr));
+  const V = W * D * H, S = 2 * (W * D + W * H + D * H), alpha = Math.min(0.95, 0.161 * V / (S * Math.max(0.2, sec))), refl = Math.sqrt(1 - alpha);
+  let seed = 0x5eed1 + Math.round(sec * 1000) + (room === 'stein' ? 77 : 0);
+  const rnd = () => { seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; return (seed >>> 0) / 4294967296; };
+  const src = [[W / 2 - 1.3, 3.2, 1.2], [W / 2 + 1.3, 3.2, 1.2]], mic = [[W / 2 - 0.3, 7.5, 1.7], [W / 2 + 0.3, 7.5, 1.7]];
+  const pairs = nch === 4 ? [[0, 0], [0, 1], [1, 0], [1, 1]] : [[0, 0], [1, 1]];
+  const c = 343, aw = Math.exp(-2 * Math.PI * R.wall / sr), out = [];
+  const tH = sec * Math.max(0.15, R.hi[0] - R.hi[1] * damp), tL = sec * R.lo, tM = sec;
+  for (const [si, mi] of pairs) {
+    const s0 = src[si], m = mic[mi], d0 = Math.hypot(s0[0] - m[0], s0[1] - m[1], s0[2] - m[2]);
+    const ord = [null, new Float32Array(len), new Float32Array(len), new Float32Array(len)];
+    // image sources: mirror the source across the walls; order = the number of reflections
+    for (let nx = -3; nx <= 3; nx++) for (let ny = -3; ny <= 3; ny++) for (let nz = -3; nz <= 3; nz++) {
+      const o = Math.abs(nx) + Math.abs(ny) + Math.abs(nz);
+      if (!o || o > 3) continue;
+      const ix = nx * W + (nx % 2 ? W - s0[0] : s0[0]), iy = ny * D + (ny % 2 ? D - s0[1] : s0[1]), iz = nz * H + (nz % 2 ? H - s0[2] : s0[2]);
+      const d = Math.hypot(ix - m[0], iy - m[1], iz - m[2]), t = (d - d0) / c;
+      const k = Math.round(t * sr * (1 + 0.004 * (rnd() - 0.5)));   // (the walls are not perfectly flat: ±0.2 % scatter)
+      if (k < 1 || k >= len - 2) continue;
+      const g = R.er * Math.pow(refl, o) * (d0 / d) * (rnd() < 0.5 ? 1 : 0.92);
+      ord[o][k] += 0.6 * g; ord[o][k + 1] += 0.3 * g; ord[o][k + 2] += 0.1 * g;   // (a little diffusion on each tap)
+    }
+    const er = new Float32Array(len);
+    for (let o = 1; o <= 3; o++) {   // each reflection through the wall's lowpass once more
+      const a = ord[o];
+      for (let p = 0; p < o; p++) { let y = 0; for (let i = 0; i < len; i++) { y = a[i] + aw * (y - a[i]); a[i] = y; } }
+      for (let i = 0; i < len; i++) er[i] += a[i];
+    }
+    // the tail: noise in three bands, each decaying at its own rate; it thickens over R.build
+    const tail = new Float32Array(len), cL = Math.exp(-2 * Math.PI * 280 / sr), cH = Math.exp(-2 * Math.PI * 3200 / sr), tm = Math.max(0.03, Math.cbrt(V) / c * 1.6);
+    let lp = 0, hpl = 0;
+    for (let i = 0; i < len; i++) {
+      const t = i / sr, x = rnd() * 2 - 1;
+      lp = x + cL * (lp - x); hpl = x + cH * (hpl - x);
+      const lo = lp, hi = x - hpl, mid = x - lo - hi;
+      const e = lo * Math.exp(-6.9 * t / tL) + mid * Math.exp(-6.9 * t / tM) + hi * Math.exp(-6.9 * t / tH);
+      tail[i] = e * (1 - Math.exp(-t / R.build)) * Math.min(1, t / tm);
+    }
+    // the tail joins at the mixing time with the early reflections' level there
+    const a0 = Math.round(tm * 0.7 * sr), a1 = Math.round(tm * 1.3 * sr);
+    let ee = 0, et = 0; for (let i = a0; i < a1 && i < len; i++) { ee += er[i] * er[i]; et += tail[i] * tail[i]; }
+    const tg = et > 0 ? Math.sqrt(Math.max(ee, 1e-9) / et) : 1, d = new Float32Array(len);
+    for (let i = 0; i < len; i++) d[i] = er[i] + tail[i] * tg;
+    const fo = Math.floor(sr * 0.002); for (let i = 0; i < fo; i++) d[len - 1 - i] *= i / fo;
+    out.push(d);
+  }
+  // the fog's energy at the same settings: Anteil means the same in every room
+  const ref = genIR(sec, damp, sr, 1)[0];
+  let er = 0, eo = 0; for (let i = 0; i < ref.length; i++) er += ref[i] * ref[i];
+  for (const d of out) for (let i = 0; i < d.length; i++) eo += d[i] * d[i];
+  const g = Math.sqrt(er / (eo / out.length));
+  for (const d of out) for (let i = 0; i < d.length; i++) d[i] *= g;
   return out;
 }
 function genTexture(kind, sr, F) {
@@ -3731,7 +3799,7 @@ function dspJob(type, args) {
   const run = () => DSP_FN[type](...args);
   if (!DSPW.broken && !DSPW.w) {
     try {
-      const src = [genIR, genTexture, genKS].map((f) => f.toString()).join('\n') +
+      const src = 'var ROOMS=' + JSON.stringify(ROOMS) + ';\n' + [genIR, genRoom, genTexture, genKS].map((f) => f.toString()).join('\n') +
         '\nvar F={ir:genIR,tex:genTexture,ks:function(){return [genKS.apply(null,arguments)];}};' +
         'onmessage=function(e){var d=e.data;var r=F[d.type].apply(null,d.args);postMessage({id:d.id,r:r},r.map(function(a){return a.buffer;}));};';
       DSPW.w = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
@@ -4065,7 +4133,7 @@ function regenIR(now) {
     // level 3: four channels = "true stereo" (each side also reverberates into the other)
     const nch = Q.rich ? 4 : 2;
     A.revWant = nch;
-    dspJob('ir', [P['rev.size'], P['rev.damp'], SR, nch]).then((ch) => {
+    dspJob('ir', [P['rev.size'], P['rev.damp'], SR, nch, P['rev.raum']]).then((ch) => {
       if (job !== A.irJob || !A.ctx) return;   // a newer request superseded this one
       const conv = A.ctx.createConvolver();
       conv.buffer = toBuffer(ch);
@@ -6464,7 +6532,10 @@ const ENGINES = {
     sustain: false, needs: 'worklet', fallback: 'glo',
     start(v, t, f, y, vel, o) {
       const L0 = (2 + 10 * P['hng.nachklang']) * clamp(Math.pow(220 / f, 0.3), 0.6, 1.5) * 1.15, dmul = wkDmul(o, L0), life = L0 * dmul + 0.3;
-      wkVoice(v, 'myzel-hng', f, y, { prm: wkPrm('hng'), seed: wkSeed(), on: { on: t, f, y, vel, dmul, seed: wkSeed() } });
+      // (Handpan-Pilot) a strike on a field that still rings touches it first; the other fields of the scale ring along
+      for (const w of A.voices) if (w !== v && w.alive && w.as === 'hng' && w.wk && w.bus === v.bus && w.hOn < t && Math.abs(w.hf / f - 1) < 0.01) w.wk.port.postMessage({ touch: 1, y, t });
+      v.hf = f; v.hOn = t;
+      wkVoice(v, 'myzel-hng', f, y, { prm: wkPrm('hng'), seed: wkSeed(), on: { on: t, f, y, vel, dmul, seed: wkSeed(), sym: N.notes.slice(0, 13).map((n) => n.f) } });
       wkRing(v, t, HNG_PEAK, life);
     },
   },
@@ -12160,11 +12231,23 @@ function myzelDsp() {
   // a few inharmonic modes that die fast, and the air in the body (the Helmholtz „Gu“, ≈ 90 Hz) with a soft low
   // thump. Höhe is where the hand strikes: low on the field the thumb in the middle (a soft, wide force – the
   // fundamental and the body), high up the fingertip at the edge (a short, hard force – octave, fifth and shell
-  // ring out, a little skin). Struck only; the field rings for seconds (Nachklang, longer in the low register). ----
+  // ring out, a little skin). Struck only; the field rings for seconds (Nachklang, longer in the low register).
+  // (Handpan-Pilot, 26.10.2026) the instrument around the field: the other fields of the scale (on: sym, their
+  // frequencies) ring along – driven by the struck field through the shell, so a field whose note meets one of its
+  // partials (the octave on the Ding's D4) blooms, the others only answer the knock faintly; a hard strike sounds a
+  // few cents sharp and settles (the steel hardens with amplitude) and is shorter, so brighter; no two strikes alike
+  // (where the hand lands, its width, each mode ±1 dB); a new strike on a ringing field touches it first ({touch}).
+  // ----
   const HNG_OUT = 0.16;
   // [ratio, centre gain, edge gain, decay share, split share]
   const HNG_M = [[1, 1, 0.45, 1, 1], [2, 0.38, 0.85, 0.72, 0.8], [3, 0.14, 0.55, 0.48, 0.6],
     [2.47, 0.045, 0.3, 0.12, 0], [3.68, 0.03, 0.24, 0.09, 0], [5.09, 0.018, 0.18, 0.06, 0], [6.85, 0.01, 0.12, 0.045, 0]];
+  // the other fields: modes 1, 2 (and 3 under 330 Hz), a shorter ring than struck (the shell carries them, it damps)
+  const HNG_SYM = [[1, 1, 0.6], [2, 0.5, 0.45], [3, 0.25, 0.3]];   // [ratio, gain, decay share]
+  const HNG_SYM_DRIVE = 2, HNG_SYM_KNOCK = 0.04, HNG_GLIDE = 7, HNG_GLIDE_T = 0.08;   // drive at a perfect match; knock; cents at velocity 1; s
+  // the shell is not linear: the fundamental's square drives the octave (f·f → 2f), fundamental × octave the fifth
+  // (→ 3f) – so a hard strike opens the octave and the fifth, a soft one stays round (the real handpan's dynamic colour)
+  const HNG_NL2 = -0.8, HNG_NL3 = -0.8;
   class Hng extends MyzelProc {
     constructor(o) {
       super(o);
@@ -12173,50 +12256,98 @@ function myzelDsp() {
       if (this.po.prm) this.set(this.po.prm);
       this.rng = new PRNG(this.po.seed || 11);
       this.md = [];
-      HNG_M.forEach((m, i) => { const n = m[4] > 0 ? 2 : 1; for (let j = 0; j < n; j++) this.md.push({ i, j, n, r: new Reso(), g: 0, pan: this.rich ? (i % 2 ? 0.3 : -0.3) * (j ? -1 : 1) : 0 }); });
-      this.gu = new Reso(); this.guF = 86 + 12 * this.rng.next(); this.guG = 0;
+      HNG_M.forEach((m, i) => { const n = m[4] > 0 ? 2 : 1; for (let j = 0; j < n; j++) this.md.push({ i, j, n, r: new Reso(), g: 0, fr: 0, t: 1, vg: 1, vs: 1, dm: 1, kq: 0, pan: this.rich ? (i % 2 ? 0.3 : -0.3) * (j ? -1 : 1) : 0 }); });
+      this.sy = [];
+      this.gu = new Reso(); this.guF = 86 + 12 * this.rng.next(); this.guG = 0; this.guV = 1;
       this.fT = 0; this.exN = 0; this.exI = 0; this.exA = 0; this.nzN = 0; this.nzI = 0; this.nzA = 0; this.hp = 0;
-      this.vel = 0.75; this.y0 = 0.5; this.dmul = 1;
+      this.vel = 0.75; this.y0 = 0.5; this.dmul = 1; this.age = 0; this.pg0 = 0; this.pg = 0; this.tN = 0;
     }
     set(p) { for (const k in p) if (k in this.p) this.p[k] = +p[k] || 0; this.fT = 0; }
-    reset() { for (const m of this.md) m.r.re = m.r.im = 0; this.gu.re = this.gu.im = 0; this.exN = this.nzN = 0; }
+    reset() { for (const m of this.md) m.r.re = m.r.im = 0; for (const m of this.sy) m.r.re = m.r.im = 0; this.gu.re = this.gu.im = 0; this.exN = this.nzN = 0; }
     // the modes for this pitch (again when the pitch moves more than a tenth of a percent – a bend, a glide)
     tune(f) {
       this.fT = f;
-      const p = this.p, base = (2 + 10 * p.nachklang) * this.dmul * Math.max(0.6, Math.min(1.5, Math.pow(220 / f, 0.3))), y = this.y0;
-      const sp = (0.0005 + 0.0032 * p.schweben) / 2, br = 0.4 + 1.2 * p.glanz, lim = 0.45 * SR;
+      const p = this.p, y = this.y0, br = 0.4 + 1.2 * p.glanz, lim = 0.45 * SR, life = (2 + 10 * p.nachklang) * this.dmul;
+      const base = life * Math.max(0.6, Math.min(1.5, Math.pow(220 / f, 0.3))), sp = (0.0005 + 0.0032 * p.schweben) / 2, mul = Math.pow(2, this.pg / 1200);
       for (const m of this.md) {
-        const M = HNG_M[m.i], fr = f * M[0] * (m.n > 1 ? 1 + (m.j ? sp : -sp) * M[4] : 1);
-        if (fr >= lim || (this.lite && m.i >= 5)) { m.g = 0; continue; }
-        m.r.set(fr, base * M[3]);
-        m.g = (M[1] * (1 - y) + M[2] * y) * (m.i ? br : 1) / m.n;
+        const M = HNG_M[m.i];
+        m.fr = f * M[0] * (m.n > 1 ? 1 + (m.j ? sp : -sp) * M[4] * m.vs : 1); m.t = base * M[3];
+        if (m.fr * mul >= lim || (this.lite && m.i >= 5)) { m.g = 0; continue; }
+        m.r.set(m.fr * mul, m.t);
+        m.g = (M[1] * (1 - y) + M[2] * y) * (m.i ? br : 1) * m.vg / m.n;
+        m.kq = m.i === 1 ? HNG_NL2 * (1 - Math.pow(0.001, 1 / (m.t * SR))) : m.i === 2 ? HNG_NL3 * (1 - Math.pow(0.001, 1 / (m.t * SR))) : 0;
       }
-      this.gu.set(this.guF, 0.55); this.guG = 0.35 * p.koerper * (1 - 0.7 * y);
+      for (const m of this.sy) {
+        const M = HNG_SYM[m.k], fs = m.fs * M[0];
+        if (fs >= lim || (this.lite && m.k === 2)) { m.g = 0; continue; }
+        const t = life * Math.max(0.6, Math.min(1.5, Math.pow(220 / m.fs, 0.3))) * HNG_M[m.k][3] * M[2], r = Math.pow(0.001, 1 / (t * SR));
+        m.r.set(fs, t);
+        m.g = M[1] * (m.k ? br : 1); m.kd = HNG_SYM_DRIVE * (1 - r); m.ki = m.k ? 0 : HNG_SYM_KNOCK * (0.5 + 0.5 * y);
+      }
+      this.gu.set(this.guF, 0.55); this.guG = 0.35 * p.koerper * (1 - 0.7 * y) * this.guV;
     }
+    // (a hard strike settles from a few cents sharp) only the frequencies, the rings keep their state
+    glide(mul) { const lim = 0.45 * SR; for (const m of this.md) if (m.g && m.fr * mul < lim) m.r.set(m.fr * mul, m.t); }
     start(m) {
-      this.vel = m.vel != null ? m.vel : 0.75; this.y0 = this.y; this.dmul = m.dmul || 1;   // (dmul: a Puls hit rings shorter)
-      this.rng = new PRNG((m.seed | 0) || 11);
+      const rng = this.rng = new PRNG((m.seed | 0) || 11);
+      this.vel = m.vel != null ? m.vel : 0.75; this.dmul = m.dmul || 1;   // (dmul: a Puls hit rings shorter)
+      // no two strikes alike: where the hand lands (±0.04), the width of its force (±5 %), each mode ±1 dB, each pair's split ±20 %
+      this.y0 = Math.max(0, Math.min(1, this.y + 0.08 * (rng.next() - 0.5)));
+      for (const d of this.md) { d.vg = Math.pow(10, (rng.next() - 0.5) * 0.1); d.vs = 0.8 + 0.4 * rng.next(); d.dm = 1; }
+      this.guV = 0.9 + 0.2 * rng.next();
+      // the other fields of the scale (not this one)
+      this.sy = [];
+      const fs = Array.isArray(m.sym) ? m.sym : [];
+      for (let k = 0, n = 0; k < fs.length && n < 12; k++) {
+        const g = +fs[k]; if (!(g > 16) || Math.abs(Math.log2(g / this.f)) < 0.012) continue;
+        const pan = this.rich ? (n % 2 ? 0.45 : -0.45) * (0.5 + 0.5 * ((n >> 1) % 2)) : 0; n++;
+        for (let j = 0; j < (g < 330 ? 3 : 2); j++) this.sy.push({ fs: g, k: j, r: new Reso(), g: 0, kd: 0, ki: 0, pan });
+      }
+      // a hard strike: a few cents sharp, settling in 80 ms
+      this.age = 0; this.pg0 = HNG_GLIDE * this.vel * this.vel; this.pg = this.pg0;
       this.tune(this.f);
-      // the force: a raised cosine, wide for the thumb (5 ms), short for the fingertip (0.7 ms); its area is the velocity
-      this.exN = Math.max(8, Math.round((0.0007 + 0.0045 * (1 - this.y0)) * SR)); this.exI = 0; this.exA = 2 * this.vel / this.exN;
+      // the force: a raised cosine, wide for the thumb (5 ms), short for the fingertip (0.7 ms) – and shorter the harder
+      // it strikes (a little: the hand is softer than Hertz' ball, v^-1/10); its area is the velocity
+      const hard = Math.pow(0.75 / Math.max(0.05, this.vel), 0.1);
+      this.exN = Math.max(8, Math.round((0.0007 + 0.0045 * (1 - this.y0)) * hard * (0.95 + 0.1 * rng.next()) * SR)); this.exI = 0; this.exA = 2 * this.vel / this.exN;
       // the skin of a finger at the edge
       this.nzN = this.y0 > 0.55 ? Math.round(0.003 * SR) : 0; this.nzI = 0; this.nzA = 0.5 * (this.y0 - 0.55) * this.vel;
     }
+    // a new strike on this field while it rings: the hand touches it first – the thumb longer than the fingertip; the
+    // shell modes lose most, the fundamental least (≈ 1.5 / 3 / 6 dB over the touch)
+    extra(m) {
+      if (!m.touch) return;
+      const y = Math.max(0, Math.min(1, +m.y || 0.5)), n = this.tN = Math.max(16, Math.round((0.0015 + 0.0045 * (1 - y)) * SR));
+      for (const d of this.md) d.dm = Math.pow(10, -(d.i === 0 ? 1.5 : d.i < 3 ? 3 : 6) / (20 * n));
+    }
     render(L, R, a, b) {
       if (Math.abs(this.f - this.fT) > 0.001 * this.fT) this.tune(this.f);
-      const md = this.md, nm = md.length, gu = this.gu, guG = this.guG, rng = this.rng, og = R ? HNG_OUT * Math.SQRT1_2 : HNG_OUT;   // (two channels: each at −3 dB, as a mono voice reaches the panner)
-      let exI = this.exI, hp = this.hp, nzI = this.nzI;
+      if (this.pg0 > 0) {
+        const pg = this.pg0 * Math.exp(-this.age / (HNG_GLIDE_T * SR));
+        if (pg < 0.02) { this.pg0 = 0; this.pg = 0; this.glide(1); } else if (Math.abs(pg - this.pg) > 0.02) { this.pg = pg; this.glide(Math.pow(2, pg / 1200)); }
+      }
+      this.age += b - a;
+      const md = this.md, nm = md.length, sy = this.sy, ns = sy.length, gu = this.gu, guG = this.guG, rng = this.rng, og = R ? HNG_OUT * Math.SQRT1_2 : HNG_OUT;   // (two channels: each at −3 dB, as a mono voice reaches the panner)
+      let exI = this.exI, hp = this.hp, nzI = this.nzI, tN = this.tN;
       for (let i = a; i < b; i++) {
         let x = 0;
         if (exI < this.exN) { x = this.exA * (0.5 - 0.5 * Math.cos(2 * Math.PI * exI / this.exN)); exI++; }
-        let sl = 0, sr = 0;
-        for (let k = 0; k < nm; k++) { const m = md[k]; if (!m.g) continue; const s = m.r.tick(x) * m.g; sl += s * (1 - m.pan); sr += s * (1 + m.pan); }
+        if (tN > 0) { for (let k = 0; k < nm; k++) { const r = md[k].r, d = md[k].dm; r.re *= d; r.im *= d; } if (--tN === 0) for (let k = 0; k < nm; k++) md[k].dm = 1; }
+        let sl = 0, sr = 0, s = 0, u1 = 0, u2 = 0;
+        for (let k = 0; k < nm; k++) {
+          const m = md[k]; if (!m.g) continue;
+          const i = m.i, u = m.r.tick(i === 1 ? x + m.kq * u1 * u1 : i === 2 ? x + m.kq * u1 * u2 : x), v = u * m.g;
+          if (i === 0) u1 += u; else if (i === 1) u2 += u;
+          s += v; sl += v * (1 - m.pan); sr += v * (1 + m.pan);
+        }
+        for (let k = 0; k < ns; k++) { const m = sy[k]; if (!m.g) continue; const v = m.r.tick(s * m.kd + x * m.ki) * m.g; sl += v * (1 - m.pan); sr += v * (1 + m.pan); }
         const g = gu.tick(x) * guG; sl += g; sr += g;
         if (nzI < this.nzN) { const nz = rng.next() * 2 - 1, h = nz - hp; hp = nz; const e = this.nzA * (1 - nzI / this.nzN); sl += h * e; sr += h * e; nzI++; }
         L[i] = sl * og; if (R) R[i] = sr * og;
       }
-      this.exI = exI; this.hp = hp; this.nzI = nzI;
+      this.exI = exI; this.hp = hp; this.nzI = nzI; this.tN = tN;
       for (const m of md) { m.r.re = flush(m.r.re); m.r.im = flush(m.r.im); }
+      for (const m of sy) { m.r.re = flush(m.r.re); m.r.im = flush(m.r.im); }
     }
   }
   // ---- Gamelan: myzel-gml – a bronze key over its resonator tube (Klangbibliothek II, 26.10.2026). A free bar's modes
@@ -16152,6 +16283,20 @@ function mapApply(b, src, ev) {
     const d = ev.type === 'cc' ? relD(relFix(b, src, st, m, ev.val), ev.val) : 0;
     if (d) tStep(T, b.inv ? -d : d, cx);
     return true;
+  }
+  // (owner, 26.10.2026: „Vorige Skala“ on a slider reacted only now and then – it pressed once when it crossed the middle
+  // upwards) a fader or knob on a stepping target browses: each sixteenth of its travel one step, up the target's own
+  // way, down back; a control that only ever sends 0 and 127 (a button sending CC) still presses
+  if (!edge && m === 'abs' && T.step && !T.cont && ev.type === 'cc' && !b.hires) {
+    if (raw > 0.01 && raw < 0.99) st.fader = true;
+    if (st.fader) {
+      const x = raw * 16, z0 = st.fz == null ? Math.min(15, Math.floor(x)) : st.fz;
+      let z = z0;   // (a sixteenth's zone, left only 1/16 of a zone past its edge: a trembling slider does not flap)
+      if (x >= z0 + 1.0625 || x < z0 - 0.0625) z = Math.max(0, Math.min(15, Math.floor(x)));
+      const n = z - z0; st.fz = z;
+      for (let i = 0; i < Math.abs(n); i++) tStep(T, (b.inv ? -1 : 1) * Math.sign(n), cx);
+      return true;
+    }
   }
   // values become presses and releases where the mode or the target wants a button
   const btn = m === 'toggle' || m === 'momentary' || m === 'trigger';
@@ -21999,7 +22144,7 @@ function onParamChanged(id) {
     case 'pha': updPhaser(); break;
     case 'cho': updChorus(); break;
     case 'dly': updDelay(); break;
-    case 'rev': if (id === 'rev.size' || id === 'rev.damp') regenIR(); else updReverbMix(); break;
+    case 'rev': if (id === 'rev.size' || id === 'rev.damp' || id === 'rev.raum') regenIR(); else updReverbMix(); break;
     case 'mov': updMove(); break;
     case 'mst': updMaster(); break;
     case 'bor': updBordun(); break;
@@ -22065,7 +22210,11 @@ function loadValues(vals, keepUnset) {
   }
   for (const id of PATCH_IDS) for (const fn of CTL[id] || []) fn(P[id], null);
   hxMvSync(was);
-  buildNotes(); drawBg(); refreshEngineUI(); updLaneTabs(); updInactive(); renderBarInfo();
+  // (owner, 26.10.2026: „einzelne Schleifen werden nicht gespielt, wenn ich ein älteres eigenes Preset lade“) another key
+  // while loops follow it: announced as from the knob – they keep sounding until the bar line their new pass is ready for,
+  // the field changes with them there (not at once, with every loop silent until its pass is rendered)
+  if (!hxWTonHold('t.root')) buildNotes();
+  drawBg(); refreshEngineUI(); updLaneTabs(); updInactive(); renderBarInfo();
   if (A.ctx) { applyAll(); seqRetempo(); warmKS(); dspMaybe(); if (P['kor.src'] === 'echo') ensureCapture(); if (!LIVE_SRC.has(P['kor.src'])) texture(P['kor.src']); }
   syncMic();
   clearTimeout(saveTimer); saveTimer = setTimeout(saveState, 400);
@@ -22694,12 +22843,12 @@ function mxSrcText(k) {
   if (k === 'gsp') return !gspInUse() ? 'aus' : DSP.state === 'kein' || A.workletBroken.has('gsp') ? 'kein Netz' : (P['gsp.saiten'] === 'zwei' ? 'zwei Oktaven' : 'eine Oktave');   // (the web's own channel)
   // the app writes a dotted value as "1/8 ·", which reads like a dangling separator here: "1/8." as in a score
   if (k === 'dly') return P['dly.sync'] ? fmt(PD['dly.div'], P['dly.div']).replace(' ·', '.') : fmt(PD['dly.ms'], P['dly.ms']);
-  if (k === 'rev') return fmt(PD['rev.size'], P['rev.size']);
+  if (k === 'rev') return (P['rev.raum'] !== 'nebel' && ROOMS[P['rev.raum']] ? ROOMS[P['rev.raum']].n + ' · ' : '') + fmt(PD['rev.size'], P['rev.size']);
   if (k === 'puls') return mxPulsOff() ? 'alle aus' : SEQ.on ? (SEQ.ext ? 'EXT ' + dec(SEQ.ext.bpm.toFixed(1)) : TG.hxOn ? dec(TG.hx.toFixed(1)) : Math.round(P['seq.bpm'])) + ' BPM' : 'steht';
   return (A.monoChk ? 'mono' : 'stereo') + (A.dim ? ' · ' + MX_MINUS + '20 dB' : '');
 }
 const mxPulsOff = () => !P['l0.on'] && !P['l1.on'] && !P['l2.on'] && !P['l3.on'];
-const MX_SRC_IDS = ['v.eng', 'v.layer', 'bor.on', 'bor.wave', 'bor.int', 'gsp.saiten', 'dly.sync', 'dly.div', 'dly.ms', 'rev.size', 'seq.bpm', 'l0.on', 'l0.eng', 'l1.on', 'l1.eng', 'l2.on', 'l2.eng', 'l3.on', 'l3.eng'];
+const MX_SRC_IDS = ['v.eng', 'v.layer', 'bor.on', 'bor.wave', 'bor.int', 'gsp.saiten', 'dly.sync', 'dly.div', 'dly.ms', 'rev.size', 'rev.raum', 'seq.bpm', 'l0.on', 'l0.eng', 'l1.on', 'l1.eng', 'l2.on', 'l2.eng', 'l3.on', 'l3.eng'];
 // A channel whose source plays nothing (Ebene 2, a lane or the Bordun switched off; the Puls group with all four
 // lanes off) is an empty mushroom in the Pult and a hollow spore in the Geflecht – one rule, kept in S.srcoff.
 function mxSrcAll() {
@@ -26126,7 +26275,7 @@ function mxdQuelle(k) {
   else if (k === 'rgn') { const q = rgQuelle(); MXD.qu[k] = q; return q; }
   else if (k === 'hxr') kids = [h('p', { class: 'note' }, 'Die Schleifen des Hexenrings – ihre Effektkette ist eingebrannt, Echo und Hall kommen hier dazu.')];   // Hexenring
   else if (k === 'dly') kids = [grid(C('dly.mix', 'Anteil (Send-Meister)'), C('dly.fb'), C('dly.pp'), C('dly.tone'), C('dly.wow')), C('dly.sync'), C('dly.div'), C('dly.ms')];
-  else kids = [grid(C('rev.mix', 'Anteil (Send-Meister)'), C('rev.size'), C('rev.damp'), C('rev.pre'))];
+  else kids = [C('rev.raum'), grid(C('rev.mix', 'Anteil (Send-Meister)'), C('rev.size'), C('rev.damp'), C('rev.pre'))];
   const el = h('div', { class: 'mxd-qbody', 'data-k': k }, ...kids);
   MXD.qu[k] = el;
   return el;
@@ -27524,7 +27673,7 @@ function buildFx() {
   box.append(section('Schweben', 'Stereo-Chorus', grid(ctl('cho.mix'), ctl('cho.rate'), ctl('cho.depth'))));
   box.append(section('Echo', 'Bandecho mit Ping-Pong', grid(ctl('dly.mix'), ctl('dly.fb'), ctl('dly.sync'), ctl('dly.div'), ctl('dly.ms'), ctl('dly.pp'), ctl('dly.tone'), ctl('dly.wow')),
     h('p', { class: 'note' }, 'Ab 100 % Rückkopplung schwillt das Echo von selbst an, die Bandsättigung begrenzt es. „Einfrieren“ (Schneeflocke oben) hält die aktuelle Schleife endlos fest; „Stille“ leert sie.')));
-  box.append(section('Hall', 'Erzeugter Raum', grid(ctl('rev.mix'), ctl('rev.size'), ctl('rev.damp'), ctl('rev.pre'))));
+  box.append(section('Hall', 'Erzeugter Raum', ctl('rev.raum'), grid(ctl('rev.mix'), ctl('rev.size'), ctl('rev.damp'), ctl('rev.pre'))));
   box.append(section('Bewegung', 'Tonhöhe und Raum aller Stimmen', grid(ctl('mov.vib'), ctl('mov.vibRate'), ctl('mov.drift'), ctl('mov.driftRate'), ctl('mov.pan'), ctl('mov.panRate'))));
   box.append(section('Summe', 'Klangregelung, Kompressor, Sättigung', grid(ctl('mst.low'), ctl('mst.high'), ctl('mst.comp'), ctl('mst.vol')),
     h('p', { class: 'note' }, 'Die Verdichtung ändert die Dynamik, nicht die Lautstärke leiser Passagen. Eine weiche Sättigung am Ende fängt seltene Spitzen ab und hält den Ausgang unter 0 dBFS.')));
@@ -29049,10 +29198,13 @@ const PRESETS = [
     'rev.size': 5, 'rev.damp': 0.4, 'rev.mix': 0.4, 'dly.div': '0.75', 'dly.fb': 0.35, 'dly.mix': 0.22, 'seq.bpm': 70,
     'l0.on': false, 'l1.on': false, 'l2.on': true, 'l2.eng': 'kto', 'l2.steps': 9, 'l2.puls': 4, 'l2.div': '0.5', 'l2.walk': 0.6, 'l2.vol': 0.35, 'l2.bright': 0.45,
     'l3.on': true, 'l3.eng': 'hng', 'l3.steps': 13, 'l3.puls': 3, 'l3.div': '1', 'l3.oct': -1, 'l3.vol': 0.35, 'l3.bright': 0.2 } },
-  { key: 'handpankreis', name: 'Handpan-Kreis', tags: 'Welt · Meditation', desc: 'Ein Stahlfeld unter der Hand, ein zweites spielt Kreise im Akebono, warmer Raum.', v: { 'drv.mix': 0,
+  { key: 'handpankreis', name: 'Handpan-Kreis', tags: 'Welt · Meditation', desc: 'Ein Stahlfeld unter der Hand, ein zweites spielt Kreise im Akebono, unter einer Steinkuppel.', v: { 'drv.mix': 0,
     'v.eng': 'hng', 't.root': '2', 't.scale': 'akebono', 't.oct': 3, 't.range': 2,
     'hng.glanz': 0.5, 'hng.nachklang': 0.7, 'hng.koerper': 0.65, 'hng.schweben': 0.55,
-    'rev.size': 6, 'rev.damp': 0.5, 'rev.mix': 0.45, 'cho.mix': 0.15, 'dly.div': '0.75', 'dly.fb': 0.3, 'dly.mix': 0.18, 'seq.bpm': 76,
+    // (Handpan-Pilot) a real room, a stone dome; the steel without the app's default motion (no vibrato, drift, phaser,
+    // circling, chorus – a handpan has none)
+    'rev.raum': 'stein', 'rev.size': 4.5, 'rev.damp': 0.45, 'rev.pre': 0.018, 'rev.mix': 0.42, 'cho.mix': 0, 'pha.mix': 0, 'flt.lfoDepth': 0, 'mov.vib': 0, 'mov.drift': 0, 'mov.pan': 0,
+    'dly.div': '0.75', 'dly.fb': 0.3, 'dly.mix': 0.18, 'seq.bpm': 76,
     'l0.on': false, 'l1.on': true, 'l1.eng': 'hng', 'l1.steps': 11, 'l1.puls': 4, 'l1.div': '0.5', 'l1.walk': 0.7, 'l1.vol': 0.4, 'l1.bright': 0.35, 'l2.on': false, 'l3.on': false } },
   // Sphäre
   { key: 'nordlichtfeld', name: 'Nordlichtfeld', tags: 'Ambient · Spektral', desc: 'Lichtvorhänge wandern über 48 Teiltöne, ein Glockenschimmer fällt hinein.', v: {
@@ -32050,8 +32202,8 @@ const hxName = (L) => 'Schleife ' + (L.slot + 1);
 const hxEngName = (L) => (L.bew ? 'Bewegung' : ENG_NAME[L.eng] || '');
 function hxLenText(L) {
   if (!hxTakt(L)) return 'frei · ' + dec(hxLen(L).toFixed(1)) + ' s';
-  const bars = L.d.beats / (L.bpb || 4);
-  return (Number.isInteger(bars) ? bars + (bars === 1 ? ' Takt' : ' Takte') : L.d.beats + ' Schläge') + (L.bpb === 3 ? ' (3er)' : '');
+  const bt = +L.d.beats.toFixed(4), bars = +(bt / (L.bpb || 4)).toFixed(4);   // (26.10.2026: a trim's 16.000000000000004 Schläge – 4 Takte)
+  return (Number.isInteger(bars) ? bars + (bars === 1 ? ' Takt' : ' Takte') : dec(+bt.toFixed(2)) + ' Schläge') + (L.bpb === 3 ? ' (3er)' : '');
 }
 
 // ---- Ernten (KONZEPT §2.3): what a Korb tap at heard time T takes – and where the Schleife enters ----
@@ -34721,28 +34873,42 @@ function hxHumSlice(H, c) {
   if (H.aud[0] && H.aud[0].dr) { const per = HX_CH / 128, b = Math.floor(off / 128), mx = H.aud.length * per - 1; dr = new Float32Array(Math.ceil(c.n / 128) + 1); for (let k = 0; k < dr.length; k++) { const q = Math.min(mx, b + k), ch = H.aud[Math.floor(q / per)]; dr[k] = ch && ch.dr ? ch.dr[q % per] : 0; } }
   return { aud, dr };
 }
+// (owner, 26.10.2026: „es passt überhaupt nicht zusammen“) the window that sounds, in the Ernte's frames: the cut's – or,
+// trimmed (band.js: the cut keeps the whole's w0 … w1 and only its pre moves), the part of it that plays; null when what
+// plays is no longer the Ernte's audio as it was (mirrored, at another tape speed, doubled)
+function hxHumWin(L, S) {
+  const c = S && S.cut; if (!c) return null;
+  if (!c.stale) return { w0: c.w0, w1: c.w1 };
+  const T = L && L.trim && L.tr0 && L.tr0.sch.find((s) => s.key === S.key);
+  if (!T || !T.cut || T.cut.stale || L.rev || (L.sp || 1) !== 1 || (L.tr0.sp || 1) !== 1) return null;
+  const w0 = c.f0 + c.pre; return { w0, w1: w0 + c.len };
+}
+// the margins a fresh cut of that window gets (hxCut): how near the Ernte's ends the window may go
+const hxHumMar = (S, W) => { const n = hxCut(S.cut.in, 0, 0, { f0: W.w0, f1: W.w1 }); return { pre: n.pre, post: n.post }; };
 // the loop's window moved or resized in its Ernte (frames, absolute): heard at once when its length stays, else from the
-// next seam; one step in the history
+// next seam; one step in the history. A trimmed loop's window is the part that plays – moved, it is a whole cut of its own
 function hxHumApply(L, w0, w1, label) {
   const S = L && HX.sch.get(L.sch[0]), H = L && L.hum;
   if (!S || !H) return false;
   if (L.sch.length > 1) { toast('Den Ausschnitt in der Ernte wählst du bei einer Schleife mit einer Schicht – lege die Schichten erst zusammen.'); return false; }
   if (!S.aud) { toast('Einen Moment – die Schleife wird noch aufgenommen.'); return false; }
-  const c = S.cut, tk = hxTakt(L), beatF = tk ? c.len / L.d.beats : 0;
+  const c = S.cut, W = hxHumWin(L, S), tk = hxTakt(L), beatF = tk ? c.len / L.d.beats : 0;
+  if (!W) { toast('Diese Schleife spielt verwandelt (rückwärts, anderes Band, verdoppelt) – den Ausschnitt in der Ernte wählst du erst nach „Wieder ganz“.'); return false; }
   w0 = Math.round(w0); w1 = Math.round(w1);
-  if (w0 === c.w0 && w1 === c.w1) return false;
+  if (w0 === W.w0 && w1 === W.w1) return false;
   const nc = hxCut(c.in, 0, 0, { f0: w0, f1: w1 });
   if (!hxHumOf(nc)) { toast('So weit reicht die Ernte nicht.'); return false; }
   const nb = tk ? Math.max(1, Math.round((w1 - w0) / beatF)) : 0, geom = tk ? (nb !== L.d.beats ? { beats: nb } : null) : (w1 - w0 !== L.d.L ? { L: w1 - w0 } : null);
-  const before = hxGeo(L), key = L.key, sw = geom ? hxNextSeam(L) : hxSwapAt(L);
+  const before = hxGeo(L), key = L.key, sw = geom ? hxNextSeam(L) : hxSwapAt(L), tr = { trim: L.trim, tr0: L.tr0 };
   hxSchSwap(S, nc, { f: sw.f, now: !!sw.now, geom });
+  L.trim = null; L.tr0 = null;   // (what plays is a cut of the Ernte again – „Wieder ganz“ has nothing to go back to)
   const after = {};
-  hxHist({ kind: 'recut', label: hxName(L) + ': ' + (label || 'Ausschnitt in der Ernte'), undo() { const X = hxByKey(key); if (X) { after.g = hxGeo(X); hxGeoBack(X, before); } }, redo() { const X = hxByKey(key); if (X && after.g) hxGeoBack(X, after.g); } });
+  hxHist({ kind: 'recut', label: hxName(L) + ': ' + (label || 'Ausschnitt in der Ernte'), undo() { const X = hxByKey(key); if (X) { after.g = hxGeo(X); hxGeoBack(X, before); X.trim = tr.trim; X.tr0 = tr.tr0; } }, redo() { const X = hxByKey(key); if (X && after.g) { hxGeoBack(X, after.g); X.trim = null; X.tr0 = null; } } });
   hxSay(hxName(L) + ': ' + (label || 'Ausschnitt in der Ernte')); hxSaveLoop(L); hxRailDirty(); hxCardDirty();
   return true;
 }
 // Grundeinstellung: the window as harvested
-function hxHumReset(L) { const H = L && L.hum, S = L && HX.sch.get(L.sch[0]); if (H && S && L.sch.length === 1 && (S.cut.w0 !== H.w0 || S.cut.w1 !== H.w1)) hxHumApply(L, H.w0, H.w1, 'Ausschnitt wie geerntet'); }
+function hxHumReset(L) { const H = L && L.hum, S = L && HX.sch.get(L.sch[0]), W = hxHumWin(L, S); if (H && W && L.sch.length === 1 && (W.w0 !== H.w0 || W.w1 !== H.w1)) hxHumApply(L, H.w0, H.w1, 'Ausschnitt wie geerntet'); }
 
 // ---- the editor's row: the Ernte whole, the loop's window in it ----
 const HXEH = { drag: null };
@@ -34754,15 +34920,15 @@ function hxEdHumRow(L) {
   const cv = h('canvas', { class: 'hx-ed-humcv', role: 'img', 'aria-label': 'Ganze Ernte von ' + hxName(L) + ' mit dem Ausschnitt der Schleife' });
   HXE.hcv = cv;
   const sec = (f) => (f >= 60 * SR ? Math.floor(f / SR / 60) + ':' + String(Math.floor(f / SR) % 60).padStart(2, '0') + ' min' : dec((f / SR).toFixed(1)) + ' s');
-  const tk = hxTakt(L), one = L.sch.length === 1;
-  const info = h('span', { class: 'hx-ms' }, 'Die ganze Ernte: ' + sec(hxHumView(H).n) + ' ab dem ersten Ton' + (tk ? ' · Ausschnitt ' + hxLenText(L) : ' · Ausschnitt ' + sec(S.cut.len)) + (one ? '' : ' – den Ausschnitt verschiebst du bei einer Schicht (Schichten zusammenlegen)'));
+  const tk = hxTakt(L), W = hxHumWin(L, S), one = L.sch.length === 1 && !!W;
+  const info = h('span', { class: 'hx-ms' }, 'Die ganze Ernte: ' + sec(hxHumView(H).n) + ' ab dem ersten Ton' + (tk ? ' · Ausschnitt ' + hxLenText(L) : ' · Ausschnitt ' + sec(S.cut.len)) + (one ? '' : !W ? ' – die Schleife spielt verwandelt (rückwärts, anderes Band, verdoppelt): der Ausschnitt lässt sich erst nach „Wieder ganz“ verschieben' : ' – den Ausschnitt verschiebst du bei einer Schicht (Schichten zusammenlegen)'));
   const btn = (t, fn, tip) => { const b = h('button', { type: 'button', class: 'btn ghost', title: tip }, t); b.addEventListener('click', fn); b.disabled = !one; return b; };
   const beatF = tk ? S.cut.len / L.d.beats : 0, barF = tk ? beatF * (L.bpb || 4) : 0;
-  const shift = (d) => () => hxHumApply(L, S.cut.w0 + d, S.cut.w1 + d, d < 0 ? 'Ausschnitt früher' : 'Ausschnitt später');
+  const win = () => hxHumWin(L, HX.sch.get(L.sch[0])) || W, shift = (d) => () => { const X = win(); if (X) hxHumApply(L, X.w0 + d, X.w1 + d, d < 0 ? 'Ausschnitt früher' : 'Ausschnitt später'); };
   const tools = tk ? h('div', { class: 'chips' },
     btn('◀ Takt', shift(-barF), 'Der Ausschnitt einen Takt früher (gleiche Länge, sofort)'), btn('Takt ▶', shift(barF), 'Der Ausschnitt einen Takt später'),
     btn('◀ Schlag', shift(-beatF), 'Einen Schlag früher'), btn('Schlag ▶', shift(beatF), 'Einen Schlag später'),
-    btn('Anfang −1 Takt', () => hxHumApply(L, S.cut.w0 - barF, S.cut.w1, 'Ausschnitt einen Takt länger (vorn)'), 'Vorn einen Takt dazu'), btn('Ende +1 Takt', () => hxHumApply(L, S.cut.w0, S.cut.w1 + barF, 'Ausschnitt einen Takt länger (hinten)'), 'Hinten einen Takt dazu'),
+    btn('Anfang −1 Takt', () => { const X = win(); if (X) hxHumApply(L, X.w0 - barF, X.w1, 'Ausschnitt einen Takt länger (vorn)'); }, 'Vorn einen Takt dazu'), btn('Ende +1 Takt', () => { const X = win(); if (X) hxHumApply(L, X.w0, X.w1 + barF, 'Ausschnitt einen Takt länger (hinten)'); }, 'Hinten einen Takt dazu'),
     btn('wie geerntet', () => hxHumReset(L), 'Der Ausschnitt wie beim Ernten'))
     : h('div', { class: 'chips' }, btn('◀ 1 s', shift(-SR), 'Eine Sekunde früher'), btn('1 s ▶', shift(SR), 'Eine Sekunde später'), btn('wie geerntet', () => hxHumReset(L), 'Der Ausschnitt wie beim Ernten'));
   const box = h('div', { class: 'hx-ed-humbox', title: 'Die ganze Ernte – alles, was der Humus beim Ernten hielt. Hell: was die Schleife spielt. Ziehen verschiebt den Ausschnitt, die Ränder ziehen ändert seine Länge (auf ganze Schläge, mit Umschalt auf ganze Takte; eine freie Schleife auf 10 ms). Gehört wird es ab der nächsten Naht – oder sofort, wenn die Länge bleibt. ↶ nimmt es zurück.' }, cv);
@@ -34784,22 +34950,22 @@ const hxHumX = (H, f, w) => { const V = hxHumView(H); return ((f - V.f0) / Math.
 function hxHumDrag(box, L) {
   const fr = (e) => { const r = HXE.hcv.getBoundingClientRect(), V = hxHumView(L.hum); return V.f0 + clamp((e.clientX - r.left) / Math.max(1, r.width), 0, 1) * V.n; };
   box.addEventListener('pointerdown', (e) => {
-    const S = HX.sch.get(L.sch[0]), H = L.hum; if (!S || !H || e.button > 0) return;
-    const r = HXE.hcv.getBoundingClientRect(), x = e.clientX - r.left, xa = hxHumX(H, S.cut.w0, r.width), xb = hxHumX(H, S.cut.w1, r.width);
+    const S = HX.sch.get(L.sch[0]), H = L.hum, W = hxHumWin(L, S); if (!S || !H || !W || e.button > 0) return;
+    const r = HXE.hcv.getBoundingClientRect(), x = e.clientX - r.left, xa = hxHumX(H, W.w0, r.width), xb = hxHumX(H, W.w1, r.width);
     const mode = Math.abs(x - xa) < 8 ? 'a' : Math.abs(x - xb) < 8 ? 'b' : x > xa && x < xb ? 'm' : 'j';
-    HXEH.drag = { L, mode, f: fr(e), w0: S.cut.w0, w1: S.cut.w1, v0: S.cut.w0, v1: S.cut.w1, moved: false };
-    if (mode === 'j') { const len = S.cut.w1 - S.cut.w0, st = hxHumSnap(L, fr(e) - len / 2, e, S); Object.assign(HXEH.drag, { mode: 'm', w0: st, w1: st + len, v0: st, v1: st + len, moved: true }); }   // (a press beside the window: it jumps there, centred – dragging on moves it)
+    HXEH.drag = { L, mode, f: fr(e), w0: W.w0, w1: W.w1, v0: W.w0, v1: W.w1, mar: hxHumMar(S, W), moved: false };
+    if (mode === 'j') { const len = W.w1 - W.w0, st = hxHumSnap(L, fr(e) - len / 2, e, S); Object.assign(HXEH.drag, { mode: 'm', w0: st, w1: st + len, v0: st, v1: st + len, moved: true }); }   // (a press beside the window: it jumps there, centred – dragging on moves it)
     box.setPointerCapture(e.pointerId); e.preventDefault(); hxHumDraw();
   });
   box.addEventListener('pointermove', (e) => {
-    const D = HXEH.drag; if (!D || D.L !== L) { const S = HX.sch.get(L.sch[0]), H = L.hum; if (S && H && HXE.hcv) { const r = HXE.hcv.getBoundingClientRect(), x = e.clientX - r.left; box.style.cursor = Math.abs(x - hxHumX(H, S.cut.w0, r.width)) < 8 || Math.abs(x - hxHumX(H, S.cut.w1, r.width)) < 8 ? 'ew-resize' : 'grab'; } return; }
+    const D = HXEH.drag; if (!D || D.L !== L) { const S = HX.sch.get(L.sch[0]), H = L.hum, W = hxHumWin(L, S); if (S && H && W && HXE.hcv) { const r = HXE.hcv.getBoundingClientRect(), x = e.clientX - r.left; box.style.cursor = Math.abs(x - hxHumX(H, W.w0, r.width)) < 8 || Math.abs(x - hxHumX(H, W.w1, r.width)) < 8 ? 'ew-resize' : 'grab'; } return; }
     const S = HX.sch.get(L.sch[0]), H = L.hum; if (!S || !H) return;
     const d = fr(e) - D.f, minF = hxTakt(L) ? S.cut.len / L.d.beats : 0.1 * SR, maxF = hxTakt(L) ? (S.cut.len / L.d.beats) * 128 * (L.bpb || 4) : H.n;
     let v0 = D.w0, v1 = D.w1;
     if (D.mode === 'm') { v0 = hxHumSnap(L, D.w0 + d, e, S); v1 = v0 + (D.w1 - D.w0); }
     else if (D.mode === 'a') { v0 = clamp(hxHumSnap(L, D.w0 + d, e, S), D.w1 - maxF, D.w1 - minF); }
     else { v1 = clamp(hxHumSnap(L, D.w1 + d, e, S), D.w0 + minF, D.w0 + maxF); }
-    const lo = H.f0 + S.cut.pre, hi = H.f0 + H.n - S.cut.post;   // (its margins inside the Ernte)
+    const lo = H.f0 + D.mar.pre, hi = H.f0 + H.n - D.mar.post;   // (its margins inside the Ernte – a fresh cut's)
     if (v0 < lo) { const k = lo - v0; v0 += k; if (D.mode !== 'a') v1 += k; }
     if (v1 > hi) { const k = v1 - hi; v1 -= k; if (D.mode !== 'b') v0 -= k; }
     D.v0 = v0; D.v1 = v1; D.moved = D.moved || Math.abs(d) > 0.002 * H.n; hxHumDraw();
@@ -34809,9 +34975,10 @@ function hxHumDrag(box, L) {
 }
 // a frame on the loop's grid: its beats (Umschalt: bars) counted from where it starts, a free loop's 10 ms
 function hxHumSnap(L, f, e, S) {
-  if (!hxTakt(L)) { const q = 0.01 * SR; return S.cut.w0 + Math.round((f - S.cut.w0) / q) * q; }
+  const a = (hxHumWin(L, S) || S.cut).w0;
+  if (!hxTakt(L)) { const q = 0.01 * SR; return a + Math.round((f - a) / q) * q; }
   const beatF = S.cut.len / L.d.beats, q = e && e.shiftKey ? beatF * (L.bpb || 4) : beatF;
-  return S.cut.w0 + Math.round((f - S.cut.w0) / q) * q;
+  return a + Math.round((f - a) / q) * q;
 }
 // the strip: the Ernte's peaks (made once per width), its bars, the loop's window bright, the rest dim
 function hxHumDraw() {
@@ -34830,7 +34997,7 @@ function hxHumDraw() {
     let m = 1e-4; for (let x = 0; x < W; x++) m = Math.max(m, -mn[x], mx[x]);
     H.pk = { W, mn, mx, m };
   }
-  const D = HXEH.drag && HXEH.drag.L === L ? HXEH.drag : null, v0 = D ? D.v0 : S.cut.w0, v1 = D ? D.v1 : S.cut.w1;
+  const Wn = hxHumWin(L, S) || S.cut, D = HXEH.drag && HXEH.drag.L === L ? HXEH.drag : null, v0 = D ? D.v0 : Wn.w0, v1 = D ? D.v1 : Wn.w1;
   const xa = hxHumX(H, v0, w), xb = hxHumX(H, v1, w), amp = (hh * 0.44) / Math.max(H.pk.m, 0.05);
   c.clearRect(0, 0, w, hh); c.fillStyle = '#120e0b'; c.fillRect(0, 0, w, hh);
   c.fillStyle = 'rgba(255,179,92,.10)'; c.fillRect(xa, 0, Math.max(1, xb - xa), hh);
@@ -37803,7 +37970,7 @@ function hxWRenderFor(L, S, sig, o = {}) {
     if (!X || !HX.sch.has(S.id) || (S.ver || 0) !== ver) return;
     if (V && V.sig === hxWSig(X, S, o.key) && (S.wu || hxMemOk(V.n))) {   // (final pass: a first Treu version within the Speichergrenze, as every other buffer – else the Abdruck plays on)
       S.wu = V; S.wuSaved = 0;
-      if (hxWAktiv(X) && !(S.anc && S.anc.sig === V.sig)) { const now = !!o.now && o.f == null && hxNowOk(X); hxWPlay(S, 'wu', o.f != null && o.f > hxF(hxNowT() + 0.05) ? o.f : now ? hxSwapAt(X).f : hxNextSeam(X).f, false, now); }
+      if (hxWAktiv(X) && !(S.anc && S.anc.sig === V.sig)) { const late = o.f != null && o.f <= hxF(hxNowT() + 0.05), now = (!!o.now && o.f == null || late) && hxNowOk(X); hxWPlay(S, 'wu', o.f != null && !late ? o.f : now ? hxSwapAt(X).f : hxNextSeam(X).f, false, now); }   // (a key change's version that came late: at once)
       hxSaveSch(S, 'w');
     }
     if (S.wAgain || (V && V.sig !== hxWSig(X, S, o.key))) hxWUpdate(X, S.wAgain || {});
@@ -37941,6 +38108,11 @@ function hxWTonSlots(F) {
   const f = Math.round(hxF(F.t));
   for (const k of F.loops) {
     const L = hxByKey(k); if (!L) continue;
+    // (owner, 26.10.2026: Schleifen fell silent for many seconds after a key change – a preset loaded) a Treu loop does not
+    // stream the pass with the change: that stream renders in real time (up to a whole pass, 40 s and more) and holds up
+    // the realm its whole new version waits for; that version renders in a moment and comes in at the bar line (hxWUpdate
+    // with F's frame; late: as soon as it is there)
+    if (!hxWLebt(L)) continue;
     const kk = hxPassK(L, f);
     for (const id of L.sch) { const S = HX.sch.get(id); if (!hxWCan(S)) continue; hxWSlot(L, S, kk, { at: f, must: true, key: F.key, treu: !hxWLebt(L) }); S.wk = Math.max(S.wk == null ? -1 : S.wk, kk); }
   }
@@ -37951,7 +38123,7 @@ function hxWKeyBuilt() {
   if (!o || HX.tonGo || !A.ctx || !HX.node || (String(o.root) === String(k.root) && o.scale === k.scale)) return;
   const list = hxLoopsLive().filter(hxWFolgt); if (!list.length) return;
   const F = { t: hxNowT() + 0.03, key: hxWKeyNow(), loops: list.map((L) => L.key) };
-  hxWTonSlots(F); for (const L of list) hxWUpdate(L);
+  hxWTonSlots(F); for (const L of list) hxWUpdate(L, { f: Math.round(hxF(F.t)) });
 }
 // at the bar line (a little before it: the Puls's notes after it are scheduled in the new key) the field changes
 function hxWTonGo() {
@@ -38430,7 +38602,7 @@ function hxSpeed(L, sp, o = {}) {
   const pw = HX.pend.find((x) => x.kind === 'band' && x.loop === L.id && !x.replay); if (pw) { hxPendDrop(pw); pw.cancel(); }
   const was = L.sp || 1; if (Math.abs(was - sp) < 1e-9) { hxCardDirty(); hxRailDirty(); return; }
   const sw = hxNextSeam(L), f = sw.f, k = sw.k - 1, takt = hxTakt(L);
-  const geo = takt ? { beats: (L.d.beats * was) / sp } : { L: Math.round((L.d.L * was) / sp) }, P1 = takt ? (geo.beats * 60) / tgBpm(hxT(f)) : geo.L / SR;
+  const geo = takt ? { beats: +((L.d.beats * was) / sp).toFixed(6) } : { L: Math.round((L.d.L * was) / sp) }, P1 = takt ? (geo.beats * 60) / tgBpm(hxT(f)) : geo.L / SR;
   const T = Math.max(0.05, Math.min(P['hx.traeg'], 0.9 * P1));
   const d0 = Object.assign({}, L.d);
   hxBatch(() => hxPost({ geom: Object.assign({ loop: L.id, f }, geo), band: { loop: L.id, f, vs: sp, T: Math.round(T * SR) } }));
@@ -38536,7 +38708,7 @@ function hxBandTrimDo(L, f, a) {
     const S = hxSchByKey(s.key); if (!S || !s.aud) return;
     const len = Math.max(1, Math.round(s.len * f)), pre = s.pre + Math.round(s.len * a), X = Math.round(0.01 * SR);
     const c = Object.assign({}, s.cut, { pre, len, post: s.n - pre - len, n: s.n, aus: whole && s.aus ? Object.assign({}, s.aus) : null, stale: true });
-    const geom = j === 0 ? (tk ? { beats: T0.d.beats * f * ks } : { L: Math.round(T0.d.L * f * ks) }) : null;
+    const geom = j === 0 ? (tk ? { beats: +(T0.d.beats * f * ks).toFixed(6) } : { L: Math.round(T0.d.L * f * ks) }) : null;
     hxSchSwap(S, c, { aud: s.aud, bak: s.bak, f: sw.f, join: whole ? s.join : 'xf', X: whole ? s.X : X, rho: whole ? s.rho : hxRho(s.bak && S.chain && !L.folgt ? s.bak : s.aud, s.n, pre, len, X), zo: whole ? s.zo : 0, kc: whole ? s.kc : hxSeamOf({ pre, len, X, zo: 0 }, s.aud), kcB: whole ? s.kcB : s.bak ? hxSeamOf({ pre, len, X, zo: 0 }, s.bak) : null, dr: s.dr, geom,
       fade: whole && s.aus ? Math.min(Math.round(0.03 * SR), s.aus.len) : 0 });
     S.wn = s.wn ? hxWnWin(s.wn, a, f) : S.wn;

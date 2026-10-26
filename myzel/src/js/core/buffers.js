@@ -1,5 +1,6 @@
 /* ---------- heavy buffers (reverb IR, grain textures) are rendered off the main thread ---------- */
-function genIR(sec, damp, sr, nch) {
+function genIR(sec, damp, sr, nch, room) {
+  if (room && room !== 'nebel' && typeof genRoom === 'function') return genRoom(room, sec, damp, sr, nch || 2);
   const len = Math.max(256, Math.floor(sec * sr));
   const tau = sec / 6.9, fadeIn = Math.floor(sr * 0.004);
   const c0 = 0.97, c1 = 0.03 + (1 - damp) * 0.85;
@@ -21,6 +22,72 @@ function genIR(sec, damp, sr, nch) {
     }
     out.push(d);
   }
+  return out;
+}
+// (Handpan-Pilot, 26.10.2026; Konzept „Effekte“ §3.1) a room instead of the fog: a box of real size, its early
+// reflections from image sources (up to the third order) at both microphones – each wall takes highs by its material,
+// the later the darker – then a dense tail in three bands, each with its own decay (low longer in stone, highs by
+// Dämpfung), building up as the echoes thicken. Nachhallzeit sets the middle band; the walls' absorption follows from
+// it (Sabine), so a longer hall also reflects more. The direct sound stays the dry path (no order 0); times are counted
+// from it, so Vorverzögerung keeps its meaning. Its energy matches the fog's at the same settings (Anteil means the same).
+// Two channels: left source → left mic, right → right; four (level 3): LL, LR, RL, RR – true stereo.
+const ROOMS = {
+  holz: { n: 'Holzsaal', dim: [17, 11, 7.5], wall: 5200, lo: 1.15, hi: [0.95, 0.45], build: 0.022, er: 1 },
+  stein: { n: 'Steinkuppel', dim: [22, 20, 15], wall: 11000, lo: 1.3, hi: [1.05, 0.6], build: 0.045, er: 0.85 },
+};
+function genRoom(room, sec, damp, sr, nch) {
+  const R = ROOMS[room] || ROOMS.holz, [W, D, H] = R.dim, len = Math.max(256, Math.floor(sec * 1.15 * sr));
+  const V = W * D * H, S = 2 * (W * D + W * H + D * H), alpha = Math.min(0.95, 0.161 * V / (S * Math.max(0.2, sec))), refl = Math.sqrt(1 - alpha);
+  let seed = 0x5eed1 + Math.round(sec * 1000) + (room === 'stein' ? 77 : 0);
+  const rnd = () => { seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; return (seed >>> 0) / 4294967296; };
+  const src = [[W / 2 - 1.3, 3.2, 1.2], [W / 2 + 1.3, 3.2, 1.2]], mic = [[W / 2 - 0.3, 7.5, 1.7], [W / 2 + 0.3, 7.5, 1.7]];
+  const pairs = nch === 4 ? [[0, 0], [0, 1], [1, 0], [1, 1]] : [[0, 0], [1, 1]];
+  const c = 343, aw = Math.exp(-2 * Math.PI * R.wall / sr), out = [];
+  const tH = sec * Math.max(0.15, R.hi[0] - R.hi[1] * damp), tL = sec * R.lo, tM = sec;
+  for (const [si, mi] of pairs) {
+    const s0 = src[si], m = mic[mi], d0 = Math.hypot(s0[0] - m[0], s0[1] - m[1], s0[2] - m[2]);
+    const ord = [null, new Float32Array(len), new Float32Array(len), new Float32Array(len)];
+    // image sources: mirror the source across the walls; order = the number of reflections
+    for (let nx = -3; nx <= 3; nx++) for (let ny = -3; ny <= 3; ny++) for (let nz = -3; nz <= 3; nz++) {
+      const o = Math.abs(nx) + Math.abs(ny) + Math.abs(nz);
+      if (!o || o > 3) continue;
+      const ix = nx * W + (nx % 2 ? W - s0[0] : s0[0]), iy = ny * D + (ny % 2 ? D - s0[1] : s0[1]), iz = nz * H + (nz % 2 ? H - s0[2] : s0[2]);
+      const d = Math.hypot(ix - m[0], iy - m[1], iz - m[2]), t = (d - d0) / c;
+      const k = Math.round(t * sr * (1 + 0.004 * (rnd() - 0.5)));   // (the walls are not perfectly flat: ±0.2 % scatter)
+      if (k < 1 || k >= len - 2) continue;
+      const g = R.er * Math.pow(refl, o) * (d0 / d) * (rnd() < 0.5 ? 1 : 0.92);
+      ord[o][k] += 0.6 * g; ord[o][k + 1] += 0.3 * g; ord[o][k + 2] += 0.1 * g;   // (a little diffusion on each tap)
+    }
+    const er = new Float32Array(len);
+    for (let o = 1; o <= 3; o++) {   // each reflection through the wall's lowpass once more
+      const a = ord[o];
+      for (let p = 0; p < o; p++) { let y = 0; for (let i = 0; i < len; i++) { y = a[i] + aw * (y - a[i]); a[i] = y; } }
+      for (let i = 0; i < len; i++) er[i] += a[i];
+    }
+    // the tail: noise in three bands, each decaying at its own rate; it thickens over R.build
+    const tail = new Float32Array(len), cL = Math.exp(-2 * Math.PI * 280 / sr), cH = Math.exp(-2 * Math.PI * 3200 / sr), tm = Math.max(0.03, Math.cbrt(V) / c * 1.6);
+    let lp = 0, hpl = 0;
+    for (let i = 0; i < len; i++) {
+      const t = i / sr, x = rnd() * 2 - 1;
+      lp = x + cL * (lp - x); hpl = x + cH * (hpl - x);
+      const lo = lp, hi = x - hpl, mid = x - lo - hi;
+      const e = lo * Math.exp(-6.9 * t / tL) + mid * Math.exp(-6.9 * t / tM) + hi * Math.exp(-6.9 * t / tH);
+      tail[i] = e * (1 - Math.exp(-t / R.build)) * Math.min(1, t / tm);
+    }
+    // the tail joins at the mixing time with the early reflections' level there
+    const a0 = Math.round(tm * 0.7 * sr), a1 = Math.round(tm * 1.3 * sr);
+    let ee = 0, et = 0; for (let i = a0; i < a1 && i < len; i++) { ee += er[i] * er[i]; et += tail[i] * tail[i]; }
+    const tg = et > 0 ? Math.sqrt(Math.max(ee, 1e-9) / et) : 1, d = new Float32Array(len);
+    for (let i = 0; i < len; i++) d[i] = er[i] + tail[i] * tg;
+    const fo = Math.floor(sr * 0.002); for (let i = 0; i < fo; i++) d[len - 1 - i] *= i / fo;
+    out.push(d);
+  }
+  // the fog's energy at the same settings: Anteil means the same in every room
+  const ref = genIR(sec, damp, sr, 1)[0];
+  let er = 0, eo = 0; for (let i = 0; i < ref.length; i++) er += ref[i] * ref[i];
+  for (const d of out) for (let i = 0; i < d.length; i++) eo += d[i] * d[i];
+  const g = Math.sqrt(er / (eo / out.length));
+  for (const d of out) for (let i = 0; i < d.length; i++) d[i] *= g;
   return out;
 }
 function genTexture(kind, sr, F) {
@@ -578,7 +645,7 @@ function dspJob(type, args) {
   const run = () => DSP_FN[type](...args);
   if (!DSPW.broken && !DSPW.w) {
     try {
-      const src = [genIR, genTexture, genKS].map((f) => f.toString()).join('\n') +
+      const src = 'var ROOMS=' + JSON.stringify(ROOMS) + ';\n' + [genIR, genRoom, genTexture, genKS].map((f) => f.toString()).join('\n') +
         '\nvar F={ir:genIR,tex:genTexture,ks:function(){return [genKS.apply(null,arguments)];}};' +
         'onmessage=function(e){var d=e.data;var r=F[d.type].apply(null,d.args);postMessage({id:d.id,r:r},r.map(function(a){return a.buffer;}));};';
       DSPW.w = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
