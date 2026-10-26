@@ -2,6 +2,8 @@
 
 ## Nächste Sitzung – zuerst lesen (Stand 26.10.2026, nachts)
 
+**Verzerrung (26.10.2026, spät):** `drv.mix` Standard jetzt 0 (vorher 0,35 – alle Presets ohne eigene Verzerrung liefen mit Röhre 12 %/35 %, Besitzer hörte die Handpan „verzerrt“). Kompostgarten und Hochspannung tragen `drv.mix: 0.35` jetzt ausdrücklich. Messung Schleife vs. Live (Chromium, Handpan/Kalimba): Pegel und Oktavbänder ±1 dB, unter 80 Hz −3 dB in der Schleife – keine eigene Verzerrung der Schleife gefunden; Firefox ungeprüft. Nächstes: Effekt-Konzept (Raummodelle, Korpus, Mikrofon-Perspektive, Transienten) – Besitzer will es gründlich durchdacht.
+
 **Editor, zweite Runde (26.10.2026, spät):** Ausschnitt aus der Ernte (`hxSchSwap` mit `o.hum`) kürzt den Ausklang jetzt über `hxAusFrom` (recuts.js) bis zur nächsten Note bzw. zum nächsten Onset – vorher liefen bis zu 6 s Folge-Töne über den Pass-Anfang (Besitzer sah Bild/Vorhören versetzt zur Ernte). Editor: Breiten-Griff `HXE.grip` (`myzel.edW`), ziehbare Zoom-Leiste unten in der Wellenform, Kopfzeile umbrechend; `hxPvToggle` hält beim Stopp die Schleife an. Oben in der Leiste `#btnStopAll` → `panic()`. Test `t-hx-editor2.js` 7/7.
 
 **Interface-Anschlüsse (26.10.2026, spät):** Das PCR-M50 des Besitzers hängt am MIDI-Eingang eines Steinberg-Interfaces – der Port heißt nach dem Interface. `KC_IFACE`/`kcIface` (geraet.js) erkennt Interface-Ports; die Karte fragt „Am Anschluss: …“ (`kcModelSel`, gespeichert als `cbData(src).model`, gilt auch für nicht erkannte Geräte), ohne Wahl kein Gerätebild des Interfaces. Test `t-iface.js` 5/5.
