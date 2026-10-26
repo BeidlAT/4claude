@@ -81,7 +81,7 @@ function regenIR(now) {
     // level 3: four channels = "true stereo" (each side also reverberates into the other)
     const nch = Q.rich ? 4 : 2;
     A.revWant = nch;
-    dspJob('ir', [P['rev.size'], P['rev.damp'], SR, nch]).then((ch) => {
+    dspJob('ir', [P['rev.size'], P['rev.damp'], SR, nch, P['rev.raum']]).then((ch) => {
       if (job !== A.irJob || !A.ctx) return;   // a newer request superseded this one
       const conv = A.ctx.createConvolver();
       conv.buffer = toBuffer(ch);

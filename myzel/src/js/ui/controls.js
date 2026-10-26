@@ -159,7 +159,7 @@ function onParamChanged(id) {
     case 'pha': updPhaser(); break;
     case 'cho': updChorus(); break;
     case 'dly': updDelay(); break;
-    case 'rev': if (id === 'rev.size' || id === 'rev.damp') regenIR(); else updReverbMix(); break;
+    case 'rev': if (id === 'rev.size' || id === 'rev.damp' || id === 'rev.raum') regenIR(); else updReverbMix(); break;
     case 'mov': updMove(); break;
     case 'mst': updMaster(); break;
     case 'bor': updBordun(); break;

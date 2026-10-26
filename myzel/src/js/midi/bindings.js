@@ -68,6 +68,20 @@ function mapApply(b, src, ev) {
     if (d) tStep(T, b.inv ? -d : d, cx);
     return true;
   }
+  // (owner, 26.10.2026: „Vorige Skala“ on a slider reacted only now and then – it pressed once when it crossed the middle
+  // upwards) a fader or knob on a stepping target browses: each sixteenth of its travel one step, up the target's own
+  // way, down back; a control that only ever sends 0 and 127 (a button sending CC) still presses
+  if (!edge && m === 'abs' && T.step && !T.cont && ev.type === 'cc' && !b.hires) {
+    if (raw > 0.01 && raw < 0.99) st.fader = true;
+    if (st.fader) {
+      const x = raw * 16, z0 = st.fz == null ? Math.min(15, Math.floor(x)) : st.fz;
+      let z = z0;   // (a sixteenth's zone, left only 1/16 of a zone past its edge: a trembling slider does not flap)
+      if (x >= z0 + 1.0625 || x < z0 - 0.0625) z = Math.max(0, Math.min(15, Math.floor(x)));
+      const n = z - z0; st.fz = z;
+      for (let i = 0; i < Math.abs(n); i++) tStep(T, (b.inv ? -1 : 1) * Math.sign(n), cx);
+      return true;
+    }
+  }
   // values become presses and releases where the mode or the target wants a button
   const btn = m === 'toggle' || m === 'momentary' || m === 'trigger';
   if (!edge && (btn || !T.cont)) {
