@@ -1369,7 +1369,7 @@ const ENGINES = {
     start(v, t, f, y, vel, o) {
       wkVoice(v, 'myzel-mtr', f, y, { prm: wkPrm('mtr'), seed: wkSeed(), on: { on: t, f, y, vel, burst: !!o.burst, gate: o.burst ? o.gate : 0, seed: wkSeed() } });
       const peak = vel * MTR_PEAK;
-      if (o.burst) burstEnv(v, t, peak, 0.002, o.gate, 0.6 * (o.decayMul || 1));
+      if (o.burst) burstEnv(v, t, peak, 0.002, o.gate, 0.3 * (o.decayMul || 1));   // (a twang: it ends within the next step)
       else wkHold(v, t, peak, 0.002, 0.7);
     },
   },

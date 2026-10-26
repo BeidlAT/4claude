@@ -3,7 +3,7 @@
   // nearly equally strong (a band-limited pulse – the Dirichlet kernel – softened by Klang). The player's mouth is a
   // narrow resonance that picks single harmonics out of it: moving the tongue plays a melody of overtones over the
   // drone – the jaw harp's „boing“ and „wow“. Höhe is that resonance: low on the field the 3rd harmonic, high up the
-  // 16th; Mund is how narrow it is. Held, the thumb re-plucks the tongue (Zupfen per second; 0: once), the breath
+  // 16th (the tongue's brightness follows it); Mund is how narrow it is. Held, the thumb re-plucks the tongue (Zupfen per second; 0: once), the breath
   // swells and colours it (Atem). A Puls hit is one twang. ----
   const MTR_OUT = 0.3;
   class Mtr extends MyzelProc {
@@ -21,7 +21,7 @@
     reset() { for (const q of [this.r1, this.r2, this.r3]) q.z1 = q.z2 = 0; this.env = 0; }
     tuneMouth(f, y) {
       this.fT = f; this.yT = y;
-      const F = Math.min(0.42 * SR, f * (2.5 + 13.5 * y)), q = 5 + 22 * this.p.mund;
+      const F = Math.min(0.42 * SR, f * (3 + 13 * y)), q = 5 + 22 * this.p.mund;
       this.r1.bp(F, q); this.r2.bp(F, q * 0.7); this.r3.bp(Math.min(0.44 * SR, F * 1.72), 4 + 6 * this.p.mund);
       this.M = Math.max(1, Math.min(48, Math.floor(0.45 * SR / f)));
       this.gc = Math.sqrt(q) * 0.55;   // (a narrower mouth passes less: its gain holds the level)
@@ -38,7 +38,7 @@
       const n = b - a, f = this.f, p = this.p, rng = this.rng;
       this.ys += (this.y - this.ys) * (1 - Math.exp(-n / (0.025 * SR)));
       if (Math.abs(f - this.fT) > 0.001 * f || Math.abs(this.ys - this.yT) > 0.003) this.tuneMouth(f, this.ys);
-      const M = this.M, dt = f / SR, dec = Math.exp(-1 / ((0.35 + 0.9 * (1 - p.klang * 0.5)) * SR)), soft = 1 - Math.exp(-2 * Math.PI * Math.min(0.4 * SR, f * (6 + 30 * p.klang)) / SR);
+      const M = this.M, dt = f / SR, dec = Math.exp(-1 / ((0.35 + 0.9 * (1 - p.klang * 0.5)) * SR)), soft = 1 - Math.exp(-2 * Math.PI * Math.min(0.4 * SR, f * (2 + (3 + 13 * this.ys) * (0.8 + 1.6 * p.klang))) / SR);   // (the pulse's top follows the mouth: no harmonics far above the sung one)
       const g = this.gc * this.vel, at = p.atem, r1 = this.r1, r2 = this.r2, r3 = this.r3;
       let ph = this.ph, env = this.env, lp = this.lp, bph = this.bph; const og = R ? MTR_OUT * Math.SQRT1_2 : MTR_OUT;
       for (let i = a; i < b; i++) {
