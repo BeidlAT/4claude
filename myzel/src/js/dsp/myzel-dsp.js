@@ -21,9 +21,10 @@ function myzelDsp() {
   // @include js/dsp/zapfen.js
   // @include js/dsp/glut.js
   // @include js/dsp/ring.js
+  // @include js/dsp/touche-fx.js
   // an empty voice: the per-node price of the contract (SPEC §8 step 1 gate, ≈ 0.06 + 0.03 per param)
   class Null extends MyzelProc { render(L, R, a, b) { for (let i = a; i < b; i++) L[i] = 0; } }
-  for (const [k, C] of [['myzel-blow', Blow], ['myzel-scan', Scan], ['myzel-bow', Bow], ['myzel-rot', Rot], ['myzel-aeol', Aeol], ['myzel-gendy', Gendy], ['myzel-web', Web], ['myzel-string', Strg], ['myzel-syrinx', Syrinx], ['myzel-scrape', Scrape], ['myzel-ember', Ember], ['myzel-null', Null], ['myzel-ring', Ring], ['myzel-ring-in', RingIn], ['myzel-wsend', WSend]]) registerProcessor(k, C);
+  for (const [k, C] of [['myzel-blow', Blow], ['myzel-scan', Scan], ['myzel-bow', Bow], ['myzel-rot', Rot], ['myzel-aeol', Aeol], ['myzel-gendy', Gendy], ['myzel-web', Web], ['myzel-string', Strg], ['myzel-syrinx', Syrinx], ['myzel-scrape', Scrape], ['myzel-ember', Ember], ['myzel-null', Null], ['myzel-ring', Ring], ['myzel-ring-in', RingIn], ['myzel-wsend', WSend], ['myzel-tfx', Tfx]]) registerProcessor(k, C);
   return { SIN, NOISE, Reso, Biquad, Allpass1, OnePole, DcBlock, FracDelay, PRNG };   // (for later processors; unused here)
 }
 // end myzelDsp

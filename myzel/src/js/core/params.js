@@ -489,7 +489,7 @@ SEL('midi.clock', 'Tempo vom Gerät (MIDI-Clock)', [['off', 'Aus'], ['follow', '
 SEL('midi.ble', 'Bluetooth-Timing', [['direct', 'Direkt'], ['even', 'Gleichmäßig']], 'direct', { chips: 1, dev: 1 });
 BOOL('midi.pads', 'Pads als Auslöser', false, { dev: 1 });
 BOOL('midi.std', 'Standard-Zuordnungen', true, { dev: 1 });
-SEL('midi.tch', 'Touché-Spielweise', [['finger', 'Finger'], ['atem', 'Atem'], ['raum', 'Raum'], ['verw', 'Verwandlung'], ['gleiten', 'Gleiten'], ['streichen', 'Streichen'], ['platte', 'Platte'], ['vokal', 'Vokal']], 'finger', { chips: 1, dev: 1 });   // (Expressive E Touché, js/midi/touche.js)
+SEL('midi.tch', 'Touché-Spielweise', [['finger', 'Finger'], ['atem', 'Atem'], ['raum', 'Raum'], ['verw', 'Verwandlung'], ['gleiten', 'Gleiten'], ['streichen', 'Streichen'], ['platte', 'Platte'], ['vokal', 'Vokal'], ['koerner', 'Körner'], ['eis', 'Eis'], ['oberton', 'Obertöne'], ['faecher', 'Fächer'], ['ort', 'Ort'], ['stottern', 'Stottern'], ['resonanz', 'Resonanz'], ['arp', 'Arpeggio']], 'finger', { chips: 1, dev: 1 });   // (Expressive E Touché, js/midi/touche.js)
 
 const GROUP = {
   v: 'Spielweise', t: 'Stimmung', neb: 'Nebel', kor: 'Körner', hau: 'Hauch', glo: 'Glocke', mem: 'Membran', sai: 'Saite', sch: 'Schale', gng: "Gong", klb: "Kalimba", obt: "Obertöne", stm: "Stimme", swm: "Schwarm", tie: "Tiefe", trp: "Tropfen", hlm: 'Halm', rnk: 'Ranke', elm: 'Elmsfeuer', jrg: 'Jahresring', hrz: 'Harz', shn: 'Sehne', zpf: 'Zapfen', glt: 'Glut', mdr: 'Moder', boe: 'Böe', amo: 'Amöbe', gsp: 'Gespinst', rhz: 'Rhizom', khl: 'Kehlchen',

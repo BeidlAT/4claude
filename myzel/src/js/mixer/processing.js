@@ -70,11 +70,11 @@ function procUpd(st, inst) {
   clearTimeout(st.procT);
   const set = inst ? setNow : (q, v) => setP(q, v, 0.006);
   if (on) {
-    st.in.connect(x.lc1); x.sat.connect(st.wet);
+    st.pt.connect(x.lc1); x.sat.connect(st.wet);
     set(st.byp.gain, 0); set(st.wet.gain, 1);
   } else {
     set(st.byp.gain, 1); set(st.wet.gain, 0);
-    st.procT = setTimeout(() => { if (!st.procOn) { try { st.in.disconnect(x.lc1); } catch (e) {} } }, 120);
+    st.procT = setTimeout(() => { if (!st.procOn) { try { st.pt.disconnect(x.lc1); } catch (e) {} } }, 120);
   }
 }
 // width of the whole sum (Summe → Breite)
