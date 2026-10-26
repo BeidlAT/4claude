@@ -155,7 +155,7 @@ function costRow(okf, what, tab, cur, env, f) {
     ond: { f0: [110, 220, 440, 880, 1760], ys: [0.3, 0.7], tol: 5, costMax: 1.51, pp: { 'ond.vibrato': 0 } },
     wal: { f0: [55, 110, 220, 440], ys: [0.5], tol: 15, costMax: 2.33, line: true, lineAt: 1.4, pp: { 'wal.knarren': 0 } },   // (the cry arrives on the note in its arc: measured on the line after it)
     stp: { pitchless: 'a Shepard tone has no single pitch (its octave voices glide forever)', costMax: 1.51 },
-    atr: { f0: [110, 220, 440], ys: [0.1], tol: 10, costMax: 0.95 },   // (the lock on the note: low on the field the orbit is periodic)
+    atr: { f0: [110, 220, 440], ys: [0.1], pY: 0.1, tol: 10, costMax: 0.95 },   // (the lock on the note: low on the field the orbit is periodic)
     tnl: { f0: [110, 220, 440, 880], ys: [0.8], tol: 8, costMax: 1.05, line: true },
     // ---- Etappe 4 (Strom, Trap, LoFi, Welt) ----
     wkg: { f0: [55, 110, 220, 440, 880], ys: [0.2, 0.7], tol: 5, costMax: 1.49 },
@@ -243,11 +243,11 @@ function costRow(okf, what, tab, cur, env, f) {
     const worst = pit.reduce((a, b) => (Math.abs(b[2]) > Math.abs(a[2]) ? b : a));
     ok(Math.abs(worst[2]) <= tc.tol, `f0 within ${tc.tol} ct on ${pit.length} notes ${tc.f0[0]}–${tc.f0[tc.f0.length - 1]} Hz (worst ${worst[2]} ct at ${worst[0]} Hz, y ${worst[1]})`);
     // -- Bebung: the pitch bus +50 ct moves the note by 50 ct
-    { const f = 220, x = await one(page, { eng: key, f, y: tc.ys[0] != null && (tc.native || tc.lineAt) ? tc.ys[0] : 0.6, dur: 2.2, params: PP, cents: 50 }); const m = mono(x);
+    { const f = 220, x = await one(page, { eng: key, f, y: tc.pY != null ? tc.pY : tc.ys[0] != null && (tc.native || tc.lineAt) ? tc.ys[0] : 0.6, dur: 2.2, params: PP, cents: 50 }); const m = mono(x);
       const fm = tc.struck ? peakHz(m, SR, f * Math.pow(2, 50 / 1200), 0.15, 16384) : tc.line ? peakHz(m, SR, f * Math.pow(2, 50 / 1200), tc.lineAt || (key === 'glt' ? 1.2 : 0.6), tc.lineAt || key === 'glt' ? 32768 : 16384) : L.combPitch(m, SR, f * Math.pow(2, 50 / 1200), 0.6, 16384);
       const c = L.cents(fm, f); rep.bebung = +c.toFixed(2); ok(Math.abs(c - 50) <= 5, `Bebung: pitch bus +50 ct → ${c.toFixed(2)} ct`); }
     // -- glide: setF moves the pitch (k-rate freq through glideTo)
-    if (!tc.struck) { const x = await one(page, { eng: key, f: 220, y: tc.native ? 0.1 : tc.lineAt ? 1 : 0.6, dur: 2.5, params: PP, moves: [[1.0, 'setF', 330]] }); const m = mono(x);
+    if (!tc.struck) { const x = await one(page, { eng: key, f: 220, y: tc.pY != null ? tc.pY : tc.native ? 0.1 : tc.lineAt ? 1 : 0.6, dur: 2.5, params: PP, moves: [[1.0, 'setF', 330]] }); const m = mono(x);
       const fm = tc.line ? peakHz(m, SR, 330, 1.6, tc.lineAt || key === 'glt' ? 32768 : 16384) : L.combPitch(m, SR, 330, 1.6, 16384);
       ok(Math.abs(L.cents(fm, 330)) <= tc.tol + 1, `setF 220 → 330 Hz lands at ${fm.toFixed(2)} Hz`); }
     }
