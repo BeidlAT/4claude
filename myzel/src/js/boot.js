@@ -35,6 +35,7 @@ function boot() {
   document.addEventListener('visibilitychange', () => {
     if (!A.ctx) return;
     if (document.visibilityState === 'visible') {
+      if (A.bgSess) { A.bgSess = false; iosUnmute(); }   // (the audio session back to „playback“)
       A.userSuspended = false; ensureRunning(); keepAwake();
       if (A.unmute && A.unmute.paused) { const p = A.unmute.play(); if (p && p.catch) p.catch(() => {}); }
     } else {
@@ -45,6 +46,7 @@ function boot() {
     }
   });
   window.addEventListener('pagehide', () => { if (A.ctx && !P['dev.bg']) bgStop(); });
+  document.addEventListener('freeze', () => { if (A.ctx && !P['dev.bg']) bgStop(); });
   window.addEventListener('blur', () => { if (document.visibilityState !== 'visible') releaseAllTouches(); });
   // Gestik: back from the background, a turned view (both do nothing while it is off)
   document.addEventListener('visibilitychange', () => { if (GK.on) gkVis(); });
