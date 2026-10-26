@@ -12643,7 +12643,7 @@ function myzelDsp() {
   // follows it, now and then a creak or a burble (Knarren: pulses of the larynx, 20 … 60 a second). Held, the whale
   // sings on: a new unit every few seconds (Dauer), each a little different; every arc arrives on the note. Under water the top is gone, the sound
   // arrives smeared and the sea answers late (Tiefe: four allpasses, a long echo of the water). Höhe is the arc: low
-  // on the field the deep moan that sinks, the middle a hump, high up the rising cry. ----
+  // on the field the deep moan that sinks, far down, the middle a hump, high up the rising cry near the surface (brighter). ----
   const WAL_OUT = 0.34;
   class Wal extends MyzelProc {
     constructor(o) {
@@ -12685,7 +12685,7 @@ function myzelDsp() {
       const n = b - a, p = this.p, f = this.f, rng = this.rng;
       this.ys += (this.y - this.ys) * (1 - Math.exp(-n / (0.1 * SR)));
       if (this.burst) { this.gate -= n; if (this.gate <= 0) this.off = true; }
-      const tf = 1 - Math.exp(-2 * Math.PI * (2400 - 1500 * p.tiefe) / SR), og = R ? WAL_OUT * 0.57 : WAL_OUT, wet = 0.15 + 0.5 * p.tiefe, EM = this.ec.length - 1, eD = Math.round((0.28 + 0.2 * p.tiefe) * SR);
+      const tf = 1 - Math.exp(-2 * Math.PI * Math.min(0.4 * SR, (2400 - 1500 * p.tiefe) * (0.45 + 1.4 * this.ys)) / SR), og = R ? WAL_OUT * 0.57 : WAL_OUT, wet = 0.15 + 0.5 * p.tiefe, EM = this.ec.length - 1, eD = Math.round((0.28 + 0.2 * p.tiefe) * SR);
       const att = 1 - Math.exp(-1 / (0.18 * SR)), rel = 1 - Math.exp(-1 / (0.35 * SR)), envT = this.off ? 0 : 1;
       let ph = this.ph, cp = this.cp, env = this.env, uEnv = this.uEnv, lp = this.lp, lp2 = this.lp2, wob = this.wob, ecW = this.ecW;
       for (let i = a; i < b; i++) {
@@ -12701,7 +12701,7 @@ function myzelDsp() {
         ph += fr / SR; if (ph >= 1) ph -= 1;
         // the tone: a sine with a few harmonics, through the throat's formant (it follows the pitch)
         const sn = Math.sin(2 * Math.PI * ph);
-        const hb = 0.4 + 1.2 * this.ys; let x = sn + 0.32 * hb * Math.sin(4 * Math.PI * ph) + 0.14 * hb * hb * Math.sin(6 * Math.PI * ph);   // (the cry is brighter than the moan)
+        const hb = 0.15 + 2.1 * this.ys; let x = sn * (1.1 - 0.35 * this.ys) + 0.32 * hb * Math.sin(4 * Math.PI * ph) + 0.14 * hb * hb * Math.sin(6 * Math.PI * ph);   // (the cry is brighter than the moan)
         if ((i & 31) === 0) { const ff = Math.min(0.4 * SR, Math.max(300, fr * 2.4)); if (Math.abs(ff - this.fT) > 0.01 * ff) { this.fT = ff; this.fm.peak(ff, 2.5, 8); } }
         x = this.fm.tick(x) * 0.5;
         // the creak: the larynx pulses
