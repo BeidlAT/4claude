@@ -69,6 +69,7 @@ function mxBuildPult(host) {
     // the Summe column: a still layer (stem, scale, root) and a narrow live one over its meter
     if (g === 'sum') { MX.cvsumS = h('canvas', { class: 'mx-cvsum', 'aria-hidden': 'true' }); MX.cvsum = h('canvas', { class: 'mx-cvsum', 'aria-hidden': 'true' }); grp.prepend(MX.cvsumS, MX.cvsum); MX.sumGrp = grp; }
     row.append(grp);
+    if (g === 'spiel' && typeof hxmPultGroup === 'function') row.append(hxmPultGroup());   // (owner, 26.10.2026: the Schleifen one by one, beside the Hexenring)
   }
   // the five beads of the chain rail name themselves under the mouse (they are drawn on the still layer)
   MX.beads = MX_FX.map(([, name]) => { const b = h('i', { class: 'mx-bead', 'aria-hidden': 'true' }); b.dataset.n = name; row.append(b); return b; });

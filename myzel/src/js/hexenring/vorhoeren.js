@@ -59,7 +59,7 @@ function hxPvFrame(L) {
   else if (P) { const [a, b] = hxPvRange(P.dur); if (Math.abs(a - P.a) > 1e-6 || Math.abs(b - P.b) > 1e-6) hxPvSrc(L, P.buf, hxPvPos()); }
   if (HXE.pv) { const g = hxPvLvl(L), pn = L.pan || 0, o = HXE.pv.out; if (Math.abs(o.g.gain.value - g) > 1e-4) o.g.gain.setTargetAtTime(g, A.ctx.currentTime, 0.02); if (Math.abs(o.p.pan.value - pn) > 1e-3) o.p.pan.setTargetAtTime(pn, A.ctx.currentTime, 0.02); }
   const b = HXE.pvBtn; if (b) { const tx = HXE.pv ? '■ Stopp' : HXE.pvWant ? '… wird berechnet' : '▶ Abspielen'; if (b.textContent !== tx) { b.textContent = tx; b.setAttribute('aria-pressed', HXE.pv ? 'true' : 'false'); } }
-  if (HXE.tEl) { const tx = hxPvTime(L, hxPvPos()); if (HXE.tEl.textContent !== tx) HXE.tEl.textContent = tx; }
+  if (HXE.tEl) { const tx = (HXE.pv ? 'Vorhören · ' : '') + hxPvTime(L, hxPvPos()); if (HXE.tEl.textContent !== tx) HXE.tEl.textContent = tx; }
   // (zoomed in: the view follows what plays)
   if (HXE.pv && HXE.zv) { const p = hxPvPos(), [v0, v1] = HXE.zv, s = v1 - v0; if (p < v0 || p > v1) { const n0 = clamp(p - 0.02 * s, 0, 1 - s); HXE.zv = [n0, n0 + s]; } }
 }

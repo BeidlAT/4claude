@@ -2,6 +2,14 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-26e",
+      "punkte": [
+        "Mixer: Jede Schleife hat jetzt ihren eigenen Kanal direkt im Pult, gleich rechts neben „Hexenring“ – Pegel, Balance, Stumm, Solo und eigene Anzeige. Ein Tipp auf den Namen öffnet die Schleife zum Bearbeiten.",
+        "Die Gruppe „Schleifen“ lässt sich über ihre Überschrift einklappen und wieder aufklappen.",
+        "Schleife bearbeiten: Beim Abspielen im Fenster gibt es nur noch einen Spielkopf – den, der gerade klingt. Die Uhr zeigt dann „Vorhören“; gestoppt markiert ein kleines Dreieck, wo ▶ beginnt."
+      ]
+    },
+    {
       "id": "2026-10-26d",
       "punkte": [
         "Schleife bearbeiten: Änderungen hörst du jetzt sofort, nicht erst wenn die Schleife einmal durch ist – Noten (Stufe, dünner, dichter, Krebs, Umkehrung), rückwärts, Weglassen, Tauschen und bearbeitete Abschnitte wechseln mitten im Durchgang, weich überblendet. Nur Band und Trimmen ändern die Länge und warten deshalb auf die Naht.",
