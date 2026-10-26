@@ -81,7 +81,8 @@ function hxEdPlace() {
 // what the editor shows depends on: rebuilt when it changes (a frame compares it), the playhead drawn every frame
 function hxEdSig(L) {
   const sch = L.sch.map((id) => HX.sch.get(id)).filter(Boolean);
-  return [L.key, L.state, L.d.beats, L.d.L, L.bpb, L.sp || 1, !!L.rev, JSON.stringify(L.trim || 0), L.dbl || 1, HX.fokus === L.id, HX.solo ? HX.solo.id : 0, JSON.stringify(L.nt || 0), L.notes.length,
+  return [L.key, L.state, L.d.beats, L.d.L, L.bpb, L.sp || 1, !!L.rev, JSON.stringify(L.trim || 0), L.dbl || 1, HX.fokus === L.id, HX.solo ? HX.solo.id : 0, JSON.stringify(L.nt || 0), JSON.stringify(L.slc || 0), L.vb, JSON.stringify(L.ab || 0), L.notes.length,   // (26.10.2026: Lücken – its chips lit only after another change)
+   
     sch.map((S) => S.key + ':' + (S.ver || 0) + ':' + S.pre + ':' + S.len + ':' + S.gain + ':' + !!S.mute + ':' + !!S.aud).join(','), hxLoopsLive().map((X) => X.slot).join('')].join('|');
 }
 function hxEdRender() {

@@ -37,6 +37,12 @@ const { ok } = H;
   });
   ok(e1 && e1.h === 'Schleife 1' && e1.wave > 2000 && e1.rows === 1 && ['Band', 'Trimmen', 'Zeit', 'Lücken', 'Noten'].every((t) => e1.tools.includes(t)) && e1.over, `Umschalt+1 opens the editor over the field: waveform drawn, its Schicht, the tools (${JSON.stringify(e1)})`);
   await page.screenshot({ path: 'out/edit-open.png' });
+  // the chips light what is set (owner, 26.10.2026: „weg 15 %“ changed the sound, the mark stayed on „weg aus“)
+  const lit = await page.evaluate(async () => { const o = {}; const c = (t) => [...document.querySelectorAll('.hx-ed .chip')].find((x) => x.textContent === t);
+    c('weg 15 %').click(); await window.__sleep(250); o.w = c('weg 15 %').getAttribute('aria-pressed') + c('weg aus').getAttribute('aria-pressed');
+    c('tauschen 30 %').click(); await window.__sleep(250); o.t = c('tauschen 30 %').getAttribute('aria-pressed');
+    c('weg aus').click(); await window.__sleep(250); o.a = c('weg aus').getAttribute('aria-pressed'); window.__M.hxSlcSet(window.__M.hxLoopsLive()[0], 'pw', 0); await window.__sleep(250); return o; });
+  ok(lit.w === 'truefalse' && lit.t === 'true' && lit.a === 'true', `the Lücken chips light what is set (${JSON.stringify(lit)})`);
   // 3. a stretch dragged over the waveform: beats 3–5 of 8 play alone; ↶ gives the whole back
   const cb = await (await page.$('.hx-ed-cv')).boundingBox();
   await page.mouse.move(cb.x + cb.width * 0.27, cb.y + 50); await page.mouse.down(); await page.mouse.move(cb.x + cb.width * 0.6, cb.y + 60, { steps: 6 }); await page.mouse.up(); await page.waitForTimeout(300);
