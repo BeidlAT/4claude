@@ -2,6 +2,13 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-27",
+      "punkte": [
+        "iPad: Verlässt oder beendest du Myzel, darf iOS es nicht mehr im Hintergrund weiterspielen lassen – die Audio-Sitzung wird beim Verlassen umgestellt.",
+        "Zurück in der App klingt alles wieder wie gewohnt, auch bei stummgeschaltetem iPad."
+      ]
+    },
+    {
       "id": "2026-10-26z",
       "punkte": [
         "iPad und Handy: Myzel verstummt jetzt, wenn du die App verlässt oder schließt – auch wenn Puls oder Schleifen laufen – und spielt weiter, sobald du zurückkommst.",
