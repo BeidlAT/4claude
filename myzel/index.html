@@ -12412,12 +12412,12 @@ function myzelDsp() {
   }
   // ---- Ätherwelle: myzel-ond – the Ondes Martenot (Klangbibliothek II, 26.10.2026). One oscillator whose wave the
   // player chooses by „timbres“: Onde (a pure sine), Creux (hollow – the odd harmonics), Nasillard (nasal – a narrow
-  // pulse through a band), Gambe (thin and bright – a saw); Höhe glides through them in that order. The left hand's
+  // pulse through a band), Gambe (thin and bright – a saw); Höhe glides through them: Onde, Creux, Gambe, Nasillard. The left hand's
   // touche shapes the attack, the finger on the ribbon a vibrato (Vibrato: depth, ≈ 5.6 Hz, never quite regular) and
   // a little scoop into each note. And its loudspeakers, the diffuseurs: the „Palme“ – twelve strings tuned to the
   // chromatic scale that the sound sets ringing (a shimmering halo) – and the „Métallique“, a gong as membrane
   // (a metallic shiver over every note). ----
-  const OND_OUT = 0.0091;
+  const OND_OUT = 0.41;
   const blep = (t, dt) => (t < dt ? (t /= dt, t + t - t * t - 1) : t > 1 - dt ? (t = (t - 1) / dt, t * t + t + t + 1) : 0);   // (PolyBLEP: a step's band-limited correction)
   class Ond extends MyzelProc {
     constructor(o) {
@@ -12456,7 +12456,8 @@ function myzelDsp() {
       const tm = Math.max(0, Math.min(1, this.ys + p.klang * (1 - this.ys))) * 3, seg = Math.min(2, Math.floor(tm)), u = tm - seg;
       if (Math.abs(this.ys - this.yT) > 0.01) { this.yT = this.ys; this.bp.bp(Math.min(0.4 * SR, Math.max(f * 3, 1200)), 1.4); }
       const vd = p.vibrato * 35 / 1731, att = 1 - Math.exp(-1 / (0.018 * SR)), rel = 1 - Math.exp(-1 / (0.09 * SR)), envT = this.off ? 0 : 1;
-      const og = R ? OND_OUT * Math.SQRT1_2 : OND_OUT, pg = 0.05 * p.palme, mg = 0.05 * p.metall, np = this.palme.length, met = this.met, nm = met.length;
+      const og = R ? OND_OUT * Math.SQRT1_2 : OND_OUT, pg = 0.9 * p.palme * 6.9 / (3 * SR), mg = 1.2 * p.metall * 6.9 / (1.8 * SR),   // (a resonator rings 1/(1 − r) ≈ t60·SR/6.9 times its input on its pitch: the halo stays a halo)
+        np = this.palme.length, met = this.met, nm = met.length;
       let ph = this.ph, vp = this.vp, lp = this.lp, env = this.env, sc = this.sc;
       for (let i = a; i < b; i++) {
         env += (envT - env) * (envT > env ? att : rel);
@@ -12471,8 +12472,8 @@ function myzelDsp() {
           let s;
           if (k === 0) s = Math.sin(2 * Math.PI * ph);
           else if (k === 1) { const q = ph + 0.5 >= 1 ? ph - 0.5 : ph + 0.5; s = (2 * ph - 1 - blep(ph, dt) - (2 * q - 1 - blep(q, dt))) * 0.55; }
-          else if (k === 2) { const q = ph + 0.86 >= 1 ? ph - 0.14 : ph + 0.86, pu = (2 * ph - 1 - blep(ph, dt) - (2 * q - 1 - blep(q, dt))) * 0.5; s = this.bp.tick(pu) * 2.2 + pu * 0.35; }
-          else s = (2 * ph - 1 - blep(ph, dt)) * 0.6;
+          else if (k === 3) { const q = ph + 0.86 >= 1 ? ph - 0.14 : ph + 0.86, pu = (2 * ph - 1 - blep(ph, dt) - (2 * q - 1 - blep(q, dt))) * 0.5; s = this.bp.tick(pu) * 2.2 + pu * 0.35; }
+          else s = (2 * ph - 1 - blep(ph, dt)) * 0.6;   // (k 2: Gambe, before the nasal pulse – the brightest last)
           x += s * g;
         }
         x *= env * this.vel;
