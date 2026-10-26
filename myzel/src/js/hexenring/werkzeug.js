@@ -29,7 +29,7 @@ function hxCardTools(L, sch, chip, row, btn) {
       chip('Puls übernimmt', false, () => hxGroovePuls(L), 'Der Puls swingt wie diese Schleife'),
       h('span', { class: 'hx-ms' }, G && (G.sw16 != null || G.sw8 != null) ? 'Swing ' + Math.round(100 * clamp(G.sw16 != null && Math.abs(G.sw16) > 1e-4 ? (2 * G.sw16) / 0.25 : (2 * (G.sw8 || 0)) / 0.5, 0, 0.6)) + ' %' : '')));
   }
-  kids.push(h('div', { class: 'hx-row end' }, notes && hxWAktiv(L) ? btn('Erstarren', () => hxErstarren(L), { aria: 'Erstarren: dieser Wuchs-Durchgang wird der Abdruck' }) : null,
+  kids.push(h('div', { class: 'hx-row end' }, btn('Grundeinstellung', () => hxDefaults(L), { aria: 'Alle Bearbeitungen zurück auf die Grundeinstellung (↶ holt sie zurück)' }), notes && hxWAktiv(L) ? btn('Erstarren', () => hxErstarren(L), { aria: 'Erstarren: dieser Wuchs-Durchgang wird der Abdruck' }) : null,
     btn('Klang aufs Feld', () => hxKlangFeld(L), { aria: 'Das Spielfeld spielt die Klangquelle dieser Schleife' }),
     btn('Als Aufnahme', () => hxExportTake(L), { aria: 'Als Aufnahme exportieren: WAV, ZIP, Körner' }), notes ? btn('MIDI', () => hxExportMidi(L), { aria: 'Die Noten als MIDI-Datei' }) : null));
   const sec = foldSec('hxt' + L.slot, 'Verwandeln', kids);
@@ -120,9 +120,13 @@ const hxBandNotes = (L) => L.sch.some((id) => hxWCan(HX.sch.get(id)));
 const hxSchnitt = (L) => !L.bew && (L.tempoArt || L.art) === 'schlag' && !hxBandNotes(L);
 function hxBandSend(L) {
   if (!L || L.bew || !HX.node) return;
+  hxPost({ slice: hxBandSliceOf(L) || { loop: L.id, off: 1 } });
+}
+// the slices a loop plays as the processor gets them (null: none) – the editor's waveform renders with the same
+function hxBandSliceOf(L) {
   const sl = L.slc || {}, sch = hxSchnitt(L), lq = L.ladung && !L.acc && !hxWAktiv(L) && !L.live ? L.ladQ || 0 : 0, on = sch || sl.pd > 0 || sl.pw > 0 || lq > 0;   // (step 4: Ladung boils an Abdruck – drop-outs and stutters on the grid)
   if (lq > 0 && !L.ladSeed) L.ladSeed = ((Math.random() * 2147483646) | 0) + 1;
-  hxPost({ slice: on ? { loop: L.id, u: lq > 0 && !sch ? hxLadU(L) : hxBandU(L), schnitt: sch ? 1 : 0, pd: Math.max(sl.pd || 0, 0.3 * lq), pw: sl.pw || 0, ps: 0.45 * lq, seed: lq > 0 ? (sl.seed || 1) ^ L.ladSeed : sl.seed || 1 } : { loop: L.id, off: 1 } });
+  return on ? { loop: L.id, u: lq > 0 && !sch ? hxLadU(L) : hxBandU(L), schnitt: sch ? 1 : 0, pd: Math.max(sl.pd || 0, 0.3 * lq), pw: sl.pw || 0, ps: 0.45 * lq, seed: lq > 0 ? (sl.seed || 1) ^ L.ladSeed : sl.seed || 1 } : null;
 }
 // once a loop's first Schicht is filled: its kind and onsets (for the tools and a tempo change); and what it plays with
 function hxBandFill(S) {

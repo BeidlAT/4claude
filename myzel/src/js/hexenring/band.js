@@ -1,6 +1,6 @@
 // ---- §14 the tape: speed steps (octaves, fifths) from the next seam, gliding with the motor's inertia; the loop's
 // length follows (a Takt loop: beats × old / new – it stays on the grid, the servo lands in phase) ----
-function hxSpeed(L, sp) {
+function hxSpeed(L, sp, o = {}) {
   if (!L || L.bew || !HX.node) return;
   const was = L.sp || 1; if (Math.abs(was - sp) < 1e-9) return;
   if (HX.pend.some((p) => p.kind === 'band' && p.loop === L.id)) { const p = HX.pend.find((x) => x.kind === 'band' && x.loop === L.id); hxPendDrop(p); p.cancel(); }
@@ -12,8 +12,11 @@ function hxSpeed(L, sp) {
   hxGeomMirror(L, f, k, geo.beats || L.d.beats, geo.L || L.d.L);
   L.sp = sp; L.spT = hxT(f);
   const lab = 'Band ' + HX_SP.find((x) => Math.abs(x[0] - sp) < 1e-6)[1];
+  // (26.10.2026, owner: every edit of a loop undoable at once) the step; a ↶ while the switch still waits cancels it and the step
+  const lk = L.key, step = o.noHist ? null : { kind: 'band', label: hxName(L) + ': ' + lab, undo() { const X = hxByKey(lk); if (X) hxSpeed(X, was, { noHist: 1 }); }, redo() { const X = hxByKey(lk); if (X) hxSpeed(X, sp, { noHist: 1 }); } };
   hxPendAdd({ kind: 'band', loop: L.id, t: hxT(f), label: lab + (takt ? ' ab Takt ' + hxBarNo(Math.round(hxBeatAtF(f) - TG.o)) : ' an der Naht'),
-    cancel: () => { const X = HX.loops.get(L.id); if (!X) return; hxBatch(() => hxPost({ geom: Object.assign({ loop: X.id, f }, takt ? { beats: d0.beats } : { L: d0.L }), band: { loop: X.id, f, vs: was, T: 1 } })); hxGeomMirror(X, f, k, d0.beats, d0.L); X.sp = was; hxCardDirty(); } });
+    cancel: () => { if (step) HX.hist = HX.hist.filter((x) => x !== step); const X = HX.loops.get(L.id); if (!X) return; hxBatch(() => hxPost({ geom: Object.assign({ loop: X.id, f }, takt ? { beats: d0.beats } : { L: d0.L }), band: { loop: X.id, f, vs: was, T: 1 } })); hxGeomMirror(X, f, k, d0.beats, d0.L); X.sp = was; hxCardDirty(); } });
+  if (step) hxHist(step);
   hxSay(hxName(L) + ': ' + lab); hxSaveMeta(L.id); hxCardDirty(); hxRailDirty();
 }
 // Bandstopp: the tape runs down (exponentially, hx.stopp s) and stands – a cadence; each loop angehalten after it
@@ -100,7 +103,7 @@ function hxBandTrimTo(L, a, f) {
 }
 function hxBandTrimDo(L, f, a) {
   const sch = hxBandReady(L); if (!sch) return false;
-  const T0 = L.tr0 || hxGeo(L), cur = L.trim || { f: 1, i: 0 };
+  const T0 = L.tr0 || Object.assign(hxGeo(L), { rev: !!L.rev, revW: !!L.revW }), cur = L.trim || { f: 1, i: 0 };   // (26.10.2026: the whole's direction – „ganz“ plays its audio as it was, so the loop says that direction again)
   if (Math.abs(f - cur.f) < 1e-9 && Math.abs(a - hxTrA(cur)) < 1e-9) return false;
   const before = hxGeo(L), sw = hxNextSeam(L), tk = hxTakt(L), whole = f > 1 - 1e-9;
   T0.sch.forEach((s, j) => {
@@ -114,6 +117,7 @@ function hxBandTrimDo(L, f, a) {
   });
   const fl0 = hxBandFl(L), i = Math.abs(a / f - Math.round(a / f)) < 1e-9 ? Math.round(a / f) : null;
   L.trim = whole ? null : { f, i: i != null ? i : 0, a }; L.tr0 = whole ? null : T0;
+  if (whole && T0.rev != null) { L.rev = T0.rev; L.revW = T0.revW; }
   const fw = f === 0.5 ? '½' : f === 0.25 ? '¼' : tk ? dec(+(T0.d.beats * f).toFixed(2)) + ' Schläge' : Math.round(f * 100) + ' %';
   hxBandStep(L, whole ? 'ganz' : 'getrimmt auf ' + fw + (i ? ' · ' + (i + 1) + '.' : ''), before, fl0);
   hxBandNotesFix(L); if (hxWAktiv(L)) hxWUpdate(L);
@@ -172,18 +176,57 @@ async function hxDouble(L) {
 const HX_VB = [[1, 'nie'], [0.97, 'langsam'], [0.9, 'mittel'], [0.75, 'schnell']];
 const HX_ABR = [[0, 'aus'], [0.04, 'langsam'], [0.1, 'mittel'], [0.25, 'schnell']];
 const HX_SLP = [[0, 'aus'], [0.15, '15 %'], [0.3, '30 %'], [0.5, '50 %']];
-function hxVbSet(L, fb) { L.vb = fb; hxPost({ vb: L.sch.map((id) => ({ schicht: id, fb })) }); hxSaveMeta(L.id); hxCardDirty(); hxSay(hxName(L) + ': Verblassen ' + HX_VB.find((x) => x[0] === fb)[1]); }
-function hxAbSet(L, rate, fresh) {
+function hxVbSet(L, fb, o = {}) {
+  const was = L.vb != null ? L.vb : 1, lk = L.key; if (Math.abs(was - fb) < 1e-9 && !o.force) return;
+  L.vb = fb; hxPost({ vb: L.sch.map((id) => ({ schicht: id, fb })) }); hxSaveMeta(L.id); hxCardDirty();
+  const lab = 'Verblassen ' + HX_VB.find((x) => x[0] === fb)[1]; hxSay(hxName(L) + ': ' + lab);
+  if (!o.noHist) hxHist({ kind: 'band', label: hxName(L) + ': ' + lab, undo() { const X = hxByKey(lk); if (X) hxVbSet(X, was, { noHist: 1 }); }, redo() { const X = hxByKey(lk); if (X) hxVbSet(X, fb, { noHist: 1 }); } });
+}
+function hxAbSet(L, rate, fresh, o = {}) {
+  const was = L.ab ? Object.assign({}, L.ab) : null, lk = L.key;
+  if (!fresh && !o.noHist) { if (((was && was.rate) || 0) === rate) return; hxHist({ kind: 'band', label: hxName(L) + ': Abrieb ' + HX_ABR.find((x) => x[0] === rate)[1], undo() { const X = hxByKey(lk); if (X) hxAbPut(X, was); }, redo() { const X = hxByKey(lk); if (X) hxAbSet(X, rate, false, { noHist: 1 }); } }); }
   const seed = (L.ab && L.ab.seed) || (((Math.random() * 2147483646) | 0) + 1);
   if (fresh) { hxPost({ abr: L.sch.map((id) => ({ schicht: id, rate: (L.ab && L.ab.rate) || 0.1, seed, reset: 1, off: !(L.ab && L.ab.rate > 0) ? 1 : 0 })) }); hxSay(hxName(L) + ': aufgefrischt'); return; }
   L.ab = rate > 0 ? { rate, seed } : null;
   hxPost({ abr: L.sch.map((id) => (rate > 0 ? { schicht: id, rate, seed } : { schicht: id, off: 1 })) });
   hxSaveMeta(L.id); hxCardDirty(); hxSay(hxName(L) + ': Abrieb ' + HX_ABR.find((x) => x[0] === rate)[1]);
 }
-function hxSlcSet(L, k, v) {
+// a loop's Abrieb as it was (↶): its rate and its seed – the wear starts again from new
+function hxAbPut(L, ab) { L.ab = ab ? Object.assign({}, ab) : null; hxPost({ abr: L.sch.map((id) => (L.ab ? { schicht: id, rate: L.ab.rate, seed: L.ab.seed } : { schicht: id, off: 1 })) }); hxSaveMeta(L.id); hxCardDirty(); }
+function hxSlcPut(L, s) { L.slc = s ? Object.assign({}, s) : null; hxBandSend(L); hxSaveMeta(L.id); hxCardDirty(); }
+function hxSlcSet(L, k, v, o = {}) {
+  const was = L.slc ? Object.assign({}, L.slc) : null, lk = L.key;
+  if (k !== 'neu' && ((was && was[k]) || 0) === v) return;
   const s = (L.slc = Object.assign({ pd: 0, pw: 0, seed: ((Math.random() * 2147483646) | 0) + 1 }, L.slc || {}));
   if (k === 'neu') s.seed = ((Math.random() * 2147483646) | 0) + 1; else s[k] = v;
   hxBandSend(L); hxSaveMeta(L.id); hxCardDirty();
-  hxSay(hxName(L) + ': ' + (k === 'pd' ? 'Auslassen ' : k === 'pw' ? 'Würfeln ' : 'neu gewürfelt') + (k === 'neu' ? '' : HX_SLP.find((x) => x[0] === v)[1]));
+  const lab = (k === 'pd' ? 'Auslassen ' : k === 'pw' ? 'Würfeln ' : 'neu gewürfelt') + (k === 'neu' ? '' : HX_SLP.find((x) => x[0] === v)[1]), to = Object.assign({}, L.slc);
+  hxSay(hxName(L) + ': ' + lab);
+  if (!o.noHist) hxHist({ kind: 'band', label: hxName(L) + ': ' + lab, undo() { const X = hxByKey(lk); if (X) hxSlcPut(X, was); }, redo() { const X = hxByKey(lk); if (X) hxSlcPut(X, to); } });
+}
+// (26.10.2026, owner) all a loop's edits back to their defaults – the tape (speed, direction, the whole), the gaps,
+// Verblassen, Abrieb, the notes as played – as one step (↶ gives them back); its level, balance and Schichten stay, and
+// a doubled loop stays doubled (that is its new whole – ↶ takes the doubling back)
+function hxDefaults(L) {
+  if (!L || L.bew) return false;
+  if (!hxBandReady(L)) return false;
+  const n0 = HX.hist.length;
+  if (L.trim) hxBandTrim(L, 'ganz');
+  if (L.rev) hxRev(L);
+  if ((L.sp || 1) !== 1) hxSpeed(L, 1);
+  if (L.slc && L.slc.pd) hxSlcSet(L, 'pd', 0);
+  if (L.slc && L.slc.pw) hxSlcSet(L, 'pw', 0);
+  if (L.vb != null && L.vb < 1) hxVbSet(L, 1);
+  if (L.ab) hxAbSet(L, 0);
+  if (hxNtOn(L)) hxNtSet(L, 'zurueck');
+  const did = hxHistGroup(n0, hxName(L) + ': alles auf Grundeinstellung');
+  hxSay(hxName(L) + (did ? ': alles auf Grundeinstellung' : ': ist schon in der Grundeinstellung'));
+  return did;
+}
+// the steps pushed since n0 as one (↶ takes them back together, newest first)
+function hxHistGroup(n0, label) {
+  const steps = HX.hist.splice(n0); if (!steps.length) return false;
+  hxHist({ kind: 'gruppe', label, undo() { for (let i = steps.length - 1; i >= 0; i--) steps[i].undo(); }, redo() { for (const s of steps) s.redo(); } });
+  return true;
 }
 
