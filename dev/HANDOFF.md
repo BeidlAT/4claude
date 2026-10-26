@@ -6,7 +6,16 @@
 exotisch, sphärisch, experimentell, psychedelisch, Ambient, LoFi, Trap, Avantgarde“. Gebaut: **22 neue Quellen**
 (jede ein eigener Worklet-Prozessor in `myzel/src/js/dsp/`), neue Familie **Strom**, **24 Presets**. Konzept, Liste und
 Stand: `dev/klang/BIBLIOTHEK.md`. Abnahme: `bench.js` (Zeilen „Klangbibliothek II“), Kosten in `VCOST1/3`. Nur in
-Chromium geprüft. Offen: Rückmeldung des Besitzers zum Klang; die Gesamtprüfung (reg.sh) einmal nachholen.
+Chromium geprüft. Bench: alle 22 grün (in Paketen – ein Lauf über alle stürzte nach 13 Quellen ab, Speicher des
+Testbrowsers). reg.sh: v2/func meldet Lastgrenzen über dem Budget bei alten Quellen (der Lastwächter senkt das Budget
+im belasteten Container mitten im Test – Umgebung), alles andere grün; perf ausgelassen.
+
+**Neue Richtung des Besitzers (26.10.2026):** ab jetzt auf den **PC** konzentrieren (16 GB RAM, Firefox). Tests knapp
+und gezielt (Bau, Syntax, die betroffene Suite; neue Klänge: Pegelmessung) – keine Gesamtläufe und keine Leistungsmessung
+mehr; bei Problemen schickt der Besitzer den Leistungsbericht seines PCs. **Nächste Etappe:** der ganze Humus-Inhalt
+bleibt beim Ernten mit der Schleife erhalten, im Bearbeiten-Fenster als Wellenform mit verschiebbarem Ausschnitt
+(Anfang/Ende auf Takte, sofort hörbar, ↶/↷/Grundeinstellung – „früher“ im Korb wird dazu eine Abkürzung); Schleifen und
+Aufnahme bis 128 Takte (Humus entsprechend länger, volle Qualität, Float32).
 
 
 Neu seit dem Stand unten (Wunsch des Besitzers, 25.10.2026 nachts – „Länge fehlt, wo bin ich beim Einspielen, Bearbeiten
