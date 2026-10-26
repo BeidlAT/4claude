@@ -42,11 +42,11 @@ function hxChainLog() {
   e.push([t, v, os, lite]);
   hxTrim(e, t);
 }
-// 180 s are kept (the Humus); the old part goes in one cut once 20 s more have gathered – a cut every call would copy the
+// 15 min are kept (the Humus, 26.10.2026: 128 bars); the old part goes in one cut once 20 s more have gathered – a cut every call would copy the
 // whole list each time (a Gestik binding writes the chain every frame)
 function hxTrim(e, t) {
   if (!(e.length > 2 && e[1][0] < t - 200)) return;
-  let k = 1; while (k < e.length - 2 && e[k + 1][0] < t - 180) k++;
+  let k = 1; while (k < e.length - 2 && e[k + 1][0] < t - 905) k++;
   e.splice(0, k);
 }
 const hxPoly = (p, t) => { if (!p || !p.length || t <= p[0][0]) return p && p.length ? p[0][1] : 0; let i = p.length - 1; while (i > 0 && p[i][0] > t) i--; const a = p[i], b = p[i + 1]; return b ? a[1] + (b[1] - a[1]) * (t - a[0]) / (b[0] - a[0]) : a[1]; };

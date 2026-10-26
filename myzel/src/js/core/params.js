@@ -542,13 +542,13 @@ for (const st of STRIPS) {
 for (const id in PD) if (id.startsWith('xhxr.') && !PD[id].live) PD[id].rec = 1;   // Hexenring: the loops' strip is not the patch's
 PD['xhxr.route'].d = 'dir';
 // Hexenring (SPEC §20): device-side settings, kept out of patches
-NUM('hx.humus', 'Humus-Länge', 16, 300, 64, 's', { step: 1, rec: 1 });
+NUM('hx.humus', 'Humus-Länge', 16, 900, MOBILE ? 64 : 300, 's', { step: 1, rec: 1 });   // (owner, 26.10.2026: on the PC 5 min by default, up to 15 – 128 bars even at 40 BPM)
 SEL('hx.modus', 'Hauptknopf', [['neu', 'Neue Schleife'], ['dieselbe', 'Dieselbe Schleife']], 'neu', { chips: 1, small: 1, rec: 1 });
 SEL('hx.start', 'Aufnahme beginnt', [['takt', 'Am Takt'], ['ton', 'Beim ersten Ton'], ['sofort', 'Sofort']], 'takt', { chips: 1, small: 1, rec: 1 });
 SEL('hx.raster', 'Raster', [['frei', 'Frei'], ['takt', 'Takt'], ['halb', '½ Takt'], ['viertel', '¼']], 'frei', { chips: 1, small: 1, rec: 1 });   // (25.10.2026: where a recording by hand begins and ends – grammar.js HX_RASTER)
 SEL('hx.laenge', 'Länge', [['auto', 'Automatisch'], ['wie1', 'Wie Schleife 1'], ['fest', 'Fest']], 'auto', { chips: 1, small: 1, rec: 1 });
-NUM('hx.festT', 'Feste Länge', 1, 16, 4, '', { step: 1, rec: 1, fmt: (v) => v + (v === 1 ? ' Takt' : ' Takte') });
-NUM('hx.mem', 'Speichergrenze', 100, 4000, MOBILE ? (IOS && !/iPhone|iPod/.test(navigator.userAgent) ? 600 : 300) : 1500, 'MB', { step: 50, rec: 1, fmt: (v) => v + ' MB' });
+NUM('hx.festT', 'Feste Länge', 1, 128, 4, '', { step: 1, rec: 1, fmt: (v) => v + (v === 1 ? ' Takt' : ' Takte') });
+NUM('hx.mem', 'Speichergrenze', 100, 12000, MOBILE ? (IOS && !/iPhone|iPod/.test(navigator.userAgent) ? 600 : 300) : 6000, 'MB', { step: 50, rec: 1, fmt: (v) => v + ' MB' });
 BOOL('hx.autoclose', 'Schließt sich, wenn du den Anfang wiederholst', false, { rec: 1 });
 SEL('hx.rail', 'Ringleiste', [['offen', 'Offen'], ['klein', 'Klein']], 'offen', { chips: 1, small: 1, rec: 1 });
 SEL('hx.ein', 'Einzählen', [['aus', 'Aus'], ['sicht', 'Sichtbar'], ['vib', 'Vibration'], ['ton', 'Hörbar']], 'sicht', { chips: 1, small: 1, rec: 1 });
@@ -600,7 +600,7 @@ BOOL('rec.arm', 'Erst mit dem ersten Ton starten', false, { rec: 1 });
 BOOL('rec.comp', 'Zusätzlich eine kleine Datei zum Teilen (MP4/WebM)', false, { rec: 1 });
 BOOL('rec.tail', 'Nachklang nach dem Stoppen mit aufnehmen', true, { rec: 1 });
 SEL('rec.len', 'Länge', [['free', 'Frei'], ['bars', 'In Takten']], 'free', { chips: 1, rec: 1 });
-NUM('rec.bars', 'Takte', 1, 64, 8, '', { step: 1, rec: 1, fmt: (v) => v + (v === 1 ? ' Takt' : ' Takte') });
+NUM('rec.bars', 'Takte', 1, 128, 8, '', { step: 1, rec: 1, fmt: (v) => v + (v === 1 ? ' Takt' : ' Takte') });
 // Gerät: Rechenleistung, Latenz, MIDI-Keyboard (gelten für dieses Gerät, nicht Teil der Klang-Presets)
 SEL('dev.q', 'Qualitätsstufe', [['1', '1 · Leicht'], ['2', '2 · Voll'], ['3', '3 · Gewaltig']], MOBILE ? '1' : '2', { chips: 1, dev: 1 });
 // (24.10.2026: Android starts in „Minimal“ – Chrome there opens its fast output only for the numeric hint; lasting

@@ -143,6 +143,7 @@ function mixerOpen() {
   // the sheet's head: the view switch, then "2. Regler" (mxRegPlace picks the chips or the compact one)
   if (MX.vsw && mxViewKeys().length > 1) sheetTitle.after(MX.vsw);
   (MX.vsw && MX.vsw.isConnected ? MX.vsw : sheetTitle).after(MX.regBox, MX.regC.el);
+  mxwOpen();   // (26.10.2026: its width, folded or not)
   mxMonSync();
   mxSrcAll();
   mxLayout();
@@ -154,6 +155,7 @@ function mixerClose() {
   MX.open = false;
   mxTaps('mix', false);
   if (MX.vsw) MX.vsw.remove();
+  mxwClose();
   MX.regBox.remove(); MX.regC.el.remove();
   mxMenu(false);
   mxTipHide(MX.root, 0);

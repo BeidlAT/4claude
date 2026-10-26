@@ -114,7 +114,7 @@ const { ok } = H;
     M.hxLenSet('auto');
     return o;
   });
-  ok(e.a === 'auto' && e.b === 4 && e.c === 6 && e.d === 4 && e.g === 0.5, `the controller: a knob sets the length (auto … 16), a button steps it (${JSON.stringify(e)})`);
+  ok(e.a === 'auto' && e.b === 8 && e.c === 12 && e.d === 8 && e.g === 0.545, `the controller: a knob sets the length (auto … 128), a button steps it (${JSON.stringify(e)})`);
   ok(!errors.length, 'no page errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
   await H.close(); process.exit(H.summary() ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

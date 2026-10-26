@@ -1,7 +1,7 @@
 // ---- the notes Humus (SPEC §5): every voice the player, the Puls, the rain or the Rassel starts, two minutes, the
 // objects reused; glides, heights and the release come from the voice's own calls. Probes (the library) and a loop's
 // own voices (o.bus = the strip „Hexenring“) are left out, and so is every offline render.
-const HX_EV = 4096, HX_EV_S = 120, HX_CV = 256;
+const HX_EV = 32768, HX_EV_S = 900, HX_CV = 256;   // (26.10.2026: as far back as the Humus reaches – 15 min)
 // a pitch against the field's scale now: degree, octave above the field's base, alt (semitones off the scale)
 function hxDeg(f) {
   const semi = 12 * Math.log2(Math.max(1e-6, f) / N.base);
@@ -105,7 +105,7 @@ function hxSegMirror(out, reset) {
   if (!out.length) return;
   while (s.length && s[s.length - 1][0] >= out[0][0]) s.pop();
   for (const x of out) s.push(x);
-  const old = hxF(hxNowT() - 300); let k = 0;
+  const old = hxF(hxNowT() - 905); let k = 0;
   while (k < s.length - 2 && s[k + 1][0] < old) k++;
   if (k) s.splice(0, k);
   HX.segF = s;

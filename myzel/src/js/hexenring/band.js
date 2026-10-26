@@ -212,7 +212,7 @@ function hxSlcSet(L, k, v, o = {}) {
 // a doubled loop stays doubled (that is its new whole – ↶ takes the doubling back)
 function hxDefaults(L) {
   if (!L || L.bew) return false;
-  if (!hxBandReady(L)) return false;
+  if (!hxBandReady(L)) { if (L.hum) { const n1 = HX.hist.length; hxHumReset(L); return hxHistGroup(n1, hxName(L) + ': Ausschnitt wie geerntet'); } return false; }   // (26.10.2026: the window in the Ernte needs no finished bake)
   const n0 = HX.hist.length;
   if (L.trim) hxBandTrim(L, 'ganz');
   if (L.rev) hxRev(L);
@@ -223,6 +223,7 @@ function hxDefaults(L) {
   if (L.ab) hxAbSet(L, 0);
   if (hxNtOn(L)) hxNtSet(L, 'zurueck');
   if (L.rx0) hxRxRestore(L);   // (the stretches edited on their own: the audio as recorded)
+  hxHumReset(L);   // (26.10.2026: the window in the whole Ernte as harvested)
   const did = hxHistGroup(n0, hxName(L) + ': alles auf Grundeinstellung');
   hxSay(hxName(L) + (did ? ': alles auf Grundeinstellung' : ': ist schon in der Grundeinstellung'));
   return did;

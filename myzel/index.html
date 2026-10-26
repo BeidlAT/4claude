@@ -819,6 +819,10 @@ body.mlearn #stage::after { content: ""; position: absolute; inset: 0; backgroun
 .hx-ed-srow.mute .hx-ed-mini { opacity: .5; }
 .hx-ed-srow .lab { color: var(--hypha); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hx-ed-mini { display: block; width: 100%; height: 30px; border-radius: 6px; }
+.hx-ed-humbox { position: relative; cursor: grab; touch-action: none; }
+.hx-ed-humcv { display: block; width: 100%; height: 64px; border-radius: 8px; }
+.hx-ed-humft { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; margin-top: 6px; }
+.hx-ed-humft .btn { min-height: 30px; padding: 3px 10px; font-size: 12px; }
 .hx-ed-srow .chip, .hx-ed-row .chip { min-height: 30px; padding: 3px 10px; font-size: 12px; }
 .hx-ed .chip[aria-pressed="true"] { background: var(--spore); border-color: var(--spore); color: var(--ink); }
 .hx-ed-row { display: grid; grid-template-columns: 80px 1fr; align-items: center; gap: 4px 10px; }
@@ -842,6 +846,12 @@ body.mlearn #stage::after { content: ""; position: absolute; inset: 0; backgroun
 .hx-ed-wait:empty { display: none; }
 /* (owner, 26.10.2026) the Schleifen in the Pult: a group beside the Spiel group, its header folds it */
 .mx-g-hxl { flex: 0 0 auto; }
+/* (owner, 26.10.2026: „optisch eindeutiger, dass die Schleifen zu Hexenring gehören – dezent“) the group as an annex of the
+   Hexenring channel left of it: a warm frame open towards it, a thin bridge to it, the header naming it */
+.mx-g-hxl { position: relative; margin-left: 6px; padding: 0 4px 4px; border: 1px solid rgba(255, 179, 92, .2); border-top: 2px solid rgba(255, 179, 92, .45); border-left-color: rgba(255, 179, 92, .38);
+  border-radius: 2px 10px 10px 10px; background: linear-gradient(180deg, rgba(255, 179, 92, .07), rgba(255, 179, 92, .02) 55%, transparent); }
+.mx-g-hxl::before { content: ''; position: absolute; left: -9px; top: -2px; width: 9px; height: 2px; background: rgba(255, 179, 92, .45); border-radius: 2px 0 0 2px; }
+.mx-g-hxl .hxmp-fold .hxmp-of { opacity: .6; font-size: .9em; }
 .mx-g-hxl[hidden] { display: none; }
 .hxmp-row { gap: 2px; }
 .mx-g-hxl .hxm-st { flex: 0 0 82px; min-height: 0; }
@@ -863,7 +873,13 @@ body.mlearn #stage::after { content: ""; position: absolute; inset: 0; backgroun
 .sheet[data-panel="mix"] .sheet-body { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
 #app:has(#sheet[data-panel="mix"]:not([hidden])) .quick { display: none; }
 @media (min-width: 900px) {
-  .sheet[data-panel="mix"] { height: auto; width: min(980px, 72vw); }
+  .sheet[data-panel="mix"] { height: auto; width: var(--mixw, min(980px, 72vw)); position: relative; }
+  /* (26.10.2026) its left edge drags its width; folded, a narrow bar */
+  .sheet[data-panel="mix"] .mx-grip { display: block; }
+  .sheet[data-panel="mix"].mx-mini { width: 38px; }
+  .sheet[data-panel="mix"].mx-mini > :not(.mx-minibar) { display: none; }
+  .sheet[data-panel="mix"].mx-mini .mx-minibar { display: flex; }
+  .sheet[data-panel="mix"] .mx-foldb { display: inline-flex; }
 }
 /* landscape phones: the field keeps two thirds of its usual room (its note row stays on one line); the field's
    "dunkel" label would run into the notes beside the mixer, so it steps aside */
@@ -887,6 +903,16 @@ body.mlearn #stage::after { content: ""; position: absolute; inset: 0; backgroun
 .mx-vsw button:last-child span { border-radius: 0 999px 999px 0; margin-left: -1px; }
 .mx-vsw button[aria-checked="true"] span { color: var(--ink); background: var(--hypha); border-color: var(--hypha); }
 
+
+/* (26.10.2026) the width grip and the folded bar – only on a wide screen (shown by the rules above) */
+.mx-grip { display: none; position: absolute; left: -4px; top: 0; bottom: 0; width: 9px; cursor: ew-resize; z-index: 5; touch-action: none; }
+.mx-grip::after { content: ''; position: absolute; left: 3px; top: 50%; width: 3px; height: 44px; margin-top: -22px; border-radius: 2px; background: rgba(240, 230, 216, .18); transition: background .15s; }
+.mx-grip:hover::after, .mx-grip.on::after, .mx-grip:focus-visible::after { background: var(--spore); }
+.mx-grip:focus-visible { outline: none; }
+.mx-foldb { display: none; font-size: 18px; }
+.mx-minibar { display: none; position: absolute; inset: 0; align-items: center; justify-content: center; border: 0; background: none; color: var(--spore); cursor: pointer; font: 600 11px/1 var(--font-num, monospace); letter-spacing: .14em; text-transform: uppercase; }
+.mx-minibar span { writing-mode: vertical-rl; transform: rotate(180deg); }
+.mx-minibar:hover { background: rgba(240, 230, 216, .05); }
 /* ---------- head band: fruiting body, loudness, snapshots, second knob ---------- */
 .mx-band { flex: none; position: relative; z-index: 4; display: grid; align-items: center; gap: 2px 12px; padding: 6px 12px 4px; border-bottom: 1px solid rgba(240, 230, 216, .07); }
 .mx[data-w="narrow"] .mx-band { grid-template-columns: 86px minmax(0, 1fr) 104px; grid-template-areas: "fk loud br" "fk snap snap"; column-gap: 10px; padding-bottom: 5px; }
@@ -2634,13 +2660,13 @@ for (const st of STRIPS) {
 for (const id in PD) if (id.startsWith('xhxr.') && !PD[id].live) PD[id].rec = 1;   // Hexenring: the loops' strip is not the patch's
 PD['xhxr.route'].d = 'dir';
 // Hexenring (SPEC §20): device-side settings, kept out of patches
-NUM('hx.humus', 'Humus-Länge', 16, 300, 64, 's', { step: 1, rec: 1 });
+NUM('hx.humus', 'Humus-Länge', 16, 900, MOBILE ? 64 : 300, 's', { step: 1, rec: 1 });   // (owner, 26.10.2026: on the PC 5 min by default, up to 15 – 128 bars even at 40 BPM)
 SEL('hx.modus', 'Hauptknopf', [['neu', 'Neue Schleife'], ['dieselbe', 'Dieselbe Schleife']], 'neu', { chips: 1, small: 1, rec: 1 });
 SEL('hx.start', 'Aufnahme beginnt', [['takt', 'Am Takt'], ['ton', 'Beim ersten Ton'], ['sofort', 'Sofort']], 'takt', { chips: 1, small: 1, rec: 1 });
 SEL('hx.raster', 'Raster', [['frei', 'Frei'], ['takt', 'Takt'], ['halb', '½ Takt'], ['viertel', '¼']], 'frei', { chips: 1, small: 1, rec: 1 });   // (25.10.2026: where a recording by hand begins and ends – grammar.js HX_RASTER)
 SEL('hx.laenge', 'Länge', [['auto', 'Automatisch'], ['wie1', 'Wie Schleife 1'], ['fest', 'Fest']], 'auto', { chips: 1, small: 1, rec: 1 });
-NUM('hx.festT', 'Feste Länge', 1, 16, 4, '', { step: 1, rec: 1, fmt: (v) => v + (v === 1 ? ' Takt' : ' Takte') });
-NUM('hx.mem', 'Speichergrenze', 100, 4000, MOBILE ? (IOS && !/iPhone|iPod/.test(navigator.userAgent) ? 600 : 300) : 1500, 'MB', { step: 50, rec: 1, fmt: (v) => v + ' MB' });
+NUM('hx.festT', 'Feste Länge', 1, 128, 4, '', { step: 1, rec: 1, fmt: (v) => v + (v === 1 ? ' Takt' : ' Takte') });
+NUM('hx.mem', 'Speichergrenze', 100, 12000, MOBILE ? (IOS && !/iPhone|iPod/.test(navigator.userAgent) ? 600 : 300) : 6000, 'MB', { step: 50, rec: 1, fmt: (v) => v + ' MB' });
 BOOL('hx.autoclose', 'Schließt sich, wenn du den Anfang wiederholst', false, { rec: 1 });
 SEL('hx.rail', 'Ringleiste', [['offen', 'Offen'], ['klein', 'Klein']], 'offen', { chips: 1, small: 1, rec: 1 });
 SEL('hx.ein', 'Einzählen', [['aus', 'Aus'], ['sicht', 'Sichtbar'], ['vib', 'Vibration'], ['ton', 'Hörbar']], 'sicht', { chips: 1, small: 1, rec: 1 });
@@ -2692,7 +2718,7 @@ BOOL('rec.arm', 'Erst mit dem ersten Ton starten', false, { rec: 1 });
 BOOL('rec.comp', 'Zusätzlich eine kleine Datei zum Teilen (MP4/WebM)', false, { rec: 1 });
 BOOL('rec.tail', 'Nachklang nach dem Stoppen mit aufnehmen', true, { rec: 1 });
 SEL('rec.len', 'Länge', [['free', 'Frei'], ['bars', 'In Takten']], 'free', { chips: 1, rec: 1 });
-NUM('rec.bars', 'Takte', 1, 64, 8, '', { step: 1, rec: 1, fmt: (v) => v + (v === 1 ? ' Takt' : ' Takte') });
+NUM('rec.bars', 'Takte', 1, 128, 8, '', { step: 1, rec: 1, fmt: (v) => v + (v === 1 ? ' Takt' : ' Takte') });
 // Gerät: Rechenleistung, Latenz, MIDI-Keyboard (gelten für dieses Gerät, nicht Teil der Klang-Presets)
 SEL('dev.q', 'Qualitätsstufe', [['1', '1 · Leicht'], ['2', '2 · Voll'], ['3', '3 · Gewaltig']], MOBILE ? '1' : '2', { chips: 1, dev: 1 });
 // (24.10.2026: Android starts in „Minimal“ – Chrome there opens its fast output only for the numeric hint; lasting
@@ -23323,6 +23349,7 @@ function mixerOpen() {
   // the sheet's head: the view switch, then "2. Regler" (mxRegPlace picks the chips or the compact one)
   if (MX.vsw && mxViewKeys().length > 1) sheetTitle.after(MX.vsw);
   (MX.vsw && MX.vsw.isConnected ? MX.vsw : sheetTitle).after(MX.regBox, MX.regC.el);
+  mxwOpen();   // (26.10.2026: its width, folded or not)
   mxMonSync();
   mxSrcAll();
   mxLayout();
@@ -23334,6 +23361,7 @@ function mixerClose() {
   MX.open = false;
   mxTaps('mix', false);
   if (MX.vsw) MX.vsw.remove();
+  mxwClose();
   MX.regBox.remove(); MX.regC.el.remove();
   mxMenu(false);
   mxTipHide(MX.root, 0);
@@ -23358,6 +23386,42 @@ function mixerFrame(dt, ts) {
   if (MX.scrollable && MX.view === 'pult' && MX.scrollAria && ts - (MX.ariaT || 0) > 500) { MX.ariaT = ts; MX.scrollAria(); }
 }
 
+// ---- (owner, 26.10.2026: „den Mixer gerne als Ganzes darstellen, mit Einklappfunktion und der Möglichkeit, ihn in
+// seiner Breite zu verschieben“) on a wide screen the mixer's sheet takes the width the player drags its left edge to
+// (a double click: the whole width, again: as before), and folds to a narrow bar at the right edge (its button in the
+// head; the bar unfolds it). Both kept on this device; the Pult lays itself out again (its ResizeObserver). ----
+const MXW = { w: 0, mini: false, grip: null, fold: null, bar: null };
+try { MXW.w = +localStorage.getItem('myzel.mixW') || 0; MXW.mini = localStorage.getItem('myzel.mixMini') === '1'; } catch (e) {}
+const mxwSave = () => { try { localStorage.setItem('myzel.mixW', String(MXW.w || 0)); localStorage.setItem('myzel.mixMini', MXW.mini ? '1' : '0'); } catch (e) {} };
+const mxwMax = () => Math.max(480, window.innerWidth - 40);   // (a sliver of the field stays: the page keeps its layout)
+function mxwApply() {
+  const sh = $('#sheet'); if (!sh) return;
+  const on = sh.dataset.panel === 'mix';
+  sh.style.setProperty('--mixw', on && MXW.w ? Math.round(clamp(MXW.w, 480, mxwMax())) + 'px' : '');
+  sh.classList.toggle('mx-mini', on && MXW.mini);
+  if (MXW.fold) { MXW.fold.textContent = MXW.mini ? '‹' : '›'; MXW.fold.setAttribute('aria-expanded', String(!MXW.mini)); }
+}
+function mxwBuild() {
+  const sh = $('#sheet'); if (!sh || MXW.grip) return;
+  MXW.grip = h('div', { class: 'mx-grip', role: 'separator', 'aria-orientation': 'vertical', 'aria-label': 'Breite des Mixers', tabindex: '0', title: 'Ziehen: der Mixer breiter oder schmaler · Doppelklick: ganze Breite / wie vorher · Pfeiltasten: in Schritten' });
+  let x0 = 0, w0 = 0, prev = 0;
+  MXW.grip.addEventListener('pointerdown', (e) => { if (e.button > 0) return; x0 = e.clientX; w0 = sh.getBoundingClientRect().width; MXW.grip.setPointerCapture(e.pointerId); MXW.grip.classList.add('on'); e.preventDefault(); });
+  MXW.grip.addEventListener('pointermove', (e) => { if (!MXW.grip.classList.contains('on')) return; MXW.w = clamp(w0 + (x0 - e.clientX), 480, mxwMax()); mxwApply(); });
+  const end = () => { if (!MXW.grip.classList.contains('on')) return; MXW.grip.classList.remove('on'); mxwSave(); };
+  MXW.grip.addEventListener('pointerup', end); MXW.grip.addEventListener('pointercancel', end);
+  MXW.grip.addEventListener('dblclick', () => { const full = MXW.w >= mxwMax() - 2; if (full) MXW.w = prev || 0; else { prev = MXW.w; MXW.w = mxwMax(); } mxwApply(); mxwSave(); });
+  MXW.grip.addEventListener('keydown', (e) => { const d = e.key === 'ArrowLeft' ? 80 : e.key === 'ArrowRight' ? -80 : 0; if (!d) return; e.preventDefault(); MXW.w = clamp((MXW.w || sh.getBoundingClientRect().width) + d, 480, mxwMax()); mxwApply(); mxwSave(); });
+  MXW.fold = h('button', { type: 'button', class: 'iconbtn mx-foldb', 'aria-label': 'Mixer einklappen', title: 'Mixer einklappen – eine schmale Leiste am Rand; ein Klick darauf holt ihn zurück' }, '›');
+  MXW.fold.addEventListener('click', () => mxwMini(!MXW.mini));
+  MXW.bar = h('button', { type: 'button', class: 'mx-minibar', 'aria-label': 'Mixer ausklappen', title: 'Mixer ausklappen' }, h('span', null, 'mixer ‹'));
+  MXW.bar.addEventListener('click', () => mxwMini(false));
+  sh.append(MXW.grip, MXW.bar);
+  window.addEventListener('resize', () => { if (MXW.w) mxwApply(); });
+}
+function mxwMini(on) { MXW.mini = !!on; mxwApply(); mxwSave(); if (!on && MX.open) requestAnimationFrame(() => mxLayout()); }
+// with the mixer's head (mixerOpen / mixerClose)
+function mxwOpen() { mxwBuild(); const close = $('#btnClose'); if (close && MXW.fold) close.before(MXW.fold); mxwApply(); }
+function mxwClose() { if (MXW.fold) MXW.fold.remove(); const sh = $('#sheet'); if (sh) { sh.classList.remove('mx-mini'); sh.style.removeProperty('--mixw'); } }
 /* =====================================================================
    Geflecht – the mix as living mycelium
    ===================================================================== */
@@ -29592,7 +29656,7 @@ function hxPanic() { return hxStille(); }
 // ---- the notes Humus (SPEC §5): every voice the player, the Puls, the rain or the Rassel starts, two minutes, the
 // objects reused; glides, heights and the release come from the voice's own calls. Probes (the library) and a loop's
 // own voices (o.bus = the strip „Hexenring“) are left out, and so is every offline render.
-const HX_EV = 4096, HX_EV_S = 120, HX_CV = 256;
+const HX_EV = 32768, HX_EV_S = 900, HX_CV = 256;   // (26.10.2026: as far back as the Humus reaches – 15 min)
 // a pitch against the field's scale now: degree, octave above the field's base, alt (semitones off the scale)
 function hxDeg(f) {
   const semi = 12 * Math.log2(Math.max(1e-6, f) / N.base);
@@ -29696,7 +29760,7 @@ function hxSegMirror(out, reset) {
   if (!out.length) return;
   while (s.length && s[s.length - 1][0] >= out[0][0]) s.pop();
   for (const x of out) s.push(x);
-  const old = hxF(hxNowT() - 300); let k = 0;
+  const old = hxF(hxNowT() - 905); let k = 0;
   while (k < s.length - 2 && s[k + 1][0] < old) k++;
   if (k) s.splice(0, k);
   HX.segF = s;
@@ -29882,7 +29946,7 @@ function hxCut(inp, w0, w1, o = {}) {
   return { in: inp | 0, w0: f0, w1: f0 + len, f0: f0 - pre, pre, len, post, n: pre + len + Math.max(post, tail), aus: tail ? { off: pre + len, len: tail } : null };
 }
 const hxOldestF = () => (HX.node ? HX.fR + (hxNowT() - HX.tR) * SR - P['hx.humus'] * SR + 0.5 * SR : 0);   // (the ring's reach, with a little room)
-const hxReach = (c) => !!c && !c.stale && c.f0 >= hxOldestF();   // (a Schleife restored after a reload: its Humus is gone)
+const hxReach = (c) => !!c && !c.stale && (c.f0 >= hxOldestF() || !!hxHumOf(c));   // (a Schleife restored after a reload: its Humus is gone; 26.10.2026: a Schleife's whole Ernte reaches back as far as it holds)
 function hxChunks(n) { const a = [], tr = []; for (let i = 0; i < Math.ceil(Math.max(1, n) / HX_CH); i++) { const L = new Float32Array(HX_CH), R = new Float32Array(HX_CH); a.push([L, R]); tr.push(L.buffer, R.buffer); } return [a, tr]; }
 function hxCopy(ch) { const a = [], tr = []; for (const c of ch) { const L = c[0].slice(), R = c[1].slice(); a.push([L, R]); tr.push(L.buffer, R.buffer); } return [a, tr]; }
 const hxBytes = (n) => Math.ceil(n / HX_CH) * HX_CH * 8;
@@ -30389,7 +30453,7 @@ function hxSnap(L) {
   return { key: L.key, slot: L.slot, d: Object.assign({}, L.d), bpb: L.bpb, notes: L.notes, mv: L.mv, cut: L.cut, eng: L.eng, setTG: L.setTG, gain: L.gain, pan: L.pan || 0, src: L.src, bpm: L.bpm, state: L.state, tk: L.tk,
     folgt: !!L.folgt, taumeln: L.taumeln !== false, nudge: L.nudge || 0, eig: L.eig, sch: L.sch.map((id) => hxSnapS(HX.sch.get(id))).filter(Boolean),
     wwhy: Object.assign({}, L.wwhy || {}), ton: L.ton, klang: L.klang, stufe: L.stufe, q: L.q, P: L.P, mask: L.mask, chainRec: L.chainRec, jrg: L.jrg, tb: hxTbOf(L), tr0: L.tr0 || null,   // (step 2a; step 2b: its tools)
-    bew: L.bew ? { lanes: L.bew.lanes.map((ln) => ({ k: ln.k, src: ln.src, v: ln.v })), disp: L.bew.disp, n: L.bew.n, g0: L.bew.g0, gs: L.bew.gs, fade: L.bew.fade, why: L.bew.why } : null, naehrt: L.naehrt || null, mi: hxMiSave(L), eco: hxEcoOf(L) };   // (step 4: its ecology)
+    hum: L.hum || null, bew: L.bew ? { lanes: L.bew.lanes.map((ln) => ({ k: ln.k, src: ln.src, v: ln.v })), disp: L.bew.disp, n: L.bew.n, g0: L.bew.g0, gs: L.bew.gs, fade: L.bew.fade, why: L.bew.why } : null, naehrt: L.naehrt || null, mi: hxMiSave(L), eco: hxEcoOf(L) };   // (step 4: its ecology)
 }
 const hxMiSave = (L) => { const m = L.mi; if (!m) return null; const o = {}; for (const k of ['rolle', 'wk', 'gOff', 'sugg', 'from', 'begl']) if (m[k] != null && m[k] !== false) o[k] = m[k]; return Object.keys(o).length ? o : null; };   // (Etappe 3: role, Gärtner, Wiederkehr, a suggestion)
 function hxSchRebuild(loop, s, o = {}) {
@@ -30407,6 +30471,7 @@ function hxRebuild(sn, o = {}) {
   if (slot < 0) { toast('Kein freier Platz für ' + 'Schleife ' + ((sn.slot || 0) + 1) + '.'); return null; }
   const L = hxLoopMake({ slot, key: sn.key, lock: sn.d.lock, b0: sn.d.b0 - TG.o, beats: sn.d.beats, Lf: sn.d.L, ph0: sn.d.ph0, gap: !!sn.d.gap, gain: sn.gain, pan: sn.pan || 0, bpb: sn.bpb, notes: sn.notes, mv: sn.mv, cut: sn.cut, eng: sn.eng, setTG: sn.setTG, src: sn.src, bpm: sn.bpm, state: o.state || (sn.state === 'stumm' ? 'stumm' : 'spielt'), fokus: o.fokus, eig: sn.eig,
     wwhy: sn.wwhy || {}, ton: sn.ton, klang: sn.klang, stufe: sn.stufe, q: sn.q, P: sn.P, mask: sn.mask, chainRec: sn.chainRec, jrg: sn.jrg });   // (step 2a: its Wuchs)
+  if (sn.hum) L.hum = sn.hum;   // (26.10.2026: its whole Ernte comes back with it)
   L.tk = sn.tk; L.folgt = !!sn.folgt; L.taumeln = sn.taumeln !== false; if (sn.nudge) L.nudge = sn.nudge;
   if (sn.mi) L.mi = Object.assign({}, sn.mi);   // (Etappe 3)
   if (sn.tb) { Object.assign(L, sn.tb); if (sn.tr0) L.tr0 = sn.tr0; }   // (step 2b: its tools – sent once its Schichten are there)
@@ -30543,6 +30608,7 @@ function hxNowOk(L) {
 const hxSwapAt = (L) => (hxNowOk(L) ? { f: Math.round(hxF(hxNowT() + 0.06)), now: true } : hxNextSeam(L));
 function hxSchSwap(S, c, o = {}) {
   const L = HX.loops.get(S.loop); if (!L) return;
+  if (!o.aud) { const H = hxHumOf(c); if (H) o = Object.assign({}, o, hxHumSlice(H, c), { hum: true }); }   // (26.10.2026: a window inside a Schleife's whole Ernte – from there, whatever the ring still holds)
   S.ver = (S.ver || 0) + 1;
   // (step 1c: audio from the Humus plays dry – through the live chain until it is baked again; the page's own versions
   // take the baked one where there is one)
@@ -30560,7 +30626,8 @@ function hxSchSwap(S, c, o = {}) {
   Object.assign(S, { cut: c, len: c.len, pre: c.pre, n: c.n, aus: c.aus ? Object.assign({}, c.aus) : null, aud: o.aud || null, live: !o.aud, saved: 0, out, bak: o.aud ? o.bak || null : null, baked: !!bak, zo: o.zo || 0, kc: o.kc || null, kcB: o.kcB || null, dr: o.aud ? o.dr || S.dr : null, cutAus: !!o.cutAus, spliced: !!o.spliced });
   hxCount();
   if (S.play && S.play !== 'ab') S.play = 'ab';   // Hexenring (step 2b): the version swapped in is an Abdruck – a Wuchs version is sent again by hxWUpdate, never assumed still playing
-  if (L.sch[0] === S.id && !o.aud) { L.cut = c; L.notesDue = Math.max(hxT(c.w1), hxNowT()); }   // (its notes from the new window)
+  if (L.sch[0] === S.id && (!o.aud || o.hum)) { L.cut = c; L.notesDue = Math.max(hxT(c.w1), hxNowT()); }   // (its notes from the new window)
+  if (o.hum) { hxSaveSch(S); hxAfterFill(S); }   // (as a fill from the ring: stored, its Ausklang rendered, baked)
   if (o.join) Object.assign(S, { join: o.join, X: o.X, rho: o.rho });
   if (!o.aud) hxProbe(S, o.f != null ? hxT(o.f) + 0.012 : 0);
 }
@@ -30745,8 +30812,9 @@ function hxMemUsed() {
   const one = (aud, n) => { if (aud && !seen.has(aud)) { seen.add(aud); b += hxBytes(n); } };
   const wv = (s) => { if (s.wu) one(s.wu.aud, s.wu.n); if (s.anc) one(s.anc.aud, s.anc.n); };   // (step 2a: its Treu render and its anchor)
   for (const S of HX.sch.values()) { b += hxBytes(S.n); if (S.aud) one(S.aud, S.n); else if (S.live) b += hxBytes(S.n); one(S.bak, S.n); wv(S); if (S.wLive) b += 3 * hxBytes(Math.round((hxWTailEst(S) + 4) * SR)); }   // (step 1c: a baked version beside the dry one; step 2a: a living Schicht's passes in the processor, about three at a time)
-  for (const g of HX.grave) for (const s of g.snap.sch) { one(s.aud, s.n); one(s.bak, s.n); wv(s); }
-  for (const st of HX.hist.concat(HX.redo)) for (const sn of st.snaps || []) for (const s of sn.sch || [sn]) if (s) { one(s.aud, s.n); one(s.bak, s.n); wv(s); }
+  for (const L of HX.loops.values()) if (L.hum) one(L.hum.aud, L.hum.n);   // (26.10.2026: a Schleife's whole Ernte)
+  for (const g of HX.grave) { if (g.snap.hum) one(g.snap.hum.aud, g.snap.hum.n); for (const s of g.snap.sch) { one(s.aud, s.n); one(s.bak, s.n); wv(s); } }
+  for (const st of HX.hist.concat(HX.redo)) for (const sn of st.snaps || []) { if (sn && sn.hum) one(sn.hum.aud, sn.hum.n); for (const s of sn.sch || [sn]) if (s) { one(s.aud, s.n); one(s.bak, s.n); wv(s); } }
   for (const tk of takes) if (tk.L) b += tk.frames * 8;
   if (HX.node) b += 3 * Math.ceil((P['hx.humus'] * SR) / HX_CH) * HX_CH * 8;   // (step 2b: the Puls's ring)
   if (HX.node && HX.mic.ring) b += (HX.mic.ringN || 0) * HX_CH * 8;   // (step 4: the Mikro's ring)
@@ -30799,6 +30867,7 @@ function hxMsg2(m) {
       hxSaveSch(S);
       hxAfterFill(S);   // (step 1c: the Ausklang's rendered rest, the bake, the drift it was played with)
       hxBandFill(S);   // (step 2b: the loop's kind and onsets – the tape's tools, a tempo change)
+      { const L1 = HX.loops.get(S.loop); if (L1 && L1.sch[0] === S.id) hxHumKeep(L1, S); }   // (26.10.2026: the whole Ernte beside it)
       const L2 = HX.loops.get(S.loop);   // (step 2a: its notes for Wuchs – its window has sounded)
       if (L2 && !L2.bew) { if (!S.wn) S.wn = hxWNotesOf(S, L2); if (S.wn && hxWAktiv(L2)) hxWUpdate(L2); }
     }
@@ -30810,7 +30879,7 @@ function hxMsg2(m) {
   if (m.wilted) { const L = HX.loops.get(m.wilted.loop); if (L && L.state !== 'weg') { L.state = 'angehalten'; L.pendTo = null; hxCount(); hxRailDirty(); hxCardDirty(); hxSaveMeta(L.id); } }   // (step 1d: a Schluss „welkend“ ended)
   if (m.meter && m.meter.inp) {   // the rings' input level, 15 per second, two minutes
     HX.lvl[HX.lvlI] = [hxT(m.meter.F), m.meter.inp[0], m.meter.inp[1], m.meter.inp[2] || 0, m.meter.inp[3] || 0];   // (step 4: the Mikro's)
-    HX.lvlI = (HX.lvlI + 1) % 1800;
+    HX.lvlI = (HX.lvlI + 1) % 13600;   // (15 min, as far as the Humus)
     for (const x of m.meter.loops) { const L = HX.loops.get(x[0]); if (L) L.lv = [x[1], x[2]]; }
   }
 }
@@ -31399,20 +31468,20 @@ function hxCoachDone() { if (!HXU.coach) return; clearTimeout(HXU.coachT); if (!
 
 // ---- (owner, 25.10.2026) „Beim Looper fehlt die Einstellung für die Taktlänge der Schleifen … und als Spieler sollte man
 // sehen, wo man im Takt ist, wo man in der Schleife ist, wenn man sie einspielt.“ The length of a new Schleife sits at the
-// rail beside the Hauptknopf (auto · 1 … 16 Takte – hx.laenge, hx.festT; „wie Schleife 1“ shows while it is set); its
+// rail beside the Hauptknopf (auto · 1 … 128 Takte – hx.laenge, hx.festT; „wie Schleife 1“ shows while it is set); its
 // popover also holds the tempo a first loop is counted in at, the count-in and the click. A fixed length closes by
 // itself – without a Takt yet one is set at the Puls's tempo and one bar counted in (grammar.js, as the Raster). While a
 // loop is counted in, played in or overdubbed, the field shows where you are (hxPosDraw): its bars as boxes of beats
 // filling up, „Takt 2 von 4“ – the rail's Taktlinie shows the same beats. ----
-const HX_LEN_Q = [1, 2, 3, 4, 6, 8, 12, 16];   // the quick lengths (any 1 … 16 in the card's settings)
-const HX_LEN_K = ['auto', 1, 2, 3, 4, 6, 8, 12, 16];   // a knob's steps (MIDI)
+const HX_LEN_Q = [1, 2, 3, 4, 6, 8, 12, 16, 32, 64, 128];   // the quick lengths (any 1 … 128 in the card's settings – owner, 26.10.2026)
+const HX_LEN_K = ['auto', 1, 2, 3, 4, 6, 8, 12, 16, 32, 64, 128];   // a knob's steps (MIDI)
 const HXLEN = { open: false, kb: false, rep: 0 };
 const hxTakteA = (n) => (n === 1 ? 'einen Takt' : dec(+n.toFixed(2)) + ' Takte');   // (accusative: „nimmt 4 Takte auf“)
 const hxTakteD = (n) => (n === 1 ? 'einem Takt' : dec(+n.toFixed(2)) + ' Takten');   // (dative: „nach 4 Takten“)
 const hxLenSay = () => { const l = P['hx.laenge'], n = P['hx.festT']; return l === 'fest' ? n + (n === 1 ? ' Takt' : ' Takte') : l === 'wie1' ? 'wie Schleife 1' : 'automatisch'; };
 function hxLenSet(v) {
   if (v === 'auto' || v === 'wie1') setParam('hx.laenge', v);
-  else { setParam('hx.festT', clamp(Math.round(+v), 1, 16)); setParam('hx.laenge', 'fest'); }
+  else { setParam('hx.festT', clamp(Math.round(+v), 1, 128)); setParam('hx.laenge', 'fest'); }
 }
 function hxLenBuild() {
   const b = HXU.len, pop = HXU.lenPop; if (!b || !pop) return;
@@ -31527,7 +31596,7 @@ function hxLenLive() {
 // a knob or a button on a controller: the length in steps (auto, 1, 2, 3, 4, 6, 8, 12, 16 bars)
 function hxLenIdx() { if (P['hx.laenge'] !== 'fest') return 0; const n = P['hx.festT']; let i = 1; for (let k = 1; k < HX_LEN_K.length; k++) if (HX_LEN_K[k] <= n) i = k; return i; }
 function hxLenStep(d) { const i = clamp(hxLenIdx() + Math.sign(d), 0, HX_LEN_K.length - 1); hxLenSet(HX_LEN_K[i]); hxSay('Länge: ' + hxLenSay()); }
-midiTarget('hx.len', 'Länge neuer Schleifen (auto · 1 bis 16 Takte)', null, { group: 'Hexenring', cont: true, get: () => hxLenIdx() / (HX_LEN_K.length - 1),
+midiTarget('hx.len', 'Länge neuer Schleifen (auto · 1 bis 128 Takte)', null, { group: 'Hexenring', cont: true, get: () => hxLenIdx() / (HX_LEN_K.length - 1),
   set: (n2) => { const v = HX_LEN_K[Math.min(HX_LEN_K.length - 1, Math.floor(clamp(n2, 0, 1) * HX_LEN_K.length))]; if (v !== (P['hx.laenge'] === 'fest' ? P['hx.festT'] : 'auto')) { hxLenSet(v); hxSay('Länge: ' + hxLenSay()); } }, step: hxLenStep });
 midiTarget('hx.len.next', 'Länge neuer Schleifen: länger', (v) => { if (v >= 0.5) hxLenStep(1); }, { group: 'Hexenring', button: true });
 midiTarget('hx.len.prev', 'Länge neuer Schleifen: kürzer', (v) => { if (v >= 0.5) hxLenStep(-1); }, { group: 'Hexenring', button: true });
@@ -31761,12 +31830,12 @@ function hxCardWuchs(L, sch, chip, row, btn) {
   if (!sch.some(hxWCan)) return [h('div', { class: 'hx-row' }, h('span', { class: 'lab' }, 'Wuchs'), h('span', { class: 'hx-ms' }, L.src ? 'aus „Alles“: bleibt ein Abdruck' : 'ohne Noten: bleibt ein Abdruck'))];
   const st = hxWQ(L), stufe = L.stufe || null, klang = L.klang || 'eigen';
   const on = hxWAktiv(L), w = L.wwhy || {}, word = hxWWord(L), why = [hxWTonOff(L) && 'folgt der Tonart', w.tempo && 'folgt dem Tempo', klang !== 'eigen' && 'anderer Klang'].filter(Boolean).join(', ');
-  const no = !hxwOk(), forced = !!(hxWTonOff(L) || w.tempo || klang !== 'eigen' || hxEigN(L) >= 1);
+  const no = !hxwOk();
   const sel = h('select', { class: 'hx-eng', 'aria-label': 'Klang: eine Quelle wählen' }, h('option', { value: '' }, 'Quelle …'), ...ENG_OPTS.map(([k, n]) => h('option', { value: k, selected: klang === k ? '' : null }, n)));
   sel.addEventListener('change', () => { if (sel.value) hxWSet(L, 'klang', sel.value); });
   const lebt = hxEigN(L) >= 1 && on && !L.live;   // (step 4: Live – ✓ ✕ need rendered passes)
   return [
-    row('Wiedergabe', chip('Abdruck', !on && !L.live, () => { if (forced) { hxHint(why ? 'Sie ' + why + ' – bleibt Wuchs' : 'Lebendig wächst immer'); if (L.live) hxWSet(L, 'live', false); return; } hxWSet(L, 'wahl', false); }, 'Wiedergabe: Abdruck – genau wie gespielt'),
+    row('Wiedergabe', chip('Abdruck', !on && !L.live, () => hxAbdruck(L), 'Wiedergabe: Abdruck – genau wie gespielt (setzt Klang, Folgen der Tonart, Eigensinn und Notenänderungen zurück)'),
       chip('Wuchs', on && !L.live, () => hxWSet(L, 'wahl', true), 'Wiedergabe: Wuchs – Myzel spielt die Noten neu' + (no ? ' (ohne Werk-Rahmen: mit echten Stimmen)' : '')),
       chip('Live', !!L.live, () => hxWSet(L, 'live', !L.live), 'Wiedergabe: Live – echte Stimmen spielen die Noten, im Takt vorausgeplant; sie kosten Stimmen und weichen deinem Spiel'),   // (step 4: SPEC §10.6)
       h('span', { class: 'hx-ms' }, (no && on ? 'ohne Werk-Rahmen: ' : '') + word + (why && on ? (word ? ' · ' : '') + why : ''))),
@@ -32068,7 +32137,7 @@ const HXMP = { grp: null, row: null, st: [], all: null, sig: '', t: 0, fold: fal
 try { HXMP.fold = localStorage.getItem('myzel.hxmPultFold') === '1'; } catch (e) {}
 function hxmPultGroup() {
   HXMP.sig = ''; HXMP.st = [];
-  HXMP.btn = h('button', { type: 'button', class: 'hxmp-fold', 'aria-expanded': 'true', title: 'Die Schleifen einzeln ein- oder ausklappen' });
+  HXMP.btn = h('button', { type: 'button', class: 'hxmp-fold', 'aria-expanded': 'true', title: 'Die Schleifen des Hexenrings einzeln ein- oder ausklappen' });
   HXMP.btn.addEventListener('click', () => { HXMP.fold = !HXMP.fold; try { localStorage.setItem('myzel.hxmPultFold', HXMP.fold ? '1' : '0'); } catch (e) {} hxmPultFold(); });
   HXMP.row = h('div', { class: 'mx-gs hxmp-row' });
   HXMP.grp = h('div', { class: 'mx-grp mx-g-hxl', role: 'group', 'aria-label': 'Schleifen', hidden: true }, h('div', { class: 'mx-gh' }, HXMP.btn), HXMP.row);
@@ -32078,7 +32147,7 @@ function hxmPultGroup() {
 function hxmPultFold() {
   const n = HXMP.st.length, f = HXMP.fold;
   if (!HXMP.btn) return;
-  HXMP.btn.textContent = f ? 'schleifen ' + n + ' ›' : 'schleifen ‹';
+  HXMP.btn.replaceChildren(h('span', { class: 'hxmp-of' }, 'hexenring · '), f ? 'schleifen ' + n + ' ›' : 'schleifen ‹');   // (26.10.2026: whose they are)
   HXMP.btn.setAttribute('aria-expanded', String(!f));
   HXMP.grp.classList.toggle('fold', f);
   if (MX.view === 'pult' && MX.scroll) requestAnimationFrame(() => { mxLayout(); hxmLayoutR(HXMP); });
@@ -32178,7 +32247,7 @@ function hxEdPlace() {
 const hxEdSig = (L) => hxEdRSig(L) + '|' + HX.hist.length + ':' + HX.redo.length + ':' + HX.pend.length + ':' + !!L.prev;
 function hxEdRSig(L) {
   const sch = L.sch.map((id) => HX.sch.get(id)).filter(Boolean);
-  return [L.key, L.state, L.d.beats, L.d.L, L.bpb, L.sp || 1, !!L.rev, JSON.stringify(L.trim || 0), L.dbl || 1, HX.fokus === L.id, HX.solo ? HX.solo.id : 0, JSON.stringify(L.nt || 0), JSON.stringify(L.slc || 0), L.vb, JSON.stringify(L.ab || 0), L.notes.length,   // (26.10.2026: Lücken – its chips lit only after another change)
+  return [L.key, L.hum ? 1 : L.humBusy ? 2 : 0, L.state, L.d.beats, L.d.L, L.bpb, L.sp || 1, !!L.rev, JSON.stringify(L.trim || 0), L.dbl || 1, HX.fokus === L.id, HX.solo ? HX.solo.id : 0, JSON.stringify(L.nt || 0), JSON.stringify(L.slc || 0), L.vb, JSON.stringify(L.ab || 0), L.notes.length,   // (26.10.2026: Lücken – its chips lit only after another change)
    
     sch.map((S) => S.key + ':' + (S.ver || 0) + ':' + S.pre + ':' + S.len + ':' + S.gain + ':' + !!S.mute + ':' + !!S.aud + ':' + (S.play || 'ab') + ':' + (S.wu ? S.wu.sig || 1 : 0) + ':' + !!S.baked).join(','), hxLoopsLive().map((X) => X.slot).join('')].join('|');
 }
@@ -32274,9 +32343,10 @@ function hxEdRender() {
       row('Pegel', 'Der Abschnitt lauter, leiser oder still.', act('stumm', 'gain', 0, 'Den Abschnitt still'), act('−6 dB', 'gain', dbToGain(-6), 'Leiser'), act('−3 dB', 'gain', dbToGain(-3), 'Etwas leiser'), act('+3 dB', 'gain', dbToGain(3), 'Etwas lauter'), act('+6 dB', 'gain', dbToGain(6), 'Lauter')),
       h('p', { class: 'note' }, 'Jeder Klick ist ein Schritt – ↶ nimmt ihn zurück. Die Auswahl bleibt, du kannst weiter darauf arbeiten oder einen anderen Teil wählen.'));
   }
-  ed.replaceChildren(head, tp, wbox, HXE.waitEl, selRow, ...(part ? [part] : []), h('div', { class: 'hx-ed-sec' }, h('div', { class: 'hx-ed-st' }, sch.length === 1 ? 'Schicht' : sch.length + ' Schichten'), ...schRows), h('div', { class: 'hx-ed-sec' }, h('div', { class: 'hx-ed-st' }, HXE.sel ? 'Ganze Schleife' : 'Bearbeiten'), ...tools), foot);
+  const hum = hxEdHumRow(L);   // (26.10.2026: the whole Ernte, the loop's window in it)
+  ed.replaceChildren(head, tp, wbox, HXE.waitEl, selRow, ...(hum ? [hum] : []), ...(part ? [part] : []), h('div', { class: 'hx-ed-sec' }, h('div', { class: 'hx-ed-st' }, sch.length === 1 ? 'Schicht' : sch.length + ' Schichten'), ...schRows), h('div', { class: 'hx-ed-sec' }, h('div', { class: 'hx-ed-st' }, HXE.sel ? 'Ganze Schleife' : 'Bearbeiten'), ...tools), foot);
   HXE.wsig = '';
-  requestAnimationFrame(() => { hxEdWave(true); for (const c of ed.querySelectorAll('.hx-ed-mini')) hxEdMini(c); });
+  requestAnimationFrame(() => { hxEdWave(true); for (const c of ed.querySelectorAll('.hx-ed-mini')) hxEdMini(c); hxHumDraw(); });
 }
 // the selection's words: beats and bars of a Takt loop, seconds of a free one
 function hxEdSelText(L, s) {
@@ -32474,6 +32544,177 @@ function hxEdFrame() {
     const tx = busy ? 'Die Noten werden neu gespielt … gleich zu hören.' : s != null ? (HXE.pv ? 'Beim Vorhören schon zu hören – in der laufenden Schleife ab der nächsten Naht, in ' : 'Das Bild zeigt schon den neuen Stand – zu hören ab der nächsten Naht, in ') + s + ' s.' : '';
     if (HXE.waitEl.textContent !== tx) HXE.waitEl.textContent = tx;
   }
+}
+// ---- (owner, 26.10.2026: „auf die gesamte gecapturte Audiodatei zurückgreifen … einfacher als im Korb, wo man nur auf
+// vorher klicken kann, was sich dann nicht mehr rückgängig machen lässt“) the whole Ernte kept with a Schleife: once its
+// first Schicht has filled, everything its Humus ring still held up to then is copied beside it (L.hum). Every re-cut –
+// Länge ±, Eins ← →, Runde davor, the window moved in the editor – and every undo of one takes its audio from there,
+// however long ago the Schleife was harvested; the editor shows the Ernte whole with the loop's window in it, its
+// edges and the window itself dragged on the beats (heard at the next seam, ↶ ↷ and Grundeinstellung as always).
+// Kept while the session lives (not stored – a few hundred MB per Schleife), counted against the Speichergrenze. ----
+function hxHumKeep(L, S) {
+  if (!L || L.hum || L.humBusy || L.bew || !S || !S.cut || S.cut.stale || !HX.node) return;
+  const c = S.cut, f1 = c.f0 + S.n, f0 = Math.max(Math.ceil(hxOldestF()), f1 - Math.round(P['hx.humus'] * SR));
+  if (f1 - f0 <= S.n + SR) return;   // (the Humus held nothing beyond its own window)
+  if (hxMemUsed() + hxBytes(f1 - f0) > P['hx.mem'] * 1048576) {
+    if (!(HX.humToastT > performance.now())) { HX.humToastT = performance.now() + 60000; toast('Speichergrenze: die ganze Ernte wird nicht mehr mit der Schleife behalten (' + P['hx.mem'] + ' MB, unter Einstellungen erhöhbar).', 6000); }
+    return;
+  }
+  L.humBusy = true; hxEdTouch(L);
+  hxGrab({ in: c.in, f0, f1, dr: true }).then((g) => {
+    L.humBusy = false;
+    if (!g || !g.chunks || HX.loops.get(L.id) !== L || L.hum) { hxEdTouch(L); return; }
+    L.hum = { in: c.in, f0: g.f0 != null ? g.f0 : f0, n: g.n || f1 - f0, aud: g.chunks, dr: g.dr || null, w0: c.w0, w1: c.w1, beats: L.d.beats, Lf: L.d.L };   // (w0, w1, beats: the window as harvested – Grundeinstellung)
+    hxEdTouch(L);
+  });
+}
+const hxEdTouch = (L) => { if (HXE.ed && !HXE.ed.hidden && hxEdL() === L) HXE.rsig = ''; };
+// the Ernte that holds a cut (its window and margin inside it; an Ausklang beyond its end is silence)
+function hxHumOf(c) {
+  if (!c || c.stale) return null;
+  for (const L of HX.loops.values()) { const H = L.hum; if (H && H.in === c.in && c.f0 >= H.f0 && c.w1 + (c.post || 0) <= H.f0 + H.n) return H; }
+  return null;
+}
+// a cut's audio copied out of the Ernte (and the drift it was played with)
+function hxHumSlice(H, c) {
+  const [aud] = hxChunks(c.n), off = c.f0 - H.f0;
+  for (let i = 0; i < c.n;) {
+    const s = off + i; if (s >= H.n) break;
+    const so = s % HX_CH, dO = i % HX_CH, k = Math.min(HX_CH - so, HX_CH - dO, c.n - i, H.n - s), src = H.aud[Math.floor(s / HX_CH)], dst = aud[Math.floor(i / HX_CH)];
+    if (src) { dst[0].set(src[0].subarray(so, so + k), dO); dst[1].set(src[1].subarray(so, so + k), dO); }
+    i += k;
+  }
+  let dr = null;
+  if (H.dr) { const b = Math.floor(off / 128); dr = new Float32Array(Math.ceil(c.n / 128) + 1); for (let k = 0; k < dr.length; k++) dr[k] = H.dr[Math.min(H.dr.length - 1, b + k)]; }
+  return { aud, dr };
+}
+// the loop's window moved or resized in its Ernte (frames, absolute): heard at once when its length stays, else from the
+// next seam; one step in the history
+function hxHumApply(L, w0, w1, label) {
+  const S = L && HX.sch.get(L.sch[0]), H = L && L.hum;
+  if (!S || !H) return false;
+  if (L.sch.length > 1) { toast('Den Ausschnitt in der Ernte wählst du bei einer Schleife mit einer Schicht – lege die Schichten erst zusammen.'); return false; }
+  if (!S.aud) { toast('Einen Moment – die Schleife wird noch aufgenommen.'); return false; }
+  const c = S.cut, tk = hxTakt(L), beatF = tk ? c.len / L.d.beats : 0;
+  w0 = Math.round(w0); w1 = Math.round(w1);
+  if (w0 === c.w0 && w1 === c.w1) return false;
+  const nc = hxCut(c.in, 0, 0, { f0: w0, f1: w1 });
+  if (!hxHumOf(nc)) { toast('So weit reicht die Ernte nicht.'); return false; }
+  const nb = tk ? Math.max(1, Math.round((w1 - w0) / beatF)) : 0, geom = tk ? (nb !== L.d.beats ? { beats: nb } : null) : (w1 - w0 !== L.d.L ? { L: w1 - w0 } : null);
+  const before = hxGeo(L), key = L.key, sw = geom ? hxNextSeam(L) : hxSwapAt(L);
+  hxSchSwap(S, nc, { f: sw.f, now: !!sw.now, geom });
+  const after = {};
+  hxHist({ kind: 'recut', label: hxName(L) + ': ' + (label || 'Ausschnitt in der Ernte'), undo() { const X = hxByKey(key); if (X) { after.g = hxGeo(X); hxGeoBack(X, before); } }, redo() { const X = hxByKey(key); if (X && after.g) hxGeoBack(X, after.g); } });
+  hxSay(hxName(L) + ': ' + (label || 'Ausschnitt in der Ernte')); hxSaveLoop(L); hxRailDirty(); hxCardDirty();
+  return true;
+}
+// Grundeinstellung: the window as harvested
+function hxHumReset(L) { const H = L && L.hum, S = L && HX.sch.get(L.sch[0]); if (H && S && L.sch.length === 1 && (S.cut.w0 !== H.w0 || S.cut.w1 !== H.w1)) hxHumApply(L, H.w0, H.w1, 'Ausschnitt wie geerntet'); }
+
+// ---- the editor's row: the Ernte whole, the loop's window in it ----
+const HXEH = { drag: null };
+function hxEdHumRow(L) {
+  if (L.bew) return null;
+  const H = L.hum;
+  if (!H) return L.humBusy ? h('div', { class: 'hx-ed-sec hx-ed-hum' }, h('div', { class: 'hx-ed-st' }, 'Ganze Ernte'), h('p', { class: 'note' }, 'Die ganze Ernte wird gerade übernommen …')) : null;
+  const S = HX.sch.get(L.sch[0]); if (!S) return null;
+  const cv = h('canvas', { class: 'hx-ed-humcv', role: 'img', 'aria-label': 'Ganze Ernte von ' + hxName(L) + ' mit dem Ausschnitt der Schleife' });
+  HXE.hcv = cv;
+  const sec = (f) => (f >= 60 * SR ? Math.floor(f / SR / 60) + ':' + String(Math.floor(f / SR) % 60).padStart(2, '0') + ' min' : dec((f / SR).toFixed(1)) + ' s');
+  const tk = hxTakt(L), one = L.sch.length === 1;
+  const info = h('span', { class: 'hx-ms' }, 'Die ganze Ernte: ' + sec(hxHumView(H).n) + ' ab dem ersten Ton' + (tk ? ' · Ausschnitt ' + hxLenText(L) : ' · Ausschnitt ' + sec(S.cut.len)) + (one ? '' : ' – den Ausschnitt verschiebst du bei einer Schicht (Schichten zusammenlegen)'));
+  const btn = (t, fn, tip) => { const b = h('button', { type: 'button', class: 'btn ghost', title: tip }, t); b.addEventListener('click', fn); b.disabled = !one; return b; };
+  const beatF = tk ? S.cut.len / L.d.beats : 0, barF = tk ? beatF * (L.bpb || 4) : 0;
+  const shift = (d) => () => hxHumApply(L, S.cut.w0 + d, S.cut.w1 + d, d < 0 ? 'Ausschnitt früher' : 'Ausschnitt später');
+  const tools = tk ? h('div', { class: 'chips' },
+    btn('◀ Takt', shift(-barF), 'Der Ausschnitt einen Takt früher (gleiche Länge, sofort)'), btn('Takt ▶', shift(barF), 'Der Ausschnitt einen Takt später'),
+    btn('◀ Schlag', shift(-beatF), 'Einen Schlag früher'), btn('Schlag ▶', shift(beatF), 'Einen Schlag später'),
+    btn('Anfang −1 Takt', () => hxHumApply(L, S.cut.w0 - barF, S.cut.w1, 'Ausschnitt einen Takt länger (vorn)'), 'Vorn einen Takt dazu'), btn('Ende +1 Takt', () => hxHumApply(L, S.cut.w0, S.cut.w1 + barF, 'Ausschnitt einen Takt länger (hinten)'), 'Hinten einen Takt dazu'),
+    btn('wie geerntet', () => hxHumReset(L), 'Der Ausschnitt wie beim Ernten'))
+    : h('div', { class: 'chips' }, btn('◀ 1 s', shift(-SR), 'Eine Sekunde früher'), btn('1 s ▶', shift(SR), 'Eine Sekunde später'), btn('wie geerntet', () => hxHumReset(L), 'Der Ausschnitt wie beim Ernten'));
+  const box = h('div', { class: 'hx-ed-humbox', title: 'Die ganze Ernte – alles, was der Humus beim Ernten hielt. Hell: was die Schleife spielt. Ziehen verschiebt den Ausschnitt, die Ränder ziehen ändert seine Länge (auf ganze Schläge, mit Umschalt auf ganze Takte; eine freie Schleife auf 10 ms). Gehört wird es ab der nächsten Naht – oder sofort, wenn die Länge bleibt. ↶ nimmt es zurück.' }, cv);
+  if (one) hxHumDrag(box, L);
+  return h('div', { class: 'hx-ed-sec hx-ed-hum' }, h('div', { class: 'hx-ed-st' }, 'Ganze Ernte'), box, h('div', { class: 'hx-ed-humft' }, info, tools));
+}
+// the strip's view: from the first sound in the Ernte (a second before it) to its end – the silence before is left out
+function hxHumView(H) {
+  if (!H.vw) {
+    let a = H.n;
+    for (let i = 0; i < H.n; i += 256) { const ch = H.aud[Math.floor(i / HX_CH)]; if (!ch) continue; const j = i % HX_CH; if (Math.abs(ch[0][j]) > 3e-4 || Math.abs(ch[1][j]) > 3e-4) { a = i; break; } }
+    const v0 = H.f0 + Math.max(0, Math.min(a - SR, H.n - 10 * SR));
+    H.vw = { f0: v0, n: H.f0 + H.n - v0 };
+  }
+  return H.vw;
+}
+// frames ↔ the strip's x (the Ernte from its first sound)
+const hxHumX = (H, f, w) => { const V = hxHumView(H); return ((f - V.f0) / Math.max(1, V.n)) * w; };
+function hxHumDrag(box, L) {
+  const fr = (e) => { const r = HXE.hcv.getBoundingClientRect(), V = hxHumView(L.hum); return V.f0 + clamp((e.clientX - r.left) / Math.max(1, r.width), 0, 1) * V.n; };
+  box.addEventListener('pointerdown', (e) => {
+    const S = HX.sch.get(L.sch[0]), H = L.hum; if (!S || !H || e.button > 0) return;
+    const r = HXE.hcv.getBoundingClientRect(), x = e.clientX - r.left, xa = hxHumX(H, S.cut.w0, r.width), xb = hxHumX(H, S.cut.w1, r.width);
+    const mode = Math.abs(x - xa) < 8 ? 'a' : Math.abs(x - xb) < 8 ? 'b' : x > xa && x < xb ? 'm' : 'j';
+    HXEH.drag = { L, mode, f: fr(e), w0: S.cut.w0, w1: S.cut.w1, v0: S.cut.w0, v1: S.cut.w1, moved: false };
+    if (mode === 'j') { const len = S.cut.w1 - S.cut.w0, st = hxHumSnap(L, fr(e) - len / 2, e, S); Object.assign(HXEH.drag, { mode: 'm', w0: st, w1: st + len, v0: st, v1: st + len, moved: true }); }   // (a press beside the window: it jumps there, centred – dragging on moves it)
+    box.setPointerCapture(e.pointerId); e.preventDefault(); hxHumDraw();
+  });
+  box.addEventListener('pointermove', (e) => {
+    const D = HXEH.drag; if (!D || D.L !== L) { const S = HX.sch.get(L.sch[0]), H = L.hum; if (S && H && HXE.hcv) { const r = HXE.hcv.getBoundingClientRect(), x = e.clientX - r.left; box.style.cursor = Math.abs(x - hxHumX(H, S.cut.w0, r.width)) < 8 || Math.abs(x - hxHumX(H, S.cut.w1, r.width)) < 8 ? 'ew-resize' : 'grab'; } return; }
+    const S = HX.sch.get(L.sch[0]), H = L.hum; if (!S || !H) return;
+    const d = fr(e) - D.f, minF = hxTakt(L) ? S.cut.len / L.d.beats : 0.1 * SR, maxF = hxTakt(L) ? (S.cut.len / L.d.beats) * 128 * (L.bpb || 4) : H.n;
+    let v0 = D.w0, v1 = D.w1;
+    if (D.mode === 'm') { v0 = hxHumSnap(L, D.w0 + d, e, S); v1 = v0 + (D.w1 - D.w0); }
+    else if (D.mode === 'a') { v0 = clamp(hxHumSnap(L, D.w0 + d, e, S), D.w1 - maxF, D.w1 - minF); }
+    else { v1 = clamp(hxHumSnap(L, D.w1 + d, e, S), D.w0 + minF, D.w0 + maxF); }
+    const lo = H.f0 + S.cut.pre, hi = H.f0 + H.n - S.cut.post;   // (its margins inside the Ernte)
+    if (v0 < lo) { const k = lo - v0; v0 += k; if (D.mode !== 'a') v1 += k; }
+    if (v1 > hi) { const k = v1 - hi; v1 -= k; if (D.mode !== 'b') v0 -= k; }
+    D.v0 = v0; D.v1 = v1; D.moved = D.moved || Math.abs(d) > 0.002 * H.n; hxHumDraw();
+  });
+  const end = () => { const D = HXEH.drag; if (!D || D.L !== L) return; HXEH.drag = null; if (D.moved) { const lab = D.mode === 'a' ? 'Anfang in der Ernte' : D.mode === 'b' ? 'Ende in der Ernte' : 'Ausschnitt in der Ernte'; if (!hxHumApply(L, D.v0, D.v1, lab)) hxHumDraw(); } else hxHumDraw(); };
+  box.addEventListener('pointerup', end); box.addEventListener('pointercancel', end);
+}
+// a frame on the loop's grid: its beats (Umschalt: bars) counted from where it starts, a free loop's 10 ms
+function hxHumSnap(L, f, e, S) {
+  if (!hxTakt(L)) { const q = 0.01 * SR; return S.cut.w0 + Math.round((f - S.cut.w0) / q) * q; }
+  const beatF = S.cut.len / L.d.beats, q = e && e.shiftKey ? beatF * (L.bpb || 4) : beatF;
+  return S.cut.w0 + Math.round((f - S.cut.w0) / q) * q;
+}
+// the strip: the Ernte's peaks (made once per width), its bars, the loop's window bright, the rest dim
+function hxHumDraw() {
+  const cv = HXE.hcv, L = hxEdL(); if (!cv || !cv.isConnected || !L || !L.hum) return;
+  const H = L.hum, S = HX.sch.get(L.sch[0]); if (!S) return;
+  const w = cv.clientWidth, hh = cv.clientHeight; if (!w || !hh) return;
+  const c = mxFit(cv, w, hh, 0, Math.min(2, devicePixelRatio || 1)), W = Math.min(1600, Math.round(w));
+  if (!H.pk || H.pk.W !== W) {
+    const V = hxHumView(H), off = V.f0 - H.f0, mn = new Float32Array(W), mx = new Float32Array(W), per = V.n / W;
+    for (let x = 0; x < W; x++) {
+      const a = off + Math.floor(x * per), b = Math.min(H.n, off + Math.floor((x + 1) * per)), st = Math.max(1, Math.floor((b - a) / 96));   // (≈ 96 reads a column – enough for a picture)
+      let lo = 0, hi = 0;
+      for (let i = a; i < b; i += st) { const ch = H.aud[Math.floor(i / HX_CH)]; if (!ch) continue; const j = i % HX_CH, v = (ch[0][j] + ch[1][j]) * 0.5; if (v < lo) lo = v; if (v > hi) hi = v; }
+      mn[x] = lo; mx[x] = hi;
+    }
+    let m = 1e-4; for (let x = 0; x < W; x++) m = Math.max(m, -mn[x], mx[x]);
+    H.pk = { W, mn, mx, m };
+  }
+  const D = HXEH.drag && HXEH.drag.L === L ? HXEH.drag : null, v0 = D ? D.v0 : S.cut.w0, v1 = D ? D.v1 : S.cut.w1;
+  const xa = hxHumX(H, v0, w), xb = hxHumX(H, v1, w), amp = (hh * 0.44) / Math.max(H.pk.m, 0.05);
+  c.clearRect(0, 0, w, hh); c.fillStyle = '#120e0b'; c.fillRect(0, 0, w, hh);
+  c.fillStyle = 'rgba(255,179,92,.10)'; c.fillRect(xa, 0, Math.max(1, xb - xa), hh);
+  // the bars on the loop's grid, across the whole Ernte
+  if (hxTakt(L)) {
+    const V = hxHumView(H), barF = (S.cut.len / L.d.beats) * (L.bpb || 4), k0 = Math.ceil((V.f0 - v0) / barF), k1 = Math.floor((V.f0 + V.n - v0) / barF);
+    if ((k1 - k0) * 9 < w) { c.fillStyle = 'rgba(240,230,216,.10)'; for (let k = k0; k <= k1; k++) c.fillRect(Math.round(hxHumX(H, v0 + k * barF, w)), 0, 1, hh); }
+  }
+  for (let x = 0; x < W; x++) {
+    const px = (x / W) * w, inW = px >= xa && px < xb, y0 = hh / 2 - H.pk.mx[x] * amp, y1 = hh / 2 - H.pk.mn[x] * amp;
+    c.fillStyle = inW ? 'rgba(233,163,94,.9)' : 'rgba(168,152,138,.35)';
+    c.fillRect(px, y0, Math.max(1, w / W), Math.max(1, y1 - y0));
+  }
+  c.fillStyle = '#ffb35c'; c.fillRect(xa - 1, 0, 2, hh); c.fillRect(xb - 1, 0, 2, hh);
+  c.fillRect(xa - 4, 0, 8, 3); c.fillRect(xb - 4, 0, 8, 3); c.fillRect(xa - 4, hh - 3, 8, 3); c.fillRect(xb - 4, hh - 3, 8, 3);
+  if (D) { const t = hxTakt(L) ? Math.round((v1 - v0) / (S.cut.len / L.d.beats)) : 0, bpb = L.bpb || 4; c.fillStyle = '#f0e6d8'; c.font = '600 11px ' + COL.fontNum; c.textBaseline = 'top';
+    c.fillText(hxTakt(L) ? (t % bpb ? t + ' Schläge' : t / bpb + (t / bpb === 1 ? ' Takt' : ' Takte')) : dec(((v1 - v0) / SR).toFixed(2)) + ' s', clamp(xa + 6, 4, w - 80), 5); }
 }
 // ---- (owner, 26.10.2026) „einzelne Abschnitte, die man auswählt, separat editieren, ohne dass der Rest betroffen ist“ –
 // a stretch chosen in the editor is changed on its own, written into the Schicht's audio (its dry and its baked version
@@ -32940,11 +33181,11 @@ function hxChainLog() {
   e.push([t, v, os, lite]);
   hxTrim(e, t);
 }
-// 180 s are kept (the Humus); the old part goes in one cut once 20 s more have gathered – a cut every call would copy the
+// 15 min are kept (the Humus, 26.10.2026: 128 bars); the old part goes in one cut once 20 s more have gathered – a cut every call would copy the
 // whole list each time (a Gestik binding writes the chain every frame)
 function hxTrim(e, t) {
   if (!(e.length > 2 && e[1][0] < t - 200)) return;
-  let k = 1; while (k < e.length - 2 && e[k + 1][0] < t - 180) k++;
+  let k = 1; while (k < e.length - 2 && e[k + 1][0] < t - 905) k++;
   e.splice(0, k);
 }
 const hxPoly = (p, t) => { if (!p || !p.length || t <= p[0][0]) return p && p.length ? p[0][1] : 0; let i = p.length - 1; while (i > 0 && p[i][0] > t) i--; const a = p[i], b = p[i + 1]; return b ? a[1] + (b[1] - a[1]) * (t - a[0]) / (b[0] - a[0]) : a[1]; };
@@ -33453,7 +33694,7 @@ async function hxAfterFill(S) {
 async function hxBake(S) {
   const n = S.n, c = S.cut, ta = c.stale ? null : hxT(c.f0);
   if (ta == null || !S.aud) return false;
-  if (hxNowT() - ta > 170) return false;   // (the chain's record reaches three minutes back)
+  if (hxNowT() - ta > 900) return false;   // (the chain's record reaches fifteen minutes back)
   const Lb = new Float32Array(n), Rb = new Float32Array(n);
   for (let i = 0; i < n; i++) { const ch = S.aud[Math.floor(i / HX_CH)], j = i % HX_CH; if (ch) { Lb[i] = ch[0][j]; Rb[i] = ch[1][j]; } }
   const bv = (S.bv = (S.bv || 0) + 1), aud = S.aud;
@@ -33897,7 +34138,7 @@ const hxGuardOk = (L) => !(L.guardK != null && !(L.k >= L.guardK));
 function hxGuardSet(L, k) { if (Number.isFinite(k)) L.guardK = Math.max(L.guardK != null ? L.guardK : -Infinity, k + 3); }
 function hxEigSet(L, e) {
   if (!HX_EIG.includes(e) || e === (L.eig || 'treu')) { L.eigWant = null; return true; }
-  if (!hxGuardOk(L)) { L.eigWant = e; return false; }
+  if (e !== 'treu' && !hxGuardOk(L)) { L.eigWant = e; return false; }   // (back to Treu always at once)
   L.eig = e; L.eigWant = null; hxSaveMeta(L.id); hxCardDirty();
   if (HX_EIG.indexOf(e) >= 1 && !hxWCanLive(L)) { L.wRefused = true; L.wRetry = performance.now() + 4000; }   // (step 2a: the device cannot keep it living now)
   hxWUpdate(L);   // (step 2a: above Treu it grows)
@@ -35391,6 +35632,23 @@ function hxWSet(L, what, v) {
   hxHist({ kind: 'wuchs', label: W[0] + (W[1] ? ' ' + W[1] : '') + ' (' + hxName(L) + ')', undo() { const X = hxByKey(lk); if (X) put(X, was); }, redo() { const X = hxByKey(lk); if (X) put(X, to); } });
   hxSay(hxName(L) + ': ' + W[0] + (W[1] ? ' ' + W[1] : ''));
 }
+// (owner, 26.10.2026: „Abdruck wird nicht markiert, es hat keine Auswirkung auf den Sound“) Abdruck: the loop as it was
+// played – whatever made it grow is set back in one step (its own sound, the notes no longer following the key,
+// Eigensinn treu, the notes' tools, Live); only a new tempo or an Auslese keeps it growing, and then it says why
+function hxAbdruck(L) {
+  const w = L.wwhy || {};
+  if (w.tempo) { hxHint(hxName(L) + ' folgt dem neuen Tempo und wächst deshalb – als Abdruck klingt sie nur im Tempo der Aufnahme.'); return false; }
+  if (w.ausl) { hxHint(hxName(L) + ' spielt die Auslese – ↶ nimmt sie zurück, dann ist sie wieder ein Abdruck.'); return false; }
+  const n0 = HX.hist.length;
+  if ((L.klang || 'eigen') !== 'eigen') hxWSet(L, 'klang', 'eigen');
+  if (hxWTonOff(L)) hxWSet(L, 'ton', 'fest');
+  if ((L.eigWant || L.eig || 'treu') !== 'treu') hxWSet(L, 'eig', 'treu');
+  if (hxNtOn(L)) hxNtSet(L, 'zurueck');
+  hxWSet(L, 'wahl', false);
+  hxHistGroup(n0, 'Wiedergabe Abdruck (' + hxName(L) + ')');
+  hxSay(hxName(L) + ': Abdruck – genau wie gespielt');
+  return true;
+}
 // the loop's word for the card and the rail: what it does now
 function hxWWord(L) {
   if (L.bew || !L.sch.some((id) => hxWCan(HX.sch.get(id)))) return '';
@@ -35913,7 +36171,7 @@ function hxSlcSet(L, k, v, o = {}) {
 // a doubled loop stays doubled (that is its new whole – ↶ takes the doubling back)
 function hxDefaults(L) {
   if (!L || L.bew) return false;
-  if (!hxBandReady(L)) return false;
+  if (!hxBandReady(L)) { if (L.hum) { const n1 = HX.hist.length; hxHumReset(L); return hxHistGroup(n1, hxName(L) + ': Ausschnitt wie geerntet'); } return false; }   // (26.10.2026: the window in the Ernte needs no finished bake)
   const n0 = HX.hist.length;
   if (L.trim) hxBandTrim(L, 'ganz');
   if (L.rev) hxRev(L);
@@ -35924,6 +36182,7 @@ function hxDefaults(L) {
   if (L.ab) hxAbSet(L, 0);
   if (hxNtOn(L)) hxNtSet(L, 'zurueck');
   if (L.rx0) hxRxRestore(L);   // (the stretches edited on their own: the audio as recorded)
+  hxHumReset(L);   // (26.10.2026: the window in the whole Ernte as harvested)
   const did = hxHistGroup(n0, hxName(L) + ': alles auf Grundeinstellung');
   hxSay(hxName(L) + (did ? ': alles auf Grundeinstellung' : ': ist schon in der Grundeinstellung'));
   return did;

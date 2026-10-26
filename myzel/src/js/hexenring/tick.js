@@ -6,8 +6,9 @@ function hxMemUsed() {
   const one = (aud, n) => { if (aud && !seen.has(aud)) { seen.add(aud); b += hxBytes(n); } };
   const wv = (s) => { if (s.wu) one(s.wu.aud, s.wu.n); if (s.anc) one(s.anc.aud, s.anc.n); };   // (step 2a: its Treu render and its anchor)
   for (const S of HX.sch.values()) { b += hxBytes(S.n); if (S.aud) one(S.aud, S.n); else if (S.live) b += hxBytes(S.n); one(S.bak, S.n); wv(S); if (S.wLive) b += 3 * hxBytes(Math.round((hxWTailEst(S) + 4) * SR)); }   // (step 1c: a baked version beside the dry one; step 2a: a living Schicht's passes in the processor, about three at a time)
-  for (const g of HX.grave) for (const s of g.snap.sch) { one(s.aud, s.n); one(s.bak, s.n); wv(s); }
-  for (const st of HX.hist.concat(HX.redo)) for (const sn of st.snaps || []) for (const s of sn.sch || [sn]) if (s) { one(s.aud, s.n); one(s.bak, s.n); wv(s); }
+  for (const L of HX.loops.values()) if (L.hum) one(L.hum.aud, L.hum.n);   // (26.10.2026: a Schleife's whole Ernte)
+  for (const g of HX.grave) { if (g.snap.hum) one(g.snap.hum.aud, g.snap.hum.n); for (const s of g.snap.sch) { one(s.aud, s.n); one(s.bak, s.n); wv(s); } }
+  for (const st of HX.hist.concat(HX.redo)) for (const sn of st.snaps || []) { if (sn && sn.hum) one(sn.hum.aud, sn.hum.n); for (const s of sn.sch || [sn]) if (s) { one(s.aud, s.n); one(s.bak, s.n); wv(s); } }
   for (const tk of takes) if (tk.L) b += tk.frames * 8;
   if (HX.node) b += 3 * Math.ceil((P['hx.humus'] * SR) / HX_CH) * HX_CH * 8;   // (step 2b: the Puls's ring)
   if (HX.node && HX.mic.ring) b += (HX.mic.ringN || 0) * HX_CH * 8;   // (step 4: the Mikro's ring)
@@ -60,6 +61,7 @@ function hxMsg2(m) {
       hxSaveSch(S);
       hxAfterFill(S);   // (step 1c: the Ausklang's rendered rest, the bake, the drift it was played with)
       hxBandFill(S);   // (step 2b: the loop's kind and onsets – the tape's tools, a tempo change)
+      { const L1 = HX.loops.get(S.loop); if (L1 && L1.sch[0] === S.id) hxHumKeep(L1, S); }   // (26.10.2026: the whole Ernte beside it)
       const L2 = HX.loops.get(S.loop);   // (step 2a: its notes for Wuchs – its window has sounded)
       if (L2 && !L2.bew) { if (!S.wn) S.wn = hxWNotesOf(S, L2); if (S.wn && hxWAktiv(L2)) hxWUpdate(L2); }
     }
@@ -71,7 +73,7 @@ function hxMsg2(m) {
   if (m.wilted) { const L = HX.loops.get(m.wilted.loop); if (L && L.state !== 'weg') { L.state = 'angehalten'; L.pendTo = null; hxCount(); hxRailDirty(); hxCardDirty(); hxSaveMeta(L.id); } }   // (step 1d: a Schluss „welkend“ ended)
   if (m.meter && m.meter.inp) {   // the rings' input level, 15 per second, two minutes
     HX.lvl[HX.lvlI] = [hxT(m.meter.F), m.meter.inp[0], m.meter.inp[1], m.meter.inp[2] || 0, m.meter.inp[3] || 0];   // (step 4: the Mikro's)
-    HX.lvlI = (HX.lvlI + 1) % 1800;
+    HX.lvlI = (HX.lvlI + 1) % 13600;   // (15 min, as far as the Humus)
     for (const x of m.meter.loops) { const L = HX.loops.get(x[0]); if (L) L.lv = [x[1], x[2]]; }
   }
 }

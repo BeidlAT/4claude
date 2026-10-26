@@ -1,19 +1,19 @@
 // ---- (owner, 25.10.2026) „Beim Looper fehlt die Einstellung für die Taktlänge der Schleifen … und als Spieler sollte man
 // sehen, wo man im Takt ist, wo man in der Schleife ist, wenn man sie einspielt.“ The length of a new Schleife sits at the
-// rail beside the Hauptknopf (auto · 1 … 16 Takte – hx.laenge, hx.festT; „wie Schleife 1“ shows while it is set); its
+// rail beside the Hauptknopf (auto · 1 … 128 Takte – hx.laenge, hx.festT; „wie Schleife 1“ shows while it is set); its
 // popover also holds the tempo a first loop is counted in at, the count-in and the click. A fixed length closes by
 // itself – without a Takt yet one is set at the Puls's tempo and one bar counted in (grammar.js, as the Raster). While a
 // loop is counted in, played in or overdubbed, the field shows where you are (hxPosDraw): its bars as boxes of beats
 // filling up, „Takt 2 von 4“ – the rail's Taktlinie shows the same beats. ----
-const HX_LEN_Q = [1, 2, 3, 4, 6, 8, 12, 16];   // the quick lengths (any 1 … 16 in the card's settings)
-const HX_LEN_K = ['auto', 1, 2, 3, 4, 6, 8, 12, 16];   // a knob's steps (MIDI)
+const HX_LEN_Q = [1, 2, 3, 4, 6, 8, 12, 16, 32, 64, 128];   // the quick lengths (any 1 … 128 in the card's settings – owner, 26.10.2026)
+const HX_LEN_K = ['auto', 1, 2, 3, 4, 6, 8, 12, 16, 32, 64, 128];   // a knob's steps (MIDI)
 const HXLEN = { open: false, kb: false, rep: 0 };
 const hxTakteA = (n) => (n === 1 ? 'einen Takt' : dec(+n.toFixed(2)) + ' Takte');   // (accusative: „nimmt 4 Takte auf“)
 const hxTakteD = (n) => (n === 1 ? 'einem Takt' : dec(+n.toFixed(2)) + ' Takten');   // (dative: „nach 4 Takten“)
 const hxLenSay = () => { const l = P['hx.laenge'], n = P['hx.festT']; return l === 'fest' ? n + (n === 1 ? ' Takt' : ' Takte') : l === 'wie1' ? 'wie Schleife 1' : 'automatisch'; };
 function hxLenSet(v) {
   if (v === 'auto' || v === 'wie1') setParam('hx.laenge', v);
-  else { setParam('hx.festT', clamp(Math.round(+v), 1, 16)); setParam('hx.laenge', 'fest'); }
+  else { setParam('hx.festT', clamp(Math.round(+v), 1, 128)); setParam('hx.laenge', 'fest'); }
 }
 function hxLenBuild() {
   const b = HXU.len, pop = HXU.lenPop; if (!b || !pop) return;
@@ -128,7 +128,7 @@ function hxLenLive() {
 // a knob or a button on a controller: the length in steps (auto, 1, 2, 3, 4, 6, 8, 12, 16 bars)
 function hxLenIdx() { if (P['hx.laenge'] !== 'fest') return 0; const n = P['hx.festT']; let i = 1; for (let k = 1; k < HX_LEN_K.length; k++) if (HX_LEN_K[k] <= n) i = k; return i; }
 function hxLenStep(d) { const i = clamp(hxLenIdx() + Math.sign(d), 0, HX_LEN_K.length - 1); hxLenSet(HX_LEN_K[i]); hxSay('Länge: ' + hxLenSay()); }
-midiTarget('hx.len', 'Länge neuer Schleifen (auto · 1 bis 16 Takte)', null, { group: 'Hexenring', cont: true, get: () => hxLenIdx() / (HX_LEN_K.length - 1),
+midiTarget('hx.len', 'Länge neuer Schleifen (auto · 1 bis 128 Takte)', null, { group: 'Hexenring', cont: true, get: () => hxLenIdx() / (HX_LEN_K.length - 1),
   set: (n2) => { const v = HX_LEN_K[Math.min(HX_LEN_K.length - 1, Math.floor(clamp(n2, 0, 1) * HX_LEN_K.length))]; if (v !== (P['hx.laenge'] === 'fest' ? P['hx.festT'] : 'auto')) { hxLenSet(v); hxSay('Länge: ' + hxLenSay()); } }, step: hxLenStep });
 midiTarget('hx.len.next', 'Länge neuer Schleifen: länger', (v) => { if (v >= 0.5) hxLenStep(1); }, { group: 'Hexenring', button: true });
 midiTarget('hx.len.prev', 'Länge neuer Schleifen: kürzer', (v) => { if (v >= 0.5) hxLenStep(-1); }, { group: 'Hexenring', button: true });
