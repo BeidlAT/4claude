@@ -225,7 +225,11 @@ function loadValues(vals, keepUnset) {
   }
   for (const id of PATCH_IDS) for (const fn of CTL[id] || []) fn(P[id], null);
   hxMvSync(was);
-  buildNotes(); drawBg(); refreshEngineUI(); updLaneTabs(); updInactive(); renderBarInfo();
+  // (owner, 26.10.2026: „einzelne Schleifen werden nicht gespielt, wenn ich ein älteres eigenes Preset lade“) another key
+  // while loops follow it: announced as from the knob – they keep sounding until the bar line their new pass is ready for,
+  // the field changes with them there (not at once, with every loop silent until its pass is rendered)
+  if (!hxWTonHold('t.root')) buildNotes();
+  drawBg(); refreshEngineUI(); updLaneTabs(); updInactive(); renderBarInfo();
   if (A.ctx) { applyAll(); seqRetempo(); warmKS(); dspMaybe(); if (P['kor.src'] === 'echo') ensureCapture(); if (!LIVE_SRC.has(P['kor.src'])) texture(P['kor.src']); }
   syncMic();
   clearTimeout(saveTimer); saveTimer = setTimeout(saveState, 400);

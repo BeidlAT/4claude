@@ -43,6 +43,11 @@ function hxWTonSlots(F) {
   const f = Math.round(hxF(F.t));
   for (const k of F.loops) {
     const L = hxByKey(k); if (!L) continue;
+    // (owner, 26.10.2026: Schleifen fell silent for many seconds after a key change – a preset loaded) a Treu loop does not
+    // stream the pass with the change: that stream renders in real time (up to a whole pass, 40 s and more) and holds up
+    // the realm its whole new version waits for; that version renders in a moment and comes in at the bar line (hxWUpdate
+    // with F's frame; late: as soon as it is there)
+    if (!hxWLebt(L)) continue;
     const kk = hxPassK(L, f);
     for (const id of L.sch) { const S = HX.sch.get(id); if (!hxWCan(S)) continue; hxWSlot(L, S, kk, { at: f, must: true, key: F.key, treu: !hxWLebt(L) }); S.wk = Math.max(S.wk == null ? -1 : S.wk, kk); }
   }
@@ -53,7 +58,7 @@ function hxWKeyBuilt() {
   if (!o || HX.tonGo || !A.ctx || !HX.node || (String(o.root) === String(k.root) && o.scale === k.scale)) return;
   const list = hxLoopsLive().filter(hxWFolgt); if (!list.length) return;
   const F = { t: hxNowT() + 0.03, key: hxWKeyNow(), loops: list.map((L) => L.key) };
-  hxWTonSlots(F); for (const L of list) hxWUpdate(L);
+  hxWTonSlots(F); for (const L of list) hxWUpdate(L, { f: Math.round(hxF(F.t)) });
 }
 // at the bar line (a little before it: the Puls's notes after it are scheduled in the new key) the field changes
 function hxWTonGo() {

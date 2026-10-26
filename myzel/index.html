@@ -22210,7 +22210,11 @@ function loadValues(vals, keepUnset) {
   }
   for (const id of PATCH_IDS) for (const fn of CTL[id] || []) fn(P[id], null);
   hxMvSync(was);
-  buildNotes(); drawBg(); refreshEngineUI(); updLaneTabs(); updInactive(); renderBarInfo();
+  // (owner, 26.10.2026: „einzelne Schleifen werden nicht gespielt, wenn ich ein älteres eigenes Preset lade“) another key
+  // while loops follow it: announced as from the knob – they keep sounding until the bar line their new pass is ready for,
+  // the field changes with them there (not at once, with every loop silent until its pass is rendered)
+  if (!hxWTonHold('t.root')) buildNotes();
+  drawBg(); refreshEngineUI(); updLaneTabs(); updInactive(); renderBarInfo();
   if (A.ctx) { applyAll(); seqRetempo(); warmKS(); dspMaybe(); if (P['kor.src'] === 'echo') ensureCapture(); if (!LIVE_SRC.has(P['kor.src'])) texture(P['kor.src']); }
   syncMic();
   clearTimeout(saveTimer); saveTimer = setTimeout(saveState, 400);
@@ -37951,7 +37955,7 @@ function hxWRenderFor(L, S, sig, o = {}) {
     if (!X || !HX.sch.has(S.id) || (S.ver || 0) !== ver) return;
     if (V && V.sig === hxWSig(X, S, o.key) && (S.wu || hxMemOk(V.n))) {   // (final pass: a first Treu version within the Speichergrenze, as every other buffer – else the Abdruck plays on)
       S.wu = V; S.wuSaved = 0;
-      if (hxWAktiv(X) && !(S.anc && S.anc.sig === V.sig)) { const now = !!o.now && o.f == null && hxNowOk(X); hxWPlay(S, 'wu', o.f != null && o.f > hxF(hxNowT() + 0.05) ? o.f : now ? hxSwapAt(X).f : hxNextSeam(X).f, false, now); }
+      if (hxWAktiv(X) && !(S.anc && S.anc.sig === V.sig)) { const late = o.f != null && o.f <= hxF(hxNowT() + 0.05), now = (!!o.now && o.f == null || late) && hxNowOk(X); hxWPlay(S, 'wu', o.f != null && !late ? o.f : now ? hxSwapAt(X).f : hxNextSeam(X).f, false, now); }   // (a key change's version that came late: at once)
       hxSaveSch(S, 'w');
     }
     if (S.wAgain || (V && V.sig !== hxWSig(X, S, o.key))) hxWUpdate(X, S.wAgain || {});
@@ -38089,6 +38093,11 @@ function hxWTonSlots(F) {
   const f = Math.round(hxF(F.t));
   for (const k of F.loops) {
     const L = hxByKey(k); if (!L) continue;
+    // (owner, 26.10.2026: Schleifen fell silent for many seconds after a key change – a preset loaded) a Treu loop does not
+    // stream the pass with the change: that stream renders in real time (up to a whole pass, 40 s and more) and holds up
+    // the realm its whole new version waits for; that version renders in a moment and comes in at the bar line (hxWUpdate
+    // with F's frame; late: as soon as it is there)
+    if (!hxWLebt(L)) continue;
     const kk = hxPassK(L, f);
     for (const id of L.sch) { const S = HX.sch.get(id); if (!hxWCan(S)) continue; hxWSlot(L, S, kk, { at: f, must: true, key: F.key, treu: !hxWLebt(L) }); S.wk = Math.max(S.wk == null ? -1 : S.wk, kk); }
   }
@@ -38099,7 +38108,7 @@ function hxWKeyBuilt() {
   if (!o || HX.tonGo || !A.ctx || !HX.node || (String(o.root) === String(k.root) && o.scale === k.scale)) return;
   const list = hxLoopsLive().filter(hxWFolgt); if (!list.length) return;
   const F = { t: hxNowT() + 0.03, key: hxWKeyNow(), loops: list.map((L) => L.key) };
-  hxWTonSlots(F); for (const L of list) hxWUpdate(L);
+  hxWTonSlots(F); for (const L of list) hxWUpdate(L, { f: Math.round(hxF(F.t)) });
 }
 // at the bar line (a little before it: the Puls's notes after it are scheduled in the new key) the field changes
 function hxWTonGo() {

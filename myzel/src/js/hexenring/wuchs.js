@@ -247,7 +247,7 @@ function hxWRenderFor(L, S, sig, o = {}) {
     if (!X || !HX.sch.has(S.id) || (S.ver || 0) !== ver) return;
     if (V && V.sig === hxWSig(X, S, o.key) && (S.wu || hxMemOk(V.n))) {   // (final pass: a first Treu version within the Speichergrenze, as every other buffer – else the Abdruck plays on)
       S.wu = V; S.wuSaved = 0;
-      if (hxWAktiv(X) && !(S.anc && S.anc.sig === V.sig)) { const now = !!o.now && o.f == null && hxNowOk(X); hxWPlay(S, 'wu', o.f != null && o.f > hxF(hxNowT() + 0.05) ? o.f : now ? hxSwapAt(X).f : hxNextSeam(X).f, false, now); }
+      if (hxWAktiv(X) && !(S.anc && S.anc.sig === V.sig)) { const late = o.f != null && o.f <= hxF(hxNowT() + 0.05), now = (!!o.now && o.f == null || late) && hxNowOk(X); hxWPlay(S, 'wu', o.f != null && !late ? o.f : now ? hxSwapAt(X).f : hxNextSeam(X).f, false, now); }   // (a key change's version that came late: at once)
       hxSaveSch(S, 'w');
     }
     if (S.wAgain || (V && V.sig !== hxWSig(X, S, o.key))) hxWUpdate(X, S.wAgain || {});
