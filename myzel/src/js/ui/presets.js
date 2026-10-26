@@ -350,12 +350,17 @@ function loadPreset(p) {
   const miss = engMissSay();
   toast('„' + p.name + '“ geladen.' + rzSay() + (miss ? ' ' + miss : ''), miss ? 8000 : 4500, UNDO);
 }
+// (owner, 26.10.2026: „mit einem leeren Preset beginnen können“) Leere Erde: every setting at its plain start, the
+// effects dry, no second layer, no Bordun, no Puls lane, no Fährte – a sound to build from. Apart from PRESETS, whose
+// order is the program numbers a device sends.
+const PRESET_LEER = { key: 'leer', name: 'Leere Erde', tags: 'Neutral · Anfang', desc: 'Alles auf Anfang: ein schlichter Klang, trocken – kein Hall, kein Echo, kein Puls. Zum Selberbauen.', fmt: 2, fae: null,
+  v: { 'rev.mix': 0, 'dly.mix': 0, 'cho.mix': 0, 'drv.mix': 0, 'flt.freq': 18000, 'flt.lfoDepth': 0, 'v.layer': 'off', 'bor.on': false, 'l0.on': false, 'l1.on': false, 'l2.on': false, 'l3.on': false, 'mst.comp': 0 } };
 function markPresetCards() { for (const c of presetCards) c.setAttribute('aria-current', String(c.dataset.key === UI.preset)); }
 function markPresetDirty() { if (UI.preset && !UI.loading) { UI.preset = null; markPresetCards(); } }
 function buildPresets() {
   const box = h('div');
   const g = h('div', { class: 'pgrid' });
-  presetCards = PRESETS.map((p) => {
+  presetCards = [PRESET_LEER].concat(PRESETS).map((p) => {
     const c = h('button', { type: 'button', class: 'pcard', 'aria-current': 'false', onclick: () => loadPreset(p) }, h('b', null, p.name), h('span', { class: 'tags' }, p.tags), h('small', null, p.desc));
     c.dataset.key = p.key; g.append(c); return c;
   });
@@ -387,7 +392,8 @@ function buildPresets() {
     h('div', { class: 'row', style: 'margin-top:10px' },
       h('button', { type: 'button', class: 'btn', onclick: exportPreset }, 'Klang als Datei exportieren'),
       h('button', { type: 'button', class: 'btn', onclick: () => file.click() }, 'Datei importieren'), file)));
-  box.append(section('Spielhilfe', null, h('ul', { class: 'help' },
+  // (owner, 26.10.2026: „den Text bei Spielhilfe zum Einklappen“; the phone's Gestik line left out – it is being rebuilt)
+  box.append(foldSec('hilfe', 'Spielhilfe', [h('ul', { class: 'help' },
     h('li', null, h('b', null, 'Klangquelle: '), ENG_OPTS.length + ' Quellen in ' + FAM.length + ' Familien – ' + listDe(FAM.map((f) => f[1])) + '. ‹ › wechseln zur Nachbarin und spielen sie kurz an, Tippen auf den Namen öffnet die Bibliothek mit Suche, ★ Favoriten und ▶ Anhören; der Würfel überrascht.'),
     h('li', null, h('b', null, 'Halten: '), 'Die Quellen aus ' + listDe(famPlay().hold) + ' klingen, solange der Finger liegt – wie jede, auf deren Kachel „hält“ steht. Schieben ändert Tonhöhe und Farbe.'),
     h('li', null, h('b', null, 'Tippen und Wischen: '), 'Die Quellen aus ' + listDe(famPlay().strike) + ' schlagen beim Berühren an (auf der Kachel: „schlägt“ oder „beides“) – mit „Wischen schlägt an“ auch bei jedem Tonwechsel unterwegs.'),
@@ -396,10 +402,9 @@ function buildPresets() {
     h('li', null, h('b', null, 'Stille: '), 'Stoppt sofort alle Töne, den Bordun, Echo, Hall und den Puls.'),
     h('li', null, h('b', null, 'Doppeltippen '), 'auf den Namen eines Reglers setzt ihn zurück.'),
     h('li', null, h('b', null, 'Keyboard und Controller: '), 'per USB einstecken und losspielen; ein Bluetooth-Keyboard wie das microKEY Air unter „Gerät“ mit „Bluetooth-Keyboard koppeln“ verbinden – in Chrome oder Edge, auch auf Android. Regler, Fader und Pads legst du dort mit „Zuweisen“ auf jedes Ziel, auch im Mixer. iPhone und iPad brauchen dafür eine App wie „Web MIDI Browser“.'),
-    h('li', null, h('b', null, 'Gestik: '), 'unter „Gerät“ einschalten – dann spielt das Handy mit: Neigen lehnt den gehaltenen Ton an (Klangfarbe, Tonhöhe zur Nachbarstufe), Schütteln lädt das Myzel auf, Umdrehen lässt es einschlafen. Der Korb des Hexenrings erntet auch Bewegung als Schleife, der Sporenregen spielt deine Töne, wenn du neigst. Ohne Sensor (Computer, claude.ai-Ansicht) ziehst du die Spore in der Wasserwaage.'),
     h('li', null, h('b', null, 'Gerät: '), 'Qualitätsstufe, Latenz und wie die Tasten spielen findest du ebenfalls dort.'),
     h('li', null, h('b', null, 'iPhone: '), 'Bleibt es still, den Stummschalter an der Seite ausschalten. Das iPhone erkennt höchstens fünf Finger gleichzeitig.'),
-    h('li', null, h('b', null, 'Als App, auch offline: '), 'beidlat.github.io/4claude im Browser öffnen, dann „Teilen → Zum Home-Bildschirm“ (iPhone) bzw. „App installieren“ (Android).'))));
+    h('li', null, h('b', null, 'Als App, auch offline: '), 'beidlat.github.io/4claude im Browser öffnen, dann „Teilen → Zum Home-Bildschirm“ (iPhone) bzw. „App installieren“ (Android).'))]));
   renderUserPresets(); markPresetCards(); updUndo();
   return box;
 }
@@ -418,7 +423,7 @@ function renderUserPresets() {
   }
 }
 function exportPreset() {
-  const name = UI.preset ? (PRESETS.find((p) => p.key === UI.preset) || {}).name : 'Mein Klang';
+  const name = UI.preset ? (PRESETS.concat([PRESET_LEER]).find((p) => p.key === UI.preset) || {}).name : 'Mein Klang';
   const x = presetExtra();   // version 2: the Fährte and Gestik's settings ride along (version 1 files still load)
   const json = JSON.stringify({ app: 'Myzel', version: 2, name: name || 'Mein Klang', values: patchValues(), faehrte: x.fae, gestik: x.gk }, null, 2);
   offerFile('myzel-klang-' + slug(name) + '.json', new Blob([json], { type: 'application/json' }));

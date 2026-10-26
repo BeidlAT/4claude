@@ -6,7 +6,9 @@
       "punkte": [
         "Aufnahme-Menü: jede Schleife lässt sich einklappen – zu zeigt sie nur ihre Zeile mit Farbe, Name und Zustand; „Alle aufklappen“ öffnet alle auf einmal.",
         "Die Länge einer Aufnahme steht jetzt in einem Satz („64 Takte … = 2:45,5“), die Einzelheiten zeigt der Mauszeiger.",
-        "Neu: „Alle löschen“ bei den Aufnahmen – ein zweiter Klick bestätigt und sagt, wie viele noch nicht als Datei gespeichert sind."
+        "Neu: „Alle löschen“ bei den Aufnahmen – ein zweiter Klick bestätigt und sagt, wie viele noch nicht als Datei gespeichert sind.",
+        "Neu: „Leere Erde“ als erste Klangwelt – alles auf Anfang, ein schlichter, trockener Klang ohne Hall, Echo, Puls und Bordun, zum Selberbauen.",
+        "Die Spielhilfe unter „Presets“ lässt sich einklappen."
       ]
     },
     {
