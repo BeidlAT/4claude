@@ -10,7 +10,7 @@ sh "$D/../v2/mk.sh" /home/user/4claude/myzel mr >/dev/null   # (the MIDI harness
 cd "$D" || exit 1
 mkdir -p out
 rc=0
-for t in t-hx-proc t-hx-taps t-hx-clock t-hx-humus t-hx-ohr t-hx-ernten t-hx-grammar t-hx-persist t-hx-ui t-hx-werk t-hx-bake t-hx-seams t-hx-form t-hx-ctl t-hx-bew t-hx-oeko t-hx-fuzz t-hx-taumeln t-hx-rsw t-bow-wasm t-hx-wuchs t-hx-tempo t-hx-tools t-hx-mitspieler t-hx-gaertner t-hx-oeko2 t-hx-mikro t-hx-live t-hx-phone t-hx-guard t-hx-tap t-hx-tips t-hx-rueck t-hx-touche t-hx-raster t-hx-laenge t-hx-mixer t-hx-bearbeiten t-hx-soak; do
+for t in t-hx-proc t-hx-taps t-hx-clock t-hx-humus t-hx-ohr t-hx-ernten t-hx-grammar t-hx-persist t-hx-ui t-hx-werk t-hx-bake t-hx-seams t-hx-form t-hx-ctl t-hx-bew t-hx-oeko t-hx-fuzz t-hx-taumeln t-hx-rsw t-bow-wasm t-hx-wuchs t-hx-tempo t-hx-tools t-hx-mitspieler t-hx-gaertner t-hx-oeko2 t-hx-mikro t-hx-live t-hx-phone t-hx-guard t-hx-tap t-hx-tips t-hx-rueck t-hx-touche t-hx-raster t-hx-laenge t-hx-mixer t-hx-bearbeiten t-hx-vorhoeren t-hx-soak; do
   echo "== $t"
   node "$t.js" > "out/$t.log" 2>&1 || rc=1
   grep -c '^PASS' "out/$t.log" | sed 's/^/   PASS: /'

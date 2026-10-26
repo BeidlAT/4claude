@@ -70,7 +70,7 @@ function hxNtSet(L, k, v) {
   const was = Object.assign({ tr: 0, dens: 0, gq: 0, krebs: false, umk: false }, L.nt || {}), to = Object.assign({}, was);
   if (k === 'tr') to.tr = clamp(was.tr + v, -14, 14); else if (k === 'dens') to.dens = clamp(was.dens + v, -3, 2); else if (k === 'gq') to.gq = clamp(Math.round((was.gq + v) * 2) / 2, -1, 1);
   else if (k === 'krebs' || k === 'umk') to[k] = !was[k]; else if (k === 'zurueck') Object.assign(to, { tr: 0, dens: 0, gq: 0, krebs: false, umk: false });
-  const lk = L.key, put = (X, s) => { X.nt = Object.assign({}, s); X.wwhy = Object.assign(X.wwhy || {}, { nt: hxNtOn(X) }); hxWUpdate(X); hxSaveMeta(X.id); hxCardDirty(); hxRailDirty(); };
+  const lk = L.key, put = (X, s) => { X.nt = Object.assign({}, s); X.wwhy = Object.assign(X.wwhy || {}, { nt: hxNtOn(X) }); hxWUpdate(X, { now: 1 }); hxSaveMeta(X.id); hxCardDirty(); hxRailDirty(); };
   put(L, to);
   const lab = k === 'tr' ? 'Stufe ' + (to.tr > 0 ? '+' : '') + to.tr : k === 'dens' ? (to.dens < 0 ? 'dünner ' + -to.dens : to.dens > 0 ? 'dichter ' + to.dens : 'Dichte wie gespielt') : k === 'gq' ? (to.gq > 0 ? 'straffer' : to.gq < 0 ? 'lockerer' : 'Groove wie gespielt') : k === 'krebs' ? (to.krebs ? 'Krebs' : 'vorwärts') : k === 'umk' ? (to.umk ? 'Umkehrung' : 'nicht umgekehrt') : 'Noten wie gespielt';
   hxHist({ kind: 'wuchs', label: hxName(L) + ': ' + lab, undo() { const X = hxByKey(lk); if (X) put(X, was); }, redo() { const X = hxByKey(lk); if (X) put(X, to); } });
