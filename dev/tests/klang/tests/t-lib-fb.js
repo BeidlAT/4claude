@@ -47,7 +47,7 @@ const L = require('./dsplib'), K = require('./klh');
     M.openPanel('dev'); o.dev = (document.body.textContent.match(/leichtere Klänge wie [^.]*/) || [''])[0];
     return o;
   });
-  L.ok(/^Klangquelle: 28 Quellen in 5 Familien – Luft, Dunst, Holz, Erz und Erde\./.test(r.help[0]) && /^Halten: Die Quellen aus Luft und Dunst klingen/.test(r.help[1]) && /^Tippen und Wischen: Die Quellen aus Holz, Erz und Erde schlagen/.test(r.help[2]), 'Spielhilfe from the families: ' + r.help.map((t) => '„' + t.slice(0, 60) + '…“').join(' '));
+  L.ok(/^Klangquelle: 50 Quellen in 6 Familien – Luft, Dunst, Holz, Erz, Erde und Strom\./.test(r.help[0]) && /^Halten: Die Quellen aus Luft und Dunst klingen/.test(r.help[1]) && /^Tippen und Wischen: Die Quellen aus Holz, Erz, Erde und Strom schlagen/.test(r.help[2]), 'Spielhilfe from the families: ' + r.help.map((t) => '„' + t.slice(0, 60) + '…“').join(' '));
   L.ok(r.start === 'Mehrere gleichzeitig; Wischen schlägt Holz, Erz und Erde an' && /leichtere Klänge wie Hauch, Saite oder Membran/.test(r.dev), 'start screen „' + r.start + '“; Gerät „' + r.dev + '“');
   L.ok(!errors.length, 'no console errors (' + errors.slice(0, 2).join(' | ') + ')');
   await ctx.close(); await browser.close();

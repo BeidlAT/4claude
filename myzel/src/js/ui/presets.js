@@ -161,7 +161,150 @@ const PRESETS = [
     'dly.div': '0.75', 'dly.fb': 0.45, 'dly.pp': 0.8, 'dly.mix': 0.3, 'rev.size': 6, 'rev.mix': 0.45, 'mov.pan': 0.3, 'seq.bpm': 84,
     'l0.on': true, 'l0.eng': 'tie', 'l0.steps': 16, 'l0.puls': 3, 'l0.div': '0.25', 'l0.deg': 0, 'l0.oct': -1, 'l0.vol': 0.55, 'l0.bright': 0.3,
     'l1.on': false, 'l2.on': false, 'l3.on': false,
-    'bor.on': true, 'bor.oct': 1, 'bor.lvl': 0.2, 'bor.int': '1.5', 'bor.cut': 420 } },
+    'bor.on': true, 'bor.oct': 1, 'bor.lvl': 0.2, 'bor.int': '1.5', 'bor.cut': 420 } },  // ---- Klangbibliothek II (26.10.2026): 24 Presets für die 22 neuen Quellen, auch gemischt mit den alten ----
+  // Welt
+  { key: 'ganges', name: 'Ganges-Dämmerung', tags: 'Welt · Raga', desc: 'Sitar mit Tarab-Saiten über einem Tanpura-Bordun, Tabla im Teental.', v: {
+    'v.eng': 'sit', 't.root': '1', 't.scale': 'bhairav', 't.oct': 3, 't.range': 2, 'v.glide': 0.12,
+    'sit.jawari': 0.7, 'sit.tarab': 0.7, 'sit.chikari': 0.4, 'sit.nachklang': 0.6, 'tbl.syahi': 0.7, 'tbl.gamak': 0.7, 'tbl.nachklang': 0.45,
+    'bor.on': true, 'bor.oct': 2, 'bor.lvl': 0.3, 'bor.int': '1.5', 'bor.wave': 'sawtooth', 'bor.cut': 900, 'bor.breath': 0.5,
+    'rev.size': 4.5, 'rev.damp': 0.55, 'rev.mix': 0.35, 'dly.mix': 0.12, 'dly.fb': 0.3, 'mov.vib': 0, 'seq.bpm': 80, 'seq.swing': 0.08,
+    'l0.on': true, 'l0.eng': 'tbl', 'l0.steps': 16, 'l0.puls': 7, 'l0.rot': 1, 'l0.div': '0.25', 'l0.deg': 0, 'l0.oct': 0, 'l0.vol': 0.55, 'l0.bright': 0.6, 'l0.prob': 0.85,
+    'l1.on': true, 'l1.eng': 'tbl', 'l1.steps': 8, 'l1.puls': 3, 'l1.div': '0.5', 'l1.oct': -1, 'l1.vol': 0.5, 'l1.bright': 0.15, 'l1.prob': 0.9, 'l2.on': false, 'l3.on': false } },
+  { key: 'balinacht', name: 'Bali-Nacht', tags: 'Welt · Gamelan', desc: 'Schwebende Bronzepaare im Pelog, eine Handpan antwortet, Zikaden-Echo.', v: {
+    'v.eng': 'gml', 't.root': '3', 't.scale': 'pelog', 't.oct': 3, 't.range': 2,
+    'gml.ombak': 0.75, 'gml.schlegel': 0.55, 'gml.nachklang': 0.6, 'gml.daempfen': 0.5, 'hng.glanz': 0.55, 'hng.nachklang': 0.6, 'hng.schweben': 0.5,
+    'dly.div': '0.3333', 'dly.fb': 0.45, 'dly.pp': 0.9, 'dly.mix': 0.3, 'dly.tone': 4200, 'rev.size': 6, 'rev.mix': 0.45, 'seq.bpm': 92,
+    'l0.on': true, 'l0.eng': 'gml', 'l0.steps': 16, 'l0.puls': 9, 'l0.div': '0.25', 'l0.walk': 0.5, 'l0.oct': 1, 'l0.vol': 0.4, 'l0.bright': 0.7,
+    'l1.on': true, 'l1.eng': 'hng', 'l1.steps': 12, 'l1.puls': 5, 'l1.div': '0.5', 'l1.deg': 2, 'l1.vol': 0.45, 'l1.bright': 0.3,
+    'l2.on': true, 'l2.eng': 'gml', 'l2.steps': 8, 'l2.puls': 2, 'l2.div': '1', 'l2.oct': -1, 'l2.vol': 0.5, 'l2.bright': 0.2, 'l3.on': false } },
+  { key: 'traumzeit', name: 'Traumzeit', tags: 'Welt · Drone', desc: 'Didgeridoo mit Zirkularatmung und Knurren, Klangstäbe im Kreis.', v: {
+    'v.eng': 'did', 't.root': '2', 't.scale': 'mpent', 't.oct': 1, 't.range': 2,
+    'did.rohr': 0.7, 'did.knurren': 0.35, 'did.atem': 0.7, 'did.rauheit': 0.35, 'jrg.holz': 0.6,
+    'rev.size': 3.5, 'rev.damp': 0.6, 'rev.mix': 0.3, 'dly.div': '0.5', 'dly.fb': 0.3, 'dly.mix': 0.15, 'seq.bpm': 104, 'seq.swing': 0.12,
+    'l0.on': true, 'l0.eng': 'jrg', 'l0.steps': 16, 'l0.puls': 6, 'l0.div': '0.25', 'l0.oct': 2, 'l0.vol': 0.4, 'l0.bright': 0.8, 'l0.prob': 0.9,
+    'l1.on': true, 'l1.eng': 'mem', 'l1.steps': 8, 'l1.puls': 3, 'l1.oct': 0, 'l1.vol': 0.45, 'l1.bright': 0.25, 'l2.on': false, 'l3.on': false } },
+  { key: 'steppenwind', name: 'Steppenwind', tags: 'Welt · Obertöne', desc: 'Maultrommel singt Obertonmelodien über einem Kehlgesang-Bordun, Wind dazu.', v: {
+    'v.eng': 'mtr', 't.root': '9', 't.scale': 'harm', 't.oct': 2, 't.range': 2,
+    'mtr.zupfen': 0.45, 'mtr.mund': 0.75, 'mtr.atem': 0.4, 'mtr.klang': 0.6,
+    'bor.on': true, 'bor.oct': 1, 'bor.lvl': 0.3, 'bor.int': '1', 'bor.wave': 'organ', 'bor.cut': 700, 'bor.breath': 0.6,
+    'rev.size': 7, 'rev.mix': 0.4, 'dly.div': '0.75', 'dly.fb': 0.35, 'dly.mix': 0.2, 'seq.bpm': 96,
+    'l0.on': false, 'l1.on': true, 'l1.eng': 'hau', 'l1.steps': 12, 'l1.puls': 3, 'l1.oct': 1, 'l1.vol': 0.2, 'l1.bright': 0.7, 'l2.on': false, 'l3.on': false } },
+  { key: 'kirschbluete', name: 'Kirschblüte', tags: 'Welt · Japan', desc: 'Koto im Hirajōshi – schieb den Finger hoch, die Hand drückt hinter dem Steg nach.', v: {
+    'v.eng': 'kto', 't.root': '4', 't.scale': 'hira', 't.oct': 3, 't.range': 2,
+    'kto.nagel': 0.7, 'kto.seide': 0.55, 'kto.nachklang': 0.6, 'kto.druck': 0.8, 'hng.glanz': 0.4,
+    'rev.size': 5, 'rev.damp': 0.4, 'rev.mix': 0.4, 'dly.div': '0.75', 'dly.fb': 0.35, 'dly.mix': 0.22, 'seq.bpm': 70,
+    'l0.on': false, 'l1.on': false, 'l2.on': true, 'l2.eng': 'kto', 'l2.steps': 9, 'l2.puls': 4, 'l2.div': '0.5', 'l2.walk': 0.6, 'l2.vol': 0.35, 'l2.bright': 0.45,
+    'l3.on': true, 'l3.eng': 'hng', 'l3.steps': 13, 'l3.puls': 3, 'l3.div': '1', 'l3.oct': -1, 'l3.vol': 0.35, 'l3.bright': 0.2 } },
+  { key: 'handpankreis', name: 'Handpan-Kreis', tags: 'Welt · Meditation', desc: 'Ein Stahlfeld unter der Hand, ein zweites spielt Kreise im Akebono, warmer Raum.', v: {
+    'v.eng': 'hng', 't.root': '2', 't.scale': 'akebono', 't.oct': 3, 't.range': 2,
+    'hng.glanz': 0.5, 'hng.nachklang': 0.7, 'hng.koerper': 0.65, 'hng.schweben': 0.55,
+    'rev.size': 6, 'rev.damp': 0.5, 'rev.mix': 0.45, 'cho.mix': 0.15, 'dly.div': '0.75', 'dly.fb': 0.3, 'dly.mix': 0.18, 'seq.bpm': 76,
+    'l0.on': false, 'l1.on': true, 'l1.eng': 'hng', 'l1.steps': 11, 'l1.puls': 4, 'l1.div': '0.5', 'l1.walk': 0.7, 'l1.vol': 0.4, 'l1.bright': 0.35, 'l2.on': false, 'l3.on': false } },
+  // Sphäre
+  { key: 'nordlichtfeld', name: 'Nordlichtfeld', tags: 'Ambient · Spektral', desc: 'Lichtvorhänge wandern über 48 Teiltöne, ein Glockenschimmer fällt hinein.', v: {
+    'v.eng': 'nrd', 'v.layer': 'glo', 'v.layerLvl': 0.12, 'v.layerInt': 24, 't.root': '7', 't.scale': 'lyd', 't.oct': 2, 't.range': 3,
+    'nrd.vorhang': 0.6, 'nrd.schimmer': 0.55, 'nrd.anstieg': 0.6, 'glo.ratio': 3.5, 'glo.index': 1.5, 'glo.decay': 5,
+    'cho.mix': 0.25, 'dly.div': '1.5', 'dly.fb': 0.55, 'dly.mix': 0.3, 'dly.tone': 5000, 'rev.size': 12, 'rev.damp': 0.35, 'rev.mix': 0.6, 'seq.bpm': 60,
+    'l0.on': false, 'l1.on': false, 'l2.on': false, 'l3.on': false, 'bor.on': true, 'bor.oct': 1, 'bor.lvl': 0.2, 'bor.int': '1.5', 'bor.cut': 400 } },
+  { key: 'schimmerdom', name: 'Schimmerdom', tags: 'Ambient · Shimmer', desc: 'Ein Raum, der jede Note eine Oktave höher zurückwirft – er wächst nach oben.', v: {
+    'v.eng': 'sht', 't.root': '0', 't.scale': 'dpent', 't.oct': 3, 't.range': 2,
+    'sht.schimmer': 0.75, 'sht.raum': 0.8, 'sht.quinte': 0.3, 'sht.farbe': 0.45,
+    'rev.size': 9, 'rev.mix': 0.35, 'dly.mix': 0.1, 'cho.mix': 0.2, 'mov.drift': 8, 'seq.bpm': 56,
+    'l0.on': false, 'l1.on': false, 'l2.on': false, 'l3.on': true, 'l3.eng': 'sht', 'l3.steps': 13, 'l3.puls': 2, 'l3.div': '1', 'l3.oct': -1, 'l3.vol': 0.35, 'l3.bright': 0.3 } },
+  { key: 'aetherfunk', name: 'Ätherfunk', tags: 'Sphärisch · Retro', desc: 'Ondes Martenot mit Palme-Diffuseur, gleitend, Vibrato aus der Hand.', v: {
+    'v.eng': 'ond', 't.root': '9', 't.scale': 'free', 't.oct': 3, 't.range': 2, 'v.glide': 0.25,
+    'ond.palme': 0.65, 'ond.metall': 0.2, 'ond.vibrato': 0.5, 'ond.klang': 0.3,
+    'rev.size': 6, 'rev.mix': 0.45, 'dly.div': '1', 'dly.fb': 0.4, 'dly.mix': 0.25, 'dly.wow': 0.3, 'seq.bpm': 66,
+    'l0.on': false, 'l1.on': false, 'l2.on': false, 'l3.on': false } },
+  { key: 'tiefseegesang', name: 'Tiefseegesang', tags: 'Ambient · Natur', desc: 'Wale rufen aus der Ferne, gedämpft vom Wasser; ein Herzschlag aus der Tiefe.', v: {
+    'v.eng': 'wal', 't.root': '2', 't.scale': 'dor', 't.oct': 2, 't.range': 3,
+    'wal.bogen': 0.7, 'wal.dauer': 0.6, 'wal.knarren': 0.35, 'wal.tiefe': 0.75,
+    'rev.size': 13, 'rev.damp': 0.7, 'rev.mix': 0.6, 'dly.div': '1.5', 'dly.fb': 0.5, 'dly.mix': 0.25, 'dly.tone': 1600, 'seq.bpm': 52,
+    'l0.on': true, 'l0.eng': 'tie', 'l0.steps': 16, 'l0.puls': 2, 'l0.div': '0.5', 'l0.oct': -1, 'l0.vol': 0.45, 'l0.bright': 0.15,
+    'l1.on': false, 'l2.on': false, 'l3.on': true, 'l3.eng': 'trp', 'l3.steps': 11, 'l3.puls': 2, 'l3.div': '1', 'l3.oct': 1, 'l3.vol': 0.25, 'l3.bright': 0.4 } },
+  // Psyche
+  { key: 'endlosetreppe', name: 'Endlose Treppe', tags: 'Psychedelisch · Illusion', desc: 'Shepard-Glissando: es steigt und steigt und kommt nie an. Unten fällt es.', v: {
+    'v.eng': 'stp', 't.root': '0', 't.scale': 'whole', 't.oct': 2, 't.range': 2,
+    'stp.tempo': 0.45, 'stp.spanne': 0.7, 'stp.atmen': 0.5, 'stp.ruhe': 0.3,
+    'pha.mix': 0.3, 'pha.rate': 0.05, 'rev.size': 8, 'rev.mix': 0.5, 'dly.div': '0.75', 'dly.fb': 0.5, 'dly.mix': 0.3, 'seq.bpm': 60,
+    'l0.on': false, 'l1.on': false, 'l2.on': false, 'l3.on': false } },
+  { key: 'seltsamerattraktor', name: 'Seltsamer Attraktor', tags: 'Experimentell · Chaos', desc: 'Ein Rössler-System auf der Note: unten ein Ton, nach oben Periodenverdopplung bis ins Chaos.', v: {
+    'v.eng': 'atr', 't.root': '5', 't.scale': 'phrdom', 't.oct': 2, 't.range': 2,
+    'atr.mischung': 0.45, 'atr.farbe': 0.6, 'atr.drift': 0.4, 'atr.tiefe': 0.5,
+    'drv.type': 'fold', 'drv.amt': 0.25, 'drv.mix': 0.3, 'flt.lfoRate': 0.11, 'flt.lfoDepth': 1.4, 'rev.size': 5, 'rev.mix': 0.4, 'dly.div': '0.3333', 'dly.fb': 0.6, 'dly.mix': 0.3, 'seq.bpm': 90,
+    'l0.on': false, 'l1.on': true, 'l1.eng': 'bnt', 'l1.steps': 16, 'l1.puls': 5, 'l1.div': '0.25', 'l1.oct': 1, 'l1.vol': 0.3, 'l1.bright': 0.7, 'l2.on': false, 'l3.on': false } },
+  { key: 'tunnelblick', name: 'Tunnelblick', tags: 'Psychedelisch · Flanger', desc: 'Ein Düsenstrahl durch die gestimmte Röhre – nach oben saugt der Tunnel.', v: {
+    'v.eng': 'tnl', 't.root': '7', 't.scale': 'mpent', 't.oct': 2, 't.range': 3,
+    'tnl.tempo': 0.25, 'tnl.tiefe': 0.85, 'tnl.rauschen': 0.5, 'tnl.breite': 0.7,
+    'rev.size': 7, 'rev.mix': 0.45, 'dly.div': '0.75', 'dly.fb': 0.55, 'dly.mix': 0.3, 'dly.wow': 0.4, 'mov.pan': 0.5, 'seq.bpm': 72,
+    'l0.on': true, 'l0.eng': 'gbs', 'l0.steps': 16, 'l0.puls': 3, 'l0.div': '0.5', 'l0.oct': -1, 'l0.vol': 0.45, 'l0.bright': 0.3, 'l1.on': false, 'l2.on': false, 'l3.on': false } },
+  { key: 'zeitlupe', name: 'Zeitlupe', tags: 'Ambient · Psychedelisch', desc: 'Schimmer und Nordlicht ineinander, alles in halber Geschwindigkeit, leierndes Band.', v: {
+    'v.eng': 'sht', 'v.layer': 'nrd', 'v.layerLvl': 0.4, 'v.layerInt': -12, 't.root': '2', 't.scale': 'hira', 't.oct': 3, 't.range': 2,
+    'sht.schimmer': 0.55, 'sht.raum': 0.7, 'sht.farbe': 0.35, 'nrd.vorhang': 0.3, 'nrd.anstieg': 0.8,
+    'dly.div': '2', 'dly.fb': 0.6, 'dly.mix': 0.35, 'dly.wow': 0.7, 'dly.tone': 2200, 'rev.size': 11, 'rev.mix': 0.55, 'cho.mix': 0.35, 'cho.rate': 0.1, 'seq.bpm': 40,
+    'l0.on': false, 'l1.on': false, 'l2.on': false, 'l3.on': false } },
+  // Strom, LoFi, Trap
+  { key: 'westkuestenbongos', name: 'Westküsten-Bongos', tags: 'Experimentell · Modular', desc: 'Gefaltete FM-Pings durch das Lowpass-Gate, polyrhythmisch – der Buchla-Bongo.', v: {
+    'v.eng': 'wkg', 't.root': '0', 't.scale': 'dor', 't.oct': 3, 't.range': 3,
+    'wkg.faltung': 0.5, 'wkg.fm': 0.4, 'wkg.verhaeltnis': 0.5, 'wkg.vaktrol': 0.35,
+    'dly.div': '0.3333', 'dly.fb': 0.45, 'dly.pp': 1, 'dly.mix': 0.3, 'rev.size': 4, 'rev.mix': 0.35, 'seq.bpm': 112,
+    'l0.on': true, 'l0.eng': 'wkg', 'l0.steps': 16, 'l0.puls': 7, 'l0.div': '0.25', 'l0.walk': 0.6, 'l0.vol': 0.45, 'l0.bright': 0.5,
+    'l1.on': true, 'l1.eng': 'wkg', 'l1.steps': 12, 'l1.puls': 5, 'l1.div': '0.25', 'l1.oct': -1, 'l1.vol': 0.45, 'l1.bright': 0.2,
+    'l2.on': true, 'l2.eng': 'wkg', 'l2.steps': 9, 'l2.puls': 4, 'l2.div': '0.5', 'l2.oct': 1, 'l2.vol': 0.3, 'l2.bright': 0.9, 'l3.on': false } },
+  { key: 'kurzschluss', name: 'Kurzschluss', tags: 'Glitch · Experimentell', desc: 'Ein verbogenes Spielzeug springt, stottert und zerbröselt, dazu Chip-Funken.', v: {
+    'v.eng': 'bnt', 't.root': '6', 't.scale': 'chrom', 't.oct': 3, 't.range': 2,
+    'bnt.bits': 0.55, 'bnt.sprung': 0.6, 'bnt.stottern': 0.55, 'bnt.kreuz': 0.5, 'bit.arpeggio': 0.6,
+    'dly.div': '0.25', 'dly.fb': 0.5, 'dly.mix': 0.25, 'rev.size': 2, 'rev.mix': 0.25, 'seq.bpm': 140,
+    'l0.on': true, 'l0.eng': 'bit', 'l0.steps': 16, 'l0.puls': 9, 'l0.div': '0.125', 'l0.oct': 1, 'l0.vol': 0.25, 'l0.bright': 0.8, 'l0.prob': 0.6,
+    'l1.on': true, 'l1.eng': 'bnt', 'l1.steps': 7, 'l1.puls': 3, 'l1.div': '0.25', 'l1.vol': 0.4, 'l1.bright': 0.9, 'l2.on': false, 'l3.on': false } },
+  { key: 'kassettendeck', name: 'Kassettendeck', tags: 'LoFi · Beats', desc: 'E-Piano auf ausgeleiertem Band, Hi-Hats im Swing, ein weicher 808 darunter.', v: {
+    'v.eng': 'kas', 't.root': '5', 't.scale': 'dor', 't.oct': 3, 't.range': 2,
+    'kas.alter': 0.6, 'kas.glocke': 0.35, 'kas.nachklang': 0.55, 'kas.waerme': 0.6, 'hht.ton': 0.3, 'hht.rauschen': 0.4, 'gbs.knack': 0.3, 'gbs.ausklang': 0.4, 'gbs.ton': 0.3,
+    'flt.freq': 6500, 'cho.mix': 0.25, 'dly.div': '0.75', 'dly.fb': 0.3, 'dly.mix': 0.15, 'dly.wow': 0.5, 'rev.size': 2.5, 'rev.mix': 0.25, 'seq.bpm': 82, 'seq.swing': 0.32,
+    'l0.on': true, 'l0.eng': 'hht', 'l0.steps': 16, 'l0.puls': 8, 'l0.div': '0.25', 'l0.vol': 0.3, 'l0.bright': 0.25, 'l0.prob': 0.9,
+    'l1.on': true, 'l1.eng': 'gbs', 'l1.steps': 16, 'l1.puls': 3, 'l1.div': '0.25', 'l1.oct': -2, 'l1.vol': 0.5, 'l1.bright': 0.2, 'l2.on': false, 'l3.on': false } },
+  { key: 'achtbithimmel', name: 'Achtbit-Himmel', tags: 'Chiptune · Retro', desc: 'Pulswellen-Arpeggios flimmern über einem Dreiecksbass, Tracker-Echo.', v: {
+    'v.eng': 'bit', 't.root': '0', 't.scale': 'lyd', 't.oct': 3, 't.range': 2,
+    'bit.arpeggio': 0.55, 'bit.leben': 0.45, 'bit.dreieck': 0.5, 'bit.abklingen': 0.35,
+    'dly.div': '0.75', 'dly.fb': 0.4, 'dly.pp': 0.8, 'dly.mix': 0.25, 'rev.size': 2.5, 'rev.mix': 0.25, 'seq.bpm': 128,
+    'l0.on': true, 'l0.eng': 'bit', 'l0.steps': 16, 'l0.puls': 6, 'l0.div': '0.25', 'l0.walk': 0.7, 'l0.oct': 1, 'l0.vol': 0.3, 'l0.bright': 0.8,
+    'l1.on': true, 'l1.eng': 'bit', 'l1.steps': 8, 'l1.puls': 3, 'l1.div': '0.5', 'l1.oct': -1, 'l1.vol': 0.35, 'l1.bright': 0.1, 'l2.on': false, 'l3.on': false } },
+  { key: 'mitternachtstrap', name: 'Mitternachtstrap', tags: 'Trap · Dunkel', desc: 'Gleitender 808 mit Knurren, Hi-Hat-Wirbel, dunkle Glocke im Phrygischen.', v: {
+    'v.eng': 'gbs', 't.root': '1', 't.scale': 'phrdom', 't.oct': 1, 't.range': 2,
+    'gbs.knack': 0.55, 'gbs.ausklang': 0.65, 'gbs.gleiten': 0.5, 'gbs.ton': 0.55, 'hht.ton': 0.55, 'hht.wirbel': 0.8, 'hht.rauschen': 0.2, 'hht.abwuergen': 1,
+    'rev.size': 3, 'rev.mix': 0.2, 'dly.div': '0.75', 'dly.fb': 0.3, 'dly.mix': 0.12, 'seq.bpm': 140, 'seq.swing': 0.04,
+    'l0.on': true, 'l0.eng': 'hht', 'l0.steps': 16, 'l0.puls': 11, 'l0.div': '0.25', 'l0.oct': 2, 'l0.vol': 0.35, 'l0.bright': 0.2, 'l0.prob': 0.85,
+    'l1.on': true, 'l1.eng': 'hht', 'l1.steps': 32, 'l1.puls': 3, 'l1.rot': 7, 'l1.div': '0.125', 'l1.oct': 2, 'l1.vol': 0.25, 'l1.bright': 0.8,
+    'l2.on': true, 'l2.eng': 'glo', 'l2.steps': 16, 'l2.puls': 2, 'l2.div': '0.5', 'l2.deg': 4, 'l2.oct': 1, 'l2.vol': 0.25, 'l2.bright': 0.3, 'l3.on': false } },
+  { key: 'silbenregen', name: 'Silbenregen', tags: 'Vocal Chops · Future', desc: 'Gehackte Silben auf dem Puls, die Höhe wählt den Vokal – ta, ka, si, cho.', v: {
+    'v.eng': 'vox', 't.root': '9', 't.scale': 'mpent', 't.oct': 3, 't.range': 2,
+    'vox.konsonant': 0.45, 'vox.hauch': 0.3, 'vox.groesse': 0.65, 'vox.vibrato': 0.35,
+    'cho.mix': 0.3, 'dly.div': '0.3333', 'dly.fb': 0.5, 'dly.pp': 1, 'dly.mix': 0.3, 'rev.size': 4, 'rev.mix': 0.4, 'seq.bpm': 100, 'seq.swing': 0.15,
+    'l0.on': true, 'l0.eng': 'vox', 'l0.steps': 16, 'l0.puls': 7, 'l0.div': '0.25', 'l0.walk': 0.6, 'l0.vol': 0.35, 'l0.bright': 0.6,
+    'l1.on': true, 'l1.eng': 'gbs', 'l1.steps': 8, 'l1.puls': 3, 'l1.oct': -2, 'l1.vol': 0.4, 'l1.bright': 0.15, 'l2.on': false, 'l3.on': false } },
+  { key: 'spieluhrtraum', name: 'Spieluhrtraum', tags: 'LoFi · Nostalgie', desc: 'Eine Spieluhr, deren Feder abläuft – auf leierndem Band, im großen Raum.', v: {
+    'v.eng': 'spu', 't.root': '4', 't.scale': 'dpent', 't.oct': 4, 't.range': 2,
+    'spu.glanz': 0.5, 'spu.nachklang': 0.6, 'spu.uhrwerk': 0.45, 'spu.kasten': 0.55,
+    'dly.div': '1.5', 'dly.fb': 0.45, 'dly.mix': 0.25, 'dly.wow': 0.65, 'dly.tone': 2800, 'rev.size': 8, 'rev.mix': 0.5, 'seq.bpm': 66,
+    'l0.on': false, 'l1.on': false, 'l2.on': true, 'l2.eng': 'spu', 'l2.steps': 12, 'l2.puls': 5, 'l2.div': '0.5', 'l2.walk': 0.7, 'l2.vol': 0.35, 'l2.bright': 0.3, 'l3.on': false } },
+  { key: 'chillhopabend', name: 'Chillhop-Abend', tags: 'LoFi · Jazz', desc: 'Weiches E-Piano mit Bellen oben, Koto-Tupfer, Hi-Hats und Gleitbass im Swing.', v: {
+    'v.eng': 'kas', 't.root': '2', 't.scale': 'dor', 't.oct': 3, 't.range': 2,
+    'kas.alter': 0.4, 'kas.glocke': 0.5, 'kas.nachklang': 0.6, 'kas.waerme': 0.45, 'kto.nagel': 0.4, 'gbs.knack': 0.25, 'gbs.ausklang': 0.35, 'gbs.ton': 0.25, 'hht.ton': 0.25,
+    'cho.mix': 0.3, 'dly.div': '0.75', 'dly.fb': 0.25, 'dly.mix': 0.15, 'dly.wow': 0.35, 'rev.size': 2.2, 'rev.mix': 0.25, 'seq.bpm': 86, 'seq.swing': 0.28,
+    'l0.on': true, 'l0.eng': 'hht', 'l0.steps': 16, 'l0.puls': 6, 'l0.div': '0.25', 'l0.vol': 0.25, 'l0.bright': 0.4,
+    'l1.on': true, 'l1.eng': 'gbs', 'l1.steps': 16, 'l1.puls': 4, 'l1.div': '0.25', 'l1.oct': -2, 'l1.vol': 0.45, 'l1.bright': 0.1,
+    'l2.on': true, 'l2.eng': 'kto', 'l2.steps': 7, 'l2.puls': 2, 'l2.div': '0.5', 'l2.deg': 4, 'l2.oct': 1, 'l2.vol': 0.3, 'l2.bright': 0.5, 'l3.on': false } },
+  // Mischungen mit den alten Quellen
+  { key: 'pilzorakel', name: 'Pilzorakel', tags: 'Psychedelisch · Ritual', desc: 'Der Attraktor raunt unter Gamelan-Paaren, Moder gärt, alles kreist im Raum.', v: {
+    'v.eng': 'atr', 'v.layer': 'gml', 'v.layerLvl': 0.3, 'v.layerInt': 12, 't.root': '3', 't.scale': 'pelog', 't.oct': 2, 't.range': 2,
+    'atr.mischung': 0.25, 'atr.farbe': 0.45, 'atr.drift': 0.5, 'gml.ombak': 0.8, 'gml.nachklang': 0.7,
+    'mov.pan': 0.6, 'mov.panRate': 0.09, 'pha.mix': 0.35, 'pha.rate': 0.07, 'rev.size': 10, 'rev.mix': 0.55, 'dly.div': '1.5', 'dly.fb': 0.5, 'dly.mix': 0.3, 'seq.bpm': 64,
+    'l0.on': false, 'l1.on': true, 'l1.eng': 'mdr', 'l1.steps': 11, 'l1.puls': 3, 'l1.div': '0.5', 'l1.vol': 0.35, 'l1.bright': 0.6, 'l2.on': false, 'l3.on': false } },
+  { key: 'polarfunk', name: 'Polarfunk', tags: 'Ambient · Experimentell', desc: 'Ätherwelle über dem Nordlicht, Schaltkreis-Störungen wie Funk aus dem Eis.', v: {
+    'v.eng': 'ond', 'v.layer': 'nrd', 'v.layerLvl': 0.35, 'v.layerInt': -12, 't.root': '11', 't.scale': 'lyd', 't.oct': 3, 't.range': 2, 'v.glide': 0.3,
+    'ond.palme': 0.5, 'ond.metall': 0.35, 'ond.vibrato': 0.45, 'nrd.vorhang': 0.5, 'bnt.bits': 0.7, 'bnt.sprung': 0.3, 'bnt.stottern': 0.5,
+    'rev.size': 12, 'rev.mix': 0.55, 'dly.div': '1', 'dly.fb': 0.5, 'dly.mix': 0.3, 'dly.wow': 0.4, 'seq.bpm': 58,
+    'l0.on': false, 'l1.on': false, 'l2.on': false, 'l3.on': true, 'l3.eng': 'bnt', 'l3.steps': 13, 'l3.puls': 3, 'l3.div': '0.25', 'l3.oct': 1, 'l3.vol': 0.2, 'l3.bright': 0.5, 'l3.prob': 0.5 } },
 ];
 let presetCards = [], userListEl, undoBtn, installBtn, installEvt = null, mutAmt = 0.35;
 async function installApp() {

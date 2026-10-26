@@ -15,7 +15,8 @@ const BOOL = (id, label, d, o = {}) => def(id, Object.assign({ kind: 'bool', lab
 // library's short probe), rich (what level 3 adds). Its order within a family is the order of ‹ ›, of the MIDI
 // stepping and of the library. A new source = one line here + its ENGINES entry + its glyph #g-<key> in the sprite.
 const FAM = [['luft', 'Luft', 'Atem, Wind, Stimmen, Funken'], ['dunst', 'Dunst', 'Wolken aus Teilchen und Zufall'],
-  ['holz', 'Holz', 'Saiten, Stäbe, Bogen'], ['erz', 'Erz', 'Metall, das nachklingt'], ['erde', 'Erde', 'Felle, Tiefe, Fäulnis, Wasser']];
+  ['holz', 'Holz', 'Saiten, Stäbe, Bogen'], ['erz', 'Erz', 'Metall, das nachklingt'], ['erde', 'Erde', 'Felle, Tiefe, Fäulnis, Wasser'],
+  ['strom', 'Strom', 'Schaltungen, Band, Maschinen']];
 const FAM_NAME = Object.fromEntries(FAM.map((f) => [f[0], f[1]]));
 const ENG_META = {
   hau: { n: 'Hauch', fam: 'luft', art: 'haelt', i: 'Gefiltertes Rauschen – von Wind bis Pfeifen', tags: 'rauschen noise wind pfeifen atem breath luft' },
@@ -25,27 +26,49 @@ const ENG_META = {
   boe: { n: 'Böe', fam: 'luft', art: 'haelt', i: 'Äolsharfe – Saiten rasten im Wind ein und hängen nach', tags: 'äolsharfe windharfe aeolian harp wind böe gust sturm storm saiten strings obertöne harmonics einrasten lock-in akkord chord', hoehe: 'Windstärke', regen: 0, hear: { gate: 1.0 }, rich: 'Stufe 3: vierzehn Saiten, die ungeraden links, die geraden rechts, ein zweiter Wind' },
   elm: { n: 'Elmsfeuer', fam: 'luft', art: 'beides', i: 'Brummen, Knistern, Lichtbogen – der Zap im Puls', tags: 'elektrisch strom netz brummen knistern funke lichtbogen tesla plasma zap electric arc spark hum crackle', hoehe: 'Spannung', hear: { gate: 0.9 }, rich: 'Stufe 3: Knistern und Lichtbogen auf beiden Seiten' },
   khl: { n: 'Kehlchen', fam: 'luft', art: 'haelt', i: 'Vogelkehle – Lippen, die ab einer Schwelle singen', tags: 'vogel vogelgesang syrinx kehle lippen amsel drossel rotkehlchen rabe zwitschern triller ruf chip pfeifen bird birdsong song trill chirp call whistle', hoehe: 'Kehldruck', regen: 0, hear: { gate: 1.0 }, rich: 'Stufe 3: beide Kehlseiten, links und rechts auf einem Luftsack – zweistimmig, mit Schwebung' },
+  mtr: { n: 'Maultrommel', fam: 'luft', art: 'beides', i: 'Stahlzunge im Mund – die Zunge spielt Obertöne', tags: 'maultrommel maultrommel jaw harp jew harp mundharfe khomus kubing doromb morsing oberton overtone twang boing lamelle zunge mund psychedelisch', hoehe: 'Mundresonanz', hear: { gate: 1.2 }, rich: 'Stufe 3: wie Stufe 1 (der Mund ist eine Stimme)' },
+  ond: { n: 'Ätherwelle', fam: 'luft', art: 'haelt', i: 'Ondes Martenot – vier Wellen, Palme und Gongfeder', tags: 'ondes martenot theremin ätherwelle elektronisch vintage sci-fi palme diffuseur gong welle sinus vibrato ribbon band sphärisch', hoehe: 'Welle (Onde → Gambe)', regen: 0, hear: { gate: 1.2 }, rich: 'Stufe 3: die Palme-Saiten im Stereo' },
+  vox: { n: 'Silbe', fam: 'luft', art: 'beides', i: 'Gesungene Silbe: Konsonant, Vokal, Vocal Chop', tags: 'silbe vox vocal chop chops stimme voice gesang formant vokal konsonant singen choir lofi trap future', hoehe: 'Vokal (u o a e i)', regen: 1, hear: { gate: 0.8 }, rich: 'Stufe 3: zwei Sänger, leicht verschieden' },
   neb: { n: 'Nebel', fam: 'dunst', art: 'haelt', i: 'Schwebende Flächen aus verstimmten Oszillatoren', tags: 'fläche pad drone wolke oszillator verstimmt ambient synth' },
   kor: { n: 'Körner', fam: 'dunst', art: 'haelt', i: 'Granulare Wolken aus winzigen Klangkörnern', tags: 'granular grain körner textur wolke cloud' },
   swm: { n: 'Schwarm', fam: 'dunst', art: 'haelt', i: 'Fremdartiger Insektenschwarm – die Fingerhöhe weckt das Chaos', tags: 'insekten schwarm chaos fm swarm insect' },
   amo: { n: 'Amöbe', fam: 'dunst', art: 'haelt', i: 'Bass aus Zufall – jede Welle anders, der Ton bleibt', tags: 'gendy gendyn xenakis stochastisch zufall vieleck polygon wellenform bass tief stochastic random waveform', hoehe: 'Unruhe', regen: 0, hear: { gate: 1.2 }, rich: 'Stufe 3: zwei Amöben links und rechts, ±3 Cent, feiner gerechnet' },
+  nrd: { n: 'Nordlicht', fam: 'dunst', art: 'haelt', i: 'Additive Fläche unter wandernden Lichtvorhängen', tags: 'nordlicht aurora additiv additive teiltöne partials fläche pad drone ambient sphärisch spectral spektral schimmer glas', hoehe: 'Helligkeit', regen: 0, hear: { gate: 1.6 }, rich: 'Stufe 3: 64 Teiltöne, links und rechts verteilt' },
+  sht: { n: 'Schimmer', fam: 'dunst', art: 'haelt', i: 'Fläche im eigenen Raum, der in Oktaven aufsteigt', tags: 'shimmer schimmer hall reverb oktave octave pad fläche ambient sphärisch himmel halo kathedrale', hoehe: 'Schimmer', regen: 0, hear: { gate: 2.0 }, rich: 'Stufe 3: wie Stufe 1 (der Raum ist schon stereo)' },
+  stp: { n: 'Endlostreppe', fam: 'dunst', art: 'haelt', i: 'Shepard-Glissando – steigt oder fällt ohne Ende', tags: 'shepard risset glissando endlos treppe illusion psychedelisch steigen fallen paradox escher experimentell', hoehe: 'Richtung und Tempo', regen: 0, hear: { gate: 1.6 }, rich: 'Stufe 3: die Stimmen links und rechts verteilt' },
+  atr: { n: 'Attraktor', fam: 'dunst', art: 'haelt', i: 'Seltsamer Attraktor – Ton, Verdopplung, Chaos', tags: 'attraktor attractor rössler chaos periodenverdopplung period doubling experimentell avantgarde nichtlinear lorenz', hoehe: 'Chaos', regen: 0, hear: { gate: 1.2 }, rich: 'Stufe 3: die andere Seite des Orbits rechts' },
+  tnl: { n: 'Tunnel', fam: 'dunst', art: 'haelt', i: 'Gestimmtes Rohr mit Durchnull-Flanger – Düsenflug', tags: 'tunnel flanger through-zero düse jet psychedelisch sweep rauschen kamm comb rohr wind experimentell', hoehe: 'Sog', regen: 0, hear: { gate: 1.6 }, rich: 'Stufe 3: rechts ein gedrehter Sweep' },
   hrz: { n: 'Harz', fam: 'holz', art: 'haelt', i: 'Gestrichenes Glas, Schale, Stab – Druck ist Höhe', tags: 'gestrichen bogen reiben glas weinglas glasharfe klangschale singing bowl stab daxophon zunge waterphone teich wasser friction bow bowed', hoehe: 'Bogendruck', hear: { gate: 1.2 }, rich: 'Stufe 3: mehr Moden, bei Glas und Schale jede als schwebendes Paar, echtes Stereo, beim Teich ein dritter Stab' },
   shn: { n: 'Sehne', fam: 'holz', art: 'beides', i: 'Lebende Saite – Handkante, Flageolett, E-Bow, Steg', tags: 'saite string lebendig gleiten slide glissando handkante handballen dämpfen palm mute flageolett harmonics ebow e-bow sustain steg bridge jawari tanpura sitar sirren waveguide zupfen pluck', hoehe: 'Hand', hear: { gate: 1.2 }, rich: 'Stufe 3: zwei Saiten links und rechts (±3 Cent) und ein Holzkorpus' },
   zpf: { n: 'Zapfen', fam: 'holz', art: 'beides', i: 'Kratzen, das zum Ton wird – Rhythmus unterm Finger', tags: 'kratzen schaben güiro guiro ratsche schnarre zapfen kiefernzapfen schuppen holz panzer chitin kürbis fels stein knarren stick-slip rhythmus scrape rasp ratchet creak', hoehe: 'Kratzrate', hear: { gate: 1.0 }, rich: 'Stufe 3: sechs Moden statt vier, echtes Stereo' },
   rnk: { n: 'Ranke', fam: 'holz', art: 'beides', i: 'Ein Ring aus Massen, den der Finger anstößt', tags: 'scanned synthesis masse feder hammer ring', hoehe: 'Hammerbreite', hear: { gate: 1.2 }, rich: 'Stufe 3: mehr Massen, zweiter Abtastkopf' },
   sai: { n: 'Saite', fam: 'holz', art: 'schlaegt', i: 'Gezupfte Saiten – leicht, viele Stimmen zugleich', tags: 'saite string karplus zupfen pluck gitarre guitar harfe harp viele stimmen' },
   jrg: { n: 'Jahresring', fam: 'holz', art: 'schlaegt', i: 'Holzstab – wo du triffst, bestimmt den Klang', tags: 'holz stab marimba xylophon schlitztrommel schlägel jahreszeit jahr wood bar mallet season', hoehe: 'Treffpunkt', rich: 'Stufe 3: sechs Moden, zwei Stäbe links und rechts' },
+  sit: { n: 'Sitar', fam: 'holz', art: 'schlaegt', i: 'Saite auf Jawari-Steg, Resonanzsaiten singen mit', tags: 'sitar indien raga jawari steg schnarren buzz tarab sympathetic resonanzsaiten chikari mizrab meend psychedelisch', hoehe: 'Steg (klar → Jawari)', regen: 1, hear: { gate: 2.0 }, rich: 'Stufe 3: die Tarab-Saiten im Stereo' },
+  kto: { n: 'Koto', fam: 'holz', art: 'beides', i: 'Seidensaite, Elfenbeinnagel, Nachdrücken (Oshide)', tags: 'koto japan japanisch zither seide silk nagel tsume oshide pentatonik saite string zupfen pluck guzheng asien', hoehe: 'Anschlag; gehalten: hoch = Nachdrücken', regen: 1, hear: { gate: 1.6 }, rich: 'Stufe 3: der Korpus im Stereo' },
   glo: { n: 'Glocke', fam: 'erz', art: 'schlaegt', i: 'FM-Glocken mit unharmonischen Obertönen', tags: 'glocke bell fm metall metal' },
   sch: { n: 'Schale', fam: 'erz', art: 'schlaegt', i: 'Klangschalen mit schwebenden Teiltönen', tags: 'klangschale singing bowl schale tibet metall' },
   gng: { n: 'Gong', fam: 'erz', art: 'schlaegt', i: 'Gong und Tamtam – Obertöne blühen nach dem Schlag auf', tags: 'gong tamtam metall metal', regen: 0 },
   klb: { n: 'Kalimba', fam: 'erz', art: 'schlaegt', i: 'Daumenklavier – Metallzungen über einem Holzkasten', tags: 'kalimba mbira daumenklavier thumb piano zunge' },
   gsp: { n: 'Gespinst', fam: 'erz', art: 'schlaegt', i: 'Ein Netz aus Saiten, das Finger und Puls teilen', tags: 'sympathetisch resonanz netz saiten steg sitar ökologie sympathetic strings web halo', hoehe: 'Zupfhelligkeit', regen: 1, rich: 'Stufe 3: zwölf Saiten im Netz, ein Doppelchor am Finger' },
+  hng: { n: 'Handpan', fam: 'erz', art: 'schlaegt', i: 'Stahlfelder, harmonisch gestimmt – Daumen bis Spitze', tags: 'handpan hang pantam steel tongue drum stahl pfanne ufo oktave quinte meditation ambient perkussion', hoehe: 'Anschlagstelle', regen: 1, hear: { gate: 2.0 }, rich: 'Stufe 3: die schwebenden Modenpaare im Stereo' },
+  gml: { n: 'Gamelan', fam: 'erz', art: 'schlaegt', i: 'Bronzestäbe in Paaren – jede Note schwebt (Ombak)', tags: 'gamelan bali java saron gender metallophon bronze ombak schwebung pelog slendro gong indonesien', hoehe: 'Schlägel', regen: 1, hear: { gate: 1.6 }, rich: 'Stufe 3: das Paar links und rechts' },
+  hht: { n: 'Zischel', fam: 'erz', art: 'schlaegt', i: '808-Hi-Hat aus sechs Rechtecken, Wirbel im Puls', tags: 'zischel hihat hi-hat hat 808 trap drill wirbel roll rolls becken cymbal metall perkussion beats', hoehe: 'offen', regen: 1, hear: { gate: 0.6 }, rich: 'Stufe 3: das Metall im Stereo' },
+  spu: { n: 'Spieluhr', fam: 'erz', art: 'schlaegt', i: 'Stahlkamm, Walzenstift, müdes Uhrwerk', tags: 'spieluhr music box spieldose kamm comb zunge glockenspiel celesta lofi nostalgie kinder traum uhrwerk', hoehe: 'Aufzug (müde → frisch)', regen: 1, hear: { gate: 1.6 }, rich: 'Stufe 3: Doppelzungen, links und rechts' },
   tie: { n: 'Tiefe', fam: 'erde', art: 'haelt', i: 'Subbass, der in seinen Ton stürzt – vom Dröhnen bis zum 808-Kick', tags: 'bass sub 808 kick drone tief low' },
   glt: { n: 'Glut', fam: 'erde', art: 'haelt', i: 'Gestimmte Rückkopplung, die nachglüht', tags: 'feedback rückkopplung larsen glühen glut schleife loop drone heulen howl verstärker amp', hoehe: 'Gewinn', hear: { gate: 2.0 }, rich: 'Stufe 3: zwei Schleifen links und rechts, leicht verstimmt und gekoppelt' },
   mem: { n: 'Membran', fam: 'erde', art: 'schlaegt', i: 'Trommelfelle mit Tonhöhensprung', tags: 'trommel drum fell membran perkussion percussion tom pauke' },
   trp: { n: 'Tropfen', fam: 'erde', art: 'schlaegt', i: 'Wassertropfen – Luftblasen mit aufsteigendem Ton', tags: 'tropfen wasser drop water blase bubble regen' },
   mdr: { n: 'Moder', fam: 'erde', art: 'schlaegt', i: 'Kompostglocke – Glanz zerfällt zu Knistern, Brummen', tags: 'kompost fäulnis pilz verdauung knistern brummen glocke holz knochen umgekehrt anschwellen perkussion compost rot decay crackle swell reverse bell', hoehe: 'Feuchte', rich: 'Stufe 3: zwölf Teiltöne links und rechts, das Knistern im Raum verteilt' },
   rhz: { n: 'Rhizom', fam: 'erde', art: 'schlaegt', i: 'Ein Schlag läuft durch die Skala – Lawinen im Netz', tags: 'rhizom wurzel netz lawine kaskade ausbreitung erschöpfung neuron welle holz metall glas perkussion marimba avalanche cascade network spread ripple', hoehe: 'Ausbreitung', regen: 1, rich: 'Stufe 3: drei Teiltöne je Ping, die Lawine läuft im Stereo die Tonlage entlang' },
+  tbl: { n: 'Tabla', fam: 'erde', art: 'beides', i: 'Dayan singt gestimmt, Bayan steigt unterm Ballen', tags: 'tabla dayan bayan indien trommel drum syahi tun tin na ge ke gamak perkussion raga', hoehe: 'Schlag (Mitte → Rand)', regen: 1, hear: { gate: 1.0 }, rich: 'Stufe 3: wie Stufe 1' },
+  did: { n: 'Didgeridoo', fam: 'erde', art: 'haelt', i: 'Lippen im Rohr – die Zunge formt das „wa-yo“', tags: 'didgeridoo yidaki australien drone lippen rohr bordun zirkularatmung knurren growl vokal formant', hoehe: 'Zunge (Vokal)', regen: 0, hear: { gate: 1.6 }, rich: 'Stufe 3: wie Stufe 1' },
+  wal: { n: 'Walgesang', fam: 'erde', art: 'haelt', i: 'Walgesang – Bögen, Knarren, Ferne unter Wasser', tags: 'wal whale buckelwal humpback gesang song meer ozean unterwasser underwater tief stöhnen moan ruf call ambient', hoehe: 'Bogen (sinkt → steigt)', regen: 0, hear: { gate: 2.2 }, rich: 'Stufe 3: das Meer antwortet rechts später' },
+  wkg: { n: 'Westküste', fam: 'strom', art: 'beides', i: 'Wavefolder und Vaktrol – der Buchla-Bongo', tags: 'westküste west coast buchla wavefolder falter lowpass gate vactrol vaktrol fm complex oscillator bongo modular experimentell', hoehe: 'Faltung', regen: 1, hear: { gate: 1.0 }, rich: 'Stufe 3: wie Stufe 1' },
+  bnt: { n: 'Schaltkreis', fam: 'strom', art: 'beides', i: 'Verbogene Schaltung: Sprünge, Stottern, Bits', tags: 'schaltkreis circuit bending bent glitch bitcrush bitcrusher lofi sample rate stotter stutter spielzeug toy noise experimentell kaputt', hoehe: 'Zerstörung', regen: 1, hear: { gate: 1.0 }, rich: 'Stufe 3: wie Stufe 1' },
+  kas: { n: 'Kassette', fam: 'strom', art: 'beides', i: 'E-Piano auf altem Band: Leiern, Rauschen, Wärme', tags: 'kassette cassette tape band lofi lo-fi rhodes wurlitzer e-piano epiano electric piano wow flutter leiern hiss chillhop beats', hoehe: 'Anschlag (weich → bellend)', regen: 1, hear: { gate: 1.6 }, rich: 'Stufe 3: wie Stufe 1' },
+  bit: { n: 'Achtbit', fam: 'strom', art: 'beides', i: 'Pulswellen-Chip, Arpeggio-Flimmern, 4-Bit-Lautstärke', tags: 'achtbit 8bit 8-bit chiptune chip nes gameboy c64 sid pulse puls rechteck square arpeggio tracker retro game videospiel', hoehe: 'Tastgrad', regen: 1, hear: { gate: 0.8 }, rich: 'Stufe 3: zweiter Kanal, verstimmt, links und rechts' },
+  gbs: { n: 'Gleitbass', fam: 'erde', art: 'haelt', i: '808-Bass: Knack, Gleiten, Antrieb – Trap', tags: 'gleitbass 808 bass sub trap drill hiphop glide slide portamento kick distortion verzerrung tief bass', hoehe: 'Antrieb', regen: 0, hear: { gate: 1.2 }, rich: 'Stufe 3: wie Stufe 1' },
 };
 // sources of later versions (and the reserves): a preset that names one says so once and plays Nebel instead
 const ENG_LATER = { unk: 'Unke', fle: 'Flechte', blz: 'Balz' };
@@ -297,6 +320,113 @@ NUM('khl.spannung', 'Spannung', 0, 1, 0.5, '%');
 NUM('khl.rauheit', 'Rauheit', 0, 1, 0.3, '%');
 NUM('khl.schnabel', 'Schnabel', 0, 1, 0.5, '%');
 NUM('khl.anstieg', 'Anstieg', 0, 1, 0.3, '%');
+// ---- Klangbibliothek II, Etappe 1 (26.10.2026): Welt – Handpan, Gamelan, Sitar, Tabla, Didgeridoo, Maultrommel ----
+// (v.out peaks per velocity: the standard phrase as loud as Nebel/Glocke/Membran – dev/tests/klang/tests/lib2.js)
+const HNG_PEAK = 2.82, GML_PEAK = 2.44, SIT_PEAK = 1, TBL_PEAK = 2.04, DID_PEAK = 0.655, MTR_PEAK = 1.58;   // (Tabla 2 dB under the others: its strike's peak stays under −1 dBFS)
+NUM('hng.glanz', 'Glanz', 0, 1, 0.5, '%');
+NUM('hng.nachklang', 'Nachklang', 0, 1, 0.5, '%');
+NUM('hng.koerper', 'Körper (Gu)', 0, 1, 0.5, '%');
+NUM('hng.schweben', 'Schweben', 0, 1, 0.4, '%');
+NUM('gml.ombak', 'Ombak (Schwebung)', 0, 1, 0.65, '%');
+NUM('gml.schlegel', 'Schlägel', 0, 1, 0.5, '%');
+NUM('gml.nachklang', 'Nachklang', 0, 1, 0.5, '%');
+NUM('gml.daempfen', 'Abdämpfen', 0, 1, 0.6, '%');
+NUM('sit.jawari', 'Jawari', 0, 1, 0.6, '%');
+NUM('sit.tarab', 'Tarab (Resonanzsaiten)', 0, 1, 0.5, '%');
+NUM('sit.chikari', 'Chikari', 0, 1, 0.35, '%');
+NUM('sit.nachklang', 'Nachklang', 0, 1, 0.5, '%');
+NUM('tbl.syahi', 'Syahi (Singen)', 0, 1, 0.6, '%');
+NUM('tbl.nachklang', 'Nachklang', 0, 1, 0.5, '%');
+NUM('tbl.bayan', 'Bayan bis', 0, 1, 0.5, '%');
+NUM('tbl.gamak', 'Gamak (Ballen)', 0, 1, 0.6, '%');
+NUM('did.rohr', 'Rohr', 0, 1, 0.6, '%');
+NUM('did.knurren', 'Knurren', 0, 1, 0.25, '%');
+NUM('did.atem', 'Zirkularatmung', 0, 1, 0.5, '%');
+NUM('did.rauheit', 'Rauheit', 0, 1, 0.3, '%');
+NUM('mtr.zupfen', 'Nachzupfen', 0, 1, 0.35, '%');
+NUM('mtr.mund', 'Mund (schmal)', 0, 1, 0.6, '%');
+NUM('mtr.atem', 'Atem', 0, 1, 0.35, '%');
+NUM('mtr.klang', 'Klang', 0, 1, 0.5, '%');
+const NRD_PEAK = 2.1;
+NUM('nrd.vorhang', 'Vorhang (Bewegung)', 0, 1, 0.4, '%');
+NUM('nrd.schimmer', 'Schimmer', 0, 1, 0.4, '%');
+NUM('nrd.teiltoene', 'Nur ungerade', 0, 1, 0, '%');
+NUM('nrd.anstieg', 'Anstieg', 0, 1, 0.4, '%');
+const SHT_PEAK = 1.54;
+NUM('sht.schimmer', 'Schimmer', 0, 1, 0.6, '%');
+NUM('sht.raum', 'Raum', 0, 1, 0.6, '%');
+NUM('sht.quinte', 'Quinte', 0, 1, 0.2, '%');
+NUM('sht.farbe', 'Farbe', 0, 1, 0.5, '%');
+const OND_PEAK = 1;
+NUM('ond.palme', 'Palme', 0, 1, 0.4, '%');
+NUM('ond.metall', 'Métallique', 0, 1, 0.15, '%');
+NUM('ond.vibrato', 'Vibrato', 0, 1, 0.35, '%');
+NUM('ond.klang', 'Klang', 0, 1, 0, '%');
+const WAL_PEAK = 1.54;
+NUM('wal.bogen', 'Bogen', 0, 1, 0.6, '%');
+NUM('wal.dauer', 'Dauer', 0, 1, 0.5, '%');
+NUM('wal.knarren', 'Knarren', 0, 1, 0.3, '%');
+NUM('wal.tiefe', 'Tiefe (Wasser)', 0, 1, 0.6, '%');
+const STP_PEAK = 0.68;
+NUM('stp.tempo', 'Tempo', 0, 1, 0.4, '%');
+NUM('stp.spanne', 'Spanne', 0, 1, 0.6, '%');
+NUM('stp.atmen', 'Atmen', 0, 1, 0.4, '%');
+NUM('stp.ruhe', 'Ruhe (Mitte)', 0, 1, 0.3, '%');
+const ATR_PEAK = 0.78;
+NUM('atr.mischung', 'Mischung (rund → spitz)', 0, 1, 0.3, '%');
+NUM('atr.farbe', 'Farbe', 0, 1, 0.6, '%');
+NUM('atr.drift', 'Drift', 0, 1, 0.3, '%');
+NUM('atr.tiefe', 'Unterseite', 0, 1, 0.4, '%');
+const TNL_PEAK = 2.47;
+NUM('tnl.tempo', 'Tempo', 0, 1, 0.3, '%');
+NUM('tnl.tiefe', 'Tiefe', 0, 1, 0.7, '%');
+NUM('tnl.rauschen', 'Rauschen', 0, 1, 0.45, '%');
+NUM('tnl.breite', 'Breite', 0, 1, 0.5, '%');
+const WKG_PEAK = 0.8;
+NUM('wkg.faltung', 'Faltung', 0, 1, 0.4, '%');
+NUM('wkg.fm', 'FM', 0, 1, 0.3, '%');
+NUM('wkg.verhaeltnis', 'Verhältnis', 0, 1, 0.25, '%');
+NUM('wkg.vaktrol', 'Vaktrol', 0, 1, 0.5, '%');
+const BNT_PEAK = 0.9;
+NUM('bnt.bits', 'Bits', 0, 1, 0.4, '%');
+NUM('bnt.sprung', 'Sprung', 0, 1, 0.4, '%');
+NUM('bnt.stottern', 'Stottern', 0, 1, 0.3, '%');
+NUM('bnt.kreuz', 'Kreuzung', 0, 1, 0.3, '%');
+const KAS_PEAK = 0.5;
+NUM('kas.alter', 'Bandalter', 0, 1, 0.5, '%');
+NUM('kas.glocke', 'Glocke', 0, 1, 0.4, '%');
+NUM('kas.nachklang', 'Nachklang', 0, 1, 0.5, '%');
+NUM('kas.waerme', 'Wärme', 0, 1, 0.5, '%');
+const BIT_PEAK = 2.9;
+NUM('bit.arpeggio', 'Arpeggio', 0, 1, 0, '%');
+NUM('bit.leben', 'Leben (Vibrato, Breite)', 0, 1, 0.35, '%');
+NUM('bit.dreieck', 'Dreieck (Bass)', 0, 1, 0.4, '%');
+NUM('bit.abklingen', 'Abklingen', 0, 1, 0.4, '%');
+const GBS_PEAK = 0.85;
+NUM('gbs.knack', 'Knack', 0, 1, 0.5, '%');
+NUM('gbs.ausklang', 'Ausklang', 0, 1, 0.6, '%');
+NUM('gbs.gleiten', 'Gleiten', 0, 1, 0.4, '%');
+NUM('gbs.ton', 'Ton', 0, 1, 0.6, '%');
+const HHT_PEAK = 6;
+NUM('hht.ton', 'Ton', 0, 1, 0.5, '%');
+NUM('hht.wirbel', 'Wirbel (Puls)', 0, 1, 0.4, '%');
+NUM('hht.rauschen', 'Rauschen', 0, 1, 0.25, '%');
+NUM('hht.abwuergen', 'Abwürgen', 0, 1, 1, '%');
+const VOX_PEAK = 1.57;
+NUM('vox.konsonant', 'Konsonant', 0, 1, 0.4, '%');
+NUM('vox.hauch', 'Hauch', 0, 1, 0.3, '%');
+NUM('vox.groesse', 'Größe', 0, 1, 0.5, '%');
+NUM('vox.vibrato', 'Vibrato', 0, 1, 0.4, '%');
+const SPU_PEAK = 0.79;
+NUM('spu.glanz', 'Glanz', 0, 1, 0.45, '%');
+NUM('spu.nachklang', 'Nachklang', 0, 1, 0.5, '%');
+NUM('spu.uhrwerk', 'Uhrwerk', 0, 1, 0.3, '%');
+NUM('spu.kasten', 'Kasten', 0, 1, 0.5, '%');
+const KTO_PEAK = 1.1;
+NUM('kto.nagel', 'Nagel', 0, 1, 0.6, '%');
+NUM('kto.seide', 'Seide', 0, 1, 0.5, '%');
+NUM('kto.nachklang', 'Nachklang', 0, 1, 0.5, '%');
+NUM('kto.druck', 'Druck (Oshide)', 0, 1, 0.6, '%');
 // Glut (worklet myzel-ember, natively without one: a tuned feedback loop; Höhe is its gain – the growth per second)
 SEL('glt.sprung', 'Sprung', [['2', 'Oktave'], ['3', 'Duodezime']], '3', { chips: 1 });
 NUM('glt.gluehen', 'Glühen (Wachstum)', 0, 1, 0.5, '%');
@@ -492,7 +622,7 @@ BOOL('midi.std', 'Standard-Zuordnungen', true, { dev: 1 });
 SEL('midi.tch', 'Touché-Spielweise', [['finger', 'Finger'], ['atem', 'Atem'], ['raum', 'Raum'], ['verw', 'Verwandlung'], ['gleiten', 'Gleiten'], ['streichen', 'Streichen'], ['platte', 'Platte'], ['vokal', 'Vokal'], ['koerner', 'Körner'], ['eis', 'Eis'], ['oberton', 'Obertöne'], ['faecher', 'Fächer'], ['ort', 'Ort'], ['stottern', 'Stottern'], ['resonanz', 'Resonanz'], ['arp', 'Arpeggio']], 'finger', { chips: 1, dev: 1 });   // (Expressive E Touché, js/midi/touche.js)
 
 const GROUP = {
-  v: 'Spielweise', t: 'Stimmung', neb: 'Nebel', kor: 'Körner', hau: 'Hauch', glo: 'Glocke', mem: 'Membran', sai: 'Saite', sch: 'Schale', gng: "Gong", klb: "Kalimba", obt: "Obertöne", stm: "Stimme", swm: "Schwarm", tie: "Tiefe", trp: "Tropfen", hlm: 'Halm', rnk: 'Ranke', elm: 'Elmsfeuer', jrg: 'Jahresring', hrz: 'Harz', shn: 'Sehne', zpf: 'Zapfen', glt: 'Glut', mdr: 'Moder', boe: 'Böe', amo: 'Amöbe', gsp: 'Gespinst', rhz: 'Rhizom', khl: 'Kehlchen',
+  v: 'Spielweise', t: 'Stimmung', neb: 'Nebel', kor: 'Körner', hau: 'Hauch', glo: 'Glocke', mem: 'Membran', sai: 'Saite', sch: 'Schale', gng: "Gong", klb: "Kalimba", obt: "Obertöne", stm: "Stimme", swm: "Schwarm", tie: "Tiefe", trp: "Tropfen", nrd: 'Nordlicht', sht: 'Schimmer', ond: 'Ätherwelle', wal: 'Walgesang', stp: 'Endlostreppe', atr: 'Attraktor', tnl: 'Tunnel', wkg: 'Westküste', bnt: 'Schaltkreis', kas: 'Kassette', bit: 'Achtbit', gbs: 'Gleitbass', hht: 'Zischel', vox: 'Silbe', spu: 'Spieluhr', kto: 'Koto', hlm: 'Halm', rnk: 'Ranke', elm: 'Elmsfeuer', hng: 'Handpan', gml: 'Gamelan', sit: 'Sitar', tbl: 'Tabla', did: 'Didgeridoo', mtr: 'Maultrommel', jrg: 'Jahresring', hrz: 'Harz', shn: 'Sehne', zpf: 'Zapfen', glt: 'Glut', mdr: 'Moder', boe: 'Böe', amo: 'Amöbe', gsp: 'Gespinst', rhz: 'Rhizom', khl: 'Kehlchen',
   drv: 'Verzerrung', rng: 'Ringmodulator', flt: 'Filter', pha: 'Phaser', cho: 'Schweben', dly: 'Echo', rev: 'Hall', mov: 'Bewegung', mst: 'Summe',
   seq: 'Puls', bor: 'Bordun', rec: 'Aufnahme', hx: 'Hexenring', dev: 'Gerät', midi: 'MIDI', l0: 'Spur 1', l1: 'Spur 2', l2: 'Spur 3', l3: 'Spur 4',
 };

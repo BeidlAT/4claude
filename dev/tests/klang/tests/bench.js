@@ -139,7 +139,32 @@ function costRow(okf, what, tab, cur, env, f) {
     // (a whistle: its partials, not a centroid that the fundamental holds near 220 Hz – the khl block's „partials rise
     // with pressure“; below the threshold there is only breath)
     khl: { f0: [220, 440, 880, 1760, 3000, 4500], ys: [0.35, 0.6, 0.9, 1], tol: 10, costMax: 0.5, pp: { 'khl.silbe': 'aus', 'khl.rauheit': 0 }, cYs: [0.35, 0.6, 1], partials: true },
-    hrz: { f0: [110, 220, 440, 880, 1568], ys: [0.45], tol: 5, costMax: 1.2 },   // (the default body, Glas; every body below)
+    hrz: { f0: [110, 220, 440, 880, 1568], ys: [0.45], tol: 5, costMax: 1.2 },
+    // ---- Klangbibliothek II, Etappe 1 (26.10.2026): Welt ----
+    hng: { struck: true, f0: [110, 220, 440, 880, 1760], ys: [0.2, 0.8], tol: 3, costMax: 1.2, ring: 9, cost: { DUR: '3' } },
+    gml: { struck: true, f0: [110, 220, 440, 880, 1760], ys: [0.2, 0.8], tol: 3, costMax: 1.0, ring: 9, cost: { DUR: '3' } },
+    sit: { struck: true, f0: [110, 220, 440, 880], ys: [0.2], tol: 8, costMax: 1.5, ring: 9, line: true, cost: { DUR: '3' } },
+    tbl: { f0: [220, 440, 880, 1760], ys: [0.45], tol: 6, costMax: 0.8 },
+    did: { f0: [55, 110, 220, 440], ys: [0.3, 0.7], tol: 5, costMax: 1.0 },
+    mtr: { f0: [110, 220, 440, 880], ys: [0.3, 0.7], tol: 3, costMax: 1.0 },   // (the default body, Glas; every body below)
+    // ---- Etappe 2/3 (Sphäre, Psyche) ----
+    nrd: { f0: [55, 110, 220, 440, 880], ys: [0.5], tol: 5, costMax: 3.09 },   // (48 partials, 64 at level 3: the price of the surface – sound first)
+    sht: { f0: [110, 220, 440, 880], ys: [0.3], tol: 8, costMax: 2.13, cYs: [0, 0.5, 1] },
+    ond: { f0: [110, 220, 440, 880, 1760], ys: [0.3, 0.7], tol: 5, costMax: 1.51, pp: { 'ond.vibrato': 0 } },
+    wal: { f0: [55, 110, 220, 440], ys: [0.5], tol: 15, costMax: 2.33, line: true, lineAt: 1.4, pp: { 'wal.knarren': 0 } },   // (the cry arrives on the note in its arc: measured on the line after it)
+    stp: { pitchless: 'a Shepard tone has no single pitch (its octave voices glide forever)', costMax: 1.51 },
+    atr: { f0: [110, 220, 440], ys: [0.1], tol: 10, costMax: 0.95 },   // (the lock on the note: low on the field the orbit is periodic)
+    tnl: { f0: [110, 220, 440, 880], ys: [0.8], tol: 8, costMax: 1.05, line: true },
+    // ---- Etappe 4 (Strom, Trap, LoFi, Welt) ----
+    wkg: { f0: [55, 110, 220, 440, 880], ys: [0.2, 0.7], tol: 5, costMax: 1.49 },
+    bnt: { f0: [110, 220, 440, 880], ys: [0.05], tol: 6, costMax: 0.95 },   // (low on the field the clean toy; up the field it jumps – by design)
+    kas: { f0: [110, 220, 440, 880], ys: [0.5], tol: 8, costMax: 1.16, pp: { 'kas.alter': 0 }, line: true },   // (the tape's wow is the instrument: pitch on a new tape)
+    bit: { f0: [110, 220, 440, 880, 1760], ys: [0.2, 0.8], tol: 3, costMax: 1.16, pp: { 'bit.leben': 0 } },
+    gbs: { f0: [41, 55, 82, 110, 220], ys: [0.1, 0.6], tol: 5, costMax: 1.31, line: true },
+    hht: { struck: true, pitchless: 'a hi-hat: six squares in a cluster, tuned with the note but no pitch of its own', loud: [-11, 2], costMax: 0.94 },   // (ticks against held tones: it sits ≈ 9 dB lower, its peak at −3 dBFS)
+    vox: { f0: [110, 220, 440, 660], ys: [0.5], tol: 8, costMax: 1.16, pp: { 'vox.vibrato': 0, 'vox.konsonant': 0 }, cYs: [0, 0.25, 0.5] },   // (u → o → a: the centroid rises; e and i are brighter by F2 but their low F1 holds it)
+    spu: { struck: true, f0: [262, 523, 1047, 2093], ys: [0.8], tol: 5, costMax: 1.08, ring: 5, cost: { DUR: '2.5' } },
+    kto: { f0: [110, 220, 440, 880], ys: [0.5], tol: 6, costMax: 0.81, line: true },
     gsp: { struck: true, web: true, ring: 4.5, f0: [110, 220, 440, 880, 1760], ys: [0.5], tol: 3, costMax: 0.45, cost: { DUR: '2' } },   // (a native pluck; the web is measured on its own below)
     // Moder: struck – pitch on the fundamental's line at the strike (wet: the swell's moisture), the voice lives its Nachklang
     mdr: { struck: true, f0: [110, 220, 440, 880, 1760], ys: [0.7], tol: 2, costMax: 0.65, ring: 5 * 1.3 + 0.15, cost: { DUR: '4' } },
@@ -181,7 +206,8 @@ function costRow(okf, what, tab, cur, env, f) {
       if (name === 'L1') { L.wav(path.join(dir, 'phrase-L1.wav'), x.L, x.R, SR); }
     }
     rep.loud = loud; rep.ref = ref;
-    ok(Math.abs(loud.L1.rms - refMean) <= 2, `loudness L1 ${loud.L1.rms} dB vs references' mean ${refMean.toFixed(2)} (±2 dB; neb ${ref.neb.rms}, glo ${ref.glo.rms}, mem ${ref.mem.rms})`);
+    { const [lo, hi] = tc.loud || [-2, 2], d = loud.L1.rms - refMean;   // (tc.loud: a source that sits lower by its nature – a hi-hat's ticks against held tones – with its window)
+      ok(d >= lo && d <= hi, `loudness L1 ${loud.L1.rms} dB vs references' mean ${refMean.toFixed(2)} (${lo} … +${hi} dB; neb ${ref.neb.rms}, glo ${ref.glo.rms}, mem ${ref.mem.rms})`); }
     ok(Math.abs(loud.L3.rms - loud.L1.rms) <= 1.5, `level 3 ${loud.L3.rms} within ±1.5 dB of level 1 ${loud.L1.rms}`);
     ok(Math.max(loud.L1.peak, loud.L3.peak, loud.burst.peak) <= -1, `peak ≤ −1 dBFS (L1 ${loud.L1.peak}, L3 ${loud.L3.peak}, burst ${loud.burst.peak})`);
     ok(!loud.L1.nan && !loud.L3.nan && !loud.burst.nan, 'no NaN');
@@ -202,6 +228,8 @@ function costRow(okf, what, tab, cur, env, f) {
     else if (tc.partials) console.log(`INFO ${key}: centroid at y ${(tc.cYs || []).join('/')}: ${(tc.cYs || []).map((y) => yc[y]).join('/')} Hz (a whistle: the rows on its partials below)`);
     else { const ys = tc.cYs || [0, 0.5, 1], c = ys.map((y) => yc[y]); ok(c[0] < c[1] && c[1] < c[2], `centroid rises with Höhe: ${ys.map((y, i) => 'y ' + y + ' ' + c[i] + ' Hz').join(', ')}`); }
     const PP = Object.assign({}, DRY, tc.pp || {}), pitchAt = (m, f, at) => (tc.struck ? peakHz(m, SR, f, 0.15, 16384) : tc.line ? peakHz(m, SR, f, at || tc.lineAt || (key === 'glt' ? 1.2 : 0.6), 32768) : L.combPitch(m, SR, f, at || 0.6, key === 'rnk' ? 32768 : 16384));
+    if (tc.pitchless) console.log(`INFO ${key}: no pitch grid – ${tc.pitchless}`);   // (Klangbibliothek II: a hi-hat, the Shepard tone)
+    else {
     // -- pitch: the grid at 0.6 s (reed: YIN + phase refinement; ring: comb of harmonics with their sidebands)
     const pit = [];
     for (const f of tc.f0) for (const y of tc.ys) {
@@ -220,6 +248,7 @@ function costRow(okf, what, tab, cur, env, f) {
     if (!tc.struck) { const x = await one(page, { eng: key, f: 220, y: tc.native ? 0.1 : tc.lineAt ? 1 : 0.6, dur: 2.5, params: PP, moves: [[1.0, 'setF', 330]] }); const m = mono(x);
       const fm = tc.line ? peakHz(m, SR, 330, 1.6, tc.lineAt || key === 'glt' ? 32768 : 16384) : L.combPitch(m, SR, 330, 1.6, 16384);
       ok(Math.abs(L.cents(fm, 330)) <= tc.tol + 1, `setF 220 → 330 Hz lands at ${fm.toFixed(2)} Hz`); }
+    }
     // -- held: Höhe moves the timbre on a sounding voice (Gestik's Höhe arrives through setY)
     if (key === 'hlm' || key === 'elm' || key === 'hrz' || key === 'glt') { const y0 = key === 'elm' ? 0.2 : 0.4, x = await one(page, { eng: key, f: 220, y: y0, dur: 3, params: DRY, moves: [[1.0, 'setY', 0.85]] }); const m = mono(x);
       const mc = (t0, t1) => { let s = 0, n = 0; for (let t = t0; t < t1; t += 0.05) { s += L.centroid(m, SR, t, 4096); n++; } return s / n; };

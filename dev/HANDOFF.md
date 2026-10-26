@@ -2,6 +2,13 @@
 
 ## Nächste Sitzung – zuerst lesen (Stand 26.10.2026, nachts)
 
+**Klangbibliothek II (26.10.2026, spät):** Wunsch des Besitzers – „mindestens 20 neue Sounds, zahlreiche Presets,
+exotisch, sphärisch, experimentell, psychedelisch, Ambient, LoFi, Trap, Avantgarde“. Gebaut: **22 neue Quellen**
+(jede ein eigener Worklet-Prozessor in `myzel/src/js/dsp/`), neue Familie **Strom**, **24 Presets**. Konzept, Liste und
+Stand: `dev/klang/BIBLIOTHEK.md`. Abnahme: `bench.js` (Zeilen „Klangbibliothek II“), Kosten in `VCOST1/3`. Nur in
+Chromium geprüft. Offen: Rückmeldung des Besitzers zum Klang; die Gesamtprüfung (reg.sh) einmal nachholen.
+
+
 Neu seit dem Stand unten (Wunsch des Besitzers, 25.10.2026 nachts – „Länge fehlt, wo bin ich beim Einspielen, Bearbeiten
 und Mixer für Schleifen nicht gefunden“), je eine Etappe, jede getestet und veröffentlicht: **4j** Länge an der
 Ringleiste + Positionsanzeige (#28), **4k** Mixer-Ansicht „Schleifen“ (#29), **4l** Rechtsklick-Menü und Fenster
