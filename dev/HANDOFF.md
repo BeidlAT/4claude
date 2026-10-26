@@ -2,6 +2,15 @@
 
 ## Nächste Sitzung – zuerst lesen (Stand 26.10.2026, nachts)
 
+**Gerätebild (26.10.2026, spät):** `js/midi/geraetebild.js` + `css/geraetebild.css`. Katalog `CB_MODELS` (Reihen-DSL:
+cbR(kind, n, lab, {sz, gap, cols/grid, same, deco, m})); PCR-M50 nach dem Foto des Besitzers (`PCRM_SEC`). Einmessen
+speichert je Gerätename die Nachricht jedes Elements (`myzel.gbild.v1`); `cbLogical` schreibt gelernte Bindungen
+(Regler → CB_KNOBS, Fader → CB_FADERS in Pult-Reihenfolge, „Master/Volume“ → mst.vol, M/S-Reihen → mute/solo,
+übrige Taster → CB_BUTTONS, Pads → PADFN). `xhxr.vol/pan/mute/solo` sind jetzt Ziele (mtParam). Hook: `midiTake` →
+`cbIn` (leuchten; beim Einmessen geschluckt). Test: `dev/tests/v2/t-gbild.js` (simulierter PCR-M50). Werks-CCs nur
+für bekannte Modelle (nanoKONTROL2, APC40 MK2, APC mini) – sonst Einmessen. Nächstes: Schleifen einfärben, dann die
+fünf APC40-Modi (`apcModesRow` wird schon aufgerufen, wenn es existiert).
+
 **24 Plätze, geteiltes Lager (26.10.2026, spät):** `HX_SLOTS = MOBILE ? 8 : 24` (humus.js); die Ringleiste zeigt
 `clamp(midW / 40, 4, 24)` Ringe pro Seite und blättert allgemein (ringleiste.js). Die Sendepaare fürs Nähren sind nicht
 mehr der Platz, sondern `hxSendCh(L)` – höchstens `HX_SENDS = 16` gleichzeitig (ein Ausgang hat höchstens 32 Kanäle).

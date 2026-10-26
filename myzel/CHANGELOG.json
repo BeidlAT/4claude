@@ -2,6 +2,15 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-26n",
+      "punkte": [
+        "Neu: das Gerätebild – unter Gerät bei deinem MIDI-Controller. Myzel zeichnet ihn (gut 30 Modelle von Akai, Arturia, Behringer, Edirol, KORG, M-Audio, Native Instruments, Nektar, Novation, Roland), unter jedem Regler steht, was er steuert, und was du am Gerät bewegst, leuchtet auf.",
+        "Einmessen: Myzel fragt jeden Regler, Fader und Taster der Reihe nach ab – einmal bewegen genügt. Danach „Logisch belegen“: Drehregler für Filter, Klang und Effekte, Fader für den Mixer in Pult-Reihenfolge (Fader 1 = erster Kanal), Taster für Puls, Aufnahme, Korb und Hauptknopf.",
+        "Ein Klick auf ein Element im Bild: sein Ziel suchen und ändern, oder „nichts steuern“. „Werkszustand“ nimmt alle eigenen Belegungen des Geräts zurück.",
+        "Ein unbekanntes Gerät baut sich beim Bewegen selbst auf: jeder Regler erscheint als Kachel."
+      ]
+    },
+    {
       "id": "2026-10-26m",
       "punkte": [
         "Die Ringleiste wächst mit: sie zeigt die belegten Plätze und dahinter einen freien – nimmst du darauf auf, erscheint der nächste (bis 24).",
