@@ -2,6 +2,13 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-26m",
+      "punkte": [
+        "Die Ringleiste wächst mit: sie zeigt die belegten Plätze und dahinter einen freien – nimmst du darauf auf, erscheint der nächste (bis 24).",
+        "Mindestens vier Plätze bleiben sichtbar; gelöschte Schleifen in der Mitte lassen ihren Platz frei, bis du ihn wieder belegst."
+      ]
+    },
+    {
       "id": "2026-10-26l",
       "punkte": [
         "Hexenring am PC: 24 Plätze für Schleifen statt 8 – die Ringleiste zeigt so viele, wie hineinpassen (sonst blättert sie), „aufnehmen“ steht nur unter dem nächsten freien Platz.",

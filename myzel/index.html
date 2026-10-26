@@ -31069,7 +31069,7 @@ function hxRailBuild() {
   });
   hxKeyClick(HXU.form, hxFormTap);
   HXU.form.addEventListener('contextmenu', (e) => e.preventDefault());
-  HXU.pg.addEventListener('click', () => { HX.page = (HX.page + 1) % Math.max(1, Math.ceil(HX_SLOTS / (HXU.per || HX_SLOTS))); hxRailDirty(); });
+  HXU.pg.addEventListener('click', () => { HX.page = (HX.page + 1) % Math.max(1, Math.ceil(hxRingsShown() / (HXU.per || HX_SLOTS))); hxRailDirty(); });
   HXU.fold.addEventListener('click', () => {
     const f = HXU.rail.dataset.fold === '1';
     if (f && hxRailAuto()) HXU.autoOpen = true;   // (folded for a panel on a short screen: open for this panel)
@@ -31180,6 +31180,13 @@ function hxRailAnim() {
   for (const L of HX.loops.values()) if (L.state === 'spielt' || L.state === 'stumm' || (L.lvT && t - L.lvT < 1000)) return true;
   return false;
 }
+// (owner, 26.10.2026: „die 24 ploppen nicht alle leer auf – es erweitert sich stetig“) with more than 8 places the rail
+// shows them up to the last one taken (or recording) and one free place after it – at least four
+function hxRingsShown() {
+  if (HX_SLOTS <= 8) return HX_SLOTS;
+  let last = -1; for (let i = 0; i < HX_SLOTS; i++) if (HX.slot[i] || (HX.rec && HX.rec.slot === i)) last = i;
+  return Math.max(4, Math.min(HX_SLOTS, last + 2));
+}
 function hxRailLayout() {
   const rail = HXU.rail, r = rail.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
   if (Math.round(r.width * dpr) !== HXU.cv.width || Math.round(r.height * dpr) !== HXU.cv.height) { HXU.cv.width = Math.round(r.width * dpr); HXU.cv.height = Math.round(r.height * dpr); }
@@ -31197,19 +31204,19 @@ function hxRailLayout() {
 function hxRailState() {
   const per = HXU.per, R = HX.rec, fold = HXU.rail.dataset.fold === '1';
   // the page: the recording's, else the one asked for
-  const pages = Math.ceil(HX_SLOTS / per);
+  const N = hxRingsShown(), pages = Math.ceil(N / per);
   if (pages > 1 && R && Math.floor(R.slot / per) !== HX.page) HX.page = Math.floor(R.slot / per);
   if (HX.page >= pages) HX.page = 0;
-  const pg0 = HX.page * per, other = []; for (let i = 0; i < HX_SLOTS; i++) if (i < pg0 || i >= pg0 + per) other.push(i);
+  const pg0 = HX.page * per, other = []; for (let i = 0; i < N; i++) if (i < pg0 || i >= pg0 + per) other.push(i);
   const otherLoops = other.map((i) => HX.loops.get(HX.slot[i])).filter(Boolean), playing = otherLoops.filter((L) => L.state === 'spielt').length;
   const needPg = pages > 1 && (otherLoops.length || HX.page > 0 || HX.slot.slice(pg0, pg0 + per).every(Boolean));
   HXU.pg.hidden = !needPg || fold;
-  if (needPg) { const n0 = ((HX.page + 1) % pages) * per, rng = (n0 + 1) + '–' + Math.min(HX_SLOTS, n0 + per), t = playing ? '+' + playing : rng, sub = playing ? 'spielen' : 'Seite'; if (HXU.pg.dataset.t !== t + sub) { HXU.pg.dataset.t = t + sub; HXU.pg.replaceChildren(h('b', null, t), h('span', { class: 'w' }, sub)); }  HXU.pg.setAttribute('aria-label', playing ? playing + ' weitere spielen – Seite wechseln' : 'Schleifen ' + rng.replace('–', ' bis ') + ' zeigen'); }
+  if (needPg) { const n0 = ((HX.page + 1) % pages) * per, rng = (n0 + 1) + '–' + Math.min(N, n0 + per), t = playing ? '+' + playing : rng, sub = playing ? 'spielen' : 'Seite'; if (HXU.pg.dataset.t !== t + sub) { HXU.pg.dataset.t = t + sub; HXU.pg.replaceChildren(h('b', null, t), h('span', { class: 'w' }, sub)); }  HXU.pg.setAttribute('aria-label', playing ? playing + ' weitere spielen – Seite wechseln' : 'Schleifen ' + rng.replace('–', ' bis ') + ' zeigen'); }
   const chipsOn = !fold && !!HX.chips;
   HXU.ringBox.hidden = chipsOn; HXU.chips.hidden = !chipsOn;
   if (chipsOn) hxChipsRender();
   for (let i = 0; i < HX_SLOTS; i++) {
-    const b = HXU.rings[i], vis = Math.floor(i / per) === HX.page;
+    const b = HXU.rings[i], vis = i < N && Math.floor(i / per) === HX.page;
     b.hidden = !vis;
     if (!vis) continue;
     const L = HX.loops.get(HX.slot[i]), pend = L && HX.pend.find((p) => p.loop === L.id), w = b.firstChild;
