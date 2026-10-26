@@ -2,6 +2,16 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-26x",
+      "punkte": [
+        "Handpan neu: die anderen Felder der Skala schwingen leise mit, ein harter Schlag klingt heller und kurz etwas höher, kein Schlag gleicht dem anderen.",
+        "Hall mit echten Räumen: neben dem gewohnten Nebel jetzt Holzsaal und Steinkuppel – Handpan-Kreis klingt unter der Steinkuppel, ohne Vibrato und Chorus.",
+        "Lädst du ein Preset mit anderer Tonart, spielen deine Schleifen weiter und wechseln am Taktstrich mit – vorher schwiegen sie bis zu einem ganzen Durchgang.",
+        "Ein Schieberegler auf „Vorige/Nächste Skala“ oder „Preset“ blättert jetzt zuverlässig: jedes Stück Weg ein Schritt, hoch und runter.",
+        "Bearbeiten: bei einer getrimmten Schleife zeigt die Ernte-Leiste genau den Teil, der spielt; die Schläge stehen als runde Zahl da."
+      ]
+    },
+    {
       "id": "2026-10-26w",
       "punkte": [
         "Die leise Röhrenwärme ist zurück: alle Klangwelten klingen wieder wie zuvor – die starke Verzerrung war ein Firefox-Fehler, kein Preset.",
