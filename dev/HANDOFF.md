@@ -216,6 +216,12 @@ Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`)
    `mxBuildPult`, `HXMP`, gleiche Streifen wie die Ansicht über `hxmSyncR`/`hxmDrawR`, nur solange es Schleifen gibt,
    Überschrift klappt ein, `localStorage myzel.hxmPultFold`; neu/weg → `mxLayout`). Beim Vorhören zeichnet der Editor
    nur dessen Spielkopf, gestoppt die Marke nur als Dreieck. `t-hx-mixer` 12.
+   Nachtrag 6 (26.10.2026, Besitzer: „Grundeinstellung funktioniert nicht immer“): (1) Abschnitte stehen in der Audio –
+   `hxRegionEdit` behält vor der ersten Bearbeitung die Audio wie aufgenommen (`L.rx0`: je Schicht aud/bak/n + `hxSnapS`,
+   ob rückwärts, `dbl`; in `hxBandFl`, also mit ↶ ↷), `hxRxRestore` tauscht sie in `hxDefaults` zurück (gespiegelt, wenn
+   nötig; gleiches Fenster: die Naht wie damals). Nach Verdoppeln oder Zusammenlegen nicht (anderes `n`/andere Schicht);
+   nach einem Neuladen ist `rx0` weg (nur im Speicher). (2) `hxBandTrimDo`: `T0.sp` – „ganz“ rechnet die Länge mit dem
+   Bandtempo seit dem Trimmen (vorher halbe/doppelte Länge nach Trimmen + Band). Test `t-hx-grund` (6, in run-all).
 5. **Offene Fragen ans Ohr:** Schale spricht wie früher das Harz-Glas manchmal spät an (soll sie immer sofort?);
    Bandträgheit, Gärtner-Bass, Musikalität der Antworten (siehe `dev/IDEEN.md`).
 6. **Danach** die Liste in `dev/IDEEN.md` (Sample-Bibliothek, Stimme als Instrument, neue Klangerzeugung, native App).

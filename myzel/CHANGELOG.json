@@ -2,6 +2,13 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-26g",
+      "punkte": [
+        "Schleife bearbeiten: „Grundeinstellung“ setzt jetzt auch einzeln bearbeitete Abschnitte zurück – die Schleife klingt wieder genau wie aufgenommen (↶ holt die Bearbeitungen zurück).",
+        "Behoben: Nach Trimmen und einem Bandwechsel war die Schleife bei „ganz“ oder „Grundeinstellung“ nur halb (oder doppelt) so lang."
+      ]
+    },
+    {
       "id": "2026-10-26f",
       "punkte": [
         "Touché: acht neue Spielweisen auf F5 bis F12 – jede formt deinen Klang grundverschieden, in Ruhe bleibt er genau wie vorher.",

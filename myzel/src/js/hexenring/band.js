@@ -47,7 +47,7 @@ function hxBandReady(L, what) {
   return sch;
 }
 // the step for a content change of the tape: ↶ gives back what was (its geometry, its Schichten), ↷ again
-const hxBandFl = (L) => ({ rev: !!L.rev, revW: !!L.revW, trim: L.trim || null, tr0: L.tr0 || null, dbl: L.dbl || 1, notes0: L.notes0 || L.notes || null, aon0: L.aon0 || L.aon || null });   // (25.10.2026: the notes as played – ↶ after a first trim gave back only the trimmed ones)
+const hxBandFl = (L) => ({ rev: !!L.rev, revW: !!L.revW, trim: L.trim || null, tr0: L.tr0 || null, dbl: L.dbl || 1, notes0: L.notes0 || L.notes || null, aon0: L.aon0 || L.aon || null, rx0: L.rx0 || null });   // (25.10.2026: the notes as played – ↶ after a first trim gave back only the trimmed ones)
 function hxBandStep(L, label, before, f0, o = {}) {
   const key = L.key, after = {}, f1 = hxBandFl(L), now = { now: !!o.now };   // (a change heard at once: its ↶ ↷ at once too)
   hxHist({ kind: 'band', label: hxName(L) + ': ' + label,
@@ -106,14 +106,14 @@ function hxBandTrimTo(L, a, f) {
 }
 function hxBandTrimDo(L, f, a) {
   const sch = hxBandReady(L); if (!sch) return false;
-  const T0 = L.tr0 || Object.assign(hxGeo(L), { rev: !!L.rev, revW: !!L.revW }), cur = L.trim || { f: 1, i: 0 };   // (26.10.2026: the whole's direction – „ganz“ plays its audio as it was, so the loop says that direction again)
+  const T0 = L.tr0 || Object.assign(hxGeo(L), { rev: !!L.rev, revW: !!L.revW, sp: L.sp || 1 }), cur = L.trim || { f: 1, i: 0 }, ks = (T0.sp || 1) / (L.sp || 1);   // (26.10.2026: the tape's speed since the whole was kept – „ganz“ after Band ½ was half as long)   // (26.10.2026: the whole's direction – „ganz“ plays its audio as it was, so the loop says that direction again)
   if (Math.abs(f - cur.f) < 1e-9 && Math.abs(a - hxTrA(cur)) < 1e-9) return false;
   const before = hxGeo(L), sw = hxNextSeam(L), tk = hxTakt(L), whole = f > 1 - 1e-9;
   T0.sch.forEach((s, j) => {
     const S = hxSchByKey(s.key); if (!S || !s.aud) return;
     const len = Math.max(1, Math.round(s.len * f)), pre = s.pre + Math.round(s.len * a), X = Math.round(0.01 * SR);
     const c = Object.assign({}, s.cut, { pre, len, post: s.n - pre - len, n: s.n, aus: whole && s.aus ? Object.assign({}, s.aus) : null, stale: true });
-    const geom = j === 0 ? (tk ? { beats: T0.d.beats * f } : { L: Math.round(T0.d.L * f) }) : null;
+    const geom = j === 0 ? (tk ? { beats: T0.d.beats * f * ks } : { L: Math.round(T0.d.L * f * ks) }) : null;
     hxSchSwap(S, c, { aud: s.aud, bak: s.bak, f: sw.f, join: whole ? s.join : 'xf', X: whole ? s.X : X, rho: whole ? s.rho : hxRho(s.bak && S.chain && !L.folgt ? s.bak : s.aud, s.n, pre, len, X), zo: whole ? s.zo : 0, kc: whole ? s.kc : hxSeamOf({ pre, len, X, zo: 0 }, s.aud), kcB: whole ? s.kcB : s.bak ? hxSeamOf({ pre, len, X, zo: 0 }, s.bak) : null, dr: s.dr, geom,
       fade: whole && s.aus ? Math.min(Math.round(0.03 * SR), s.aus.len) : 0 });
     S.wn = s.wn ? hxWnWin(s.wn, a, f) : S.wn;
@@ -222,6 +222,7 @@ function hxDefaults(L) {
   if (L.vb != null && L.vb < 1) hxVbSet(L, 1);
   if (L.ab) hxAbSet(L, 0);
   if (hxNtOn(L)) hxNtSet(L, 'zurueck');
+  if (L.rx0) hxRxRestore(L);   // (the stretches edited on their own: the audio as recorded)
   const did = hxHistGroup(n0, hxName(L) + ': alles auf Grundeinstellung');
   hxSay(hxName(L) + (did ? ': alles auf Grundeinstellung' : ': ist schon in der Grundeinstellung'));
   return did;

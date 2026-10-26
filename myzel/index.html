@@ -30131,7 +30131,7 @@ function hxEdRender() {
       loops.length > 1 ? btn('‹', () => go(-1), 'Vorige Schleife', 'ghost') : null, loops.length > 1 ? btn('›', () => go(1), 'Nächste Schleife', 'ghost') : null,
       (() => { const u = btn('↶', hxUndoStep, HX.hist.length ? 'Rückgängig: ' + HX.hist[HX.hist.length - 1].label + ' (Strg+Z)' : 'Nichts rückgängig zu machen', 'ghost'); u.disabled = !HX.hist.length && !HX.pend.length; u.setAttribute('aria-label', 'Rückgängig'); return u; })(),
       (() => { const r = btn('↷', hxRedoStep, HX.redo.length ? 'Wiederholen: ' + HX.redo[HX.redo.length - 1].label + ' (Strg+Umschalt+Z)' : 'Nichts zu wiederholen', 'ghost'); r.disabled = !HX.redo.length; r.setAttribute('aria-label', 'Wiederholen'); return r; })(),
-      btn('Grundeinstellung', () => hxDefaults(L), 'Alle Bearbeitungen zurück: Band ×1, vorwärts, ganz, keine Lücken, kein Verblassen, kein Abrieb, Noten wie gespielt – als ein Schritt (↶ holt sie zurück). Pegel, Balance und Schichten bleiben.', 'ghost'),
+      btn('Grundeinstellung', () => hxDefaults(L), 'Alle Bearbeitungen zurück: Band ×1, vorwärts, ganz, keine Lücken, kein Verblassen, kein Abrieb, Noten wie gespielt, bearbeitete Abschnitte wie aufgenommen – als ein Schritt (↶ holt sie zurück). Pegel, Balance und Schichten bleiben.', 'ghost'),
       btn('Karte', () => { hxEdClose(); hxCardOpen(L.slot); }, 'Die Karte mit allen Einstellungen dieser Schleife', 'ghost'),
       (() => { const x = btn('✕', hxEdClose, 'Schließen (Esc)', 'ghost hx-ed-x'); x.setAttribute('aria-label', 'Schließen'); return x; })()));
   // the waveform: drag over it to choose a stretch
@@ -30493,6 +30493,9 @@ function hxRegionEdit(L, a, b, op, v) {
   const sch = hxBandReady(L); if (!sch) return false;
   if (sch.some((S) => !hxMemOk(2 * S.n))) return false;
   const before = hxGeo(L), fl0 = hxBandFl(L), sw = hxSwapAt(L), u = hxBandU(L).map((p) => (p - a) / (b - a)).filter((p) => p >= 0 && p < 1);
+  // (26.10.2026, owner: „Grundeinstellung funktioniert nicht immer“ – a stretch's edit is written into the audio; the
+  // audio as recorded is kept from the first edit on, so „Grundeinstellung“ can give it back – hxRxRestore)
+  if (!L.rx0) L.rx0 = { rev: !!L.rev, dbl: L.dbl || 1, sch: sch.map((S) => ({ key: S.key, aud: S.aud, bak: S.bak || null, n: S.n, s: hxSnapS(S) })) };
   const done = [];
   for (const S of sch) {
     const [r0, r1] = hxRxFrames(S, a, b); if (r1 - r0 < 64) continue;
@@ -30515,6 +30518,31 @@ function hxRxName(L, a, b) {
   if (!hxTakt(L)) { const T = hxLen(L); return dec((a * T).toFixed(1)) + '–' + dec((b * T).toFixed(1)) + ' s'; }
   const B = L.d.beats, bpb = L.bpb || 4, x = Math.round(a * B), y = Math.round(b * B);
   return x % bpb === 0 && y % bpb === 0 ? 'Takt ' + (x / bpb + 1) + (y - x > bpb ? '–' + y / bpb : '') : 'Schlag ' + (x + 1) + '–' + y;
+}
+// „Grundeinstellung“ for the stretches: every Schicht's audio as it was before the first stretch was edited (mirrored if
+// it was kept while the loop played backwards and plays forwards now), one step (↶ gives the edits back). Not after
+// „Verdoppeln“ or a Schicht that is not the same any more (merged, newly recorded) – those keep what they have.
+function hxRxRestore(L) {
+  const R = L.rx0; if (!R) return false;
+  if ((L.dbl || 1) !== R.dbl) { L.rx0 = null; return false; }
+  const sch = hxBandReady(L); if (!sch) return false;
+  const before = hxGeo(L), fl0 = hxBandFl(L), sw = hxSwapAt(L);
+  let n = 0;
+  for (const e of R.sch) {
+    const S = sch.find((x) => x.key === e.key); if (!S || S.n !== e.n) continue;
+    const flip = R.rev !== !!L.rev, aud = flip ? hxRevArr(e.aud, S.n) : e.aud, bak = e.bak ? (flip ? hxRevArr(e.bak, S.n) : e.bak) : null;
+    if (!S.bak && bak) continue;   // (a Schicht whose bake is gone meanwhile: its dry audio would not match)
+    const c = Object.assign({}, S.cut, { pre: S.pre, len: S.len, n: S.n, aus: S.aus ? Object.assign({}, S.aus) : null, stale: true }), o = e.s;
+    // (the same window as when it was kept: its seam exactly as it was then – else the warm crossfade made anew)
+    if (!flip && o && o.pre === S.pre && o.len === S.len) hxSchSwap(S, c, { aud, bak: S.bak ? bak : null, f: sw.f, now: !!sw.now, join: o.join, X: o.X, rho: o.rho, zo: o.zo || 0, kc: o.kc, kcB: o.kcB, dr: o.dr });
+    else { const X = S.X || Math.round(0.01 * SR), g = { pre: S.pre, len: S.len, X, zo: S.zo || 0 }; hxSchSwap(S, c, { aud, bak: S.bak ? bak : null, f: sw.f, now: !!sw.now, join: 'xf', X, rho: hxRho(bak && S.chain && !L.folgt ? bak : aud, S.n, S.pre, S.len, X), zo: S.zo || 0, kc: hxSeamOf(g, aud), kcB: bak ? hxSeamOf(g, bak) : null, dr: S.dr }); }
+    n++;
+  }
+  L.rx0 = null;
+  if (!n) return false;
+  hxBandStep(L, 'Abschnitte wie aufgenommen', before, fl0, { now: !!sw.now });
+  hxSaveLoop(L);
+  return true;
 }
 // ---- (owner, 26.10.2026: „in der Schleifen-Ansicht auch ein Play und Stopp – und dass man auf eine beliebige Stelle
 // klickt und es dort weiterspielt; bei längeren Schleifen muss man sonst immer alles durchlaufen lassen“) Vorhören: the
@@ -33652,7 +33680,7 @@ function hxBandReady(L, what) {
   return sch;
 }
 // the step for a content change of the tape: ↶ gives back what was (its geometry, its Schichten), ↷ again
-const hxBandFl = (L) => ({ rev: !!L.rev, revW: !!L.revW, trim: L.trim || null, tr0: L.tr0 || null, dbl: L.dbl || 1, notes0: L.notes0 || L.notes || null, aon0: L.aon0 || L.aon || null });   // (25.10.2026: the notes as played – ↶ after a first trim gave back only the trimmed ones)
+const hxBandFl = (L) => ({ rev: !!L.rev, revW: !!L.revW, trim: L.trim || null, tr0: L.tr0 || null, dbl: L.dbl || 1, notes0: L.notes0 || L.notes || null, aon0: L.aon0 || L.aon || null, rx0: L.rx0 || null });   // (25.10.2026: the notes as played – ↶ after a first trim gave back only the trimmed ones)
 function hxBandStep(L, label, before, f0, o = {}) {
   const key = L.key, after = {}, f1 = hxBandFl(L), now = { now: !!o.now };   // (a change heard at once: its ↶ ↷ at once too)
   hxHist({ kind: 'band', label: hxName(L) + ': ' + label,
@@ -33711,14 +33739,14 @@ function hxBandTrimTo(L, a, f) {
 }
 function hxBandTrimDo(L, f, a) {
   const sch = hxBandReady(L); if (!sch) return false;
-  const T0 = L.tr0 || Object.assign(hxGeo(L), { rev: !!L.rev, revW: !!L.revW }), cur = L.trim || { f: 1, i: 0 };   // (26.10.2026: the whole's direction – „ganz“ plays its audio as it was, so the loop says that direction again)
+  const T0 = L.tr0 || Object.assign(hxGeo(L), { rev: !!L.rev, revW: !!L.revW, sp: L.sp || 1 }), cur = L.trim || { f: 1, i: 0 }, ks = (T0.sp || 1) / (L.sp || 1);   // (26.10.2026: the tape's speed since the whole was kept – „ganz“ after Band ½ was half as long)   // (26.10.2026: the whole's direction – „ganz“ plays its audio as it was, so the loop says that direction again)
   if (Math.abs(f - cur.f) < 1e-9 && Math.abs(a - hxTrA(cur)) < 1e-9) return false;
   const before = hxGeo(L), sw = hxNextSeam(L), tk = hxTakt(L), whole = f > 1 - 1e-9;
   T0.sch.forEach((s, j) => {
     const S = hxSchByKey(s.key); if (!S || !s.aud) return;
     const len = Math.max(1, Math.round(s.len * f)), pre = s.pre + Math.round(s.len * a), X = Math.round(0.01 * SR);
     const c = Object.assign({}, s.cut, { pre, len, post: s.n - pre - len, n: s.n, aus: whole && s.aus ? Object.assign({}, s.aus) : null, stale: true });
-    const geom = j === 0 ? (tk ? { beats: T0.d.beats * f } : { L: Math.round(T0.d.L * f) }) : null;
+    const geom = j === 0 ? (tk ? { beats: T0.d.beats * f * ks } : { L: Math.round(T0.d.L * f * ks) }) : null;
     hxSchSwap(S, c, { aud: s.aud, bak: s.bak, f: sw.f, join: whole ? s.join : 'xf', X: whole ? s.X : X, rho: whole ? s.rho : hxRho(s.bak && S.chain && !L.folgt ? s.bak : s.aud, s.n, pre, len, X), zo: whole ? s.zo : 0, kc: whole ? s.kc : hxSeamOf({ pre, len, X, zo: 0 }, s.aud), kcB: whole ? s.kcB : s.bak ? hxSeamOf({ pre, len, X, zo: 0 }, s.bak) : null, dr: s.dr, geom,
       fade: whole && s.aus ? Math.min(Math.round(0.03 * SR), s.aus.len) : 0 });
     S.wn = s.wn ? hxWnWin(s.wn, a, f) : S.wn;
@@ -33827,6 +33855,7 @@ function hxDefaults(L) {
   if (L.vb != null && L.vb < 1) hxVbSet(L, 1);
   if (L.ab) hxAbSet(L, 0);
   if (hxNtOn(L)) hxNtSet(L, 'zurueck');
+  if (L.rx0) hxRxRestore(L);   // (the stretches edited on their own: the audio as recorded)
   const did = hxHistGroup(n0, hxName(L) + ': alles auf Grundeinstellung');
   hxSay(hxName(L) + (did ? ': alles auf Grundeinstellung' : ': ist schon in der Grundeinstellung'));
   return did;
