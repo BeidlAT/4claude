@@ -2,6 +2,8 @@
 
 ## Nächste Sitzung – zuerst lesen (Stand 26.10.2026, nachts)
 
+**APC40 MK2 (26.10.2026, spät):** `midi/apc.js` – `APC` (mode aus|raster|zeit|netz|ton|puls, gespeichert `myzel.apc.v1`), `apcScan` (aus `midiScan`: findet das Gerät per `profModel`, startet `apcFrame` alle 60 ms), `apcIn` (in `midiTake` nach dem Gerätebild: nur Kanal 1, Pads 0–39, Scene 82–86 = Modus, Shift 98, Play 91, Pfeile 94–97; Fader/Regler/andere Tasten → Belegungen), `apcPad(k, down)` (k = Reihe·8+Spalte, Reihe 0 oben; auch vom klickbaren Pad-Bild `apcModesRow` im Gerätebild). Lichter: `apcLights()` → [Velocity, Kanal] je Pad (Tabelle `APC_PAL`, Pigment über `apcVel`), `apcSendAll` schickt nur Änderungen; `apcSysex` stellt das Gerät per SysEx in den Alternate-Ableton-Modus (0x42), damit der Rechner die LEDs führt. Myzelnetz und Sequenzer laufen über `apcTick` im `tickRun` (T 14) auf dem Taktgeber, auch wenn ein anderer Modus gezeigt wird; Zeitreise erntet mit `apcHarvest(b0, b1)` (Plan `kind: 'grid'`, Einstieg nächste Eins). Test `dev/tests/v2/t-apc.js` (9/9, simuliertes Gerät, nur Chromium) – am echten APC ungetestet (Notennummern laut Akai-Protokoll).
+
 **Pigmente (26.10.2026, spät):** `hexenring/farben.js` – `HX_PIG` (12, dunkel → hell), `hxPig(L)`: L.col (gewählt) oder
 L.colA (aus der Nulldurchgangsrate der ersten Schicht, nächstes freies); Ring (ringleiste.js), Mixer-Streifen (`--c`,
 mixer.js), Ring-Menü und Editor (`hxColRow`). Gespeichert in hxRecOf/hxSnap.

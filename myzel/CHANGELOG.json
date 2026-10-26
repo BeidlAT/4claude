@@ -2,6 +2,16 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-26p",
+      "punkte": [
+        "Akai APC40 MK2: die 40 Clip-Pads bekommen fünf neue Aufgaben – wählbar im Gerätebild oder mit den fünf Scene-Tasten rechts am Gerät.",
+        "Hexenring-Raster: die 24 Plätze in ihren Farben auf drei Reihen, darunter Korb, Hauptknopf, Zurück und eine Reihe, die die letzten 1 bis 128 Takte erntet. Humus-Zeitreise: die letzten 40 Takte als Pads – einer erntet seinen Takt, zwei gehalten alles dazwischen.",
+        "Myzelnetz: Pads säen Hyphen, die im Takt weiterwachsen, altern und dabei Töne der Tonleiter spielen. Tonnetz: ein Halbton nach rechts, eine Quarte nach oben – jeder Akkord greift sich überall gleich.",
+        "Puls-Sequenzer: fünf Spuren mit acht Achteln im Takt – die vier Puls-Spuren und der Grundton deines Klangs; Play startet und stoppt.",
+        "Die Pads leuchten in den passenden Farben (der Browser fragt einmal nach der SysEx-Erlaubnis); Fader und Regler bleiben wie belegt. Am echten Gerät noch ungetestet – sag mir, was nicht passt."
+      ]
+    },
+    {
       "id": "2026-10-26o",
       "punkte": [
         "Schleifen haben jetzt Farben – zwölf Pilzpigmente, vom Indigo-Milchling über Grünspan, Fliegenpilz und Pfifferling bis zum Birkenporling.",
