@@ -24,7 +24,8 @@
       this.ys += (this.y - this.ys) * (1 - Math.exp(-n / (0.03 * SR)));
       if (this.burst) { this.gate -= n; if (this.gate <= 0) this.off = true; }
       const D = Math.min(1, this.ys * 0.85 + 0.15 * (p.bits + p.sprung + p.stottern) / 3 * 2), hold = Math.max(1, Math.round(1 + 9 * D * D)), lev = Math.pow(2, Math.round(12 - 9 * Math.max(D, p.bits * 0.8)));
-      const jr = p.sprung * D * 9, sp = p.stottern * D * 3, kx = p.kreuz * Math.min(1, 1.4 * D), att = 1 - Math.exp(-1 / (0.003 * SR)), rel = 1 - Math.exp(-1 / (0.05 * SR)), envT = this.off ? 0 : 1, og = R ? BNT_OUT * Math.SQRT1_2 : BNT_OUT;
+      // (at the bottom of the field the toy is whole: no jumps, no stutter, no crossed wires)
+      const Dz = Math.max(0, (D - 0.2) / 0.8), jr = p.sprung * Dz * 9, sp = p.stottern * Dz * 3, kx = p.kreuz * Math.min(1, 1.4 * Dz), att = 1 - Math.exp(-1 / (0.003 * SR)), rel = 1 - Math.exp(-1 / (0.05 * SR)), envT = this.off ? 0 : 1, og = R ? BNT_OUT * Math.SQRT1_2 : BNT_OUT;
       const SL = this.st.length;
       let p1 = this.p1, p2 = this.p2, hc = this.hc, hv = this.hold, env = this.env, lp = this.lp;
       for (let i = a; i < b; i++) {
@@ -35,8 +36,10 @@
         // the crossed wires: the second oscillator (a seventh below, detuned) bends the first and rings with it
         p2 += fr * 0.4447 / SR; if (p2 >= 1) p2 -= 1;
         const o2 = p2 < 0.5 ? 1 : -1;
-        p1 += fr * (1 + kx * 0.25 * o2) / SR; if (p1 >= 1) p1 -= 1;
-        let s = (p1 < 0.5 ? 1 : -1) * (1 - 0.5 * kx) + (p1 < 0.5 ? 1 : -1) * o2 * 0.5 * kx;
+        const d1 = fr * (1 + kx * 0.25 * o2) / SR; p1 += d1; if (p1 >= 1) p1 -= 1;
+        let h1 = p1 + 0.5; if (h1 >= 1) h1 -= 1;
+        const sq = (p1 < 0.5 ? 1 : -1) + blep(p1, d1) - blep(h1, d1);   // (the clean toy's square is band-limited; the stumbling clock below brings the aliases)
+        let s = sq * (1 - 0.5 * kx) + (p1 < 0.5 ? 1 : -1) * o2 * 0.5 * kx;
         // the stumbling clock: sample and hold (the alias), then too few bits
         if (++hc >= hold) { hc = 0; hv = Math.round(s * env * lev) / lev; }
         let x = hv;
