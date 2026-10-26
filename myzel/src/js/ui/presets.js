@@ -195,7 +195,7 @@ const PRESETS = [
     'rev.size': 5, 'rev.damp': 0.4, 'rev.mix': 0.4, 'dly.div': '0.75', 'dly.fb': 0.35, 'dly.mix': 0.22, 'seq.bpm': 70,
     'l0.on': false, 'l1.on': false, 'l2.on': true, 'l2.eng': 'kto', 'l2.steps': 9, 'l2.puls': 4, 'l2.div': '0.5', 'l2.walk': 0.6, 'l2.vol': 0.35, 'l2.bright': 0.45,
     'l3.on': true, 'l3.eng': 'hng', 'l3.steps': 13, 'l3.puls': 3, 'l3.div': '1', 'l3.oct': -1, 'l3.vol': 0.35, 'l3.bright': 0.2 } },
-  { key: 'handpankreis', name: 'Handpan-Kreis', tags: 'Welt · Meditation', desc: 'Ein Stahlfeld unter der Hand, ein zweites spielt Kreise im Akebono, warmer Raum.', v: {
+  { key: 'handpankreis', name: 'Handpan-Kreis', tags: 'Welt · Meditation', desc: 'Ein Stahlfeld unter der Hand, ein zweites spielt Kreise im Akebono, warmer Raum.', v: { 'drv.mix': 0,
     'v.eng': 'hng', 't.root': '2', 't.scale': 'akebono', 't.oct': 3, 't.range': 2,
     'hng.glanz': 0.5, 'hng.nachklang': 0.7, 'hng.koerper': 0.65, 'hng.schweben': 0.55,
     'rev.size': 6, 'rev.damp': 0.5, 'rev.mix': 0.45, 'cho.mix': 0.15, 'dly.div': '0.75', 'dly.fb': 0.3, 'dly.mix': 0.18, 'seq.bpm': 76,
