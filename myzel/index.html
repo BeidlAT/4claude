@@ -873,6 +873,20 @@ body.mlearn #stage::after { content: ""; position: absolute; inset: 0; backgroun
 .hx-pig-a[aria-pressed="true"] { color: var(--hypha); border-color: var(--dim); }
 .hx-cm-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
 .hx-cm .hx-pig { padding: 4px 10px 6px; max-width: 250px; }
+/* Kreise: the Leiste kept and loaded – each a small ring of its Pigmente */
+.hx-kreise { display: flex; flex-direction: column; gap: 8px; margin: 10px 0 4px; }
+.hx-kr-save { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.hx-kr-name, .hx-kr-n { background: var(--loam-2); color: var(--hypha); border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; font: inherit; min-width: 0; }
+.hx-kr-name { flex: 1 1 220px; }
+.hx-kr-list { display: flex; flex-direction: column; gap: 6px; }
+.hx-kr { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: rgba(240, 230, 216, .03); }
+.hx-kr-ring { width: 40px; height: 40px; flex: none; }
+.hx-kr-c { fill: none; stroke: rgba(240, 230, 216, .18); stroke-width: 1.2; }
+.hx-kr-t { display: flex; flex-direction: column; gap: 2px; flex: 1 1 200px; min-width: 0; }
+.hx-kr-n { border-color: transparent; background: none; padding: 2px 4px; font-weight: 600; }
+.hx-kr-n:hover, .hx-kr-n:focus { border-color: var(--line); background: var(--loam-2); }
+.hx-kr-m { color: var(--dim); font-size: 12px; padding-left: 4px; }
+.hx-kr-b { display: flex; flex-wrap: wrap; gap: 6px; }
 /* ---------- Gerätebild (26.10.2026): the controller drawn with its bindings ---------- */
 .cb { position: fixed; inset: 0; z-index: 60; background: rgba(17, 13, 11, .97); color: var(--hypha); display: flex; flex-direction: column; gap: 10px; padding: 14px 18px; overflow: auto; font: 400 14px/1.35 var(--font-ui); }
 .cb[hidden] { display: none; }
@@ -14068,13 +14082,15 @@ function idbOpen() {
   return new Promise((res) => {
     try {
       // version 2 (Hexenring, SPEC §19): its Schleifen and their audio; only the stores missing are made
-      const rq = indexedDB.open('myzel', 2);
+      const rq = indexedDB.open('myzel', 3);   // (3: the Hexenring's Kreise – the Leiste kept under a name)
       rq.onupgradeneeded = () => {
         const db = rq.result, has = (n) => db.objectStoreNames.contains(n);
         if (!has('takes')) db.createObjectStore('takes', { keyPath: 'id' });
         if (!has('segs')) db.createObjectStore('segs', { keyPath: ['take', 'i'] });
         if (!has('rings')) db.createObjectStore('rings', { keyPath: 'id' });
         if (!has('ringsegs')) db.createObjectStore('ringsegs', { keyPath: ['ring', 'schicht', 'i'] });
+        if (!has('kreise')) db.createObjectStore('kreise', { keyPath: 'id' });
+        if (!has('kreissegs')) db.createObjectStore('kreissegs', { keyPath: ['kreis', 'schicht', 'i'] });
       };
       rq.onsuccess = () => { IDB.db = rq.result; IDB.ok = true; IDB.db.onversionchange = () => { try { IDB.db.close(); } catch (e) {} IDB.ok = false; toast('Myzel wurde in einem anderen Tab erneuert – lade diese Seite neu, damit weiter gesichert wird.', 8000); }; res(true); };
       rq.onerror = () => res(false);
@@ -16669,9 +16685,9 @@ const PCRM_SEC = [[cbR('wheel', 1, ['Bender/Mod'], { sz: [58, 96] }), cbR('butto
 const CB_MODELS = [
   // (owner's photo, 26.10.2026) left the lever and six small keys, the name, R1–R8 over four function keys and B1–B6,
   // the little display, the short sliders S1–S8, the velocity curves printed at the right
-  { id: 'pcrm50', maker: 'Edirol', name: 'PCR-M50', re: /PCR-?\s*M\s*50/i, keys: 49, sec: PCRM_SEC, note: 'Einmessen empfohlen: die Werksbelegung des PCR-M ist frei einstellbar.' },
-  { id: 'pcrm30', maker: 'Edirol', name: 'PCR-M30', re: /PCR-?\s*M\s*30/i, keys: 25, sec: PCRM_SEC },
-  { id: 'pcrm80', maker: 'Edirol', name: 'PCR-M80', re: /PCR-?\s*M\s*80/i, keys: 61, sec: PCRM_SEC },
+  { id: 'pcrm50', maker: 'Edirol', name: 'PCR-M50', re: /PCR[-\s]*M\s*50|PCR[-\s]*M\s*30\s*\/\s*50|PCR[-\s]*M(?!\s*[38]0\b)|EDIROL\s*PCR(?![-\s]*[358]00)|^\s*PCR\s*(\d|MIDI|IN\b|OUT\b|$)/i, keys: 49, sec: PCRM_SEC, note: 'Einmessen empfohlen: die Werksbelegung des PCR-M ist frei einstellbar.' },
+  { id: 'pcrm30', maker: 'Edirol', name: 'PCR-M30', re: /PCR[-\s]*M\s*30/i, keys: 25, sec: PCRM_SEC },
+  { id: 'pcrm80', maker: 'Edirol', name: 'PCR-M80', re: /PCR[-\s]*M\s*80/i, keys: 61, sec: PCRM_SEC },
   { id: 'pcr500', maker: 'Edirol', name: 'PCR-300 / 500 / 800', re: /PCR-?\s*[358]00|PCR-?\s*[358]0\b/i, keys: 49, sec: [[cbR('wheel', 1, ['Bender/Mod'])], [cbR('knob', 8, 'R'), cbR('fader', 9, 'S')], [cbR('button', 9, 'B')]] },
   { id: 'apc40mk2', maker: 'Akai', name: 'APC40 MK2', re: /APC\s*40\s*mk\s*II|APC40\s*mkII|APC40\s*MK2/i, keys: 0, grid: [8, 5],
     sec: [[cbR('knob', 8, 'Spur-Regler ', { m: cbCC(48) }), cbR('pad', 40, '', { grid: [8, 5], m: (i) => ({ type: 'note', ch: 0, num: (4 - Math.floor(i / 8)) * 8 + (i % 8) }) }), cbR('button', 8, 'Clip Stop ', { m: (i) => ({ type: 'note', ch: i, num: 52 }) }),
@@ -16770,6 +16786,8 @@ function cbLogical(src) {
   return nb.length;
 }
 // a recognised profile's model (the catalogue's by the port name)
+// the model of a device: the one chosen in the Gerätebild, else the one its name gives
+const cbModelFor = (src) => cbModelOf(cbData(src).model) || profModel(src);
 function profModel(src) { for (const M of CB_MODELS) if (M.re && M.re.test(src.name)) return M; return cbModelOf('generic'); }
 
 // ---- the page ----
@@ -28502,8 +28520,10 @@ function kcCard(it) {
   if (on) {
     mapOf(s);
     const p = s.prof, po = profOn(s), o = kcOut(s);
+    const gm = cbModelFor(s), gmn = gm && gm.id !== 'generic' ? (gm.maker ? gm.maker + ' ' : '') + gm.name : '';   // (owner, 26.10.2026: the PCR-M50 „nirgends erkannt“ – the Gerätebild's model, named here too)
     el.append(h('p', { class: 'kc-prof' }, p ? [h('b', null, p.name), ' erkannt – ' + p.what + (po ? '' : ' (Profil aus)')]
-      : ['Kein eigenes Profil: Tasten, Räder und Pedale spielen', P['midi.std'] ? ', übliche Regler (CC 7, 10, 74, 91 …) wirken' : '', '. Weitere Regler weist du unter „Zuordnungen“ zu.']));
+      : gmn ? [h('b', null, gmn), ' erkannt – Tasten, Räder und Pedale spielen; seine Regler und Fader zeigt und belegt das „Gerätebild“' + (cbData(s).model ? '' : ' (dort auch ein anderes Modell wählen)') + '.']
+      : ['Kein eigenes Profil: Tasten, Räder und Pedale spielen', P['midi.std'] ? ', übliche Regler (CC 7, 10, 74, 91 …) wirken' : '', '. Modell nicht erkannt – im „Gerätebild“ wählst du es aus der Liste, weitere Regler weist du unter „Zuordnungen“ zu.']));
     C.last = h('p', { class: 'kc-last idle' });
     el.append(C.last);
     const opts = h('div', { class: 'kc-opts' });
@@ -32544,6 +32564,7 @@ function hxCardSec() {
   HXK.acts = h('div', { class: 'hx-acts' });
   HXK.list = h('div', { class: 'hx-cards' });
   HXK.grave = h('div', { class: 'hx-grave' });
+  HXK.kreise = h('div', { class: 'hx-kreise' });   // (26.10.2026: the Leiste kept and loaded – kreise.js)
   HXK.mem = h('p', { class: 'note' }); HXK.cost = h('p', { class: 'note', id: 'hxCost' });
   HXK.form = h('div', { class: 'hx-form-sec' });   // (step 1d: Lichtungen, Kern, Lücke, Schluss)
   HXK.gd = h('div', { class: 'hx-form-sec hx-gd' });   // (Etappe 3: the Gärtner)
@@ -32561,7 +32582,7 @@ function hxCardSec() {
     HXK.mem,
     h('p', { class: 'note' }, 'Der Korb erntet, was du gespielt hast („Gespielt“: deine Klangquellen nach Stumm und Solo, ohne Echo und Hall); „Alles“ wählst du pro Schleife – es hört auch die Schleifen mit, wie ein Zusammenmischen. Die Humus-Länge gilt ab dem nächsten Klangstart.'),
   ]);
-  HXK.sec = h('div', { class: 'sec hx-sec', id: 'hxSec' }, h('div', { class: 'sec-h' }, h('h3', null, 'Hexenring'), HXK.sub), HXK.acts, HXK.cost, HXK.list, HXK.gd, HXK.form, HXK.grave, set);
+  HXK.sec = h('div', { class: 'sec hx-sec', id: 'hxSec' }, h('div', { class: 'sec-h' }, h('h3', null, 'Hexenring'), HXK.sub), HXK.acts, HXK.cost, HXK.list, HXK.kreise, HXK.gd, HXK.form, HXK.grave, set);
   HXK.dirty = true; hxCardRender();
   hxTipsWatch(HXK.sec);   // (25.10.2026: every control explains itself on hover)
   hxBlitzOn(HXK.sec);   // (25.10.2026: every press flashes)
@@ -32632,6 +32653,7 @@ function hxCardRender() {
   HXK.list.replaceChildren();
   if (!loops.length) HXK.list.append(h('div', { class: 'empty' }, 'Noch keine Schleife. Spiel etwas und tippe den Korb unter dem Spielfeld – oder tippe den runden Knopf daneben, spiel und tippe noch einmal.'));
   for (const L of loops) HXK.list.append(hxCardOne(L, btn));
+  hxKrRender(btn);
   hxCardForm(btn);   // (step 1d)
   hxCardGd(btn); hxCardHand(btn);   // (Etappe 3)
   if (HXK.setl) HXK.setl.replaceChildren(hxCardSet(btn));   // (step 2b)
@@ -34018,57 +34040,68 @@ async function hxRestoreApply() {
   // the tempo they were made in (theirs, or the Puls's then): a Takt Schleife's audio fits only that – they give it now
   const tk = recs.find((r) => r.lock === 'takt' && r.sch && r.sch.length), tb = HX.restoreS && HX.restoreS.hxOn ? HX.restoreS.hx : tk ? (HX.restoreS && HX.restoreS.bpm) || tk.bpm : 0;
   if (tb && !SEQ.ext) { TG.hxOn = true; TG.hx = tb; TG.keep = !!(HX.restoreS && HX.restoreS.keep); tgRetempo(TG.hx); for (const fn of CTL['seq.bpm'] || []) fn(P['seq.bpm'], null); updDelay(); }
+  const lost = { n: 0 };
   for (const r of recs.sort((a, b) => a.slot - b.slot)) {
-    if (r.bew && !(r.sch && r.sch.length)) {   // (step 1d: a Schleife of Bewegung – no audio, its lanes)
-      const B = r.bew, dec = (x) => faeDec(x, B.n), lanes = (B.lanes || []).map((x) => ({ k: x.k, src: x.src, v: dec(x.d) })).filter((x) => x.v && MODT[x.k]);
-      if (!lanes.length || HX.slot[r.slot]) continue;
-      const disp = B.disp ? Object.fromEntries(Object.entries(B.disp).map(([k, v]) => [k, dec(v)]).filter(([, v]) => v)) : null;
-      const sn = { key: r.id, col: r.col || null, colA: r.colA || null, slot: r.slot, d: { lock: 'takt', b0: r.b0 + TG.o, beats: r.beats }, bpb: 4, notes: [], eng: 'bew', gain: r.gain, state: 'angehalten', eig: r.eig, sch: [], bew: { lanes, disp, n: B.n, g0: B.g0, gs: r.b0 + TG.o + (B.gs || 0), fade: B.fade, why: B.why } };
-      const L = hxRebuild(sn, { state: 'angehalten', fokus: false, noSave: true });
-      if (L) { L.made = r.made || Date.now(); n++; hxSaveMeta(L.id); }
-      continue;
-    }
-    const sch = [];
-    for (const s of r.sch) {
-      if (!s.saved) continue;
-      const read = async (key, nn, ns) => {
-        const n = nn || s.n, segN = ns || s.segs;
-        const segs = ((await idbDo('ringsegs', 'readonly', (st) => st.getAll(IDBKeyRange.bound([r.id, key, 0], [r.id, key, Number.MAX_SAFE_INTEGER])))) || []).sort((a, b) => a.i - b.i);
-        if (segs.length < segN) return null;
-        const [aud] = hxChunks(n);
-        let o = 0;
-        for (const g of segs) { const L = new Float32Array(g.L), R = new Float32Array(g.R); for (let i = 0; i < L.length && o < n; i++, o++) { const c = aud[Math.floor(o / HX_CH)]; c[0][o % HX_CH] = L[i]; c[1][o % HX_CH] = R[i]; } }
-        return aud;
-      };
-      const aud = await read(s.key);
-      if (!aud) continue;
-      const bak = s.bakd ? await read(s.key + '~b') : null;   // (the baked version beside it: it plays as baked, exact)
-      const f32 = (a) => (a ? Float32Array.from(a) : null), sr = s.sr || r.sr;
-      // (step 2a) its Treu render and its anchor, as they were (at another rate: rendered again from the notes)
-      const ver = async (V, w) => { if (!V || sr !== SR) return null; const a = await read(s.key + '~' + w, V.n, Math.ceil(V.n / (HX_SEG * sr))); return a ? Object.assign({}, V, { aud: a }) : null; };
-      const wu = await ver(s.wu, 'w'), anc = await ver(s.anc, 'x');
-      sch.push(Object.assign({}, s, { aud, bak, kc: f32(s.kc), kcB: f32(s.kcB), dr: f32(s.dr), sr, cut: s.cut ? Object.assign({}, s.cut, { stale: true }) : null, wu, anc }));
-    }
-    if (!sch.length) continue;
-    // another sample rate: the processor's resampler, then every frame count scaled (one it could not convert stays out
-    // of the loop – never played at the wrong speed – and the toast says so)
-    for (const s of sch) if (s.sr !== SR) { s.bak = null; s.kcB = null; s.zo = Math.round((s.zo || 0) * SR / s.sr); }   // (another rate: the dry Abdruck is converted; it plays dry through the live chain)
-    for (const s of sch) if (s.sr !== SR) await hxResampleS(s);
-    for (let i = sch.length - 1; i >= 0; i--) if (sch[i].sr !== SR) { sch.splice(i, 1); rsLost++; }
-    if (!sch.length) continue;
-    const k = r.sr && r.sr !== SR ? SR / r.sr : 1;
-    const sn = { key: r.id, col: r.col || null, colA: r.colA || null, slot: r.slot, d: { lock: r.lock, b0: r.b0 + TG.o, beats: r.beats, L: r.L ? (k === 1 ? r.L : r.L * k) : r.L, ph0: 0, gap: !!r.gap }, bpb: r.bpb, eco: r.eco || null, notes: r.notes || [], mv: r.mv, cut: r.cut ? Object.assign({}, r.cut, { stale: true }) : null, eng: r.eng, setTG: r.setTG, gain: r.gain, pan: r.pan || 0, src: r.src, bpm: r.bpm, state: 'angehalten', tk: r.tk, folgt: r.folgt, taumeln: r.taumeln, eig: r.eig, naehrt: r.naehrt || null, sch,
-      wwhy: r.wwhy || {}, ton: r.ton, klang: r.klang, stufe: r.stufe, q: r.q, P: r.P, mask: r.mask, chainRec: r.chainRec, jrg: r.jrg, tb: r.tb || null, mi: r.mi || null };   // (step 2a; step 2b: its tools; Etappe 3: role, Gärtner, Wiederkehr)
     if (HX.slot[r.slot]) continue;
-    const L = hxRebuild(sn, { state: 'angehalten', fokus: false, noSave: true });
-    if (L) { L.nudge = r.nudge || 0; L.plan = r.plan; L.made = r.made || Date.now(); n++; for (const id of L.sch) { const S = HX.sch.get(id); if (S) { S.saved = hxSegs(S); if (S.bak) S.savedB = hxSegs(S); if (S.wu) S.savedW = hxSegsV(S, 'w'); if (S.anc) S.savedX = hxSegsV(S, 'x'); } } hxSaveMeta(L.id); }
+    const segsOf = (key) => idbDo('ringsegs', 'readonly', (st) => st.getAll(IDBKeyRange.bound([r.id, key, 0], [r.id, key, Number.MAX_SAFE_INTEGER])));
+    if (await hxRecBuild(r, segsOf, { lost })) n++;
   }
+  rsLost = lost.n;
   if (!n) return;
   if (HX.restoreS && HX.restoreS.fokus) { const F = hxByKey(HX.restoreS.fokus); if (F) HX.fokus = F.id; }
   hxAccRelink();   // (step 4: the Sammelschleifen find their sources)
   HX.ruht = true; HX.persistAsked = false; hxPersistAsk();
   toast('Hexenring wiederhergestellt: ' + n + (n === 1 ? ' Schleife' : ' Schleifen') + ', angehalten.' + (rsLost ? ' ' + rsLost + (rsLost === 1 ? ' Schicht in anderer Abtastrate ließ' : ' Schichten in anderer Abtastrate ließen') + ' sich nicht umrechnen.' : ''), 9000, { label: '▶ Weiter', fn: hxWeiter });
   hxSay('Hexenring wiederhergestellt'); hxRailDirty(); hxCardDirty(); hxStripSync();
+}
+// one stored Schleife made again: its record r and its audio (segsOf(key) → the segments of one Schicht or version) –
+// after a reload from „rings“, from a Kreis (o.fresh: new keys, saved anew as a Schleife of this session)
+async function hxRecBuild(r, segsOf, o = {}) {
+  if (r.bew && !(r.sch && r.sch.length)) {   // (step 1d: a Schleife of Bewegung – no audio, its lanes)
+    const B = r.bew, dec = (x) => faeDec(x, B.n), lanes = (B.lanes || []).map((x) => ({ k: x.k, src: x.src, v: dec(x.d) })).filter((x) => x.v && MODT[x.k]);
+    if (!lanes.length) return null;
+    const disp = B.disp ? Object.fromEntries(Object.entries(B.disp).map(([k, v]) => [k, dec(v)]).filter(([, v]) => v)) : null;
+    const sn = { key: o.fresh ? hxKey('l') : r.id, col: r.col || null, colA: r.colA || null, slot: r.slot, d: { lock: 'takt', b0: r.b0 + TG.o, beats: r.beats }, bpb: 4, notes: [], eng: 'bew', gain: r.gain, state: 'angehalten', eig: r.eig, sch: [], bew: { lanes, disp, n: B.n, g0: B.g0, gs: r.b0 + TG.o + (B.gs || 0), fade: B.fade, why: B.why } };
+    const L = hxRebuild(sn, { state: 'angehalten', fokus: false, noSave: true });
+    if (L) { L.made = o.fresh ? Date.now() : r.made || Date.now(); hxSaveMeta(L.id); }
+    return L;
+  }
+  const sch = [];
+  for (const s of r.sch) {
+    if (!s.saved) continue;   // (a Kreis: every Schicht it holds is complete)
+    const read = async (key, nn, ns) => {
+      const n = nn || s.n, segN = ns || s.segs;
+      const segs = ((await segsOf(key)) || []).sort((a, b) => a.i - b.i);
+      if (segs.length < segN) return null;
+      const [aud] = hxChunks(n);
+      let o = 0;
+      for (const g of segs) { const L = new Float32Array(g.L), R = new Float32Array(g.R); for (let i = 0; i < L.length && o < n; i++, o++) { const c = aud[Math.floor(o / HX_CH)]; c[0][o % HX_CH] = L[i]; c[1][o % HX_CH] = R[i]; } }
+      return aud;
+    };
+    const aud = await read(s.key);
+    if (!aud) continue;
+    const bak = s.bakd ? await read(s.key + '~b') : null;   // (the baked version beside it: it plays as baked, exact)
+    const f32 = (a) => (a ? Float32Array.from(a) : null), sr = s.sr || r.sr;
+    // (step 2a) its Treu render and its anchor, as they were (at another rate: rendered again from the notes)
+    const ver = async (V, w) => { if (!V || sr !== SR) return null; const a = await read(s.key + '~' + w, V.n, Math.ceil(V.n / (HX_SEG * sr))); return a ? Object.assign({}, V, { aud: a }) : null; };
+    const wu = await ver(s.wu, 'w'), anc = await ver(s.anc, 'x');
+    sch.push(Object.assign({}, s, { aud, bak, kc: f32(s.kc), kcB: f32(s.kcB), dr: f32(s.dr), sr, cut: s.cut ? Object.assign({}, s.cut, { stale: true }) : null, wu, anc }));
+  }
+  if (!sch.length) return null;
+  // another sample rate: the processor's resampler, then every frame count scaled (one it could not convert stays out
+  // of the loop – never played at the wrong speed – and the toast says so)
+  for (const s of sch) if (s.sr !== SR) { s.bak = null; s.kcB = null; s.zo = Math.round((s.zo || 0) * SR / s.sr); }   // (another rate: the dry Abdruck is converted; it plays dry through the live chain)
+  for (const s of sch) if (s.sr !== SR) await hxResampleS(s);
+  for (let i = sch.length - 1; i >= 0; i--) if (sch[i].sr !== SR) { sch.splice(i, 1); if (o.lost) o.lost.n++; }
+  if (!sch.length) return null;
+  if (o.fresh) for (const x of sch) x.key = hxKey('s');   // (a Kreis loaded: new keys – it may come twice, beside the Schleifen it was made of)
+  const k = r.sr && r.sr !== SR ? SR / r.sr : 1;
+  const sn = { key: o.fresh ? hxKey('l') : r.id, col: r.col || null, colA: r.colA || null, slot: r.slot, d: { lock: r.lock, b0: r.b0 + TG.o, beats: r.beats, L: r.L ? (k === 1 ? r.L : r.L * k) : r.L, ph0: 0, gap: !!r.gap }, bpb: r.bpb, eco: r.eco || null, notes: r.notes || [], mv: r.mv, cut: r.cut ? Object.assign({}, r.cut, { stale: true }) : null, eng: r.eng, setTG: r.setTG, gain: r.gain, pan: r.pan || 0, src: r.src, bpm: r.bpm, state: 'angehalten', tk: r.tk, folgt: r.folgt, taumeln: r.taumeln, eig: r.eig, naehrt: r.naehrt || null, sch,
+    wwhy: r.wwhy || {}, ton: r.ton, klang: r.klang, stufe: r.stufe, q: r.q, P: r.P, mask: r.mask, chainRec: r.chainRec, jrg: r.jrg, tb: r.tb || null, mi: r.mi || null };   // (step 2a; step 2b: its tools; Etappe 3: role, Gärtner, Wiederkehr)
+  const L = hxRebuild(sn, { state: 'angehalten', fokus: false, noSave: true });
+  if (L && o.fresh) { L.nudge = r.nudge || 0; L.plan = r.plan; L.made = Date.now(); hxSaveLoop(L); return L; }
+  if (L) { L.nudge = r.nudge || 0; L.plan = r.plan; L.made = r.made || Date.now(); for (const id of L.sch) { const S = HX.sch.get(id); if (S) { S.saved = hxSegs(S); if (S.bak) S.savedB = hxSegs(S); if (S.wu) S.savedW = hxSegsV(S, 'w'); if (S.anc) S.savedX = hxSegsV(S, 'x'); } } hxSaveMeta(L.id); }
+  return L;
 }
 // a Schicht stored at another rate: through the processor's resampler (160 taps) in an offline render of its own – on
 // its own thread, never the live one (there a conversion took ≈ 0.6 ms of every 2.7-ms block while it ran)
@@ -34095,6 +34128,236 @@ async function hxResampleS(s) {
    count-in and click (§6.3). The Werk-Rahmen is this page in a hidden frame of itself: a second realm whose every
    singleton (A, RHZ, MOD, KS_CACHE, Q …) is its own, so an offline render there can never touch the live instrument. ---- */
 
+// ---- (owner, 26.10.2026: „die Leiste mit den Loops speichern können, mit Ladefunktion – jederzeit laden, unabhängig
+// vom restlichen Projekt“) Kreise: the whole Ringleiste kept under a name – every Schleife with its Schichten' audio,
+// its Pigment, level, balance, notes and tools, and the Takt they were made in. A library on this device (IndexedDB
+// „kreise“ for the records, „kreissegs“ for the audio in 4-s segments, written while the page idles, so the playing
+// never stutters), apart from patches and presets. „Laden“ replaces the Leiste (one ↶ brings the old one back), the
+// Kreis's Takt is set and its Schleifen begin together on the next 1; „Dazulegen“ puts them into the free places
+// (same tempo). A Kreis also goes out as a file (.myzelkreis) and comes back in from one – on another computer too.
+// A Kreis's Schleifen are made like the ones after a reload (hxRecBuild), with new keys: one Kreis may come twice. ----
+const HXKR = { list: null, busy: null, reading: false, el: null, file: null };
+const HX_KR_EXT = '.myzelkreis';
+const hxKrOk = () => IDB.ok && !!IDB.db && IDB.db.objectStoreNames.contains('kreise');
+const hxKrRange = (id, sk) => (sk ? IDBKeyRange.bound([id, sk, 0], [id, sk, Number.MAX_SAFE_INTEGER]) : IDBKeyRange.bound([id, '', 0], [id, '￿', Number.MAX_SAFE_INTEGER]));
+// what the Leiste holds now: the records (as a reload keeps them) and the audio to write beside them
+function hxKrCollect() {
+  const recs = [], parts = [];
+  let skipped = 0;
+  for (const L of hxLoopsLive().sort((a, b) => a.slot - b.slot)) {
+    hxPig(L);   // (its Pigment chosen, if it was not yet)
+    const r = hxRecOf(L), live = L.sch.map((id) => HX.sch.get(id)).filter(Boolean);
+    if (L.bew && !live.length) { recs.push(r); continue; }
+    const sch = [];
+    r.sch.forEach((s, i) => {
+      const S = live[i];
+      if (!S || !S.aud) return;   // (still filling: not yet a Schicht to keep)
+      const sr = S.sr || SR, segs = (n) => Math.ceil(n / (HX_SEG * sr)), part = (k, src, n) => parts.push({ sk: r.id + '/' + k, src, n, sr });
+      const wu = S.wu && S.wu.aud ? { n: S.wu.n, len: S.wu.len, sig: S.wu.sig, seed: S.wu.seed } : null;
+      const anc = S.anc && S.anc.aud ? { n: S.anc.n, len: S.anc.len, sig: S.anc.sig, seed: S.anc.seed, br: S.anc.br != null ? S.anc.br : null, vn: S.anc.vn || null } : null;
+      sch.push(Object.assign({}, s, { saved: 1, segs: segs(S.n), bakd: !!S.bak, wu, anc }));
+      part(s.key, S.aud, S.n);
+      if (S.bak) part(s.key + '~b', S.bak, S.n);
+      if (wu) part(s.key + '~w', S.wu.aud, S.wu.n);
+      if (anc) part(s.key + '~x', S.anc.aud, S.anc.n);
+    });
+    if (!sch.length) { skipped++; continue; }
+    r.sch = sch; recs.push(r);
+  }
+  return { recs, parts, skipped };
+}
+const hxKrPig = (r) => { const p = hxPigOf(r.col || r.colA); return p ? p.c : HX_PIG[8].c; };
+// keep the Leiste as a Kreis: the records at once (in memory), the audio a segment per idle moment, the Kreis listed
+// once all of it is written
+function hxKrSave(name, tries = 0) {
+  if (!hxKrOk()) { toast('Dieser Browser kann hier nichts sichern.', 3500); return; }
+  if (HXKR.busy || (HXKR.waiting && !tries)) { toast('Ein Kreis wird gerade noch gesichert.', 2500); return; }
+  const { recs, parts, skipped } = hxKrCollect();
+  if (skipped && tries < 160) {   // a Schleife still filling (its window still sounding): kept once it is there, up to 40 s
+    if (!tries) { toast('Gleich – eine Schleife füllt sich noch, dann wird die Leiste gesichert.', 2500); HXKR.waiting = true; hxCardDirty(); }
+    setTimeout(() => hxKrSave(name, tries + 1), 250);
+    return;
+  }
+  if (HXKR.waiting) { HXKR.waiting = false; hxCardDirty(); }
+  if (!recs.length) { toast(skipped ? 'Die Schleifen füllen sich noch – gleich noch einmal.' : 'Die Leiste ist leer – es gibt nichts zu sichern.', 3000); return; }
+  const id = 'k' + Date.now().toString(36), now = new Date();
+  const nm = (name || '').trim() || 'Kreis vom ' + now.toLocaleDateString('de-DE', { day: 'numeric', month: 'numeric' }) + ', ' + now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  const tk = recs.some((r) => r.lock === 'takt');
+  let bytes = 0; for (const p of parts) bytes += p.n * 8;
+  const meta = { id, name: nm, t: Date.now(), v: 1, bpm: tk ? (TG.hxOn ? TG.hx : tgBpm(hxNowT())) : 0, keep: !!TG.keep, sr: SR, n: recs.length, bytes, cols: recs.map(hxKrPig), recs, done: false };
+  const jobs = [];
+  for (const p of parts) { const seg = HX_SEG * p.sr; for (let i = 0; i * seg < p.n; i++) jobs.push({ p, i, a: i * seg, b: Math.min(p.n, (i + 1) * seg) }); }
+  const B = (HXKR.busy = { id, name: nm, done: 0, tot: jobs.length });
+  hxCardDirty();
+  const fail = () => { HXKR.busy = null; hxKrDel(id, true); toast('Der Gerätespeicher ist voll – der Kreis „' + nm + '“ ließ sich nicht sichern.', 6000); hxCardDirty(); };
+  const next = () => {
+    const j = jobs.shift();
+    if (!j) {
+      meta.done = true;
+      hxDbPut('kreise', meta).then((ok) => { HXKR.busy = null; if (!ok) { fail(); return; } HXKR.list = null; hxSay('Kreis „' + nm + '“ gesichert'); toast('Kreis „' + nm + '“ gesichert: ' + recs.length + (recs.length === 1 ? ' Schleife' : ' Schleifen') + (skipped ? ' (' + skipped + ' noch nicht fertig gefüllt, ohne sie)' : '') + '.', 4000); hxCardDirty(); });
+      return;
+    }
+    const n = j.b - j.a, Lb = new Float32Array(n), Rb = new Float32Array(n), src = j.p.src;
+    for (let i = 0; i < n; i++) { const x = j.a + i, c = src[Math.floor(x / HX_CH)], k = x % HX_CH; if (c) { Lb[i] = c[0][k]; Rb[i] = c[1][k]; } }
+    hxDbPut('kreissegs', { kreis: id, schicht: j.p.sk, i: j.i, L: Lb.buffer, R: Rb.buffer, sr: j.p.sr }).then((ok) => {
+      if (!ok) { fail(); return; }
+      B.done++; if (B.done % 8 === 0) hxCardDirty();
+      if (window.requestIdleCallback) requestIdleCallback(next, { timeout: 300 }); else setTimeout(next, 20);
+    });
+  };
+  hxDbPut('kreise', meta).then((ok) => (ok ? next() : fail()));   // (listed only once done: a Kreis cut off by a closed tab is cleared later)
+}
+async function hxKrList() {
+  if (!hxKrOk()) { HXKR.list = []; return HXKR.list; }
+  if (HXKR.reading) return HXKR.list || [];
+  HXKR.reading = true;
+  const all = (await idbDo('kreise', 'readonly', (st) => st.getAll())) || [];
+  HXKR.reading = false;
+  for (const k of all) if (!k.done && (!HXKR.busy || HXKR.busy.id !== k.id) && Date.now() - k.t > 600000) hxKrDel(k.id, true);   // (one left half-written)
+  HXKR.list = all.filter((k) => k.done).sort((a, b) => b.t - a.t);
+  hxCardDirty();
+  return HXKR.list;
+}
+function hxKrDel(id, quiet) {
+  if (!hxKrOk()) return;
+  idbDo('kreise', 'readwrite', (st) => st.delete(id));
+  idbDo('kreissegs', 'readwrite', (st) => st.delete(hxKrRange(id)));
+  if (!quiet) { HXKR.list = (HXKR.list || []).filter((k) => k.id !== id); hxCardDirty(); }
+}
+function hxKrRename(id, name) {
+  const k = (HXKR.list || []).find((x) => x.id === id), nm = (name || '').trim();
+  if (!k || !nm || nm === k.name) return;
+  k.name = nm; hxDbPut('kreise', k);
+}
+// load a Kreis: mode 'neu' replaces the Leiste (one ↶ for all of it), 'dazu' adds into the free places
+async function hxKrLoad(id, mode = 'neu') {
+  if (!A.started || !HX.node) { toast('Erst „Klang starten“ – dann lädt der Kreis.', 3000); return null; }
+  if (HXKR.loading) return null;
+  const K = await idbDo('kreise', 'readonly', (st) => st.get(id));
+  if (!K || !K.done) { toast('Diesen Kreis gibt es nicht mehr.', 2500); return null; }
+  const live = hxLoopsLive(), tk = K.recs.some((r) => r.lock === 'takt') && K.bpm > 0;
+  if (mode === 'dazu') {
+    if (tk && live.some((L) => hxTakt(L)) && Math.abs(tgBpm(hxNowT()) - K.bpm) > 0.05) { toast('„' + K.name + '“ hat ' + dec(K.bpm.toFixed(1)) + ' BPM, die Leiste ' + dec(tgBpm(hxNowT()).toFixed(1)) + ' – dazulegen geht nur im selben Tempo. „Laden“ ersetzt die Leiste.', 6000); return null; }
+    const free = HX.slot.filter((x) => !x).length;
+    if (free < K.n) { toast('Nur ' + free + ' Plätze frei – „' + K.name + '“ hat ' + K.n + ' Schleifen.', 4000); return null; }
+    if (!hxMemOk(Math.ceil(K.bytes / 8))) return null;
+  }
+  HXKR.loading = true; hxCardDirty();
+  try {
+    const n0 = HX.hist.length, wasBpm = TG.hxOn ? TG.hx : null;
+    if (mode !== 'dazu' && live.length) {   // the Leiste as it was: one step, as „Alle leeren“
+      if (HX.rec) hxRecCancel(true);
+      if (HX.punch) hxPunchEnd(hxHeard());
+      HX.pend = [];
+      const snaps = live.map(hxSnap);
+      for (const L of live) hxDrop(L, 0.04);
+      hxHist({ kind: 'leeren', label: 'Leiste geleert', undo() { for (const sn of snaps) hxRebuild(sn, { fokus: false }); }, redo() { for (const sn of snaps) { const X = hxByKey(sn.key); if (X) hxDrop(X, 0.04); } } });
+    }
+    const setT = tk && !SEQ.ext && (mode !== 'dazu' || !live.some((L) => hxTakt(L)));
+    if (setT) { hxTempo(K.bpm); TG.keep = !!K.keep; }
+    const made = [], lost = { n: 0 };
+    for (const r of K.recs.slice().sort((a, b) => a.slot - b.slot)) {
+      const segsOf = (key) => idbDo('kreissegs', 'readonly', (st) => st.getAll(hxKrRange(K.id, r.id + '/' + key)));
+      const L = await hxRecBuild(r, segsOf, { fresh: true, lost });
+      if (L) made.push([L, r.state]);
+    }
+    const keys = made.map(([L]) => L.key);
+    let snaps = null;
+    hxHist({ kind: 'kreis', label: 'Kreis „' + K.name + '“ geladen',
+      undo() { snaps = keys.map(hxByKey).filter(Boolean).map((X) => { const sn = hxSnap(X); hxDrop(X, 0.04); return sn; }); if (setT && wasBpm) hxTempo(wasBpm); },
+      redo() { if (setT) hxTempo(K.bpm); for (const sn of snaps || []) hxRebuild(sn, { fokus: false, state: 'angehalten' }); hxReenter(keys.map(hxByKey).filter(Boolean)); } });
+    hxHistGroup(n0, 'Kreis „' + K.name + '“ geladen');
+    // together on the next 1: the ones that played when it was kept (the others wait, angehalten – a tap starts them)
+    const go = made.filter(([, st]) => st === 'spielt' || st === 'stumm').map(([L]) => L);
+    if (go.length) hxReenter(go);
+    HX.ruht = false;
+    hxSay('Kreis „' + K.name + '“ geladen');
+    toast('Kreis „' + K.name + '“: ' + made.length + (made.length === 1 ? ' Schleife' : ' Schleifen') + (go.length ? ', sie beginnen auf der nächsten Eins' : '') + '.' + (lost.n ? ' ' + lost.n + ' Schicht(en) in anderer Abtastrate ließen sich nicht umrechnen.' : ''), 5000, { label: 'Rückgängig', fn: hxUndoStep });
+    hxRailDirty(); hxStripSync();
+    return made.map(([L]) => L);
+  } finally { HXKR.loading = false; hxCardDirty(); }
+}
+
+// ---- as a file: „MYZK“, the header's length (4 bytes), the header (JSON: the Kreis and where each segment sits),
+// then every segment's left and right channel, Float32 ----
+async function hxKrExport(id) {
+  const K = await idbDo('kreise', 'readonly', (st) => st.get(id));
+  if (!K) return;
+  const segs = ((await idbDo('kreissegs', 'readonly', (st) => st.getAll(hxKrRange(id)))) || []);
+  const meta = Object.assign({}, K); delete meta.done;
+  const head = new TextEncoder().encode(JSON.stringify({ myzel: 'kreis', v: 1, kreis: meta, segs: segs.map((g) => ({ s: g.schicht, i: g.i, n: g.L.byteLength / 4, sr: g.sr })) }));
+  const len = new Uint8Array(4); new DataView(len.buffer).setUint32(0, head.length, true);
+  const blob = new Blob([new TextEncoder().encode('MYZK'), len, head, ...segs.flatMap((g) => [g.L, g.R])], { type: 'application/octet-stream' });
+  const fn = K.name.replace(/[\\/:*?"<>|]+/g, ' ').trim().slice(0, 80) + HX_KR_EXT;
+  if (typeof offerFile === 'function' && inViewer) offerFile(fn, blob); else anchorSave(blob, fn);
+}
+async function hxKrImport(file) {
+  if (!file || !hxKrOk()) return;
+  try {
+    const buf = await file.arrayBuffer(), u8 = new Uint8Array(buf);
+    if (new TextDecoder().decode(u8.subarray(0, 4)) !== 'MYZK') throw new Error('kein Kreis');
+    const hl = new DataView(buf, 4, 4).getUint32(0, true), H = JSON.parse(new TextDecoder().decode(u8.subarray(8, 8 + hl)));
+    if (!H || H.myzel !== 'kreis' || !H.kreis || !Array.isArray(H.kreis.recs) || !Array.isArray(H.segs)) throw new Error('kein Kreis');
+    const id = 'k' + Date.now().toString(36), K = Object.assign({}, H.kreis, { id, t: Date.now(), done: false });
+    let o = 8 + hl;
+    await hxDbPut('kreise', K);
+    for (const g of H.segs) {
+      const nb = g.n * 4, L = buf.slice(o, o + nb), R = buf.slice(o + nb, o + 2 * nb); o += 2 * nb;
+      if (R.byteLength !== nb) throw new Error('unvollständig');
+      if (!(await hxDbPut('kreissegs', { kreis: id, schicht: g.s, i: g.i, L, R, sr: g.sr }))) { hxKrDel(id, true); toast('Der Gerätespeicher ist voll – der Kreis passt nicht mehr hinein.', 5000); return; }
+    }
+    K.done = true; await hxDbPut('kreise', K);
+    HXKR.list = null; hxCardDirty();
+    toast('Kreis „' + K.name + '“ aufgenommen – „Laden“ legt ihn in die Leiste.', 4000);
+  } catch (e) { toast('Diese Datei ist kein Myzel-Kreis (' + HX_KR_EXT + ').', 4000); }
+}
+
+// ---- in the card: „Leiste sichern“ with a name, the Kreise as small rings of their Pigmente ----
+function hxKrRing(cols) {
+  const n = cols.length, R = 13, svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 36 36'); svg.setAttribute('class', 'hx-kr-ring'); svg.setAttribute('aria-hidden', 'true');
+  const c0 = document.createElementNS(svg.namespaceURI, 'circle'); c0.setAttribute('cx', 18); c0.setAttribute('cy', 18); c0.setAttribute('r', R); c0.setAttribute('class', 'hx-kr-c'); svg.append(c0);
+  cols.forEach((c, i) => {
+    const a = -Math.PI / 2 + (i / Math.max(1, n)) * Math.PI * 2, d = document.createElementNS(svg.namespaceURI, 'circle');
+    d.setAttribute('cx', (18 + R * Math.cos(a)).toFixed(2)); d.setAttribute('cy', (18 + R * Math.sin(a)).toFixed(2)); d.setAttribute('r', n > 12 ? 2.2 : 3); d.setAttribute('fill', c);
+    svg.append(d);
+  });
+  return svg;
+}
+function hxKrRender(btn) {
+  const box = HXK.kreise; if (!box) return;
+  if (!hxKrOk()) { box.replaceChildren(); return; }
+  if (!HXKR.list) hxKrList();
+  // the save row is made once (a re-render must not take the name being typed); the rest only when it changed
+  if (!HXKR.head || !box.contains(HXKR.head)) {
+    HXKR.nm = h('input', { type: 'text', class: 'hx-kr-name', placeholder: 'Name (frei lassen: Datum und Uhrzeit)', 'aria-label': 'Name des Kreises', maxlength: 80 });
+    HXKR.save = btn('Leiste sichern', () => { hxKrSave(HXKR.nm.value); HXKR.nm.value = ''; }, { cls: 'primary', aria: 'Die ganze Leiste als Kreis sichern' });
+    HXKR.nm.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); HXKR.save.click(); } });
+    if (!HXKR.file) { HXKR.file = h('input', { type: 'file', accept: HX_KR_EXT + ',application/octet-stream', hidden: true }); HXKR.file.addEventListener('change', () => { const f = HXKR.file.files[0]; HXKR.file.value = ''; hxKrImport(f); }); document.body.append(HXKR.file); }
+    const imp = btn('Datei öffnen …', () => HXKR.file.click(), { cls: 'ghost', aria: 'Einen Kreis aus einer Datei aufnehmen (' + HX_KR_EXT + ')' });
+    HXKR.head = h('div', { class: 'hx-row hx-kr-save' }, HXKR.nm, HXKR.save, imp);
+    HXKR.rows = h('div', { class: 'hx-kr-list' });
+    box.replaceChildren(h('div', { class: 'lab hx-sub' }, 'Kreise – die Leiste sichern und laden'), HXKR.head, HXKR.rows);
+    HXKR.sig = null;
+  }
+  HXKR.save.textContent = HXKR.waiting ? 'Wartet …' : HXKR.busy ? 'Sichere … ' + Math.round((100 * HXKR.busy.done) / Math.max(1, HXKR.busy.tot)) + ' %' : 'Leiste sichern';
+  HXKR.save.disabled = !!HXKR.busy || !!HXKR.waiting || !hxLoopsLive().length;
+  const sig = (HXKR.list || []).map((K) => K.id + K.name).join('|') + '/' + !!HXKR.loading + '/' + (HXKR.ask || '');
+  if (sig === HXKR.sig) return;
+  HXKR.sig = sig;
+  const rows = (HXKR.list || []).map((K) => {
+    const date = new Date(K.t), when = date.toLocaleDateString('de-DE', { day: 'numeric', month: 'numeric', year: '2-digit' }) + ' ' + date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+    const name = h('input', { type: 'text', class: 'hx-kr-n', value: K.name, 'aria-label': 'Name des Kreises', maxlength: 80 });
+    name.addEventListener('change', () => hxKrRename(K.id, name.value));
+    const meta = K.n + (K.n === 1 ? ' Schleife' : ' Schleifen') + (K.bpm ? ' · ' + dec(K.bpm.toFixed(1)) + ' BPM' : '') + ' · ' + Math.max(1, Math.round(K.bytes / 1048576)) + ' MB · ' + when;
+    const del = btn(HXKR.ask === K.id ? 'Wirklich löschen?' : '✕', () => { if (HXKR.ask === K.id) { HXKR.ask = null; hxKrDel(K.id); hxSay('Kreis „' + K.name + '“ gelöscht'); } else { HXKR.ask = K.id; hxCardDirty(); setTimeout(() => { if (HXKR.ask === K.id) { HXKR.ask = null; hxCardDirty(); } }, 3000); } }, { cls: 'ghost danger', aria: 'Kreis „' + K.name + '“ löschen' });
+    return h('div', { class: 'hx-kr' }, hxKrRing(K.cols || []), h('div', { class: 'hx-kr-t' }, name, h('span', { class: 'hx-kr-m' }, meta)),
+      h('div', { class: 'hx-kr-b' }, btn('Laden', () => hxKrLoad(K.id, 'neu'), { cls: 'primary', dis: !!HXKR.loading, aria: '„' + K.name + '“ laden – ersetzt die Leiste (↶ bringt sie zurück)' }),
+        btn('Dazulegen', () => hxKrLoad(K.id, 'dazu'), { dis: !!HXKR.loading, aria: '„' + K.name + '“ in die freien Plätze legen' }),
+        btn('Datei', () => hxKrExport(K.id), { cls: 'ghost', aria: '„' + K.name + '“ als Datei sichern' }), del));
+  });
+  HXKR.rows.replaceChildren(...(rows.length ? rows : [h('p', { class: 'note' }, 'Noch kein Kreis. „Leiste sichern“ hält alle Schleifen fest – mit Klang, Farbe, Pegel und Takt – und du lädst sie jederzeit wieder, unabhängig vom übrigen Projekt.')]));
+}
 // ---- the chain's modulators and the drift, followed: each tracked AudioParam's automation as the app sets it (setP:
 // a setTargetAtTime from the value it has), from the moment the modulators started – its value and its integral at any
 // audio time: an LFO's phase in cycles ----

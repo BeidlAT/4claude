@@ -2,6 +2,15 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-26q",
+      "punkte": [
+        "Neu: Kreise – die ganze Leiste unter einem Namen sichern (Hexenring-Karte, „Leiste sichern“): alle Schleifen mit Klang, Farbe, Pegel und Takt, unabhängig vom übrigen Projekt.",
+        "„Laden“ ersetzt die Leiste durch den Kreis, sein Takt gilt, die Schleifen beginnen gemeinsam auf der nächsten Eins – ein ↶ bringt die vorige Leiste zurück. „Dazulegen“ legt ihn in die freien Plätze.",
+        "Jeder Kreis lässt sich als Datei (.myzelkreis) sichern und wieder öffnen, auch auf einem anderen Rechner; in der Liste zeigt ein kleiner Ring seine Farben.",
+        "Edirol PCR-M50 (und PCR-M30/80): wird jetzt auch unter den Namen erkannt, die die Treiber vergeben (etwa „PCR-M 1“ oder „EDIROL PCR 1“); unter Gerät steht das erkannte Modell."
+      ]
+    },
+    {
       "id": "2026-10-26p",
       "punkte": [
         "Akai APC40 MK2: die 40 Clip-Pads bekommen fünf neue Aufgaben – wählbar im Gerätebild oder mit den fünf Scene-Tasten rechts am Gerät.",

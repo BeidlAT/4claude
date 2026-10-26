@@ -34,6 +34,10 @@ const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) process
     M.cbClose(); await sl(100);
     const v0 = M.P['xfin.vol']; for (let v = 127; v >= 20; v -= 3) { window.__send([0xb0, 24, v]); await sl(8); } await sl(150);  o.fader = [v0, M.P['xfin.vol']];
     M.cbOpen(src); await sl(400);
+    // (owner, 26.10.2026: „nicht erkannt“) the names its drivers give it; the device card names the model
+    o.names = ['PCR-M 1', 'EDIROL PCR 1', 'PCR-M30/50/80', 'PCR MIDI', 'PCR-M30', 'EDIROL PCR-500'].map((n) => M.profModel({ name: n }).id);
+    M.cbClose(); M.openPanel('dev'); await sl(400);
+    o.card = [...document.querySelectorAll('.kc-prof')].map((e) => e.textContent).join(' | ');
     return o;
   });
   console.log(JSON.stringify(r));
@@ -42,6 +46,8 @@ const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) process
   ok(r.cal === 22 && r.calStep === -1, `Einmessen: 22 controls taken in turn (${r.cal})`);
   ok(r.r1 === 'flt.freq' && r.s1 === 'xfin.vol' && r.s3 === 'xhxr.vol' && r.b1 === 'puls', `logical: R1 Filter, S1 Klang, S3 Hexenring, B1 Puls (${r.r1}, ${r.s1}, ${r.s3}, ${r.b1})`);
   ok(r.fader[1] < r.fader[0] - 5, `S1 on the device moves the first mixer channel (${r.fader.join(' → ')} dB)`);
+  ok(r.names.join() === 'pcrm50,pcrm50,pcrm50,pcrm50,pcrm30,pcr500', `port names recognised: ${r.names.join(', ')}`);
+  ok(/PCR-M50 erkannt/.test(r.card), `the device card names it: „${r.card.slice(0, 90)}“`);
   ok(!errors.length, 'no page errors ' + errors.slice(0, 3).join(' | '));
   await browser.close();
 })();

@@ -4,13 +4,15 @@ function idbOpen() {
   return new Promise((res) => {
     try {
       // version 2 (Hexenring, SPEC §19): its Schleifen and their audio; only the stores missing are made
-      const rq = indexedDB.open('myzel', 2);
+      const rq = indexedDB.open('myzel', 3);   // (3: the Hexenring's Kreise – the Leiste kept under a name)
       rq.onupgradeneeded = () => {
         const db = rq.result, has = (n) => db.objectStoreNames.contains(n);
         if (!has('takes')) db.createObjectStore('takes', { keyPath: 'id' });
         if (!has('segs')) db.createObjectStore('segs', { keyPath: ['take', 'i'] });
         if (!has('rings')) db.createObjectStore('rings', { keyPath: 'id' });
         if (!has('ringsegs')) db.createObjectStore('ringsegs', { keyPath: ['ring', 'schicht', 'i'] });
+        if (!has('kreise')) db.createObjectStore('kreise', { keyPath: 'id' });
+        if (!has('kreissegs')) db.createObjectStore('kreissegs', { keyPath: ['kreis', 'schicht', 'i'] });
       };
       rq.onsuccess = () => { IDB.db = rq.result; IDB.ok = true; IDB.db.onversionchange = () => { try { IDB.db.close(); } catch (e) {} IDB.ok = false; toast('Myzel wurde in einem anderen Tab erneuert – lade diese Seite neu, damit weiter gesichert wird.', 8000); }; res(true); };
       rq.onerror = () => res(false);
