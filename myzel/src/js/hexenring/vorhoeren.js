@@ -47,7 +47,13 @@ function hxPvStop() {
   const L = hxByKey(P.key); if (L) { L.pvMute = false; if (L.state !== 'weg') hxGain(L.id, L.gain, null, 0.03); }   // (the loop as it runs, at its own place)
   HXE.wsig = '';
 }
-function hxPvToggle() { if (HXE.pv || HXE.pvWant) hxPvStop(); else hxPvPlay(); }
+// (owner, 26.10.2026: „die Schleife läuft beim Stoppen weiter“) Stopp ends the listening and halts the Schleife too –
+// it comes back with its ring or ▶ Weiter
+function hxPvToggle() {
+  if (!(HXE.pv || HXE.pvWant)) { hxPvPlay(); return; }
+  const L = hxEdL(); hxPvStop();
+  if (L && (L.state === 'spielt' || L.state === 'stumm') && A.started && HX.node) { hxState(L.id, 'angehalten'); L.pendTo = null; hxSay(hxName(L) + ' angehalten'); toast(hxName(L) + ' angehalten – ihr Ring oder ▶ Weiter lässt sie wieder spielen.', 3000); hxRailDirty(); }
+}
 // a jump: playing – from there at once; stopped – the mark moves
 function hxPvJump(u) { u = clamp(u, 0, 0.9999); if (HXE.pv) hxPvPlay(u); else { HXE.pvAt = u; HXE.wsig = ''; } }
 // every frame (the editor's): the render waited for starts it, a new render takes over where it plays, the stretch

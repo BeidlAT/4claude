@@ -79,6 +79,12 @@ input[type=text], select { -webkit-user-select: text; user-select: text; }
   border-radius: 999px; border: 1px solid var(--line); background: var(--bark);
   font: 500 12px/1 var(--font-num); font-variant-numeric: tabular-nums; color: var(--hypha);
 }
+.stopall { flex: none; display: flex; align-items: center; gap: 7px; height: 38px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--bark); font: 500 12px/1 var(--font-num); color: var(--hypha); cursor: pointer; }
+.stopall .sq { width: 9px; height: 9px; border-radius: 2px; background: var(--hypha); flex: none; }
+.stopall:hover { border-color: var(--hypha); }
+.stopall:active { background: var(--hypha); color: var(--ink); }
+.stopall:active .sq { background: var(--ink); }
+@media (max-width: 560px) { .stopall { padding: 0 10px; font-size: 0; gap: 0; } }
 .recbtn .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--rec); flex: none; }
 .recbtn[data-state="armed"], .recbtn[data-state="cue"] { border-color: var(--rec); color: var(--rec); }
 .recbtn[data-state="armed"] .dot, .recbtn[data-state="cue"] .dot { animation: blink 1s steps(2) infinite; }
@@ -832,11 +838,15 @@ body.mlearn #stage::after { content: ""; position: absolute; inset: 0; backgroun
 .hx-cm-sep { height: 1px; margin: 4px 6px; background: var(--line); }
 .hx-ed { position: fixed; z-index: 40; display: flex; flex-direction: column; gap: 10px; padding: 12px 14px 12px; overflow-y: auto; overscroll-behavior: contain; border-radius: 14px; background: rgba(17, 13, 11, .97); border: 1px solid var(--line); box-shadow: 0 10px 36px rgba(0, 0, 0, .6); color: var(--hypha); font: 500 12px/1.3 var(--font-ui); }
 .hx-ed[hidden] { display: none; }
-.hx-ed-h { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.hx-ed-t { display: flex; align-items: baseline; gap: 12px; min-width: 0; flex-wrap: wrap; }
+.hx-ed-h { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; }
+.hx-ed-t { display: flex; align-items: baseline; gap: 4px 12px; min-width: 0; flex-wrap: wrap; flex: 1 1 240px; }
 .hx-ed-t h3 { margin: 0; font: 600 15px/1.2 var(--font-ui); color: var(--hypha); }
 .hx-ed-t .meta { color: var(--dim); font: 400 11.5px/1.2 var(--font-num); }
-.hx-ed-hb { display: flex; gap: 6px; flex: none; }
+.hx-ed-hb { display: flex; gap: 6px; flex: 0 1 auto; flex-wrap: wrap; justify-content: flex-end; }
+/* (owner, 26.10.2026) the editor's width: dragged at its right edge (it may reach over the panel) */
+.hx-ed-grip { position: fixed; z-index: 41; width: 10px; cursor: ew-resize; touch-action: none; }
+.hx-ed-grip::after { content: ''; position: absolute; left: 3px; top: 50%; width: 4px; height: 44px; margin-top: -22px; border-radius: 2px; background: rgba(240, 230, 216, .22); }
+.hx-ed-grip:hover::after, .hx-ed-grip.on::after { background: var(--spore); }
 .hx-ed-hb .btn { min-height: 34px; padding: 4px 12px; }
 .hx-ed-wave { position: relative; height: clamp(110px, 24vh, 190px); flex: none; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); cursor: crosshair; touch-action: none; }
 .hx-ed-cv { display: block; width: 100%; height: 100%; }
@@ -2091,6 +2101,7 @@ body.mlearn #stage::after { content: ""; position: absolute; inset: 0; backgroun
     <div class="logo" aria-hidden="true">myzel</div>
     <button id="engChip" class="eng-chip" type="button" aria-controls="sheet" aria-label="Klangquelle: Nebel. Einstellungen öffnen"><span class="lbl">Klang</span><span id="engGlyph" class="eng-g" aria-hidden="true"></span><span id="engName">Nebel</span></button>
     <button id="btnPuls" class="iconbtn" type="button" aria-pressed="false" aria-label="Puls" title="Puls starten oder anhalten" data-act="puls"></button>
+    <button id="btnStopAll" class="stopall" type="button" aria-label="Alles stoppen: alle Schleifen, Töne, Puls, Bordun, Echo und Hall" title="Alles stoppen – alle Schleifen halten an, alle Töne, Puls, Bordun, Echo und Hall verstummen (Puls startest du wieder mit ▶, Schleifen mit ▶ Weiter)" data-act="stille"><span class="sq"></span>Stopp</button>
     <button id="btnFreeze" class="iconbtn" type="button" aria-pressed="false" aria-label="Echo einfrieren" title="Echo einfrieren" data-act="freeze"></button>
     <button id="btnHold" class="iconbtn" type="button" aria-pressed="false" aria-label="Halten" title="Halten: was du loslässt, klingt weiter – bis du neu anspielst oder Halten ausschaltest (Taste: Eingabe)" data-act="hold"></button>
     <button id="btnGk" class="gk-ico" type="button" hidden aria-label="Gestik" title="Gestik" data-st="aus"><svg viewBox="0 0 32 32" aria-hidden="true"><circle class="trk" cx="16" cy="16" r="13"/><circle class="lad" cx="16" cy="16" r="13" pathLength="100" stroke-dasharray="0 100"/><g class="spo"><circle cx="16" cy="16" r="3.3"/><path d="M16 11.2V8.4M16 20.8v2.8M11.2 16H8.4M20.8 16h2.8M12.6 12.6l-2-2M19.4 19.4l2 2M19.4 12.6l2-2M12.6 19.4l-2 2"/></g><text class="zz" x="22.5" y="10.5">z</text></svg></button>
@@ -30969,6 +30980,7 @@ function buildUI() {
   }, true);
   $('#startFingerLine').textContent = 'Mehrere gleichzeitig; Wischen schlägt ' + listDe(famPlay().strike) + ' an';
   $('#btnPuls').addEventListener('click', () => { if (!A.started) return; SEQ.on ? seqStop() : seqStart(); });
+  $('#btnStopAll').addEventListener('click', () => { if (A.started) { if (typeof hxPvStop === 'function') hxPvStop(); panic(); } });   // (owner, 26.10.2026: „ein globaler Stopp, der alle Schleifen und alles andere beendet“)
   $('#btnFreeze').addEventListener('click', () => { if (A.started) setFreeze(!A.frozen); });
   $('#btnHold').addEventListener('click', () => holdSet(!HOLD.on));
   // Halten from the computer keyboard: Enter, where it would press nothing else (the field, the page)
@@ -32638,6 +32650,9 @@ const hxSwapAt = (L) => (hxNowOk(L) ? { f: Math.round(hxF(hxNowT() + 0.06)), now
 function hxSchSwap(S, c, o = {}) {
   const L = HX.loops.get(S.loop); if (!L) return;
   if (!o.aud) { const H = hxHumOf(c); if (H) o = Object.assign({}, o, hxHumSlice(H, c), { hum: true }); }   // (26.10.2026: a window inside a Schleife's whole Ernte – from there, whatever the ring still holds)
+  // (owner, 26.10.2026: „die Zeitleisten passen nicht zusammen“) a window moved in the Ernte: its Ausklang ends where the
+  // next thing played begins (a note, else an onset in the audio) – never the notes that followed carried over the start
+  if (o.hum && c.aus && c.aus.len > 0) { const al = hxAusFrom(c, o.aud); if (al < c.aus.len) { c = Object.assign({}, c, { aus: { off: c.aus.off, len: al } }); o = Object.assign({}, o, { cutAus: true }); } }
   S.ver = (S.ver || 0) + 1;
   // (step 1c: audio from the Humus plays dry – through the live chain until it is baked again; the page's own versions
   // take the baked one where there is one)
@@ -32659,6 +32674,17 @@ function hxSchSwap(S, c, o = {}) {
   if (o.hum) { hxSaveSch(S); hxAfterFill(S); }   // (as a fill from the ring: stored, its Ausklang rendered, baked)
   if (o.join) Object.assign(S, { join: o.join, X: o.X, rho: o.rho });
   if (!o.aud) hxProbe(S, o.f != null ? hxT(o.f) + 0.012 : 0);
+}
+// how long a cut's Ausklang may ring (frames): to the first note after its window, else the first onset in its audio there
+function hxAusFrom(c, aud) {
+  const w1t = hxT(c.w1), evs = hxEvents(w1t + 0.002, w1t + c.aus.len / SR + 0.01, false).filter((e) => hxSrcIn(e.src, c.in));
+  let al = evs.length ? Math.max(0, Math.round((evs[0].t0 - w1t - 0.005) * SR)) : c.aus.len;
+  if (aud) {   // (a loop without notes – or an onset no note names)
+    const pre = Math.round(0.02 * SR), x = hxMono(aud, c.pre + c.len - pre, Math.min(al, c.aus.len) + pre);
+    const on = x.length > 1024 ? hxFlux(x, 0.003).map((v) => v - pre).filter((v) => v > 0.01 * SR) : [];
+    if (on.length) al = Math.min(al, Math.max(0, on[0] - Math.round(0.005 * SR)));
+  }
+  return al;
 }
 // the page's mirror of a geom that keeps the seam at frame f (the end of pass k): as the processor derives it
 function hxGeomMirror(L, f, k, beats, Lf) {
@@ -34289,13 +34315,23 @@ function hxEdOpen(L) {
   HXE.ed.querySelector('.hx-ed-x').focus({ preventScroll: true });
   hxSay(hxName(L) + ': bearbeiten');
 }
-function hxEdClose() { if (!HXE.ed || HXE.ed.hidden) return; hxPvStop(); HXE.ed.hidden = true; HXE.key = null; HXE.drag = null; HXE.rw = null; HXE.zv = null; }   // (the rendered pass freed – a long loop's is large)
+function hxEdClose() { if (!HXE.ed || HXE.ed.hidden) return; hxPvStop(); HXE.ed.hidden = true; if (HXE.grip) HXE.grip.hidden = true; HXE.key = null; HXE.drag = null; HXE.rw = null; HXE.zv = null; }   // (the rendered pass freed – a long loop's is large)
 function hxEdBuild() {
   const ed = HXE.ed = h('section', { class: 'hx-ed', role: 'dialog', 'aria-label': 'Schleife bearbeiten', hidden: true });
   ed.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); hxEdClose(); } });
   document.body.append(ed);
   window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !ed.hidden && !HXE.menu && !(MX.open && MX.detailK)) { e.preventDefault(); e.stopPropagation(); hxEdClose(); } }, true);   // (wherever the focus is)
   window.addEventListener('resize', () => { if (!ed.hidden) { hxEdPlace(); HXE.wsig = ''; } });
+  // (owner, 26.10.2026: „die Leiste nach rechts verschiebbar“) its width, dragged at the right edge (double click: as before)
+  try { HXE.w = +localStorage.getItem('myzel.edW') || 0; } catch (e) {}
+  const g = HXE.grip = h('div', { class: 'hx-ed-grip', role: 'separator', 'aria-orientation': 'vertical', 'aria-label': 'Breite des Bearbeiten-Fensters', title: 'Ziehen: breiter oder schmaler · Doppelklick: wie zuerst', hidden: true });
+  let x0 = 0, w0 = 0;
+  g.addEventListener('pointerdown', (e) => { if (e.button > 0) return; e.preventDefault(); x0 = e.clientX; w0 = ed.getBoundingClientRect().width; try { g.setPointerCapture(e.pointerId); } catch (x) {} g.classList.add('on'); });
+  g.addEventListener('pointermove', (e) => { if (!g.classList.contains('on')) return; HXE.w = Math.max(360, w0 + e.clientX - x0); hxEdPlace(); HXE.wsig = ''; });
+  const end = () => { if (!g.classList.contains('on')) return; g.classList.remove('on'); try { localStorage.setItem('myzel.edW', String(Math.round(HXE.w || 0))); } catch (e) {} };
+  g.addEventListener('pointerup', end); g.addEventListener('pointercancel', end);
+  g.addEventListener('dblclick', () => { HXE.w = 0; try { localStorage.removeItem('myzel.edW'); } catch (e) {} hxEdPlace(); HXE.wsig = ''; });
+  document.body.append(g);
   hxBlitzOn(ed);
 }
 // over the field (its column), never over the rail: you still play and the rings still answer
@@ -34303,7 +34339,9 @@ function hxEdPlace() {
   const st = typeof stage !== 'undefined' && stage.getBoundingClientRect(), ed = HXE.ed; if (!st || !ed) return;
   const m = st.width < 700 ? 6 : 14;
   ed.style.left = Math.round(st.left + m) + 'px'; ed.style.top = Math.round(st.top + m) + 'px';
-  ed.style.width = Math.round(st.width - 2 * m) + 'px'; ed.style.maxHeight = Math.round(st.height - 2 * m) + 'px';
+  const wd = HXE.w ? Math.min(HXE.w, window.innerWidth - st.left - m - 8) : st.width - 2 * m;
+  ed.style.width = Math.round(wd) + 'px'; ed.style.maxHeight = Math.round(st.height - 2 * m) + 'px';
+  if (HXE.grip) { const g = HXE.grip; g.hidden = ed.hidden; g.style.left = Math.round(st.left + m + wd - 5) + 'px'; g.style.top = Math.round(st.top + m + 14) + 'px'; g.style.height = Math.max(40, Math.round(Math.min(ed.getBoundingClientRect().height || st.height, st.height - 2 * m) - 28)) + 'px'; }
 }
 // what the editor shows depends on: rebuilt when it changes (a frame compares it), the playhead drawn every frame
 // (the ↶ ↷ buttons follow the history: it is part of what is shown, not of what is rendered)
@@ -34427,10 +34465,17 @@ function hxEdWaveDrag(box) {
   box.addEventListener('pointerdown', (e) => {
     const L = hxEdL(); if (!L || e.button > 0) return;
     e.preventDefault(); try { box.setPointerCapture(e.pointerId); } catch (x) {} box.focus({ preventScroll: true });
+    const r = HXE.cv.getBoundingClientRect();
+    if (HXE.zv && e.clientY > r.bottom - 14) {   // (owner, 26.10.2026: the bar under a zoomed view – dragged to the end of the take)
+      const [v0, v1] = HXE.zv, s = v1 - v0, u = px(e);
+      if (u < v0 || u > v1) hxEdPan((u - (v0 + v1) / 2) / s);
+      HXE.drag = { id: e.pointerId, bar: true, cx: e.clientX, v0: HXE.zv[0] }; HXE.wsig = ''; return;
+    }
     HXE.drag = { id: e.pointerId, x0: at(e), cx: e.clientX, moved: false };
   });
   box.addEventListener('pointermove', (e) => {
     const D = HXE.drag, L = hxEdL(); if (!D || e.pointerId !== D.id || !L) return;
+    if (D.bar) { const r = HXE.cv.getBoundingClientRect(), s = HXE.zv[1] - HXE.zv[0], n0 = clamp(D.v0 + (e.clientX - D.cx) / Math.max(1, r.width * hxEdWf(L)), 0, 1 - s); HXE.zv = [n0, n0 + s]; HXE.wsig = ''; return; }
     const x = at(e); if (Math.abs(e.clientX - D.cx) > 4) D.moved = true; if (!D.moved) return;
     const u = hxEdStep(L) / (e.altKey ? 4 : 1), a = Math.floor(Math.min(D.x0, x) / u + 1e-9) * u, b = Math.min(1, Math.ceil(Math.max(D.x0, x) / u - 1e-9) * u);   // (Alt: a sixteenth of a beat)
     HXE.sel = { a, b: Math.max(b, a + u) }; HXE.wsig = '';
@@ -34438,6 +34483,7 @@ function hxEdWaveDrag(box) {
   // a click: it plays from there (owner, 26.10.2026) – inside the selection the selection stays, outside it goes
   const up = (e) => {
     const D = HXE.drag; if (!D || e.pointerId !== D.id) return; HXE.drag = null;
+    if (D.bar) return;
     if (D.moved) { hxEdRender(); return; }
     const had = !!HXE.sel; if (HXE.sel && (D.x0 < HXE.sel.a || D.x0 >= HXE.sel.b)) HXE.sel = null;
     hxPvPlay(D.x0); HXE.wsig = '';
@@ -34560,7 +34606,7 @@ function hxEdWave(force) {
     const bar = (n, D0) => { const x = X(n.ph), y = 16 + (1 - (n.r != null ? n.r : 0.5)) * (hh - 30), len = Math.max(3, ((n.d || 0.1) / D0 / vs) * ww); if (x + len >= 0 && x <= ww) c.fillRect(x, y - 1.5, len, 3); };
     if (mk) { c.fillStyle = 'rgba(134,240,208,.22)'; for (const n of mk.was) bar(n, 1); c.fillStyle = 'rgba(134,240,208,.9)'; for (const n of mk.now) bar(n, 1); }
     else { c.fillStyle = 'rgba(134,240,208,.85)'; for (const n of L.notes) bar(n, D); }
-    if (HXE.zv) { c.fillStyle = 'rgba(240,230,216,.10)'; c.fillRect(0, hh - 4, ww, 4); c.fillStyle = 'rgba(240,230,216,.55)'; c.fillRect(v0 * ww, hh - 4, Math.max(3, vs * ww), 4); }   // (where the view is in the whole)
+    if (HXE.zv) { c.fillStyle = 'rgba(240,230,216,.12)'; c.fillRect(0, hh - 8, ww, 8); c.fillStyle = 'rgba(240,230,216,.6)'; c.beginPath(); c.roundRect ? c.roundRect(v0 * ww, hh - 7, Math.max(10, vs * ww), 6, 3) : c.rect(v0 * ww, hh - 7, Math.max(10, vs * ww), 6); c.fill(); }   // (where the view is in the whole – drag it)
   }
   const c = mxFit(cv, w, hh, 0, Math.min(2, devicePixelRatio || 1));
   c.clearRect(0, 0, w, hh); c.drawImage(HXE.bg, 0, 0, w, hh);
@@ -35062,7 +35108,13 @@ function hxPvStop() {
   const L = hxByKey(P.key); if (L) { L.pvMute = false; if (L.state !== 'weg') hxGain(L.id, L.gain, null, 0.03); }   // (the loop as it runs, at its own place)
   HXE.wsig = '';
 }
-function hxPvToggle() { if (HXE.pv || HXE.pvWant) hxPvStop(); else hxPvPlay(); }
+// (owner, 26.10.2026: „die Schleife läuft beim Stoppen weiter“) Stopp ends the listening and halts the Schleife too –
+// it comes back with its ring or ▶ Weiter
+function hxPvToggle() {
+  if (!(HXE.pv || HXE.pvWant)) { hxPvPlay(); return; }
+  const L = hxEdL(); hxPvStop();
+  if (L && (L.state === 'spielt' || L.state === 'stumm') && A.started && HX.node) { hxState(L.id, 'angehalten'); L.pendTo = null; hxSay(hxName(L) + ' angehalten'); toast(hxName(L) + ' angehalten – ihr Ring oder ▶ Weiter lässt sie wieder spielen.', 3000); hxRailDirty(); }
+}
 // a jump: playing – from there at once; stopped – the mark moves
 function hxPvJump(u) { u = clamp(u, 0, 0.9999); if (HXE.pv) hxPvPlay(u); else { HXE.pvAt = u; HXE.wsig = ''; } }
 // every frame (the editor's): the render waited for starts it, a new render takes over where it plays, the stretch

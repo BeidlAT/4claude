@@ -2,6 +2,15 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-26u",
+      "punkte": [
+        "Ausschnitt in der Ernte verschoben: der Ausklang reicht nur noch bis zum nächsten gespielten Ton – vorher klangen Töne von hinter dem Ausschnitt über den Anfang der Schleife, darum passten Bild, Vorhören und Ernte nicht zusammen.",
+        "Bearbeiten-Fenster: am rechten Rand breiter ziehen (auch über das Panel), die Leiste unter der gezoomten Wellenform lässt sich bis ans Ende ziehen, die Kopfzeile bricht sauber um.",
+        "„Stopp“ im Bearbeiten-Fenster hält jetzt auch die Schleife an – ihr Ring oder ▶ Weiter lässt sie wieder spielen.",
+        "Neu oben in der Leiste: „Stopp“ hält alle Schleifen an und beendet alle Töne, Puls, Bordun, Echo und Hall; ▶ startet den Puls wie bisher."
+      ]
+    },
+    {
       "id": "2026-10-26t",
       "punkte": [
         "Ein Keyboard am MIDI-Eingang eines Audio-Interfaces (etwa Steinberg UR) erscheint unter „Gerät“ mit dem Namen des Interfaces – dort wählst du jetzt „Am Anschluss: …“ dein Keyboard, zum Beispiel Edirol PCR-M50.",
