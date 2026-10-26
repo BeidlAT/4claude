@@ -223,3 +223,13 @@
 .hxmp-fold:focus-visible { outline: 2px solid var(--lumen); outline-offset: 0; }
 .mx[data-strip="tight"] .mx-g-hxl .hxm-kw, .mx[data-strip="side"] .mx-g-hxl .hxm-kw { min-height: 0; }
 .mx[data-strip="tight"] .mx-g-hxl .hxm-kl, .mx[data-strip="tight"] .mx-g-hxl .hxm-state { display: none; }
+
+/* (26.10.2026) Pigmente: the loops' colours – swatches in the ring's menu and the editor */
+.hx-pig { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; padding: 4px 2px; }
+.hx-pig-s { width: 20px; height: 20px; border-radius: 50%; border: 2px solid rgba(240, 230, 216, .12); background: var(--p); cursor: pointer; padding: 0; transition: transform .1s, box-shadow .15s; }
+.hx-pig-s:hover, .hx-pig-s:focus-visible { transform: scale(1.15); box-shadow: 0 0 10px var(--p); outline: none; }
+.hx-pig-s.cur { border-color: var(--hypha); box-shadow: 0 0 8px var(--p); }
+.hx-pig-a { border: 1px solid var(--line); background: none; color: var(--dim); border-radius: 999px; padding: 2px 9px; font: 500 11px var(--font-ui); cursor: pointer; }
+.hx-pig-a[aria-pressed="true"] { color: var(--hypha); border-color: var(--dim); }
+.hx-cm-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+.hx-cm .hx-pig { padding: 4px 10px 6px; max-width: 250px; }

@@ -2,6 +2,15 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-26o",
+      "punkte": [
+        "Schleifen haben jetzt Farben – zwölf Pilzpigmente, vom Indigo-Milchling über Grünspan, Fliegenpilz und Pfifferling bis zum Birkenporling.",
+        "Ohne dein Zutun wählt jede Schleife ihr Pigment aus ihrem Klang: dunkle, tiefe Klänge bekommen tiefe Farben, helle Klänge leuchtende – und keine zwei Schleifen dieselbe.",
+        "Die Farbe zeigt sich am Ring in der Leiste (spielend leuchtet er in ihr), an ihrem Kanal im Mixer und im Pult und im Fenster „Ansehen und bearbeiten“.",
+        "Ändern: Rechtsklick auf den Ring oder im Bearbeiten-Fenster unter „Farbe“; „aus dem Klang“ stellt die automatische zurück, ↶ nimmt jede Änderung zurück."
+      ]
+    },
+    {
       "id": "2026-10-26n",
       "punkte": [
         "Neu: das Gerätebild – unter Gerät bei deinem MIDI-Controller. Myzel zeichnet ihn (gut 30 Modelle von Akai, Arturia, Behringer, Edirol, KORG, M-Audio, Native Instruments, Nektar, Novation, Roland), unter jedem Regler steht, was er steuert, und was du am Gerät bewegst, leuchtet auf.",

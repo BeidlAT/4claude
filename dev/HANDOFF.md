@@ -2,6 +2,10 @@
 
 ## Nächste Sitzung – zuerst lesen (Stand 26.10.2026, nachts)
 
+**Pigmente (26.10.2026, spät):** `hexenring/farben.js` – `HX_PIG` (12, dunkel → hell), `hxPig(L)`: L.col (gewählt) oder
+L.colA (aus der Nulldurchgangsrate der ersten Schicht, nächstes freies); Ring (ringleiste.js), Mixer-Streifen (`--c`,
+mixer.js), Ring-Menü und Editor (`hxColRow`). Gespeichert in hxRecOf/hxSnap.
+
 **Gerätebild (26.10.2026, spät):** `js/midi/geraetebild.js` + `css/geraetebild.css`. Katalog `CB_MODELS` (Reihen-DSL:
 cbR(kind, n, lab, {sz, gap, cols/grid, same, deco, m})); PCR-M50 nach dem Foto des Besitzers (`PCRM_SEC`). Einmessen
 speichert je Gerätename die Nachricht jedes Elements (`myzel.gbild.v1`); `cbLogical` schreibt gelernte Bindungen
