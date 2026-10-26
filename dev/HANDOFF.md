@@ -222,6 +222,10 @@ Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`)
    nötig; gleiches Fenster: die Naht wie damals). Nach Verdoppeln oder Zusammenlegen nicht (anderes `n`/andere Schicht);
    nach einem Neuladen ist `rx0` weg (nur im Speicher). (2) `hxBandTrimDo`: `T0.sp` – „ganz“ rechnet die Länge mit dem
    Bandtempo seit dem Trimmen (vorher halbe/doppelte Länge nach Trimmen + Band). Test `t-hx-grund` (6, in run-all).
+   Nachtrag 7 (26.10.2026, Besitzer, Bild: nur Schleife 1 gezeichnet): die Ansicht „Schleifen“ wird gemerkt
+   (`myzel.mixview`) – öffnete der Mixer direkt darin, hatte das Pult die Leucht-Sprites (`mxSprites`) noch nicht angelegt,
+   `mxMeter` brach bei der ersten klingenden Schleife ab und die übrigen Kanäle blieben leer. `hxmStrDraw` ruft
+   `mxSprites()` selbst; jeder Kanal zeichnet in eigenem try. Test `t-hx-mixer2` (öffnet direkt dort, in run-all).
 5. **Offene Fragen ans Ohr:** Schale spricht wie früher das Harz-Glas manchmal spät an (soll sie immer sofort?);
    Bandträgheit, Gärtner-Bass, Musikalität der Antworten (siehe `dev/IDEEN.md`).
 6. **Danach** die Liste in `dev/IDEEN.md` (Sample-Bibliothek, Stimme als Instrument, neue Klangerzeugung, native App).
