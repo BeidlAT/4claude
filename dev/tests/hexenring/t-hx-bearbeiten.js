@@ -103,6 +103,46 @@ const { ok } = H;
   });
   ok(wv.a && wv.b && wv.c && wv.d && wv.b.e < wv.a.e * 0.85 && wv.b.quiet > wv.a.quiet && wv.c.e < wv.b.e && Math.abs(wv.d.e - wv.a.e) < wv.a.e * 0.05, `the waveform is the loop as it sounds: 50 % weggelassen emptier, Verblassen quieter, Grundeinstellung as before (${JSON.stringify(wv)})`);
   await page.screenshot({ path: 'out/edit-render.png' });
+  // 4d. (owner, 26.10.2026) a stretch edited on its own: the rest stays sample for sample; one step each, ↶ back exactly
+  const rg = await page.evaluate(async () => {
+    const M = window.__M, L = M.hxLoopsLive()[0], o = {};
+    const S0 = () => M.HX.sch.get(L.sch[0]), rd = (S, f) => { const c = S.aud[Math.floor(f / 8192)]; return c ? c[0][f % 8192] : 0; };
+    const fp = (S, f0, f1) => { let h = 0; for (let f = f0; f < f1; f += 7) h = (h * 31 + Math.round(rd(S, f) * 1e6)) | 0; return h; };
+    let S = S0(); const half = Math.round(S.len / 2), X = 260;
+    const fA = fp(S, S.pre, S.pre + half - X), fB = fp(S, S.pre + half + X, S.pre + S.len), n0 = M.HX.hist.length;
+    M.HXE.sel = { a: 0, b: 0.5 }; M.hxEdRender(); await window.__sleep(200);
+    const part = document.querySelector('.hx-ed-part'); o.part = part && part.querySelector('.hx-ed-st').textContent;
+    [...part.querySelectorAll('.chip')].find((x) => x.textContent === '×2').click(); await window.__sleep(400);
+    S = S0(); o.x2 = { first: fp(S, S.pre, S.pre + half - X) !== fA, rest: fp(S, S.pre + half + X, S.pre + S.len) === fB, steps: M.HX.hist.length - n0, label: M.HX.hist[M.HX.hist.length - 1].label, len: S.len };
+    // the second half on its own: still ×1 – then softer only there
+    M.HXE.sel = { a: 0.5, b: 1 }; M.hxEdRender(); await window.__sleep(150);
+    const fA2 = fp(S, S.pre, S.pre + half - X);
+    [...document.querySelectorAll('.hx-ed-part .chip')].find((x) => x.textContent === 'stumm').click(); await window.__sleep(400);
+    S = S0(); let e2 = 0; for (let f = S.pre + half + X; f < S.pre + S.len - X; f += 5) e2 += Math.abs(rd(S, f));
+    o.mute = { firstKept: fp(S, S.pre, S.pre + half - X) === fA2, silent: e2 < 1e-6 };
+    for (const t of ['rückwärts', '30 %']) { const c = [...document.querySelectorAll('.hx-ed-part .chip')].find((x) => x.textContent === t); c.click(); await window.__sleep(300); }
+    const tw = [...document.querySelectorAll('.hx-ed-part .hx-ed-row')].find((r) => r.querySelector('.lab').textContent === 'Tauschen'); [...tw.querySelectorAll('.chip')][0].click(); await window.__sleep(300);
+    o.steps = M.HX.hist.length - n0;
+    for (let i = 0; i < o.steps; i++) { M.hxUndoStep(); await window.__sleep(150); }
+    S = S0(); o.back = fp(S, S.pre, S.pre + half - X) === fA && fp(S, S.pre + half + X, S.pre + S.len) === fB;
+    // the whole tape ×2: the waveform shows a loop half as long
+    M.HXE.sel = null; M.hxSpeed(L, 2); await window.__sleep(300); o.wf = M.hxEdWf(L); M.hxUndoStep(); await window.__sleep(200); o.wf1 = M.hxEdWf(L);
+    return o;
+  });
+  ok(/^Abschnitt bearbeiten – Takt 1/.test(rg.part) && rg.x2.first && rg.x2.rest && rg.x2.steps === 1 && /Abschnitt Takt 1 Band ×2/.test(rg.x2.label), `a stretch on its own: Takt 1 ×2 changes it, the rest stays sample for sample, one step (${JSON.stringify(rg.x2)}; „${rg.part}“)`);
+  ok(rg.mute.firstKept && rg.mute.silent, `the next stretch still as it was, then silenced alone (${JSON.stringify(rg.mute)})`);
+  ok(rg.steps === 5 && rg.back, `rückwärts, Weglassen, Tauschen too – each a step; ↶ five times: the audio exactly as before (${rg.steps}, ${rg.back})`);
+  ok(rg.wf === 0.5 && rg.wf1 === 1, `the whole tape ×2: the waveform shows the loop half as long (${rg.wf} → ${rg.wf1})`);
+  // 4e. (owner, 26.10.2026: „die Waveform wird nicht aktualisiert“) a change waiting for the next seam: the picture is the
+  // coming pass – filled to its end, not cut off at the old pass's length – and says when it is heard
+  const pend = await page.evaluate(async () => {
+    const M = window.__M, L = M.hxLoopsLive()[0], q = async () => { for (let i = 0; i < 80 && !(M.HXE.rw && M.HXE.rw.sig === M.HXE.rsig && !M.HXE.rw.none); i++) await window.__sleep(100); const r = M.HXE.rw; if (!r || r.none) return null; const n = r.mx.length, a = Math.floor(n * 0.8); let tail = 0; for (let x = a; x < n; x++) tail += r.mx[x] - r.mn[x]; return +tail.toFixed(2); };
+    M.hxSpeed(L, 0.5); await window.__sleep(250); const t1 = await q(); const w = document.querySelector('.hx-ed-wait'); const say = w && w.textContent;
+    M.hxUndoStep(); await window.__sleep(300);
+    M.hxBandTrimTo(L, 0, 0.5); await window.__sleep(250); const t2 = await q(); M.hxUndoStep(); await window.__sleep(300);
+    return { t1, t2, say };
+  });
+  ok(pend.t1 > 1 && pend.t2 > 1 && /zu hören ab der nächsten Naht, in \d+ s/.test(pend.say || ''), `a change still waiting for its seam is drawn whole – Band ½ and „nur die erste Hälfte“ fill the picture to its end, and it says when (${JSON.stringify(pend)})`);
   // 5. Escape closes; the mixer's strip head opens it
   await page.keyboard.press('Escape'); await page.waitForTimeout(150);
   const closed = await page.evaluate(() => document.querySelector('.hx-ed').hidden);

@@ -2,6 +2,17 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-26c",
+      "punkte": [
+        "Schleife bearbeiten: Einen gewählten Teil kannst du jetzt allein bearbeiten – der Rest der Schleife bleibt, wie er ist.",
+        "Für den Teil: Band ½, ⅔, 1½, ×2 (er behält seine Länge – ×2 spielt ihn zweimal, ½ seine erste Hälfte langsam), rückwärts, Weglassen, Tauschen und Pegel bis stumm.",
+        "Jeder Schritt lässt sich mit ↶ zurücknehmen; die Auswahl bleibt, du kannst weiter daran arbeiten oder einen anderen Teil wählen.",
+        "Die Wellenform zeigt auch das Tempo der ganzen Schleife: mit ×2 ist sie halb so lang, mit ½ ist die Länge bei ×1 markiert.",
+        "Behoben: Wartet eine Änderung (Band, Trimmen, „Nur die Auswahl spielen“) auf die nächste Naht, zeigt die Wellenform sie jetzt richtig – und darunter steht, in wie vielen Sekunden sie zu hören ist.",
+        "Die türkisen Striche in der Wellenform sind deine gespielten Noten (wo, wie hoch, wie lang) – der Hinweis über der Wellenform sagt es."
+      ]
+    },
+    {
       "id": "2026-10-26b",
       "punkte": [
         "Schleife bearbeiten: „Weglassen“ und „Tauschen“ sind jetzt zwei Zeilen mit eigenem „aus“ – ein einmal gewähltes Tauschen lässt sich wieder abschalten.",
