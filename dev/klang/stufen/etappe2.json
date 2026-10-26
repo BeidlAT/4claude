@@ -1,0 +1,321 @@
+{
+ "knobAnchor": "// Glut (worklet myzel-ember",
+ "engineAnchor": "  // Ranke: scanned synthesis on a ring of masses (myzel-scan).",
+ "sources": [
+  {
+   "key": "nrd",
+   "n": "Nordlicht",
+   "fam": "dunst",
+   "art": "haelt",
+   "i": "Additive Fläche unter wandernden Lichtvorhängen",
+   "tags": "nordlicht aurora additiv additive teiltöne partials fläche pad drone ambient sphärisch spectral spektral schimmer glas",
+   "hoehe": "Helligkeit",
+   "gate": 1.6,
+   "rich": "Stufe 3: 64 Teiltöne, links und rechts verteilt",
+   "knobs": [
+    [
+     "vorhang",
+     "Vorhang (Bewegung)",
+     0.4
+    ],
+    [
+     "schimmer",
+     "Schimmer",
+     0.4
+    ],
+    [
+     "teiltoene",
+     "Nur ungerade",
+     0
+    ],
+    [
+     "anstieg",
+     "Anstieg",
+     0.4
+    ]
+   ],
+   "macro": [
+    "vorhang",
+    "schimmer"
+   ],
+   "fb": "neb",
+   "rel": 1.4,
+   "att": 0.03,
+   "burstRel": 0.5,
+   "cmt": "Nordlicht: an additive surface under moving curtains (myzel-nrd) – Höhe lifts the curtains. Stand-in: Nebel.",
+   "help": "Ein Ton aus 48 Teiltönen, über die drei Lichtvorhänge wandern – die Farbe des Klangs bewegt sich wie ein Polarlicht. Die Höhe hebt die Vorhänge: unten ein dunkler, warmer Bordun, oben glasiges Schimmern der hohen Teiltöne. Jeder Teilton driftet ein paar Cent für sich (Schimmer). Im Puls ein Aufleuchten.",
+   "glyph": "<path d=\"M3 18c3-6 5-10 9-10s6 4 9 10\"/><path d=\"M6 18c2-4 3.5-6.5 6-6.5s4 2.5 6 6.5\" stroke-dasharray=\"1.6 2\"/><path d=\"M12 3v2.5M7 5l1 2M17 5l-1 2\"/>",
+   "engine": "  // Nordlicht: an additive surface under moving curtains (myzel-nrd) – Höhe lifts the curtains. Stand-in: Nebel.\n  nrd: {\n    sustain: true, needs: 'worklet', fallback: 'neb',\n    start(v, t, f, y, vel, o) {\n      wkVoice(v, 'myzel-nrd', f, y, { prm: wkPrm('nrd'), seed: wkSeed(), on: { on: t, f, y, vel, burst: !!o.burst, gate: o.burst ? o.gate : 0, seed: wkSeed() } });\n      const peak = vel * NRD_PEAK;\n      if (o.burst) burstEnv(v, t, peak, 0.03, o.gate, 0.5 * (o.decayMul || 1));\n      else wkHold(v, t, peak, 0.03, 1.4);\n    },\n  },\n"
+  },
+  {
+   "key": "sht",
+   "n": "Schimmer",
+   "fam": "dunst",
+   "art": "haelt",
+   "i": "Fläche im eigenen Raum, der in Oktaven aufsteigt",
+   "tags": "shimmer schimmer hall reverb oktave octave pad fläche ambient sphärisch himmel halo kathedrale",
+   "hoehe": "Schimmer",
+   "gate": 2.0,
+   "rich": "Stufe 3: wie Stufe 1 (der Raum ist schon stereo)",
+   "knobs": [
+    [
+     "schimmer",
+     "Schimmer",
+     0.6
+    ],
+    [
+     "raum",
+     "Raum",
+     0.6
+    ],
+    [
+     "quinte",
+     "Quinte",
+     0.2
+    ],
+    [
+     "farbe",
+     "Farbe",
+     0.5
+    ]
+   ],
+   "macro": [
+    "schimmer",
+    "raum"
+   ],
+   "fb": "neb",
+   "rel": 3.5,
+   "att": 0.05,
+   "burstRel": 1.2,
+   "cmt": "Schimmer: a surface in its own rising room (myzel-sht) – Höhe is the shimmer; let go, the halo rings out. Stand-in: Nebel.",
+   "help": "Eine schlichte Fläche klingt in einem eigenen Raum – und was aus dem Raum zurückkommt, steigt um eine Oktave (mit Quinte auch eine Quinte) und geht wieder hinein: der Nachhall blüht in einen Halo aus Oktaven über dem Ton. Die Höhe ist der Schimmer: unten trocken im schlichten Raum, oben singt der Raum darüber. Loslassen lässt den Halo ausklingen.",
+   "glyph": "<path d=\"M12 20V9\"/><path d=\"M8 13l4-4 4 4\"/><path d=\"M5 9l3-3M19 9l-3-3M12 4.5V3\"/><circle cx=\"12\" cy=\"20\" r=\"1\" fill=\"currentColor\"/>",
+   "engine": "  // Schimmer: a surface in its own rising room (myzel-sht) – Höhe is the shimmer; let go, the halo rings out. Stand-in: Nebel.\n  sht: {\n    sustain: true, needs: 'worklet', fallback: 'neb',\n    start(v, t, f, y, vel, o) {\n      wkVoice(v, 'myzel-sht', f, y, { prm: wkPrm('sht'), seed: wkSeed(), on: { on: t, f, y, vel, burst: !!o.burst, gate: o.burst ? o.gate : 0, seed: wkSeed() } });\n      const peak = vel * SHT_PEAK;\n      if (o.burst) burstEnv(v, t, peak, 0.05, o.gate, 1.2 * (o.decayMul || 1));\n      else wkHold(v, t, peak, 0.05, 3.5);\n    },\n  },\n"
+  },
+  {
+   "key": "ond",
+   "n": "Ätherwelle",
+   "fam": "luft",
+   "art": "haelt",
+   "i": "Ondes Martenot – vier Wellen, Palme und Gongfeder",
+   "tags": "ondes martenot theremin ätherwelle elektronisch vintage sci-fi palme diffuseur gong welle sinus vibrato ribbon band sphärisch",
+   "hoehe": "Welle (Onde → Gambe)",
+   "gate": 1.2,
+   "rich": "Stufe 3: die Palme-Saiten im Stereo",
+   "knobs": [
+    [
+     "palme",
+     "Palme",
+     0.4
+    ],
+    [
+     "metall",
+     "Métallique",
+     0.15
+    ],
+    [
+     "vibrato",
+     "Vibrato",
+     0.35
+    ],
+    [
+     "klang",
+     "Klang",
+     0
+    ]
+   ],
+   "macro": [
+    "vibrato",
+    "palme"
+   ],
+   "fb": "neb",
+   "rel": 0.15,
+   "att": 0.02,
+   "burstRel": 0.12,
+   "cmt": "Ätherwelle: the Ondes Martenot (myzel-ond) – Höhe glides through its timbres; its diffuseurs ring. Stand-in: Nebel.",
+   "help": "Das Ondes Martenot: ein Oszillator, dessen Welle die Höhe wählt – unten Onde (ein reiner Sinus), dann Creux (hohl), Nasillard (näselnd), oben Gambe (dünn und hell). Der Finger gibt ein Vibrato und gleitet in jeden Ton. Seine Lautsprecher klingen mit: die Palme, zwölf Saiten chromatisch gestimmt (ein Halo), und Métallique, ein Gong als Membran.",
+   "glyph": "<path d=\"M3 12c1.5-4 3-4 4.5 0s3 4 4.5 0 3-4 4.5 0 3 4 4.5 0\"/><path d=\"M5 19h14\"/><path d=\"M9 19v-2M15 19v-2\"/>",
+   "engine": "  // Ätherwelle: the Ondes Martenot (myzel-ond) – Höhe glides through its timbres; its diffuseurs ring. Stand-in: Nebel.\n  ond: {\n    sustain: true, needs: 'worklet', fallback: 'neb',\n    start(v, t, f, y, vel, o) {\n      wkVoice(v, 'myzel-ond', f, y, { prm: wkPrm('ond'), seed: wkSeed(), on: { on: t, f, y, vel, burst: !!o.burst, gate: o.burst ? o.gate : 0, seed: wkSeed() } });\n      const peak = vel * OND_PEAK;\n      if (o.burst) burstEnv(v, t, peak, 0.02, o.gate, 0.12 * (o.decayMul || 1));\n      else wkHold(v, t, peak, 0.02, 0.15);\n    },\n  },\n"
+  },
+  {
+   "key": "wal",
+   "n": "Walgesang",
+   "fam": "erde",
+   "art": "haelt",
+   "i": "Walgesang – Bögen, Knarren, Ferne unter Wasser",
+   "tags": "wal whale buckelwal humpback gesang song meer ozean unterwasser underwater tief stöhnen moan ruf call ambient",
+   "hoehe": "Bogen (sinkt → steigt)",
+   "gate": 2.2,
+   "rich": "Stufe 3: das Meer antwortet rechts später",
+   "knobs": [
+    [
+     "bogen",
+     "Bogen",
+     0.6
+    ],
+    [
+     "dauer",
+     "Dauer",
+     0.5
+    ],
+    [
+     "knarren",
+     "Knarren",
+     0.3
+    ],
+    [
+     "tiefe",
+     "Tiefe (Wasser)",
+     0.6
+    ]
+   ],
+   "macro": [
+    "bogen",
+    "knarren"
+   ],
+   "fb": "stm",
+   "rel": 0.9,
+   "att": 0.12,
+   "burstRel": 0.5,
+   "cmt": "Walgesang: a humpback's moan under water (myzel-wal) – Höhe is the arc; held, the song goes on. Stand-in: Stimme.",
+   "help": "Ein Buckelwal singt: jede Einheit ein langer Bogen, der auf dem Ton ankommt – unten sinkt das Stöhnen hinein, in der Mitte ein Buckel, oben steigt der Ruf hinauf. Gehalten singt er weiter, alle paar Sekunden eine neue Einheit (Dauer). Manche knarren (Knarren). Unter Wasser fehlen die Höhen, das Meer antwortet spät (Tiefe).",
+   "glyph": "<path d=\"M3 13c2-3 6-4.5 10-3.5 3 .8 5 2.5 6 4.5-2 0-3 1-3.5 2.5-2-1.5-6-1.5-9 0-1.5.7-3 .2-3.5-1\"/><path d=\"M19 14l2-3M19 14l2.5 1\"/><circle cx=\"8\" cy=\"12\" r=\".6\" fill=\"currentColor\"/>",
+   "engine": "  // Walgesang: a humpback's moan under water (myzel-wal) – Höhe is the arc; held, the song goes on. Stand-in: Stimme.\n  wal: {\n    sustain: true, needs: 'worklet', fallback: 'stm',\n    start(v, t, f, y, vel, o) {\n      wkVoice(v, 'myzel-wal', f, y, { prm: wkPrm('wal'), seed: wkSeed(), on: { on: t, f, y, vel, burst: !!o.burst, gate: o.burst ? o.gate : 0, seed: wkSeed() } });\n      const peak = vel * WAL_PEAK;\n      if (o.burst) burstEnv(v, t, peak, 0.12, o.gate, 0.5 * (o.decayMul || 1));\n      else wkHold(v, t, peak, 0.12, 0.9);\n    },\n  },\n"
+  },
+  {
+   "key": "stp",
+   "n": "Endlostreppe",
+   "fam": "dunst",
+   "art": "haelt",
+   "i": "Shepard-Glissando – steigt oder fällt ohne Ende",
+   "tags": "shepard risset glissando endlos treppe illusion psychedelisch steigen fallen paradox escher experimentell",
+   "hoehe": "Richtung und Tempo",
+   "gate": 1.6,
+   "rich": "Stufe 3: die Stimmen links und rechts verteilt",
+   "knobs": [
+    [
+     "tempo",
+     "Tempo",
+     0.4
+    ],
+    [
+     "spanne",
+     "Spanne",
+     0.6
+    ],
+    [
+     "atmen",
+     "Atmen",
+     0.4
+    ],
+    [
+     "ruhe",
+     "Ruhe (Mitte)",
+     0.3
+    ]
+   ],
+   "macro": [
+    "tempo",
+    "spanne"
+   ],
+   "fb": "neb",
+   "rel": 0.6,
+   "att": 0.08,
+   "burstRel": 0.3,
+   "cmt": "Endlostreppe: the Shepard–Risset glissando (myzel-stp) – Höhe is the stair (still in the middle). Stand-in: Nebel.",
+   "help": "Acht Stimmen im Oktavabstand unter einer Glocke: während sie gleiten, verschwindet die oberste, wo die unterste auftaucht – der Ton steigt oder fällt ohne Ende. Die Höhe ist die Treppe: in der Mitte steht sie (Ruhe: wie breit), darüber steigt sie, darunter fällt sie, je weiter weg, desto schneller (Tempo). Jede Stimme ist ein atmendes Paar.",
+   "glyph": "<path d=\"M3 20h4v-4h4v-4h4V8h4V4\"/><path d=\"M17 4h4\"/><path d=\"M5 20l-2 2\" stroke-dasharray=\"1 1.5\"/>",
+   "engine": "  // Endlostreppe: the Shepard–Risset glissando (myzel-stp) – Höhe is the stair (still in the middle). Stand-in: Nebel.\n  stp: {\n    sustain: true, needs: 'worklet', fallback: 'neb',\n    start(v, t, f, y, vel, o) {\n      wkVoice(v, 'myzel-stp', f, y, { prm: wkPrm('stp'), seed: wkSeed(), on: { on: t, f, y, vel, burst: !!o.burst, gate: o.burst ? o.gate : 0, seed: wkSeed() } });\n      const peak = vel * STP_PEAK;\n      if (o.burst) burstEnv(v, t, peak, 0.08, o.gate, 0.3 * (o.decayMul || 1));\n      else wkHold(v, t, peak, 0.08, 0.6);\n    },\n  },\n"
+  },
+  {
+   "key": "atr",
+   "n": "Attraktor",
+   "fam": "dunst",
+   "art": "haelt",
+   "i": "Seltsamer Attraktor – Ton, Verdopplung, Chaos",
+   "tags": "attraktor attractor rössler chaos periodenverdopplung period doubling experimentell avantgarde nichtlinear lorenz",
+   "hoehe": "Chaos",
+   "gate": 1.2,
+   "rich": "Stufe 3: die andere Seite des Orbits rechts",
+   "knobs": [
+    [
+     "mischung",
+     "Mischung (rund → spitz)",
+     0.3
+    ],
+    [
+     "farbe",
+     "Farbe",
+     0.6
+    ],
+    [
+     "drift",
+     "Drift",
+     0.3
+    ],
+    [
+     "tiefe",
+     "Unterseite",
+     0.4
+    ]
+   ],
+   "macro": [
+    "mischung",
+    "farbe"
+   ],
+   "fb": "amo",
+   "rel": 0.12,
+   "att": 0.01,
+   "burstRel": 0.12,
+   "cmt": "Attraktor: the Rössler system played (myzel-atr) – Höhe is the road to chaos. Stand-in: Amöbe.",
+   "help": "Ein seltsamer Attraktor (Rössler) als Instrument: sein Orbit läuft einmal je Periode um – gezogen auf deinen Ton. Die Höhe ist der Weg ins Chaos: unten eine Schleife (ein runder Ton), dann verdoppelt sich die Periode (die Unteroktave erscheint), noch einmal, und oben wiederholt sich nichts mehr: knurrendes, atmendes Chaos um den Ton.",
+   "glyph": "<path d=\"M12 12c-4-5-9-2-7 2s7 3 7-2 3-7 7-5-1 8-7 5\"/><circle cx=\"12\" cy=\"12\" r=\".8\" fill=\"currentColor\"/>",
+   "engine": "  // Attraktor: the Rössler system played (myzel-atr) – Höhe is the road to chaos. Stand-in: Amöbe.\n  atr: {\n    sustain: true, needs: 'worklet', fallback: 'amo',\n    start(v, t, f, y, vel, o) {\n      wkVoice(v, 'myzel-atr', f, y, { prm: wkPrm('atr'), seed: wkSeed(), on: { on: t, f, y, vel, burst: !!o.burst, gate: o.burst ? o.gate : 0, seed: wkSeed() } });\n      const peak = vel * ATR_PEAK;\n      if (o.burst) burstEnv(v, t, peak, 0.01, o.gate, 0.12 * (o.decayMul || 1));\n      else wkHold(v, t, peak, 0.01, 0.12);\n    },\n  },\n"
+  },
+  {
+   "key": "tnl",
+   "n": "Tunnel",
+   "fam": "dunst",
+   "art": "haelt",
+   "i": "Gestimmtes Rohr mit Durchnull-Flanger – Düsenflug",
+   "tags": "tunnel flanger through-zero düse jet psychedelisch sweep rauschen kamm comb rohr wind experimentell",
+   "hoehe": "Sog",
+   "gate": 1.6,
+   "rich": "Stufe 3: rechts ein gedrehter Sweep",
+   "knobs": [
+    [
+     "tempo",
+     "Tempo",
+     0.3
+    ],
+    [
+     "tiefe",
+     "Tiefe",
+     0.7
+    ],
+    [
+     "rauschen",
+     "Rauschen",
+     0.45
+    ],
+    [
+     "breite",
+     "Breite",
+     0.5
+    ]
+   ],
+   "macro": [
+    "tempo",
+    "tiefe"
+   ],
+   "fb": "hau",
+   "rel": 0.4,
+   "att": 0.04,
+   "burstRel": 0.25,
+   "cmt": "Tunnel: a jet through a tuned tube (myzel-tnl) – Höhe is the pull. Stand-in: Hauch.",
+   "help": "Rauschen und eine Sägezahnwelle klingen in einem Rohr, das auf deinen Ton gestimmt ist, und fliegen durch einen Durchnull-Flanger – der Düsenflug alter psychedelischer Platten. Die Höhe ist der Sog: unten klingt das Rohr kaum und der Sweep ist flach, oben heult es und der Sweep stürzt durch die Null. Tempo, Tiefe, Breite stellen den Sweep.",
+   "glyph": "<ellipse cx=\"12\" cy=\"12\" rx=\"9\" ry=\"7\"/><ellipse cx=\"12\" cy=\"12\" rx=\"5.5\" ry=\"4\"/><ellipse cx=\"12\" cy=\"12\" rx=\"2.2\" ry=\"1.6\"/>",
+   "engine": "  // Tunnel: a jet through a tuned tube (myzel-tnl) – Höhe is the pull. Stand-in: Hauch.\n  tnl: {\n    sustain: true, needs: 'worklet', fallback: 'hau',\n    start(v, t, f, y, vel, o) {\n      wkVoice(v, 'myzel-tnl', f, y, { prm: wkPrm('tnl'), seed: wkSeed(), on: { on: t, f, y, vel, burst: !!o.burst, gate: o.burst ? o.gate : 0, seed: wkSeed() } });\n      const peak = vel * TNL_PEAK;\n      if (o.burst) burstEnv(v, t, peak, 0.04, o.gate, 0.25 * (o.decayMul || 1));\n      else wkHold(v, t, peak, 0.04, 0.4);\n    },\n  },\n"
+  }
+ ]
+}

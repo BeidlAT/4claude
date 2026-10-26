@@ -1308,6 +1308,237 @@ const ENGINES = {
       else wkHold(v, t, peak, 0.004, 0.08);
     },
   },
+  // ---- Klangbibliothek II, Etappe 1 (26.10.2026): Welt. Struck sources ring as long as their processor says (Nachklang;
+  // a Puls hit shorter, as every struck source's life follows the gate); held ones as their kind. ----
+  // Handpan: a steel tone field (myzel-hng) – Höhe is where the hand strikes. Stand-in: Glocke.
+  hng: {
+    sustain: false, needs: 'worklet', fallback: 'glo',
+    start(v, t, f, y, vel, o) {
+      const L0 = (2 + 10 * P['hng.nachklang']) * clamp(Math.pow(220 / f, 0.3), 0.6, 1.5) * 1.15, dmul = wkDmul(o, L0), life = L0 * dmul + 0.3;
+      wkVoice(v, 'myzel-hng', f, y, { prm: wkPrm('hng'), seed: wkSeed(), on: { on: t, f, y, vel, dmul, seed: wkSeed() } });
+      wkRing(v, t, HNG_PEAK, life);
+    },
+  },
+  // Gamelan: bronze keys in pairs (myzel-gml) – Höhe is the mallet; a new stroke damps the one before on the same
+  // channel (Abdämpfen, the player's other hand). Stand-in: Glocke.
+  gml: {
+    sustain: false, needs: 'worklet', fallback: 'glo',
+    start(v, t, f, y, vel, o) {
+      const L0 = (1.4 + 8 * P['gml.nachklang']) * clamp(Math.pow(300 / f, 0.55), 0.5, 2) * 1.3, dmul = wkDmul(o, L0), life = L0 * dmul + 0.3;
+      if (P['gml.daempfen'] > 0) for (const w of A.voices) if (w !== v && w.alive && w.as === 'gml' && w.wk && w.bus === v.bus && w.t0 < t) w.wk.port.postMessage({ damp: 1, t: t + 0.004 });
+      wkVoice(v, 'myzel-gml', f, y, { prm: wkPrm('gml'), seed: wkSeed(), on: { on: t, f, y, vel, dmul, seed: wkSeed() } });
+      wkRing(v, t, GML_PEAK, life);
+    },
+  },
+  // Sitar: a string on a curved bridge, chikari and tarab strings (myzel-sit) – Höhe is the bridge (clean → jawari);
+  // the tarab tuned to the scale around the middle of the field, the chikari to the key's Sa. Stand-in: Saite.
+  sit: {
+    sustain: false, needs: 'worklet', fallback: 'sai',
+    start(v, t, f, y, vel, o) {
+      const L0 = (2 + 9 * P['sit.nachklang']) * clamp(Math.pow(260 / f, 0.35), 0.5, 1.5) * 1.15, dmul = wkDmul(o, L0), life = L0 * dmul + 0.4 + (o.gate ? 0 : 1.5 * P['sit.tarab']);   // (the tarab ring on)
+      wkVoice(v, 'myzel-sit', f, y, { prm: wkPrm('sit'), seed: wkSeed(), ch: sitChikari(), tar: sitTarab(), on: { on: t, f, y, vel, dmul, seed: wkSeed() } });
+      wkRing(v, t, SIT_PEAK, life);
+    },
+  },
+  // Tabla: the dayan's loaded skin, the bayan below its limit (myzel-tbl) – Höhe is the stroke (Tun · Tin · Na; on the
+  // bayan Ge … Ke); held, moving up raises the bayan's pitch (the heel). Let go: the drum rings on. Stand-in: Membran.
+  tbl: {
+    sustain: true, needs: 'worklet', fallback: 'mem',
+    start(v, t, f, y, vel, o) {
+      const L0 = (0.4 + 1.6 * P['tbl.nachklang']) * 1.4, dmul = wkDmul(o, L0), life = L0 * dmul + 0.25;
+      wkVoice(v, 'myzel-tbl', f, y, { prm: wkPrm('tbl'), seed: wkSeed(), on: { on: t, f, y, vel, dmul, seed: wkSeed() } });
+      v.out.gain.setValueAtTime(TBL_PEAK, t);
+      if (o.burst) { wkRing(v, t, TBL_PEAK, life); return; }
+      v.release = () => { if (!v.alive || v.released) return; const now = A.ctx.currentTime; v.wk.port.postMessage({ off: now }); v.released = true; v.relAt = now; v.out.gain.setTargetAtTime(0, now + life, 0.05); v.finish(now + life + 0.3); };
+    },
+  },
+  // Didgeridoo: lips in a long tube (myzel-did) – Höhe is the tongue; a Puls hit is a toot. Stand-in: Obertöne.
+  did: {
+    sustain: true, needs: 'worklet', fallback: 'obt',
+    start(v, t, f, y, vel, o) {
+      wkVoice(v, 'myzel-did', f, y, { prm: wkPrm('did'), seed: wkSeed(), on: { on: t, f, y, vel, burst: !!o.burst, gate: o.burst ? o.gate : 0, seed: wkSeed() } });
+      const peak = vel * DID_PEAK;
+      if (o.burst) burstEnv(v, t, peak, 0.012, o.gate, 0.18 * (o.decayMul || 1));
+      else wkHold(v, t, peak, 0.03, 0.25);
+    },
+  },
+  // Maultrommel: a steel tongue, the mouth as resonator (myzel-mtr) – Höhe is the mouth (which overtone sings); held,
+  // the thumb plucks again. Let go: the tongue rings out. Stand-in: Obertöne.
+  mtr: {
+    sustain: true, needs: 'worklet', fallback: 'obt',
+    start(v, t, f, y, vel, o) {
+      wkVoice(v, 'myzel-mtr', f, y, { prm: wkPrm('mtr'), seed: wkSeed(), on: { on: t, f, y, vel, burst: !!o.burst, gate: o.burst ? o.gate : 0, seed: wkSeed() } });
+      const peak = vel * MTR_PEAK;
+      if (o.burst) burstEnv(v, t, peak, 0.002, o.gate, 0.3 * (o.decayMul || 1));   // (a twang: it ends within the next step)
+      else wkHold(v, t, peak, 0.002, 0.7);
+    },
+  },
+  // Nordlicht: an additive surface under moving curtains (myzel-nrd) – Höhe lifts the curtains. Stand-in: Nebel.
+  nrd: {
+    sustain: true, needs: 'worklet', fallback: 'neb',
+    start(v, t, f, y, vel, o) {
+      wkVoice(v, 'myzel-nrd', f, y, { prm: wkPrm('nrd'), seed: wkSeed(), on: { on: t, f, y, vel, burst: !!o.burst, gate: o.burst ? o.gate : 0, seed: wkSeed() } });
+      const peak = vel * NRD_PEAK;
+      if (o.burst) burstEnv(v, t, peak, 0.03, o.gate, 0.5 * (o.decayMul || 1));
+      else wkHold(v, t, peak, 0.03, 1.4);
+    },
+  },
+  // Schimmer: a surface in its own rising room (myzel-sht) – Höhe is the shimmer; let go, the halo rings out. Stand-in: Nebel.
+  sht: {
+    sustain: true, needs: 'worklet', fallback: 'neb',
+    start(v, t, f, y, vel, o) {
+      wkVoice(v, 'myzel-sht', f, y, { prm: wkPrm('sht'), seed: wkSeed(), on: { on: t, f, y, vel, burst: !!o.burst, gate: o.burst ? o.gate : 0, seed: wkSeed() } });
+      const peak = vel * SHT_PEAK;
+      if (o.burst) burstEnv(v, t, peak, 0.05, o.gate, 1.2 * (o.decayMul || 1));
+      else wkHold(v, t, peak, 0.05, 3.5);
+    },
+  },
+  // Ätherwelle: the Ondes Martenot (myzel-ond) – Höhe glides through its timbres; its diffuseurs ring. Stand-in: Nebel.
+  ond: {
+    sustain: true, needs: 'worklet', fallback: 'neb',
+    start(v, t, f, y, vel, o) {
+      wkVoice(v, 'myzel-ond', f, y, { prm: wkPrm('ond'), seed: wkSeed(), on: { on: t, f, y, vel, burst: !!o.burst, gate: o.burst ? o.gate : 0, seed: wkSeed() } });
+      const peak = vel * OND_PEAK;
+      if (o.burst) burstEnv(v, t, peak, 0.02, o.gate, 0.12 * (o.decayMul || 1));
+      else wkHold(v, t, peak, 0.02, 0.15);
+    },
+  },
+  // Walgesang: a humpback's moan under water (myzel-wal) – Höhe is the arc; held, the song goes on. Stand-in: Stimme.
+  wal: {
+    sustain: true, needs: 'worklet', fallback: 'stm',
+    start(v, t, f, y, vel, o) {
+      wkVoice(v, 'myzel-wal', f, y, { prm: wkPrm('wal'), seed: wkSeed(), on: { on: t, f, y, vel, burst: !!o.burst, gate: o.burst ? o.gate : 0, seed: wkSeed() } });
+      const peak = vel * WAL_PEAK;
+      if (o.burst) burstEnv(v, t, peak, 0.12, o.gate, 0.5 * (o.decayMul || 1));
+      else wkHold(v, t, peak, 0.12, 0.9);
+    },
+  },
+  // Endlostreppe: the Shepard–Risset glissando (myzel-stp) – Höhe is the stair (still in the middle). Stand-in: Nebel.
+  stp: {
+    sustain: true, needs: 'worklet', fallback: 'neb',
+    start(v, t, f, y, vel, o) {
+      wkVoice(v, 'myzel-stp', f, y, { prm: wkPrm('stp'), seed: wkSeed(), on: { on: t, f, y, vel, burst: !!o.burst, gate: o.burst ? o.gate : 0, seed: wkSeed() } });
+      const peak = vel * STP_PEAK;
+      if (o.burst) burstEnv(v, t, peak, 0.08, o.gate, 0.3 * (o.decayMul || 1));
+      else wkHold(v, t, peak, 0.08, 0.6);
+    },
+  },
+  // Attraktor: the Rössler system played (myzel-atr) – Höhe is the road to chaos. Stand-in: Amöbe.
+  atr: {
+    sustain: true, needs: 'worklet', fallback: 'amo',
+    start(v, t, f, y, vel, o) {
+      wkVoice(v, 'myzel-atr', f, y, { prm: wkPrm('atr'), seed: wkSeed(), on: { on: t, f, y, vel, burst: !!o.burst, gate: o.burst ? o.gate : 0, seed: wkSeed() } });
+      const peak = vel * ATR_PEAK;
+      if (o.burst) burstEnv(v, t, peak, 0.01, o.gate, 0.12 * (o.decayMul || 1));
+      else wkHold(v, t, peak, 0.01, 0.12);
+    },
+  },
+  // Tunnel: a jet through a tuned tube (myzel-tnl) – Höhe is the pull. Stand-in: Hauch.
+  tnl: {
+    sustain: true, needs: 'worklet', fallback: 'hau',
+    start(v, t, f, y, vel, o) {
+      wkVoice(v, 'myzel-tnl', f, y, { prm: wkPrm('tnl'), seed: wkSeed(), on: { on: t, f, y, vel, burst: !!o.burst, gate: o.burst ? o.gate : 0, seed: wkSeed() } });
+      const peak = vel * TNL_PEAK;
+      if (o.burst) burstEnv(v, t, peak, 0.04, o.gate, 0.25 * (o.decayMul || 1));
+      else wkHold(v, t, peak, 0.04, 0.4);
+    },
+  },
+  // Westküste: complex oscillator, wavefolder, low pass gate (myzel-wkg) – Höhe folds. Stand-in: Nebel.
+  wkg: {
+    sustain: true, needs: 'worklet', fallback: 'neb',
+    start(v, t, f, y, vel, o) {
+      wkVoice(v, 'myzel-wkg', f, y, { prm: wkPrm('wkg'), seed: wkSeed(), on: { on: t, f, y, vel, burst: !!o.burst, gate: o.burst ? o.gate : 0, seed: wkSeed() } });
+      const peak = vel * WKG_PEAK;
+      if (o.burst) burstEnv(v, t, peak, 0.002, o.gate, 0.4 * (o.decayMul || 1));
+      else wkHold(v, t, peak, 0.002, 1.2);
+    },
+  },
+  // Schaltkreis: a circuit-bent toy (myzel-bnt) – Höhe is the destruction. Stand-in: Körner.
+  bnt: {
+    sustain: true, needs: 'worklet', fallback: 'kor',
+    start(v, t, f, y, vel, o) {
+      wkVoice(v, 'myzel-bnt', f, y, { prm: wkPrm('bnt'), seed: wkSeed(), on: { on: t, f, y, vel, burst: !!o.burst, gate: o.burst ? o.gate : 0, seed: wkSeed() } });
+      const peak = vel * BNT_PEAK;
+      if (o.burst) burstEnv(v, t, peak, 0.003, o.gate, 0.06 * (o.decayMul || 1));
+      else wkHold(v, t, peak, 0.003, 0.08);
+    },
+  },
+  // Kassette: a tine piano on a worn tape (myzel-kas) – Höhe is the strike; let go, the damper. Stand-in: Kalimba.
+  kas: {
+    sustain: true, needs: 'worklet', fallback: 'klb',
+    start(v, t, f, y, vel, o) {
+      const L0 = (1.2 + 7 * P['kas.nachklang']) * clamp(Math.pow(260 / f, 0.6), 0.35, 1.6) * 1.2, dmul = wkDmul(o, L0), life = L0 * dmul + 0.3;
+      wkVoice(v, 'myzel-kas', f, y, { prm: wkPrm('kas'), seed: wkSeed(), on: { on: t, f, y, vel, dmul, seed: wkSeed() } });
+      v.out.gain.setValueAtTime(KAS_PEAK, t);
+      if (o.burst) { wkRing(v, t, KAS_PEAK, life); return; }
+      v.release = () => { if (!v.alive || v.released) return; const now = A.ctx.currentTime; v.wk.port.postMessage({ off: now }); v.released = true; v.relAt = now; v.out.gain.setTargetAtTime(0, now + 0.6, 0.08); v.finish(now + 1.1); };
+      v.finish(t + life);
+    },
+  },
+  // Achtbit: a pulse-wave sound chip (myzel-bit) – Höhe is the width. Stand-in: Obertöne.
+  bit: {
+    sustain: true, needs: 'worklet', fallback: 'obt',
+    start(v, t, f, y, vel, o) {
+      wkVoice(v, 'myzel-bit', f, y, { prm: wkPrm('bit'), seed: wkSeed(), on: { on: t, f, y, vel, burst: !!o.burst, gate: o.burst ? o.gate : 0, seed: wkSeed() } });
+      const peak = vel * BIT_PEAK;
+      if (o.burst) burstEnv(v, t, peak, 0.002, o.gate, 0.08 * (o.decayMul || 1));
+      else wkHold(v, t, peak, 0.002, 0.13);
+    },
+  },
+  // Gleitbass: the 808 bass (myzel-gbs) – Höhe is the drive; a note while the last still sounds glides from it (legato,
+  // that one is cut). Stand-in: Tiefe.
+  gbs: {
+    sustain: true, needs: 'worklet', fallback: 'tie',
+    start(v, t, f, y, vel, o) {
+      let from = 0; if (P['gbs.gleiten'] > 0.02 && !o.burst) for (const w of A.voices) if (w !== v && w.alive && w.as === 'gbs' && w.bus === v.bus && w.t0 < t && w._gf && (!w.released || t - w.relAt < 0.25)) { from = w._gf; w.out.gain.cancelScheduledValues(t); w.out.gain.setTargetAtTime(0, t, 0.012); w.released = true; w.relAt = t; w.finish(t + 0.1); }
+      v._gf = f;
+      wkVoice(v, 'myzel-gbs', f, y, { prm: wkPrm('gbs'), seed: wkSeed(), on: { on: t, f, y, vel, burst: !!o.burst, gate: o.burst ? o.gate : 0, seed: wkSeed(), from } });
+      const peak = vel * GBS_PEAK;
+      if (o.burst) burstEnv(v, t, peak, 0.001, o.gate, 0.12 * (o.decayMul || 1));
+      else wkHold(v, t, peak, 0.001, 0.1);
+    },
+  },
+  // Zischel: the 808 hi-hat (myzel-hht) – Höhe opens it; a new hat chokes an open one on the same channel. Stand-in: Membran.
+  hht: {
+    sustain: false, needs: 'worklet', fallback: 'mem',
+    start(v, t, f, y, vel, o) {
+      const L0 = (0.03 + 1.1 * Math.pow(clamp(y, 0, 1), 1.7)) * 1.6 + 0.1, dmul = wkDmul(o, L0), life = L0 * dmul + 0.3;
+      if (P['hht.abwuergen'] > 0.5) for (const w of A.voices) if (w !== v && w.alive && w.as === 'hht' && w.wk && w.bus === v.bus && w.t0 < t) w.wk.port.postMessage({ choke: 1, t: t + 0.002 });
+      wkVoice(v, 'myzel-hht', f, y, { prm: wkPrm('hht'), seed: wkSeed(), on: { on: t, f, y, vel, dmul, seed: wkSeed(), burst: !!o.burst, gate: o.burst ? o.gate : 0 } });
+      wkRing(v, t, HHT_PEAK, life);
+    },
+  },
+  // Silbe: a sung syllable (myzel-vox) – Höhe is the vowel. Stand-in: Stimme.
+  vox: {
+    sustain: true, needs: 'worklet', fallback: 'stm',
+    start(v, t, f, y, vel, o) {
+      wkVoice(v, 'myzel-vox', f, y, { prm: wkPrm('vox'), seed: wkSeed(), on: { on: t, f, y, vel, burst: !!o.burst, gate: o.burst ? o.gate : 0, seed: wkSeed() } });
+      const peak = vel * VOX_PEAK;
+      if (o.burst) burstEnv(v, t, peak, 0.004, o.gate, 0.08 * (o.decayMul || 1));
+      else wkHold(v, t, peak, 0.004, 0.12);
+    },
+  },
+  // Spieluhr: a music box (myzel-spu) – Höhe is the winding. Stand-in: Kalimba.
+  spu: {
+    sustain: false, needs: 'worklet', fallback: 'klb',
+    start(v, t, f, y, vel, o) {
+      const L0 = (1.5 + 6 * P['spu.nachklang']) * clamp(Math.pow(523 / f, 0.7), 0.35, 1.8) + 0.2, dmul = wkDmul(o, L0), life = L0 * dmul + 0.3;
+      wkVoice(v, 'myzel-spu', f, y, { prm: wkPrm('spu'), seed: wkSeed(), on: { on: t, f, y, vel, dmul, seed: wkSeed(), burst: !!o.burst, gate: o.burst ? o.gate : 0 } });
+      wkRing(v, t, SPU_PEAK, life);
+    },
+  },
+  // Koto: a silk string, an ivory nail (myzel-kto) – Höhe is the pluck, held moving up presses behind the bridge. Stand-in: Saite.
+  kto: {
+    sustain: true, needs: 'worklet', fallback: 'sai',
+    start(v, t, f, y, vel, o) {
+      const L0 = (1.2 + 6 * P['kto.nachklang']) * clamp(Math.pow(260 / f, 0.5), 0.4, 1.6) * 1.15, dmul = wkDmul(o, L0), life = L0 * dmul + 0.3;
+      wkVoice(v, 'myzel-kto', f, y, { prm: wkPrm('kto'), seed: wkSeed(), on: { on: t, f, y, vel, dmul, seed: wkSeed() } });
+      v.out.gain.setValueAtTime(KTO_PEAK, t);
+      if (o.burst) { wkRing(v, t, KTO_PEAK, life); return; }
+      v.release = () => { if (!v.alive || v.released) return; const now = A.ctx.currentTime; v.wk.port.postMessage({ off: now }); v.released = true; v.relAt = now; v.out.gain.setTargetAtTime(0, now + 0.6, 0.08); v.finish(now + 1.1); };
+      v.finish(t + life);
+    },
+  },
   // Ranke: scanned synthesis on a ring of masses (myzel-scan). Touch = a hammer (Höhe: wide and soft → narrow and
   // bright), held = a steady push keeps the form alive; Puls = hammer only, the ring three times faster. Stand-in: Nebel.
   rnk: {

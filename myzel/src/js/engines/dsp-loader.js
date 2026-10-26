@@ -9,7 +9,7 @@ const MYZEL_DSP_SRC = '(' + myzelDsp + ')();\ntry {\n' + TAP_SRC + '\n} catch (e
 // engine plays its stand-in (ENGINES[k].fallback) and keeps its key in the patch.
 // DSP.state for the UI: '' not asked yet · 'laden' loading · 'ok' · 'kein' this browser cannot (stand-ins play).
 const DSP = { state: '', toldFrame: false };
-const WORKLET_ENGINES = new Set(['hrz', 'hlm', 'glt', 'boe', 'amo', 'rnk', 'shn', 'zpf', 'mdr', 'gsp', 'khl']);
+const WORKLET_ENGINES = new Set(['hrz', 'hlm', 'glt', 'boe', 'amo', 'rnk', 'shn', 'zpf', 'mdr', 'gsp', 'khl', 'hng', 'gml', 'sit', 'tbl', 'did', 'mtr', 'nrd', 'sht', 'ond', 'wal', 'stp', 'atr', 'tnl', 'wkg', 'bnt', 'kas', 'bit', 'gbs', 'hht', 'vox', 'spu', 'kto']);
 A.workletOK = false; A.workletBroken = new Set();
 function dspWanted() {
   const g = GK.p ? [GK.p.rgS, GK.p.rasS] : [];
@@ -95,3 +95,21 @@ function wkPrm(k) {
 }
 const wkSeed = () => ((Math.random() * 2147483647) | 0) || 1;
 
+// (Klangbibliothek II) a struck worklet voice: its processor rings as long as it says; the voice's level holds, then a
+// safety fade, and the voice ends after `life`
+// a Puls hit: the decays scale with the gate (a 0.2-s step rings ≈ 0.6 of its Nachklang, never below 0.15)
+const wkDmul = (o, L0) => (o && o.gate ? Math.min(clamp(o.gate * 3, 0.15, 1), L0 ? 2.6 / L0 : 1) : 1);   // (L0: the natural life – a Puls hit ends within ≈ 3 s)
+function wkRing(v, t, peak, life) {
+  v.out.gain.setValueAtTime(peak, t);
+  v.out.gain.setTargetAtTime(0, t + life, 0.06);
+  v.released = true; v.relAt = t;
+  v.finish(t + life + 0.25);
+}
+// Sitar: the chikari (the key's Sa, high, and its octave) and eleven tarab strings (the scale around the middle of the
+// field, from a little below the root's fourth octave up)
+function sitChikari() { let f = (N.notes && N.notes[0] ? N.notes[0].f : 261.6); while (f < 480) f *= 2; while (f >= 960) f /= 2; return [f, f * 2]; }
+function sitTarab() {
+  const fs = (N.notes || []).map((n) => n.f).filter((f) => f >= 240 && f <= 1000).sort((a, b) => a - b);
+  const out = fs.slice(0, 11); for (let k = 0; out.length < 11 && fs.length; k++) out.push(fs[k % fs.length] * 2);
+  return out.length ? out : null;
+}
