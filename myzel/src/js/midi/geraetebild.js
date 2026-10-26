@@ -26,9 +26,9 @@ const PCRM_SEC = [[cbR('wheel', 1, ['Bender/Mod'], { sz: [58, 96] }), cbR('butto
 const CB_MODELS = [
   // (owner's photo, 26.10.2026) left the lever and six small keys, the name, R1–R8 over four function keys and B1–B6,
   // the little display, the short sliders S1–S8, the velocity curves printed at the right
-  { id: 'pcrm50', maker: 'Edirol', name: 'PCR-M50', re: /PCR-?\s*M\s*50/i, keys: 49, sec: PCRM_SEC, note: 'Einmessen empfohlen: die Werksbelegung des PCR-M ist frei einstellbar.' },
-  { id: 'pcrm30', maker: 'Edirol', name: 'PCR-M30', re: /PCR-?\s*M\s*30/i, keys: 25, sec: PCRM_SEC },
-  { id: 'pcrm80', maker: 'Edirol', name: 'PCR-M80', re: /PCR-?\s*M\s*80/i, keys: 61, sec: PCRM_SEC },
+  { id: 'pcrm50', maker: 'Edirol', name: 'PCR-M50', re: /PCR[-\s]*M\s*50|PCR[-\s]*M\s*30\s*\/\s*50|PCR[-\s]*M(?!\s*[38]0\b)|EDIROL\s*PCR(?![-\s]*[358]00)|^\s*PCR\s*(\d|MIDI|IN\b|OUT\b|$)/i, keys: 49, sec: PCRM_SEC, note: 'Einmessen empfohlen: die Werksbelegung des PCR-M ist frei einstellbar.' },
+  { id: 'pcrm30', maker: 'Edirol', name: 'PCR-M30', re: /PCR[-\s]*M\s*30/i, keys: 25, sec: PCRM_SEC },
+  { id: 'pcrm80', maker: 'Edirol', name: 'PCR-M80', re: /PCR[-\s]*M\s*80/i, keys: 61, sec: PCRM_SEC },
   { id: 'pcr500', maker: 'Edirol', name: 'PCR-300 / 500 / 800', re: /PCR-?\s*[358]00|PCR-?\s*[358]0\b/i, keys: 49, sec: [[cbR('wheel', 1, ['Bender/Mod'])], [cbR('knob', 8, 'R'), cbR('fader', 9, 'S')], [cbR('button', 9, 'B')]] },
   { id: 'apc40mk2', maker: 'Akai', name: 'APC40 MK2', re: /APC\s*40\s*mk\s*II|APC40\s*mkII|APC40\s*MK2/i, keys: 0, grid: [8, 5],
     sec: [[cbR('knob', 8, 'Spur-Regler ', { m: cbCC(48) }), cbR('pad', 40, '', { grid: [8, 5], m: (i) => ({ type: 'note', ch: 0, num: (4 - Math.floor(i / 8)) * 8 + (i % 8) }) }), cbR('button', 8, 'Clip Stop ', { m: (i) => ({ type: 'note', ch: i, num: 52 }) }),
@@ -127,6 +127,8 @@ function cbLogical(src) {
   return nb.length;
 }
 // a recognised profile's model (the catalogue's by the port name)
+// the model of a device: the one chosen in the Gerätebild, else the one its name gives
+const cbModelFor = (src) => cbModelOf(cbData(src).model) || profModel(src);
 function profModel(src) { for (const M of CB_MODELS) if (M.re && M.re.test(src.name)) return M; return cbModelOf('generic'); }
 
 // ---- the page ----

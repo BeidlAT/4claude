@@ -32,7 +32,7 @@ const ORIGIN = 'http://127.0.0.1:8790/';
     await page.reload(); await page.waitForFunction(() => !!window.__M); await page.waitForTimeout(800);
     const takes = await page.evaluate(() => window.__M.takes.map((t) => t.name).join(','));
     ok(/anderen Tab/.test(blocked.msg) && !blocked.ok, `a tab still holding version 1 blocks the upgrade: the toast says so („${blocked.msg}“)`);
-    ok(after.ok && after.v === 2 && /rings/.test(after.stores) && /ringsegs/.test(after.stores) && /takes/.test(after.stores), `  once it lets go: version ${after.v}, stores ${after.stores}`);
+    ok(after.ok && after.v === 3 && /rings/.test(after.stores) && /kreise/.test(after.stores) && /ringsegs/.test(after.stores) && /takes/.test(after.stores), `  once it lets go: version ${after.v}, stores ${after.stores}`);
     ok(takes === 'Alte Aufnahme', `  the version-1 take is still there (${takes}); restoreTakes lists no ring data`);
     await ctx.close();
   }

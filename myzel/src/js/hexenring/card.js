@@ -7,6 +7,7 @@ function hxCardSec() {
   HXK.acts = h('div', { class: 'hx-acts' });
   HXK.list = h('div', { class: 'hx-cards' });
   HXK.grave = h('div', { class: 'hx-grave' });
+  HXK.kreise = h('div', { class: 'hx-kreise' });   // (26.10.2026: the Leiste kept and loaded – kreise.js)
   HXK.mem = h('p', { class: 'note' }); HXK.cost = h('p', { class: 'note', id: 'hxCost' });
   HXK.form = h('div', { class: 'hx-form-sec' });   // (step 1d: Lichtungen, Kern, Lücke, Schluss)
   HXK.gd = h('div', { class: 'hx-form-sec hx-gd' });   // (Etappe 3: the Gärtner)
@@ -24,7 +25,7 @@ function hxCardSec() {
     HXK.mem,
     h('p', { class: 'note' }, 'Der Korb erntet, was du gespielt hast („Gespielt“: deine Klangquellen nach Stumm und Solo, ohne Echo und Hall); „Alles“ wählst du pro Schleife – es hört auch die Schleifen mit, wie ein Zusammenmischen. Die Humus-Länge gilt ab dem nächsten Klangstart.'),
   ]);
-  HXK.sec = h('div', { class: 'sec hx-sec', id: 'hxSec' }, h('div', { class: 'sec-h' }, h('h3', null, 'Hexenring'), HXK.sub), HXK.acts, HXK.cost, HXK.list, HXK.gd, HXK.form, HXK.grave, set);
+  HXK.sec = h('div', { class: 'sec hx-sec', id: 'hxSec' }, h('div', { class: 'sec-h' }, h('h3', null, 'Hexenring'), HXK.sub), HXK.acts, HXK.cost, HXK.list, HXK.kreise, HXK.gd, HXK.form, HXK.grave, set);
   HXK.dirty = true; hxCardRender();
   hxTipsWatch(HXK.sec);   // (25.10.2026: every control explains itself on hover)
   hxBlitzOn(HXK.sec);   // (25.10.2026: every press flashes)
@@ -95,6 +96,7 @@ function hxCardRender() {
   HXK.list.replaceChildren();
   if (!loops.length) HXK.list.append(h('div', { class: 'empty' }, 'Noch keine Schleife. Spiel etwas und tippe den Korb unter dem Spielfeld – oder tippe den runden Knopf daneben, spiel und tippe noch einmal.'));
   for (const L of loops) HXK.list.append(hxCardOne(L, btn));
+  hxKrRender(btn);
   hxCardForm(btn);   // (step 1d)
   hxCardGd(btn); hxCardHand(btn);   // (Etappe 3)
   if (HXK.setl) HXK.setl.replaceChildren(hxCardSet(btn));   // (step 2b)

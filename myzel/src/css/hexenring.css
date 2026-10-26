@@ -233,3 +233,17 @@
 .hx-pig-a[aria-pressed="true"] { color: var(--hypha); border-color: var(--dim); }
 .hx-cm-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
 .hx-cm .hx-pig { padding: 4px 10px 6px; max-width: 250px; }
+/* Kreise: the Leiste kept and loaded – each a small ring of its Pigmente */
+.hx-kreise { display: flex; flex-direction: column; gap: 8px; margin: 10px 0 4px; }
+.hx-kr-save { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.hx-kr-name, .hx-kr-n { background: var(--loam-2); color: var(--hypha); border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; font: inherit; min-width: 0; }
+.hx-kr-name { flex: 1 1 220px; }
+.hx-kr-list { display: flex; flex-direction: column; gap: 6px; }
+.hx-kr { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: rgba(240, 230, 216, .03); }
+.hx-kr-ring { width: 40px; height: 40px; flex: none; }
+.hx-kr-c { fill: none; stroke: rgba(240, 230, 216, .18); stroke-width: 1.2; }
+.hx-kr-t { display: flex; flex-direction: column; gap: 2px; flex: 1 1 200px; min-width: 0; }
+.hx-kr-n { border-color: transparent; background: none; padding: 2px 4px; font-weight: 600; }
+.hx-kr-n:hover, .hx-kr-n:focus { border-color: var(--line); background: var(--loam-2); }
+.hx-kr-m { color: var(--dim); font-size: 12px; padding-left: 4px; }
+.hx-kr-b { display: flex; flex-wrap: wrap; gap: 6px; }
