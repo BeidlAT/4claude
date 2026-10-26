@@ -247,3 +247,12 @@
 .hx-kr-n:hover, .hx-kr-n:focus { border-color: var(--line); background: var(--loam-2); }
 .hx-kr-m { color: var(--dim); font-size: 12px; padding-left: 4px; }
 .hx-kr-b { display: flex; flex-wrap: wrap; gap: 6px; }
+/* a Schleife's entry folded: only its line (Pigment, name, state) */
+.hx-card.zu > :not(.hx-ch) { display: none; }
+.hx-card .hx-ch { cursor: pointer; align-items: center; }
+.hx-fold { border: 0; background: none; color: var(--dim); padding: 2px; cursor: pointer; display: inline-flex; }
+.hx-fold svg { width: 14px; height: 14px; transition: transform .15s; transform: rotate(90deg); }
+.hx-card.zu .hx-fold svg { transform: none; }
+.hx-pigdot { width: 10px; height: 10px; border-radius: 50%; background: var(--pig, var(--spore)); flex: none; }
+.hx-foldall { margin-bottom: -2px; }
+.take-all { display: flex; justify-content: flex-end; margin-bottom: 6px; }

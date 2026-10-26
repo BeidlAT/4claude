@@ -4,7 +4,9 @@ SRC=$1; NAME=$2; P=$(dirname "$0")
 # the app is built from its modules ($SRC/src): never test a stale index.html
 [ -d "$SRC/src" ] && { python3 "$SRC/build.py" "$SRC/src" --check "$SRC/index.html" >/dev/null || { echo "mk.sh: $SRC/index.html is not the build of $SRC/src – run python3 $SRC/build.py $SRC/src $SRC/index.html" >&2; exit 1; }; }
 mkdir -p "$P/$NAME" "$P/$NAME-inst"
-HEAD='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body>'
+# (26.10.2026) the suites were written for the sound the app opened with before „Beim Öffnen mit Leerer Erde beginnen“:
+# test pages open with the last sound unless a test sets window.__leer (an init script) – t-leer.js, t-kb.js do
+HEAD='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><script>try{var k="myzel.dev.v1",d=JSON.parse(localStorage.getItem(k)||"{}");if(!("ui.leer" in d)&&!window.__leer){d["ui.leer"]=false;localStorage.setItem(k,JSON.stringify(d));}}catch(e){}</script></head><body>'
 { printf '%s' "$HEAD"; cat "$SRC/index.html"; printf '</body></html>'; } > "$P/$NAME/index.html"
 cp "$SRC/tap-worklet.js" "$P/$NAME/" ; cp "$SRC/tap-worklet.js" "$P/$NAME-inst/"
 python3 - "$P/$NAME/index.html" "$P/$NAME-inst/index.html" <<'PY'
@@ -61,7 +63,7 @@ if 'function hxRecPos(' in s: extra += ['hxRecPos', 'hxPosWords', 'hxPosDraw', '
 if 'function hxmBuild(' in s: extra += ['HXM', 'hxmSync', 'HXMP', 'hxmPultFold', 'hxmMute', 'hxmSolo', 'hxPan', 'hxRecOf', 'hxSnap', 'hxDelete', 'MTARGETS', 'mxSetView']
 if 'function hxEdOpen(' in s: extra += ['HXE', 'hxEdOpen', 'hxEdClose', 'hxEdRender', 'hxEdTrimSel', 'hxEdPeaks', 'hxCtxMenu', 'hxCtxClose', 'hxBandTrim', 'hxBandTrimTo', 'hxTrA', 'hxDefaults', 'hxRev', 'hxVbSet', 'hxAbSet', 'hxSlcSet', 'hxNtSet', 'hxSpeed', 'hxRedoStep', 'hxRegionEdit', 'hxEdWf', 'hxPvPlay', 'hxPvStop', 'hxPvPos', 'hxPvToggle', 'hxPvJump', 'hxEdZoom', 'hxEdZoomTo', 'hxNowOk', 'hxSwapAt', 'hxGain', 'hxEdNtMarks', 'hxUndoStep', 'hxPhase', 'hxLen']
 if 'function tfxSet(' in s: extra += ['TFX', 'tfxSet', 'tfxFreqs', 'TCH', 'tchWeise', 'TCH_W', 'MIX', 'touches', 'ensureDSP']
-if 'function hxHumApply(' in s: extra += ['hxBandReady', 'MXW', 'mxwMini', 'mxwApply', 'openPanel', 'hxPig', 'hxCol', 'hxColSet', 'HX_PIG', 'hxCtxMenu', 'hxAbdruck', 'hxWSet', 'hxWAktiv', 'hxHumApply', 'hxHumReset', 'hxHumKeep', 'hxHumOf', 'hxHumSlice', 'hxEdHumRow', 'hxHumDraw', 'hxMemUsed', 'hxMemOk', 'APC', 'apcPad', 'apcModeSet', 'apcLights', 'apcVel', 'apcSysex', 'apcSeqRun', 'apcNetRun', 'apcTonNote', 'apcZeitBar', 'cbOpen', 'cbClose', 'tgBeat', 'hxLoopsLive', 'HXKR', 'hxKrSave', 'hxKrList', 'hxKrLoad', 'hxKrExport', 'hxKrImport', 'hxKrDel', 'cbModelFor', 'profModel']
+if 'function hxHumApply(' in s: extra += ['hxBandReady', 'MXW', 'mxwMini', 'mxwApply', 'openPanel', 'hxPig', 'hxCol', 'hxColSet', 'HX_PIG', 'hxCtxMenu', 'hxAbdruck', 'hxWSet', 'hxWAktiv', 'hxHumApply', 'hxHumReset', 'hxHumKeep', 'hxHumOf', 'hxHumSlice', 'hxEdHumRow', 'hxHumDraw', 'hxMemUsed', 'hxMemOk', 'APC', 'apcPad', 'apcModeSet', 'apcLights', 'apcVel', 'apcSysex', 'apcSeqRun', 'apcNetRun', 'apcTonNote', 'apcZeitBar', 'cbOpen', 'cbClose', 'tgBeat', 'hxLoopsLive', 'HXKR', 'hxKrSave', 'hxKrList', 'hxKrLoad', 'hxKrExport', 'hxKrImport', 'hxKrDel', 'cbModelFor', 'profModel', 'recToggle', 'takes', 'KB', 'kbSpec', 'kbDraw', 'kbFrame', 'PRESET_LEER', 'mxFit', 'saveState', 'UI']
 if 'function cbOpen(' in s: extra += ['CB', 'cbOpen', 'cbClose', 'cbLogical', 'cbData', 'cbCalStart', 'cbCtls', 'CB_MODELS', 'MAP', 'MIDI', 'mtOf']
 if 'function gdRecover(' in s: extra += ['GD', 'gdRecover', 'budgetApply', 'hxTauBack', 'hxGeraet', 'lmEv', 'lmUPoll', 'lmUlog', 'HX_PHONE']
 import re as _re
