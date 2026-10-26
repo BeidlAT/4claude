@@ -142,7 +142,7 @@ function costRow(okf, what, tab, cur, env, f) {
     hrz: { f0: [110, 220, 440, 880, 1568], ys: [0.45], tol: 5, costMax: 1.2 },
     // ---- Klangbibliothek II, Etappe 1 (26.10.2026): Welt ----
     hng: { struck: true, f0: [110, 220, 440, 880, 1760], ys: [0.2, 0.8], tol: 3, costMax: 1.2, ring: 9, cost: { DUR: '3' } },
-    gml: { struck: true, f0: [110, 220, 440, 880, 1760], ys: [0.2, 0.8], tol: 3, costMax: 1.0, ring: 9, cost: { DUR: '3' } },
+    gml: { struck: true, f0: [110, 220, 440, 880, 1760], ys: [0.2, 0.8], tol: 3, costMax: 1.0, ring: 9, cost: { DUR: '3' }, pp: { 'gml.ombak': 0 } },   // (pitch on the pair's centre: with Ombak its two keys stand ± 2.6 Hz apart – the beat – and a 16k window picks one of them)
     sit: { struck: true, f0: [110, 220, 440, 880], ys: [0.2], tol: 8, costMax: 1.5, ring: 9, line: true, cost: { DUR: '3' } },
     tbl: { f0: [220, 440, 880, 1760], ys: [0.45], tol: 6, costMax: 0.8 },
     did: { f0: [55, 110, 220, 440], ys: [0.3, 0.7], tol: 5, costMax: 1.0 },
