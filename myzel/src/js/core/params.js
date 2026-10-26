@@ -437,7 +437,7 @@ NUM('glt.kasten', 'Kasten (offen)', 0, 1, 0.5, '%');
 // Effekte
 SEL('drv.type', 'Art', [['tube', 'Röhre'], ['fold', 'Falter'], ['crush', 'Bitbrecher']], 'tube', { chips: 1 });
 NUM('drv.amt', 'Stärke', 0, 1, 0.12, '%');
-NUM('drv.mix', 'Anteil', 0, 1, 0.35, '%');
+NUM('drv.mix', 'Anteil', 0, 1, 0, '%');   // (owner, 26.10.2026: the Handpan „verzerrt“ – presets that do not choose a drive play clean)
 NUM('rng.freq', 'Frequenz', 0.5, 3000, 220, 'Hz', { curve: 'exp' });
 NUM('rng.mix', 'Anteil', 0, 1, 0, '%');
 SEL('flt.type', 'Typ', [['lowpass', 'Tiefpass'], ['bandpass', 'Bandpass'], ['highpass', 'Hochpass'], ['notch', 'Kerbe']], 'lowpass', { chips: 1 });

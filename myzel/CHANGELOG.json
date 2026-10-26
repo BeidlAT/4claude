@@ -2,6 +2,13 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-26v",
+      "punkte": [
+        "Keine ungewollte Verzerrung mehr: 41 Klangwelten – darunter Handpan, Gamelan, Koto, Kalimba, Gong und Sitar – spielen jetzt sauber. Die Röhre lief bisher als Grundeinstellung leise mit.",
+        "Wo die Verzerrung zum Charakter gehört (Pilzregen, Maschinenträume, Kurzwellenritual, Kompostgarten, Hochspannung, Seltsamer Attraktor), bleibt sie wie gewohnt."
+      ]
+    },
+    {
       "id": "2026-10-26u",
       "punkte": [
         "Ausschnitt in der Ernte verschoben: der Ausklang reicht nur noch bis zum nächsten gespielten Ton – vorher klangen Töne von hinter dem Ausschnitt über den Anfang der Schleife, darum passten Bild, Vorhören und Ernte nicht zusammen.",

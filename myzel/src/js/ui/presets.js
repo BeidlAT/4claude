@@ -128,7 +128,7 @@ const PRESETS = [
     'l0.on': true, 'l0.eng': 'mdr', 'l0.steps': 16, 'l0.puls': 5, 'l0.oct': -1, 'l0.bright': 0.7,
     'l1.on': true, 'l1.eng': 'zpf', 'l1.steps': 12, 'l1.puls': 7, 'l1.bright': 0.35, 'l1.vol': 0.4,
     'l2.on': true, 'l2.eng': 'jrg', 'l2.steps': 7, 'l2.puls': 3, 'l2.div': '0.5', 'l2.walk': 0.5,
-    'l3.on': true, 'l3.eng': 'gsp', 'l3.steps': 11, 'l3.puls': 2, 'l3.div': '1', 'gsp.kopplung': 0.5, 'drv.amt': 0.2, 'rev.mix': 0.35 } },
+    'l3.on': true, 'l3.eng': 'gsp', 'l3.steps': 11, 'l3.puls': 2, 'l3.div': '1', 'gsp.kopplung': 0.5, 'drv.amt': 0.2, 'drv.mix': 0.35, 'rev.mix': 0.35 } },
   { key: 'atemrohr', name: 'Atemrohr', tags: 'Experimentell · Atem', desc: 'Ein Rohrblatt, darunter eine Oktave tiefer eine Rückkopplung, die nachglüht; eine Spur bläst kurze Stöße ins Echo.', v: {
     'v.eng': 'hlm', 'hlm.rohr': 'rohrblatt', 'hlm.luft': 0.5, 'v.layer': 'glt', 'v.layerInt': -12, 'v.layerLvl': 0.35, 'glt.gluehen': 0.45, 'glt.nachgluehen': 2.5,
     't.root': '2', 't.scale': 'dor', 't.oct': 3, 't.range': 2, 'v.glide': 0.15,
@@ -139,7 +139,7 @@ const PRESETS = [
     't.root': '4', 't.scale': 'phrdom', 't.oct': 3, 't.range': 2,
     'l0.on': true, 'l0.eng': 'elm', 'l0.steps': 16, 'l0.puls': 7, 'l0.div': '0.25', 'l0.bright': 0.9, 'l0.vol': 0.5, 'l1.on': false,
     'l2.on': true, 'l2.eng': 'zpf', 'l2.steps': 9, 'l2.puls': 4, 'l2.bright': 0.95, 'zpf.koerper': 'fels', 'l3.on': false,
-    'drv.type': 'fold', 'drv.amt': 0.35, 'flt.type': 'lowpass', 'flt.freq': 5000, 'flt.lfoDepth': 0.8, 'rev.mix': 0.3, 'seq.bpm': 110 } },
+    'drv.type': 'fold', 'drv.amt': 0.35, 'drv.mix': 0.35, 'flt.type': 'lowpass', 'flt.freq': 5000, 'flt.lfoDepth': 0.8, 'rev.mix': 0.3, 'seq.bpm': 110 } },
   { key: 'wurzelnetz', name: 'Wurzelnetz', tags: 'Perkussiv · Generativ', desc: 'Jeder Schlag läuft als Lawine durch die Tonleiter – Finger und zwei Spuren laden und erschöpfen dasselbe Netz.', v: {
     'v.eng': 'rhz', 'rhz.knoten': 'holz', 'rhz.reiz': 0.55, 'rhz.erholung': 0.8, 'rhz.weg': 45, 'rhz.glimmen': 0.14, 'rhz.streuung': 0.35,
     't.root': '2', 't.scale': 'mpent', 't.oct': 3, 't.range': 3, 'seq.bpm': 88,
