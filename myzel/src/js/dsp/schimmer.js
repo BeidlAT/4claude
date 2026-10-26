@@ -17,6 +17,7 @@
       this.dl = SHT_D.map(() => ({ b: new Float32Array(1 << Math.ceil(Math.log2(mx))), w: 0, z: 0 }));
       this.ps = new Float32Array(1 << 14); this.psW = 0; this.psD = 0; this.psD2 = 0;
       this.p1 = this.rng.next(); this.p2 = this.rng.next(); this.p3 = 0; this.lp1 = 0; this.lp2 = 0; this.env = 0; this.vel = 0.75; this.burst = false; this.gate = 0; this.ys = this.y;
+      this.dcU = new DcBlock(12); this.dcL = new DcBlock(12); this.dcR = new DcBlock(12);   // (no DC may circle in the room)
     }
     set(p) { for (const k in p) if (k in this.p) this.p[k] = +p[k] || 0; }
     reset() { for (const d of this.dl) { d.b.fill(0); d.z = 0; } this.ps.fill(0); this.env = 0; }
@@ -26,7 +27,7 @@
       const n = b - a, p = this.p, f = this.f;
       this.ys += (this.y - this.ys) * (1 - Math.exp(-n / (0.05 * SR)));
       if (this.burst) { this.gate -= n; if (this.gate <= 0) this.off = true; }
-      const sh = Math.min(1, this.ys * (0.3 + 1.0 * p.schimmer)), size = 0.6 + p.raum, t60 = 1.5 + 9 * p.raum;
+      const sh = Math.min(1, this.ys * (0.3 + 1.0 * p.schimmer)), size = 0.6 + p.raum, t60 = this.off ? Math.min(2.2, 1.5 + 9 * p.raum) : 1.5 + 9 * p.raum;   // (let go, the halo rings out within ≈ 2 s – the voice ends with it)
       const len = SHT_D.map((d) => Math.round(d * size * SR)), gfb = len.map((l) => Math.pow(0.001, l / (t60 * SR)));
       const damp = 1 - Math.exp(-2 * Math.PI * (2500 + 7000 * p.farbe) / SR), cut = 1 - Math.exp(-2 * Math.PI * Math.min(0.4 * SR, f * (2 + 10 * p.farbe) * (0.4 + 2.6 * this.ys * this.ys)) / SR);   // (Höhe opens the surface too: dark below, glassy above)
       const dt1 = f * 1.0035 / SR, dt2 = f * 0.9965 / SR, dt3 = f * 0.5 / SR, att = 1 - Math.exp(-1 / ((this.burst ? 0.01 : 0.25) * SR)), rel = 1 - Math.exp(-1 / (0.5 * SR));
@@ -47,15 +48,15 @@
         if (1 - q > 0.001) for (let h = 0; h < 2; h++) { let dq = d1 + h * W / 2; if (dq >= W) dq -= W; const wv = Math.sin(Math.PI * dq / W), at = psW - 4 - dq, j = Math.floor(at), fr = at - j, x0 = ps[j & PM]; up += (x0 + fr * (ps[(j + 1) & PM] - x0)) * wv * wv * (1 - q); }
         if (q > 0.001) for (let h = 0; h < 2; h++) { let dq = d2 + h * W / 2; if (dq >= W) dq -= W; const wv = Math.sin(Math.PI * dq / W), at = psW - 4 - dq, j = Math.floor(at), fr = at - j, x0 = ps[j & PM]; up += (x0 + fr * (ps[(j + 1) & PM] - x0)) * wv * wv * q; }
         d1 -= 1; if (d1 < 0) d1 += W; d2 -= 0.5; if (d2 < 0) d2 += W;   // (the tap runs through its window at the shift's rate: ×2 one sample a sample, ×1.5 half)
-        const inp = s + tanh(up * fbs * 0.5);   // (the rise never runs away: what returns is limited softly)
+        const inp = s + tanh(this.dcU.tick(up) * fbs * 0.5);   // (the rise never runs away: what returns is limited softly)
         const h0 = (o0 + o1 + o2 + o3) * 0.5, h1 = (o0 - o1 + o2 - o3) * 0.5, h2 = (o0 + o1 - o2 - o3) * 0.5, h3 = (o0 - o1 - o2 + o3) * 0.5;
         let D = dl[0]; D.z += damp * (h0 - D.z); D.b[D.w & (D.b.length - 1)] = inp + D.z * gfb[0]; D.w++;
         D = dl[1]; D.z += damp * (h1 - D.z); D.b[D.w & (D.b.length - 1)] = inp + D.z * gfb[1]; D.w++;
         D = dl[2]; D.z += damp * (h2 - D.z); D.b[D.w & (D.b.length - 1)] = inp + D.z * gfb[2]; D.w++;
         D = dl[3]; D.z += damp * (h3 - D.z); D.b[D.w & (D.b.length - 1)] = inp + D.z * gfb[3]; D.w++;
         const wl = (o0 + o2) * wet, wr = (o1 + o3) * wet;
-        L[i] = (s * (1 - 0.4 * sh) + wl) * og; if (R) R[i] = (s * (1 - 0.4 * sh) + wr) * og;
-        if (!R) L[i] = (s * (1 - 0.4 * sh) + (wl + wr) * 0.5) * og;
+        if (R) { L[i] = this.dcL.tick(s * (1 - 0.4 * sh) + wl) * og; R[i] = this.dcR.tick(s * (1 - 0.4 * sh) + wr) * og; }
+        else L[i] = this.dcL.tick(s * (1 - 0.4 * sh) + (wl + wr) * 0.5) * og;
       }
       this.p1 = p1; this.p2 = p2; this.p3 = p3; this.lp1 = lp1; this.lp2 = lp2; this.env = env; this.psW = psW; this.psD = d1; this.psD2 = d2;
       for (const D of dl) D.z = flush(D.z);
