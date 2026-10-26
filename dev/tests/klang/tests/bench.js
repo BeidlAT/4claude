@@ -161,7 +161,8 @@ function costRow(okf, what, tab, cur, env, f) {
     tnl: { cAvg: 8, f0: [110, 220, 440, 880], ys: [0.8], tol: 8, costMax: 1.05, line: true },
     // ---- Etappe 4 (Strom, Trap, LoFi, Welt) ----
     wkg: { f0: [55, 110, 220, 440, 880], ys: [0.2, 0.7], tol: 5, costMax: 1.49 },
-    bnt: { f0: [110, 220, 440, 880], ys: [0.05], pY: 0.05, tol: 6, costMax: 0.95 },   // (low on the field the clean toy; up the field it jumps – by design)
+    // (Schaltkreis: up the field each note jumps and stutters its own way – the centroid over eight notes)
+    bnt: { cAvg: 8, f0: [110, 220, 440, 880], ys: [0.05], pY: 0.05, tol: 6, costMax: 0.95 },   // (low on the field the clean toy; up the field it jumps – by design)
     // Kassette and Koto: a Puls hit rings like a struck key (≤ 3 s, wkDmul), its end measured after that
     kas: { f0: [110, 220, 440, 880], ys: [0.5], tol: 8, costMax: 1.16, pp: { 'kas.alter': 0 }, line: true, burstDur: () => 3.6 },   // (the tape's wow is the instrument: pitch on a new tape)
     bit: { f0: [110, 220, 440, 880, 1760], ys: [0.2, 0.8], tol: 3, costMax: 1.16, pp: { 'bit.leben': 0 } },
