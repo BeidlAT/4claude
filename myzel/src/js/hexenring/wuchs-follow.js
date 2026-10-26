@@ -338,8 +338,12 @@ function hxWLiveTick(now, horizon) {
           const t = t0 + n.t0; if (t < now || n.eng === 'bor') continue;
           const o = { pan: n.pan || 0, bus: out(), loop: true, hxSrc: 'hxr' }, E = ENGINES[n.eng]; if (!E) continue;   // (step 4: hxSrc – before, the chain's copy was no strip, so they counted as the field's notes in the Humus)
           // (a held note's length as the engine's own gate – it lets go on time; struck ones ring)
-          const g = n.t1 != null ? n.t1 - n.t0 : null, v = n.burst || (E.sustain && g != null) ? playNote(n.eng, t, n.f, n.y0 != null ? n.y0 : 0.5, n.vel, Object.assign(o, { burst: true, gate: n.burst ? n.gate || 0.22 : g })) : E.sustain ? playNote(n.eng, t, n.f, n.y0 != null ? n.y0 : 0.5, n.vel, o) : hit(n.eng, t, n.f, n.y0 != null ? n.y0 : 0.5, n.vel, o);
+          // (owner, 26.10.2026: „der Klang der Schleife ändert sich mit dem gewählten Preset“) a loop in its own sound plays
+          // its notes with the source's settings it was recorded with, not the preset's now (P borrowed for the start)
+          const own = (L.klang || 'eigen') === 'eigen' && L.P ? hxWOwnP(L.P, n.eng) : null;
+          const g = n.t1 != null ? n.t1 - n.t0 : null, v = own ? hxWWithP(own, () => hxWLiveNote(n, E, t, o, g)) : hxWLiveNote(n, E, t, o, g);
           if (!v) continue;
+          if ((L.klang || 'eigen') === 'eigen') v.hxOwn = true;   // (a knob turned now does not reach it: controls.js)
           for (const [tc, y] of n.curves.y) HX.wLq.push([t0 + tc, () => v.alive && v.setY && v.setY(y)]);
           for (const [tc, f] of n.curves.f) HX.wLq.push([t0 + tc, () => v.alive && v.setF && v.setF(f, P['v.glide'])]);
         }
@@ -347,6 +351,12 @@ function hxWLiveTick(now, horizon) {
     }
   }
   if (HX.wLq.length) { const due = HX.wLq.filter((x) => x[0] <= now + 0.012); if (due.length) { HX.wLq = HX.wLq.filter((x) => x[0] > now + 0.012); for (const [, fn] of due) try { fn(); } catch (e) {} } }
+}
+// the settings of a source (its own parameters: 'hng.glanz' …) from a loop's patch, where they differ from now
+function hxWOwnP(LP, eng) { const o = {}, pre = eng + '.'; let n = 0; for (const id in LP) if (id.startsWith(pre) && PD[id] && LP[id] !== P[id]) { o[id] = LP[id]; n++; } return n ? o : null; }
+function hxWWithP(o, fn) { const keep = {}; for (const id in o) { keep[id] = P[id]; P[id] = o[id]; } try { return fn(); } finally { for (const id in keep) P[id] = keep[id]; } }
+function hxWLiveNote(n, E, t, o, g) {
+  return n.burst || (E.sustain && g != null) ? playNote(n.eng, t, n.f, n.y0 != null ? n.y0 : 0.5, n.vel, Object.assign(o, { burst: true, gate: n.burst ? n.gate || 0.22 : g })) : E.sustain ? playNote(n.eng, t, n.f, n.y0 != null ? n.y0 : 0.5, n.vel, o) : hit(n.eng, t, n.f, n.y0 != null ? n.y0 : 0.5, n.vel, o);
 }
 HX.wLq = [];
 // the Bühnenansicht's rail: big rings, the pedals' legend on the Taktlinie (what each switch does, from the profile learned)
