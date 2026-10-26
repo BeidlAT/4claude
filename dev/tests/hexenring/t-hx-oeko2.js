@@ -17,6 +17,7 @@ const { ok } = H;
 const PARTS = (process.env.PARTS || 'A,B').split(',');
 (async () => {
   const { page, errors } = await G.open({ w: 1280, h: 800 });
+  await page.evaluate(() => window.__M.setParam('hx.folgen', 'diatonisch'));   // (following the key is tested here – since 27.10.2026 a choice, not the default)
   const ev = (fn, a) => page.evaluate(fn, a);
   if (PARTS.includes('A')) {
     // ---------- A1 · gap ----------

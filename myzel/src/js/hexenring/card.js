@@ -13,7 +13,7 @@ function hxCardSec() {
   HXK.gd = h('div', { class: 'hx-form-sec hx-gd' });   // (Etappe 3: the Gärtner)
   const set = foldSec('hxset', 'Einstellungen', [
     grid(ctl('hx.modus'), ctl('hx.start'), ctl('hx.raster'), ctl('hx.ein'), ctl('hx.klick'), ctl('hx.laenge'), ctl('hx.festT'), ctl('hx.pulsMit'), ctl('hx.borMit'), ctl('hx.autoclose'), ctl('hx.runde'), ctl('hx.rail'), ctl('hx.humus'), ctl('hx.ernte'), ctl('hx.mem')),
-    h('div', { class: 'lab hx-sub' }, 'Wuchs'), grid(ctl('hx.beginn'), ctl('hx.stufe'), ctl('hx.tonartAmTakt')),   // (step 2a)
+    h('div', { class: 'lab hx-sub' }, 'Wuchs'), grid(ctl('hx.folgen'), ctl('hx.beginn'), ctl('hx.stufe'), ctl('hx.tonartAmTakt')),   // (step 2a)
     h('div', { class: 'lab hx-sub' }, 'Form'), grid(ctl('hx.regel'), ctl('hx.lichMix'), ctl('hx.lichPuls'), ctl('hx.lueckeT'), ctl('hx.schluss'), ctl('hx.welk')),
     h('div', { class: 'lab hx-sub' }, 'Mitspieler'), grid(ctl('hx.gPlatz'), ctl('hx.gRollen'), ctl('hx.gAntw'), ctl('hx.gBegl'), ctl('hx.gWk'), ctl('hx.gStimme'), ctl('hx.hand')), (HXK.hand = h('div', { class: 'hx-klopf' })),   // (Etappe 3)
     h('div', { class: 'lab hx-sub' }, 'Band und Bühne'), grid(ctl('hx.traeg'), ctl('hx.stopp'), ctl('hx.buehne')),   // (step 2b)
@@ -166,7 +166,7 @@ function hxCardWuchs(L, sch, chip, row, btn) {
       h('span', { class: 'hx-ms' }, (no && on ? 'ohne Werk-Rahmen: ' : '') + word + (why && on ? (word ? ' · ' : '') + why : ''))),
     row('Eigensinn', ...HX_EIG.map((e) => chip(HX_EIGW[e], (L.eigWant || L.eig || 'treu') === e, () => hxWSet(L, 'eig', e), 'Eigensinn ' + HX_EIGW[e] + { treu: ': gleiche Noten, gleicher Wurf', lebendig: ': neuer Wurf in jedem Durchgang', variieren: ': Noten auf leichten Zeiten ändern sich', wandern: ': Halbtakte tauschen, immer zurück zum Anker' }[e])), L.eigWant ? h('span', { class: 'hx-ms' }, 'nach drei Runden') : null),
     row('Stufe', ...[['gespielt', 'wie gespielt'], ['1', '1'], ['2', '2'], ['3', '3']].map(([k, t]) => chip(t, (stufe || P['hx.stufe']) === k, () => hxWSet(L, 'stufe', k === P['hx.stufe'] ? null : k), 'Klangstufe ' + t + (k === 'gespielt' ? ' (' + (L.q || '?') + ')' : ''))), h('span', { class: 'hx-ms' }, on ? 'Stufe ' + st : '')),
-    row('Folgen', ...[['diatonisch', 'diatonisch'], ['transponieren', 'transp.'], ['fest', 'fest']].map(([k, t]) => chip(t, (L.ton || 'diatonisch') === k, () => hxWSet(L, 'ton', k), 'Tonart: ' + k))),
+    row('Folgen', ...[['diatonisch', 'diatonisch'], ['transponieren', 'transp.'], ['fest', 'fest']].map(([k, t]) => chip(t, hxTon(L) === k, () => hxWSet(L, 'ton', k), 'Tonart: ' + k))),
     row('Klang', chip('eigener', klang === 'eigen', () => hxWSet(L, 'klang', 'eigen'), 'Klang: der eigene'), chip('Spielfeld', klang === 'feld', () => hxWSet(L, 'klang', 'feld'), 'Klang: folgt dem Spielfeld'), sel),
     h('div', { class: 'hx-row end' }, btn('Neuer Wurf', () => hxWSet(L, 'wurf'), { aria: 'Neuer Wurf: die Noten mit neuem Zufall' }),
       lebt && !no ? btn('✓', () => hxWLob(L), { aria: 'Behalten: diese Runde gefällt dir – sie wird die neue Grundlage' }) : null, lebt && !no ? btn('✕', () => hxWNein(L), { aria: 'Ablehnen: zurück zur Runde, die du behalten hast' }) : null,

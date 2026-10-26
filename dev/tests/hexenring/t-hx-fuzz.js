@@ -168,6 +168,7 @@ async function install(page) {
 }
 (async () => {
   let { page, errors } = await G.open({ w: 1280, h: 800, url: process.env.FUZZ_URL });
+  await page.evaluate(() => window.__M.setParam('hx.folgen', 'diatonisch'));   // (following the key is tested here – since 27.10.2026 a choice, not the default)
   const cdp0 = async () => { const s = await page.context().newCDPSession(page); return s; };
   let cdp = await cdp0();
   const heap = async () => { await cdp.send('HeapProfiler.collectGarbage'); const u = await cdp.send('Runtime.getHeapUsage'); return Math.round(u.usedSize / 1048576); };

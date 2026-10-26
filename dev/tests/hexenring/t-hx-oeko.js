@@ -10,6 +10,7 @@ const { ok } = H;
 const BPM = 120;
 (async () => {
   let { page, errors } = await G.open({ w: 1280, h: 800 });
+  await page.evaluate(() => window.__M.setParam('hx.folgen', 'diatonisch'));   // (following the key is tested here – since 27.10.2026 a choice, not the default)
   const ev = (fn, a) => page.evaluate(fn, a);
   const setup = () => ev(async (BPM) => {
     const M = window.__M, A = M.A, ctx = A.ctx;
