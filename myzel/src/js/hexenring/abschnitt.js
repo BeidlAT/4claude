@@ -84,6 +84,9 @@ function hxRegionEdit(L, a, b, op, v) {
   const sch = hxBandReady(L); if (!sch) return false;
   if (sch.some((S) => !hxMemOk(2 * S.n))) return false;
   const before = hxGeo(L), fl0 = hxBandFl(L), sw = hxSwapAt(L), u = hxBandU(L).map((p) => (p - a) / (b - a)).filter((p) => p >= 0 && p < 1);
+  // (26.10.2026, owner: „Grundeinstellung funktioniert nicht immer“ – a stretch's edit is written into the audio; the
+  // audio as recorded is kept from the first edit on, so „Grundeinstellung“ can give it back – hxRxRestore)
+  if (!L.rx0) L.rx0 = { rev: !!L.rev, dbl: L.dbl || 1, sch: sch.map((S) => ({ key: S.key, aud: S.aud, bak: S.bak || null, n: S.n, s: hxSnapS(S) })) };
   const done = [];
   for (const S of sch) {
     const [r0, r1] = hxRxFrames(S, a, b); if (r1 - r0 < 64) continue;
@@ -106,4 +109,29 @@ function hxRxName(L, a, b) {
   if (!hxTakt(L)) { const T = hxLen(L); return dec((a * T).toFixed(1)) + '–' + dec((b * T).toFixed(1)) + ' s'; }
   const B = L.d.beats, bpb = L.bpb || 4, x = Math.round(a * B), y = Math.round(b * B);
   return x % bpb === 0 && y % bpb === 0 ? 'Takt ' + (x / bpb + 1) + (y - x > bpb ? '–' + y / bpb : '') : 'Schlag ' + (x + 1) + '–' + y;
+}
+// „Grundeinstellung“ for the stretches: every Schicht's audio as it was before the first stretch was edited (mirrored if
+// it was kept while the loop played backwards and plays forwards now), one step (↶ gives the edits back). Not after
+// „Verdoppeln“ or a Schicht that is not the same any more (merged, newly recorded) – those keep what they have.
+function hxRxRestore(L) {
+  const R = L.rx0; if (!R) return false;
+  if ((L.dbl || 1) !== R.dbl) { L.rx0 = null; return false; }
+  const sch = hxBandReady(L); if (!sch) return false;
+  const before = hxGeo(L), fl0 = hxBandFl(L), sw = hxSwapAt(L);
+  let n = 0;
+  for (const e of R.sch) {
+    const S = sch.find((x) => x.key === e.key); if (!S || S.n !== e.n) continue;
+    const flip = R.rev !== !!L.rev, aud = flip ? hxRevArr(e.aud, S.n) : e.aud, bak = e.bak ? (flip ? hxRevArr(e.bak, S.n) : e.bak) : null;
+    if (!S.bak && bak) continue;   // (a Schicht whose bake is gone meanwhile: its dry audio would not match)
+    const c = Object.assign({}, S.cut, { pre: S.pre, len: S.len, n: S.n, aus: S.aus ? Object.assign({}, S.aus) : null, stale: true }), o = e.s;
+    // (the same window as when it was kept: its seam exactly as it was then – else the warm crossfade made anew)
+    if (!flip && o && o.pre === S.pre && o.len === S.len) hxSchSwap(S, c, { aud, bak: S.bak ? bak : null, f: sw.f, now: !!sw.now, join: o.join, X: o.X, rho: o.rho, zo: o.zo || 0, kc: o.kc, kcB: o.kcB, dr: o.dr });
+    else { const X = S.X || Math.round(0.01 * SR), g = { pre: S.pre, len: S.len, X, zo: S.zo || 0 }; hxSchSwap(S, c, { aud, bak: S.bak ? bak : null, f: sw.f, now: !!sw.now, join: 'xf', X, rho: hxRho(bak && S.chain && !L.folgt ? bak : aud, S.n, S.pre, S.len, X), zo: S.zo || 0, kc: hxSeamOf(g, aud), kcB: bak ? hxSeamOf(g, bak) : null, dr: S.dr }); }
+    n++;
+  }
+  L.rx0 = null;
+  if (!n) return false;
+  hxBandStep(L, 'Abschnitte wie aufgenommen', before, fl0, { now: !!sw.now });
+  hxSaveLoop(L);
+  return true;
 }
