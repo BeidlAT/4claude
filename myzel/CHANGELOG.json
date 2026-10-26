@@ -2,6 +2,14 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-26r",
+      "punkte": [
+        "Aufnahme-Menü: jede Schleife lässt sich einklappen – zu zeigt sie nur ihre Zeile mit Farbe, Name und Zustand; „Alle aufklappen“ öffnet alle auf einmal.",
+        "Die Länge einer Aufnahme steht jetzt in einem Satz („64 Takte … = 2:45,5“), die Einzelheiten zeigt der Mauszeiger.",
+        "Neu: „Alle löschen“ bei den Aufnahmen – ein zweiter Klick bestätigt und sagt, wie viele noch nicht als Datei gespeichert sind."
+      ]
+    },
+    {
       "id": "2026-10-26q",
       "punkte": [
         "Neu: Kreise – die ganze Leiste unter einem Namen sichern (Hexenring-Karte, „Leiste sichern“): alle Schleifen mit Klang, Farbe, Pegel und Takt, unabhängig vom übrigen Projekt.",
