@@ -6,9 +6,10 @@ function hxMemUsed() {
   const one = (aud, n) => { if (aud && !seen.has(aud)) { seen.add(aud); b += hxBytes(n); } };
   const wv = (s) => { if (s.wu) one(s.wu.aud, s.wu.n); if (s.anc) one(s.anc.aud, s.anc.n); };   // (step 2a: its Treu render and its anchor)
   for (const S of HX.sch.values()) { b += hxBytes(S.n); if (S.aud) one(S.aud, S.n); else if (S.live) b += hxBytes(S.n); one(S.bak, S.n); wv(S); if (S.wLive) b += 3 * hxBytes(Math.round((hxWTailEst(S) + 4) * SR)); }   // (step 1c: a baked version beside the dry one; step 2a: a living Schicht's passes in the processor, about three at a time)
-  for (const L of HX.loops.values()) if (L.hum) one(L.hum.aud, L.hum.n);   // (26.10.2026: a Schleife's whole Ernte)
-  for (const g of HX.grave) { if (g.snap.hum) one(g.snap.hum.aud, g.snap.hum.n); for (const s of g.snap.sch) { one(s.aud, s.n); one(s.bak, s.n); wv(s); } }
-  for (const st of HX.hist.concat(HX.redo)) for (const sn of st.snaps || []) { if (sn && sn.hum) one(sn.hum.aud, sn.hum.n); for (const s of sn.sch || [sn]) if (s) { one(s.aud, s.n); one(s.bak, s.n); wv(s); } }
+  const hum = (H) => { if (H) for (const ch of H.aud) if (ch && !seen.has(ch)) { seen.add(ch); b += HX_CH * 8; } };   // (26.10.2026: the Ernten – each shared chunk once)
+  for (const L of HX.loops.values()) hum(L.hum);
+  for (const g of HX.grave) { hum(g.snap.hum); for (const s of g.snap.sch) { one(s.aud, s.n); one(s.bak, s.n); wv(s); } }
+  for (const st of HX.hist.concat(HX.redo)) for (const sn of st.snaps || []) { if (sn) hum(sn.hum); for (const s of sn.sch || [sn]) if (s) { one(s.aud, s.n); one(s.bak, s.n); wv(s); } }
   for (const tk of takes) if (tk.L) b += tk.frames * 8;
   if (HX.node) b += 3 * Math.ceil((P['hx.humus'] * SR) / HX_CH) * HX_CH * 8;   // (step 2b: the Puls's ring)
   if (HX.node && HX.mic.ring) b += (HX.mic.ringN || 0) * HX_CH * 8;   // (step 4: the Mikro's ring)

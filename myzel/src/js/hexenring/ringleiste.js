@@ -80,7 +80,7 @@ function hxRailBuild() {
   });
   hxKeyClick(HXU.form, hxFormTap);
   HXU.form.addEventListener('contextmenu', (e) => e.preventDefault());
-  HXU.pg.addEventListener('click', () => { HX.page = HX.page ? 0 : 1; hxRailDirty(); });
+  HXU.pg.addEventListener('click', () => { HX.page = (HX.page + 1) % Math.max(1, Math.ceil(HX_SLOTS / (HXU.per || HX_SLOTS))); hxRailDirty(); });
   HXU.fold.addEventListener('click', () => {
     const f = HXU.rail.dataset.fold === '1';
     if (f && hxRailAuto()) HXU.autoOpen = true;   // (folded for a panel on a short screen: open for this panel)
@@ -195,9 +195,9 @@ function hxRailLayout() {
   const rail = HXU.rail, r = rail.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
   if (Math.round(r.width * dpr) !== HXU.cv.width || Math.round(r.height * dpr) !== HXU.cv.height) { HXU.cv.width = Math.round(r.width * dpr); HXU.cv.height = Math.round(r.height * dpr); }
   HXU.w = r.width; HXU.h = r.height; HXU.dpr = dpr;
-  // rings per page: 8 where they fit at ≥ 44 px each (iPad, PC), else 4
-  const midW = HXU.mid.getBoundingClientRect().width || r.width - 200;
-  HXU.per = midW + (HXU.pg.hidden ? 0 : 34) >= 8 * 44 ? 8 : 4;
+  // rings per page: all where they fit at ≥ 44 px each (24 on a PC), else 8 (iPad), else 4
+  const midW = (HXU.mid.getBoundingClientRect().width || r.width - 200) + (HXU.pg.hidden ? 0 : 34);
+  HXU.per = HX_SLOTS > 8 ? clamp(Math.floor(midW / 40), 4, HX_SLOTS) : midW >= 8 * 44 ? 8 : 4;   // (24 places on a PC: as many as fit at 40 px)
   hxRailState();
   // where each button sits (the canvas draws under them)
   const q = r, at = (el) => { if (el.hidden || !el.offsetParent) return null; const b = el.getBoundingClientRect(); return { x: b.left - q.left, y: b.top - q.top, w: b.width, h: b.height, cx: b.left - q.left + b.width / 2 }; };
@@ -208,24 +208,26 @@ function hxRailLayout() {
 function hxRailState() {
   const per = HXU.per, R = HX.rec, fold = HXU.rail.dataset.fold === '1';
   // the page: the recording's, else the one asked for
-  if (per === 4 && R && Math.floor(R.slot / 4) !== HX.page) HX.page = Math.floor(R.slot / 4);
-  if (per === 8) HX.page = 0;
-  const other = per === 4 ? [0, 1, 2, 3].map((i) => i + (HX.page ? 0 : 4)) : [];
+  const pages = Math.ceil(HX_SLOTS / per);
+  if (pages > 1 && R && Math.floor(R.slot / per) !== HX.page) HX.page = Math.floor(R.slot / per);
+  if (HX.page >= pages) HX.page = 0;
+  const pg0 = HX.page * per, other = []; for (let i = 0; i < HX_SLOTS; i++) if (i < pg0 || i >= pg0 + per) other.push(i);
   const otherLoops = other.map((i) => HX.loops.get(HX.slot[i])).filter(Boolean), playing = otherLoops.filter((L) => L.state === 'spielt').length;
-  const needPg = per === 4 && (otherLoops.length || HX.page === 1 || HX.slot.slice(0, 4).every(Boolean));
+  const needPg = pages > 1 && (otherLoops.length || HX.page > 0 || HX.slot.slice(pg0, pg0 + per).every(Boolean));
   HXU.pg.hidden = !needPg || fold;
-  if (needPg) { const t = playing ? '+' + playing : HX.page ? '1–4' : '5–8', sub = playing ? 'spielen' : 'Seite'; if (HXU.pg.dataset.t !== t + sub) { HXU.pg.dataset.t = t + sub; HXU.pg.replaceChildren(h('b', null, t), h('span', { class: 'w' }, sub)); }  HXU.pg.setAttribute('aria-label', playing ? playing + ' weitere spielen – Seite wechseln' : 'Schleifen ' + (HX.page ? '1 bis 4' : '5 bis 8') + ' zeigen'); }
+  if (needPg) { const n0 = ((HX.page + 1) % pages) * per, rng = (n0 + 1) + '–' + Math.min(HX_SLOTS, n0 + per), t = playing ? '+' + playing : rng, sub = playing ? 'spielen' : 'Seite'; if (HXU.pg.dataset.t !== t + sub) { HXU.pg.dataset.t = t + sub; HXU.pg.replaceChildren(h('b', null, t), h('span', { class: 'w' }, sub)); }  HXU.pg.setAttribute('aria-label', playing ? playing + ' weitere spielen – Seite wechseln' : 'Schleifen ' + rng.replace('–', ' bis ') + ' zeigen'); }
   const chipsOn = !fold && !!HX.chips;
   HXU.ringBox.hidden = chipsOn; HXU.chips.hidden = !chipsOn;
   if (chipsOn) hxChipsRender();
   for (let i = 0; i < HX_SLOTS; i++) {
-    const b = HXU.rings[i], vis = per === 8 || Math.floor(i / 4) === HX.page;
+    const b = HXU.rings[i], vis = Math.floor(i / per) === HX.page;
     b.hidden = !vis;
     if (!vis) continue;
     const L = HX.loops.get(HX.slot[i]), pend = L && HX.pend.find((p) => p.loop === L.id), w = b.firstChild;
     let word, aria;
     if (R && R.slot === i) { word = R.phase === 'rec' ? 'schließen' : 'abbrechen'; aria = 'Schleife ' + (i + 1) + (R.phase === 'rec' ? ', nimmt auf – schließen' : ', wartet – abbrechen'); }
-    else if (!L) { word = 'aufnehmen'; aria = 'Schleife ' + (i + 1) + ', leer' + (hxZiel() === i ? ', Ziel' : '') + ' – aufnehmen'; }
+    else if (!L) { word = HX_SLOTS <= 8 || hxZiel() === i ? 'aufnehmen' : '';   // (26.10.2026: 24 places – the word under the next free one only)
+      aria = 'Schleife ' + (i + 1) + ', leer' + (hxZiel() === i ? ', Ziel' : '') + ' – aufnehmen'; }
     else {
       word = pend ? 'abbrechen' : '';   // (owner, 25.10.2026: no word under a loop – it glows while it plays; what a tap does is in its tooltip)
       const sw = pend ? '' : hxStance(L); b.classList.toggle('g', !!sw); if (sw) word = sw;   // (Etappe 3: the stance – a tap on it takes the Gärtner's change back)

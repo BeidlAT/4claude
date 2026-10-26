@@ -87,7 +87,8 @@ function hxMv(t0, t1) {
    persistence (§19). Everything the player does acts at the press, in the time they heard (heardT); what has to wait
    for a bar line is pending, visible and cancellable. The processor gets every start, entry and swap as a frame of its
    own clock, so nothing here depends on the main thread being on time. ---- */
-const HX_SLOTS = 8, HX_GRACE = 0.25, HX_RGRACE = 0.15, HX_HOLD = 0.5, HX_CLEAR_HOLD = 1.5, HX_CHIP_S = 8, HX_REDO_S = 8, HX_TAIL = 6, HX_LEAD = 0.04;
+// (owner, 26.10.2026) 24 Schleifen on the PC, 8 on touch devices
+const HX_SLOTS = MOBILE ? 8 : 24, HX_GRACE = 0.25, HX_RGRACE = 0.15, HX_HOLD = 0.5, HX_CLEAR_HOLD = 1.5, HX_CHIP_S = 8, HX_REDO_S = 8, HX_TAIL = 6, HX_LEAD = 0.04;
 Object.assign(HX, { slot: new Array(HX_SLOTS).fill(0), fokus: 0, pend: [], hist: [], redo: [], redoT: 0, grave: [], ruht: false, rec: null, punch: null, chips: null,
   segF: [], lvl: [], lvlI: 0, keyN: 0, groupN: 0, page: 0, korb: null, lastHarvest: null, ear: null, earT: 0, saveQ: [], saveBusy: false, saveFail: false, persistAsked: false, restore: null, used: 0 });
 const hxKey = (p) => p + Date.now().toString(36) + (++HX.keyN).toString(36);

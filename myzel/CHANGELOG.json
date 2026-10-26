@@ -2,6 +2,13 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-26l",
+      "punkte": [
+        "Hexenring am PC: 24 Plätze für Schleifen statt 8 – die Ringleiste zeigt so viele, wie hineinpassen (sonst blättert sie), „aufnehmen“ steht nur unter dem nächsten freien Platz.",
+        "Die ganzen Ernten teilen sich jetzt einen Speicher: was zwei Schleifen gemeinsam im Humus hatten, liegt nur einmal im Arbeitsspeicher – bei vielen Schleifen spart das mehrere GB, ohne Klangverlust."
+      ]
+    },
+    {
       "id": "2026-10-26k",
       "punkte": [
         "Behoben: „Nur die Auswahl spielen“ und andere Band-Werkzeuge meldeten immer wieder „eine Schicht wird noch eingebrannt“ – sie warten jetzt nur noch, solange das Einbrennen wirklich läuft (ein paar Sekunden).",

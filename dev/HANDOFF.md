@@ -2,6 +2,12 @@
 
 ## Nächste Sitzung – zuerst lesen (Stand 26.10.2026, nachts)
 
+**24 Plätze, geteiltes Lager (26.10.2026, spät):** `HX_SLOTS = MOBILE ? 8 : 24` (humus.js); die Ringleiste zeigt
+`clamp(midW / 40, 4, 24)` Ringe pro Seite und blättert allgemein (ringleiste.js). Die Sendepaare fürs Nähren sind nicht
+mehr der Platz, sondern `hxSendCh(L)` – höchstens `HX_SENDS = 16` gleichzeitig (ein Ausgang hat höchstens 32 Kanäle).
+Ernten: `HX_LAGER` (vorrat.js) – je Ring eine Map Stück-Nummer → WeakRef auf [L, R] (+ end, dr); eine Ernte ist eine
+Liste von Verweisen; geholt wird nur, was fehlt. Speicherzählung zählt jedes Stück einmal. Test: t-hx-vorrat (11/11).
+
 **Ganze Ernte / 128 Takte / Mixer-Breite (26.10.2026, spät, #40):** `hexenring/vorrat.js` – nach dem ersten Füllen einer
 Schleife kopiert `hxHumKeep` den ganzen Humus-Ring (bis zum Füllende) nach `L.hum` (nur Sitzung, zählt gegen hx.mem);
 `hxReach` und `hxSchSwap` nehmen Schnitte daraus (`hxHumOf`/`hxHumSlice`), daher gehen alle Neuschnitte und ihr ↶ auch

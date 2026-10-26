@@ -56,7 +56,8 @@ function hxFeedMake(L, kind) {
   if (!A.ctx || !A.ctx.__dspOK || !HX.node || !ENGINES[kind] || A.workletBroken.has(kind)) return null;
   hxWakeRing();
   try {
-    const sp = hxSplit(), mg = A.ctx.createChannelMerger(2), i = L.slot, out = G(F.lvl), rich = !!Q.rich, vs = [];
+    const i = hxSendCh(L); if (i < 0) return null;
+    const sp = hxSplit(), mg = A.ctx.createChannelMerger(2), out = G(F.lvl), rich = !!Q.rich, vs = [];
     sp.connect(mg, 2 * i, 0); sp.connect(mg, 2 * i + 1, 1);
     out.connect(stripIn('hxr'));
     const I = hxFeedIdx(L, kind), t = A.ctx.currentTime + 0.03;
@@ -93,7 +94,7 @@ const hxFeedCost = () => { let c = 0; for (const F of HXN.feed.values()) if (F.c
 // the loop's send (output 2): on while it feeds a web or a Hof
 function hxSendSync(L) {
   const n = L.naehrt || {}, on = !!(n.gsp || n.glt || n.shn) && L.slot != null;
-  if (on !== !!L.sendOn) { L.sendOn = on; hxPost({ send: on ? { loop: L.id, ch: L.slot, g: 1, X: Math.round(0.03 * SR) } : { loop: L.id, ch: -1, X: Math.round(0.03 * SR) } }); }
+  if (on !== !!L.sendOn) { const ch = on ? hxSendCh(L) : -1; if (on && ch < 0) return; L.sendOn = on; hxPost({ send: on ? { loop: L.id, ch, g: 1, X: Math.round(0.03 * SR) } : { loop: L.id, ch: -1, X: Math.round(0.03 * SR) } }); if (!on) L.sendCh = null; }
 }
 // Nähren for one of rhz · rgn · glt · shn (gsp and kor: hxNaehrGsp, hxNaehrKor)
 function hxNaehr(L, kind, on, quiet) {

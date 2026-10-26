@@ -48,6 +48,16 @@ const { ok } = H;
     M.hxWSet(L, 'klang', 'feld'); await sl(300); const onW = M.hxWAktiv(L);
     M.hxAbdruck(L); await sl(300);
     o.H = { wasW: onW, abdruck: !M.hxWAktiv(L), klang: L.klang || 'eigen' };
+    // I. (owner) a second harvest shares the store: its Ernte refers to the same chunks where they overlap, the memory
+    // grows by its new part only
+    const mem0 = M.hxMemUsed(), B1 = Math.ceil(M.tgBeat(A.ctx.currentTime + 0.3) / 4) * 4;
+    window.__riff(M.tgTime(B1), 60 / 110, [7, 4, 0, 4, 7, 9, 7, 4], 1, { eng: 'klb', dur: 0.3 }); await window.__until(M.tgTime(B1 + 8) + 0.06);
+    M.hxKorb(null); await sl(300);
+    const L2 = M.hxLoopsLive().find((X) => X !== L);
+    for (let i = 0; i < 120 && !(L2 && L2.hum); i++) await sl(100);
+    const H2 = L2 && L2.hum; let shared = 0;
+    if (H2) { const set = new Set(Hm.aud); for (const ch of H2.aud) if (set.has(ch)) shared++; }
+    o.I = { hum2: !!H2, shared, n2: H2 ? H2.aud.length : 0, grewMB: +((M.hxMemUsed() - mem0) / 1048576).toFixed(1), fullMB: H2 ? +(H2.aud.length * M.HX_CH * 8 / 1048576).toFixed(1) : 0 };
     // G. 128 bars can be chosen
     M.hxLenSet(128); o.G = M.P['hx.festT'] === 128;
     return o;
@@ -61,6 +71,7 @@ const { ok } = H;
   ok(r.E && r.E.row && r.E.btns >= 5, `the editor shows „Ganze Ernte“ with its buttons (${JSON.stringify(r.E)})`);
   ok(r.F, 'the Ernte counts against the Speichergrenze');
   ok(r.H && r.H.wasW && r.H.abdruck && r.H.klang === 'eigen', `Abdruck after „Klang: Spielfeld“: the loop plays as recorded again (${JSON.stringify(r.H)})`);
+  ok(r.I && r.I.hum2 && r.I.shared > r.I.n2 * 0.8 && r.I.grewMB < r.I.fullMB * 0.5, `a second Ernte shares the store: ${r.I && r.I.shared} of ${r.I && r.I.n2} chunks the same, memory +${r.I && r.I.grewMB} MB instead of ${r.I && r.I.fullMB} MB`);
   ok(r.G, '128 bars can be set as the length of new loops');
   ok(!errors.length, 'no page errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
   await H.close(); process.exit(H.summary() ? 1 : 0);

@@ -185,15 +185,15 @@ const { ok } = H;
     await window.__until(M.tgTime(B0 + 12) + 0.05 + lat);
     o.wie1 = M.hxKorbPlan(M.heardT()).bars;
     M.setParam('hx.laenge', 'auto');
-    // eight Schleifen: „voll“, nothing more
-    for (let s = 1; s < 8; s++) M.hxHarvest({ kind: 'grid', in: 0, w0: M.tgTime(B0), w1: M.tgTime(B0 + 4), b0: B0 + 4, beats: 4, bars: 1, lock: 'takt', entry: { b: B0 + 4, t: M.tgTime(B0 + 4), now: true } });
+    // every place taken (8 on touch devices, 24 on a PC): „voll“, nothing more
+    for (let s = 1; s < M.HX.slot.length; s++) M.hxHarvest({ kind: 'grid', in: 0, w0: M.tgTime(B0), w1: M.tgTime(B0 + 4), b0: B0 + 4, beats: 4, bars: 1, lock: 'takt', entry: { b: B0 + 4, t: M.tgTime(B0 + 4), now: true } });
     const plan = M.hxKorbPlan(M.heardT()); M.hxKorb(null); await window.__sleep(320); M.hxRailState();
-    o.full = { kind: plan.kind, word: M.HXU.korb.textContent, n: M.hxLoopsLive().length, toast: document.getElementById('toastMsg').textContent };
+    o.slots = M.HX.slot.length; o.full = { kind: plan.kind, word: M.HXU.korb.textContent, n: M.hxLoopsLive().length, toast: document.getElementById('toastMsg').textContent };
     return o;
   });
   ok(r.auto === 2 && r.l1 === 8, `automatic length: a 2-bar phrase after a rest is taken whole (${r.auto} bars) – the phrase's boundary at both ends`);
   ok(r.fest === 3 && r.wie1 === 2, `fixed lengths: „fest 3 Takte“ → ${r.fest}, „wie Schleife 1“ → ${r.wie1} bars`);
-  ok(r.full.kind === 'voll' && r.full.word === 'voll' && r.full.n === 8 && /belegt/.test(r.full.toast), `eight Schleifen: the Korb says „${r.full.word}“, a tap overwrites nothing („${r.full.toast}“)`);
+  ok(r.full.kind === 'voll' && r.full.word === 'voll' && r.full.n === r.slots && /belegt/.test(r.full.toast), `all ${r.slots} places taken: the Korb says „${r.full.word}“, a tap overwrites nothing („${r.full.toast}“)`);
 
   // ---- precedence: the Korb replaces a recording or a wait; twice over one window is one Schleife; a second tap on a
   // waiting harvest cancels it ----
