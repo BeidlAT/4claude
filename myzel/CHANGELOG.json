@@ -2,6 +2,13 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-26t",
+      "punkte": [
+        "Ein Keyboard am MIDI-Eingang eines Audio-Interfaces (etwa Steinberg UR) erscheint unter „Gerät“ mit dem Namen des Interfaces – dort wählst du jetzt „Am Anschluss: …“ dein Keyboard, zum Beispiel Edirol PCR-M50.",
+        "Danach nennt die Gerätekarte dein Keyboard, das Gerätebild zeichnet es, und die Wahl bleibt gespeichert. Ein Bild des Interfaces selbst gibt es nicht mehr."
+      ]
+    },
+    {
       "id": "2026-10-26s",
       "punkte": [
         "Myzel beginnt jetzt mit „Leerer Erde“ – schlicht und trocken. Wer lieber mit dem letzten Klang startet, schaltet unter „Presets“ „Beim Öffnen mit Leerer Erde beginnen“ aus.",

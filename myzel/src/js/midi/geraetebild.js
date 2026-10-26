@@ -151,7 +151,7 @@ function cbRender() {
   const btn = (t, fn, tip, cls) => { const b = h('button', { type: 'button', class: 'btn' + (cls ? ' ' + cls : ''), title: tip || '' }, t); b.addEventListener('click', fn); return b; };
   const head = h('div', { class: 'cb-h' }, h('h2', null, 'Gerätebild'));
   const srcs = cbSources();
-  if (srcs.length > 1) { const sel = h('select', { class: 'cb-dev', 'aria-label': 'Gerät' }, ...srcs.map((s) => h('option', { value: s.key, selected: s === src ? '' : null }, s.name))); sel.addEventListener('change', () => { CB.src = srcs.find((s) => s.key === sel.value) || null; CB.sel = null; cbRender(); }); head.append(sel); }
+  if (srcs.length > 1) { const sel = h('select', { class: 'cb-dev', 'aria-label': 'Gerät' }, ...srcs.map((s) => { const m = cbModelOf(cbData(s).model); return h('option', { value: s.key, selected: s === src ? '' : null }, s.name + (m && m.id !== 'generic' && !(m.re && m.re.test(s.name)) ? ' · ' + m.name : '')); })); sel.addEventListener('change', () => { CB.src = srcs.find((s) => s.key === sel.value) || null; CB.sel = null; cbRender(); }); head.append(sel); }
   else head.append(h('span', { class: 'cb-dn' }, src ? src.name : 'kein Gerät verbunden'));
   const x = btn('✕', cbClose, 'Schließen (Esc)', 'ghost cb-x'); x.setAttribute('aria-label', 'Schließen'); head.append(h('span', { class: 'cb-sp' }), x);
   if (!src) { el.replaceChildren(head, h('p', { class: 'cb-note' }, 'Schließe einen MIDI-Controller an (USB oder Bluetooth) – dann zeigt Myzel ihn hier mit allen Belegungen.')); return; }
