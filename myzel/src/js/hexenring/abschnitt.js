@@ -3,6 +3,7 @@
 // alike, the same frames): the tape faster or slower (the stretch keeps its length – owner's choice: ×2 plays it twice
 // in its time, ½ its first half slowly), rückwärts, Weglassen and Tauschen of its onsets, louder, softer or silent.
 // 5-ms crossfades at the stretch's edges and inside; one history step each (↶ swaps the audio before back – hxGeo).
+// Heard at once (hxSwapAt: mid-pass, crossfaded), its ↶ too.
 // The loop's own tools (the whole tape, Verblassen, Abrieb) keep working on top. ----
 const HX_RX = Math.round(0.005 * SR);   // the crossfade at a stretch's edges, at a repetition's joins and a slice's
 // a windowed sinc (Kaiser, β 9, 32 taps) read at a fractional position of a chunk list – the cutoff lowered for a
@@ -82,7 +83,7 @@ function hxRegionEdit(L, a, b, op, v) {
   if (hxWAktiv(L)) { toast('Diese Schleife spielt ihre Noten neu (Wuchs) – Abschnitte lassen sich nur an der Aufnahme bearbeiten. Zuerst „Erstarren“ oder Noten wie gespielt.', 5000); return false; }
   const sch = hxBandReady(L); if (!sch) return false;
   if (sch.some((S) => !hxMemOk(2 * S.n))) return false;
-  const before = hxGeo(L), fl0 = hxBandFl(L), sw = hxNextSeam(L), u = hxBandU(L).map((p) => (p - a) / (b - a)).filter((p) => p >= 0 && p < 1);
+  const before = hxGeo(L), fl0 = hxBandFl(L), sw = hxSwapAt(L), u = hxBandU(L).map((p) => (p - a) / (b - a)).filter((p) => p >= 0 && p < 1);
   const done = [];
   for (const S of sch) {
     const [r0, r1] = hxRxFrames(S, a, b); if (r1 - r0 < 64) continue;
@@ -90,13 +91,13 @@ function hxRegionEdit(L, a, b, op, v) {
     const aud = ed(S.aud), bak = S.bak ? ed(S.bak) : null, X = S.X || Math.round(0.01 * SR), g = { pre: S.pre, len: S.len, X, zo: S.zo || 0 };
     const c = Object.assign({}, S.cut, { pre: S.pre, len: S.len, n: S.n, aus: S.aus ? Object.assign({}, S.aus) : null, stale: true });
     done.push([S.key, S.aud, aud, S.bak, bak]);
-    hxSchSwap(S, c, { aud, bak, f: sw.f, join: 'xf', X, rho: hxRho(bak && S.chain && !L.folgt ? bak : aud, S.n, S.pre, S.len, X), zo: S.zo || 0, kc: hxSeamOf(g, aud), kcB: bak ? hxSeamOf(g, bak) : null, dr: S.dr });
+    hxSchSwap(S, c, { aud, bak, f: sw.f, now: !!sw.now, join: 'xf', X, rho: hxRho(bak && S.chain && !L.folgt ? bak : aud, S.n, S.pre, S.len, X), zo: S.zo || 0, kc: hxSeamOf(g, aud), kcB: bak ? hxSeamOf(g, bak) : null, dr: S.dr });
   }
   if (!done.length) { toast('Der Abschnitt ist zu kurz.'); return false; }
   // a trimmed loop: its whole keeps the edit too (the same frames of the same audio)
   if (L.tr0) L.tr0 = Object.assign({}, L.tr0, { sch: L.tr0.sch.map((s) => { const d = done.find((x) => x[0] === s.key && x[1] === s.aud); return d ? Object.assign({}, s, { aud: d[2], bak: s.bak === d[3] ? d[4] : s.bak }) : s; }) });
   const lab = { band: 'Band ' + (HX_SP.find((x) => Math.abs(x[0] - v) < 1e-6) || [0, '×' + v])[1], rev: 'rückwärts', weg: 'Weglassen ' + Math.round(v * 100) + ' %', tausch: 'Tauschen ' + Math.round(v * 100) + ' %', gain: v === 0 ? 'stumm' : (v > 1 ? 'lauter ' : 'leiser ') + Math.round(Math.abs(20 * Math.log10(v))) + ' dB' }[op];
-  hxBandStep(L, 'Abschnitt ' + hxRxName(L, a, b) + ' ' + lab, before, fl0);
+  hxBandStep(L, 'Abschnitt ' + hxRxName(L, a, b) + ' ' + lab, before, fl0, { now: true });
   hxSay(hxName(L) + ': Abschnitt ' + lab); hxSaveLoop(L); hxCardDirty();
   return true;
 }

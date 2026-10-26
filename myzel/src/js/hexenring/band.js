@@ -2,8 +2,10 @@
 // length follows (a Takt loop: beats × old / new – it stays on the grid, the servo lands in phase) ----
 function hxSpeed(L, sp, o = {}) {
   if (!L || L.bew || !HX.node) return;
-  const was = L.sp || 1; if (Math.abs(was - sp) < 1e-9) return;
-  if (HX.pend.some((p) => p.kind === 'band' && p.loop === L.id)) { const p = HX.pend.find((x) => x.kind === 'band' && x.loop === L.id); hxPendDrop(p); p.cancel(); }
+  // (26.10.2026) a switch of the player's own still waiting is taken back first (its step with it) – the new one is
+  // reckoned from what plays then; one that an ↶ ↷ waits for stays: the new one follows it at the same seam
+  const pw = HX.pend.find((x) => x.kind === 'band' && x.loop === L.id && !x.replay); if (pw) { hxPendDrop(pw); pw.cancel(); }
+  const was = L.sp || 1; if (Math.abs(was - sp) < 1e-9) { hxCardDirty(); hxRailDirty(); return; }
   const sw = hxNextSeam(L), f = sw.f, k = sw.k - 1, takt = hxTakt(L);
   const geo = takt ? { beats: (L.d.beats * was) / sp } : { L: Math.round((L.d.L * was) / sp) }, P1 = takt ? (geo.beats * 60) / tgBpm(hxT(f)) : geo.L / SR;
   const T = Math.max(0.05, Math.min(P['hx.traeg'], 0.9 * P1));
@@ -14,7 +16,7 @@ function hxSpeed(L, sp, o = {}) {
   const lab = 'Band ' + HX_SP.find((x) => Math.abs(x[0] - sp) < 1e-6)[1];
   // (26.10.2026, owner: every edit of a loop undoable at once) the step; a ↶ while the switch still waits cancels it and the step
   const lk = L.key, step = o.noHist ? null : { kind: 'band', label: hxName(L) + ': ' + lab, undo() { const X = hxByKey(lk); if (X) hxSpeed(X, was, { noHist: 1 }); }, redo() { const X = hxByKey(lk); if (X) hxSpeed(X, sp, { noHist: 1 }); } };
-  hxPendAdd({ kind: 'band', loop: L.id, t: hxT(f), label: lab + (takt ? ' ab Takt ' + hxBarNo(Math.round(hxBeatAtF(f) - TG.o)) : ' an der Naht'),
+  hxPendAdd({ kind: 'band', loop: L.id, t: hxT(f), replay: !!o.noHist, label: lab + (takt ? ' ab Takt ' + hxBarNo(Math.round(hxBeatAtF(f) - TG.o)) : ' an der Naht'),
     cancel: () => { if (step) HX.hist = HX.hist.filter((x) => x !== step); const X = HX.loops.get(L.id); if (!X) return; hxBatch(() => hxPost({ geom: Object.assign({ loop: X.id, f }, takt ? { beats: d0.beats } : { L: d0.L }), band: { loop: X.id, f, vs: was, T: 1 } })); hxGeomMirror(X, f, k, d0.beats, d0.L); X.sp = was; hxCardDirty(); } });
   if (step) hxHist(step);
   hxSay(hxName(L) + ': ' + lab); hxSaveMeta(L.id); hxCardDirty(); hxRailDirty();
@@ -46,14 +48,14 @@ function hxBandReady(L, what) {
 }
 // the step for a content change of the tape: ↶ gives back what was (its geometry, its Schichten), ↷ again
 const hxBandFl = (L) => ({ rev: !!L.rev, revW: !!L.revW, trim: L.trim || null, tr0: L.tr0 || null, dbl: L.dbl || 1, notes0: L.notes0 || L.notes || null, aon0: L.aon0 || L.aon || null });   // (25.10.2026: the notes as played – ↶ after a first trim gave back only the trimmed ones)
-function hxBandStep(L, label, before, f0) {
-  const key = L.key, after = {}, f1 = hxBandFl(L);
+function hxBandStep(L, label, before, f0, o = {}) {
+  const key = L.key, after = {}, f1 = hxBandFl(L), now = { now: !!o.now };   // (a change heard at once: its ↶ ↷ at once too)
   hxHist({ kind: 'band', label: hxName(L) + ': ' + label,
-    undo() { const X = hxByKey(key); if (X) { after.g = hxGeo(X); hxGeoBack(X, before); Object.assign(X, f0); hxBandNotesFix(X); hxSaveMeta(X.id); } },
-    redo() { const X = hxByKey(key); if (X && after.g) { hxGeoBack(X, after.g); Object.assign(X, f1); hxBandNotesFix(X); hxSaveMeta(X.id); } } });
+    undo() { const X = hxByKey(key); if (X) { after.g = hxGeo(X); const n = hxGeoBack(X, before, now); Object.assign(X, f0); hxBandNotesFix(X, n); if (n && hxWAktiv(X)) hxWUpdate(X, { now: 1 }); hxSaveMeta(X.id); } },
+    redo() { const X = hxByKey(key); if (X && after.g) { const n = hxGeoBack(X, after.g, now); Object.assign(X, f1); hxBandNotesFix(X, n); if (n && hxWAktiv(X)) hxWUpdate(X, { now: 1 }); hxSaveMeta(X.id); } } });
 }
 // the ring's spores and the slices follow what the tape does (rückwärts, Trimmen, Verdoppeln)
-function hxBandNotesFix(L) {
+function hxBandNotesFix(L, now) {
   const base = L.notes0 || (L.notes0 = L.notes);
   let ns = base.map((n) => Object.assign({}, n));
   const tr = L.trim; if (tr && tr.f < 1) { const a = hxTrA(tr); ns = ns.filter((n) => n.ph >= a - 1e-9 && n.ph < a + tr.f - 1e-9).map((n) => Object.assign(n, { ph: (n.ph - a) / tr.f, d: n.d })); }
@@ -61,24 +63,25 @@ function hxBandNotesFix(L) {
   if (L.rev) { const D = Math.max(0.05, hxLen(L)); ns = ns.map((n) => Object.assign(n, { ph: clamp(1 - n.ph - Math.min(n.d || 0, D) / D, 0, 0.9999) })); }
   L.notes = ns;
   if (L.aon0 || L.aon) { const a0 = L.aon0 || (L.aon0 = L.aon); let u = a0.slice(); if (tr && tr.f < 1) { const a = hxTrA(tr); u = u.filter((p) => p >= a && p < a + tr.f).map((p) => (p - a) / tr.f); } for (let i = 1; i < (L.dbl || 1); i *= 2) u = u.map((p) => p / 2).concat(u.map((p) => 0.5 + p / 2)); if (L.rev) u = u.map((p) => (1 - p) % 1).sort((a, b) => a - b); L.aon = u; }
-  hxBandSend(L); hxRailDirty(); hxCardDirty();
+  hxBandSend(L, now); hxRailDirty(); hxCardDirty();
 }
 const hxRevArr = (ch, n) => { const [a] = hxChunks(n); for (let i = 0; i < n; i++) { const s = ch[Math.floor((n - 1 - i) / HX_CH)], j = (n - 1 - i) % HX_CH, d = a[Math.floor(i / HX_CH)], k = i % HX_CH; d[0][k] = s ? s[0][j] : 0; d[1][k] = s ? s[1][j] : 0; } return a; };
 const hxDrMap = (dr, n, map) => { if (!dr) return null; const o = new Float32Array(Math.ceil(n / 128) + 1); for (let j = 0; j < o.length; j++) o[j] = dr[clamp(Math.floor(map(Math.min(n - 1, j * 128)) / 128), 0, dr.length - 1)]; return o; };
-// rückwärts at the seam: every Schicht's audio (dry and baked) mirrored – its margins swap: what came before the window
-// is the continuation after it now; the seam is the warm crossfade
+// rückwärts: every Schicht's audio (dry and baked) mirrored – its margins swap: what came before the window is the
+// continuation after it now; the seam is the warm crossfade. At once (owner, 26.10.2026: mid-pass, from the mirrored
+// place – crossfaded), or at the seam while a new length waits for it
 function hxRev(L) {
   const sch = hxBandReady(L); if (!sch) return false;
-  const before = hxGeo(L), sw = hxNextSeam(L), was = !!L.rev;
+  const before = hxGeo(L), sw = hxSwapAt(L), was = !!L.rev;
   for (const S of sch) {
     const n = S.n, pre = n - S.pre - S.len, aud = hxRevArr(S.aud, n), bak = S.bak ? hxRevArr(S.bak, n) : null, X = S.X || Math.round(0.01 * SR);
     const c = Object.assign({}, S.cut, { pre, len: S.len, post: S.pre, n, aus: null, stale: true });
     const g = { pre, len: S.len, X, zo: 0 };   // (the mirrored seam's own curve, as every seam's – the law held in every window, not the one-number fallback)
-    hxSchSwap(S, c, { aud, bak, f: sw.f, join: 'xf', X, rho: hxRho(bak && S.chain && !L.folgt ? bak : aud, n, pre, S.len, X), zo: 0, kc: hxSeamOf(g, aud), kcB: bak ? hxSeamOf(g, bak) : null, dr: hxDrMap(S.dr, n, (i) => n - 1 - i) });
+    hxSchSwap(S, c, { aud, bak, f: sw.f, now: !!sw.now, join: 'xf', X, rho: hxRho(bak && S.chain && !L.folgt ? bak : aud, n, pre, S.len, X), zo: 0, kc: hxSeamOf(g, aud), kcB: bak ? hxSeamOf(g, bak) : null, dr: hxDrMap(S.dr, n, (i) => n - 1 - i) });
   }
   const fl = hxBandFl(L); L.rev = !was; L.revW = !L.revW;   // (revW: its Wuchs renders mirrored too)
-  hxBandStep(L, was ? 'vorwärts' : 'rückwärts', before, fl);
-  hxBandNotesFix(L); if (hxWAktiv(L)) hxWUpdate(L);
+  hxBandStep(L, was ? 'vorwärts' : 'rückwärts', before, fl, { now: !!sw.now });
+  hxBandNotesFix(L, !!sw.now); if (hxWAktiv(L)) hxWUpdate(L, sw.now ? { now: 1 } : {});
   hxSay(hxName(L) + (L.rev ? ' rückwärts' : ' vorwärts')); hxSaveLoop(L);
   return true;
 }
@@ -193,13 +196,13 @@ function hxAbSet(L, rate, fresh, o = {}) {
 }
 // a loop's Abrieb as it was (↶): its rate and its seed – the wear starts again from new
 function hxAbPut(L, ab) { L.ab = ab ? Object.assign({}, ab) : null; hxPost({ abr: L.sch.map((id) => (L.ab ? { schicht: id, rate: L.ab.rate, seed: L.ab.seed } : { schicht: id, off: 1 })) }); hxSaveMeta(L.id); hxCardDirty(); }
-function hxSlcPut(L, s) { L.slc = s ? Object.assign({}, s) : null; hxBandSend(L); hxSaveMeta(L.id); hxCardDirty(); }
+function hxSlcPut(L, s) { L.slc = s ? Object.assign({}, s) : null; hxBandSend(L, true); hxSaveMeta(L.id); hxCardDirty(); }
 function hxSlcSet(L, k, v, o = {}) {
   const was = L.slc ? Object.assign({}, L.slc) : null, lk = L.key;
   if (k !== 'neu' && ((was && was[k]) || 0) === v) return;
   const s = (L.slc = Object.assign({ pd: 0, pw: 0, seed: ((Math.random() * 2147483646) | 0) + 1 }, L.slc || {}));
   if (k === 'neu') s.seed = ((Math.random() * 2147483646) | 0) + 1; else s[k] = v;
-  hxBandSend(L); hxSaveMeta(L.id); hxCardDirty();
+  hxBandSend(L, true); hxSaveMeta(L.id); hxCardDirty();
   const lab = (k === 'pd' ? 'Auslassen ' : k === 'pw' ? 'Würfeln ' : 'neu gewürfelt') + (k === 'neu' ? '' : HX_SLP.find((x) => x[0] === v)[1]), to = Object.assign({}, L.slc);
   hxSay(hxName(L) + ': ' + lab);
   if (!o.noHist) hxHist({ kind: 'band', label: hxName(L) + ': ' + lab, undo() { const X = hxByKey(lk); if (X) hxSlcPut(X, was); }, redo() { const X = hxByKey(lk); if (X) hxSlcPut(X, to); } });

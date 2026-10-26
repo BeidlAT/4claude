@@ -279,6 +279,7 @@ function hxKeyDown(e) {
     if (e.code === 'KeyZ' || e.code === 'KeyY') { e.preventDefault(); e.stopPropagation(); if (!e.repeat) (e.shiftKey || e.code === 'KeyY' ? hxRedoStep : hxUndoStep)(); }
     return;
   }
+  if (e.code === 'Space' && !e.shiftKey && HXE.ed && !HXE.ed.hidden && HXE.ed.contains(e.target)) { e.preventDefault(); e.stopPropagation(); if (!e.repeat) hxPvToggle(); return; }   // (owner, 26.10.2026: in the editor – Vorhören)
   const free = hxKeyFree(e.target), rail = !!(HXU.rail && HXU.rail.contains(e.target)), dg = /^Digit([1-8])$/.exec(e.code);
   if (e.code === 'Space' && free) { e.preventDefault(); e.stopPropagation(); if (!e.repeat) { HXPED.down.add('Space'); hxHaupt(hxKeyEv(e)); } return; }
   if (e.shiftKey && dg && (free || rail)) { e.preventDefault(); e.stopPropagation(); if (!e.repeat) { const L = hxRingL(+dg[1] - 1); if (L) hxEdOpen(L); } return; }   // (owner, 25.10.2026: Umschalt+1…8 – the loop's editor)

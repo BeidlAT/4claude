@@ -73,7 +73,7 @@ function idleBuild() {
 // what can sound: a voice, a held finger, the Bordun, a frozen echo, the Puls, the rain, a Schleife, a web that rings
 // (Leistung, 23.10.2026: a Schleife that is halted or muted sounds no more – a loop played again wakes the graph first,
 // hxPost with a state „spielt“; its stop's Ausklang still ringing keeps the taps from seeing zeros)
-const idleSrc = () => !!(A.voices.size || A.grainVoices.size || touches.size || A.bor || A.frozen || SEQ.on || rgSounds() || hxSounds() || HXN.webs.size || (HXN.feed && HXN.feed.size) || HX.ws || (typeof preview !== 'undefined' && preview) ||
+const idleSrc = () => !!(A.voices.size || A.grainVoices.size || touches.size || A.bor || A.frozen || SEQ.on || rgSounds() || hxSounds() || HXN.webs.size || (HXN.feed && HXN.feed.size) || HX.ws || (typeof preview !== 'undefined' && preview) || (typeof HXE !== 'undefined' && !!HXE.pv) ||
   (A.gsp && A.gsp.active) || RHZ.vs.size || RHZ.q.length || (A.revWant && !A.revActive));
 // the taps hear only the quiet after the last sound: while a source sounds nothing is counted, so they rest then (and
 // while the graph sleeps); plugged in, they are read once they hold a whole window of what came since

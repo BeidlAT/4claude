@@ -194,13 +194,13 @@ async function hxWRender(L, S, sig, key) {
   return { aud, n, len: job.lenF, sig, seed, ms: m.rms || m.ms || 0, dur: job.dur };
 }
 // a Schicht's version to the processor at frame f: the Abdruck (dry or baked), its Treu render, or its anchor
-function hxWPlay(S, which, f, keepStream) {
+function hxWPlay(S, which, f, keepStream, now) {
   const L = HX.loops.get(S.loop); if (!L || !HX.node) return false;
   if (which === 'ab') { S.play = 'ab'; hxWStop(S); return hxSchPlay(S, !!(S.bak && S.chain && !L.folgt), f); }
   const V = which === 'anc' ? S.anc : S.wu; if (!V || !V.aud) return false;
   const [cp, tr] = hxCopy(V.aud), out = L.folgt ? 1 : 0;
   if (out) hxOut1();
-  hxPost({ replace: { loop: S.loop, schicht: S.id, chunks: cp, n: V.n, pre: V.pre || 0, len: V.len, ausklang: V.rev ? null : { off: V.len, len: Math.max(0, V.n - V.len) }, f, join: V.rev ? 'xf' : 'ola', X: Math.round(0.01 * SR), rho: 0, zo: 0, kc: V.rev ? hxSeamOf({ pre: V.pre || 0, len: V.len, X: Math.round(0.01 * SR), zo: 0 }, V.aud) : 0, out, dd: 1, wu: 1 } }, tr);   // (step 2b: a mirrored version: its margin before it, joined warm)
+  hxPost({ replace: { loop: S.loop, schicht: S.id, chunks: cp, n: V.n, pre: V.pre || 0, len: V.len, ausklang: V.rev ? null : { off: V.len, len: Math.max(0, V.n - V.len) }, f, join: V.rev ? 'xf' : 'ola', X: Math.round(0.01 * SR), XM: now ? HX_XM : undefined, rho: 0, zo: 0, kc: V.rev ? hxSeamOf({ pre: V.pre || 0, len: V.len, X: Math.round(0.01 * SR), zo: 0 }, V.aud) : 0, out, dd: 1, wu: 1 } }, tr);   // (step 2b: a mirrored version: its margin before it, joined warm)
   S.play = which; S.out = out; S.swapF = f; S.ddOn = true; hxCount();
   if (!keepStream && S.wLive) S.wk = Math.max(S.wk == null ? -1 : S.wk, hxPassK(L, f));   // (that pass is this version's)
   return true;
@@ -221,16 +221,17 @@ function hxWUpdate(L, o = {}) {
   HX.wFeld = hxLoopsLive().some((X) => (X.klang || 'eigen') === 'feld' && hxWAktiv(X));
   const on = hxWAktiv(L), F = HX.folge && HX.folge.loops.includes(L.key) ? HX.folge : null;
   // (while a key change is announced, nothing of this loop changes before its bar line)
-  const at = () => (o.f != null ? o.f : F ? Math.max(Math.round(hxF(F.t)), hxNextSeam(L).f) : hxNextSeam(L).f);
+  // (owner, 26.10.2026: „on the fly“ – o.now: a tool of the notes is heard at once, crossfaded mid-pass)
+  const at = () => (o.f != null ? o.f : F ? Math.max(Math.round(hxF(F.t)), hxNextSeam(L).f) : o.now ? hxSwapAt(L).f : hxNextSeam(L).f), nw = () => !!o.now && !F && o.f == null && hxNowOk(L);
   if (F && !o.key) o = Object.assign({}, o, { key: F.key });
   for (const id of L.sch) {
     const S = HX.sch.get(id);
     if (!hxWCan(S)) continue;
     if (!S.wseed) S.wseed = ((Math.random() * 2147483646) | 0) + 1;
-    if (!on) { if (S.play && S.play !== 'ab') hxWPlay(S, 'ab', at()); continue; }
+    if (!on) { if (S.play && S.play !== 'ab') hxWPlay(S, 'ab', at(), false, nw()); continue; }
     const sig = hxWSig(L, S, o.key);
-    if (S.anc && S.anc.sig === sig) { if (S.play !== 'anc') hxWPlay(S, 'anc', at()); continue; }
-    if (S.wu && S.wu.sig === sig) { if (S.play !== 'wu' || o.re) hxWPlay(S, 'wu', at()); continue; }
+    if (S.anc && S.anc.sig === sig) { if (S.play !== 'anc') hxWPlay(S, 'anc', at(), false, nw()); continue; }
+    if (S.wu && S.wu.sig === sig) { if (S.play !== 'wu' || o.re) hxWPlay(S, 'wu', at(), false, nw()); continue; }
     hxWRenderFor(L, S, sig, Object.assign({}, o, { f: o.f != null ? o.f : F ? Math.round(hxF(F.t)) : null }));
   }
   hxCardDirty(); hxRailDirty();
@@ -246,7 +247,7 @@ function hxWRenderFor(L, S, sig, o = {}) {
     if (!X || !HX.sch.has(S.id) || (S.ver || 0) !== ver) return;
     if (V && V.sig === hxWSig(X, S, o.key) && (S.wu || hxMemOk(V.n))) {   // (final pass: a first Treu version within the Speichergrenze, as every other buffer – else the Abdruck plays on)
       S.wu = V; S.wuSaved = 0;
-      if (hxWAktiv(X) && !(S.anc && S.anc.sig === V.sig)) hxWPlay(S, 'wu', o.f != null && o.f > hxF(hxNowT() + 0.05) ? o.f : hxNextSeam(X).f);
+      if (hxWAktiv(X) && !(S.anc && S.anc.sig === V.sig)) { const now = !!o.now && o.f == null && hxNowOk(X); hxWPlay(S, 'wu', o.f != null && o.f > hxF(hxNowT() + 0.05) ? o.f : now ? hxSwapAt(X).f : hxNextSeam(X).f, false, now); }
       hxSaveSch(S, 'w');
     }
     if (S.wAgain || (V && V.sig !== hxWSig(X, S, o.key))) hxWUpdate(X, S.wAgain || {});

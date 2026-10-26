@@ -5,7 +5,9 @@
 Neu seit dem Stand unten (Wunsch des Besitzers, 25.10.2026 nachts – „Länge fehlt, wo bin ich beim Einspielen, Bearbeiten
 und Mixer für Schleifen nicht gefunden“), je eine Etappe, jede getestet und veröffentlicht: **4j** Länge an der
 Ringleiste + Positionsanzeige (#28), **4k** Mixer-Ansicht „Schleifen“ (#29), **4l** Rechtsklick-Menü und Fenster
-„Ansehen und bearbeiten“ (#30). Rückmeldung des Besitzers dazu abwarten (nur in Chromium geprüft). Die Gesamtprüfung
+„Ansehen und bearbeiten“ (#30), danach am 26.10. Nachträge (#31–#33: Lücken-Markierung, Rückgängig/Grundeinstellung/
+exakte Wellenform, Abschnitte) und Nachtrag 4 (sofort hörbar, Vorhören mit Play/Stopp, Zoom – unter 4l). Rückmeldung
+des Besitzers dazu abwarten (nur in Chromium geprüft). Die Gesamtprüfung
 (reg.sh, Lastwächter) lief für diese drei nicht – nur die betroffenen Suiten; einmal nachholen.
 
 ### Davor (Stand 25.10.2026, abends)
@@ -171,6 +173,28 @@ Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`)
    Die Noten (Ring, Notenbalken) folgen einem Abschnitt-Band nicht. Wellenform-Rendern mit der Länge aus `L.d` (der kommende
    Durchgang – eine Änderung wartet bis zur Naht, `L.prev`; vorher wurde mit der alten Länge gerechnet: Bild abgeschnitten),
    Hinweis `.hx-ed-wait` mit den Sekunden bis zur Naht. `t-hx-bearbeiten` 20.
+   Nachtrag 4 (26.10.2026, Besitzer: „erst zu hören, wenn die Schleife fertig gespielt hat – on the fly besser; Stufe −1,
+   Krebs, dünner ohne Wirkung; Play/Stopp und an beliebiger Stelle weiterspielen“). Diagnose: die Noten-Werkzeuge wirkten
+   (neu gerendert in ≈ 1,5 s), aber erst an der nächsten Naht – bei seiner 109-s-Schleife bis fast 2 min. Jetzt
+   **sofort**: `hxSwapAt(L)`/`hxNowOk(L)` (recuts.js) – Tausch mitten im Durchgang (Prozessor-Überblendung an derselben
+   Stelle, `XM` = `HX_XM` 25 ms, neu in `replace`), außer eine neue Länge (`L.prev`, wartender Bandwechsel) oder ein
+   anderer Tausch (`S.swapF` in der Zukunft, z. B. das Einbrennen) wartet noch – dann an der Naht wie bisher. Sofort:
+   `hxRegionEdit`, `hxRev`, Wuchs-Versionen der Noten-Werkzeuge (`hxWUpdate(L, {now})` → `hxWPlay(…, now)`), Weglassen/
+   Tauschen (`hxBandSend(L, now)` → `slice.now`: Prozessor `slNow` – was klingt, klingt als Schwanz aus, die neuen
+   Scheiben setzen mit 12 ms ein), ↶ ↷ davon ebenso (`hxGeoBack(L, g, {now})` gibt zurück, ob sofort). Band und Trimmen
+   bleiben an der Naht (sie ändern die Länge). **Vorhören** `js/hexenring/vorhoeren.js`: ▶/■ im Fenster (Leertaste bei
+   Fokus im Fenster), spielt den gerenderten Durchgang (`hxEdRenderPass` behält ihn als `buf`; über 20 s nur zwei
+   Durchgänge) über `stripIn('hxr')` mit Pegel/Balance der Schleife; die Schleife selbst schweigt (`L.pvMute` in
+   `hxGain`), die anderen spielen weiter; Klick in die Wellenform spielt ab dort (in der Auswahl bleibt sie), Auswahl
+   wiederholt sich („Auswahl wiederholen“), eine neue Berechnung übernimmt an derselben Stelle (30 ms), Uhr Takt/Schlag/
+   Sekunden, `idleSrc` zählt es. Zoom (`HXE.zv`, Strg+Mausrad, −/+, „Auswahl“, Umschalt+Mausrad schiebt, folgt beim
+   Abspielen; Spitzen aus dem gerenderten Puffer), Alt beim Ziehen = Sechzehntel. Umgeformte Noten hell, gespielte blass
+   (`hxEdNtMarks`); Hinweis „Die Noten werden neu gespielt …“. Test `t-hx-vorhoeren` (neu, in run-all): jedes der
+   16 Werkzeuge ändert den gerenderten Durchgang und ↶ stellt ihn exakt her, sofort hörbar, Sinus ohne Knack durch
+   Scheibenwechsel und Tausch, Transport, Zoom. Nur in Chromium geprüft. Dabei zwei Fehler aus #32 behoben: ↶ brach
+   den Bandwechsel ab, auf den ein ↶ selbst noch wartete (statt den Schritt davor zurückzunehmen – Wartende mit
+   `replay` zählen nicht), und ein zweiter Bandwechsel vor der Naht rechnete vom falschen Stand (`hxSpeed` nimmt den
+   eigenen wartenden zuerst zurück, dann `was`); die Schleife konnte danach doppelt so lang sein.
 5. **Offene Fragen ans Ohr:** Schale spricht wie früher das Harz-Glas manchmal spät an (soll sie immer sofort?);
    Bandträgheit, Gärtner-Bass, Musikalität der Antworten (siehe `dev/IDEEN.md`).
 6. **Danach** die Liste in `dev/IDEEN.md` (Sample-Bibliothek, Stimme als Instrument, neue Klangerzeugung, native App).

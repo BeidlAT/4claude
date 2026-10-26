@@ -7,7 +7,7 @@ function hxCardTools(L, sch, chip, row, btn) {
   const sp = L.sp || 1, slc = L.slc || {}, nt = L.nt || {}, notes = sch.some(hxWCan), audio = !notes, tk = hxTakt(L);
   const kids = [
     row('Band', ...HX_SP.map(([v, t]) => chip(t, Math.abs(sp - v) < 1e-6, () => hxSpeed(L, v), 'Bandgeschwindigkeit ' + t + (v === 1 ? '' : v < 1 ? ' – tiefer und langsamer' : ' – höher und schneller'))),
-      chip('rückwärts', !!L.rev, () => hxRev(L), 'Rückwärts ab der Naht'), chip('Stopp', false, () => hxBandstopp([L]), 'Bandstopp: das Band läuft aus')),
+      chip('rückwärts', !!L.rev, () => hxRev(L), 'Rückwärts – sofort, ab der gespiegelten Stelle'), chip('Stopp', false, () => hxBandstopp([L]), 'Bandstopp: das Band läuft aus')),
     row('Trimmen', chip('½', !!(L.trim && L.trim.f === 0.5), () => hxBandTrim(L, 'h'), 'Trimmen: die halbe Schleife'), chip('¼', !!(L.trim && L.trim.f === 0.25), () => hxBandTrim(L, 'v'), 'Trimmen: ein Viertel'),
       L.trim ? chip('◀', false, () => hxBandTrim(L, '<'), 'Ausschnitt früher') : null, L.trim ? chip('▶', false, () => hxBandTrim(L, '>'), 'Ausschnitt später') : null, L.trim ? chip('ganz', false, () => hxBandTrim(L, 'ganz'), 'Wieder ganz') : null,
       chip('Verdoppeln', false, () => hxDouble(L), 'Verdoppeln: doppelt so lang durch Wiederholung')),
@@ -118,9 +118,11 @@ const hxBandNotes = (L) => L.sch.some((id) => hxWCan(HX.sch.get(id)));
 // Schnitt: an audio loop of the rhythmic kind is re-placed by slices when its pass is not its own length (the processor
 // decides at each pass start) – loops with notes grow in the new tempo instead (Wuchs)
 const hxSchnitt = (L) => !L.bew && (L.tempoArt || L.art) === 'schlag' && !hxBandNotes(L);
-function hxBandSend(L) {
+// now (owner, 26.10.2026: „on the fly“): Weglassen and Tauschen from this moment, crossfaded – not while a new length
+// waits for its seam (the slices are the coming pass's)
+function hxBandSend(L, now) {
   if (!L || L.bew || !HX.node) return;
-  hxPost({ slice: hxBandSliceOf(L) || { loop: L.id, off: 1 } });
+  hxPost({ slice: Object.assign(hxBandSliceOf(L) || { loop: L.id, off: 1 }, now && !L.prev ? { now: 1 } : null) });
 }
 // the slices a loop plays as the processor gets them (null: none) – the editor's waveform renders with the same
 function hxBandSliceOf(L) {

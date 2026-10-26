@@ -655,7 +655,7 @@
         S.wu = !!B.wu; if (S.wu) S.ddA = true;   // (step 2a: a Wuchs version reads at the live drift alone)
         if (S.ws) { this.wsPrev(S, null); S.ws.cur = null; S.ws.hold = false; }   // (a fixed version now: the stream's passes, if any, take over again at their pass)
         if (B.out >= 0) S.out = B.out;
-        if (seam) { O.v = O.a = O.b = 0; O.i = O.N = 0; } else { O.v = 1; envGo(O, 0, this.xf(d.X)); S.xin.v = 0; envGo(S.xin, 1, this.xf(d.X)); S.xrho = B.wu ? this.corr(S.old.ch, S.old.tot, S.old.pre + S.q, B.ch, B.tot, B.pre + S.q, this.xf(d.X)) : 0; }   // (step 2a: a Wuchs version, normalised as the streams' crossings)
+        if (seam) { O.v = O.a = O.b = 0; O.i = O.N = 0; } else { const XM = this.xf(d.XM != null ? d.XM : d.X); O.v = 1; envGo(O, 0, XM); S.xin.v = 0; envGo(S.xin, 1, XM); S.xrho = B.wu ? this.corr(S.old.ch, S.old.tot, S.old.pre + S.q, B.ch, B.tot, B.pre + S.q, this.xf(d.X)) : 0; }   // (step 2a: a Wuchs version, normalised as the streams' crossings)
         S.ch = B.ch; S.tot = B.tot; S.pre = B.pre; S.len = B.len; S.ac = B.ac; S.aoff = B.aoff; S.aend = B.aend; S.afd = B.afd || 0;
         if (B.dr) S.dr = B.dr;
         if (B.join) { S.join = B.join; S.X = B.X; S.rho = B.rho; }
@@ -1314,10 +1314,31 @@
     // thrown (Würfeln) by a seeded hash per pass; a slice enters e frames before its place with the smooth law, the one
     // before crosses out over X. Set now, played from the next pass start
     slSet(L, d) {
-      if (d.off || !d.u || !d.u.length) { if (L.sl) L.sl.off = true; return; }
+      // (owner, 26.10.2026: „on the fly“) now: mid-pass – what sounds rings out over a crossfade, the new slices enter
+      const T0 = d.now && L.k >= 0 && !L.dying ? (L.slA ? L.sl : 0) : null;
+      if (d.off || !d.u || !d.u.length) { if (L.sl) L.sl.off = true; if (T0 != null) this.slNow(L, T0); return; }
       const n = d.u.length;
       L.sl = { n, u: Float64Array.from(d.u), dst: new Float64Array(n + 1), map: new Int32Array(n), drop: new Uint8Array(n), schnitt: !!d.schnitt, pd: Math.max(0, Math.min(1, +d.pd || 0)), pw: Math.max(0, Math.min(1, +d.pw || 0)), ps: Math.max(0, Math.min(1, +d.ps || 0)),   // (step 4: ps – a stutter, the slice before played again: Ladung)
         seed: d.seed | 0 || 1, X: this.xf(d.X != null ? d.X : 0.008 * SR), e: Math.max(1, Math.round(d.e != null ? d.e : 0.003 * SR)), off: false };
+      if (T0 != null) this.slNow(L, T0);
+    }
+    // the read that sounds at the pass's frame L.q fades out as a tail of its own (a slice where it stands, or the tape)
+    slOut(L, T) {
+      const j = L.q, X = this.xf(0.012 * SR);
+      for (let i = 0; i < L.sch.length; i++) {
+        const S = L.sch[i]; if (S.dead || S.dying || !(S.f0 <= L.s0 + j)) continue;
+        if (!T) { this.tail(S, false, 1, S.pre + S.q, X, 0, S); continue; }
+        const r = L.r * S.r;
+        for (let k = 0; k < T.n; k++) { if (T.drop[k]) continue; const Q = this.slSlot(T, S, k, r), a = Q[0], b = Q[1], s0 = Q[2]; if (a < j && b > j) this.tail(S, false, 1, S.pre + s0 + (j - a) * r, Math.max(1, Math.min(X, Math.round(b - j))), 0, S); }
+      }
+    }
+    // the pass's slices made again from here (the same throw a seam would make for it): the read that sounded rings out,
+    // the new one enters with the fade – nothing when the tape plays as it is before and after
+    slNow(L, T0) {
+      this.slPass(L);
+      if (!T0 && !L.slA) return;
+      this.slOut(L, T0);
+      const X = this.xf(0.012 * SR); for (let i = 0; i < L.sch.length; i++) { const S = L.sch[i]; S.xin.v = 0; envGo(S.xin, 1, X); }
     }
     // a pass's slices: their places, which plays where, which rests; in slices only when it needs them (a tempo not its own,
     // or something left out or thrown) – else the tape as it is, bit for bit

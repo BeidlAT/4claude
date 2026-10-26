@@ -830,6 +830,16 @@ body.mlearn #stage::after { content: ""; position: absolute; inset: 0; backgroun
 .hx-ed-part .hx-ed-st { color: var(--lumen); }
 .hx-ed-part .note { margin: 2px 0 0; color: var(--dim); font-size: 11.5px; }
 .hx-ed-wait { color: var(--spore); font: 500 12px/1.3 var(--font-ui); }
+/* (owner, 26.10.2026) the editor's transport: Vorhören, the clock, the zoom */
+.hx-ed-tp { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-height: 34px; }
+.hx-ed-tp .btn { min-height: 32px; padding: 3px 12px; }
+.hx-ed-tp .hx-pv-play { min-width: 128px; }
+.hx-pv-t { font: 500 12px/1.2 var(--font-num); color: var(--hypha); font-variant-numeric: tabular-nums; min-width: 190px; }
+.hx-ed-zoom { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; }
+.hx-ed-zoom .lab { color: var(--dim); font: 500 11px/1 var(--font-ui); margin-right: 2px; }
+.hx-ed-zoom .btn { min-width: 34px; padding: 3px 9px; }
+.hx-ed-wave:focus-visible { outline: 2px solid var(--lumen); outline-offset: 1px; }
+.hx-ed-wait:empty { display: none; }
 /* ---------- Mixer (Mischpult) ---------- */
 /* The sheet grows for the mixer: on phones it leaves ~130 px of play field above (still playable), on wide screens
    it becomes a broad column next to the field. The quick strip steps aside while the mixer is open – Echo and Hall
@@ -4173,7 +4183,7 @@ function idleBuild() {
 // what can sound: a voice, a held finger, the Bordun, a frozen echo, the Puls, the rain, a Schleife, a web that rings
 // (Leistung, 23.10.2026: a Schleife that is halted or muted sounds no more – a loop played again wakes the graph first,
 // hxPost with a state „spielt“; its stop's Ausklang still ringing keeps the taps from seeing zeros)
-const idleSrc = () => !!(A.voices.size || A.grainVoices.size || touches.size || A.bor || A.frozen || SEQ.on || rgSounds() || hxSounds() || HXN.webs.size || (HXN.feed && HXN.feed.size) || HX.ws || (typeof preview !== 'undefined' && preview) ||
+const idleSrc = () => !!(A.voices.size || A.grainVoices.size || touches.size || A.bor || A.frozen || SEQ.on || rgSounds() || hxSounds() || HXN.webs.size || (HXN.feed && HXN.feed.size) || HX.ws || (typeof preview !== 'undefined' && preview) || (typeof HXE !== 'undefined' && !!HXE.pv) ||
   (A.gsp && A.gsp.active) || RHZ.vs.size || RHZ.q.length || (A.revWant && !A.revActive));
 // the taps hear only the quiet after the last sound: while a source sounds nothing is counted, so they rest then (and
 // while the graph sleeps); plugged in, they are read once they hold a whole window of what came since
@@ -10469,7 +10479,7 @@ function myzelDsp() {
         S.wu = !!B.wu; if (S.wu) S.ddA = true;   // (step 2a: a Wuchs version reads at the live drift alone)
         if (S.ws) { this.wsPrev(S, null); S.ws.cur = null; S.ws.hold = false; }   // (a fixed version now: the stream's passes, if any, take over again at their pass)
         if (B.out >= 0) S.out = B.out;
-        if (seam) { O.v = O.a = O.b = 0; O.i = O.N = 0; } else { O.v = 1; envGo(O, 0, this.xf(d.X)); S.xin.v = 0; envGo(S.xin, 1, this.xf(d.X)); S.xrho = B.wu ? this.corr(S.old.ch, S.old.tot, S.old.pre + S.q, B.ch, B.tot, B.pre + S.q, this.xf(d.X)) : 0; }   // (step 2a: a Wuchs version, normalised as the streams' crossings)
+        if (seam) { O.v = O.a = O.b = 0; O.i = O.N = 0; } else { const XM = this.xf(d.XM != null ? d.XM : d.X); O.v = 1; envGo(O, 0, XM); S.xin.v = 0; envGo(S.xin, 1, XM); S.xrho = B.wu ? this.corr(S.old.ch, S.old.tot, S.old.pre + S.q, B.ch, B.tot, B.pre + S.q, this.xf(d.X)) : 0; }   // (step 2a: a Wuchs version, normalised as the streams' crossings)
         S.ch = B.ch; S.tot = B.tot; S.pre = B.pre; S.len = B.len; S.ac = B.ac; S.aoff = B.aoff; S.aend = B.aend; S.afd = B.afd || 0;
         if (B.dr) S.dr = B.dr;
         if (B.join) { S.join = B.join; S.X = B.X; S.rho = B.rho; }
@@ -11128,10 +11138,31 @@ function myzelDsp() {
     // thrown (Würfeln) by a seeded hash per pass; a slice enters e frames before its place with the smooth law, the one
     // before crosses out over X. Set now, played from the next pass start
     slSet(L, d) {
-      if (d.off || !d.u || !d.u.length) { if (L.sl) L.sl.off = true; return; }
+      // (owner, 26.10.2026: „on the fly“) now: mid-pass – what sounds rings out over a crossfade, the new slices enter
+      const T0 = d.now && L.k >= 0 && !L.dying ? (L.slA ? L.sl : 0) : null;
+      if (d.off || !d.u || !d.u.length) { if (L.sl) L.sl.off = true; if (T0 != null) this.slNow(L, T0); return; }
       const n = d.u.length;
       L.sl = { n, u: Float64Array.from(d.u), dst: new Float64Array(n + 1), map: new Int32Array(n), drop: new Uint8Array(n), schnitt: !!d.schnitt, pd: Math.max(0, Math.min(1, +d.pd || 0)), pw: Math.max(0, Math.min(1, +d.pw || 0)), ps: Math.max(0, Math.min(1, +d.ps || 0)),   // (step 4: ps – a stutter, the slice before played again: Ladung)
         seed: d.seed | 0 || 1, X: this.xf(d.X != null ? d.X : 0.008 * SR), e: Math.max(1, Math.round(d.e != null ? d.e : 0.003 * SR)), off: false };
+      if (T0 != null) this.slNow(L, T0);
+    }
+    // the read that sounds at the pass's frame L.q fades out as a tail of its own (a slice where it stands, or the tape)
+    slOut(L, T) {
+      const j = L.q, X = this.xf(0.012 * SR);
+      for (let i = 0; i < L.sch.length; i++) {
+        const S = L.sch[i]; if (S.dead || S.dying || !(S.f0 <= L.s0 + j)) continue;
+        if (!T) { this.tail(S, false, 1, S.pre + S.q, X, 0, S); continue; }
+        const r = L.r * S.r;
+        for (let k = 0; k < T.n; k++) { if (T.drop[k]) continue; const Q = this.slSlot(T, S, k, r), a = Q[0], b = Q[1], s0 = Q[2]; if (a < j && b > j) this.tail(S, false, 1, S.pre + s0 + (j - a) * r, Math.max(1, Math.min(X, Math.round(b - j))), 0, S); }
+      }
+    }
+    // the pass's slices made again from here (the same throw a seam would make for it): the read that sounded rings out,
+    // the new one enters with the fade – nothing when the tape plays as it is before and after
+    slNow(L, T0) {
+      this.slPass(L);
+      if (!T0 && !L.slA) return;
+      this.slOut(L, T0);
+      const X = this.xf(0.012 * SR); for (let i = 0; i < L.sch.length; i++) { const S = L.sch[i]; S.xin.v = 0; envGo(S.xin, 1, X); }
     }
     // a pass's slices: their places, which plays where, which rests; in slices only when it needs them (a tempo not its own,
     // or something left out or thrown) – else the tape as it is, bit for bit
@@ -26972,7 +27003,7 @@ function hxState(loop, to, at, o = {}) {
 // a level (a loop's, or a Schicht's: {schicht: id}), with a smooth ramp (s); pan for a loop
 function hxGain(target, g, at, ramp, pan) {
   const t = typeof target === 'object' ? target : { loop: target };
-  if (t.schicht == null && g != null) { const L = HX.loops.get(t.loop); if (L && L.gg != null) g *= L.gg; }   // (Etappe 3: under the Gärtner's factor – the player's level stays his own)
+  if (t.schicht == null && g != null) { const L = HX.loops.get(t.loop); if (L && L.gg != null) g *= L.gg; if (L && L.pvMute) g = 0; }   // (owner, 26.10.2026: silent while the editor plays it – Vorhören)   // (Etappe 3: under the Gärtner's factor – the player's level stays his own)
   return hxPost({ gain: Object.assign({}, t, { g, f: hxAt(at), ramp: ramp != null ? Math.round(ramp * SR) : undefined, pan }) });
 }
 // a Schicht out (its seam fade), a loop or all out; → Promise of the chunks the processor hands back
@@ -27924,7 +27955,7 @@ function hxTempoKeep() { HX.keepT = null; TG.keep = true; HX.chips = null; hxSay
 // first, else undoes the last step; ↷ for 8 s. Depth is limited only by the memory cap (the oldest go first). ----
 function hxHist(step) { step.t = Date.now(); HX.hist.push(step); HX.redo.length = 0; HX.redoT = 0; if (HX.hist.length > 200) HX.hist.shift(); hxRailDirty(); hxCardDirty(); }
 function hxUndoStep() {
-  const p = HX.pend[HX.pend.length - 1];
+  const p = HX.pend.filter((x) => !x.replay).pop();   // (26.10.2026: the switch an ↶ or ↷ itself waits for is no step to cancel – the next ↶ takes the step before)
   if (p) { hxPendDrop(p); p.cancel(); hxSay('Abgebrochen: ' + p.label); return; }
   if (HX.rec) { hxRecCancel(); return; }
   const s = HX.hist.pop();
@@ -27977,6 +28008,15 @@ function hxBatch(fn) {
 }
 // the next seam at least ≈ 60 ms ahead (the swap must reach the processor first)
 function hxNextSeam(L) { const f = Math.round(hxF(hxNowT() + 0.06)), k = hxPassK(L, f); return { k: k + 1, f: hxPassF(L, k + 1) }; }
+// (owner, 26.10.2026: „on the fly“) a change of a loop's sound without a new length is heard at once: its audio swapped
+// mid-pass (the processor's crossfade at the same place, HX_XM) – unless a new length or another swap still waits for
+// its seam (the swap would come before it); then at the seam, as before
+const HX_XM = Math.round(0.025 * SR);
+function hxNowOk(L) {
+  const f = Math.round(hxF(hxNowT() + 0.06));
+  return !!L && !L.prev && !HX.pend.some((p) => p.loop === L.id && p.kind === 'band') && !L.sch.some((id) => { const S = HX.sch.get(id); return S && S.swapF > f; });
+}
+const hxSwapAt = (L) => (hxNowOk(L) ? { f: Math.round(hxF(hxNowT() + 0.06)), now: true } : hxNextSeam(L));
 function hxSchSwap(S, c, o = {}) {
   const L = HX.loops.get(S.loop); if (!L) return;
   S.ver = (S.ver || 0) + 1;
@@ -27987,11 +28027,12 @@ function hxSchSwap(S, c, o = {}) {
   S.ddOn = false;
   if (out) hxOut1();
   let tr;
-  if (o.aud) { const [cp, t1] = hxCopy(bak || o.aud); d.chunks = cp; tr = t1; if (o.join) Object.assign(d, { join: o.join, X: o.X, rho: o.rho }); const dr = o.dr || S.dr; if (dr) { d.dr = Float32Array.from(dr); tr.push(d.dr.buffer); } }
+  if (o.aud) { const [cp, t1] = hxCopy(bak || o.aud); d.chunks = cp; tr = t1; if (o.join) Object.assign(d, { join: o.join, X: o.X, rho: o.rho }); if (o.now) d.XM = HX_XM; const dr = o.dr || S.dr; if (dr) { d.dr = Float32Array.from(dr); tr.push(d.dr.buffer); } }
   else { const [dst, t1] = hxChunks(c.n), [cp, t2] = hxChunks(c.n); d.chunks = dst; d.copy = cp; tr = t1.concat(t2); d.fill = { in: c.in, f0: c.f0, v: S.ver }; d.dr = new Float32Array(Math.ceil(c.n / 128) + 1); d.drc = new Float32Array(d.dr.length); tr.push(d.dr.buffer, d.drc.buffer); }
   const m = { replace: d };
   if (o.geom) { m.geom = Object.assign({ loop: S.loop, f: o.f }, o.geom); const k = hxPassK(L, (o.f != null ? o.f : Math.round(hxF(hxNowT()))) - 1); hxGeomMirror(L, hxPassF(L, k + 1), k, o.geom.beats || L.d.beats, o.geom.L || L.d.L); }
   hxPost(m, tr);
+  S.swapF = o.f;
   Object.assign(S, { cut: c, len: c.len, pre: c.pre, n: c.n, aus: c.aus ? Object.assign({}, c.aus) : null, aud: o.aud || null, live: !o.aud, saved: 0, out, bak: o.aud ? o.bak || null : null, baked: !!bak, zo: o.zo || 0, kc: o.kc || null, kcB: o.kcB || null, dr: o.aud ? o.dr || S.dr : null, cutAus: !!o.cutAus, spliced: !!o.spliced });
   hxCount();
   if (S.play && S.play !== 'ab') S.play = 'ab';   // Hexenring (step 2b): the version swapped in is an Abdruck – a Wuchs version is sent again by hxWUpdate, never assumed still playing
@@ -28007,20 +28048,22 @@ function hxGeomMirror(L, f, k, beats, Lf) {
 }
 // what a loop is now (geometry, tempo, its Schichten) – a re-cut's undo goes back to it
 function hxGeo(L) { return { d: Object.assign({}, L.d), bpb: L.bpb, bpm: TG.hx, hxOn: TG.hxOn, o: TG.o, sch: L.sch.map((id) => hxSnapS(HX.sch.get(id))).filter(Boolean), nudge: L.nudge || 0 }; }
-function hxGeoBack(L, g) {
-  const sw = hxNextSeam(L);
+function hxGeoBack(L, g, o = {}) {
+  const same = g.d.beats === L.d.beats && g.d.L === L.d.L && Math.abs(g.bpm - TG.hx) < 1e-9 && Math.abs(g.o - TG.o) < 1e-9 && g.nudge === (L.nudge || 0);
+  const sw = o.now && same ? hxSwapAt(L) : hxNextSeam(L);   // (the undo of a change heard at once: at once too)
   hxBatch(() => {
     if (g.hxOn && TG.hxOn && Math.abs(g.bpm - TG.hx) > 1e-9 && !SEQ.ext) { TG.hx = g.bpm; tgRetempo(g.bpm); for (const fn of CTL['seq.bpm'] || []) fn(P['seq.bpm'], null); }
     if (Math.abs(g.o - TG.o) > 1e-9) { const sh = g.o - TG.o; TG.o = g.o; TG.ver++; rgRebase(sh); }
     for (const s of g.sch) {
       const S = hxSchByKey(s.key); if (!S) continue;
       const c = { in: s.cut.in, w0: s.cut.w0, w1: s.cut.w1, f0: s.cut.f0, pre: s.pre, len: s.len, post: s.cut.post, n: s.n, aus: s.aus };
-      if (s.aud || hxReach(s.cut)) hxSchSwap(S, s.aud ? c : s.cut, { aud: s.aud, bak: s.bak, zo: s.zo, kc: s.kc, kcB: s.kcB, dr: s.dr, cutAus: s.cutAus, spliced: s.spliced, f: sw.f, join: s.join, X: s.X, rho: s.rho, fade: Math.min(Math.round(0.03 * SR), s.aus ? s.aus.len : 0),
+      if (s.aud || hxReach(s.cut)) hxSchSwap(S, s.aud ? c : s.cut, { aud: s.aud, bak: s.bak, zo: s.zo, kc: s.kc, kcB: s.kcB, dr: s.dr, cutAus: s.cutAus, spliced: s.spliced, f: sw.f, now: !!sw.now, join: s.join, X: s.X, rho: s.rho, fade: Math.min(Math.round(0.03 * SR), s.aus ? s.aus.len : 0),
         geom: s === g.sch[0] && (g.d.beats !== L.d.beats || g.d.L !== L.d.L) ? (hxTakt(L) ? { beats: g.d.beats } : { L: g.d.L }) : null });
     }
   });
   L.bpb = g.bpb; L.nudge = g.nudge;
   hxSaveLoop(L); hxCardDirty();
+  return !!sw.now;
 }
 // a new tempo for the Schleife that gave it: the Taktgeber's slope and the loop's beats in one message, from its next
 // seam (a bar line – the new grid starts there; its sound is untouched); also the undo of such a correction
@@ -29542,12 +29585,13 @@ function hxEdOpen(L) {
   if (!L || L.bew) { if (L && L.bew) toast('Eine Schleife aus Bewegung hat keinen Klang zum Bearbeiten – ihre Karte zeigt, was sie bewegt.', 3500); return; }
   hxCtxClose();
   if (!HXE.ed) hxEdBuild();
+  if (HXE.key !== L.key) { hxPvStop(); HXE.zv = null; HXE.pvAt = 0; }   // (another loop: its own view and mark)
   HXE.key = L.key; HXE.sel = null; HXE.sig = ''; HXE.wsig = '';
   HXE.ed.hidden = false; hxEdPlace(); hxEdRender();
   HXE.ed.querySelector('.hx-ed-x').focus({ preventScroll: true });
   hxSay(hxName(L) + ': bearbeiten');
 }
-function hxEdClose() { if (!HXE.ed || HXE.ed.hidden) return; HXE.ed.hidden = true; HXE.key = null; HXE.drag = null; }
+function hxEdClose() { if (!HXE.ed || HXE.ed.hidden) return; hxPvStop(); HXE.ed.hidden = true; HXE.key = null; HXE.drag = null; HXE.rw = null; HXE.zv = null; }   // (the rendered pass freed – a long loop's is large)
 function hxEdBuild() {
   const ed = HXE.ed = h('section', { class: 'hx-ed', role: 'dialog', 'aria-label': 'Schleife bearbeiten', hidden: true });
   ed.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); hxEdClose(); } });
@@ -29594,12 +29638,22 @@ function hxEdRender() {
       (() => { const x = btn('✕', hxEdClose, 'Schließen (Esc)', 'ghost hx-ed-x'); x.setAttribute('aria-label', 'Schließen'); return x; })()));
   // the waveform: drag over it to choose a stretch
   HXE.cv = h('canvas', { class: 'hx-ed-cv', role: 'img', 'aria-label': 'Wellenform von ' + hxName(L) + (tk ? ', ' + hxLenText(L) : '') });
-  const wbox = h('div', { class: 'hx-ed-wave', title: 'Die Schleife, wie sie klingt. Türkise Striche: die gespielten Noten – wo sie liegen, wie hoch (oben hoch), wie lang. Ziehen wählt einen Teil (auf ganze Schläge).' }, HXE.cv);
+  const wbox = h('div', { class: 'hx-ed-wave', tabindex: '0', title: 'Die Schleife, wie sie klingt. Türkise Striche: die gespielten Noten – wo sie liegen, wie hoch (oben hoch), wie lang. Klicken spielt ab dieser Stelle (Leertaste: Abspielen/Stopp). Ziehen wählt einen Teil (auf ganze Schläge, mit Alt feiner). Strg+Mausrad zoomt, Umschalt+Mausrad schiebt.' }, HXE.cv);
   hxEdWaveDrag(wbox);
+  // (owner, 26.10.2026) the transport: Vorhören from any place, the stretch repeating, the clock, the zoom
+  const zoomed = !!HXE.zv;
+  HXE.pvBtn = btn(HXE.pv ? '■ Stopp' : '▶ Abspielen', hxPvToggle, 'Vorhören (Leertaste): die Schleife so, wie sie mit allen Änderungen klingt – sofort, ab der Marke. Die laufende Schleife schweigt solange, die anderen spielen weiter. Ein Klick in die Wellenform spielt ab dort.', 'primary hx-pv-play');
+  const tp = h('div', { class: 'hx-ed-tp' }, HXE.pvBtn,
+    btn('⏮', () => hxPvJump(HXE.sel ? HXE.sel.a : 0), HXE.sel ? 'An den Anfang der Auswahl' : 'An den Anfang', 'ghost'),
+    HXE.sel ? chip('Auswahl wiederholen', HXE.pvRep !== false, () => { HXE.pvRep = HXE.pvRep === false; hxEdRender(); }, 'Beim Vorhören nur die Auswahl, immer wieder') : null,
+    HXE.tEl = h('span', { class: 'hx-pv-t', 'aria-live': 'off' }, hxPvTime(L, hxPvPos())),
+    h('span', { class: 'hx-ed-zoom' }, h('span', { class: 'lab' }, 'Zoom'),
+      btn('−', () => hxEdZoom(2), 'Weiter weg (Strg+Mausrad)', 'ghost'), btn('+', () => hxEdZoom(0.5), 'Näher heran (Strg+Mausrad)', 'ghost'),
+      HXE.sel ? btn('Auswahl', () => hxEdZoomTo(HXE.sel.a, HXE.sel.b), 'Die Auswahl groß', 'ghost') : null,
+      zoomed ? btn('ganz', () => { HXE.zv = null; HXE.wsig = ''; hxEdRender(); }, 'Die ganze Schleife', 'ghost') : null));
   const selTxt = HXE.sel ? hxEdSelText(L, HXE.sel) : '';
   // (26.10.2026) a change that waits for the next seam: the picture already shows it – when it is heard
-  const wait = L.prev || HX.pend.some((p) => p.loop === L.id && p.kind === 'band');
-  HXE.waitEl = wait ? h('span', { class: 'hx-ed-wait' }, '') : null;
+  HXE.waitEl = h('span', { class: 'hx-ed-wait' }, '');
   const selRow = h('div', { class: 'hx-ed-sel' },
     h('span', { class: 'hx-ms' }, HXE.sel ? 'Auswahl: ' + selTxt : L.trim ? 'Getrimmt – es spielt nur ein Teil der Aufnahme.' : 'Ziehe über die Wellenform, um einen Teil auszuwählen – dann lässt er sich allein bearbeiten.'),
     HXE.sel ? btn('Nur die Auswahl spielen', () => hxEdTrimSel(L), 'Die Schleife spielt ab der nächsten Naht nur diesen Teil (↶ macht es rückgängig). Den Teil bearbeiten: die Zeilen „Abschnitt bearbeiten“ darunter.', 'primary') : null,
@@ -29623,7 +29677,7 @@ function hxEdRender() {
   const sp = L.sp || 1, slc = L.slc || {}, nt = L.nt || {};
   const tools = [
     row('Band', 'Wie ein Tonband: langsamer und tiefer, schneller und höher, rückwärts, auslaufen, verdoppeln.', ...HX_SP.map(([v, t]) => chip(t, Math.abs(sp - v) < 1e-6, () => hxSpeed(L, v), 'Bandgeschwindigkeit ' + t)),
-      chip('rückwärts', !!L.rev, () => hxRev(L), 'Rückwärts ab der Naht'), chip('Stopp', false, () => hxBandstopp([L]), 'Bandstopp: das Band läuft aus'), chip('Verdoppeln', false, () => hxDouble(L), 'Doppelt so lang durch Wiederholung')),
+      chip('rückwärts', !!L.rev, () => hxRev(L), 'Rückwärts – sofort, ab der gespiegelten Stelle'), chip('Stopp', false, () => hxBandstopp([L]), 'Bandstopp: das Band läuft aus'), chip('Verdoppeln', false, () => hxDouble(L), 'Doppelt so lang durch Wiederholung')),
     row('Trimmen', 'Nur einen Teil spielen – oder oben einen Teil auswählen.', chip('½', !!(L.trim && L.trim.f === 0.5), () => hxBandTrim(L, 'h'), 'Die halbe Schleife'), chip('¼', !!(L.trim && L.trim.f === 0.25), () => hxBandTrim(L, 'v'), 'Ein Viertel'),
       L.trim ? chip('◀', false, () => hxBandTrim(L, '<'), 'Ausschnitt früher') : null, L.trim ? chip('▶', false, () => hxBandTrim(L, '>'), 'Ausschnitt später') : null, L.trim ? chip('ganz', false, () => hxBandTrim(L, 'ganz'), 'Wieder ganz') : null),
     row('Zeit', 'Die Schleife zeitlich verschieben oder Erkanntes korrigieren.', chip('−1 Schlag', false, () => hxNudge(L, -60 / tgBpm(hxNowT())), 'Einen Schlag früher'), chip('−5 ms', false, () => hxNudge(L, -0.005), 'Fein früher'),
@@ -29654,33 +29708,48 @@ function hxEdRender() {
       row('Pegel', 'Der Abschnitt lauter, leiser oder still.', act('stumm', 'gain', 0, 'Den Abschnitt still'), act('−6 dB', 'gain', dbToGain(-6), 'Leiser'), act('−3 dB', 'gain', dbToGain(-3), 'Etwas leiser'), act('+3 dB', 'gain', dbToGain(3), 'Etwas lauter'), act('+6 dB', 'gain', dbToGain(6), 'Lauter')),
       h('p', { class: 'note' }, 'Jeder Klick ist ein Schritt – ↶ nimmt ihn zurück. Die Auswahl bleibt, du kannst weiter darauf arbeiten oder einen anderen Teil wählen.'));
   }
-  ed.replaceChildren(head, wbox, ...(HXE.waitEl ? [HXE.waitEl] : []), selRow, ...(part ? [part] : []), h('div', { class: 'hx-ed-sec' }, h('div', { class: 'hx-ed-st' }, sch.length === 1 ? 'Schicht' : sch.length + ' Schichten'), ...schRows), h('div', { class: 'hx-ed-sec' }, h('div', { class: 'hx-ed-st' }, HXE.sel ? 'Ganze Schleife' : 'Bearbeiten'), ...tools), foot);
+  ed.replaceChildren(head, tp, wbox, HXE.waitEl, selRow, ...(part ? [part] : []), h('div', { class: 'hx-ed-sec' }, h('div', { class: 'hx-ed-st' }, sch.length === 1 ? 'Schicht' : sch.length + ' Schichten'), ...schRows), h('div', { class: 'hx-ed-sec' }, h('div', { class: 'hx-ed-st' }, HXE.sel ? 'Ganze Schleife' : 'Bearbeiten'), ...tools), foot);
   HXE.wsig = '';
   requestAnimationFrame(() => { hxEdWave(true); for (const c of ed.querySelectorAll('.hx-ed-mini')) hxEdMini(c); });
 }
 // the selection's words: beats and bars of a Takt loop, seconds of a free one
 function hxEdSelText(L, s) {
-  if (hxTakt(L)) { const B = L.d.beats, bpb = L.bpb || 4, a = Math.round(s.a * B), b = Math.round(s.b * B), bar = (x) => Math.floor(x / bpb) + 1 + (x % bpb ? '.' + ((x % bpb) + 1) : '');
-    return 'Schlag ' + (a + 1) + '–' + b + ' von ' + B + ' (ab Takt ' + bar(a) + ', ' + dec(+((b - a) / bpb).toFixed(2)) + ((b - a) === bpb ? ' Takt' : ' Takte') + ')'; }
+  if (hxTakt(L)) { const B = L.d.beats, bpb = L.bpb || 4, q = (x) => Math.round(x * 16) / 16, a = q(s.a * B), b = q(s.b * B), fb = (x) => dec(+x.toFixed(2)), bar = (x) => Math.floor(x / bpb) + 1 + (Math.floor(x % bpb) ? '.' + (Math.floor(x % bpb) + 1) : '');   // (Alt: on sixteenths – a beat with its share)
+    return 'Schlag ' + fb(a + 1) + '–' + fb(b) + ' von ' + B + ' (ab Takt ' + bar(a) + ', ' + fb((b - a) / bpb) + ((b - a) === bpb ? ' Takt' : ' Takte') + ')'; }
   const T = hxLen(L); return dec((s.a * T).toFixed(2)) + '–' + dec((s.b * T).toFixed(2)) + ' s';
 }
 // the grid a stretch snaps to: a beat on the Takt, a sixteenth of a free loop
 const hxEdStep = (L) => (hxTakt(L) ? 1 / Math.max(1, Math.round(L.d.beats)) : 1 / 16);
 function hxEdWaveDrag(box) {
-  const at = (e) => { const r = HXE.cv.getBoundingClientRect(), L = hxEdL(); return clamp((e.clientX - r.left) / Math.max(1, r.width * hxEdWf(L)), 0, 1); };
+  // (a place of the pass under the pointer – in the view, zoomed or whole; px: its share of the drawn width)
+  const px = (e) => { const r = HXE.cv.getBoundingClientRect(), L = hxEdL(); return clamp((e.clientX - r.left) / Math.max(1, r.width * hxEdWf(L)), 0, 1); };
+  const at = (e) => { const [v0, v1] = HXE.zv || [0, 1]; return v0 + px(e) * (v1 - v0); };
   box.addEventListener('pointerdown', (e) => {
     const L = hxEdL(); if (!L || e.button > 0) return;
-    e.preventDefault(); try { box.setPointerCapture(e.pointerId); } catch (x) {}
-    HXE.drag = { id: e.pointerId, x0: at(e), moved: false };
+    e.preventDefault(); try { box.setPointerCapture(e.pointerId); } catch (x) {} box.focus({ preventScroll: true });
+    HXE.drag = { id: e.pointerId, x0: at(e), cx: e.clientX, moved: false };
   });
   box.addEventListener('pointermove', (e) => {
     const D = HXE.drag, L = hxEdL(); if (!D || e.pointerId !== D.id || !L) return;
-    const x = at(e); if (Math.abs(x - D.x0) > 0.004) D.moved = true; if (!D.moved) return;
-    const u = hxEdStep(L), a = Math.floor(Math.min(D.x0, x) / u + 1e-9) * u, b = Math.min(1, Math.ceil(Math.max(D.x0, x) / u - 1e-9) * u);
+    const x = at(e); if (Math.abs(e.clientX - D.cx) > 4) D.moved = true; if (!D.moved) return;
+    const u = hxEdStep(L) / (e.altKey ? 4 : 1), a = Math.floor(Math.min(D.x0, x) / u + 1e-9) * u, b = Math.min(1, Math.ceil(Math.max(D.x0, x) / u - 1e-9) * u);   // (Alt: a sixteenth of a beat)
     HXE.sel = { a, b: Math.max(b, a + u) }; HXE.wsig = '';
   });
-  const up = (e) => { const D = HXE.drag; if (!D || e.pointerId !== D.id) return; HXE.drag = null; if (!D.moved) HXE.sel = null; hxEdRender(); };
-  box.addEventListener('pointerup', up); box.addEventListener('pointercancel', up);
+  // a click: it plays from there (owner, 26.10.2026) – inside the selection the selection stays, outside it goes
+  const up = (e) => {
+    const D = HXE.drag; if (!D || e.pointerId !== D.id) return; HXE.drag = null;
+    if (D.moved) { hxEdRender(); return; }
+    const had = !!HXE.sel; if (HXE.sel && (D.x0 < HXE.sel.a || D.x0 >= HXE.sel.b)) HXE.sel = null;
+    hxPvPlay(D.x0); HXE.wsig = '';
+    if (had !== !!HXE.sel) hxEdRender();
+  };
+  box.addEventListener('pointerup', up); box.addEventListener('pointercancel', (e) => { const D = HXE.drag; if (D && e.pointerId === D.id) { HXE.drag = null; hxEdRender(); } });
+  // Strg+Mausrad: zoom around the pointer; Umschalt+Mausrad (or sideways): move the view
+  box.addEventListener('wheel', (e) => {
+    if (!hxEdL()) return;
+    if (e.ctrlKey || e.metaKey) { e.preventDefault(); hxEdZoom(Math.exp(clamp(e.deltaY, -200, 200) * 0.004), at(e)); }
+    else if (HXE.zv && (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY))) { e.preventDefault(); hxEdPan(((e.shiftKey ? e.deltaY : 0) + e.deltaX) / Math.max(200, box.clientWidth)); }
+  }, { passive: false });
 }
 function hxEdTrimSel(L) {
   const s = HXE.sel; if (!s) return;
@@ -29710,7 +29779,8 @@ function hxEdSchStep(S, from, to, label) {
 // (owner, 26.10.2026: „die Wellenform ändert sich nie – eine exakte Darstellung jederzeit“) what a pass sounds like now,
 // rendered offline by the loop's own processor: every audible Schicht in the version it plays (Abdruck dry or baked,
 // its Wuchs render, its anchor) with its level, the tape's speed, the slices (Weglassen, Tauschen, Schnitt), Verblassen
-// and Abrieb – three passes, the third drawn (with the Ausklang of the one before, as it sounds)
+// and Abrieb – three passes, the third drawn (with the Ausklang of the one before, as it sounds); a loop longer than
+// 20 s two (its render's time and memory). The pass drawn is kept as a buffer: Vorhören plays it
 async function hxEdRenderPass(L, W) {
   const sch = L.sch.map((id) => HX.sch.get(id)).filter((S) => S && !S.mute);
   const ver = (S) => (S.play === 'wu' && S.wu && S.wu.aud ? { ch: S.wu.aud, n: S.wu.n, pre: S.wu.pre || 0, len: S.wu.len, aus: S.wu.rev ? null : { off: S.wu.len, len: Math.max(0, S.wu.n - S.wu.len), fade: 0 }, join: S.wu.rev ? 'xf' : 'ola', kc: 0 }
@@ -29718,7 +29788,7 @@ async function hxEdRenderPass(L, W) {
       : S.aud ? { ch: S.baked && S.bak ? S.bak : S.aud, n: S.n, pre: S.pre, len: S.len, aus: S.aus ? { off: S.aus.off, len: S.aus.len, fade: Math.min(Math.round(0.03 * SR), S.aus.len) } : null, join: S.join, kc: (S.baked ? S.kcB : S.kc) || 0 } : null);
   const vs = sch.map(ver); if (!sch.length || vs.some((v) => !v)) return null;
   // (26.10.2026: the pass as it will be – a change waits for the next seam, the pass now may still be the old one's length)
-  const Lf = Math.max(128, Math.round(hxTakt(L) ? (L.d.beats * 60 * SR) / tgBpm(hxNowT()) : L.d.L)), N = 3;
+  const Lf = Math.max(128, Math.round(hxTakt(L) ? (L.d.beats * 60 * SR) / tgBpm(hxNowT()) : L.d.L)), N = Lf > 20 * SR ? 2 : 3;
   const ctx = new OfflineAudioContext(2, Lf * N, SR);
   if (!(await ensureDSP(ctx))) return null;
   const msgs = [{ loop: { id: 1, lock: 'frei', L: Lf, ph0: 0, gain: 1 } }];
@@ -29732,7 +29802,8 @@ async function hxEdRenderPass(L, W) {
   const buf = await ctx.startRendering(), a = buf.getChannelData(0), b = buf.getChannelData(1), o = (N - 1) * Lf;
   const mn = new Float32Array(W), mx = new Float32Array(W);
   for (let x = 0; x < W; x++) { const i0 = o + Math.floor((x * Lf) / W), i1 = o + Math.max(Math.floor(((x + 1) * Lf) / W), Math.floor((x * Lf) / W) + 1); let lo = 0, hi = 0; for (let i = i0; i < i1; i++) { const v = 0.5 * (a[i] + b[i]); if (v < lo) lo = v; else if (v > hi) hi = v; } mn[x] = lo; mx[x] = hi; }
-  return { mn, mx };
+  const pb = new AudioBuffer({ numberOfChannels: 2, length: Lf, sampleRate: SR }); pb.copyToChannel(a.subarray(o, o + Lf), 0); pb.copyToChannel(b.subarray(o, o + Lf), 1);
+  return { mn, mx, buf: pb };
 }
 // one render at a time, a moment after the last change; a render overtaken by a change is thrown away
 function hxEdRenderKick(L) {
@@ -29754,39 +29825,63 @@ const hxEdWf = (L) => (L ? Math.min(1, 1 / (L.sp || 1)) : 1);
 function hxEdWave(force) {
   const L = hxEdL(), cv = HXE.cv; if (!L || !cv || !cv.isConnected) return;
   const w = cv.clientWidth, hh = cv.clientHeight; if (!w || !hh) return;
-  const ws = HXE.rsig + '|' + (HXE.rw ? HXE.rw.sig : '') + '|' + w + 'x' + hh + '|' + JSON.stringify(HXE.sel || 0);
+  const ws = HXE.rsig + '|' + (HXE.rw ? HXE.rw.sig : '') + '|' + w + 'x' + hh + '|' + JSON.stringify(HXE.sel || 0) + '|' + JSON.stringify(HXE.zv || 0);
   if (force || ws !== HXE.wsig || !HXE.bg) {   // the still layer: grid, waveform, notes, the selection
     HXE.wsig = ws;
-    const raw = hxEdPeaks(L, HXE_W), rd = HXE.rw && HXE.rw.sig === HXE.rsig && !HXE.rw.none ? HXE.rw : null, pk = rd || raw, W = HXE_W;
+    const raw = hxEdPeaks(L, HXE_W), rd = HXE.rw && HXE.rw.sig === HXE.rsig && !HXE.rw.none ? HXE.rw : null, W = HXE_W;
+    // (owner, 26.10.2026: long loops) the view: a share [v0, v1) of the pass – zoomed, its peaks from the rendered pass
+    const [v0, v1] = HXE.zv || [0, 1], vs = v1 - v0;
+    const pk = !HXE.zv ? rd || raw : rd && rd.buf ? hxEdPkBuf(rd.buf, v0, v1, W) : (() => { const q = rd || raw, mn = new Float32Array(W), mx = new Float32Array(W); for (let x = 0; x < W; x++) { const i = Math.min(W - 1, Math.floor((v0 + (x / W) * vs) * W)); mn[x] = q.mn[i]; mx[x] = q.mx[i]; } return { mn, mx }; })();
     hxEdRenderKick(L);
     const bg = HXE.bg || (HXE.bg = document.createElement('canvas')), c = mxFit(bg, w, hh, 0, Math.min(2, devicePixelRatio || 1));
     c.clearRect(0, 0, w, hh); c.fillStyle = '#120e0b'; c.fillRect(0, 0, w, hh);
     const tk = hxTakt(L), B = tk ? Math.round(L.d.beats) : 16, bpb = L.bpb || 4;
-    const wf = hxEdWf(L), ww = w * wf, sp = L.sp || 1;
+    const wf = hxEdWf(L), ww = w * wf, sp = L.sp || 1, X = (u) => ((u - v0) / vs) * ww;
     if (wf < 1) { c.fillStyle = 'rgba(168,152,138,.07)'; c.fillRect(ww, 0, w - ww, hh); c.fillStyle = HXC.dim; c.font = '400 11px ' + COL.fontNum; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('Band ' + (HX_SP.find((x) => Math.abs(x[0] - sp) < 1e-6) || [0, '×' + sp])[1] + ': die Schleife ist ' + (sp === 2 ? 'halb so lang' : 'kürzer'), ww + (w - ww) / 2, hh / 2); }
-    else if (sp < 1) { const xm = Math.round(sp * w) + 0.5; c.strokeStyle = 'rgba(240,230,216,.35)'; c.setLineDash([3, 4]); c.beginPath(); c.moveTo(xm, 0); c.lineTo(xm, hh); c.stroke(); c.setLineDash([]); c.fillStyle = HXC.dim; c.font = '400 10px ' + COL.fontNum; c.textAlign = 'left'; c.textBaseline = 'bottom'; c.fillText('Länge bei ×1', xm + 4, hh - 3); }
-    for (let b = 0; b <= B; b++) {
-      const x = Math.round((b / B) * (ww - 1)) + 0.5, one = tk && b % bpb === 0;
-      c.strokeStyle = one ? 'rgba(255,179,92,.45)' : 'rgba(240,230,216,.08)'; c.lineWidth = 1; c.beginPath(); c.moveTo(x, one ? 0 : 14); c.lineTo(x, hh); c.stroke();
+    else if (sp < 1 && X(sp) <= w) { const xm = Math.round(X(sp)) + 0.5; c.strokeStyle = 'rgba(240,230,216,.35)'; c.setLineDash([3, 4]); c.beginPath(); c.moveTo(xm, 0); c.lineTo(xm, hh); c.stroke(); c.setLineDash([]); c.fillStyle = HXC.dim; c.font = '400 10px ' + COL.fontNum; c.textAlign = 'left'; c.textBaseline = 'bottom'; c.fillText('Länge bei ×1', xm + 4, hh - 3); }
+    const sub = tk && (ww / vs / B) > 48 ? 4 : 1;   // (zoomed in far: the sixteenths too)
+    for (let q = 0; q <= B * sub; q++) {
+      const u = q / (B * sub); if (u < v0 - 1e-9 || u > v1 + 1e-9) continue;
+      const b = q / sub, x = Math.round(X(u) * (ww - 1) / ww) + 0.5, one = tk && q % (bpb * sub) === 0, beat = q % sub === 0;
+      c.strokeStyle = one ? 'rgba(255,179,92,.45)' : beat ? 'rgba(240,230,216,.08)' : 'rgba(240,230,216,.04)'; c.lineWidth = 1; c.beginPath(); c.moveTo(x, one ? 0 : beat ? 14 : 24); c.lineTo(x, hh); c.stroke();
       if (one && b < B) { c.fillStyle = 'rgba(255,179,92,.85)'; c.font = '500 10px ' + COL.fontNum; c.textAlign = 'left'; c.textBaseline = 'top'; c.fillText(String(b / bpb + 1), x + 3, 2); }
     }
-    if (HXE.sel) { c.fillStyle = 'rgba(134,240,208,.16)'; c.fillRect(HXE.sel.a * ww, 0, (HXE.sel.b - HXE.sel.a) * ww, hh); c.strokeStyle = 'rgba(134,240,208,.7)'; c.strokeRect(HXE.sel.a * ww + 0.5, 0.5, (HXE.sel.b - HXE.sel.a) * ww - 1, hh - 1); }
+    if (HXE.sel) { const xa = X(HXE.sel.a), xb = X(HXE.sel.b); c.fillStyle = 'rgba(134,240,208,.16)'; c.fillRect(xa, 0, xb - xa, hh); c.strokeStyle = 'rgba(134,240,208,.7)'; c.strokeRect(xa + 0.5, 0.5, xb - xa - 1, hh - 1); }
     if (!L.sch.some((id) => { const S = HX.sch.get(id); return S && S.aud; })) { c.fillStyle = HXC.dim; c.font = '400 12px ' + COL.fontNum; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('Die Schleife wird noch fertig eingefangen …', w / 2, hh / 2); }
     // the scale: the recording's own peak – so quieter (Verblassen, a Schicht down) or emptier (gaps) shows as such
-    let m = 1e-4; for (let x = 0; x < W; x++) m = Math.max(m, -raw.mn[x], raw.mx[x]);
-    for (let x = 0; x < W; x++) m = Math.max(m, -pk.mn[x], pk.mx[x]);
+    let m = 1e-4; const whole = rd || raw; for (let x = 0; x < W; x++) m = Math.max(m, -raw.mn[x], raw.mx[x], -whole.mn[x], whole.mx[x]);   // (the whole pass's: zooming keeps the scale)
     const yc = hh * 0.55, amp = (hh * 0.42) / Math.max(m, 0.05);
     if (!rd) { c.fillStyle = HXC.dim; c.font = '400 10px ' + COL.fontNum; c.textAlign = 'right'; c.textBaseline = 'top'; c.fillText('Klang wird berechnet …', w - 6, 3); }
     c.fillStyle = L.state === 'spielt' ? 'rgba(233,163,94,.85)' : 'rgba(168,152,138,.7)';
-    for (let x = 0; x < W; x++) { const X = (x / W) * ww, y0 = yc - pk.mx[x] * amp, y1 = yc - pk.mn[x] * amp; c.fillRect(X, y0, Math.max(1, ww / W), Math.max(1, y1 - y0)); }
-    // the notes: where they sound, how high (the loop's own range), how long
-    const D = Math.max(0.05, hxLen(L));
-    c.fillStyle = 'rgba(134,240,208,.85)';
-    for (const n of L.notes) { const x = n.ph * ww, y = 16 + (1 - (n.r != null ? n.r : 0.5)) * (hh - 30), len = Math.max(3, ((n.d || 0.1) / D) * ww); c.fillRect(x, y - 1.5, len, 3); }
+    for (let x = 0; x < W; x++) { const xc = (x / W) * ww, y0 = yc - pk.mx[x] * amp, y1 = yc - pk.mn[x] * amp; c.fillRect(xc, y0, Math.max(1, ww / W), Math.max(1, y1 - y0)); }
+    // the notes: where they sound, how high (the loop's own range), how long – reshaped by the notes' tools: the notes it
+    // plays now bright, the ones played faint behind them (owner, 26.10.2026: „Stufe −1, Krebs, dünner – keine Wirkung?“)
+    const D = Math.max(0.05, hxLen(L)), mk = hxEdNtMarks(L);
+    const bar = (n, D0) => { const x = X(n.ph), y = 16 + (1 - (n.r != null ? n.r : 0.5)) * (hh - 30), len = Math.max(3, ((n.d || 0.1) / D0 / vs) * ww); if (x + len >= 0 && x <= ww) c.fillRect(x, y - 1.5, len, 3); };
+    if (mk) { c.fillStyle = 'rgba(134,240,208,.22)'; for (const n of mk.was) bar(n, 1); c.fillStyle = 'rgba(134,240,208,.9)'; for (const n of mk.now) bar(n, 1); }
+    else { c.fillStyle = 'rgba(134,240,208,.85)'; for (const n of L.notes) bar(n, D); }
+    if (HXE.zv) { c.fillStyle = 'rgba(240,230,216,.10)'; c.fillRect(0, hh - 4, ww, 4); c.fillStyle = 'rgba(240,230,216,.55)'; c.fillRect(v0 * ww, hh - 4, Math.max(3, vs * ww), 4); }   // (where the view is in the whole)
   }
   const c = mxFit(cv, w, hh, 0, Math.min(2, devicePixelRatio || 1));
   c.clearRect(0, 0, w, hh); c.drawImage(HXE.bg, 0, 0, w, hh);
-  if (L.state !== 'angehalten' && A.ctx) { const x = Math.round(hxPhase(L, heardT()) * (w * hxEdWf(L) - 1)) + 0.5; c.strokeStyle = L.state === 'spielt' ? HXC.hypha : HXC.dim; c.lineWidth = 1.5; c.beginPath(); c.moveTo(x, 0); c.lineTo(x, hh); c.stroke(); }
+  const [v0, v1] = HXE.zv || [0, 1], ww = w * hxEdWf(L), X = (u) => Math.round(((u - v0) / (v1 - v0)) * (ww - 1)) + 0.5;
+  // the loop's own playhead – while the editor plays it, its playhead (bright) and the loop's own dimmed; stopped: the mark
+  if (L.state !== 'angehalten' && A.ctx) { const x = X(hxPhase(L, heardT())); if (x >= 0 && x <= ww) { c.strokeStyle = L.state === 'spielt' && !HXE.pv ? HXC.hypha : HXC.dim; c.lineWidth = 1.5; c.beginPath(); c.moveTo(x, 0); c.lineTo(x, hh); c.stroke(); } }
+  const pu = hxPvPos(), xp = X(pu);
+  if (xp >= 0 && xp <= ww) {
+    if (HXE.pv) { c.strokeStyle = '#f6efe4'; c.lineWidth = 2; c.beginPath(); c.moveTo(xp, 0); c.lineTo(xp, hh); c.stroke(); c.fillStyle = '#f6efe4'; c.beginPath(); c.moveTo(xp - 5, 0); c.lineTo(xp + 5, 0); c.lineTo(xp, 7); c.closePath(); c.fill(); }
+    else if (pu > 0) { c.strokeStyle = 'rgba(246,239,228,.6)'; c.setLineDash([2, 3]); c.lineWidth = 1; c.beginPath(); c.moveTo(xp, 0); c.lineTo(xp, hh); c.stroke(); c.setLineDash([]); c.fillStyle = 'rgba(246,239,228,.75)'; c.beginPath(); c.moveTo(xp - 4, 0); c.lineTo(xp + 4, 0); c.lineTo(xp, 6); c.closePath(); c.fill(); }
+  }
+}
+// the notes a loop plays when its notes' tools reshape them (Stufen, dünner, dichter, Krebs, Umkehrung, Groove): place,
+// height on one scale with the notes as played, length – shares of the pass (null: it plays them as played)
+function hxEdNtMarks(L) {
+  if (!hxNtOn(L)) return null;
+  const S = L.sch.map((id) => HX.sch.get(id)).find((x) => hxWCan(x)); if (!S) return null;
+  const W = hxWNotesT(L, S); if (!W || !W.n) return null;
+  const U = Math.max(1e-6, W.len || 1), fs = W.n.concat(S.wn.n).map((n) => Math.log2(n.f)).filter(Number.isFinite), lo = Math.min(...fs), hi = Math.max(...fs);
+  const one = (n) => { const d = n.d != null ? Math.max(0, n.d) / U : 0.02; let ph = (((n.t % U) + U) % U) / U; if (L.rev) ph = clamp(1 - ph - Math.min(d, 1), 0, 0.9999); return { ph, d, r: hi > lo ? (Math.log2(n.f) - lo) / (hi - lo) : 0.5 }; };
+  return { now: W.n.map(one), was: S.wn.n.map(one) };
 }
 function hxEdMini(cv) {
   const S = cv.hxS, L = hxEdL(); if (!S || !L) return;
@@ -29805,13 +29900,20 @@ function hxEdFrame() {
   const a = document.activeElement, busy = HXE.drag || (a && a.type === 'range' && HXE.ed.contains(a) && (a.matches(':active')));
   if (!busy && hxEdSig(L) !== HXE.sig) hxEdRender();
   hxEdWave(false);
-  if (HXE.waitEl) { const f = L.prev ? L.prev.until : null, p = HX.pend.find((x) => x.loop === L.id && x.kind === 'band'), t = f != null ? hxT(f) : p ? p.t : null, s = t != null ? Math.max(0, Math.ceil(t - hxNowT())) : null, tx = s != null ? 'Das Bild zeigt schon den neuen Stand – zu hören ab der nächsten Naht, in ' + s + ' s.' : ''; if (HXE.waitEl.textContent !== tx) HXE.waitEl.textContent = tx; }
+  hxPvFrame(L);
+  if (HXE.waitEl) {   // (26.10.2026) what still waits: the notes played anew, a new length or a swap at the next seam
+    const now = hxNowT(), f = L.prev ? L.prev.until : null, p = HX.pend.find((x) => x.loop === L.id && x.kind === 'band'), sch = L.sch.map((id) => HX.sch.get(id)).filter(Boolean), sw = sch.reduce((m, S) => (S.swapF != null && hxT(S.swapF) > now + 0.15 ? Math.max(m, hxT(S.swapF)) : m), 0);
+    const t = f != null ? hxT(f) : p ? p.t : sw || null, s = t != null ? Math.max(0, Math.ceil(t - now)) : null, busy = sch.some((S) => S.wBusy);
+    const tx = busy ? 'Die Noten werden neu gespielt … gleich zu hören.' : s != null ? (HXE.pv ? 'Beim Vorhören schon zu hören – in der laufenden Schleife ab der nächsten Naht, in ' : 'Das Bild zeigt schon den neuen Stand – zu hören ab der nächsten Naht, in ') + s + ' s.' : '';
+    if (HXE.waitEl.textContent !== tx) HXE.waitEl.textContent = tx;
+  }
 }
 // ---- (owner, 26.10.2026) „einzelne Abschnitte, die man auswählt, separat editieren, ohne dass der Rest betroffen ist“ –
 // a stretch chosen in the editor is changed on its own, written into the Schicht's audio (its dry and its baked version
 // alike, the same frames): the tape faster or slower (the stretch keeps its length – owner's choice: ×2 plays it twice
 // in its time, ½ its first half slowly), rückwärts, Weglassen and Tauschen of its onsets, louder, softer or silent.
 // 5-ms crossfades at the stretch's edges and inside; one history step each (↶ swaps the audio before back – hxGeo).
+// Heard at once (hxSwapAt: mid-pass, crossfaded), its ↶ too.
 // The loop's own tools (the whole tape, Verblassen, Abrieb) keep working on top. ----
 const HX_RX = Math.round(0.005 * SR);   // the crossfade at a stretch's edges, at a repetition's joins and a slice's
 // a windowed sinc (Kaiser, β 9, 32 taps) read at a fractional position of a chunk list – the cutoff lowered for a
@@ -29891,7 +29993,7 @@ function hxRegionEdit(L, a, b, op, v) {
   if (hxWAktiv(L)) { toast('Diese Schleife spielt ihre Noten neu (Wuchs) – Abschnitte lassen sich nur an der Aufnahme bearbeiten. Zuerst „Erstarren“ oder Noten wie gespielt.', 5000); return false; }
   const sch = hxBandReady(L); if (!sch) return false;
   if (sch.some((S) => !hxMemOk(2 * S.n))) return false;
-  const before = hxGeo(L), fl0 = hxBandFl(L), sw = hxNextSeam(L), u = hxBandU(L).map((p) => (p - a) / (b - a)).filter((p) => p >= 0 && p < 1);
+  const before = hxGeo(L), fl0 = hxBandFl(L), sw = hxSwapAt(L), u = hxBandU(L).map((p) => (p - a) / (b - a)).filter((p) => p >= 0 && p < 1);
   const done = [];
   for (const S of sch) {
     const [r0, r1] = hxRxFrames(S, a, b); if (r1 - r0 < 64) continue;
@@ -29899,13 +30001,13 @@ function hxRegionEdit(L, a, b, op, v) {
     const aud = ed(S.aud), bak = S.bak ? ed(S.bak) : null, X = S.X || Math.round(0.01 * SR), g = { pre: S.pre, len: S.len, X, zo: S.zo || 0 };
     const c = Object.assign({}, S.cut, { pre: S.pre, len: S.len, n: S.n, aus: S.aus ? Object.assign({}, S.aus) : null, stale: true });
     done.push([S.key, S.aud, aud, S.bak, bak]);
-    hxSchSwap(S, c, { aud, bak, f: sw.f, join: 'xf', X, rho: hxRho(bak && S.chain && !L.folgt ? bak : aud, S.n, S.pre, S.len, X), zo: S.zo || 0, kc: hxSeamOf(g, aud), kcB: bak ? hxSeamOf(g, bak) : null, dr: S.dr });
+    hxSchSwap(S, c, { aud, bak, f: sw.f, now: !!sw.now, join: 'xf', X, rho: hxRho(bak && S.chain && !L.folgt ? bak : aud, S.n, S.pre, S.len, X), zo: S.zo || 0, kc: hxSeamOf(g, aud), kcB: bak ? hxSeamOf(g, bak) : null, dr: S.dr });
   }
   if (!done.length) { toast('Der Abschnitt ist zu kurz.'); return false; }
   // a trimmed loop: its whole keeps the edit too (the same frames of the same audio)
   if (L.tr0) L.tr0 = Object.assign({}, L.tr0, { sch: L.tr0.sch.map((s) => { const d = done.find((x) => x[0] === s.key && x[1] === s.aud); return d ? Object.assign({}, s, { aud: d[2], bak: s.bak === d[3] ? d[4] : s.bak }) : s; }) });
   const lab = { band: 'Band ' + (HX_SP.find((x) => Math.abs(x[0] - v) < 1e-6) || [0, '×' + v])[1], rev: 'rückwärts', weg: 'Weglassen ' + Math.round(v * 100) + ' %', tausch: 'Tauschen ' + Math.round(v * 100) + ' %', gain: v === 0 ? 'stumm' : (v > 1 ? 'lauter ' : 'leiser ') + Math.round(Math.abs(20 * Math.log10(v))) + ' dB' }[op];
-  hxBandStep(L, 'Abschnitt ' + hxRxName(L, a, b) + ' ' + lab, before, fl0);
+  hxBandStep(L, 'Abschnitt ' + hxRxName(L, a, b) + ' ' + lab, before, fl0, { now: true });
   hxSay(hxName(L) + ': Abschnitt ' + lab); hxSaveLoop(L); hxCardDirty();
   return true;
 }
@@ -29914,6 +30016,99 @@ function hxRxName(L, a, b) {
   if (!hxTakt(L)) { const T = hxLen(L); return dec((a * T).toFixed(1)) + '–' + dec((b * T).toFixed(1)) + ' s'; }
   const B = L.d.beats, bpb = L.bpb || 4, x = Math.round(a * B), y = Math.round(b * B);
   return x % bpb === 0 && y % bpb === 0 ? 'Takt ' + (x / bpb + 1) + (y - x > bpb ? '–' + y / bpb : '') : 'Schlag ' + (x + 1) + '–' + y;
+}
+// ---- (owner, 26.10.2026: „in der Schleifen-Ansicht auch ein Play und Stopp – und dass man auf eine beliebige Stelle
+// klickt und es dort weiterspielt; bei längeren Schleifen muss man sonst immer alles durchlaufen lassen“) Vorhören: the
+// editor plays the loop as it sounds with every change – the pass it renders for its waveform (hxEdRenderPass) – from
+// any place, at once; the running loop is silent meanwhile (the others play on), a chosen stretch repeats. A change
+// while it plays: the new render takes over at the same place, crossfaded. Space plays and stops (the focus in the
+// editor), a click into the waveform plays from there. ----
+const HXPV_X = 0.03;   // the crossfade between renders, at a jump, at the stop (s)
+// where it plays: a share of the pass (stopped: its mark)
+function hxPvPos() {
+  const P = HXE.pv; if (!P || !A.ctx) return HXE.pvAt || 0;
+  let el = P.off + Math.max(0, A.ctx.currentTime - P.t0);
+  if (el >= P.b) el = P.a + ((el - P.b) % Math.max(1e-3, P.b - P.a));
+  return clamp(el / P.dur, 0, 1);
+}
+// what repeats: the chosen stretch (unless „Auswahl wiederholen“ is off), else the whole pass – in seconds of the buffer
+const hxPvRange = (dur) => (HXE.sel && HXE.pvRep !== false ? [HXE.sel.a * dur, Math.max(HXE.sel.a * dur + 0.02, HXE.sel.b * dur)] : [0, dur]);
+const hxPvLvl = (L) => L.gain * (L.gg != null ? L.gg : 1);   // (the rendered pass holds each Schicht's level – the loop's own and its pan come here)
+const hxPvBuf = () => (HXE.rw && HXE.rw.sig === HXE.rsig && HXE.rw.buf ? HXE.rw.buf : null);
+function hxPvPlay(u) {
+  const L = hxEdL(); if (!L || !A.ctx) return;
+  if (u != null) HXE.pvAt = clamp(u, 0, 0.9999);
+  const buf = hxPvBuf();
+  if (!buf) { HXE.pvWant = true; hxEdRenderKick(L); return; }   // (it starts when the pass is rendered)
+  HXE.pvWant = false;
+  hxPvSrc(L, buf, HXE.pv ? (u != null ? HXE.pvAt : hxPvPos()) : HXE.pvAt || 0);
+}
+function hxPvSrc(L, buf, u) {
+  const ctx = A.ctx, t = ctx.currentTime + 0.02, dur = buf.duration, old = HXE.pv && HXE.pv.key === L.key ? HXE.pv : null;
+  if (HXE.pv && !old) hxPvStop();
+  let out = old ? old.out : null;
+  if (!out) { const g = ctx.createGain(), p = ctx.createStereoPanner(); g.gain.value = hxPvLvl(L); p.pan.value = L.pan || 0; g.connect(p).connect(stripIn('hxr')); out = { g, p }; }
+  const [a, b] = hxPvRange(dur); let off = clamp(u * dur, 0, dur - 1e-3); if (off < a || off >= b) off = a;
+  const src = ctx.createBufferSource(), x = ctx.createGain();
+  src.buffer = buf; src.loop = true; src.loopStart = a; src.loopEnd = b; src.connect(x).connect(out.g);
+  x.gain.setValueAtTime(0, t); x.gain.linearRampToValueAtTime(1, t + HXPV_X);
+  src.start(t, off);
+  if (old) hxPvFade(old, t);
+  HXE.pv = { key: L.key, src, x, out, buf, t0: t, off, a, b, dur };
+  if (!old) { L.pvMute = true; hxGain(L.id, 0, null, 0.03); if (IDLE.on) idleWake(); hxSay(hxName(L) + ': Vorhören'); }
+}
+function hxPvFade(P, t) { try { P.x.gain.cancelScheduledValues(t); P.x.gain.setValueAtTime(P.x.gain.value, t); P.x.gain.linearRampToValueAtTime(0, t + HXPV_X); P.src.stop(t + HXPV_X + 0.02); } catch (e) {} }
+function hxPvStop() {
+  const P = HXE.pv; HXE.pvWant = false; if (!P) return;
+  HXE.pvAt = hxPvPos(); HXE.pv = null;
+  const t = A.ctx.currentTime; hxPvFade(P, t);
+  setTimeout(() => { try { P.out.g.disconnect(); P.out.p.disconnect(); } catch (e) {} }, (HXPV_X + 0.1) * 1000);
+  const L = hxByKey(P.key); if (L) { L.pvMute = false; if (L.state !== 'weg') hxGain(L.id, L.gain, null, 0.03); }   // (the loop as it runs, at its own place)
+  HXE.wsig = '';
+}
+function hxPvToggle() { if (HXE.pv || HXE.pvWant) hxPvStop(); else hxPvPlay(); }
+// a jump: playing – from there at once; stopped – the mark moves
+function hxPvJump(u) { u = clamp(u, 0, 0.9999); if (HXE.pv) hxPvPlay(u); else { HXE.pvAt = u; HXE.wsig = ''; } }
+// every frame (the editor's): the render waited for starts it, a new render takes over where it plays, the stretch
+// that repeats follows the selection, the button and the clock
+function hxPvFrame(L) {
+  const P = HXE.pv, buf = hxPvBuf();
+  if (HXE.pvWant && buf) hxPvPlay();
+  else if (P && buf && P.buf !== buf) hxPvSrc(L, buf, hxPvPos());
+  else if (P) { const [a, b] = hxPvRange(P.dur); if (Math.abs(a - P.a) > 1e-6 || Math.abs(b - P.b) > 1e-6) hxPvSrc(L, P.buf, hxPvPos()); }
+  if (HXE.pv) { const g = hxPvLvl(L), pn = L.pan || 0, o = HXE.pv.out; if (Math.abs(o.g.gain.value - g) > 1e-4) o.g.gain.setTargetAtTime(g, A.ctx.currentTime, 0.02); if (Math.abs(o.p.pan.value - pn) > 1e-3) o.p.pan.setTargetAtTime(pn, A.ctx.currentTime, 0.02); }
+  const b = HXE.pvBtn; if (b) { const tx = HXE.pv ? '■ Stopp' : HXE.pvWant ? '… wird berechnet' : '▶ Abspielen'; if (b.textContent !== tx) { b.textContent = tx; b.setAttribute('aria-pressed', HXE.pv ? 'true' : 'false'); } }
+  if (HXE.tEl) { const tx = hxPvTime(L, hxPvPos()); if (HXE.tEl.textContent !== tx) HXE.tEl.textContent = tx; }
+  // (zoomed in: the view follows what plays)
+  if (HXE.pv && HXE.zv) { const p = hxPvPos(), [v0, v1] = HXE.zv, s = v1 - v0; if (p < v0 || p > v1) { const n0 = clamp(p - 0.02 * s, 0, 1 - s); HXE.zv = [n0, n0 + s]; } }
+}
+// the place in words: Takt and Schlag on the Takt, and the seconds of the pass
+function hxPvTime(L, u) {
+  const T = HXE.pv ? HXE.pv.dur : hxPvBuf() ? hxPvBuf().duration : hxLen(L), s = u * T, mm = (x) => Math.floor(x / 60) + ':' + dec((x % 60).toFixed(1)).padStart(4, '0');
+  let w = '';
+  if (hxTakt(L)) { const B = L.d.beats, bpb = L.bpb || 4, be = Math.min(B - 1e-9, u * B); w = 'Takt ' + (Math.floor(be / bpb) + 1) + ' · Schlag ' + (Math.floor(be % bpb) + 1) + ' · '; }
+  return w + mm(s) + ' / ' + mm(T);
+}
+// the waveform's view (a share of the pass): zoomed around a place, moved, whole again
+function hxEdZoom(f, u) {
+  const L = hxEdL(); if (!L) return;
+  const [v0, v1] = HXE.zv || [0, 1], s0 = v1 - v0, T = Math.max(0.05, hxLen(L)), min = Math.max(1 / 512, 0.2 / T), s = clamp(s0 * f, min, 1);
+  const was = !!HXE.zv;
+  if (s >= 1 - 1e-9) HXE.zv = null;
+  else { const c = u != null ? u : HXE.pv ? hxPvPos() : HXE.sel ? (HXE.sel.a + HXE.sel.b) / 2 : (v0 + v1) / 2, p = (c - v0) / s0, n0 = clamp(c - p * s, 0, 1 - s); HXE.zv = [n0, n0 + s]; }
+  HXE.wsig = ''; if (was !== !!HXE.zv) hxEdRender();   // (its „ganz“ comes and goes)
+}
+function hxEdZoomTo(a, b) { const was = !!HXE.zv, s = Math.max(b - a, 1 / 512), m = s * 0.04; if (s + 2 * m >= 1 - 1e-9) HXE.zv = null; else { const n0 = clamp(a - m, 0, 1 - (s + 2 * m)); HXE.zv = [n0, n0 + s + 2 * m]; } HXE.wsig = ''; if (was !== !!HXE.zv) hxEdRender(); }
+function hxEdPan(d) { if (!HXE.zv) return; const [v0, v1] = HXE.zv, s = v1 - v0, n0 = clamp(v0 + d * s, 0, 1 - s); HXE.zv = [n0, n0 + s]; HXE.wsig = ''; }
+// the peaks of a stretch [v0, v1) of the rendered pass, W columns
+function hxEdPkBuf(buf, v0, v1, W) {
+  const a = buf.getChannelData(0), b = buf.getChannelData(1), n = a.length, mn = new Float32Array(W), mx = new Float32Array(W);
+  for (let x = 0; x < W; x++) {
+    const i0 = Math.floor((v0 + (x / W) * (v1 - v0)) * n), i1 = Math.min(n, Math.max(i0 + 1, Math.floor((v0 + ((x + 1) / W) * (v1 - v0)) * n)));
+    let lo = 0, hi = 0; for (let i = i0; i < i1; i++) { const v = 0.5 * (a[i] + b[i]); if (v < lo) lo = v; else if (v > hi) hi = v; }
+    mn[x] = lo; mx[x] = hi;
+  }
+  return { mn, mx };
 }
 // ---- persistence (SPEC §19): IndexedDB myzel v2 – „rings“ (a Schleife's record: geometry, Schichten, notes,
 // Bewegung, the Takt) and „ringsegs“ ([ring, schicht, i]: its audio in ≈ 4-s segments, Float32, sample rate kept).
@@ -31647,6 +31842,7 @@ function hxKeyDown(e) {
     if (e.code === 'KeyZ' || e.code === 'KeyY') { e.preventDefault(); e.stopPropagation(); if (!e.repeat) (e.shiftKey || e.code === 'KeyY' ? hxRedoStep : hxUndoStep)(); }
     return;
   }
+  if (e.code === 'Space' && !e.shiftKey && HXE.ed && !HXE.ed.hidden && HXE.ed.contains(e.target)) { e.preventDefault(); e.stopPropagation(); if (!e.repeat) hxPvToggle(); return; }   // (owner, 26.10.2026: in the editor – Vorhören)
   const free = hxKeyFree(e.target), rail = !!(HXU.rail && HXU.rail.contains(e.target)), dg = /^Digit([1-8])$/.exec(e.code);
   if (e.code === 'Space' && free) { e.preventDefault(); e.stopPropagation(); if (!e.repeat) { HXPED.down.add('Space'); hxHaupt(hxKeyEv(e)); } return; }
   if (e.shiftKey && dg && (free || rail)) { e.preventDefault(); e.stopPropagation(); if (!e.repeat) { const L = hxRingL(+dg[1] - 1); if (L) hxEdOpen(L); } return; }   // (owner, 25.10.2026: Umschalt+1…8 – the loop's editor)
@@ -32254,13 +32450,13 @@ async function hxWRender(L, S, sig, key) {
   return { aud, n, len: job.lenF, sig, seed, ms: m.rms || m.ms || 0, dur: job.dur };
 }
 // a Schicht's version to the processor at frame f: the Abdruck (dry or baked), its Treu render, or its anchor
-function hxWPlay(S, which, f, keepStream) {
+function hxWPlay(S, which, f, keepStream, now) {
   const L = HX.loops.get(S.loop); if (!L || !HX.node) return false;
   if (which === 'ab') { S.play = 'ab'; hxWStop(S); return hxSchPlay(S, !!(S.bak && S.chain && !L.folgt), f); }
   const V = which === 'anc' ? S.anc : S.wu; if (!V || !V.aud) return false;
   const [cp, tr] = hxCopy(V.aud), out = L.folgt ? 1 : 0;
   if (out) hxOut1();
-  hxPost({ replace: { loop: S.loop, schicht: S.id, chunks: cp, n: V.n, pre: V.pre || 0, len: V.len, ausklang: V.rev ? null : { off: V.len, len: Math.max(0, V.n - V.len) }, f, join: V.rev ? 'xf' : 'ola', X: Math.round(0.01 * SR), rho: 0, zo: 0, kc: V.rev ? hxSeamOf({ pre: V.pre || 0, len: V.len, X: Math.round(0.01 * SR), zo: 0 }, V.aud) : 0, out, dd: 1, wu: 1 } }, tr);   // (step 2b: a mirrored version: its margin before it, joined warm)
+  hxPost({ replace: { loop: S.loop, schicht: S.id, chunks: cp, n: V.n, pre: V.pre || 0, len: V.len, ausklang: V.rev ? null : { off: V.len, len: Math.max(0, V.n - V.len) }, f, join: V.rev ? 'xf' : 'ola', X: Math.round(0.01 * SR), XM: now ? HX_XM : undefined, rho: 0, zo: 0, kc: V.rev ? hxSeamOf({ pre: V.pre || 0, len: V.len, X: Math.round(0.01 * SR), zo: 0 }, V.aud) : 0, out, dd: 1, wu: 1 } }, tr);   // (step 2b: a mirrored version: its margin before it, joined warm)
   S.play = which; S.out = out; S.swapF = f; S.ddOn = true; hxCount();
   if (!keepStream && S.wLive) S.wk = Math.max(S.wk == null ? -1 : S.wk, hxPassK(L, f));   // (that pass is this version's)
   return true;
@@ -32281,16 +32477,17 @@ function hxWUpdate(L, o = {}) {
   HX.wFeld = hxLoopsLive().some((X) => (X.klang || 'eigen') === 'feld' && hxWAktiv(X));
   const on = hxWAktiv(L), F = HX.folge && HX.folge.loops.includes(L.key) ? HX.folge : null;
   // (while a key change is announced, nothing of this loop changes before its bar line)
-  const at = () => (o.f != null ? o.f : F ? Math.max(Math.round(hxF(F.t)), hxNextSeam(L).f) : hxNextSeam(L).f);
+  // (owner, 26.10.2026: „on the fly“ – o.now: a tool of the notes is heard at once, crossfaded mid-pass)
+  const at = () => (o.f != null ? o.f : F ? Math.max(Math.round(hxF(F.t)), hxNextSeam(L).f) : o.now ? hxSwapAt(L).f : hxNextSeam(L).f), nw = () => !!o.now && !F && o.f == null && hxNowOk(L);
   if (F && !o.key) o = Object.assign({}, o, { key: F.key });
   for (const id of L.sch) {
     const S = HX.sch.get(id);
     if (!hxWCan(S)) continue;
     if (!S.wseed) S.wseed = ((Math.random() * 2147483646) | 0) + 1;
-    if (!on) { if (S.play && S.play !== 'ab') hxWPlay(S, 'ab', at()); continue; }
+    if (!on) { if (S.play && S.play !== 'ab') hxWPlay(S, 'ab', at(), false, nw()); continue; }
     const sig = hxWSig(L, S, o.key);
-    if (S.anc && S.anc.sig === sig) { if (S.play !== 'anc') hxWPlay(S, 'anc', at()); continue; }
-    if (S.wu && S.wu.sig === sig) { if (S.play !== 'wu' || o.re) hxWPlay(S, 'wu', at()); continue; }
+    if (S.anc && S.anc.sig === sig) { if (S.play !== 'anc') hxWPlay(S, 'anc', at(), false, nw()); continue; }
+    if (S.wu && S.wu.sig === sig) { if (S.play !== 'wu' || o.re) hxWPlay(S, 'wu', at(), false, nw()); continue; }
     hxWRenderFor(L, S, sig, Object.assign({}, o, { f: o.f != null ? o.f : F ? Math.round(hxF(F.t)) : null }));
   }
   hxCardDirty(); hxRailDirty();
@@ -32306,7 +32503,7 @@ function hxWRenderFor(L, S, sig, o = {}) {
     if (!X || !HX.sch.has(S.id) || (S.ver || 0) !== ver) return;
     if (V && V.sig === hxWSig(X, S, o.key) && (S.wu || hxMemOk(V.n))) {   // (final pass: a first Treu version within the Speichergrenze, as every other buffer – else the Abdruck plays on)
       S.wu = V; S.wuSaved = 0;
-      if (hxWAktiv(X) && !(S.anc && S.anc.sig === V.sig)) hxWPlay(S, 'wu', o.f != null && o.f > hxF(hxNowT() + 0.05) ? o.f : hxNextSeam(X).f);
+      if (hxWAktiv(X) && !(S.anc && S.anc.sig === V.sig)) { const now = !!o.now && o.f == null && hxNowOk(X); hxWPlay(S, 'wu', o.f != null && o.f > hxF(hxNowT() + 0.05) ? o.f : now ? hxSwapAt(X).f : hxNextSeam(X).f, false, now); }
       hxSaveSch(S, 'w');
     }
     if (S.wAgain || (V && V.sig !== hxWSig(X, S, o.key))) hxWUpdate(X, S.wAgain || {});
@@ -32748,7 +32945,7 @@ function hxCardTools(L, sch, chip, row, btn) {
   const sp = L.sp || 1, slc = L.slc || {}, nt = L.nt || {}, notes = sch.some(hxWCan), audio = !notes, tk = hxTakt(L);
   const kids = [
     row('Band', ...HX_SP.map(([v, t]) => chip(t, Math.abs(sp - v) < 1e-6, () => hxSpeed(L, v), 'Bandgeschwindigkeit ' + t + (v === 1 ? '' : v < 1 ? ' – tiefer und langsamer' : ' – höher und schneller'))),
-      chip('rückwärts', !!L.rev, () => hxRev(L), 'Rückwärts ab der Naht'), chip('Stopp', false, () => hxBandstopp([L]), 'Bandstopp: das Band läuft aus')),
+      chip('rückwärts', !!L.rev, () => hxRev(L), 'Rückwärts – sofort, ab der gespiegelten Stelle'), chip('Stopp', false, () => hxBandstopp([L]), 'Bandstopp: das Band läuft aus')),
     row('Trimmen', chip('½', !!(L.trim && L.trim.f === 0.5), () => hxBandTrim(L, 'h'), 'Trimmen: die halbe Schleife'), chip('¼', !!(L.trim && L.trim.f === 0.25), () => hxBandTrim(L, 'v'), 'Trimmen: ein Viertel'),
       L.trim ? chip('◀', false, () => hxBandTrim(L, '<'), 'Ausschnitt früher') : null, L.trim ? chip('▶', false, () => hxBandTrim(L, '>'), 'Ausschnitt später') : null, L.trim ? chip('ganz', false, () => hxBandTrim(L, 'ganz'), 'Wieder ganz') : null,
       chip('Verdoppeln', false, () => hxDouble(L), 'Verdoppeln: doppelt so lang durch Wiederholung')),
@@ -32859,9 +33056,11 @@ const hxBandNotes = (L) => L.sch.some((id) => hxWCan(HX.sch.get(id)));
 // Schnitt: an audio loop of the rhythmic kind is re-placed by slices when its pass is not its own length (the processor
 // decides at each pass start) – loops with notes grow in the new tempo instead (Wuchs)
 const hxSchnitt = (L) => !L.bew && (L.tempoArt || L.art) === 'schlag' && !hxBandNotes(L);
-function hxBandSend(L) {
+// now (owner, 26.10.2026: „on the fly“): Weglassen and Tauschen from this moment, crossfaded – not while a new length
+// waits for its seam (the slices are the coming pass's)
+function hxBandSend(L, now) {
   if (!L || L.bew || !HX.node) return;
-  hxPost({ slice: hxBandSliceOf(L) || { loop: L.id, off: 1 } });
+  hxPost({ slice: Object.assign(hxBandSliceOf(L) || { loop: L.id, off: 1 }, now && !L.prev ? { now: 1 } : null) });
 }
 // the slices a loop plays as the processor gets them (null: none) – the editor's waveform renders with the same
 function hxBandSliceOf(L) {
@@ -32909,8 +33108,10 @@ function hxTempoArtSet(L, a) { L.tempoArt = a; hxBandSend(L); hxSaveMeta(L.id); 
 // length follows (a Takt loop: beats × old / new – it stays on the grid, the servo lands in phase) ----
 function hxSpeed(L, sp, o = {}) {
   if (!L || L.bew || !HX.node) return;
-  const was = L.sp || 1; if (Math.abs(was - sp) < 1e-9) return;
-  if (HX.pend.some((p) => p.kind === 'band' && p.loop === L.id)) { const p = HX.pend.find((x) => x.kind === 'band' && x.loop === L.id); hxPendDrop(p); p.cancel(); }
+  // (26.10.2026) a switch of the player's own still waiting is taken back first (its step with it) – the new one is
+  // reckoned from what plays then; one that an ↶ ↷ waits for stays: the new one follows it at the same seam
+  const pw = HX.pend.find((x) => x.kind === 'band' && x.loop === L.id && !x.replay); if (pw) { hxPendDrop(pw); pw.cancel(); }
+  const was = L.sp || 1; if (Math.abs(was - sp) < 1e-9) { hxCardDirty(); hxRailDirty(); return; }
   const sw = hxNextSeam(L), f = sw.f, k = sw.k - 1, takt = hxTakt(L);
   const geo = takt ? { beats: (L.d.beats * was) / sp } : { L: Math.round((L.d.L * was) / sp) }, P1 = takt ? (geo.beats * 60) / tgBpm(hxT(f)) : geo.L / SR;
   const T = Math.max(0.05, Math.min(P['hx.traeg'], 0.9 * P1));
@@ -32921,7 +33122,7 @@ function hxSpeed(L, sp, o = {}) {
   const lab = 'Band ' + HX_SP.find((x) => Math.abs(x[0] - sp) < 1e-6)[1];
   // (26.10.2026, owner: every edit of a loop undoable at once) the step; a ↶ while the switch still waits cancels it and the step
   const lk = L.key, step = o.noHist ? null : { kind: 'band', label: hxName(L) + ': ' + lab, undo() { const X = hxByKey(lk); if (X) hxSpeed(X, was, { noHist: 1 }); }, redo() { const X = hxByKey(lk); if (X) hxSpeed(X, sp, { noHist: 1 }); } };
-  hxPendAdd({ kind: 'band', loop: L.id, t: hxT(f), label: lab + (takt ? ' ab Takt ' + hxBarNo(Math.round(hxBeatAtF(f) - TG.o)) : ' an der Naht'),
+  hxPendAdd({ kind: 'band', loop: L.id, t: hxT(f), replay: !!o.noHist, label: lab + (takt ? ' ab Takt ' + hxBarNo(Math.round(hxBeatAtF(f) - TG.o)) : ' an der Naht'),
     cancel: () => { if (step) HX.hist = HX.hist.filter((x) => x !== step); const X = HX.loops.get(L.id); if (!X) return; hxBatch(() => hxPost({ geom: Object.assign({ loop: X.id, f }, takt ? { beats: d0.beats } : { L: d0.L }), band: { loop: X.id, f, vs: was, T: 1 } })); hxGeomMirror(X, f, k, d0.beats, d0.L); X.sp = was; hxCardDirty(); } });
   if (step) hxHist(step);
   hxSay(hxName(L) + ': ' + lab); hxSaveMeta(L.id); hxCardDirty(); hxRailDirty();
@@ -32953,14 +33154,14 @@ function hxBandReady(L, what) {
 }
 // the step for a content change of the tape: ↶ gives back what was (its geometry, its Schichten), ↷ again
 const hxBandFl = (L) => ({ rev: !!L.rev, revW: !!L.revW, trim: L.trim || null, tr0: L.tr0 || null, dbl: L.dbl || 1, notes0: L.notes0 || L.notes || null, aon0: L.aon0 || L.aon || null });   // (25.10.2026: the notes as played – ↶ after a first trim gave back only the trimmed ones)
-function hxBandStep(L, label, before, f0) {
-  const key = L.key, after = {}, f1 = hxBandFl(L);
+function hxBandStep(L, label, before, f0, o = {}) {
+  const key = L.key, after = {}, f1 = hxBandFl(L), now = { now: !!o.now };   // (a change heard at once: its ↶ ↷ at once too)
   hxHist({ kind: 'band', label: hxName(L) + ': ' + label,
-    undo() { const X = hxByKey(key); if (X) { after.g = hxGeo(X); hxGeoBack(X, before); Object.assign(X, f0); hxBandNotesFix(X); hxSaveMeta(X.id); } },
-    redo() { const X = hxByKey(key); if (X && after.g) { hxGeoBack(X, after.g); Object.assign(X, f1); hxBandNotesFix(X); hxSaveMeta(X.id); } } });
+    undo() { const X = hxByKey(key); if (X) { after.g = hxGeo(X); const n = hxGeoBack(X, before, now); Object.assign(X, f0); hxBandNotesFix(X, n); if (n && hxWAktiv(X)) hxWUpdate(X, { now: 1 }); hxSaveMeta(X.id); } },
+    redo() { const X = hxByKey(key); if (X && after.g) { const n = hxGeoBack(X, after.g, now); Object.assign(X, f1); hxBandNotesFix(X, n); if (n && hxWAktiv(X)) hxWUpdate(X, { now: 1 }); hxSaveMeta(X.id); } } });
 }
 // the ring's spores and the slices follow what the tape does (rückwärts, Trimmen, Verdoppeln)
-function hxBandNotesFix(L) {
+function hxBandNotesFix(L, now) {
   const base = L.notes0 || (L.notes0 = L.notes);
   let ns = base.map((n) => Object.assign({}, n));
   const tr = L.trim; if (tr && tr.f < 1) { const a = hxTrA(tr); ns = ns.filter((n) => n.ph >= a - 1e-9 && n.ph < a + tr.f - 1e-9).map((n) => Object.assign(n, { ph: (n.ph - a) / tr.f, d: n.d })); }
@@ -32968,24 +33169,25 @@ function hxBandNotesFix(L) {
   if (L.rev) { const D = Math.max(0.05, hxLen(L)); ns = ns.map((n) => Object.assign(n, { ph: clamp(1 - n.ph - Math.min(n.d || 0, D) / D, 0, 0.9999) })); }
   L.notes = ns;
   if (L.aon0 || L.aon) { const a0 = L.aon0 || (L.aon0 = L.aon); let u = a0.slice(); if (tr && tr.f < 1) { const a = hxTrA(tr); u = u.filter((p) => p >= a && p < a + tr.f).map((p) => (p - a) / tr.f); } for (let i = 1; i < (L.dbl || 1); i *= 2) u = u.map((p) => p / 2).concat(u.map((p) => 0.5 + p / 2)); if (L.rev) u = u.map((p) => (1 - p) % 1).sort((a, b) => a - b); L.aon = u; }
-  hxBandSend(L); hxRailDirty(); hxCardDirty();
+  hxBandSend(L, now); hxRailDirty(); hxCardDirty();
 }
 const hxRevArr = (ch, n) => { const [a] = hxChunks(n); for (let i = 0; i < n; i++) { const s = ch[Math.floor((n - 1 - i) / HX_CH)], j = (n - 1 - i) % HX_CH, d = a[Math.floor(i / HX_CH)], k = i % HX_CH; d[0][k] = s ? s[0][j] : 0; d[1][k] = s ? s[1][j] : 0; } return a; };
 const hxDrMap = (dr, n, map) => { if (!dr) return null; const o = new Float32Array(Math.ceil(n / 128) + 1); for (let j = 0; j < o.length; j++) o[j] = dr[clamp(Math.floor(map(Math.min(n - 1, j * 128)) / 128), 0, dr.length - 1)]; return o; };
-// rückwärts at the seam: every Schicht's audio (dry and baked) mirrored – its margins swap: what came before the window
-// is the continuation after it now; the seam is the warm crossfade
+// rückwärts: every Schicht's audio (dry and baked) mirrored – its margins swap: what came before the window is the
+// continuation after it now; the seam is the warm crossfade. At once (owner, 26.10.2026: mid-pass, from the mirrored
+// place – crossfaded), or at the seam while a new length waits for it
 function hxRev(L) {
   const sch = hxBandReady(L); if (!sch) return false;
-  const before = hxGeo(L), sw = hxNextSeam(L), was = !!L.rev;
+  const before = hxGeo(L), sw = hxSwapAt(L), was = !!L.rev;
   for (const S of sch) {
     const n = S.n, pre = n - S.pre - S.len, aud = hxRevArr(S.aud, n), bak = S.bak ? hxRevArr(S.bak, n) : null, X = S.X || Math.round(0.01 * SR);
     const c = Object.assign({}, S.cut, { pre, len: S.len, post: S.pre, n, aus: null, stale: true });
     const g = { pre, len: S.len, X, zo: 0 };   // (the mirrored seam's own curve, as every seam's – the law held in every window, not the one-number fallback)
-    hxSchSwap(S, c, { aud, bak, f: sw.f, join: 'xf', X, rho: hxRho(bak && S.chain && !L.folgt ? bak : aud, n, pre, S.len, X), zo: 0, kc: hxSeamOf(g, aud), kcB: bak ? hxSeamOf(g, bak) : null, dr: hxDrMap(S.dr, n, (i) => n - 1 - i) });
+    hxSchSwap(S, c, { aud, bak, f: sw.f, now: !!sw.now, join: 'xf', X, rho: hxRho(bak && S.chain && !L.folgt ? bak : aud, n, pre, S.len, X), zo: 0, kc: hxSeamOf(g, aud), kcB: bak ? hxSeamOf(g, bak) : null, dr: hxDrMap(S.dr, n, (i) => n - 1 - i) });
   }
   const fl = hxBandFl(L); L.rev = !was; L.revW = !L.revW;   // (revW: its Wuchs renders mirrored too)
-  hxBandStep(L, was ? 'vorwärts' : 'rückwärts', before, fl);
-  hxBandNotesFix(L); if (hxWAktiv(L)) hxWUpdate(L);
+  hxBandStep(L, was ? 'vorwärts' : 'rückwärts', before, fl, { now: !!sw.now });
+  hxBandNotesFix(L, !!sw.now); if (hxWAktiv(L)) hxWUpdate(L, sw.now ? { now: 1 } : {});
   hxSay(hxName(L) + (L.rev ? ' rückwärts' : ' vorwärts')); hxSaveLoop(L);
   return true;
 }
@@ -33100,13 +33302,13 @@ function hxAbSet(L, rate, fresh, o = {}) {
 }
 // a loop's Abrieb as it was (↶): its rate and its seed – the wear starts again from new
 function hxAbPut(L, ab) { L.ab = ab ? Object.assign({}, ab) : null; hxPost({ abr: L.sch.map((id) => (L.ab ? { schicht: id, rate: L.ab.rate, seed: L.ab.seed } : { schicht: id, off: 1 })) }); hxSaveMeta(L.id); hxCardDirty(); }
-function hxSlcPut(L, s) { L.slc = s ? Object.assign({}, s) : null; hxBandSend(L); hxSaveMeta(L.id); hxCardDirty(); }
+function hxSlcPut(L, s) { L.slc = s ? Object.assign({}, s) : null; hxBandSend(L, true); hxSaveMeta(L.id); hxCardDirty(); }
 function hxSlcSet(L, k, v, o = {}) {
   const was = L.slc ? Object.assign({}, L.slc) : null, lk = L.key;
   if (k !== 'neu' && ((was && was[k]) || 0) === v) return;
   const s = (L.slc = Object.assign({ pd: 0, pw: 0, seed: ((Math.random() * 2147483646) | 0) + 1 }, L.slc || {}));
   if (k === 'neu') s.seed = ((Math.random() * 2147483646) | 0) + 1; else s[k] = v;
-  hxBandSend(L); hxSaveMeta(L.id); hxCardDirty();
+  hxBandSend(L, true); hxSaveMeta(L.id); hxCardDirty();
   const lab = (k === 'pd' ? 'Auslassen ' : k === 'pw' ? 'Würfeln ' : 'neu gewürfelt') + (k === 'neu' ? '' : HX_SLP.find((x) => x[0] === v)[1]), to = Object.assign({}, L.slc);
   hxSay(hxName(L) + ': ' + lab);
   if (!o.noHist) hxHist({ kind: 'band', label: hxName(L) + ': ' + lab, undo() { const X = hxByKey(lk); if (X) hxSlcPut(X, was); }, redo() { const X = hxByKey(lk); if (X) hxSlcPut(X, to); } });
@@ -33209,7 +33411,7 @@ function hxNtSet(L, k, v) {
   const was = Object.assign({ tr: 0, dens: 0, gq: 0, krebs: false, umk: false }, L.nt || {}), to = Object.assign({}, was);
   if (k === 'tr') to.tr = clamp(was.tr + v, -14, 14); else if (k === 'dens') to.dens = clamp(was.dens + v, -3, 2); else if (k === 'gq') to.gq = clamp(Math.round((was.gq + v) * 2) / 2, -1, 1);
   else if (k === 'krebs' || k === 'umk') to[k] = !was[k]; else if (k === 'zurueck') Object.assign(to, { tr: 0, dens: 0, gq: 0, krebs: false, umk: false });
-  const lk = L.key, put = (X, s) => { X.nt = Object.assign({}, s); X.wwhy = Object.assign(X.wwhy || {}, { nt: hxNtOn(X) }); hxWUpdate(X); hxSaveMeta(X.id); hxCardDirty(); hxRailDirty(); };
+  const lk = L.key, put = (X, s) => { X.nt = Object.assign({}, s); X.wwhy = Object.assign(X.wwhy || {}, { nt: hxNtOn(X) }); hxWUpdate(X, { now: 1 }); hxSaveMeta(X.id); hxCardDirty(); hxRailDirty(); };
   put(L, to);
   const lab = k === 'tr' ? 'Stufe ' + (to.tr > 0 ? '+' : '') + to.tr : k === 'dens' ? (to.dens < 0 ? 'dünner ' + -to.dens : to.dens > 0 ? 'dichter ' + to.dens : 'Dichte wie gespielt') : k === 'gq' ? (to.gq > 0 ? 'straffer' : to.gq < 0 ? 'lockerer' : 'Groove wie gespielt') : k === 'krebs' ? (to.krebs ? 'Krebs' : 'vorwärts') : k === 'umk' ? (to.umk ? 'Umkehrung' : 'nicht umgekehrt') : 'Noten wie gespielt';
   hxHist({ kind: 'wuchs', label: hxName(L) + ': ' + lab, undo() { const X = hxByKey(lk); if (X) put(X, was); }, redo() { const X = hxByKey(lk); if (X) put(X, to); } });

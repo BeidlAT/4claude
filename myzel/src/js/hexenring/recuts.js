@@ -8,6 +8,15 @@ function hxBatch(fn) {
 }
 // the next seam at least ≈ 60 ms ahead (the swap must reach the processor first)
 function hxNextSeam(L) { const f = Math.round(hxF(hxNowT() + 0.06)), k = hxPassK(L, f); return { k: k + 1, f: hxPassF(L, k + 1) }; }
+// (owner, 26.10.2026: „on the fly“) a change of a loop's sound without a new length is heard at once: its audio swapped
+// mid-pass (the processor's crossfade at the same place, HX_XM) – unless a new length or another swap still waits for
+// its seam (the swap would come before it); then at the seam, as before
+const HX_XM = Math.round(0.025 * SR);
+function hxNowOk(L) {
+  const f = Math.round(hxF(hxNowT() + 0.06));
+  return !!L && !L.prev && !HX.pend.some((p) => p.loop === L.id && p.kind === 'band') && !L.sch.some((id) => { const S = HX.sch.get(id); return S && S.swapF > f; });
+}
+const hxSwapAt = (L) => (hxNowOk(L) ? { f: Math.round(hxF(hxNowT() + 0.06)), now: true } : hxNextSeam(L));
 function hxSchSwap(S, c, o = {}) {
   const L = HX.loops.get(S.loop); if (!L) return;
   S.ver = (S.ver || 0) + 1;
@@ -18,11 +27,12 @@ function hxSchSwap(S, c, o = {}) {
   S.ddOn = false;
   if (out) hxOut1();
   let tr;
-  if (o.aud) { const [cp, t1] = hxCopy(bak || o.aud); d.chunks = cp; tr = t1; if (o.join) Object.assign(d, { join: o.join, X: o.X, rho: o.rho }); const dr = o.dr || S.dr; if (dr) { d.dr = Float32Array.from(dr); tr.push(d.dr.buffer); } }
+  if (o.aud) { const [cp, t1] = hxCopy(bak || o.aud); d.chunks = cp; tr = t1; if (o.join) Object.assign(d, { join: o.join, X: o.X, rho: o.rho }); if (o.now) d.XM = HX_XM; const dr = o.dr || S.dr; if (dr) { d.dr = Float32Array.from(dr); tr.push(d.dr.buffer); } }
   else { const [dst, t1] = hxChunks(c.n), [cp, t2] = hxChunks(c.n); d.chunks = dst; d.copy = cp; tr = t1.concat(t2); d.fill = { in: c.in, f0: c.f0, v: S.ver }; d.dr = new Float32Array(Math.ceil(c.n / 128) + 1); d.drc = new Float32Array(d.dr.length); tr.push(d.dr.buffer, d.drc.buffer); }
   const m = { replace: d };
   if (o.geom) { m.geom = Object.assign({ loop: S.loop, f: o.f }, o.geom); const k = hxPassK(L, (o.f != null ? o.f : Math.round(hxF(hxNowT()))) - 1); hxGeomMirror(L, hxPassF(L, k + 1), k, o.geom.beats || L.d.beats, o.geom.L || L.d.L); }
   hxPost(m, tr);
+  S.swapF = o.f;
   Object.assign(S, { cut: c, len: c.len, pre: c.pre, n: c.n, aus: c.aus ? Object.assign({}, c.aus) : null, aud: o.aud || null, live: !o.aud, saved: 0, out, bak: o.aud ? o.bak || null : null, baked: !!bak, zo: o.zo || 0, kc: o.kc || null, kcB: o.kcB || null, dr: o.aud ? o.dr || S.dr : null, cutAus: !!o.cutAus, spliced: !!o.spliced });
   hxCount();
   if (S.play && S.play !== 'ab') S.play = 'ab';   // Hexenring (step 2b): the version swapped in is an Abdruck – a Wuchs version is sent again by hxWUpdate, never assumed still playing
@@ -38,20 +48,22 @@ function hxGeomMirror(L, f, k, beats, Lf) {
 }
 // what a loop is now (geometry, tempo, its Schichten) – a re-cut's undo goes back to it
 function hxGeo(L) { return { d: Object.assign({}, L.d), bpb: L.bpb, bpm: TG.hx, hxOn: TG.hxOn, o: TG.o, sch: L.sch.map((id) => hxSnapS(HX.sch.get(id))).filter(Boolean), nudge: L.nudge || 0 }; }
-function hxGeoBack(L, g) {
-  const sw = hxNextSeam(L);
+function hxGeoBack(L, g, o = {}) {
+  const same = g.d.beats === L.d.beats && g.d.L === L.d.L && Math.abs(g.bpm - TG.hx) < 1e-9 && Math.abs(g.o - TG.o) < 1e-9 && g.nudge === (L.nudge || 0);
+  const sw = o.now && same ? hxSwapAt(L) : hxNextSeam(L);   // (the undo of a change heard at once: at once too)
   hxBatch(() => {
     if (g.hxOn && TG.hxOn && Math.abs(g.bpm - TG.hx) > 1e-9 && !SEQ.ext) { TG.hx = g.bpm; tgRetempo(g.bpm); for (const fn of CTL['seq.bpm'] || []) fn(P['seq.bpm'], null); }
     if (Math.abs(g.o - TG.o) > 1e-9) { const sh = g.o - TG.o; TG.o = g.o; TG.ver++; rgRebase(sh); }
     for (const s of g.sch) {
       const S = hxSchByKey(s.key); if (!S) continue;
       const c = { in: s.cut.in, w0: s.cut.w0, w1: s.cut.w1, f0: s.cut.f0, pre: s.pre, len: s.len, post: s.cut.post, n: s.n, aus: s.aus };
-      if (s.aud || hxReach(s.cut)) hxSchSwap(S, s.aud ? c : s.cut, { aud: s.aud, bak: s.bak, zo: s.zo, kc: s.kc, kcB: s.kcB, dr: s.dr, cutAus: s.cutAus, spliced: s.spliced, f: sw.f, join: s.join, X: s.X, rho: s.rho, fade: Math.min(Math.round(0.03 * SR), s.aus ? s.aus.len : 0),
+      if (s.aud || hxReach(s.cut)) hxSchSwap(S, s.aud ? c : s.cut, { aud: s.aud, bak: s.bak, zo: s.zo, kc: s.kc, kcB: s.kcB, dr: s.dr, cutAus: s.cutAus, spliced: s.spliced, f: sw.f, now: !!sw.now, join: s.join, X: s.X, rho: s.rho, fade: Math.min(Math.round(0.03 * SR), s.aus ? s.aus.len : 0),
         geom: s === g.sch[0] && (g.d.beats !== L.d.beats || g.d.L !== L.d.L) ? (hxTakt(L) ? { beats: g.d.beats } : { L: g.d.L }) : null });
     }
   });
   L.bpb = g.bpb; L.nudge = g.nudge;
   hxSaveLoop(L); hxCardDirty();
+  return !!sw.now;
 }
 // a new tempo for the Schleife that gave it: the Taktgeber's slope and the loop's beats in one message, from its next
 // seam (a bar line – the new grid starts there; its sound is untouched); also the undo of such a correction

@@ -2,6 +2,17 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-26d",
+      "punkte": [
+        "Schleife bearbeiten: Änderungen hörst du jetzt sofort, nicht erst wenn die Schleife einmal durch ist – Noten (Stufe, dünner, dichter, Krebs, Umkehrung), rückwärts, Weglassen, Tauschen und bearbeitete Abschnitte wechseln mitten im Durchgang, weich überblendet. Nur Band und Trimmen ändern die Länge und warten deshalb auf die Naht.",
+        "Neu im Bearbeiten-Fenster: ▶ Abspielen und ■ Stopp (auch mit der Leertaste) – du hörst die Schleife so, wie sie mit allen Änderungen klingt, auch Band und Trimmen sofort. Die laufende Schleife schweigt solange, die anderen spielen weiter.",
+        "Ein Klick in die Wellenform spielt ab dieser Stelle; mit einer Auswahl wiederholt sich nur dieser Teil. Eine Uhr zeigt Takt, Schlag und Sekunden.",
+        "Zoom für lange Schleifen: Strg+Mausrad oder − / +, „Auswahl“ zeigt den gewählten Teil groß, Umschalt+Mausrad schiebt. Mit gedrückter Alt-Taste wählst du feiner (Sechzehntel).",
+        "Die Noten-Werkzeuge wirken (geprüft): Die Wellenform zeigt die neu gespielten Noten hell, die ursprünglichen blass dahinter; solange neu gespielt wird, steht es darunter.",
+        "Behoben: Zwei Bandwechsel kurz hintereinander (oder ↶ gleich danach) konnten die Schleife falsch lang machen."
+      ]
+    },
+    {
       "id": "2026-10-26c",
       "punkte": [
         "Schleife bearbeiten: Einen gewählten Teil kannst du jetzt allein bearbeiten – der Rest der Schleife bleibt, wie er ist.",

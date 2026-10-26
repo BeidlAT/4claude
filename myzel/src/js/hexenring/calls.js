@@ -68,7 +68,7 @@ function hxState(loop, to, at, o = {}) {
 // a level (a loop's, or a Schicht's: {schicht: id}), with a smooth ramp (s); pan for a loop
 function hxGain(target, g, at, ramp, pan) {
   const t = typeof target === 'object' ? target : { loop: target };
-  if (t.schicht == null && g != null) { const L = HX.loops.get(t.loop); if (L && L.gg != null) g *= L.gg; }   // (Etappe 3: under the Gärtner's factor – the player's level stays his own)
+  if (t.schicht == null && g != null) { const L = HX.loops.get(t.loop); if (L && L.gg != null) g *= L.gg; if (L && L.pvMute) g = 0; }   // (owner, 26.10.2026: silent while the editor plays it – Vorhören)   // (Etappe 3: under the Gärtner's factor – the player's level stays his own)
   return hxPost({ gain: Object.assign({}, t, { g, f: hxAt(at), ramp: ramp != null ? Math.round(ramp * SR) : undefined, pan }) });
 }
 // a Schicht out (its seam fade), a loop or all out; → Promise of the chunks the processor hands back
