@@ -106,6 +106,22 @@ Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`)
      Filter drei Bandpässe (`VOK_F`, `VOK_C`, `VOK_MAKEUP`, `vokConnect`), erst beim ersten Gebrauch gespeist – vorher
      kosten sie nichts, in Ruhe ist die Kette exakt wie vorher. t-map-touche misst a/i/u an weißem Rauschen.
    Klang nur in Chromium geprüft; Stärken (Formant-Q, Makeup, Platte-Bremse) nach dem Ohr des Besitzers nachstellen.
+   **F5–F12 (Besitzer, 26.10.2026: „viel weitreichendere Klangformung, acht weitere F-Tasten, jede fundamental anders“;
+   gewählt: den aktuellen Klang formen, keine eigenen Klänge):** `TCH_W` 16 Einträge (`tchKey`: F1–F4, ⇧F1–F4, F5–F12),
+   `midi.tch` erweitert, Ziele `tch.9–16`. Einschub in den Kanälen Klang und Ebene 2 (`buildStrips`: `st.tD`/`st.tW`, danach
+   `st.pt` – der Kanal-EQ hängt jetzt dort an), `js/midi/touche-fx.js` (`TFX`, `tfxSet` aus `tchApply`): erst bei Bewegung
+   in den Weg, in Ruhe (Prozessor meldet `idle`) wieder heraus – dann exakt wie vorher; die Gespielt-Abgriffe hören ihn.
+   Prozessor `myzel-tfx` (`js/dsp/touche-fx.js`, Ring 10,9 s): **Körner** (Körnerwolke, bis 6 s zurück, Tonhöhen-Streuung
+   in Oktaven/Quinten, rückwärts), **Eis** (0,6 s eingefroren, Körner an Zufallsstellen, ±1 Oktave gleitend, Verwischen über
+   2×4 Allpässe, dunkler + Oktave darunter), **Obertöne** (4× Überabtastung, tanh mit Versatz = gerade, Chebyshev = ungerade,
+   Wellenfaltung, Kleinsignal-Verstärkung 1), **Stottern** (Ausschnitt 1 … 1/16 Schlag im Puls-Tempo aus dem Ziel der Hand,
+   Band langsamer, Ausklingen + Tiefpass), **Resonanz** (6 Saiten auf die gehaltenen Töne, sonst Grunddreiklang; Druck =
+   Nachklang 0,25 … 9 s, heller, Dispersions-Allpass = Glocke, ±1 Oktave; sanfte Pegelwache). **Ort** nativ: Verzögerung =
+   Entfernung/343 (Doppler), Luft-Tiefpass, Nähe-Bass, `PannerNode` HRTF, Hall über Formen `rev`. **Fächer** spielt echte
+   Stimmen der Klangquelle (`tfxFan`: Paar ±6 … 18 Cent, Oktave ↓/↑, Quinte; folgen Höhe/Tonhöhe, enden mit dem Ton) – ein
+   Tonhöhenschieber auf dem Signal waberte hörbar (verworfen). **Arpeggio** (`tfxArp`, `hit` je Ebene; auf dem Puls-Raster
+   2/3/4/6/8 je Schlag, sonst 3 … 16/s). Test `midi-tests/t-tch-fx.js` (13, in run-map). Nur in Chromium geprüft; ob der
+   Browser F5/F11/F12 hergibt (Firefox!), am Gerät prüfen – sonst die Chips.
    **Offene Testfehler (25.10.2026, Besitzer: „notier dir den Fehler“):** im Regressionslauf nach #24 rot – `v2/func`
    (Last-Zeilen: q2 kor/glo/sai, q3 neb/hau/mem/sch – „load 39.98/32 …“, das Stimmenbudget) und `motion-tests` (Gestik-
    Erlaubnis/requestPermission, Ansicht gedreht, Pad „Gestik an/aus“, „nothing saved … myzel.guard.v1“, Dorisch-Nachbarstufe,

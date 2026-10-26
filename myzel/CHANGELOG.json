@@ -2,6 +2,16 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-26f",
+      "punkte": [
+        "Touché: acht neue Spielweisen auf F5 bis F12 – jede formt deinen Klang grundverschieden, in Ruhe bleibt er genau wie vorher.",
+        "F5 Körner (Körnerwolke aus dem eben Gespielten) · F6 Eis (Drücken friert den Klang ein, seitlich malst du ihn in der Tonhöhe) · F7 Obertöne (gerade, ungerade, Antrieb, Faltung).",
+        "F8 Fächer (jeder Ton fächert sich in echte Stimmen auf: Oktave darunter, darüber, Quinte, verstimmtes Paar) · F9 Ort (der Klang an einem Ort im Raum – weit weg, nah am Ohr, rundherum; am besten mit Kopfhörer).",
+        "F10 Stottern (Drücken wiederholt den Moment im Tempo des Pulses) · F11 Resonanz (Saiten, auf deine Töne gestimmt, schwingen mit) · F12 Arpeggio (die Hand spielt deine gehaltenen Töne nacheinander).",
+        "Was jede Richtung tut, steht in der Geräte-Karte beim Touché; Schleifen nehmen alles mit auf. Falls der Browser F5, F11 oder F12 für sich behält: die Chips in der Geräte-Karte wählen sie ebenso."
+      ]
+    },
+    {
       "id": "2026-10-26e",
       "punkte": [
         "Mixer: Jede Schleife hat jetzt ihren eigenen Kanal direkt im Pult, gleich rechts neben „Hexenring“ – Pegel, Balance, Stumm, Solo und eigene Anzeige. Ein Tipp auf den Namen öffnet die Schleife zum Bearbeiten.",
