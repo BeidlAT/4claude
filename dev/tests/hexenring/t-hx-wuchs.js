@@ -79,6 +79,7 @@ async function wtools(page) {
 
 (async () => {
   const { page, errors } = await G.open({});
+  await page.evaluate(() => window.__M.setParam('hx.folgen', 'diatonisch'));   // (following the key is tested here – since 27.10.2026 a choice, not the default)
   const ev = (fn, a) => page.evaluate(fn, a);
   await wtools(page);
   await ev(async () => { const M = window.__M; await M.hxWerk(); await M.A.ctx.audioWorklet.addModule(window.__testUrl); });

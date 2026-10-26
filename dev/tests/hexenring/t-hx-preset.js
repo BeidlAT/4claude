@@ -1,10 +1,12 @@
 // (owner, 26.10.2026: „einzelne Schleifen werden nicht gespielt, wenn ich ein älteres eigenes Preset lade“) three
-// Schleifen play; an own preset (another key, sound, tempo) is loaded: every Schleife still sounds afterwards.
+// Schleifen play; an own preset (another key, sound, tempo) is loaded: every Schleife still sounds afterwards. By default
+// (owner, 27.10.2026) they play their recording – no announcement, nothing rendered; FOLGEN=diatonisch: they follow it.
 //                                                                                     node t-hx-preset.js
 const G = require('./hx-g'), H = require('./hx-h');
 const { ok } = H;
 (async () => {
   const { page, errors } = await G.open({ w: 1440, h: 900 });
+  if (process.env.FOLGEN) await page.evaluate((v) => window.__M.setParam('hx.folgen', v), process.env.FOLGEN);
   if (process.env.OV) await page.evaluate((s) => { window.__ov = JSON.parse(s); }, process.env.OV);
   if (process.env.BARS) await page.evaluate((b) => { window.__bars = b; }, process.env.BARS);
   if (process.env.DBG) await page.evaluate(() => { window.__dbg = 1; });
@@ -34,7 +36,8 @@ const { ok } = H;
     o.back = back;
     o.states = M.hxLoopsLive().map((L) => L.slot + ':' + L.state + (L.gain != null ? ':' + L.gain : ''));
     o.after = await lv();
-    o.pend = M.HX.pend.map((p) => p.kind);
+    o.pend = M.HX.pend.map((p) => p.kind); o.folgen = M.P['hx.folgen'];
+    o.wu = M.hxLoopsLive().map((L) => M.HX.sch.get(L.sch[0]).play || 'ab');
     if (window.__dbg) {
       o.dbg = M.hxLoopsLive().map((L) => L.sch.map((id) => { const S = M.HX.sch.get(id); return { play: S.play, busy: !!S.wBusy, again: !!S.wAgain, wu: S.wu && S.wu.sig && String(S.wu.sig).slice(0, 40), cur: String(M.hxWSig(L, S)).slice(0, 40), wk: S.wk, can: M.hxWCan(S), ver: S.ver }; }));
       await sl(10000); o.later = await lv();
@@ -47,6 +50,7 @@ const { ok } = H;
   ok(s.length === 3 && s.every((k) => r.before[k] > 0.002), `three Schleifen sound before (${JSON.stringify(r.before)})`);
   ok(s.every((k) => r.back[k] != null && r.back[k] < 2500), `each sounds again within 2.5 s of the load (ms: ${JSON.stringify(r.back)})`);
   ok(s.every((k) => r.after[k] > 0.002), `after loading the own preset every one still sounds (${JSON.stringify(r.after)}; ${r.states.join(' ')})`);
+  if (r.folgen === 'fest') ok(r.wu.every((w) => w === 'ab') && !r.pend.includes('folge'), `by default they play their recording – nothing announced, nothing rendered (${r.wu.join(' ')})`);
   ok(!errors.length, 'no page errors ' + errors.slice(0, 3).join(' | '));
   H.summary(); process.exit(0);
 })();

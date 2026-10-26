@@ -2827,6 +2827,7 @@ NUM('hx.welk', 'Welkt über', 4, 16, 8, '', { step: 1, rec: 1, fmt: (v) => v + '
 BOOL('hx.runde', 'Überspielen: eine Runde', false, { rec: 1 });
 // (step 2a) Wuchs: how a new Schleife begins (exactly as played, or grown anew); the level loops are rendered at (owner: manual,
 // the best by default; „wie gespielt“ = the level the loop was played at); the field's key and the loops' on the same bar line
+SEL('hx.folgen', 'Neue Schleife folgt der Tonart', [['fest', 'Nein – Original'], ['diatonisch', 'Diatonisch'], ['transponieren', 'Transponiert']], 'fest', { chips: 1, small: 1, rec: 1 });   // (owner, 27.10.2026: „die Schleife spielt immer die Originalaufnahme“ – folgen nur, wenn eingestellt)
 SEL('hx.beginn', 'Neue Schleife', [['abdruck', 'Wie gespielt'], ['wuchs', 'Als Wuchs']], 'abdruck', { chips: 1, small: 1, rec: 1 });
 SEL('hx.stufe', 'Klangstufe der Schleifen', [['gespielt', 'Wie gespielt'], ['1', '1'], ['2', '2'], ['3', '3']], '3', { chips: 1, small: 1, rec: 1 });
 BOOL('hx.tonartAmTakt', 'Tonart wechselt mit den Schleifen am Takt', true, { rec: 1 });
@@ -32192,7 +32193,7 @@ function hxLoopMake(o) {
   Object.assign(L, { slot: o.slot, key: o.key || hxKey('l'), bpb: o.bpb || 4, notes: o.notes || [], mv: o.mv || null, cut: o.cut || null, eng: o.eng || 'neb', setTG: !!o.setTG,
     gain: o.gain != null ? o.gain : 1, pan: o.pan || 0, made: Date.now(), ps: [], src: o.src || 0, bpm: o.bpm || tgBpm(hxNowT()), lv: [0, 0], taumeln: o.taumeln !== false, folgt: !!o.folgt, eig: HX_EIG.includes(o.eig) ? o.eig : 'treu',
     // (step 2a) Wuchs: why it grows (wahl: hx.beginn for a new one), how it follows, the level it was played at, the patch
-    wwhy: o.wwhy ? Object.assign({}, o.wwhy) : { wahl: !o.key && o.eng !== 'bew' && P['hx.beginn'] === 'wuchs' }, ton: o.ton || 'diatonisch', klang: o.klang || 'eigen', stufe: o.stufe || null, q: o.q || P['dev.q'], P: o.P || (o.key ? null : Object.assign({}, P)), mask: o.mask || [...HX.mask], chainRec: o.chainRec || null, jrg: o.jrg || { age: A.jrgAge || 0, season: A.season || 0 } });   // (jrg: the Jahresring's year as it was played – a Wuchs pass hits that bar, not today's)
+    wwhy: o.wwhy ? Object.assign({}, o.wwhy) : { wahl: !o.key && o.eng !== 'bew' && P['hx.beginn'] === 'wuchs' }, ton: o.ton || P['hx.folgen'] || 'fest', klang: o.klang || 'eigen', stufe: o.stufe || null, q: o.q || P['dev.q'], P: o.P || (o.key ? null : Object.assign({}, P)), mask: o.mask || [...HX.mask], chainRec: o.chainRec || null, jrg: o.jrg || { age: A.jrgAge || 0, season: A.season || 0 } });   // (jrg: the Jahresring's year as it was played – a Wuchs pass hits that bar, not today's)
   HX.slot[o.slot] = id;
   if (o.eng !== 'bew' && (!HX.fokus || !HX.loops.has(HX.fokus) || HX.loops.get(HX.fokus).bew)) HX.fokus = id;   // Hexenring: (step 1d) never a Schleife of Bewegung
   if (o.fokus !== false && o.eng !== 'bew') HX.fokus = id;
@@ -33919,7 +33920,7 @@ function hxCardSec() {
   HXK.gd = h('div', { class: 'hx-form-sec hx-gd' });   // (Etappe 3: the Gärtner)
   const set = foldSec('hxset', 'Einstellungen', [
     grid(ctl('hx.modus'), ctl('hx.start'), ctl('hx.raster'), ctl('hx.ein'), ctl('hx.klick'), ctl('hx.laenge'), ctl('hx.festT'), ctl('hx.pulsMit'), ctl('hx.borMit'), ctl('hx.autoclose'), ctl('hx.runde'), ctl('hx.rail'), ctl('hx.humus'), ctl('hx.ernte'), ctl('hx.mem')),
-    h('div', { class: 'lab hx-sub' }, 'Wuchs'), grid(ctl('hx.beginn'), ctl('hx.stufe'), ctl('hx.tonartAmTakt')),   // (step 2a)
+    h('div', { class: 'lab hx-sub' }, 'Wuchs'), grid(ctl('hx.folgen'), ctl('hx.beginn'), ctl('hx.stufe'), ctl('hx.tonartAmTakt')),   // (step 2a)
     h('div', { class: 'lab hx-sub' }, 'Form'), grid(ctl('hx.regel'), ctl('hx.lichMix'), ctl('hx.lichPuls'), ctl('hx.lueckeT'), ctl('hx.schluss'), ctl('hx.welk')),
     h('div', { class: 'lab hx-sub' }, 'Mitspieler'), grid(ctl('hx.gPlatz'), ctl('hx.gRollen'), ctl('hx.gAntw'), ctl('hx.gBegl'), ctl('hx.gWk'), ctl('hx.gStimme'), ctl('hx.hand')), (HXK.hand = h('div', { class: 'hx-klopf' })),   // (Etappe 3)
     h('div', { class: 'lab hx-sub' }, 'Band und Bühne'), grid(ctl('hx.traeg'), ctl('hx.stopp'), ctl('hx.buehne')),   // (step 2b)
@@ -34072,7 +34073,7 @@ function hxCardWuchs(L, sch, chip, row, btn) {
       h('span', { class: 'hx-ms' }, (no && on ? 'ohne Werk-Rahmen: ' : '') + word + (why && on ? (word ? ' · ' : '') + why : ''))),
     row('Eigensinn', ...HX_EIG.map((e) => chip(HX_EIGW[e], (L.eigWant || L.eig || 'treu') === e, () => hxWSet(L, 'eig', e), 'Eigensinn ' + HX_EIGW[e] + { treu: ': gleiche Noten, gleicher Wurf', lebendig: ': neuer Wurf in jedem Durchgang', variieren: ': Noten auf leichten Zeiten ändern sich', wandern: ': Halbtakte tauschen, immer zurück zum Anker' }[e])), L.eigWant ? h('span', { class: 'hx-ms' }, 'nach drei Runden') : null),
     row('Stufe', ...[['gespielt', 'wie gespielt'], ['1', '1'], ['2', '2'], ['3', '3']].map(([k, t]) => chip(t, (stufe || P['hx.stufe']) === k, () => hxWSet(L, 'stufe', k === P['hx.stufe'] ? null : k), 'Klangstufe ' + t + (k === 'gespielt' ? ' (' + (L.q || '?') + ')' : ''))), h('span', { class: 'hx-ms' }, on ? 'Stufe ' + st : '')),
-    row('Folgen', ...[['diatonisch', 'diatonisch'], ['transponieren', 'transp.'], ['fest', 'fest']].map(([k, t]) => chip(t, (L.ton || 'diatonisch') === k, () => hxWSet(L, 'ton', k), 'Tonart: ' + k))),
+    row('Folgen', ...[['diatonisch', 'diatonisch'], ['transponieren', 'transp.'], ['fest', 'fest']].map(([k, t]) => chip(t, hxTon(L) === k, () => hxWSet(L, 'ton', k), 'Tonart: ' + k))),
     row('Klang', chip('eigener', klang === 'eigen', () => hxWSet(L, 'klang', 'eigen'), 'Klang: der eigene'), chip('Spielfeld', klang === 'feld', () => hxWSet(L, 'klang', 'feld'), 'Klang: folgt dem Spielfeld'), sel),
     h('div', { class: 'hx-row end' }, btn('Neuer Wurf', () => hxWSet(L, 'wurf'), { aria: 'Neuer Wurf: die Noten mit neuem Zufall' }),
       lebt && !no ? btn('✓', () => hxWLob(L), { aria: 'Behalten: diese Runde gefällt dir – sie wird die neue Grundlage' }) : null, lebt && !no ? btn('✕', () => hxWNein(L), { aria: 'Ablehnen: zurück zur Runde, die du behalten hast' }) : null,
@@ -35355,7 +35356,7 @@ function hxRecOf(L) {
       wn: S.wn || null, wseed: S.wseed || 0, gate: S.gate || null, play: S.play || 'ab',
       wu: S.wu && (S.savedW || 0) >= hxSegsV(S, 'w') ? { n: S.wu.n, len: S.wu.len, sig: S.wu.sig, seed: S.wu.seed } : null,
       anc: S.anc && (S.savedX || 0) >= hxSegsV(S, 'x') ? { n: S.anc.n, len: S.anc.len, sig: S.anc.sig, seed: S.anc.seed, br: S.anc.br != null ? S.anc.br : null, vn: S.anc.vn || null } : null })),
-    wwhy: L.wwhy || {}, ton: L.ton || 'diatonisch', klang: L.klang || 'eigen', stufe: L.stufe || null, q: L.q || null, P: L.P || null, mask: L.mask || null, chainRec: L.chainRec || null, jrg: L.jrg || null, tb: hxTbOf(L),
+    wwhy: L.wwhy || {}, ton: hxTon(L), tonV: 1, klang: L.klang || 'eigen', stufe: L.stufe || null, q: L.q || null, P: L.P || null, mask: L.mask || null, chainRec: L.chainRec || null, jrg: L.jrg || null, tb: hxTbOf(L),
     bew: L.bew ? { n: L.bew.n, g0: L.bew.g0, gs: L.bew.gs - L.d.b0, fade: L.bew.fade, why: L.bew.why, lanes: L.bew.lanes.map((ln) => ({ k: ln.k, src: ln.src, d: faeEnc(ln.v) })), disp: L.bew.disp ? Object.fromEntries(Object.entries(L.bew.disp).map(([k, v]) => [k, faeEnc(v)])) : null } : null };   // (step 1d: a Schleife of Bewegung, its lanes as the Fährte kept them)
 }
 function hxSaveMeta(loopId) {
@@ -35505,7 +35506,7 @@ async function hxRecBuild(r, segsOf, o = {}) {
   if (o.fresh) for (const x of sch) x.key = hxKey('s');   // (a Kreis loaded: new keys – it may come twice, beside the Schleifen it was made of)
   const k = r.sr && r.sr !== SR ? SR / r.sr : 1;
   const sn = { key: o.fresh ? hxKey('l') : r.id, col: r.col || null, colA: r.colA || null, slot: r.slot, d: { lock: r.lock, b0: r.b0 + TG.o, beats: r.beats, L: r.L ? (k === 1 ? r.L : r.L * k) : r.L, ph0: 0, gap: !!r.gap }, bpb: r.bpb, eco: r.eco || null, notes: r.notes || [], mv: r.mv, cut: r.cut ? Object.assign({}, r.cut, { stale: true }) : null, eng: r.eng, setTG: r.setTG, gain: r.gain, pan: r.pan || 0, src: r.src, bpm: r.bpm, state: 'angehalten', tk: r.tk, folgt: r.folgt, taumeln: r.taumeln, eig: r.eig, naehrt: r.naehrt || null, sch,
-    wwhy: r.wwhy || {}, ton: r.ton, klang: r.klang, stufe: r.stufe, q: r.q, P: r.P, mask: r.mask, chainRec: r.chainRec, jrg: r.jrg, tb: r.tb || null, mi: r.mi || null };   // (step 2a; step 2b: its tools; Etappe 3: role, Gärtner, Wiederkehr)
+    wwhy: r.wwhy || {}, ton: r.tonV ? r.ton : r.ton === 'diatonisch' ? 'fest' : r.ton, klang: r.klang, stufe: r.stufe, q: r.q, P: r.P, mask: r.mask, chainRec: r.chainRec, jrg: r.jrg, tb: r.tb || null, mi: r.mi || null };   // (step 2a; step 2b: its tools; Etappe 3: role, Gärtner, Wiederkehr)
   const L = hxRebuild(sn, { state: 'angehalten', fokus: false, noSave: true });
   if (L && o.fresh) { L.nudge = r.nudge || 0; L.plan = r.plan; L.made = Date.now(); hxSaveLoop(L); return L; }
   if (L) { L.nudge = r.nudge || 0; L.plan = r.plan; L.made = r.made || Date.now(); for (const id of L.sch) { const S = HX.sch.get(id); if (S) { S.saved = hxSegs(S); if (S.bak) S.savedB = hxSegs(S); if (S.wu) S.savedW = hxSegsV(S, 'w'); if (S.anc) S.savedX = hxSegsV(S, 'x'); } } hxSaveMeta(L.id); }
@@ -37810,7 +37811,7 @@ function hxWNotesAll(L) { let any = false; for (const id of L.sch) { const S = H
 // a note's pitch in the key the loop follows now (diatonisch: the same degree in the new scale; transponieren: moved with
 // the root; fest: as played) – the nearest way to the new root, never an octave jump; its register stays where it was
 function hxWF(L, W, n, key) {
-  const t = L.ton || 'diatonisch', k0 = W.key;
+  const t = hxTon(L), k0 = W.key;
   if (t === 'fest' || !key) return n.f;
   const sh = ((((key.root - k0.root) % 12) + 18) % 12) - 6;
   if (t === 'transponieren' || key.free || k0.free || n.deg == null) return n.f * Math.pow(2, sh / 12);
@@ -37881,7 +37882,7 @@ function hxWTailAdd(S, sec, cut) { const a = S.wTails || (S.wTails = []); a.push
 function hxWJob(L, S, job, seed) {
   // (the key it sounds in: the sources tuned by the scale – Gespinst's strings, Rhizom's avalanches, the Bordun – follow it
   // as the notes do; transponieren keeps the scale it was played in, fest the key)
-  const p = hxWPat(L), t = L.ton || 'diatonisch', k = job.key;
+  const p = hxWPat(L), t = hxTon(L), k = job.key;
   if (t !== 'fest' && k && k.id != null) { p['t.root'] = k.id; if (t === 'diatonisch') p['t.scale'] = k.scale; }
   return { sr: SR, dur: job.dur, body: job.body, notes: job.notes, prm: job.prm, P: p, q: hxWQ(L), seed, chain: L.folgt || !L.chainRec ? null : L.chainRec, mask: L.mask || [...HX.mask], jrg: L.jrg || { age: A.jrgAge || 0, season: A.season || 0 } };
 }
@@ -37889,9 +37890,9 @@ function hxWJob(L, S, job, seed) {
 // throw, the chain – a version made for something else is made again (Treu: once per change)
 function hxWSig(L, S, key) {
   const W = S.wn, k = key || hxWKeyNow(), f = hxNextSeam(L), lenF = hxPassF(L, f.k + 1) - hxPassF(L, f.k);
-  const keyS = (L.ton || 'diatonisch') === 'fest' ? '-' : (L.ton === 'transponieren' ? k.root : k.root + ':' + (k.rat || []).map((x) => x.toFixed(6)).join(','));
+  const keyS = hxTon(L) === 'fest' ? '-' : (L.ton === 'transponieren' ? k.root : k.root + ':' + (k.rat || []).map((x) => x.toFixed(6)).join(','));
   const engs = [...new Set(W.n.map((n) => hxWEng(L, n)))].join(',');
-  return [Math.round((lenF * (L.sp || 1)) / 8), L.ton || 'diatonisch', keyS, engs, hxWQ(L), S.anc ? S.anc.seed + ':' + (S.anc.br != null ? S.anc.br : '') + (S.anc.vn ? ':v' + S.anc.vn.length + ':' + Math.round(S.anc.vn.reduce((a, x) => a + x.t * 97 + x.f, 0)) : '') : S.wseed, L.folgt ? 1 : 0, (L.klang || 'eigen') === 'eigen' ? 'e' : hxWPHash(),
+  return [Math.round((lenF * (L.sp || 1)) / 8), hxTon(L), keyS, engs, hxWQ(L), S.anc ? S.anc.seed + ':' + (S.anc.br != null ? S.anc.br : '') + (S.anc.vn ? ':v' + S.anc.vn.length + ':' + Math.round(S.anc.vn.reduce((a, x) => a + x.t * 97 + x.f, 0)) : '') : S.wseed, L.folgt ? 1 : 0, (L.klang || 'eigen') === 'eigen' ? 'e' : hxWPHash(),
     hxNtOn(L) ? JSON.stringify(L.nt) : '', L.revW ? 'r' : '', S.wn.n.length + ':' + Math.round(S.wn.len * 1000)].join('|');   // (step 2b: the notes' tools, mirrored, a record trimmed, doubled or the Auslese's)   // (a pass's length within 8 frames is the same: a fractional tempo alternates ±1 frame)
 }
 function hxWPHash() { let h = 7; for (const id in P) if (PD[id] && !PD[id].rec && !PD[id].dev && !id.startsWith('x') && !/^(rev|dly|mst|seq|l\d|rec|hx|mix)\./.test(id)) { const v = String(P[id]); for (let i = 0; i < v.length; i++) h = (Math.imul(h, 31) + v.charCodeAt(i)) | 0; } return h; }
@@ -37941,7 +37942,7 @@ function hxWPlay(S, which, f, keepStream, now) {
 function hxWAktiv(L) { const w = L.wwhy || {}; return !L.bew && !!(w.wahl || w.tempo || w.ausl || hxEigN(L) >= 1 || (L.klang || 'eigen') !== 'eigen' || hxNtOn(L) || hxWTonOff(L)); }   // (step 2b: the notes' tools, the Auslese's consensus)
 // it follows the key and the key is not the one it was played in (the parameters' key – an announced one included)
 const hxWKeyEq = (a, b) => !!a && !!b && a.root === b.root && !!a.free === !!b.free && (a.rat || []).map((x) => x.toFixed(6)).join() === (b.rat || []).map((x) => x.toFixed(6)).join();
-const hxWTonOff = (L) => { const t = L.ton || 'diatonisch'; if (t === 'fest') return false; const k = hxWKeyNow(); return L.sch.some((id) => { const S = HX.sch.get(id); return hxWCan(S) && (t === 'transponieren' ? S.wn.key.root !== k.root : !hxWKeyEq(S.wn.key, k)); }); };
+const hxWTonOff = (L) => { const t = hxTon(L); if (t === 'fest') return false; const k = hxWKeyNow(); return L.sch.some((id) => { const S = HX.sch.get(id); return hxWCan(S) && (t === 'transponieren' ? S.wn.key.root !== k.root : !hxWKeyEq(S.wn.key, k)); }); };
 const hxWLebt = (L) => hxEigN(L) >= 1 && !L.revW && !L.live && hxWAktiv(L) && !(L.treuBis != null && tgBeat(hxNowT()) < L.treuBis) && !(HX.wGuard.pause > performance.now()) && !L.wRefused;
 // the reconciler: what every Schicht of a loop should play now – the Abdruck, the anchor, or a Treu render made for
 // what it follows (rendered first when there is none; swapped at the next seam, or at o.f)
@@ -38077,7 +38078,9 @@ function hxWTick(now, horizon) {
 // at once, the loops fall silent until their new pass is there). Every loop that follows gets that pass rendered in the
 // new key from its start and heard from the bar line – it must come: if it is late the loop is silent there, never in
 // the old key. ----
-const hxWFolgt = (L) => !L.bew && L.state !== 'weg' && (L.ton || 'diatonisch') !== 'fest' && L.sch.some((id) => hxWCan(HX.sch.get(id)));   // (hxWTonOff: whether its key is another now)
+// (owner, 27.10.2026) a loop without its own choice keeps its key: it plays its recording (hx.folgen for new ones)
+const hxTon = (L) => L.ton || 'fest';
+const hxWFolgt = (L) => !L.bew && L.state !== 'weg' && hxTon(L) !== 'fest' && L.sch.some((id) => hxWCan(HX.sch.get(id)));   // (hxWTonOff: whether its key is another now)
 // the time a pass takes to render here (the guard's prediction: the sources' measured cost × CAL.unit × duration)
 function hxWPredict(L, S, dur) {
   const W = S.wn; if (!W) return 0;
@@ -38255,7 +38258,7 @@ function hxWAnker(L) {
 
 // ---- the card's choices, each a history step: Wiedergabe, Eigensinn, Folgen, Klang, Stufe, Neuer Wurf ----
 function hxWSet(L, what, v) {
-  const lk = L.key, snap = (X) => ({ live: !!X.live, wahl: !!(X.wwhy && X.wwhy.wahl), eig: X.eig || 'treu', ton: X.ton || 'diatonisch', klang: X.klang || 'eigen', stufe: X.stufe || null, seeds: X.sch.map((id) => { const S = HX.sch.get(id); return S ? [S.key, S.wseed] : null; }).filter(Boolean) });
+  const lk = L.key, snap = (X) => ({ live: !!X.live, wahl: !!(X.wwhy && X.wwhy.wahl), eig: X.eig || 'treu', ton: hxTon(X), klang: X.klang || 'eigen', stufe: X.stufe || null, seeds: X.sch.map((id) => { const S = HX.sch.get(id); return S ? [S.key, S.wseed] : null; }).filter(Boolean) });
   const was = snap(L);
   const put = (X, s) => {
     X.wwhy = Object.assign(X.wwhy || {}, { wahl: s.wahl }); X.ton = s.ton; X.klang = s.klang; X.stufe = s.stufe; X.live = !!s.live;   // (step 4: Live)
@@ -39864,7 +39867,7 @@ async function hxBegleiten(Lm, o = {}) {
       const wn = { u: 'b', len: lenB, key: W.key, sd: 0, lanes: [], n: part };
       const sn = { key: hxKey('l'), slot, d: { lock: 'takt', b0: Lm.d.b0, beats: Lm.d.beats, L: r.len, ph0: 0 }, bpb: Lm.bpb || 4, notes: notesR, eng, gain: kind === 'bass' ? 0.9 : 0.7, src: 0, bpm: Lm.bpm, state: 'stumm', folgt: true, taumeln: true, eig: 'treu',
         sch: [{ key: hxKey('s'), len: r.len, pre: 0, n: r.n, cut: null, aus: { off: r.len, len: Math.max(0, r.n - r.len) }, join: 'ola', X: Math.round(0.01 * SR), rho: 0, gain: 1, mute: false, kind: 'begleit', group: 0, sr: SR, aud: r.aud, chain: false, wn, wseed: seed + i }],
-        wwhy: {}, ton: 'diatonisch', klang: 'eigen', mi: { sugg: kind, from: Lm.key, rolle: kind } };
+        wwhy: {}, ton: hxTon(Lm), klang: 'eigen', mi: { sugg: kind, from: Lm.key, rolle: kind } };
       const L = hxRebuild(sn, { state: 'stumm', fokus: false });
       if (L) made.push(L.key);
     }
@@ -41123,6 +41126,7 @@ const HX_TIP_P = {
   'hx.rail': 'Die Leiste mit den Schleifen unter dem Spielfeld: groß oder klein.',
   'hx.humus': 'Wie viele Sekunden Myzel im Hintergrund mithört – so weit zurück kann der Korb übernehmen.',
   'hx.mem': 'Wie viel Arbeitsspeicher die Schleifen höchstens belegen dürfen.',
+  'hx.folgen': 'Ob eine neue Schleife einer neuen Tonart folgt. „Nein – Original“: sie spielt immer genau ihre Aufnahme; in ihrer Karte lässt es sich je Schleife umstellen.',
   'hx.beginn': 'Wie neue Schleifen spielen: genau wie gespielt oder gleich von Myzel neu gespielt.',
   'hx.stufe': 'In welcher Klangqualität Myzel Schleifen neu spielt.',
   'hx.tonartAmTakt': 'Wechselst du die Tonart, folgen die Schleifen erst am nächsten Takt – nicht mitten in der Phrase.',

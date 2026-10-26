@@ -3,7 +3,9 @@
 // at once, the loops fall silent until their new pass is there). Every loop that follows gets that pass rendered in the
 // new key from its start and heard from the bar line – it must come: if it is late the loop is silent there, never in
 // the old key. ----
-const hxWFolgt = (L) => !L.bew && L.state !== 'weg' && (L.ton || 'diatonisch') !== 'fest' && L.sch.some((id) => hxWCan(HX.sch.get(id)));   // (hxWTonOff: whether its key is another now)
+// (owner, 27.10.2026) a loop without its own choice keeps its key: it plays its recording (hx.folgen for new ones)
+const hxTon = (L) => L.ton || 'fest';
+const hxWFolgt = (L) => !L.bew && L.state !== 'weg' && hxTon(L) !== 'fest' && L.sch.some((id) => hxWCan(HX.sch.get(id)));   // (hxWTonOff: whether its key is another now)
 // the time a pass takes to render here (the guard's prediction: the sources' measured cost × CAL.unit × duration)
 function hxWPredict(L, S, dur) {
   const W = S.wn; if (!W) return 0;
@@ -181,7 +183,7 @@ function hxWAnker(L) {
 
 // ---- the card's choices, each a history step: Wiedergabe, Eigensinn, Folgen, Klang, Stufe, Neuer Wurf ----
 function hxWSet(L, what, v) {
-  const lk = L.key, snap = (X) => ({ live: !!X.live, wahl: !!(X.wwhy && X.wwhy.wahl), eig: X.eig || 'treu', ton: X.ton || 'diatonisch', klang: X.klang || 'eigen', stufe: X.stufe || null, seeds: X.sch.map((id) => { const S = HX.sch.get(id); return S ? [S.key, S.wseed] : null; }).filter(Boolean) });
+  const lk = L.key, snap = (X) => ({ live: !!X.live, wahl: !!(X.wwhy && X.wwhy.wahl), eig: X.eig || 'treu', ton: hxTon(X), klang: X.klang || 'eigen', stufe: X.stufe || null, seeds: X.sch.map((id) => { const S = HX.sch.get(id); return S ? [S.key, S.wseed] : null; }).filter(Boolean) });
   const was = snap(L);
   const put = (X, s) => {
     X.wwhy = Object.assign(X.wwhy || {}, { wahl: s.wahl }); X.ton = s.ton; X.klang = s.klang; X.stufe = s.stufe; X.live = !!s.live;   // (step 4: Live)

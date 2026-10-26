@@ -2,6 +2,14 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-27b",
+      "punkte": [
+        "Schleifen spielen jetzt immer ihre Originalaufnahme – auch wenn du ein Preset mit anderer Tonart lädst. Kein Hinweis „Schleifen folgen …“ mehr beim Preset-Wechsel.",
+        "Wer will, dass Schleifen mitgehen: im Aufnahme-Panel „Neue Schleife folgt der Tonart“ oder in der Karte einer Schleife bei „Folgen“ diatonisch bzw. transponiert wählen.",
+        "Bestehende Schleifen und Kreise sind ebenfalls auf „Original“ gestellt."
+      ]
+    },
+    {
       "id": "2026-10-27",
       "punkte": [
         "iPad: Verlässt oder beendest du Myzel, darf iOS es nicht mehr im Hintergrund weiterspielen lassen – die Audio-Sitzung wird beim Verlassen umgestellt.",

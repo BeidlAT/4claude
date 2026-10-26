@@ -142,7 +142,7 @@ async function hxBegleiten(Lm, o = {}) {
       const wn = { u: 'b', len: lenB, key: W.key, sd: 0, lanes: [], n: part };
       const sn = { key: hxKey('l'), slot, d: { lock: 'takt', b0: Lm.d.b0, beats: Lm.d.beats, L: r.len, ph0: 0 }, bpb: Lm.bpb || 4, notes: notesR, eng, gain: kind === 'bass' ? 0.9 : 0.7, src: 0, bpm: Lm.bpm, state: 'stumm', folgt: true, taumeln: true, eig: 'treu',
         sch: [{ key: hxKey('s'), len: r.len, pre: 0, n: r.n, cut: null, aus: { off: r.len, len: Math.max(0, r.n - r.len) }, join: 'ola', X: Math.round(0.01 * SR), rho: 0, gain: 1, mute: false, kind: 'begleit', group: 0, sr: SR, aud: r.aud, chain: false, wn, wseed: seed + i }],
-        wwhy: {}, ton: 'diatonisch', klang: 'eigen', mi: { sugg: kind, from: Lm.key, rolle: kind } };
+        wwhy: {}, ton: hxTon(Lm), klang: 'eigen', mi: { sugg: kind, from: Lm.key, rolle: kind } };
       const L = hxRebuild(sn, { state: 'stumm', fokus: false });
       if (L) made.push(L.key);
     }
