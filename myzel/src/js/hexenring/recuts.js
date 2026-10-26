@@ -188,7 +188,7 @@ async function hxMerge(L) {
   if (sch.length < 2) { toast('Zum Zusammenlegen braucht es zwei hörbare Schichten.'); return false; }
   if (sch.some((S) => !S.aud)) { toast('Einen Moment – eine Schicht wird noch aufgenommen.'); return false; }
   // (step 1c: each as it plays – baked, or dry where it follows the chain; a dry one that waits for its bake waits)
-  if (!L.folgt && sch.some((S) => S.chain && !S.baked)) { toast('Einen Moment – eine Schicht wird noch eingebrannt.'); return false; }
+  if (!L.folgt && sch.some((S) => S.chain && !S.baked && S.baking)) { toast('Einen Moment – eine Schicht wird noch eingebrannt.'); return false; }
   const ver = (S) => (S.baked && S.bak ? S.bak : S.aud), dry = L.folgt && sch.some((S) => S.chain);
   const k = hxPassK(L, Math.round(hxF(hxNowT()))), Lf = hxPassF(L, k + 1) - hxPassF(L, k), tail = Math.max(0, ...sch.map((S) => (S.aus ? S.aus.len : 0)));
   const passes = Math.ceil(tail / Lf) + 2, ctx = new OfflineAudioContext(2, Lf * (passes + 2), SR);

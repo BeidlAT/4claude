@@ -61,7 +61,7 @@ if 'function hxRecPos(' in s: extra += ['hxRecPos', 'hxPosWords', 'hxPosDraw', '
 if 'function hxmBuild(' in s: extra += ['HXM', 'hxmSync', 'HXMP', 'hxmPultFold', 'hxmMute', 'hxmSolo', 'hxPan', 'hxRecOf', 'hxSnap', 'hxDelete', 'MTARGETS', 'mxSetView']
 if 'function hxEdOpen(' in s: extra += ['HXE', 'hxEdOpen', 'hxEdClose', 'hxEdRender', 'hxEdTrimSel', 'hxEdPeaks', 'hxCtxMenu', 'hxCtxClose', 'hxBandTrim', 'hxBandTrimTo', 'hxTrA', 'hxDefaults', 'hxRev', 'hxVbSet', 'hxAbSet', 'hxSlcSet', 'hxNtSet', 'hxSpeed', 'hxRedoStep', 'hxRegionEdit', 'hxEdWf', 'hxPvPlay', 'hxPvStop', 'hxPvPos', 'hxPvToggle', 'hxPvJump', 'hxEdZoom', 'hxEdZoomTo', 'hxNowOk', 'hxSwapAt', 'hxGain', 'hxEdNtMarks', 'hxUndoStep', 'hxPhase', 'hxLen']
 if 'function tfxSet(' in s: extra += ['TFX', 'tfxSet', 'tfxFreqs', 'TCH', 'tchWeise', 'TCH_W', 'MIX', 'touches', 'ensureDSP']
-if 'function hxHumApply(' in s: extra += ['MXW', 'mxwMini', 'mxwApply', 'openPanel', 'hxAbdruck', 'hxWSet', 'hxWAktiv', 'hxHumApply', 'hxHumReset', 'hxHumKeep', 'hxHumOf', 'hxHumSlice', 'hxEdHumRow', 'hxHumDraw', 'hxMemUsed', 'hxMemOk']
+if 'function hxHumApply(' in s: extra += ['hxBandReady', 'MXW', 'mxwMini', 'mxwApply', 'openPanel', 'hxAbdruck', 'hxWSet', 'hxWAktiv', 'hxHumApply', 'hxHumReset', 'hxHumKeep', 'hxHumOf', 'hxHumSlice', 'hxEdHumRow', 'hxHumDraw', 'hxMemUsed', 'hxMemOk']
 if 'function gdRecover(' in s: extra += ['GD', 'gdRecover', 'budgetApply', 'hxTauBack', 'hxGeraet', 'lmEv', 'lmUPoll', 'lmUlog', 'HX_PHONE']
 import re as _re
 def _defined(n):

@@ -30,7 +30,8 @@ async function hxAfterFill(S) {
   let changed = false;
   if (S.cutAus && !S.spliced && L.notes.length && S.cut.in === 0) { const r = await hxTail(S); if (!ok()) return; if (r) changed = true; }
   if (S.chain && !L.folgt && hxwOk()) {
-    const r = await hxBake(S);
+    S.baking = (S.baking || 0) + 1;   // (26.10.2026: the tools wait only while a bake really runs – one that fails leaves the Schicht dry through the live chain, never stuck)
+    let r = false; try { r = await hxBake(S); } finally { S.baking--; }
     if (!ok()) return;
     if (r) { hxSchPlay(S, true, hxNextSeam(L).f); if (changed) hxSaveSch(S); hxSaveSch(S, 'b'); return; }
   }
