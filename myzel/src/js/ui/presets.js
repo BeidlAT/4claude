@@ -360,13 +360,12 @@ function markPresetDirty() { if (UI.preset && !UI.loading) { UI.preset = null; m
 function buildPresets() {
   const box = h('div');
   const g = h('div', { class: 'pgrid' });
-  presetCards = [PRESET_LEER].concat(PRESETS).map((p) => {
-    const c = h('button', { type: 'button', class: 'pcard', 'aria-current': 'false', onclick: () => loadPreset(p) }, h('b', null, p.name), h('span', { class: 'tags' }, p.tags), h('small', null, p.desc));
-    c.dataset.key = p.key; g.append(c); return c;
-  });
+  KB.cards = [];   // (the Klangwelten's pictures – klangwelten.js)
+  presetCards = [PRESET_LEER].concat(PRESETS).map((p, i) => { const c = kbCard(p, i, () => loadPreset(p)); g.append(c); return c; });
+  requestAnimationFrame(() => kbWatch(g));
   undoBtn = h('button', { type: 'button', class: 'btn', disabled: true, onclick: undo }, 'Rückgängig');
   installBtn = h('button', { type: 'button', class: 'btn primary', hidden: !installEvt, onclick: installApp }, 'Als App installieren');
-  box.append(section('Klangwelten', 'Laden ersetzt alle Klangeinstellungen', g, h('div', { class: 'row', style: 'margin-top:10px' }, undoBtn, installBtn)));
+  box.append(section('Klangwelten', 'Laden ersetzt alle Klangeinstellungen', g, h('div', { class: 'row', style: 'margin-top:10px' }, undoBtn, installBtn), h('div', { class: 'pleer' }, ctl('ui.leer'))));
   const mut = h('input', { type: 'range', id: 'mutAmt', min: 0, max: 100, step: 1, value: Math.round(mutAmt * 100), 'aria-label': 'Stärke der Mutation' });
   const mutVal = h('span', { class: 'val' }, Math.round(mutAmt * 100) + ' %');
   mut.style.setProperty('--p', mut.value + '%');
@@ -419,7 +418,7 @@ function renderUserPresets() {
       if (!del.dataset.confirm) { del.dataset.confirm = '1'; del.textContent = 'Wirklich?'; setTimeout(() => { if (del.isConnected) { delete del.dataset.confirm; del.textContent = 'Löschen'; } }, 3000); return; }
       setUserPresets(userPresets().filter((x) => x.name !== p.name)); renderUserPresets();
     });
-    userListEl.append(h('div', { class: 'urow' }, h('span', null, p.name), h('button', { type: 'button', class: 'btn', onclick: () => loadPreset(p) }, 'Laden'), del));
+    userListEl.append(h('div', { class: 'urow' }, kbMini(p), h('span', null, p.name), h('button', { type: 'button', class: 'btn', onclick: () => loadPreset(p) }, 'Laden'), del));
   }
 }
 function exportPreset() {

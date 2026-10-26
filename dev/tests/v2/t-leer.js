@@ -4,7 +4,9 @@ const { chromium } = require('/opt/node22/lib/node_modules/playwright');
 const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) process.exitCode = 1; };
 (async () => {
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
-  const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  await ctx.addInitScript(() => { window.__leer = true; });
+  const page = await ctx.newPage();
   const errors = []; page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('http://127.0.0.1:8790/new-inst/index.html');
   await page.waitForFunction(() => !!window.__M);
