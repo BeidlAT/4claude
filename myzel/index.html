@@ -2867,6 +2867,7 @@ NUM('rec.bars', 'Takte', 1, 128, 8, '', { step: 1, rec: 1, fmt: (v) => v + (v ==
 SEL('dev.q', 'Qualitätsstufe', [['1', '1 · Leicht'], ['2', '2 · Voll'], ['3', '3 · Gewaltig']], MOBILE ? '1' : '2', { chips: 1, dev: 1 });
 // (24.10.2026: Android starts in „Minimal“ – Chrome there opens its fast output only for the numeric hint; lasting
 // underruns step back by themselves, latStep. iPhone and iPad „Standard“, computers „Minimal“ as before)
+BOOL('dev.bg', 'Im Hintergrund weiterspielen', !(IOS || MOBILE), { dev: 1 });   // (owner, 26.10.2026, iPad: „spielt weiter, obwohl geschlossen“) boot.js
 SEL('dev.lat', 'Latenz', [['min', 'Minimal'], ['std', 'Standard'], ['safe', 'Sicher']], MOBILE && !ANDROID ? 'std' : 'min', { chips: 1, dev: 1 });
 SEL('midi.map', 'Tasten', [['scale', 'Skala'], ['white', 'Weiße Tasten'], ['chrom', 'Chromatisch']], 'scale', { chips: 1, dev: 1 });
 NUM('midi.y', 'Höhe auf der Spielfläche', 0, 1, 0.55, '%', { dev: 1 });
@@ -29586,6 +29587,7 @@ function buildDev() {
   const latBtn = h('button', { type: 'button', class: 'btn primary', hidden: true, onclick: restartAudio }, 'Klang neu starten');
   const latAutoB = h('button', { type: 'button', class: 'btn ghost', id: 'latAuto', hidden: true, onclick: latAutoAgain }, 'Wieder automatisch');
   box.append(section('Latenz', 'Zeit vom Anschlag bis zum Ton', grid(ctl('dev.lat', { label: 'Ausgabe' })), latInfo, h('div', { class: 'row' }, latBtn, latAutoB)));
+  box.append(section('Hintergrund', 'Wenn Myzel nicht zu sehen ist', grid(ctl('dev.bg')), h('p', { class: 'note' }, 'An: laufen Puls, Schleifen, Bordun, Freeze oder eine Aufnahme, spielt Myzel weiter, wenn du die App wechselst oder den Bildschirm sperrst. Aus: Myzel verstummt und spielt weiter, sobald du zurückkommst. Auf iPad und Handy ist es anfangs aus.')));
   box.append(lmBuild());   // Leistung: the Handy-Modus and „Leistung messen“ (ui/leistung.js)
   box.append(section('Computertastatur', null, h('p', { class: 'note' }, 'Ohne Keyboard spielen die Tasten A bis Ö (Grundreihe) die ersten Töne der Spielfläche, mit Umschalt weiter oben.')));
   Object.assign(devEls, { qInfo, qLive, latInfo, latBtn, latAuto: latAutoB });
@@ -31314,6 +31316,8 @@ function updReload() { if (UPD.done || A.started) return; UPD.done = true; locat
 function ensureRunning() {
   if (A.ctx && A.ctx.state !== 'running') { try { const p = A.ctx.resume(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
 }
+// out of sight (and not to play on there): the sound stops, the silent element too – else iOS keeps the page playing
+function bgStop() { A.userSuspended = true; try { A.ctx.suspend(); } catch (e) {} try { if (A.unmute && !A.unmute.paused) A.unmute.pause(); } catch (e) {} }
 async function keepAwake() {
   try {
     if ('wakeLock' in navigator && document.visibilityState === 'visible' && !A.wake) {
@@ -41637,9 +41641,12 @@ function boot() {
       if (A.unmute && A.unmute.paused) { const p = A.unmute.play(); if (p && p.catch) p.catch(() => {}); }
     } else {
       releaseAllTouches();
-      if (CAP.state === 'idle' && !SEQ.on && !A.bor && !A.frozen && !hxBusy()) { A.userSuspended = true; try { A.ctx.suspend(); } catch (e) {} }   // (Hexenring: a Schleife plays on)
+      // (Hexenring: a Schleife plays on – Puls, Bordun, Freeze and a recording too – but only with „Im Hintergrund
+      // weiterspielen“; owner, 26.10.2026: on the iPad Myzel played on after it was closed – off there by default)
+      if (!P['dev.bg'] || (CAP.state === 'idle' && !SEQ.on && !A.bor && !A.frozen && !hxBusy())) bgStop();
     }
   });
+  window.addEventListener('pagehide', () => { if (A.ctx && !P['dev.bg']) bgStop(); });
   window.addEventListener('blur', () => { if (document.visibilityState !== 'visible') releaseAllTouches(); });
   // Gestik: back from the background, a turned view (both do nothing while it is off)
   document.addEventListener('visibilitychange', () => { if (GK.on) gkVis(); });
