@@ -198,6 +198,23 @@ function hxWSet(L, what, v) {
   hxHist({ kind: 'wuchs', label: W[0] + (W[1] ? ' ' + W[1] : '') + ' (' + hxName(L) + ')', undo() { const X = hxByKey(lk); if (X) put(X, was); }, redo() { const X = hxByKey(lk); if (X) put(X, to); } });
   hxSay(hxName(L) + ': ' + W[0] + (W[1] ? ' ' + W[1] : ''));
 }
+// (owner, 26.10.2026: „Abdruck wird nicht markiert, es hat keine Auswirkung auf den Sound“) Abdruck: the loop as it was
+// played – whatever made it grow is set back in one step (its own sound, the notes no longer following the key,
+// Eigensinn treu, the notes' tools, Live); only a new tempo or an Auslese keeps it growing, and then it says why
+function hxAbdruck(L) {
+  const w = L.wwhy || {};
+  if (w.tempo) { hxHint(hxName(L) + ' folgt dem neuen Tempo und wächst deshalb – als Abdruck klingt sie nur im Tempo der Aufnahme.'); return false; }
+  if (w.ausl) { hxHint(hxName(L) + ' spielt die Auslese – ↶ nimmt sie zurück, dann ist sie wieder ein Abdruck.'); return false; }
+  const n0 = HX.hist.length;
+  if ((L.klang || 'eigen') !== 'eigen') hxWSet(L, 'klang', 'eigen');
+  if (hxWTonOff(L)) hxWSet(L, 'ton', 'fest');
+  if ((L.eigWant || L.eig || 'treu') !== 'treu') hxWSet(L, 'eig', 'treu');
+  if (hxNtOn(L)) hxNtSet(L, 'zurueck');
+  hxWSet(L, 'wahl', false);
+  hxHistGroup(n0, 'Wiedergabe Abdruck (' + hxName(L) + ')');
+  hxSay(hxName(L) + ': Abdruck – genau wie gespielt');
+  return true;
+}
 // the loop's word for the card and the rail: what it does now
 function hxWWord(L) {
   if (L.bew || !L.sch.some((id) => hxWCan(HX.sch.get(id)))) return '';

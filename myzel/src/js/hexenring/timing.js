@@ -79,7 +79,7 @@ const hxGuardOk = (L) => !(L.guardK != null && !(L.k >= L.guardK));
 function hxGuardSet(L, k) { if (Number.isFinite(k)) L.guardK = Math.max(L.guardK != null ? L.guardK : -Infinity, k + 3); }
 function hxEigSet(L, e) {
   if (!HX_EIG.includes(e) || e === (L.eig || 'treu')) { L.eigWant = null; return true; }
-  if (!hxGuardOk(L)) { L.eigWant = e; return false; }
+  if (e !== 'treu' && !hxGuardOk(L)) { L.eigWant = e; return false; }   // (back to Treu always at once)
   L.eig = e; L.eigWant = null; hxSaveMeta(L.id); hxCardDirty();
   if (HX_EIG.indexOf(e) >= 1 && !hxWCanLive(L)) { L.wRefused = true; L.wRetry = performance.now() + 4000; }   // (step 2a: the device cannot keep it living now)
   hxWUpdate(L);   // (step 2a: above Treu it grows)

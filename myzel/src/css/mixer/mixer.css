@@ -8,7 +8,13 @@
 .sheet[data-panel="mix"] .sheet-body { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
 #app:has(#sheet[data-panel="mix"]:not([hidden])) .quick { display: none; }
 @media (min-width: 900px) {
-  .sheet[data-panel="mix"] { height: auto; width: min(980px, 72vw); }
+  .sheet[data-panel="mix"] { height: auto; width: var(--mixw, min(980px, 72vw)); position: relative; }
+  /* (26.10.2026) its left edge drags its width; folded, a narrow bar */
+  .sheet[data-panel="mix"] .mx-grip { display: block; }
+  .sheet[data-panel="mix"].mx-mini { width: 38px; }
+  .sheet[data-panel="mix"].mx-mini > :not(.mx-minibar) { display: none; }
+  .sheet[data-panel="mix"].mx-mini .mx-minibar { display: flex; }
+  .sheet[data-panel="mix"] .mx-foldb { display: inline-flex; }
 }
 /* landscape phones: the field keeps two thirds of its usual room (its note row stays on one line); the field's
    "dunkel" label would run into the notes beside the mixer, so it steps aside */
@@ -32,3 +38,13 @@
 .mx-vsw button:last-child span { border-radius: 0 999px 999px 0; margin-left: -1px; }
 .mx-vsw button[aria-checked="true"] span { color: var(--ink); background: var(--hypha); border-color: var(--hypha); }
 
+
+/* (26.10.2026) the width grip and the folded bar – only on a wide screen (shown by the rules above) */
+.mx-grip { display: none; position: absolute; left: -4px; top: 0; bottom: 0; width: 9px; cursor: ew-resize; z-index: 5; touch-action: none; }
+.mx-grip::after { content: ''; position: absolute; left: 3px; top: 50%; width: 3px; height: 44px; margin-top: -22px; border-radius: 2px; background: rgba(240, 230, 216, .18); transition: background .15s; }
+.mx-grip:hover::after, .mx-grip.on::after, .mx-grip:focus-visible::after { background: var(--spore); }
+.mx-grip:focus-visible { outline: none; }
+.mx-foldb { display: none; font-size: 18px; }
+.mx-minibar { display: none; position: absolute; inset: 0; align-items: center; justify-content: center; border: 0; background: none; color: var(--spore); cursor: pointer; font: 600 11px/1 var(--font-num, monospace); letter-spacing: .14em; text-transform: uppercase; }
+.mx-minibar span { writing-mode: vertical-rl; transform: rotate(180deg); }
+.mx-minibar:hover { background: rgba(240, 230, 216, .05); }

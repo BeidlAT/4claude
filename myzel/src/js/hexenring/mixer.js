@@ -230,7 +230,7 @@ const HXMP = { grp: null, row: null, st: [], all: null, sig: '', t: 0, fold: fal
 try { HXMP.fold = localStorage.getItem('myzel.hxmPultFold') === '1'; } catch (e) {}
 function hxmPultGroup() {
   HXMP.sig = ''; HXMP.st = [];
-  HXMP.btn = h('button', { type: 'button', class: 'hxmp-fold', 'aria-expanded': 'true', title: 'Die Schleifen einzeln ein- oder ausklappen' });
+  HXMP.btn = h('button', { type: 'button', class: 'hxmp-fold', 'aria-expanded': 'true', title: 'Die Schleifen des Hexenrings einzeln ein- oder ausklappen' });
   HXMP.btn.addEventListener('click', () => { HXMP.fold = !HXMP.fold; try { localStorage.setItem('myzel.hxmPultFold', HXMP.fold ? '1' : '0'); } catch (e) {} hxmPultFold(); });
   HXMP.row = h('div', { class: 'mx-gs hxmp-row' });
   HXMP.grp = h('div', { class: 'mx-grp mx-g-hxl', role: 'group', 'aria-label': 'Schleifen', hidden: true }, h('div', { class: 'mx-gh' }, HXMP.btn), HXMP.row);
@@ -240,7 +240,7 @@ function hxmPultGroup() {
 function hxmPultFold() {
   const n = HXMP.st.length, f = HXMP.fold;
   if (!HXMP.btn) return;
-  HXMP.btn.textContent = f ? 'schleifen ' + n + ' ›' : 'schleifen ‹';
+  HXMP.btn.replaceChildren(h('span', { class: 'hxmp-of' }, 'hexenring · '), f ? 'schleifen ' + n + ' ›' : 'schleifen ‹');   // (26.10.2026: whose they are)
   HXMP.btn.setAttribute('aria-expanded', String(!f));
   HXMP.grp.classList.toggle('fold', f);
   if (MX.view === 'pult' && MX.scroll) requestAnimationFrame(() => { mxLayout(); hxmLayoutR(HXMP); });

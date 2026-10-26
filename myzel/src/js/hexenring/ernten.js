@@ -8,7 +8,7 @@ function hxCut(inp, w0, w1, o = {}) {
   return { in: inp | 0, w0: f0, w1: f0 + len, f0: f0 - pre, pre, len, post, n: pre + len + Math.max(post, tail), aus: tail ? { off: pre + len, len: tail } : null };
 }
 const hxOldestF = () => (HX.node ? HX.fR + (hxNowT() - HX.tR) * SR - P['hx.humus'] * SR + 0.5 * SR : 0);   // (the ring's reach, with a little room)
-const hxReach = (c) => !!c && !c.stale && c.f0 >= hxOldestF();   // (a Schleife restored after a reload: its Humus is gone)
+const hxReach = (c) => !!c && !c.stale && (c.f0 >= hxOldestF() || !!hxHumOf(c));   // (a Schleife restored after a reload: its Humus is gone; 26.10.2026: a Schleife's whole Ernte reaches back as far as it holds)
 function hxChunks(n) { const a = [], tr = []; for (let i = 0; i < Math.ceil(Math.max(1, n) / HX_CH); i++) { const L = new Float32Array(HX_CH), R = new Float32Array(HX_CH); a.push([L, R]); tr.push(L.buffer, R.buffer); } return [a, tr]; }
 function hxCopy(ch) { const a = [], tr = []; for (const c of ch) { const L = c[0].slice(), R = c[1].slice(); a.push([L, R]); tr.push(L.buffer, R.buffer); } return [a, tr]; }
 const hxBytes = (n) => Math.ceil(n / HX_CH) * HX_CH * 8;

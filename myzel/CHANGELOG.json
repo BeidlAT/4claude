@@ -2,6 +2,16 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-26j",
+      "punkte": [
+        "Ganze Ernte: Jede Schleife behält alles, was der Humus beim Ernten hielt. Im Fenster „Ansehen und bearbeiten“ verschiebst du ihren Ausschnitt darin frei – Ränder ziehen, Takt- und Schlag-Schritte –, ↶ und Grundeinstellung holen ihn zurück, auch lange nach dem Ernten.",
+        "Länge ±, Eins ← →, Runde davor und ihr Rückgängig gehen jetzt auch, wenn der Humus längst weitergelaufen ist.",
+        "Schleifen und Takt-Aufnahmen bis 128 Takte; der Humus reicht am PC bis 15 Minuten zurück (Standard 5 Minuten).",
+        "Mixer: am linken Rand breiter oder schmaler ziehen (Doppelklick: ganze Breite), mit › zu einer schmalen Leiste einklappen; die Schleifen im Pult sind sichtbar dem Hexenring zugeordnet.",
+        "Behoben: „Abdruck“ wirkte nicht, wenn die Schleife einen anderen Klang hatte oder der Tonart folgte – ein Klick setzt jetzt alles zurück, sie spielt genau wie aufgenommen."
+      ]
+    },
+    {
       "id": "2026-10-26i",
       "punkte": [
         "Klangbibliothek: 22 neue Klangquellen – jede ein eigenes Klangmodell, keine Samples, und jede spielt gehalten, angeschlagen, im Puls und mit der Höhe.",

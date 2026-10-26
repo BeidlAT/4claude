@@ -40,7 +40,7 @@ async function hxAfterFill(S) {
 async function hxBake(S) {
   const n = S.n, c = S.cut, ta = c.stale ? null : hxT(c.f0);
   if (ta == null || !S.aud) return false;
-  if (hxNowT() - ta > 170) return false;   // (the chain's record reaches three minutes back)
+  if (hxNowT() - ta > 900) return false;   // (the chain's record reaches fifteen minutes back)
   const Lb = new Float32Array(n), Rb = new Float32Array(n);
   for (let i = 0; i < n; i++) { const ch = S.aud[Math.floor(i / HX_CH)], j = i % HX_CH; if (ch) { Lb[i] = ch[0][j]; Rb[i] = ch[1][j]; } }
   const bv = (S.bv = (S.bv || 0) + 1), aud = S.aud;

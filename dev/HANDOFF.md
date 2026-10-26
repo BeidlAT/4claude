@@ -2,6 +2,16 @@
 
 ## Nächste Sitzung – zuerst lesen (Stand 26.10.2026, nachts)
 
+**Ganze Ernte / 128 Takte / Mixer-Breite (26.10.2026, spät, #40):** `hexenring/vorrat.js` – nach dem ersten Füllen einer
+Schleife kopiert `hxHumKeep` den ganzen Humus-Ring (bis zum Füllende) nach `L.hum` (nur Sitzung, zählt gegen hx.mem);
+`hxReach` und `hxSchSwap` nehmen Schnitte daraus (`hxHumOf`/`hxHumSlice`), daher gehen alle Neuschnitte und ihr ↶ auch
+nach dem Überschreiben des Rings. Editor-Zeile „Ganze Ernte“ (ab dem ersten Ton, Ränder/Ausschnitt ziehen, Takt-/
+Schlag-Knöpfe, „wie geerntet“; Grundeinstellung setzt den Ausschnitt zurück). Grenzen: hx.humus ≤ 900 s (PC 300),
+hx.festT/rec.bars ≤ 128, hx.mem ≤ 12000 (PC 6000), Noten-/Pegel-/Kettenprotokoll 15 min. Mixer: `mixer/breite.js`
+(Breite am linken Rand, Einklappen). „Abdruck“ setzt jetzt alles zurück, was Wuchs erzwang (`hxAbdruck`). Test:
+`dev/tests/hexenring/t-hx-vorrat.js`. Bekannt: `t-hx-mixer.js` scheitert auch auf dem alten Stand (Streifen doppelt im
+Test, im Einzelversuch nicht) – offen.
+
 **Klangbibliothek II (26.10.2026, spät):** Wunsch des Besitzers – „mindestens 20 neue Sounds, zahlreiche Presets,
 exotisch, sphärisch, experimentell, psychedelisch, Ambient, LoFi, Trap, Avantgarde“. Gebaut: **22 neue Quellen**
 (jede ein eigener Worklet-Prozessor in `myzel/src/js/dsp/`), neue Familie **Strom**, **24 Presets**. Konzept, Liste und

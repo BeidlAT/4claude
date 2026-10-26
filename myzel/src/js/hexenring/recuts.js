@@ -19,6 +19,7 @@ function hxNowOk(L) {
 const hxSwapAt = (L) => (hxNowOk(L) ? { f: Math.round(hxF(hxNowT() + 0.06)), now: true } : hxNextSeam(L));
 function hxSchSwap(S, c, o = {}) {
   const L = HX.loops.get(S.loop); if (!L) return;
+  if (!o.aud) { const H = hxHumOf(c); if (H) o = Object.assign({}, o, hxHumSlice(H, c), { hum: true }); }   // (26.10.2026: a window inside a Schleife's whole Ernte – from there, whatever the ring still holds)
   S.ver = (S.ver || 0) + 1;
   // (step 1c: audio from the Humus plays dry – through the live chain until it is baked again; the page's own versions
   // take the baked one where there is one)
@@ -36,7 +37,8 @@ function hxSchSwap(S, c, o = {}) {
   Object.assign(S, { cut: c, len: c.len, pre: c.pre, n: c.n, aus: c.aus ? Object.assign({}, c.aus) : null, aud: o.aud || null, live: !o.aud, saved: 0, out, bak: o.aud ? o.bak || null : null, baked: !!bak, zo: o.zo || 0, kc: o.kc || null, kcB: o.kcB || null, dr: o.aud ? o.dr || S.dr : null, cutAus: !!o.cutAus, spliced: !!o.spliced });
   hxCount();
   if (S.play && S.play !== 'ab') S.play = 'ab';   // Hexenring (step 2b): the version swapped in is an Abdruck – a Wuchs version is sent again by hxWUpdate, never assumed still playing
-  if (L.sch[0] === S.id && !o.aud) { L.cut = c; L.notesDue = Math.max(hxT(c.w1), hxNowT()); }   // (its notes from the new window)
+  if (L.sch[0] === S.id && (!o.aud || o.hum)) { L.cut = c; L.notesDue = Math.max(hxT(c.w1), hxNowT()); }   // (its notes from the new window)
+  if (o.hum) { hxSaveSch(S); hxAfterFill(S); }   // (as a fill from the ring: stored, its Ausklang rendered, baked)
   if (o.join) Object.assign(S, { join: o.join, X: o.X, rho: o.rho });
   if (!o.aud) hxProbe(S, o.f != null ? hxT(o.f) + 0.012 : 0);
 }

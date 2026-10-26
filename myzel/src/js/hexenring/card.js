@@ -151,12 +151,12 @@ function hxCardWuchs(L, sch, chip, row, btn) {
   if (!sch.some(hxWCan)) return [h('div', { class: 'hx-row' }, h('span', { class: 'lab' }, 'Wuchs'), h('span', { class: 'hx-ms' }, L.src ? 'aus „Alles“: bleibt ein Abdruck' : 'ohne Noten: bleibt ein Abdruck'))];
   const st = hxWQ(L), stufe = L.stufe || null, klang = L.klang || 'eigen';
   const on = hxWAktiv(L), w = L.wwhy || {}, word = hxWWord(L), why = [hxWTonOff(L) && 'folgt der Tonart', w.tempo && 'folgt dem Tempo', klang !== 'eigen' && 'anderer Klang'].filter(Boolean).join(', ');
-  const no = !hxwOk(), forced = !!(hxWTonOff(L) || w.tempo || klang !== 'eigen' || hxEigN(L) >= 1);
+  const no = !hxwOk();
   const sel = h('select', { class: 'hx-eng', 'aria-label': 'Klang: eine Quelle wählen' }, h('option', { value: '' }, 'Quelle …'), ...ENG_OPTS.map(([k, n]) => h('option', { value: k, selected: klang === k ? '' : null }, n)));
   sel.addEventListener('change', () => { if (sel.value) hxWSet(L, 'klang', sel.value); });
   const lebt = hxEigN(L) >= 1 && on && !L.live;   // (step 4: Live – ✓ ✕ need rendered passes)
   return [
-    row('Wiedergabe', chip('Abdruck', !on && !L.live, () => { if (forced) { hxHint(why ? 'Sie ' + why + ' – bleibt Wuchs' : 'Lebendig wächst immer'); if (L.live) hxWSet(L, 'live', false); return; } hxWSet(L, 'wahl', false); }, 'Wiedergabe: Abdruck – genau wie gespielt'),
+    row('Wiedergabe', chip('Abdruck', !on && !L.live, () => hxAbdruck(L), 'Wiedergabe: Abdruck – genau wie gespielt (setzt Klang, Folgen der Tonart, Eigensinn und Notenänderungen zurück)'),
       chip('Wuchs', on && !L.live, () => hxWSet(L, 'wahl', true), 'Wiedergabe: Wuchs – Myzel spielt die Noten neu' + (no ? ' (ohne Werk-Rahmen: mit echten Stimmen)' : '')),
       chip('Live', !!L.live, () => hxWSet(L, 'live', !L.live), 'Wiedergabe: Live – echte Stimmen spielen die Noten, im Takt vorausgeplant; sie kosten Stimmen und weichen deinem Spiel'),   // (step 4: SPEC §10.6)
       h('span', { class: 'hx-ms' }, (no && on ? 'ohne Werk-Rahmen: ' : '') + word + (why && on ? (word ? ' · ' : '') + why : ''))),
