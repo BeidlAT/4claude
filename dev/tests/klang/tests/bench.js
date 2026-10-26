@@ -167,7 +167,7 @@ function costRow(okf, what, tab, cur, env, f) {
     gbs: { f0: [41, 55, 82, 110, 220], ys: [0.1, 0.6], tol: 5, costMax: 1.31, line: true },
     hht: { struck: true, pitchless: 'a hi-hat: six squares in a cluster, tuned with the note but no pitch of its own', loud: [-11, 2], costMax: 0.94 },   // (ticks against held tones: it sits ≈ 9 dB lower, its peak at −3 dBFS)
     vox: { f0: [110, 220, 440, 660], ys: [0.5], tol: 8, costMax: 1.16, pp: { 'vox.vibrato': 0, 'vox.konsonant': 0 }, cYs: [0, 0.25, 0.5] },   // (u → o → a: the centroid rises; e and i are brighter by F2 but their low F1 holds it)
-    spu: { struck: true, f0: [262, 523, 1047, 2093], ys: [0.8], tol: 5, costMax: 1.08, ring: 5, cost: { DUR: '2.5' } },
+    spu: { struck: true, f0: [262, 523, 1047, 2093], ys: [0.8], tol: 5, costMax: 1.08, ring: 6.5, cost: { DUR: '2.5' } },   // (a music box's tine rings ≈ 6 s at 440 Hz)
     kto: { f0: [110, 220, 440, 880], ys: [0.5], tol: 6, costMax: 0.81, line: true, burstDur: () => 3.6 },
     gsp: { struck: true, web: true, ring: 4.5, f0: [110, 220, 440, 880, 1760], ys: [0.5], tol: 3, costMax: 0.45, cost: { DUR: '2' } },   // (a native pluck; the web is measured on its own below)
     // Moder: struck – pitch on the fundamental's line at the strike (wet: the swell's moisture), the voice lives its Nachklang
