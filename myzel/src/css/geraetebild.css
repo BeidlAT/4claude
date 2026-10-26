@@ -52,3 +52,18 @@
 .cb-logo2 { fill: #a8988a; font: 600 7.5px var(--font-num); letter-spacing: .1em; }
 .cb-disp { fill: #0a0d0a; stroke: #3d312a; }
 .cb-disp-t { fill: #6fe08a; font: 600 13px var(--font-num); }
+/* the APC40 MK2's five modes: the mode, its pads as a clickable picture of their lights */
+.apc { margin-top: 14px; border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: var(--bark); display: flex; flex-direction: column; gap: 10px; }
+.apc h4 { margin: 0; font: 600 15px var(--font-ui); }
+.apc-modes { display: flex; flex-wrap: wrap; gap: 6px; }
+.apc-row { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; }
+.apc-grid { display: grid; grid-template-columns: repeat(8, 34px); grid-auto-rows: 26px; gap: 5px; padding: 8px; border-radius: 10px; background: #15110e; }
+.apc-pad { --l: transparent; border: 1px solid #3d312a; border-radius: 4px; background: #221b17; cursor: pointer; padding: 0; touch-action: none; }
+.apc-pad.lit { background: var(--l); border-color: var(--l); box-shadow: 0 0 8px var(--l); }
+.apc-pad.puls { animation: apcPuls 1s ease-in-out infinite; }
+.apc-pad.blink { animation: apcBlink .5s steps(2, jump-none) infinite; }
+.apc-pad:focus-visible { outline: 2px solid var(--lumen); outline-offset: 1px; }
+@keyframes apcPuls { 50% { opacity: .45; } }
+@keyframes apcBlink { 50% { opacity: .15; } }
+.apc-side { display: flex; flex-direction: column; gap: 8px; max-width: 340px; }
+@media (prefers-reduced-motion: reduce) { .apc-pad.puls, .apc-pad.blink { animation: none; } }

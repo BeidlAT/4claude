@@ -12,6 +12,7 @@
 function midiTake(src, ev) {
   if (ev.ch === 15 && gkrTake(src, ev)) return true;   // channel 16: a phone's Gestik over the Funkstrecke (only with its signature)
   if (CB.on && cbIn(src, ev)) return true;   // (26.10.2026: the Gerätebild – lights its controls; while calibrating it takes them)
+  if (APC.src && apcIn(src, ev)) return true;   // (26.10.2026: the APC40 MK2's pads in one of its five modes)
   if (MIDI.take && MIDI.take(src, ev) === true) return true;
   if (LEARN.on && learnIn(src, ev)) return true;
   return mapTake(src, ev);

@@ -136,7 +136,7 @@ function tickRun() {
   const T = tickTry;
   T(0, () => { ctxSync(); if (A.ctxJump) { A.ctxJump = false; if (SEQ.ext && CLK.run && CLK.n > 2) clkFollow(); } }); T(1, jrgClock); T(2, () => seqTick(horizon)); T(3, () => clkOutTick(horizon)); T(4, () => rollTick(horizon));
   T(5, () => grainTick(horizon)); T(6, () => previewTick(horizon)); T(7, () => faeTick(horizon)); if (GK.on || RG.on) T(8, () => rgTick(horizon)); if (MOD.tm) T(9, () => modFlush(true)); if (A.gsp) T(10, gspTick);
-  if (RHZ.vs.size || RHZ.q.length) T(11, () => rhzRun(horizon)); T(12, () => hxTick(horizon)); T(13, idleTick);   // (Hexenring: its waits, the Ohr, the field's rings)
+  if (RHZ.vs.size || RHZ.q.length) T(11, () => rhzRun(horizon)); T(12, () => hxTick(horizon)); T(13, idleTick); if (APC.seq.on || APC.net.on) T(14, () => apcTick(horizon));   // (the APC40's Sequenzer and Myzelnetz)   // (Hexenring: its waits, the Ohr, the field's rings)
 }
 function startClock() {
   const fallback = () => { if (!A.clockId) A.clockId = setInterval(tick, 25); };
