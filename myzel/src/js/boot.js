@@ -39,9 +39,12 @@ function boot() {
       if (A.unmute && A.unmute.paused) { const p = A.unmute.play(); if (p && p.catch) p.catch(() => {}); }
     } else {
       releaseAllTouches();
-      if (CAP.state === 'idle' && !SEQ.on && !A.bor && !A.frozen && !hxBusy()) { A.userSuspended = true; try { A.ctx.suspend(); } catch (e) {} }   // (Hexenring: a Schleife plays on)
+      // (Hexenring: a Schleife plays on – Puls, Bordun, Freeze and a recording too – but only with „Im Hintergrund
+      // weiterspielen“; owner, 26.10.2026: on the iPad Myzel played on after it was closed – off there by default)
+      if (!P['dev.bg'] || (CAP.state === 'idle' && !SEQ.on && !A.bor && !A.frozen && !hxBusy())) bgStop();
     }
   });
+  window.addEventListener('pagehide', () => { if (A.ctx && !P['dev.bg']) bgStop(); });
   window.addEventListener('blur', () => { if (document.visibilityState !== 'visible') releaseAllTouches(); });
   // Gestik: back from the background, a turned view (both do nothing while it is off)
   document.addEventListener('visibilitychange', () => { if (GK.on) gkVis(); });

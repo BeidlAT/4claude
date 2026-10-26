@@ -607,6 +607,7 @@ NUM('rec.bars', 'Takte', 1, 128, 8, '', { step: 1, rec: 1, fmt: (v) => v + (v ==
 SEL('dev.q', 'Qualitätsstufe', [['1', '1 · Leicht'], ['2', '2 · Voll'], ['3', '3 · Gewaltig']], MOBILE ? '1' : '2', { chips: 1, dev: 1 });
 // (24.10.2026: Android starts in „Minimal“ – Chrome there opens its fast output only for the numeric hint; lasting
 // underruns step back by themselves, latStep. iPhone and iPad „Standard“, computers „Minimal“ as before)
+BOOL('dev.bg', 'Im Hintergrund weiterspielen', !(IOS || MOBILE), { dev: 1 });   // (owner, 26.10.2026, iPad: „spielt weiter, obwohl geschlossen“) boot.js
 SEL('dev.lat', 'Latenz', [['min', 'Minimal'], ['std', 'Standard'], ['safe', 'Sicher']], MOBILE && !ANDROID ? 'std' : 'min', { chips: 1, dev: 1 });
 SEL('midi.map', 'Tasten', [['scale', 'Skala'], ['white', 'Weiße Tasten'], ['chrom', 'Chromatisch']], 'scale', { chips: 1, dev: 1 });
 NUM('midi.y', 'Höhe auf der Spielfläche', 0, 1, 0.55, '%', { dev: 1 });

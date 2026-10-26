@@ -2,6 +2,13 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-26z",
+      "punkte": [
+        "iPad und Handy: Myzel verstummt jetzt, wenn du die App verlässt oder schließt – auch wenn Puls oder Schleifen laufen – und spielt weiter, sobald du zurückkommst.",
+        "Neu unter Gerät › Hintergrund: „Im Hintergrund weiterspielen“ – am PC an (beim Tab-Wechsel spielt es weiter), auf iPad und Handy anfangs aus."
+      ]
+    },
+    {
       "id": "2026-10-26y",
       "punkte": [
         "Schleifen behalten ihren eigenen Klang, auch wenn du ein anderes Preset lädst – vorher spielten sie auf manchen Geräten (z. B. iPad) mit den Klangreglern des neuen Presets.",
