@@ -200,3 +200,16 @@
 .hx-ed-zoom .btn { min-width: 34px; padding: 3px 9px; }
 .hx-ed-wave:focus-visible { outline: 2px solid var(--lumen); outline-offset: 1px; }
 .hx-ed-wait:empty { display: none; }
+/* (owner, 26.10.2026) the Schleifen in the Pult: a group beside the Spiel group, its header folds it */
+.mx-g-hxl { flex: 0 0 auto; }
+.mx-g-hxl[hidden] { display: none; }
+.hxmp-row { gap: 2px; }
+.mx-g-hxl .hxm-st { flex: 0 0 82px; min-height: 0; }
+.mx-g-hxl .hxm-stem { min-height: 60px; }
+.mx-g-hxl.fold .hxmp-row { display: none; }
+.mx-g-hxl.fold { min-width: 64px; }
+.hxmp-fold { flex: none; border: 0; background: none; padding: 0 4px; height: 100%; color: var(--spore); font: inherit; letter-spacing: inherit; cursor: pointer; border-radius: 6px; }
+.hxmp-fold:hover { background: rgba(240, 230, 216, .06); }
+.hxmp-fold:focus-visible { outline: 2px solid var(--lumen); outline-offset: 0; }
+.mx[data-strip="tight"] .mx-g-hxl .hxm-kw, .mx[data-strip="side"] .mx-g-hxl .hxm-kw { min-height: 0; }
+.mx[data-strip="tight"] .mx-g-hxl .hxm-kl, .mx[data-strip="tight"] .mx-g-hxl .hxm-state { display: none; }

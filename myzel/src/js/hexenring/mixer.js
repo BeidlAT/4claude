@@ -14,18 +14,23 @@ function hxmBuild(host) {
   HXM.sig = '';
 }
 function hxmOpen() { HXM.sig = ''; hxmSync(); }
-function hxmLayout() { for (const S of HXM.st) hxmStemLayout(S); if (HXM.all) hxmStemLayout(HXM.all); }
-// the strips follow the loops: built again when a loop comes or goes (never per frame)
-function hxmSync() {
-  if (!HXM.row) return;
+function hxmLayout() { hxmLayoutR(HXM); }
+function hxmLayoutR(R) { for (const S of R.st) hxmStemLayout(S); if (R.all) hxmStemLayout(R.all); }
+// the strips follow the loops: built again when a loop comes or goes (never per frame) – in this view (with „Alle“) and
+// in the Pult's group „Schleifen“ (HXMP, beside the Hexenring's own channel); true when they changed
+function hxmSync() { return hxmSyncR(HXM, true); }
+function hxmSyncR(R, withAll) {
+  if (!R.row) return false;
   const loops = hxLoopsLive().filter((L) => !L.bew).sort((a, b) => a.slot - b.slot), sig = loops.map((L) => L.slot + ':' + L.key).join(',');
-  if (sig === HXM.sig) return;
-  HXM.sig = sig;
-  HXM.st = loops.map((L) => hxmStrip(L));
-  HXM.all = loops.length ? hxmAllStrip() : null;
-  HXM.row.replaceChildren(...HXM.st.map((S) => S.el), ...(HXM.all ? [h('i', { class: 'hxm-sep', 'aria-hidden': 'true' }), HXM.all.el] : []));
-  HXM.empty.hidden = !!loops.length; HXM.row.hidden = !loops.length;
-  requestAnimationFrame(hxmLayout);
+  if (sig === R.sig) return false;
+  R.sig = sig;
+  R.st = loops.map((L) => hxmStrip(L));
+  R.all = withAll && loops.length ? hxmAllStrip() : null;
+  R.row.replaceChildren(...R.st.map((S) => S.el), ...(R.all ? [h('i', { class: 'hxm-sep', 'aria-hidden': 'true' }), R.all.el] : []));
+  if (R.empty) R.empty.hidden = !!loops.length;
+  R.row.hidden = !loops.length;
+  requestAnimationFrame(() => hxmLayoutR(R));
+  return true;
 }
 const hxmL = (S) => { const L = hxByKey(S.key); return L && L.state !== 'weg' ? L : null; };
 const hxmDb = (g) => (g > 0 ? 20 * Math.log10(g) : -Infinity);
@@ -145,8 +150,11 @@ function hxmFrame(dt) {
   if (!HXM.row) return;
   const now = performance.now();
   if (now - HXM.t > 250) { HXM.t = now; hxmSync(); }
+  hxmDrawR(HXM, dt);
+}
+function hxmDrawR(R, dt) {
   const met = new Map((HX.meter || []).map((m) => [m[0], m]));
-  for (const S of HXM.st) {
+  for (const S of R.st) {
     const L = hxmL(S); if (!L) continue;
     const m = met.get(L.id), st = L.state, pend = L.pendTo && L.pendTo !== st ? L.pendTo : null;
     hxmText(S, 'src', S.src, hxEngName(L) + ' · ' + (hxTakt(L) ? dec(+(L.d.beats / (L.bpb || 4)).toFixed(2)) + ' T' : dec(hxLen(L).toFixed(1)) + ' s'));   // (short: the strip is narrow – the card says it whole)
@@ -155,8 +163,8 @@ function hxmFrame(dt) {
     hxmLv(S, m ? m[1] : 0, m ? m[2] : 0, dt, st === 'spielt');
     hxmStrDraw(S);
   }
-  if (HXM.all) {
-    const A2 = HXM.all, L2 = MX.ch.hxr && MX.ch.hxr.lv;
+  if (R.all) {
+    const A2 = R.all, L2 = MX.ch.hxr && MX.ch.hxr.lv;
     hxmText(A2, 'src', A2.src, hxSrcText()); hxmText(A2, 'state', A2.state, P['xhxr.mute'] ? 'stumm' : '');
     A2.el.classList.toggle('dormant', !!(MX.ch.hxr && MX.ch.hxr.dorm));
     if (L2) { A2.lv = L2; A2.shared = true; }
@@ -211,4 +219,37 @@ function hxmKnobDraw(S, v) {
   c.strokeStyle = 'rgba(240,230,216,.16)'; c.lineWidth = 3; c.beginPath(); c.arc(cx, cy, r, a0 - 0.75 * Math.PI, a0 + 0.75 * Math.PI); c.stroke();
   c.strokeStyle = S.dorm ? '#7a6d63' : HXM_COL; c.lineWidth = 3; c.beginPath(); if (Math.abs(v) < 0.005) c.arc(cx, cy, r, a0 - 0.04, a0 + 0.04); else c.arc(cx, cy, r, Math.min(a0, a1), Math.max(a0, a1)); c.stroke();
   c.fillStyle = 'rgba(240,230,216,.9)'; c.beginPath(); c.arc(cx + Math.cos(a1) * (r - 6), cy + Math.sin(a1) * (r - 6), 2, 0, Math.PI * 2); c.fill();
+}
+
+// ---- (owner, 26.10.2026: „im Mixer fehlen die einzelnen Schleifen zum Einstellen“ – chosen: directly in the Pult) the
+// Pult's group „Schleifen“ right of the Spiel group, so beside the Hexenring's channel: the same strips as the view
+// „Schleifen“ (level, Balance, M, S, meter; the head opens the loop's editor). Only while there are loops; its header
+// folds it to one narrow column (kept on this device). A loop coming or going lays the Pult out again. ----
+const HXMP = { grp: null, row: null, st: [], all: null, sig: '', t: 0, fold: false, btn: null };
+try { HXMP.fold = localStorage.getItem('myzel.hxmPultFold') === '1'; } catch (e) {}
+function hxmPultGroup() {
+  HXMP.sig = ''; HXMP.st = [];
+  HXMP.btn = h('button', { type: 'button', class: 'hxmp-fold', 'aria-expanded': 'true', title: 'Die Schleifen einzeln ein- oder ausklappen' });
+  HXMP.btn.addEventListener('click', () => { HXMP.fold = !HXMP.fold; try { localStorage.setItem('myzel.hxmPultFold', HXMP.fold ? '1' : '0'); } catch (e) {} hxmPultFold(); });
+  HXMP.row = h('div', { class: 'mx-gs hxmp-row' });
+  HXMP.grp = h('div', { class: 'mx-grp mx-g-hxl', role: 'group', 'aria-label': 'Schleifen', hidden: true }, h('div', { class: 'mx-gh' }, HXMP.btn), HXMP.row);
+  hxmPultFold();
+  return HXMP.grp;
+}
+function hxmPultFold() {
+  const n = HXMP.st.length, f = HXMP.fold;
+  if (!HXMP.btn) return;
+  HXMP.btn.textContent = f ? 'schleifen ' + n + ' ›' : 'schleifen ‹';
+  HXMP.btn.setAttribute('aria-expanded', String(!f));
+  HXMP.grp.classList.toggle('fold', f);
+  if (MX.view === 'pult' && MX.scroll) requestAnimationFrame(() => { mxLayout(); hxmLayoutR(HXMP); });
+}
+function hxmPultFrame(dt) {
+  if (!HXMP.row || !HXMP.row.isConnected) return;
+  const now = performance.now();
+  if (now - HXMP.t > 250) {
+    HXMP.t = now;
+    if (hxmSyncR(HXMP, false)) { HXMP.grp.hidden = !HXMP.st.length; hxmPultFold(); }
+  }
+  if (!HXMP.fold && !HXMP.grp.hidden) hxmDrawR(HXMP, dt);
 }

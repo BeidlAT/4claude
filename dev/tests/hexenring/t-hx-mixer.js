@@ -17,7 +17,7 @@ const { ok } = H;
     M.HX.chips = null; M.setParam('hx.laenge', 'auto'); await window.__sleep(2200);
     M.openPanel('mix'); await window.__sleep(400);
     const sw = document.querySelector('.mx-vsw [data-v="schleifen"]'); o.tab = !!sw; sw.click(); await window.__sleep(900);
-    const st = [...document.querySelectorAll('.hxm-st')];
+    const st = [...document.querySelectorAll('.mx-v-schleifen .hxm-st')];
     o.n = st.length; o.names = st.map((s) => s.querySelector('.hxm-nm').textContent);
     o.vis = st.every((s) => s.offsetParent && s.getBoundingClientRect().height > 250);
     const Ls = M.hxLoopsLive().sort((a, b) => a.slot - b.slot), L1 = Ls[0], L2 = Ls[1], L3 = Ls[2];
@@ -38,7 +38,7 @@ const { ok } = H;
     st[0].querySelector('.mx-s').click(); await window.__sleep(150); o.s = Ls.map((L) => L.state); o.sp = st[0].querySelector('.mx-s').getAttribute('aria-pressed');
     st[0].querySelector('.mx-s').click(); await window.__sleep(150); o.s2 = Ls.map((L) => L.state);
     // „Alle“ is the Hexenring channel
-    const all = document.querySelector('.hxm-all'); o.all = !!all;
+    const all = document.querySelector('.mx-v-schleifen .hxm-all'); o.all = !!all;
     all.querySelector('.mx-m').click(); await window.__sleep(80); o.allM = M.P['xhxr.mute']; all.querySelector('.mx-m').click();
     // the processor got the Balance: its report's level per side – render check via the snapshot's record
     o.rec = M.hxRecOf ? M.hxRecOf(L2).pan : null;
@@ -46,7 +46,15 @@ const { ok } = H;
     const T = M.MTARGETS; o.mt = ['hx.ring.1.stumm', 'hx.ring.1.balance', 'hx.ring.1.pegel', 'hx.ring.1.solo'].every((k) => T.has(k));
     T.get('hx.ring.3.balance').set(0); o.mtPan = L3.pan; T.get('hx.ring.3.stumm').press(1); await window.__sleep(60); o.mtM = L3.state; T.get('hx.ring.3.stumm').press(1); T.get('hx.ring.3.balance').set(0.5);
     // a loop gone: its strip goes too
-    M.hxDelete(L3); await window.__sleep(600); o.after = document.querySelectorAll('.hxm-st:not(.hxm-all)').length;
+    M.hxDelete(L3); await window.__sleep(600); o.after = document.querySelectorAll('.mx-v-schleifen .hxm-st:not(.hxm-all)').length;
+    // (owner, 26.10.2026) the Pult itself: a group „Schleifen“ right beside the Hexenring channel, folding
+    M.mxSetView('pult'); await window.__sleep(900);
+    const g = document.querySelector('.mx-g-hxl'), hx = document.querySelector('.mx-st[data-k="hxr"]').getBoundingClientRect(), ps = [...g.querySelectorAll('.hxm-st')];
+    o.pult = { shown: !g.hidden, n: ps.length, names: ps.map((x) => x.querySelector('.hxm-nm').textContent), next: Math.abs(g.getBoundingClientRect().left - hx.right) < 20, h: Math.round(ps[0].getBoundingClientRect().height) };
+    const L1b = M.hxLoopsLive().sort((a, b) => a.slot - b.slot)[0], stem2 = ps[0].querySelector('.hxm-stem'); stem2.focus(); stem2.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true })); await window.__sleep(80);
+    o.pult.db = +(20 * Math.log10(L1b.gain)).toFixed(2);
+    g.querySelector('.hxmp-fold').click(); await window.__sleep(300); o.pult.fold = [g.classList.contains('fold'), g.querySelector('.hxmp-fold').textContent];
+    g.querySelector('.hxmp-fold').click(); await window.__sleep(300); o.pult.open = !g.classList.contains('fold');
     return o;
   });
   await page.screenshot({ path: 'out/mixer-schleifen.png' });
@@ -59,6 +67,8 @@ const { ok } = H;
   ok(r.all && r.allM === true, '„Alle“ is the Hexenring channel (its M is xhxr.mute)');
   ok(r.mt && r.mtPan === -1 && r.mtM === 'stumm', `MIDI: per loop stumm, Balance, Pegel, Solo (${r.mtPan}, ${r.mtM})`);
   ok(r.after === 2, `a loop deleted: its strip goes (${r.after})`);
+  ok(r.pult.shown && r.pult.n === 2 && r.pult.names.join() === 'Schleife 1,Schleife 2' && r.pult.next && r.pult.h > 250, `the Pult: the loops one by one right beside the Hexenring channel (${JSON.stringify(r.pult)})`);
+  ok(Math.abs(r.pult.db + 2.5) < 0.05 && r.pult.fold[0] && /schleifen 2/.test(r.pult.fold[1]) && r.pult.open, `… the same faders (−3 → −2,5 dB), its header folds and unfolds it (${JSON.stringify(r.pult.fold)})`);
   ok(!errors.length, 'no page errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
   await H.close(); process.exit(H.summary() ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

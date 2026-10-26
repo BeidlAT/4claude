@@ -174,6 +174,7 @@ function mxPultFrame(dt, ts) {
   mxDrawSum();
   if (MX.scrollable && (!MOBILE || ts - (MX.brT || 0) > 45)) { MX.brT = ts; mxDrawBridge(); }
   mxRings();
+  if (typeof hxmPultFrame === 'function') hxmPultFrame(dt);
   // the numbers on the strips: peak readouts eight times a second, the compressor arc with them
   const t = ts / 1000;
   if (t - (MX.stripT || 0) > 0.125) {

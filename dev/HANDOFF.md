@@ -195,6 +195,11 @@ Veröffentlicht ist alles bis Pull-Request #11 (Pages aus `ccr-c7c5d0a6-cus3ip`)
    den Bandwechsel ab, auf den ein ↶ selbst noch wartete (statt den Schritt davor zurückzunehmen – Wartende mit
    `replay` zählen nicht), und ein zweiter Bandwechsel vor der Naht rechnete vom falschen Stand (`hxSpeed` nimmt den
    eigenen wartenden zuerst zurück, dann `was`); die Schleife konnte danach doppelt so lang sein.
+   Nachtrag 5 (26.10.2026, Besitzer: „im Mixer fehlen die einzelnen Schleifen“ – gewählt: direkt im Pult; „zwei
+   Spielköpfe – welcher spielt?“): Gruppe „Schleifen“ im Pult gleich nach der Spiel-Gruppe (`hxmPultGroup` aus
+   `mxBuildPult`, `HXMP`, gleiche Streifen wie die Ansicht über `hxmSyncR`/`hxmDrawR`, nur solange es Schleifen gibt,
+   Überschrift klappt ein, `localStorage myzel.hxmPultFold`; neu/weg → `mxLayout`). Beim Vorhören zeichnet der Editor
+   nur dessen Spielkopf, gestoppt die Marke nur als Dreieck. `t-hx-mixer` 12.
 5. **Offene Fragen ans Ohr:** Schale spricht wie früher das Harz-Glas manchmal spät an (soll sie immer sofort?);
    Bandträgheit, Gärtner-Bass, Musikalität der Antworten (siehe `dev/IDEEN.md`).
 6. **Danach** die Liste in `dev/IDEEN.md` (Sample-Bibliothek, Stimme als Instrument, neue Klangerzeugung, native App).

@@ -337,12 +337,13 @@ function hxEdWave(force) {
   const c = mxFit(cv, w, hh, 0, Math.min(2, devicePixelRatio || 1));
   c.clearRect(0, 0, w, hh); c.drawImage(HXE.bg, 0, 0, w, hh);
   const [v0, v1] = HXE.zv || [0, 1], ww = w * hxEdWf(L), X = (u) => Math.round(((u - v0) / (v1 - v0)) * (ww - 1)) + 0.5;
-  // the loop's own playhead – while the editor plays it, its playhead (bright) and the loop's own dimmed; stopped: the mark
-  if (L.state !== 'angehalten' && A.ctx) { const x = X(hxPhase(L, heardT())); if (x >= 0 && x <= ww) { c.strokeStyle = L.state === 'spielt' && !HXE.pv ? HXC.hypha : HXC.dim; c.lineWidth = 1.5; c.beginPath(); c.moveTo(x, 0); c.lineTo(x, hh); c.stroke(); } }
+  // one playhead at a time (owner, 26.10.2026: two heads – which one plays?): while the editor plays, only its own (the
+  // loop is silent meanwhile); else the loop's, and the mark where ▶ starts as a small triangle on top, no line
+  if (!HXE.pv && L.state !== 'angehalten' && A.ctx) { const x = X(hxPhase(L, heardT())); if (x >= 0 && x <= ww) { c.strokeStyle = L.state === 'spielt' ? HXC.hypha : HXC.dim; c.lineWidth = 1.5; c.beginPath(); c.moveTo(x, 0); c.lineTo(x, hh); c.stroke(); } }
   const pu = hxPvPos(), xp = X(pu);
   if (xp >= 0 && xp <= ww) {
     if (HXE.pv) { c.strokeStyle = '#f6efe4'; c.lineWidth = 2; c.beginPath(); c.moveTo(xp, 0); c.lineTo(xp, hh); c.stroke(); c.fillStyle = '#f6efe4'; c.beginPath(); c.moveTo(xp - 5, 0); c.lineTo(xp + 5, 0); c.lineTo(xp, 7); c.closePath(); c.fill(); }
-    else if (pu > 0) { c.strokeStyle = 'rgba(246,239,228,.6)'; c.setLineDash([2, 3]); c.lineWidth = 1; c.beginPath(); c.moveTo(xp, 0); c.lineTo(xp, hh); c.stroke(); c.setLineDash([]); c.fillStyle = 'rgba(246,239,228,.75)'; c.beginPath(); c.moveTo(xp - 4, 0); c.lineTo(xp + 4, 0); c.lineTo(xp, 6); c.closePath(); c.fill(); }
+    else if (pu > 0) { c.fillStyle = 'rgba(246,239,228,.75)'; c.beginPath(); c.moveTo(xp - 4, 0); c.lineTo(xp + 4, 0); c.lineTo(xp, 6); c.closePath(); c.fill(); }
   }
 }
 // the notes a loop plays when its notes' tools reshape them (Stufen, dünner, dichter, Krebs, Umkehrung, Groove): place,
