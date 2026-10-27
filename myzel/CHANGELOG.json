@@ -2,6 +2,14 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-27f",
+      "punkte": [
+        "Behoben: stand der Kanal „Hexenring“ im Mischpult auf KETTE, liefen alle Schleifen noch einmal durch die Effekte des aktuellen Presets – darum änderte der Filter auch eingebrannte Schleifen, und Presets veränderten den Klang je nach ihren Effekten.",
+        "Der Punkt KETTE/DIREKT beim Hexenring-Kanal ist jetzt derselbe Schalter wie „Effekte des Presets wirken auf die Schleifen“: DIREKT – die Schleifen klingen wie aufgenommen, KETTE – sie laufen trocken durch die Effekte des Presets.",
+        "„Effektkette: eingebrannt / folgt“ in der Karte einer Schleife wirkt jetzt hörbar: nur bei „folgt“ greift der Filter."
+      ]
+    },
+    {
       "id": "2026-10-27e",
       "punkte": [
         "Jede Schleife hat jetzt ihren eigenen Hall und ihr eigenes Echo – die, in denen sie gespielt wurde. Ein späteres Preset ändert sie nicht mehr, auch wenn die Schleifen unter verschiedenen Presets aufgenommen wurden.",

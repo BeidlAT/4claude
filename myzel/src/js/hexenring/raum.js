@@ -136,3 +136,5 @@ function hxFxSet(on) {
   for (const L of hxLoopsLive()) if (!L.bew && !!L.folgt !== !!on) hxFolgt(L, !!on, true);
   hxrSync(); hxSay(on ? 'Schleifen: Effekte des Presets wirken (live)' : 'Schleifen: klingen wie aufgenommen'); hxCardDirty();
 }
+// the Hexenring channel's node in the console (KETTE/DIREKT) shows the switch
+function hxRouteMirror() { const v = P['hx.fx'] ? 'fx' : 'dir'; if (P['xhxr.route'] === v) return; P['xhxr.route'] = v; for (const fn of CTL['xhxr.route'] || []) fn(v, null); if (typeof MX !== 'undefined') MX.dirtyStatic = true; clearTimeout(saveTimer); saveTimer = setTimeout(saveState, 400); }

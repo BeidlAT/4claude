@@ -22120,7 +22120,8 @@ function updInactive() {
   for (const el of document.querySelectorAll('#p-dly-div')) el.parentNode.classList.toggle('inactive', !P['dly.sync']);
 }
 function onParamChanged(id) {
-  if (id === 'hx.fx') { hxFxSet(P['hx.fx']); return; }   // (Hexenring: the preset's effects on the loops – raum.js)
+  if (id === 'hx.fx') { hxFxSet(P['hx.fx']); hxRouteMirror(); return; }   // (Hexenring: the preset's effects on the loops – raum.js)
+  if (id === 'xhxr.route') { if ((P['xhxr.route'] !== 'dir') !== !!P['hx.fx']) setParam('hx.fx', P['xhxr.route'] !== 'dir'); }   // (its node in the console is the same switch)
   if ((id === 't.root' || id === 't.scale') && hxWTonHold(id)) return;   // Hexenring: (step 2a) the field and the loops change key on the announced bar line
   const pre = id.slice(0, id.indexOf('.'));
   if (HX.wFeld && A.ctx && (ENGINES[pre] || id === 'v.eng' || id === 'v.layer')) HX.wKlang = performance.now() + 400;   // Hexenring: (step 2a) loops that sound as the field: anew, once the knob rests
@@ -22250,6 +22251,7 @@ function restoreState() {
     else if (s && s.values) { const v = engKeysIn(s.values); for (const id of PATCH_IDS) if (id in v) P[id] = sanitize(PD[id], v[id]); UI.preset = s.preset || null; }
     const r = JSON.parse(store.get('myzel.rec.v1') || 'null');
     if (r) for (const id in r) if (PD[id] && PD[id].rec) P[id] = sanitize(PD[id], r[id]);
+    P['xhxr.route'] = P['hx.fx'] ? 'fx' : 'dir';   // (Hexenring: KETTE/DIREKT shows „Effekte des Presets wirken auf die Schleifen“ – raum.js)
     latRestore(dv);   // (the latency: chosen by hand, or the default with this device's step – ui/leistung.js)
   } catch (e) {}
 }
@@ -31646,7 +31648,10 @@ function hxMask(keys) {
 }
 // the strip „Hexenring“: straight to the master (its chain is burnt in) – or, set to the chain, through a copy of it
 // (the same settings and modulators) that ends at the master as well, never in A.masterSum where „Alles“ listens
-function hxRoute() { return P['xhxr.route'] !== 'dir' ? hxChain('fx').in : hxGateM(); }
+// (owner, 27.10.2026: „wenn ich es auf eingebrannt lasse, kann ich mittels Filter den Sound immer noch ändern“) the channel
+// itself always goes straight to the sum: the live chain reaches loops only one by one, dry, when they follow it (folgt,
+// hx.fx) – its node in the console (KETTE/DIREKT) is that switch (controls.js), never a second chain over baked loops
+function hxRoute() { return hxGateM(); }
 // the Hexenring's way into the master's input, straight or through the chain's copy: a gate at 1 (Ruhe: at 0 while the
 // graph sleeps, so the master rests while what is before it runs on – hxGates)
 function hxGateM() { if (!HX.gM || HX.gM.context !== A.ctx) { HX.gM = G(1); HX.gM.connect(A.masterIn); } return HX.gM; }
@@ -31872,6 +31877,8 @@ function hxFxSet(on) {
   for (const L of hxLoopsLive()) if (!L.bew && !!L.folgt !== !!on) hxFolgt(L, !!on, true);
   hxrSync(); hxSay(on ? 'Schleifen: Effekte des Presets wirken (live)' : 'Schleifen: klingen wie aufgenommen'); hxCardDirty();
 }
+// the Hexenring channel's node in the console (KETTE/DIREKT) shows the switch
+function hxRouteMirror() { const v = P['hx.fx'] ? 'fx' : 'dir'; if (P['xhxr.route'] === v) return; P['xhxr.route'] = v; for (const fn of CTL['xhxr.route'] || []) fn(v, null); if (typeof MX !== 'undefined') MX.dirtyStatic = true; clearTimeout(saveTimer); saveTimer = setTimeout(saveState, 400); }
 // ---- the calls (times are audio seconds of A.ctx; the processor gets frames). Musical beats: bar lines at 0, 4, 8 … ----
 // hxGrab({in: 0 Gespielt | 1 Alles, t0, t1 | f0, f1, pre, post, tail}) → Promise<{id, chunks: [[L, R]…], f0, n, pre,
 // len, post, tail, lost, in}>: the window [t0 − pre, t1 + post + tail) copied out of a Humus ring (waits until it has

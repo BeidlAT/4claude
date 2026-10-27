@@ -127,7 +127,8 @@ function updInactive() {
   for (const el of document.querySelectorAll('#p-dly-div')) el.parentNode.classList.toggle('inactive', !P['dly.sync']);
 }
 function onParamChanged(id) {
-  if (id === 'hx.fx') { hxFxSet(P['hx.fx']); return; }   // (Hexenring: the preset's effects on the loops – raum.js)
+  if (id === 'hx.fx') { hxFxSet(P['hx.fx']); hxRouteMirror(); return; }   // (Hexenring: the preset's effects on the loops – raum.js)
+  if (id === 'xhxr.route') { if ((P['xhxr.route'] !== 'dir') !== !!P['hx.fx']) setParam('hx.fx', P['xhxr.route'] !== 'dir'); }   // (its node in the console is the same switch)
   if ((id === 't.root' || id === 't.scale') && hxWTonHold(id)) return;   // Hexenring: (step 2a) the field and the loops change key on the announced bar line
   const pre = id.slice(0, id.indexOf('.'));
   if (HX.wFeld && A.ctx && (ENGINES[pre] || id === 'v.eng' || id === 'v.layer')) HX.wKlang = performance.now() + 400;   // Hexenring: (step 2a) loops that sound as the field: anew, once the knob rests
@@ -257,6 +258,7 @@ function restoreState() {
     else if (s && s.values) { const v = engKeysIn(s.values); for (const id of PATCH_IDS) if (id in v) P[id] = sanitize(PD[id], v[id]); UI.preset = s.preset || null; }
     const r = JSON.parse(store.get('myzel.rec.v1') || 'null');
     if (r) for (const id in r) if (PD[id] && PD[id].rec) P[id] = sanitize(PD[id], r[id]);
+    P['xhxr.route'] = P['hx.fx'] ? 'fx' : 'dir';   // (Hexenring: KETTE/DIREKT shows „Effekte des Presets wirken auf die Schleifen“ – raum.js)
     latRestore(dv);   // (the latency: chosen by hand, or the default with this device's step – ui/leistung.js)
   } catch (e) {}
 }
