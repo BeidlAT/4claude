@@ -2,6 +2,13 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-27k",
+      "punkte": [
+        "Ein eigenes Preset übernimmt keine Schleifen mehr, die beim Laden nur schon in der Leiste lagen – nur, was unter ihm dazukommt.",
+        "Der Leistungsbericht (Gerät → Leistung messen) zeigt jetzt genau, wo der Klang der Schleifen auf dem Weg zum Ausgang steht."
+      ]
+    },
+    {
       "id": "2026-10-27j",
       "punkte": [
         "Wieder die neueste Version, mit Kreisen.",

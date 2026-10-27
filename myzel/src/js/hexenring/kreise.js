@@ -334,7 +334,7 @@ function hxUprLeave() {
   const p = userPresets().find((x) => x.name === U.name); if (!p) return;
   const live = hxLoopsLive(), keys = new Set(U.keys);
   if (!live.length) return;   // (an empty Leiste never replaces the preset's own – only „Speichern“ makes it empty)
-  const changed = live.length !== keys.size || live.some((L) => !keys.has(L.key) || !hxKrIsSafe(L)) || p.kr === undefined || p.kr === 'leer';
+  const changed = live.length !== keys.size || live.some((L) => !keys.has(L.key) || !hxKrIsSafe(L)) || (p.kr === 'leer' && !U.keys.length);   // (a Leiste it only found when it came is not its own)
   if (!changed) return;
   hxUprKr(U.name, hxUprKeep(U.name, p.kr));
 }
