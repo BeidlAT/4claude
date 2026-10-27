@@ -127,7 +127,7 @@ function updInactive() {
   for (const el of document.querySelectorAll('#p-dly-div')) el.parentNode.classList.toggle('inactive', !P['dly.sync']);
 }
 function onParamChanged(id) {
-  if (id === 'hx.raumFolgt') { updSends(); return; }   // (Hexenring: the loops' room – raum.js)
+  if (id === 'hx.fx') { hxFxSet(P['hx.fx']); return; }   // (Hexenring: the preset's effects on the loops – raum.js)
   if ((id === 't.root' || id === 't.scale') && hxWTonHold(id)) return;   // Hexenring: (step 2a) the field and the loops change key on the announced bar line
   const pre = id.slice(0, id.indexOf('.'));
   if (HX.wFeld && A.ctx && (ENGINES[pre] || id === 'v.eng' || id === 'v.layer')) HX.wKlang = performance.now() + 400;   // Hexenring: (step 2a) loops that sound as the field: anew, once the knob rests
@@ -219,11 +219,16 @@ function patchValues() { const o = {}; for (const id of PATCH_IDS) o[id] = P[id]
 function loadValues(vals, keepUnset) {
   KQ.miss = []; vals = engKeysIn(vals);
   const was = {}; for (const id in FAE_PAR) was[id] = P[id];   // (Hexenring: the Bewegung lanes take the new values)
+  // (owner, 27.10.2026: „wenn die Schleifen erst einmal stehen, darf nichts mehr darauf wirken“) while Schleifen play in a
+  // Takt, a preset keeps the tempo: another one would set every one of them anew in its grid (Maschinenträume, 128 BPM)
+  const keepT = A.ctx && hxLoopsLive().some((L) => !L.bew && L.state !== 'weg' && hxTakt(L)) ? P['seq.bpm'] : null;
   for (const id of PATCH_IDS) {
     const d = PD[id];
     const v = vals && Object.prototype.hasOwnProperty.call(vals, id) ? sanitize(d, vals[id]) : keepUnset ? P[id] : d.d;
     P[id] = v;
   }
+  UI.tempoKept = keepT != null && P['seq.bpm'] !== keepT ? keepT : null;
+  if (keepT != null) P['seq.bpm'] = keepT;
   for (const id of PATCH_IDS) for (const fn of CTL[id] || []) fn(P[id], null);
   hxMvSync(was);
   // (owner, 26.10.2026: „einzelne Schleifen werden nicht gespielt, wenn ich ein älteres eigenes Preset lade“) another key

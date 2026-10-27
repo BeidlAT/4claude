@@ -192,6 +192,7 @@ const { ok } = H;
     window.__grid(120);
     await window.__sleep(4600);
     const L = M.hxHarvest(M.hxKorbPlan(M.hxHeard()), {}), S = L && M.HX.sch.get(L.sch[0]);
+    if (L) M.hxTaumelnSet(L, true);   // (since 27.10.2026 Taumeln is a choice, off by default – here it is chosen)
     await window.__sleep(300); src.stop(); A.pitchMod.disconnect(src.detune);
     for (let i = 0; i < 160 && !S.baked; i++) await window.__sleep(100);
     const live = ctx.createGain();

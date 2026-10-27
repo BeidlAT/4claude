@@ -39,13 +39,16 @@ async function hxAfterFill(S) {
 }
 // → true when S.bak holds the baked audio of S.aud
 async function hxBake(S) {
-  const n = S.n, c = S.cut, ta = c.stale ? null : hxT(c.f0);
-  if (ta == null || !S.aud) return false;
-  if (hxNowT() - ta > 900) return false;   // (the chain's record reaches fifteen minutes back)
+  const n = S.n, c = S.cut, ta = c.stale ? null : hxT(c.f0), Lp = HX.loops.get(S.loop);
+  if (!S.aud) return false;
+  // (the chain's record reaches fifteen minutes back; older – a window moved far back in the Ernte, a Schleife that
+  // followed the chain for long – its chain as recorded with the loop, owner 27.10.2026: never left on the live chain)
+  const rec = ta != null && hxNowT() - ta <= 900 ? hxChainRec(ta, ta + n / SR) : Lp && Lp.chainRec ? Lp.chainRec : null;
+  if (!rec) return false;
   const Lb = new Float32Array(n), Rb = new Float32Array(n);
   for (let i = 0; i < n; i++) { const ch = S.aud[Math.floor(i / HX_CH)], j = i % HX_CH; if (ch) { Lb[i] = ch[0][j]; Rb[i] = ch[1][j]; } }
   const bv = (S.bv = (S.bv || 0) + 1), aud = S.aud;
-  const m = await hxwCall('bake', { sr: SR, n, L: Lb, R: Rb, chain: hxChainRec(ta, ta + n / SR) }, [Lb.buffer, Rb.buffer]);
+  const m = await hxwCall('bake', { sr: SR, n, L: Lb, R: Rb, chain: rec }, [Lb.buffer, Rb.buffer]);
   if (!m || m.err || !m.L || S.bv !== bv || S.aud !== aud) { if (m && m.err) console.warn('Hexenring: Einbrennen', m.err); return false; }
   const [bak] = hxChunks(n);
   for (let i = 0; i < n; i++) { const ch = bak[Math.floor(i / HX_CH)], j = i % HX_CH; ch[0][j] = m.L[i]; ch[1][j] = m.R[i]; }
@@ -54,7 +57,7 @@ async function hxBake(S) {
 }
 // „folgt der Effektkette“ for a loop: its Schichten go dry through the live chain from the next seam on – or back to
 // their baked versions (baked now if they were not)
-function hxFolgt(L, on) {
+function hxFolgt(L, on, quiet) {
   L.folgt = !!on;
   const f = hxNextSeam(L).f;
   for (const id of L.sch) {
@@ -62,7 +65,7 @@ function hxFolgt(L, on) {
     if (on && S.baked) hxSchPlay(S, false, f);
     else if (!on && !S.baked) { if (S.bak) hxSchPlay(S, true, f); else hxAfterFill(S); }
   }
-  hxSay(hxName(L) + (on ? ' folgt der Effektkette' : ': Effektkette eingebrannt')); hxSaveMeta(L.id); hxCardDirty();
+  if (!quiet) hxSay(hxName(L) + (on ? ' folgt der Effektkette' : ': Effektkette eingebrannt')); hxSaveMeta(L.id); hxCardDirty();
 }
 
 // ---- Taumeln (SPEC §9, per loop, default on): the shared drift bends every live voice; the processor hears it (input
