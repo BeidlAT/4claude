@@ -45,6 +45,7 @@ function hxSetGo(i) {
   const cur = S.list[S.cur];
   // what plays goes to the graveyard with its song (back with it)
   const live = hxLoopsLive();
+  if (live.length) hxKrSecure('Lied „' + (cur ? cur.name : '–') + '“', live);   // (kept as an automatic Kreis first – kreise.js)
   if (live.length) { const snaps = live.map(hxSnap); for (const sn of snaps) HX.grave.unshift({ snap: sn, t: Date.now(), song: cur ? cur.name : null }); for (const L of live) hxDrop(L, 0.04); if (cur) cur.lichSaved = HX.lich.slice(); }
   HX.lich = (e.lichSaved || e.lich.map((x) => ({ id: 'l' + (++HX.lichN) + Date.now().toString(36), name: x.name, loops: {}, rule: x.rule, mix: null, puls: null, kern: x.kern }))).slice(); HX.lichCur = null; HX.fl = null;
   const pr = e.preset ? PRESETS.find((p) => p.key === e.preset) : null;
