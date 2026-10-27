@@ -28,7 +28,7 @@ function hxPvSrc(L, buf, u) {
   const ctx = A.ctx, t = ctx.currentTime + 0.02, dur = buf.duration, old = HXE.pv && HXE.pv.key === L.key ? HXE.pv : null;
   if (HXE.pv && !old) hxPvStop();
   let out = old ? old.out : null;
-  if (!out) { const g = ctx.createGain(), p = ctx.createStereoPanner(); g.gain.value = hxPvLvl(L); p.pan.value = L.pan || 0; g.connect(p).connect(stripIn('hxr')); out = { g, p }; }
+  if (!out) { const g = ctx.createGain(), p = ctx.createStereoPanner(), an = ctx.createAnalyser(); an.fftSize = 2048; g.gain.value = hxPvLvl(L); p.pan.value = L.pan || 0; g.connect(p).connect(stripIn('hxr')); p.connect(an); out = { g, p, an }; }   // (an: its level on the Schleife's strip – it stands in for it)
   const [a, b] = hxPvRange(dur); let off = clamp(u * dur, 0, dur - 1e-3); if (off < a || off >= b) off = a;
   const src = ctx.createBufferSource(), x = ctx.createGain();
   src.buffer = buf; src.loop = true; src.loopStart = a; src.loopEnd = b; src.connect(x).connect(out.g);
@@ -43,7 +43,7 @@ function hxPvStop() {
   const P = HXE.pv; HXE.pvWant = false; if (!P) return;
   HXE.pvAt = hxPvPos(); HXE.pv = null;
   const t = A.ctx.currentTime; hxPvFade(P, t);
-  setTimeout(() => { try { P.out.g.disconnect(); P.out.p.disconnect(); } catch (e) {} }, (HXPV_X + 0.1) * 1000);
+  setTimeout(() => { try { P.out.g.disconnect(); P.out.p.disconnect(); if (P.out.an) P.out.an.disconnect(); } catch (e) {} }, (HXPV_X + 0.1) * 1000);
   const L = hxByKey(P.key); if (L) { L.pvMute = false; if (L.state !== 'weg') hxGain(L.id, L.gain, null, 0.03); }   // (the loop as it runs, at its own place)
   HXE.wsig = '';
 }

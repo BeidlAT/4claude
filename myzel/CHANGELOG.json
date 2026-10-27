@@ -2,6 +2,14 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-27g",
+      "punkte": [
+        "Neu oben in der Leiste: der Taktgeber – das Tempo groß mit Zehnteln, woher es kommt (Puls, Schleife, MIDI-Uhr) und ein Ring, der mit dem Schlag pulsiert (die Eins in Grün).",
+        "Tempo ändern wie in einer DAW: ziehen oder Mausrad (mit Umschalt in Zehnteln), Pfeiltasten, Doppelklick zum Eintippen, TAP zum Eintippen im Takt; ein Klick öffnet −/+, ½×, 2× und „Tempo halten“.",
+        "Spielt eine Schleife im Bearbeiten-Fenster („Abspielen“), zeigt ihr Kanal im Mixer jetzt den Pegel; startest du sie aus der Leiste, endet das Vorhören und die Schleife selbst klingt."
+      ]
+    },
+    {
       "id": "2026-10-27f",
       "punkte": [
         "Behoben: stand der Kanal „Hexenring“ im Mischpult auf KETTE, liefen alle Schleifen noch einmal durch die Effekte des aktuellen Presets – darum änderte der Filter auch eingebrannte Schleifen, und Presets veränderten den Klang je nach ihren Effekten.",
