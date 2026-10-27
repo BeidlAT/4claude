@@ -2925,7 +2925,7 @@ SEL('midi.map', 'Tasten', [['scale', 'Skala'], ['white', 'Weiße Tasten'], ['chr
 NUM('midi.y', 'Höhe auf der Spielfläche', 0, 1, 0.55, '%', { dev: 1 });
 BOOL('ui.leer', 'Beim Öffnen mit „Leerer Erde“ beginnen', true, { dev: 1 });
 // (owner, 27.10.2026: „die schleife immer die original aufnahme“; „das preset an die tonart der schleife(n) anpassen“)
-BOOL('ui.tonHalt', 'Presets übernehmen die Tonart der Schleifen', true, { dev: 1 });   // (owner, 26.10.2026: „leer starten“ – presets.js)
+SEL('ui.tonart', 'Tonart beim Preset-Wechsel', [['preset', 'Preset passt sich den Schleifen an'], ['schleifen', 'Schleifen folgen dem Preset']], 'preset', { chips: 1, small: 1, dev: 1 });   // (owner, 27.10.2026: „entweder die schleifen in die tonart der presets bringen oder die tonart der presets sich den schleifen anpassen“)   // (owner, 26.10.2026: „leer starten“ – presets.js)
 BOOL('midi.vel', 'Anschlagdynamik', true, { dev: 1 });
 NUM('midi.bend', 'Tonhöhenrad', 0, 12, 2, 'HT', { step: 1, dev: 1, fmt: (v) => (v ? '±' + v + ' HT' : 'aus') });
 SEL('midi.curve', 'Anschlag', [['soft', 'Weich'], ['lin', 'Linear'], ['mid', 'Mittel'], ['hard', 'Hart'], ['fix', 'Fest']], 'mid', { chips: 1, dev: 1 });
@@ -29265,7 +29265,7 @@ function loadPreset(p, own) {
   if (p.fmt >= 2) HIST[HIST.length - 1].fae = faeExport();   // "Rückgängig" brings back the Fährte it replaces
   if (p.fmt >= 2 && p.gk && GK.on && GK.p.rez !== false) HIST[HIST.length - 1].gk = gkOwnGet();   // … and the player's own Gestik settings
   // (owner, 27.10.2026) Schleifen in der Leiste: the preset takes their key – its sound, never another key under them
-  const keep = P['ui.tonHalt'] && hxLoopsLive().some((L) => !L.bew) && (String(p.v['t.root'] ?? PD['t.root'].d) !== String(P['t.root']) || (p.v['t.scale'] ?? PD['t.scale'].d) !== P['t.scale']);
+  const keep = P['ui.tonart'] === 'preset' && hxLoopsLive().some((L) => !L.bew) && (String(p.v['t.root'] ?? PD['t.root'].d) !== String(P['t.root']) || (p.v['t.scale'] ?? PD['t.scale'].d) !== P['t.scale']);
   const vals = keep ? Object.assign({}, p.v, { 't.root': P['t.root'], 't.scale': P['t.scale'] }) : p.v;
   UI.loading = true; loadValues(vals, false); UI.loading = false;
   UI.preset = p.key || null;
@@ -29293,7 +29293,7 @@ function buildPresets() {
   requestAnimationFrame(() => kbWatch(g));
   undoBtn = h('button', { type: 'button', class: 'btn', disabled: true, onclick: undo }, 'Rückgängig');
   installBtn = h('button', { type: 'button', class: 'btn primary', hidden: !installEvt, onclick: installApp }, 'Als App installieren');
-  box.append(section('Klangwelten', 'Laden ersetzt alle Klangeinstellungen', g, h('div', { class: 'row', style: 'margin-top:10px' }, undoBtn, installBtn), h('div', { class: 'pleer' }, ctl('ui.leer'), ctl('ui.tonHalt'))));
+  box.append(section('Klangwelten', 'Laden ersetzt alle Klangeinstellungen', g, h('div', { class: 'row', style: 'margin-top:10px' }, undoBtn, installBtn), h('div', { class: 'pleer' }, ctl('ui.leer'), ctl('ui.tonart'))));
   const mut = h('input', { type: 'range', id: 'mutAmt', min: 0, max: 100, step: 1, value: Math.round(mutAmt * 100), 'aria-label': 'Stärke der Mutation' });
   const mutVal = h('span', { class: 'val' }, Math.round(mutAmt * 100) + ' %');
   mut.style.setProperty('--p', mut.value + '%');
@@ -31122,7 +31122,8 @@ function toast(msg, ms = 3200, action) {
    views). Säen: the spore tool, then a tap on any setting in Myzel sows it into the Wurzelwerk (myzel.ww.v1); a sown
    setting wears a small spore at its home. W (outside the field and text fields) opens and closes it, Esc closes. */
 const WW = { open: false, saen: false, set: new Set(), el: null, tiles: new Map(), taps: [], tk: null, pop: null, sig: '' };
-try { const a = JSON.parse(store.get('myzel.ww.v1') || '[]'); if (Array.isArray(a)) for (const id of a) if (PD[id] || /^a:/.test(id)) WW.set.add(id); } catch (e) {}
+try { const a = JSON.parse(store.get('myzel.ww.v1') || '["ui.tonart"]');   // (sown from the start: the key's direction – owner, 27.10.2026)
+   if (Array.isArray(a)) for (const id of a) if (PD[id] || /^a:/.test(id)) WW.set.add(id); } catch (e) {}
 // what can be sown: a param's control (data-ww; the mixer's data-pid) or an action (data-wa: a MIDI target – „a:key“)
 const WW_SEL = '[data-ww],[data-wa],[data-pid]';
 const wwKeyOf = (el) => (el.dataset.ww ? el.dataset.ww : el.dataset.wa ? 'a:' + el.dataset.wa : el.dataset.pid && PD[el.dataset.pid] ? el.dataset.pid : null);
@@ -31133,7 +31134,7 @@ ICON.knot = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-w
 ICON.spore = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3.4" fill="currentColor" stroke="none"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>';
 const WW_GROUPS = [
   { k: 'schleifen', t: 'Schleifen', c: 'var(--spore)', ids: ['hx.beginn', ['hx.folgen', 'Tonart folgen'], 'hx.laenge', 'hx.start', 'hx.ein', 'hx.klick'] },
-  { k: 'klang', t: 'Klang & Presets', c: 'var(--lilac)', ids: ['ui.leer', 'ui.tonHalt', 't.root', 't.scale', ['rev.mix', 'Hall'], ['dly.mix', 'Echo'], ['flt.freq', 'Filter']] },
+  { k: 'klang', t: 'Klang & Presets', c: 'var(--lilac)', ids: ['ui.tonart', 'ui.leer', 't.root', 't.scale', ['rev.mix', 'Hall'], ['dly.mix', 'Echo'], ['flt.freq', 'Filter']] },
   { k: 'takt', t: 'Takt', c: 'var(--lumen)', ids: ['midi.clock'] },
   { k: 'geraet', t: 'Gerät', c: 'var(--rose)', ids: ['dev.lat', 'dev.q'] },
   { k: 'gesichert', t: 'Gesichert', c: '#7fb069', ids: [] },
@@ -38025,7 +38026,7 @@ function hxWNotesAll(L) { let any = false; for (const id of L.sch) { const S = H
 // a note's pitch in the key the loop follows now (diatonisch: the same degree in the new scale; transponieren: moved with
 // the root; fest: as played) – the nearest way to the new root, never an octave jump; its register stays where it was
 function hxWF(L, W, n, key) {
-  const t = L.ton || 'diatonisch', k0 = W.key;
+  const t = hxTonOf(L), k0 = W.key;
   if (t === 'fest' || !key) return n.f;
   const sh = ((((key.root - k0.root) % 12) + 18) % 12) - 6;
   if (t === 'transponieren' || key.free || k0.free || n.deg == null) return n.f * Math.pow(2, sh / 12);
@@ -38096,7 +38097,7 @@ function hxWTailAdd(S, sec, cut) { const a = S.wTails || (S.wTails = []); a.push
 function hxWJob(L, S, job, seed) {
   // (the key it sounds in: the sources tuned by the scale – Gespinst's strings, Rhizom's avalanches, the Bordun – follow it
   // as the notes do; transponieren keeps the scale it was played in, fest the key)
-  const p = hxWPat(L), t = L.ton || 'diatonisch', k = job.key;
+  const p = hxWPat(L), t = hxTonOf(L), k = job.key;
   if (t !== 'fest' && k && k.id != null) { p['t.root'] = k.id; if (t === 'diatonisch') p['t.scale'] = k.scale; }
   return { sr: SR, dur: job.dur, body: job.body, notes: job.notes, prm: job.prm, P: p, q: hxWQ(L), seed, chain: L.folgt || !L.chainRec ? null : L.chainRec, mask: L.mask || [...HX.mask], jrg: L.jrg || { age: A.jrgAge || 0, season: A.season || 0 } };
 }
@@ -38104,9 +38105,9 @@ function hxWJob(L, S, job, seed) {
 // throw, the chain – a version made for something else is made again (Treu: once per change)
 function hxWSig(L, S, key) {
   const W = S.wn, k = key || hxWKeyNow(), f = hxNextSeam(L), lenF = hxPassF(L, f.k + 1) - hxPassF(L, f.k);
-  const keyS = (L.ton || 'diatonisch') === 'fest' ? '-' : (L.ton === 'transponieren' ? k.root : k.root + ':' + (k.rat || []).map((x) => x.toFixed(6)).join(','));
+  const keyS = hxTonOf(L) === 'fest' ? '-' : (hxTonOf(L) === 'transponieren' ? k.root : k.root + ':' + (k.rat || []).map((x) => x.toFixed(6)).join(','));
   const engs = [...new Set(W.n.map((n) => hxWEng(L, n)))].join(',');
-  return [Math.round((lenF * (L.sp || 1)) / 8), L.ton || 'diatonisch', keyS, engs, hxWQ(L), S.anc ? S.anc.seed + ':' + (S.anc.br != null ? S.anc.br : '') + (S.anc.vn ? ':v' + S.anc.vn.length + ':' + Math.round(S.anc.vn.reduce((a, x) => a + x.t * 97 + x.f, 0)) : '') : S.wseed, L.folgt ? 1 : 0, (L.klang || 'eigen') === 'eigen' ? 'e' : hxWPHash(),
+  return [Math.round((lenF * (L.sp || 1)) / 8), hxTonOf(L), keyS, engs, hxWQ(L), S.anc ? S.anc.seed + ':' + (S.anc.br != null ? S.anc.br : '') + (S.anc.vn ? ':v' + S.anc.vn.length + ':' + Math.round(S.anc.vn.reduce((a, x) => a + x.t * 97 + x.f, 0)) : '') : S.wseed, L.folgt ? 1 : 0, (L.klang || 'eigen') === 'eigen' ? 'e' : hxWPHash(),
     hxNtOn(L) ? JSON.stringify(L.nt) : '', L.revW ? 'r' : '', S.wn.n.length + ':' + Math.round(S.wn.len * 1000)].join('|');   // (step 2b: the notes' tools, mirrored, a record trimmed, doubled or the Auslese's)   // (a pass's length within 8 frames is the same: a fractional tempo alternates ±1 frame)
 }
 function hxWPHash() { let h = 7; for (const id in P) if (PD[id] && !PD[id].rec && !PD[id].dev && !id.startsWith('x') && !/^(rev|dly|mst|seq|l\d|rec|hx|mix)\./.test(id)) { const v = String(P[id]); for (let i = 0; i < v.length; i++) h = (Math.imul(h, 31) + v.charCodeAt(i)) | 0; } return h; }
@@ -38156,7 +38157,9 @@ function hxWPlay(S, which, f, keepStream, now) {
 function hxWAktiv(L) { const w = L.wwhy || {}; return !L.bew && !!(w.wahl || w.tempo || w.ausl || hxEigN(L) >= 1 || (L.klang || 'eigen') !== 'eigen' || hxNtOn(L) || hxWTonOff(L)); }   // (step 2b: the notes' tools, the Auslese's consensus)
 // it follows the key and the key is not the one it was played in (the parameters' key – an announced one included)
 const hxWKeyEq = (a, b) => !!a && !!b && a.root === b.root && !!a.free === !!b.free && (a.rat || []).map((x) => x.toFixed(6)).join() === (b.rat || []).map((x) => x.toFixed(6)).join();
-const hxWTonOff = (L) => { const t = L.ton || 'diatonisch'; if (t === 'fest') return false; const k = hxWKeyNow(); return L.sch.some((id) => { const S = HX.sch.get(id); return hxWCan(S) && (t === 'transponieren' ? S.wn.key.root !== k.root : !hxWKeyEq(S.wn.key, k)); }); };
+// how a loop follows the key: its own setting – „Schleifen folgen dem Preset“ (ui.tonart) makes a fixed one follow too
+const hxTonOf = (L) => { const t = L.ton || 'diatonisch'; return t === 'fest' && P['ui.tonart'] === 'schleifen' ? 'diatonisch' : t; };
+const hxWTonOff = (L) => { const t = hxTonOf(L); if (t === 'fest') return false; const k = hxWKeyNow(); return L.sch.some((id) => { const S = HX.sch.get(id); return hxWCan(S) && (t === 'transponieren' ? S.wn.key.root !== k.root : !hxWKeyEq(S.wn.key, k)); }); };
 const hxWLebt = (L) => hxEigN(L) >= 1 && !L.revW && !L.live && hxWAktiv(L) && !(L.treuBis != null && tgBeat(hxNowT()) < L.treuBis) && !(HX.wGuard.pause > performance.now()) && !L.wRefused;
 // the reconciler: what every Schicht of a loop should play now – the Abdruck, the anchor, or a Treu render made for
 // what it follows (rendered first when there is none; swapped at the next seam, or at o.f)
@@ -38292,7 +38295,7 @@ function hxWTick(now, horizon) {
 // at once, the loops fall silent until their new pass is there). Every loop that follows gets that pass rendered in the
 // new key from its start and heard from the bar line – it must come: if it is late the loop is silent there, never in
 // the old key. ----
-const hxWFolgt = (L) => !L.bew && L.state !== 'weg' && (L.ton || 'diatonisch') !== 'fest' && L.sch.some((id) => hxWCan(HX.sch.get(id)));   // (hxWTonOff: whether its key is another now)
+const hxWFolgt = (L) => !L.bew && L.state !== 'weg' && hxTonOf(L) !== 'fest' && L.sch.some((id) => hxWCan(HX.sch.get(id)));   // (hxWTonOff: whether its key is another now)
 // the time a pass takes to render here (the guard's prediction: the sources' measured cost × CAL.unit × duration)
 function hxWPredict(L, S, dur) {
   const W = S.wn; if (!W) return 0;

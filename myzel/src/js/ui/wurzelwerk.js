@@ -6,7 +6,8 @@
    views). Säen: the spore tool, then a tap on any setting in Myzel sows it into the Wurzelwerk (myzel.ww.v1); a sown
    setting wears a small spore at its home. W (outside the field and text fields) opens and closes it, Esc closes. */
 const WW = { open: false, saen: false, set: new Set(), el: null, tiles: new Map(), taps: [], tk: null, pop: null, sig: '' };
-try { const a = JSON.parse(store.get('myzel.ww.v1') || '[]'); if (Array.isArray(a)) for (const id of a) if (PD[id] || /^a:/.test(id)) WW.set.add(id); } catch (e) {}
+try { const a = JSON.parse(store.get('myzel.ww.v1') || '["ui.tonart"]');   // (sown from the start: the key's direction – owner, 27.10.2026)
+   if (Array.isArray(a)) for (const id of a) if (PD[id] || /^a:/.test(id)) WW.set.add(id); } catch (e) {}
 // what can be sown: a param's control (data-ww; the mixer's data-pid) or an action (data-wa: a MIDI target – „a:key“)
 const WW_SEL = '[data-ww],[data-wa],[data-pid]';
 const wwKeyOf = (el) => (el.dataset.ww ? el.dataset.ww : el.dataset.wa ? 'a:' + el.dataset.wa : el.dataset.pid && PD[el.dataset.pid] ? el.dataset.pid : null);
@@ -17,7 +18,7 @@ ICON.knot = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-w
 ICON.spore = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3.4" fill="currentColor" stroke="none"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>';
 const WW_GROUPS = [
   { k: 'schleifen', t: 'Schleifen', c: 'var(--spore)', ids: ['hx.beginn', ['hx.folgen', 'Tonart folgen'], 'hx.laenge', 'hx.start', 'hx.ein', 'hx.klick'] },
-  { k: 'klang', t: 'Klang & Presets', c: 'var(--lilac)', ids: ['ui.leer', 'ui.tonHalt', 't.root', 't.scale', ['rev.mix', 'Hall'], ['dly.mix', 'Echo'], ['flt.freq', 'Filter']] },
+  { k: 'klang', t: 'Klang & Presets', c: 'var(--lilac)', ids: ['ui.tonart', 'ui.leer', 't.root', 't.scale', ['rev.mix', 'Hall'], ['dly.mix', 'Echo'], ['flt.freq', 'Filter']] },
   { k: 'takt', t: 'Takt', c: 'var(--lumen)', ids: ['midi.clock'] },
   { k: 'geraet', t: 'Gerät', c: 'var(--rose)', ids: ['dev.lat', 'dev.q'] },
   { k: 'gesichert', t: 'Gesichert', c: '#7fb069', ids: [] },

@@ -343,7 +343,7 @@ function loadPreset(p, own) {
   if (p.fmt >= 2) HIST[HIST.length - 1].fae = faeExport();   // "Rückgängig" brings back the Fährte it replaces
   if (p.fmt >= 2 && p.gk && GK.on && GK.p.rez !== false) HIST[HIST.length - 1].gk = gkOwnGet();   // … and the player's own Gestik settings
   // (owner, 27.10.2026) Schleifen in der Leiste: the preset takes their key – its sound, never another key under them
-  const keep = P['ui.tonHalt'] && hxLoopsLive().some((L) => !L.bew) && (String(p.v['t.root'] ?? PD['t.root'].d) !== String(P['t.root']) || (p.v['t.scale'] ?? PD['t.scale'].d) !== P['t.scale']);
+  const keep = P['ui.tonart'] === 'preset' && hxLoopsLive().some((L) => !L.bew) && (String(p.v['t.root'] ?? PD['t.root'].d) !== String(P['t.root']) || (p.v['t.scale'] ?? PD['t.scale'].d) !== P['t.scale']);
   const vals = keep ? Object.assign({}, p.v, { 't.root': P['t.root'], 't.scale': P['t.scale'] }) : p.v;
   UI.loading = true; loadValues(vals, false); UI.loading = false;
   UI.preset = p.key || null;
@@ -371,7 +371,7 @@ function buildPresets() {
   requestAnimationFrame(() => kbWatch(g));
   undoBtn = h('button', { type: 'button', class: 'btn', disabled: true, onclick: undo }, 'Rückgängig');
   installBtn = h('button', { type: 'button', class: 'btn primary', hidden: !installEvt, onclick: installApp }, 'Als App installieren');
-  box.append(section('Klangwelten', 'Laden ersetzt alle Klangeinstellungen', g, h('div', { class: 'row', style: 'margin-top:10px' }, undoBtn, installBtn), h('div', { class: 'pleer' }, ctl('ui.leer'), ctl('ui.tonHalt'))));
+  box.append(section('Klangwelten', 'Laden ersetzt alle Klangeinstellungen', g, h('div', { class: 'row', style: 'margin-top:10px' }, undoBtn, installBtn), h('div', { class: 'pleer' }, ctl('ui.leer'), ctl('ui.tonart'))));
   const mut = h('input', { type: 'range', id: 'mutAmt', min: 0, max: 100, step: 1, value: Math.round(mutAmt * 100), 'aria-label': 'Stärke der Mutation' });
   const mutVal = h('span', { class: 'val' }, Math.round(mutAmt * 100) + ' %');
   mut.style.setProperty('--p', mut.value + '%');

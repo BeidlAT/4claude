@@ -3,7 +3,7 @@
 // at once, the loops fall silent until their new pass is there). Every loop that follows gets that pass rendered in the
 // new key from its start and heard from the bar line – it must come: if it is late the loop is silent there, never in
 // the old key. ----
-const hxWFolgt = (L) => !L.bew && L.state !== 'weg' && (L.ton || 'diatonisch') !== 'fest' && L.sch.some((id) => hxWCan(HX.sch.get(id)));   // (hxWTonOff: whether its key is another now)
+const hxWFolgt = (L) => !L.bew && L.state !== 'weg' && hxTonOf(L) !== 'fest' && L.sch.some((id) => hxWCan(HX.sch.get(id)));   // (hxWTonOff: whether its key is another now)
 // the time a pass takes to render here (the guard's prediction: the sources' measured cost × CAL.unit × duration)
 function hxWPredict(L, S, dur) {
   const W = S.wn; if (!W) return 0;
