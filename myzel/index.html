@@ -36063,6 +36063,17 @@ function hxChainRec(ta, tb) {
 Object.assign(HXW, { frame: null, port: null, st: '', p: null, wait: new Map(), id: 0, why: '', ver: 1, ms: [] });
 // (27.10.2026: in the owner's Firefox no pass came back – what the realms did, for the Leistung report: the last 40 steps)
 HXW.log = [];
+// (27.10.2026, the owner's Firefox: „ctx.suspend is not a function“ – Firefox's OfflineAudioContext has no suspend) Without
+// it, the work of each render block is done before the render begins, in block order, with the context's clock showing
+// that block's time (an own currentTime over the prototype's): what is scheduled lands where it would have; what acts at
+// once on the shared graph acts from the start. The streamed reads of a pass (nsRead) are left to the end (ns.fin).
+const hxwNoSusp = (ctx) => !ctx.suspend || store.get('myzel.test.nosusp') === '1';
+function hxwAhead(ctx, work, run) {
+  let tf = 0;
+  Object.defineProperty(ctx, 'currentTime', { configurable: true, get: () => tf });
+  try { for (const b of [...work.keys()].sort((x, y) => x - y)) { tf = (b * 128) / SR; run(b, work.get(b)); } }
+  finally { delete ctx.currentTime; }
+}
 function hxwLog(t) { const L = HXW.log; L.push(Math.round(performance.now() / 100) / 10 + ' ' + t); if (L.length > 40) L.shift(); }
 // (Leistung, 23.10.2026) a realm's document: this page's own HTML with its app script loaded from one Blob made once –
 // Chromium keeps ≈ 5 MB of every document it loaded whose 2.3 MB script was inline, also after the frame went (measured:
@@ -36187,7 +36198,7 @@ function hxwNs(ctx, pre, tap, port, n, body, from) {
   S.fin = (buf, stopped) => {
     if (!stopped && !S.done) {
       const st = Math.max(S.c0, S.F), bL = buf.getChannelData(0), bR = buf.getChannelData(1);
-      if (st < n) chunk(st, bL.slice(st, n), bR.slice(st, n), n - st);
+      for (let a = st; a < n && !S.done; a += CH) { const m = Math.min(CH, n - a); chunk(a, bL.slice(a, a + m), bR.slice(a, a + m), m); }   // (chunk by chunk: without suspend all of it comes here)
       if (!S.done) { try { port.postMessage({ end: n }); } catch (e) {} S.done = true; }
     }
     try { port.close(); } catch (e) {}
@@ -36353,7 +36364,7 @@ async function hxwNotes(d) {
   });
   if (notes.some((n) => n.eng === 'kor' || n.eng === 'rhz')) for (let t = 0; t < dur; t += 0.025) add(t, () => { const h = ctx.currentTime + 0.12; grainTick(h); if (RHZ.vs.size || RHZ.q.length) rhzRun(h); });
   for (const [t, fn] of chainEv) add(t, fn);
-  if (ns) for (let F = ns.c0 + HX_CH; F + 128 < len; F += HX_CH) { const b = F / 128 + 1; if (!work.has(b)) work.set(b, []); work.get(b).push(() => ns.read(F)); }   // (each whole chunk read a quantum after its end – the delay)
+  if (ns) for (let F = ns.c0 + HX_CH; F + 128 < len; F += HX_CH) { const b = F / 128 + 1; if (!work.has(b)) work.set(b, []); const rd = () => ns.read(F); rd.nsRead = 1; work.get(b).push(rd); }   // (each whole chunk read a quantum after its end – the delay)
   for (const [t, id, v] of d.prm || []) add(t, () => { if (PD[id]) P[id] = v; });   // (step 2a: the engines' Bewegung lanes, as they were turned)
   // the pacing: a suspend every 0.25 s of the body from where it is heard (d.from) – each waits until its frame is at
   // most d.lead s ahead of the live one; the field's knobs (d.feld) are taken there too
@@ -36361,7 +36372,12 @@ async function hxwNotes(d) {
   if (strm) { add(0, () => {}); for (let t = Math.max(0, +d.from || 0); t < (+d.body || dur); t += 0.25) { const b = Math.max(0, Math.floor(t * SR / 128)); if (b * 128 < len) { pace.add(b); add(t, () => {}); } } }
   const lead = Math.round((+d.lead || 1.25) * SR), F0 = d.F0 != null ? +d.F0 : null;
   const C0 = HXW.cur;
-  for (const [b, fns] of work) ctx.suspend(b * 128 / SR).then(async () => {
+  if (hxwNoSusp(ctx)) hxwAhead(ctx, work, (b, fns) => {
+    Math.random = RND;
+    for (const fn of fns) if (!fn.nsRead) { try { fn(); } catch (e) { console.warn(e); } }
+    Math.random = HXW_RND;
+  });
+  else for (const [b, fns] of work) ctx.suspend(b * 128 / SR).then(async () => {
     // (stopped by the page – the Schicht went, the loop rests, a newer render took its pass: nothing more is streamed,
     // played or waited for; the rest renders silent at once – an offline render cannot end early)
     if (C0 && C0.stop) { if (snk) { try { snk.disconnect(); tap.disconnect(); } catch (e) {} } for (const v of A.voices) try { v.cleanup(); } catch (e) {} ctx.resume(); return; }
@@ -36491,10 +36507,9 @@ async function hxwBake(d) {
   // the recorded changes, each at its moment (its block's suspend; the glides start at the exact time)
   const work = new Map();
   for (const e of C.ev) { const b = Math.floor(e[0] * SR / 128); if (b * 128 >= n) continue; if (!work.has(b)) work.set(b, []); work.get(b).push(e); }
-  for (const [b, list] of work) ctx.suspend(b * 128 / SR).then(() => {
-    for (const e of list) { C.ids.forEach((id, i) => { P[id] = e[1][i]; }); Q.os = e[2]; A.lite = !!e[3]; HXW.t = e[0]; try { all(); } finally { HXW.t = null; } }
-    ctx.resume();
-  });
+  const step = (list) => { for (const e of list) { C.ids.forEach((id, i) => { P[id] = e[1][i]; }); Q.os = e[2]; A.lite = !!e[3]; HXW.t = e[0]; try { all(); } finally { HXW.t = null; } } };
+  if (hxwNoSusp(ctx)) hxwAhead(ctx, work, (b, list) => step(list));
+  else for (const [b, list] of work) ctx.suspend(b * 128 / SR).then(() => { step(list); ctx.resume(); });
   const b = ctx.createBuffer(2, n, SR); b.getChannelData(0).set(d.L); b.getChannelData(1).set(d.R);
   const src = ctx.createBufferSource(); src.buffer = b; src.connect(c.in); c.out.connect(ctx.destination); src.start(0);
   const t0 = performance.now(), buf = await ctx.startRendering(), ms = performance.now() - t0;

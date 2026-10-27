@@ -2,6 +2,14 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-27r",
+      "punkte": [
+        "Firefox: Schleifen lassen sich jetzt in die Tonart des Presets umrechnen – vorher brach das Umrechnen dort sofort ab.",
+        "Firefox: Effekte werden jetzt auch dort in aufgenommene Schleifen eingebrannt – vorher wirkte die laufende Effektkette in Firefox weiter auf die Schleifen.",
+        "In Firefox kommt ein umgerechneter Durchgang als Ganzes, also etwas später; bis dahin spielt die Schleife weiter wie bisher."
+      ]
+    },
+    {
       "id": "2026-10-27q",
       "punkte": [
         "Der Leistungsbericht zeigt jetzt, was beim Umrechnen der Schleifen in eine neue Tonart passiert (Zeile „werklog“).",
