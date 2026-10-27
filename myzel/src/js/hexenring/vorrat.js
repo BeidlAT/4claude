@@ -92,6 +92,7 @@ function hxHumApply(L, w0, w1, label) {
   const nb = tk ? Math.max(1, Math.round((w1 - w0) / beatF)) : 0, geom = tk ? (nb !== L.d.beats ? { beats: nb } : null) : (w1 - w0 !== L.d.L ? { L: w1 - w0 } : null);
   const before = hxGeo(L), key = L.key, sw = geom ? hxNextSeam(L) : hxSwapAt(L), tr = { trim: L.trim, tr0: L.tr0 };
   hxSchSwap(S, nc, { f: sw.f, now: !!sw.now, geom });
+  { const rr = hxrAt(hxT(w0)); if (rr) { L.room = rr; hxrSync(); } }   // (27.10.2026: the echo and hall that window was played in – raum.js)
   L.trim = null; L.tr0 = null;   // (what plays is a cut of the Ernte again – „Wieder ganz“ has nothing to go back to)
   const after = {};
   hxHist({ kind: 'recut', label: hxName(L) + ': ' + (label || 'Ausschnitt in der Ernte'), undo() { const X = hxByKey(key); if (X) { after.g = hxGeo(X); hxGeoBack(X, before); X.trim = tr.trim; X.tr0 = tr.tr0; } }, redo() { const X = hxByKey(key); if (X && after.g) { hxGeoBack(X, after.g); X.trim = null; X.tr0 = null; } } });

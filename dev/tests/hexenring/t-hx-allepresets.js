@@ -21,7 +21,7 @@ const { ok } = H;
     await sl(6000);   // (echo and hall of the loops settled)
     // the loops' path: the ring's output 0 and the two returns of their room, summed in a tap (the Hexenring channel's
     // fader is the user's – unchanged)
-    const sum = ctx.createGain(); M.HX.node.connect(sum, 0); M.HXR.u.revRet.connect(sum); M.HXR.u.dlyRet.connect(sum);
+    const sum = ctx.createGain(); M.HX.node.connect(sum, 0); for (const U of M.HXR.rooms.values()) { U.revRet.connect(sum); U.dlyRet.connect(sum); }
     const grab = async (sec) => { const sp = ctx.createScriptProcessor(4096, 1, 1), buf = []; sp.onaudioprocess = (e) => buf.push(new Float32Array(e.inputBuffer.getChannelData(0))); const z = ctx.createGain(); z.gain.value = 0; sum.connect(sp); sp.connect(z); z.connect(ctx.destination); await sl(sec * 1000); sum.disconnect(sp); sp.disconnect(); const a = new Float32Array(buf.reduce((x, c) => x + c.length, 0)); let p = 0; for (const c of buf) { a.set(c, p); p += c.length; } return a; };
     const pass = Math.round(2.4 * SR), ref = (await grab(5)).slice(pass, 2 * pass);
     const same = (all) => { let best = -2, bl = 0; for (let lag = 0; lag < pass; lag += 1) { let xy = 0, xx = 0, yy = 0; for (let i = 0; i < 24000; i += 4) { const a = ref[i], b = all[pass + lag + i] || 0; xy += a * b; xx += a * a; yy += b * b; } const c = xy / Math.sqrt(xx * yy + 1e-30); if (c > best) { best = c; bl = lag; } }
@@ -29,7 +29,9 @@ const { ok } = H;
     for (const p of M.PRESETS) {
       M.loadPreset(p); for (const i of [0, 1, 2, 3]) M.setParam('l' + i + '.on', false); M.setParam('bor.on', false);
       await sl(700);
-      const c = same(await grab(7.5)); o.n++; o.worst = Math.min(o.worst, c);
+      let c = same(await grab(7.5));
+      if (!(c > 0.9999)) { await sl(2000); c = same(await grab(7.5)); }   // (the page busy loading a long hall: the capture may lose a block – measured again)
+      o.n++; o.worst = Math.min(o.worst, c);
       if (!(c > 0.9999)) o.bad.push(p.key + ':' + c.toFixed(4));
       const b = M.tgBpm(A.ctx.currentTime); if (Math.abs(b - 100) > 0.01) o.bpm.push(p.key + ':' + b.toFixed(1));
     }

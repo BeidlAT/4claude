@@ -81,6 +81,7 @@ const { ok } = H;
       window.__riff(M.tgTime(B0), 0.25, degs, 1, { eng: 'klb', dur: 0.2 });
       await window.__until(M.tgTime(B0 + 4) + 0.06);
       M.hxKorb(null); await window.__sleep(200);
+      for (const L of M.hxLoopsLive()) if (!L.taumeln) M.hxTaumelnSet(L, true);   // (since 27.10.2026 Taumeln is a choice, off by default – here it is chosen)
     };
     await run([0, 4, 7, 4, 2, 5, 9, 5, 0, 4, 7, 4, 2, 5, 9, 5]);
     const Lp = M.hxLoopsLive()[0];

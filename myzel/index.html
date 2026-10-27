@@ -3930,7 +3930,7 @@ function initAudio() {
   }
   // the echo return feeds the hall (its "Hall" send, 0.3 at 100 %)
   MIX.s.dly.hS.connect(A.revIn);
-  hxrBuild();   // Hexenring: the loops' own echo and hall (hexenring/raum.js)
+  hxrBuild();   // Hexenring: the loops' own echo and hall (hexenring/raum.js – built as loops need them)
 
   // ---- master: EQ → level → glue compressor → soft saturating ceiling, all without look-ahead latency ----
   A.lowSh = BQ('lowshelf', 120); A.highSh = BQ('highshelf', 6500);
@@ -4124,15 +4124,16 @@ function updDelay() {
   setP(A.wowG.gain, P['dly.wow'] * 0.004); setP(A.flutG.gain, P['dly.wow'] * 0.0006);
   setP(A.dlySend.gain, P['dly.mix']);
   setP(A.dlyIn.gain, A.frozen ? 0 : 1, 0.02);
-  if (HXR.u) hxrApply(false, true);   // (the loops' echo: its sync time follows the tempo)
+  hxrAll();   // (the loops' rooms: a synced echo follows the tempo; the field's echo logged – raum.js)
 }
 function updReverbMix() {
   if (!A.ctx) return;
   setP(A.revSend.gain, P['rev.mix']); setP(A.revPre.delayTime, P['rev.pre'], 0.05);
+  hxrLog();
 }
 function regenIR(now) {
   if (!A.ctx || HXW.on) return;   // (Hexenring: the Werk-Rahmen renders without the hall)
-  if (HXR.u) hxrApply(false, true);   // (the loops' hall: again only when the level's channels changed)
+  hxrAll();   // (the loops' halls: again only when the level's channels changed; the field's hall logged)
   clearTimeout(A.irTimer);
   A.irTimer = setTimeout(() => {
     const job = ++A.irJob;
@@ -4260,6 +4261,7 @@ function gates(st, set) {
   gspGate(st, set);
   if (st.eS) set(st.eS.gain, on ? mp(p + 'dly') : 0);
   if (st.hS) set(st.hS.gain, on ? (st.k === 'dly' ? 0.3 : 1) * mp(p + 'rev') : 0);
+  if (st.k === 'hxr' && typeof hxrLevels === 'function') hxrLevels(set);   // (the Schleifen's own rooms – raum.js)
 }
 // dry path: through the insert chain or straight into the sum; a move fades the channel out and back in
 function wireStrip(st) {
@@ -4295,7 +4297,7 @@ function updSends(inst) {
       updDrive(S.copy); updRing(S.copy); updFilter(S.copy); updPhaser(S.copy); updChorus(S.copy);
       S.fromCopy = G(0); S.copy.out.connect(S.fromCopy).connect(S.target);
     }
-    for (const st of MIX.src) sendTo(st, fx, node(st), st.k === 'hxr' && hxrTarget(fx) ? hxrTarget(fx) : !viaFx(st) ? S.target : copy ? S.copy.in : null);   // (Hexenring: its own room – raum.js)
+    for (const st of MIX.src) sendTo(st, fx, node(st), st.k === 'hxr' && !P['hx.fx'] ? null : !viaFx(st) ? S.target : copy ? S.copy.in : null);   // (Hexenring: its own room – raum.js)
     if (copy !== (S.mode === 'copy')) {
       S.mode = copy ? 'copy' : 'fx';
       const set = inst ? setNow : (q, v) => setP(q, v, 0.01);
@@ -31730,28 +31732,49 @@ function hxF1Tick(now) {
 }
 const hxSrcText = () => { const n = HX.loops.size; return n ? n + (n === 1 ? ' Schleife' : ' Schleifen') : 'aus'; };
 // the mixer shows the strip from the first Schleife on (or once something of it was set)
-function hxStripSync() { if (MX.root) { mxRgnSync(); mxSrcAll(); } }
+function hxStripSync() { hxrSync(); if (MX.root) { mxRgnSync(); mxSrcAll(); } }   // (27.10.2026: and the loops' rooms)
 
-// ---- (owner, 27.10.2026: „der Inhalt der Schleife muss unbedingt immer 1:1 original bleiben – keinerlei Veränderung beim
-// Preset-Wechsel, außer man stellt es bewusst ein“) the Raum der Schleifen: the Hexenring channel's echo and hall are its
-// own – a copy of the echo (the same tape: ping-pong, tone, saturation, wow and flutter) and of the hall (its own IR),
-// with the settings of when the Leiste's first Schleife was made (HXR.v; kept on the device and in a Kreis). A preset
-// changes the field's echo and hall, never these. „Effekte des Presets wirken auf die Schleifen“ (hx.fx) sends the
-// channel to the field's as before, and every loop dry through the live chain (hxFxSet). Their returns go straight into the sum – the console's echo and hall returns are
-// the preset's (their levels, their sends) – and the echo feeds the loops' hall, as the field's echo feeds the field's. ----
+// ---- (owner, 27.10.2026: „aufgenommene Schleifen werden nicht mehr von Effekten berührt“) the Räume der Schleifen: every
+// Schleife plays into the echo and hall it was played in – their settings at its window's start (HXRL, the field's echo
+// and hall as they changed, 20 minutes back; L.room, kept with it, in a Kreis), whatever the field does now. Loops played
+// in the same room share one copy of it (a key of its settings); a copy is the field's echo (the same tape: ping-pong,
+// tone, saturation, wow and flutter on the field's LFOs) and hall (its own IR, genIR/genRoom), its returns straight into
+// the sum (the console's echo and hall returns are the preset's). Each loop reaches its room through its send pair on
+// the processor's output 2 (post level, balance and state – as Nähren uses it), times the Hexenring channel's fader,
+// mute and solo and its Echo/Hall knobs; that channel's own sends stay closed then (never twice). „Effekte des Presets
+// wirken auf die Schleifen“ (hx.fx) instead: every loop dry through the live chain into the field's echo and hall. ----
 const HXR_IDS = ['dly.sync', 'dly.div', 'dly.ms', 'dly.fb', 'dly.pp', 'dly.tone', 'dly.wow', 'dly.mix', 'rev.size', 'rev.damp', 'rev.pre', 'rev.mix', 'rev.raum'];
-const HXR = { v: null, u: null, job: 0, nch: 0, act: null };
-const hxrV = (id) => (HXR.v && HXR.v[id] != null ? HXR.v[id] : P[id]);
+const HXR = { v: null, rooms: new Map(), warned: false };
+const HXRL = [];   // [time, settings] – a new entry whenever the field's echo or hall changes
+// (a Schleife from before 27.10.2026 without a room of its own: its patch, else the room the Leiste had then)
 (() => { try { const v = JSON.parse(localStorage.getItem('myzel.hxRaum') || 'null'); if (v && typeof v === 'object') HXR.v = v; } catch (e) {} })();
-function hxrSave() { try { localStorage.setItem('myzel.hxRaum', JSON.stringify(HXR.v)); } catch (e) {} }
-// the room as the field has it now becomes the loops' room (the Leiste's first Schleife; „jetzt übernehmen“)
-function hxrTake() { const o = {}; for (const id of HXR_IDS) o[id] = P[id]; HXR.v = o; hxrSave(); hxrApply(true); }
-function hxrSet(v) { if (!v) return; HXR.v = Object.assign({}, v); hxrSave(); hxrApply(true); }
-// built with the graph (initAudio); never in the Werk-Rahmen (it renders without echo and hall)
-function hxrBuild() {
-  if (HXW.on || !A.ctx) return;
-  const ctx = A.ctx, U = { ctx };
-  U.dlySend = G(0); U.dlyIn = G(1); U.dlySend.connect(U.dlyIn);
+const hxrNow = () => { const o = {}; for (const id of HXR_IDS) o[id] = P[id]; return o; };
+const hxrKey = (v) => HXR_IDS.map((id) => v[id]).join('|');
+// the field's echo and hall changed (updDelay, updReverbMix, regenIR call this): logged with the time
+function hxrLog() {
+  if (!A.ctx || HXW.on) return;
+  const t = A.ctx.currentTime, v = hxrNow(), last = HXRL[HXRL.length - 1];
+  if (last && hxrKey(last[1]) === hxrKey(v)) return;
+  if (last && last[0] >= t - 0.02) HXRL.pop();
+  HXRL.push([t, v]);
+  while (HXRL.length > 2 && HXRL[1][0] < t - 1200) HXRL.shift();
+}
+// the field's echo and hall at time t (a window's start); null before the log reaches
+function hxrAt(t) {
+  if (t == null || !HXRL.length) return null;
+  let i = HXRL.length - 1; while (i > 0 && HXRL[i][0] > t) i--;
+  return HXRL[i][0] <= t + 0.05 || i === 0 && t > A.ctx.currentTime - 1200 ? Object.assign({}, HXRL[i][1]) : null;
+}
+function hxrOf(L) {
+  const p = (L && (L.room || L.P)) || HXR.v || {}, o = {};
+  for (const id of HXR_IDS) o[id] = p[id] != null ? p[id] : PD[id].d;
+  return o;
+}
+// one room: an echo and a hall with the settings v
+function hxrUnit(v) {
+  const ctx = A.ctx, U = { ctx, v, key: hxrKey(v), n: 0, job: 0, nch: 0, act: null, idle: 0 };
+  U.inp = G(1); U.gD = G(0); U.gR = G(0); U.inp.connect(U.gD); U.inp.connect(U.gR);
+  U.dlySend = G(0); U.dlyIn = G(1); U.gD.connect(U.dlySend).connect(U.dlyIn);
   const split = ctx.createChannelSplitter(2), merge = ctx.createChannelMerger(2);
   U.dlyIn.connect(split);
   U.dSumL = G(1); U.dSumR = G(1); U.dInR = G(1); U.dInRL = G(0);
@@ -31769,46 +31792,77 @@ function hxrBuild() {
   U.dSatR.connect(U.dStrR).connect(U.dSumR); U.dSatR.connect(U.dCrsR).connect(U.dSumL);
   U.dSatL.connect(merge, 0, 0); U.dSatR.connect(merge, 0, 1);
   U.dlyRet = G(1); merge.connect(U.dlyRet).connect(A.masterSum);
-  U.wowG = G(0); U.flutG = G(0); A.wowLfo.connect(U.wowG); A.flutLfo.connect(U.flutG);   // (the tape's own LFOs, as the field's echo)
+  U.wowG = G(0); U.flutG = G(0); A.wowLfo.connect(U.wowG); A.flutLfo.connect(U.flutG);
   for (const g of [U.wowG, U.flutG]) { g.connect(U.dL.delayTime); g.connect(U.dR.delayTime); }
   U.revSend = G(0); U.revIn = G(1); U.revPre = ctx.createDelay(1); U.revRet = G(1.25);
-  U.revSend.connect(U.revIn); U.revIn.connect(U.revPre); U.revRet.connect(A.masterSum);
+  U.gR.connect(U.revSend).connect(U.revIn); U.revIn.connect(U.revPre); U.revRet.connect(A.masterSum);
   U.dlyToRev = G(0.3); U.dlyRet.connect(U.dlyToRev).connect(U.revIn);   // (the echo into the hall, as the echo return's Hall send at 100 %)
-  HXR.u = U; HXR.nch = 0; HXR.act = null; HXR.key = null;
-  hxrApply(true);
+  hxrApply(U, true); hxrLevelsOf(U, setNow);
+  return U;
 }
-// the settings onto the copy; the IR again when the hall's own settings (or the level's channels) changed
-function hxrApply(ir, noSends) {
-  const U = HXR.u; if (!U || U.ctx !== A.ctx) return;
-  const sync = hxrV('dly.sync'), t = clamp(sync ? divBeats(hxrV('dly.div')) * 60 / seqBpm() : hxrV('dly.ms') / 1000, 0.01, 3.9);
+function hxrApply(U, ir) {
+  if (!U || U.ctx !== A.ctx || U.dead) return;
+  const v = U.v, t = clamp(v['dly.sync'] ? divBeats(v['dly.div']) * 60 / seqBpm() : v['dly.ms'] / 1000, 0.01, 3.9);
   setP(U.dL.delayTime, t, 0.09); setP(U.dR.delayTime, t, 0.09);
-  const pp = hxrV('dly.pp'), fb = hxrV('dly.fb');
+  const pp = v['dly.pp'], fb = v['dly.fb'];
   setP(U.dStrL.gain, fb * (1 - pp)); setP(U.dCrsL.gain, fb * pp); setP(U.dStrR.gain, fb * (1 - pp)); setP(U.dCrsR.gain, fb * pp);
   setP(U.dInR.gain, 1 - pp); setP(U.dInRL.gain, pp);
-  setP(U.dToneL.frequency, hxrV('dly.tone')); setP(U.dToneR.frequency, hxrV('dly.tone'));
-  setP(U.wowG.gain, hxrV('dly.wow') * 0.004); setP(U.flutG.gain, hxrV('dly.wow') * 0.0006);
-  setP(U.dlySend.gain, hxrV('dly.mix'));
-  setP(U.revSend.gain, hxrV('rev.mix')); setP(U.revPre.delayTime, hxrV('rev.pre'), 0.05);
-  const nch = Q.rich ? 4 : 2, key = [hxrV('rev.size'), hxrV('rev.damp'), hxrV('rev.raum'), nch].join('|');
-  if ((ir || HXR.nch !== nch) && HXR.key !== key) hxrIR(nch, key);
-  if (!noSends && typeof updSends === 'function') updSends();
+  setP(U.dToneL.frequency, v['dly.tone']); setP(U.dToneR.frequency, v['dly.tone']);
+  setP(U.wowG.gain, v['dly.wow'] * 0.004); setP(U.flutG.gain, v['dly.wow'] * 0.0006);
+  setP(U.dlySend.gain, v['dly.mix']); setP(U.revSend.gain, v['rev.mix']); setP(U.revPre.delayTime, v['rev.pre'], 0.05);
+  const nch = Q.rich ? 4 : 2;
+  if (ir || U.nch !== nch) hxrIR(U, nch);
 }
-function hxrIR(nch, key) {
-  const U = HXR.u; if (!U) return;
-  const job = ++HXR.job; HXR.nch = nch; HXR.key = key;
-  dspJob('ir', [hxrV('rev.size'), hxrV('rev.damp'), SR, nch, hxrV('rev.raum')]).then((ch) => {
-    if (job !== HXR.job || HXR.u !== U || !A.ctx || U.ctx !== A.ctx) return;
+function hxrIR(U, nch) {
+  const job = ++U.job, v = U.v; U.nch = nch;
+  dspJob('ir', [v['rev.size'], v['rev.damp'], SR, nch, v['rev.raum']]).then((ch) => {
+    if (job !== U.job || !A.ctx || U.ctx !== A.ctx || U.dead) return;
     const conv = A.ctx.createConvolver(); conv.buffer = toBuffer(ch);
     const g = G(0), t = A.ctx.currentTime;
     U.revPre.connect(conv).connect(g).connect(U.revRet);
     g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(nch === 4 ? IR4_GAIN : 1, t + 0.25);
-    const old = HXR.act;
+    const old = U.act;
     if (old) { holdParam(old.g.gain, t); old.g.gain.linearRampToValueAtTime(0, t + 0.25); setTimeout(() => { try { U.revPre.disconnect(old.conv); old.conv.disconnect(); old.g.disconnect(); } catch (e) {} }, 600); }
-    HXR.act = { conv, g };
+    U.act = { conv, g };
   });
 }
-// where the Hexenring channel's sends go: its own room (or, „folgt dem Preset“, the field's)
-const hxrTarget = (fx) => (!P['hx.fx'] && HXR.u && HXR.u.ctx === A.ctx ? (fx === 'dly' ? HXR.u.dlySend : HXR.u.revSend) : null);
+// the Hexenring channel as it would send: its fader, mute and solo, its Echo and Hall knobs (strips.js gates)
+function hxrLevelsOf(U, set) {
+  const st = MIX.s && MIX.s.hxr, on = !!st && !st.silent, g = st ? stripGain(st) : 1;
+  set(U.gD.gain, on ? g * mp('xhxr.dly') : 0); set(U.gR.gain, on ? g * mp('xhxr.rev') : 0);
+}
+function hxrLevels(set) { for (const U of HXR.rooms.values()) if (U.ctx === A.ctx && !U.dead) hxrLevelsOf(U, set || ((q, v) => setP(q, v, 0.012))); }
+// the graph built again (initAudio): the rooms of the old context are gone
+function hxrBuild() { for (const U of HXR.rooms.values()) U.dead = true; HXR.rooms.clear(); for (const L of HX.loops.values()) L.rm = null; HXRL.length = 0; hxrLog(); }
+// every loop to its room (none: hx.fx; a Schleife of Bewegung; gone) – after any loop came, went or changed (hxStripSync)
+function hxrSync() {
+  if (!A.ctx || !HX.node || HXW.on || !A.masterSum || !A.wowLfo) return;
+  const want = !P['hx.fx'], live = new Set();
+  for (const L of hxLoopsLive()) {
+    if (L.bew || L.state === 'weg') continue;
+    live.add(L.id);
+    if (want) {
+      const v = hxrOf(L), key = hxrKey(v);
+      L.roomOn = true; hxSendSync(L);
+      const ch = L.sendCh != null ? L.sendCh : -1;
+      if (ch < 0) { if (!HXR.warned) { HXR.warned = true; toast('Höchstens ' + HX_SENDS + ' Schleifen haben ihren eigenen Raum – die übrigen klingen ohne Hall und Echo.', 5000); } continue; }
+      if (L.rm && (L.rm.key !== key || L.rm.ch !== ch || L.rm.ctx !== A.ctx)) hxrUnlink(L);
+      if (!L.rm) {
+        let U = HXR.rooms.get(key); if (!U || U.ctx !== A.ctx || U.dead) { U = hxrUnit(v); HXR.rooms.set(key, U); }
+        const sp = hxSplit(), mg = A.ctx.createChannelMerger(2);
+        sp.connect(mg, 2 * ch, 0); sp.connect(mg, 2 * ch + 1, 1); mg.connect(U.inp);
+        U.n++; U.idle = 0; L.rm = { mg, key, ch, ctx: A.ctx, U };
+      }
+    } else { if (L.rm) hxrUnlink(L); if (L.roomOn) { L.roomOn = false; hxSendSync(L); } }
+  }
+  for (const L of HX.loops.values()) if (L.rm && !live.has(L.id)) { hxrUnlink(L); L.roomOn = false; }
+  // a room nobody plays into rings out, then goes
+  for (const [k, U] of HXR.rooms) if (U.n <= 0 && !U.idle) { U.idle = 1; setTimeout(() => { if (U.n <= 0 && HXR.rooms.get(k) === U) { U.dead = true; HXR.rooms.delete(k); try { U.dlyRet.disconnect(); U.revRet.disconnect(); A.wowLfo.disconnect(U.wowG); A.flutLfo.disconnect(U.flutG); } catch (e) {} } }, 15000); }
+  if (typeof updSends === 'function') updSends();
+}
+function hxrUnlink(L) { const r = L.rm; L.rm = null; if (!r) return; try { r.mg.disconnect(); } catch (e) {} if (r.U) r.U.n--; }
+// the field's tempo (a synced echo), the level's channels (the hall's IR) – every room again; and the log
+function hxrAll() { hxrLog(); for (const U of HXR.rooms.values()) hxrApply(U, false); }
 // (owner, 27.10.2026: „ein Schalter, der die Effekte für Schleifen aktiviert oder deaktiviert … wenn die Schleifen erst
 // einmal stehen, darf kein Effekt mehr darauf wirken, außer der User möchte das“) the switch for the whole Leiste: on –
 // every Schleife plays dry through the live chain (its folgt, from its next seam) into the field's echo and hall; off –
@@ -31816,7 +31870,7 @@ const hxrTarget = (fx) => (!P['hx.fx'] && HXR.u && HXR.u.ctx === A.ctx ? (fx ===
 // never also baked. A new Schleife takes it (ernten.js).
 function hxFxSet(on) {
   for (const L of hxLoopsLive()) if (!L.bew && !!L.folgt !== !!on) hxFolgt(L, !!on, true);
-  updSends(); hxSay(on ? 'Schleifen: Effekte des Presets wirken (live)' : 'Schleifen: klingen wie aufgenommen'); hxCardDirty();
+  hxrSync(); hxSay(on ? 'Schleifen: Effekte des Presets wirken (live)' : 'Schleifen: klingen wie aufgenommen'); hxCardDirty();
 }
 // ---- the calls (times are audio seconds of A.ctx; the processor gets frames). Musical beats: bar lines at 0, 4, 8 … ----
 // hxGrab({in: 0 Gespielt | 1 Alles, t0, t1 | f0, f1, pre, post, tail}) → Promise<{id, chunks: [[L, R]…], f0, n, pre,
@@ -32294,7 +32348,8 @@ function hxLoopMake(o) {
   if (o.eng !== 'bew' && (!HX.fokus || !HX.loops.has(HX.fokus) || HX.loops.get(HX.fokus).bew)) HX.fokus = id;   // Hexenring: (step 1d) never a Schleife of Bewegung
   if (o.fokus !== false && o.eng !== 'bew') HX.fokus = id;
   // (owner, 27.10.2026) the Leiste's first Schleife: the room it was played in becomes the loops' own (raum.js)
-  if (!o.key && o.eng !== 'bew' && (!HXR.v || !hxLoopsLive().some((X) => X !== L && !X.bew))) hxrTake();
+  // (owner, 27.10.2026) the echo and hall it was played in: the field's at its window's start (a moved window: again)
+  if (!L.room && o.eng !== 'bew') L.room = o.room || (o.key ? null : hxrAt(L.cut ? hxT(L.cut.f0) : hxNowT()) || hxrNow());
   hxPersistAsk();
   return L;
 }
@@ -32752,7 +32807,7 @@ function hxSnapS(S) { return S && { key: S.key, len: S.len, pre: S.pre, n: S.n, 
 function hxSnap(L) {
   return { key: L.key, slot: L.slot, d: Object.assign({}, L.d), bpb: L.bpb, notes: L.notes, mv: L.mv, cut: L.cut, eng: L.eng, setTG: L.setTG, gain: L.gain, pan: L.pan || 0, src: L.src, bpm: L.bpm, state: L.state, tk: L.tk,
     folgt: !!L.folgt, taumeln: !!L.taumeln, nudge: L.nudge || 0, eig: L.eig, sch: L.sch.map((id) => hxSnapS(HX.sch.get(id))).filter(Boolean),
-    wwhy: Object.assign({}, L.wwhy || {}), ton: L.ton, klang: L.klang, stufe: L.stufe, q: L.q, P: L.P, mask: L.mask, chainRec: L.chainRec, jrg: L.jrg, tb: hxTbOf(L), tr0: L.tr0 || null,   // (step 2a; step 2b: its tools)
+    wwhy: Object.assign({}, L.wwhy || {}), ton: L.ton, klang: L.klang, stufe: L.stufe, q: L.q, P: L.P, room: L.room || null, mask: L.mask, chainRec: L.chainRec, jrg: L.jrg, tb: hxTbOf(L), tr0: L.tr0 || null,   // (step 2a; step 2b: its tools)
     hum: L.hum || null, col: L.col || null, colA: L.colA || null, bew: L.bew ? { lanes: L.bew.lanes.map((ln) => ({ k: ln.k, src: ln.src, v: ln.v })), disp: L.bew.disp, n: L.bew.n, g0: L.bew.g0, gs: L.bew.gs, fade: L.bew.fade, why: L.bew.why } : null, naehrt: L.naehrt || null, mi: hxMiSave(L), eco: hxEcoOf(L) };   // (step 4: its ecology)
 }
 const hxMiSave = (L) => { const m = L.mi; if (!m) return null; const o = {}; for (const k of ['rolle', 'wk', 'gOff', 'sugg', 'from', 'begl']) if (m[k] != null && m[k] !== false) o[k] = m[k]; return Object.keys(o).length ? o : null; };   // (Etappe 3: role, Gärtner, Wiederkehr, a suggestion)
@@ -32770,7 +32825,7 @@ function hxRebuild(sn, o = {}) {
   const slot = sn.slot != null && sn.slot < HX_SLOTS && !HX.slot[sn.slot] ? sn.slot : hxZiel();   // (a slot beyond this device's places: a free one)
   if (slot < 0) { toast('Kein freier Platz für ' + 'Schleife ' + ((sn.slot || 0) + 1) + '.'); return null; }
   const L = hxLoopMake({ slot, key: sn.key, lock: sn.d.lock, b0: sn.d.b0 - TG.o, beats: sn.d.beats, Lf: sn.d.L, ph0: sn.d.ph0, gap: !!sn.d.gap, gain: sn.gain, pan: sn.pan || 0, bpb: sn.bpb, notes: sn.notes, mv: sn.mv, cut: sn.cut, eng: sn.eng, setTG: sn.setTG, src: sn.src, bpm: sn.bpm, state: o.state || (sn.state === 'stumm' ? 'stumm' : 'spielt'), fokus: o.fokus, eig: sn.eig,
-    wwhy: sn.wwhy || {}, ton: sn.ton, klang: sn.klang, stufe: sn.stufe, q: sn.q, P: sn.P, mask: sn.mask, chainRec: sn.chainRec, jrg: sn.jrg });   // (step 2a: its Wuchs)
+    wwhy: sn.wwhy || {}, ton: sn.ton, klang: sn.klang, stufe: sn.stufe, q: sn.q, P: sn.P, room: sn.room || null, mask: sn.mask, chainRec: sn.chainRec, jrg: sn.jrg });   // (step 2a: its Wuchs)
   if (sn.hum) L.hum = sn.hum;
   L.col = sn.col || null; L.colA = sn.colA || null;   // (26.10.2026: its pigment)   // (26.10.2026: its whole Ernte comes back with it)
   L.tk = sn.tk; L.folgt = !!sn.folgt; L.taumeln = !!sn.taumeln; if (sn.nudge) L.nudge = sn.nudge;
@@ -35036,6 +35091,7 @@ function hxHumApply(L, w0, w1, label) {
   const nb = tk ? Math.max(1, Math.round((w1 - w0) / beatF)) : 0, geom = tk ? (nb !== L.d.beats ? { beats: nb } : null) : (w1 - w0 !== L.d.L ? { L: w1 - w0 } : null);
   const before = hxGeo(L), key = L.key, sw = geom ? hxNextSeam(L) : hxSwapAt(L), tr = { trim: L.trim, tr0: L.tr0 };
   hxSchSwap(S, nc, { f: sw.f, now: !!sw.now, geom });
+  { const rr = hxrAt(hxT(w0)); if (rr) { L.room = rr; hxrSync(); } }   // (27.10.2026: the echo and hall that window was played in – raum.js)
   L.trim = null; L.tr0 = null;   // (what plays is a cut of the Ernte again – „Wieder ganz“ has nothing to go back to)
   const after = {};
   hxHist({ kind: 'recut', label: hxName(L) + ': ' + (label || 'Ausschnitt in der Ernte'), undo() { const X = hxByKey(key); if (X) { after.g = hxGeo(X); hxGeoBack(X, before); X.trim = tr.trim; X.tr0 = tr.tr0; } }, redo() { const X = hxByKey(key); if (X && after.g) { hxGeoBack(X, after.g); X.trim = null; X.tr0 = null; } } });
@@ -35481,7 +35537,7 @@ function hxRecOf(L) {
       wn: S.wn || null, wseed: S.wseed || 0, gate: S.gate || null, play: S.play || 'ab',
       wu: S.wu && (S.savedW || 0) >= hxSegsV(S, 'w') ? { n: S.wu.n, len: S.wu.len, sig: S.wu.sig, seed: S.wu.seed } : null,
       anc: S.anc && (S.savedX || 0) >= hxSegsV(S, 'x') ? { n: S.anc.n, len: S.anc.len, sig: S.anc.sig, seed: S.anc.seed, br: S.anc.br != null ? S.anc.br : null, vn: S.anc.vn || null } : null })),
-    wwhy: L.wwhy || {}, ton: hxTon(L), tonV: 1, klang: L.klang || 'eigen', stufe: L.stufe || null, q: L.q || null, P: L.P || null, mask: L.mask || null, chainRec: L.chainRec || null, jrg: L.jrg || null, tb: hxTbOf(L),
+    wwhy: L.wwhy || {}, ton: hxTon(L), tonV: 1, klang: L.klang || 'eigen', stufe: L.stufe || null, q: L.q || null, P: L.P || null, room: L.room || null, mask: L.mask || null, chainRec: L.chainRec || null, jrg: L.jrg || null, tb: hxTbOf(L),
     bew: L.bew ? { n: L.bew.n, g0: L.bew.g0, gs: L.bew.gs - L.d.b0, fade: L.bew.fade, why: L.bew.why, lanes: L.bew.lanes.map((ln) => ({ k: ln.k, src: ln.src, d: faeEnc(ln.v) })), disp: L.bew.disp ? Object.fromEntries(Object.entries(L.bew.disp).map(([k, v]) => [k, faeEnc(v)])) : null } : null };   // (step 1d: a Schleife of Bewegung, its lanes as the Fährte kept them)
 }
 function hxSaveMeta(loopId) {
@@ -35631,7 +35687,7 @@ async function hxRecBuild(r, segsOf, o = {}) {
   if (o.fresh) for (const x of sch) x.key = hxKey('s');   // (a Kreis loaded: new keys – it may come twice, beside the Schleifen it was made of)
   const k = r.sr && r.sr !== SR ? SR / r.sr : 1;
   const sn = { key: o.fresh ? hxKey('l') : r.id, col: r.col || null, colA: r.colA || null, slot: r.slot, d: { lock: r.lock, b0: r.b0 + TG.o, beats: r.beats, L: r.L ? (k === 1 ? r.L : r.L * k) : r.L, ph0: 0, gap: !!r.gap }, bpb: r.bpb, eco: r.eco || null, notes: r.notes || [], mv: r.mv, cut: r.cut ? Object.assign({}, r.cut, { stale: true }) : null, eng: r.eng, setTG: r.setTG, gain: r.gain, pan: r.pan || 0, src: r.src, bpm: r.bpm, state: 'angehalten', tk: r.tk, folgt: r.folgt, taumeln: r.tauV ? !!r.taumeln : false, eig: r.eig, naehrt: r.naehrt || null, sch,
-    wwhy: r.wwhy || {}, ton: r.tonV ? r.ton : r.ton === 'diatonisch' ? 'fest' : r.ton, klang: r.klang, stufe: r.stufe, q: r.q, P: r.P, mask: r.mask, chainRec: r.chainRec, jrg: r.jrg, tb: r.tb || null, mi: r.mi || null };   // (step 2a; step 2b: its tools; Etappe 3: role, Gärtner, Wiederkehr)
+    wwhy: r.wwhy || {}, ton: r.tonV ? r.ton : r.ton === 'diatonisch' ? 'fest' : r.ton, klang: r.klang, stufe: r.stufe, q: r.q, P: r.P, room: r.room || null, mask: r.mask, chainRec: r.chainRec, jrg: r.jrg, tb: r.tb || null, mi: r.mi || null };   // (step 2a; step 2b: its tools; Etappe 3: role, Gärtner, Wiederkehr)
   const L = hxRebuild(sn, { state: 'angehalten', fokus: false, noSave: true });
   if (L && o.fresh) { L.nudge = r.nudge || 0; L.plan = r.plan; L.made = Date.now(); hxSaveLoop(L); return L; }
   if (L) { L.nudge = r.nudge || 0; L.plan = r.plan; L.made = r.made || Date.now(); for (const id of L.sch) { const S = HX.sch.get(id); if (S) { S.saved = hxSegs(S); if (S.bak) S.savedB = hxSegs(S); if (S.wu) S.savedW = hxSegsV(S, 'w'); if (S.anc) S.savedX = hxSegsV(S, 'x'); } } hxSaveMeta(L.id); }
@@ -35718,7 +35774,7 @@ function hxKrSave(name, tries = 0) {
   const nm = (name || '').trim() || 'Kreis vom ' + now.toLocaleDateString('de-DE', { day: 'numeric', month: 'numeric' }) + ', ' + now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
   const tk = recs.some((r) => r.lock === 'takt');
   let bytes = 0; for (const p of parts) bytes += p.n * 8;
-  const meta = { id, name: nm, t: Date.now(), v: 1, bpm: tk ? (TG.hxOn ? TG.hx : tgBpm(hxNowT())) : 0, keep: !!TG.keep, sr: SR, n: recs.length, bytes, cols: recs.map(hxKrPig), recs, raum: HXR.v ? Object.assign({}, HXR.v) : null, done: false };   // (27.10.2026: the loops' room – raum.js)
+  const meta = { id, name: nm, t: Date.now(), v: 1, bpm: tk ? (TG.hxOn ? TG.hx : tgBpm(hxNowT())) : 0, keep: !!TG.keep, sr: SR, n: recs.length, bytes, cols: recs.map(hxKrPig), recs, done: false };
   const jobs = [];
   for (const p of parts) { const seg = HX_SEG * p.sr; for (let i = 0; i * seg < p.n; i++) jobs.push({ p, i, a: i * seg, b: Math.min(p.n, (i + 1) * seg) }); }
   const B = (HXKR.busy = { id, name: nm, done: 0, tot: jobs.length });
@@ -35789,7 +35845,6 @@ async function hxKrLoad(id, mode = 'neu') {
     }
     const setT = tk && !SEQ.ext && (mode !== 'dazu' || !live.some((L) => hxTakt(L)));
     if (setT) { hxTempo(K.bpm); TG.keep = !!K.keep; }
-    if (mode !== 'dazu' && K.raum) hxrSet(K.raum);   // (its room comes with it; „Dazulegen“ keeps the Leiste's)
     const made = [], lost = { n: 0 };
     for (const r of K.recs.slice().sort((a, b) => a.slot - b.slot)) {
       const segsOf = (key) => idbDo('kreissegs', 'readonly', (st) => st.getAll(hxKrRange(K.id, r.id + '/' + key)));
@@ -36425,7 +36480,11 @@ function hxChainFor(inp, evs) {
 function hxSchPlay(S, bak, f) {
   const L = HX.loops.get(S.loop), aud = bak ? S.bak : S.aud;
   if (!L || !aud || !HX.node) return false;
-  const [cp, tr] = hxCopy(aud), out = bak || !S.chain ? 0 : 1;
+  // (owner, 27.10.2026: „aufgenommene Schleifen werden nicht mehr von Effekten berührt“) the live chain only for a loop
+  // that follows it (folgt, hx.fx) – or for the moment until its fresh bake is there; one that cannot be baked plays dry
+  // (out 0), never through the preset's chain
+  const due = !S.bakeFail && hxwOk() && !!S.cut && !S.cut.stale && hxNowT() - hxT(S.cut.f0) < 120;
+  const [cp, tr] = hxCopy(aud), out = !bak && S.chain && (L.folgt || due) ? 1 : 0;
   const au = S.aus ? { off: S.aus.off, len: S.aus.len, fade: S.aus.fade != null ? S.aus.fade : Math.min(Math.round(0.03 * SR), S.aus.len) } : null;
   hxPost({ replace: { loop: S.loop, schicht: S.id, chunks: cp, n: S.n, pre: S.pre, len: S.len, ausklang: au, f, join: S.join, X: S.X, rho: S.rho, zo: S.zo || 0, kc: (bak ? S.kcB : S.kc) || 0, out, dd: out && !L.folgt ? 0 : 1 } }, tr);
   S.out = out; S.baked = !!bak; S.swapF = f; S.ddOn = false; hxCount();
@@ -36443,9 +36502,10 @@ async function hxAfterFill(S) {
     S.baking = (S.baking || 0) + 1;   // (26.10.2026: the tools wait only while a bake really runs – one that fails leaves the Schicht dry through the live chain, never stuck)
     let r = false; try { r = await hxBake(S); } finally { S.baking--; }
     if (!ok()) return;
-    if (r) { hxSchPlay(S, true, hxNextSeam(L).f); if (changed) hxSaveSch(S); hxSaveSch(S, 'b'); return; }
+    if (r) { S.bakeFail = false; hxSchPlay(S, true, hxNextSeam(L).f); if (changed) hxSaveSch(S); hxSaveSch(S, 'b'); return; }
+    S.bakeFail = true;   // (dry from its next seam – not left on the live chain)
   }
-  if (changed) { hxSchPlay(S, false, hxNextSeam(L).f); hxSaveSch(S); }
+  if (changed || (S.chain && !L.folgt && !S.baked && S.out)) { hxSchPlay(S, false, hxNextSeam(L).f); if (changed) hxSaveSch(S); }
 }
 // → true when S.bak holds the baked audio of S.aud
 async function hxBake(S) {
@@ -40525,7 +40585,7 @@ function hxFeedRetune() {
 const hxFeedCost = () => { let c = 0; for (const F of HXN.feed.values()) if (F.ctx === A.ctx) c += F.cost; return c; };
 // the loop's send (output 2): on while it feeds a web or a Hof
 function hxSendSync(L) {
-  const n = L.naehrt || {}, on = !!(n.gsp || n.glt || n.shn) && L.slot != null;
+  const n = L.naehrt || {}, on = !!(n.gsp || n.glt || n.shn || L.roomOn) && L.slot != null;   // (27.10.2026: or its own room – raum.js)
   if (on !== !!L.sendOn) { const ch = on ? hxSendCh(L) : -1; if (on && ch < 0) return; L.sendOn = on; hxPost({ send: on ? { loop: L.id, ch, g: 1, X: Math.round(0.03 * SR) } : { loop: L.id, ch: -1, X: Math.round(0.03 * SR) } }); if (!on) L.sendCh = null; }
 }
 // Nähren for one of rhz · rgn · glt · shn (gsp and kor: hxNaehrGsp, hxNaehrKor)

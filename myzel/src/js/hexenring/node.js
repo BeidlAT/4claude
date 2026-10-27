@@ -226,5 +226,5 @@ function hxF1Tick(now) {
 }
 const hxSrcText = () => { const n = HX.loops.size; return n ? n + (n === 1 ? ' Schleife' : ' Schleifen') : 'aus'; };
 // the mixer shows the strip from the first Schleife on (or once something of it was set)
-function hxStripSync() { if (MX.root) { mxRgnSync(); mxSrcAll(); } }
+function hxStripSync() { hxrSync(); if (MX.root) { mxRgnSync(); mxSrcAll(); } }   // (27.10.2026: and the loops' rooms)
 

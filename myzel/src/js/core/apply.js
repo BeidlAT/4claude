@@ -68,15 +68,16 @@ function updDelay() {
   setP(A.wowG.gain, P['dly.wow'] * 0.004); setP(A.flutG.gain, P['dly.wow'] * 0.0006);
   setP(A.dlySend.gain, P['dly.mix']);
   setP(A.dlyIn.gain, A.frozen ? 0 : 1, 0.02);
-  if (HXR.u) hxrApply(false, true);   // (the loops' echo: its sync time follows the tempo)
+  hxrAll();   // (the loops' rooms: a synced echo follows the tempo; the field's echo logged – raum.js)
 }
 function updReverbMix() {
   if (!A.ctx) return;
   setP(A.revSend.gain, P['rev.mix']); setP(A.revPre.delayTime, P['rev.pre'], 0.05);
+  hxrLog();
 }
 function regenIR(now) {
   if (!A.ctx || HXW.on) return;   // (Hexenring: the Werk-Rahmen renders without the hall)
-  if (HXR.u) hxrApply(false, true);   // (the loops' hall: again only when the level's channels changed)
+  hxrAll();   // (the loops' halls: again only when the level's channels changed; the field's hall logged)
   clearTimeout(A.irTimer);
   A.irTimer = setTimeout(() => {
     const job = ++A.irJob;

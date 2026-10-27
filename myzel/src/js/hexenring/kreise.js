@@ -54,7 +54,7 @@ function hxKrSave(name, tries = 0) {
   const nm = (name || '').trim() || 'Kreis vom ' + now.toLocaleDateString('de-DE', { day: 'numeric', month: 'numeric' }) + ', ' + now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
   const tk = recs.some((r) => r.lock === 'takt');
   let bytes = 0; for (const p of parts) bytes += p.n * 8;
-  const meta = { id, name: nm, t: Date.now(), v: 1, bpm: tk ? (TG.hxOn ? TG.hx : tgBpm(hxNowT())) : 0, keep: !!TG.keep, sr: SR, n: recs.length, bytes, cols: recs.map(hxKrPig), recs, raum: HXR.v ? Object.assign({}, HXR.v) : null, done: false };   // (27.10.2026: the loops' room – raum.js)
+  const meta = { id, name: nm, t: Date.now(), v: 1, bpm: tk ? (TG.hxOn ? TG.hx : tgBpm(hxNowT())) : 0, keep: !!TG.keep, sr: SR, n: recs.length, bytes, cols: recs.map(hxKrPig), recs, done: false };
   const jobs = [];
   for (const p of parts) { const seg = HX_SEG * p.sr; for (let i = 0; i * seg < p.n; i++) jobs.push({ p, i, a: i * seg, b: Math.min(p.n, (i + 1) * seg) }); }
   const B = (HXKR.busy = { id, name: nm, done: 0, tot: jobs.length });
@@ -125,7 +125,6 @@ async function hxKrLoad(id, mode = 'neu') {
     }
     const setT = tk && !SEQ.ext && (mode !== 'dazu' || !live.some((L) => hxTakt(L)));
     if (setT) { hxTempo(K.bpm); TG.keep = !!K.keep; }
-    if (mode !== 'dazu' && K.raum) hxrSet(K.raum);   // (its room comes with it; „Dazulegen“ keeps the Leiste's)
     const made = [], lost = { n: 0 };
     for (const r of K.recs.slice().sort((a, b) => a.slot - b.slot)) {
       const segsOf = (key) => idbDo('kreissegs', 'readonly', (st) => st.getAll(hxKrRange(K.id, r.id + '/' + key)));

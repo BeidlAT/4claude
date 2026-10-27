@@ -58,7 +58,8 @@ function hxLoopMake(o) {
   if (o.eng !== 'bew' && (!HX.fokus || !HX.loops.has(HX.fokus) || HX.loops.get(HX.fokus).bew)) HX.fokus = id;   // Hexenring: (step 1d) never a Schleife of Bewegung
   if (o.fokus !== false && o.eng !== 'bew') HX.fokus = id;
   // (owner, 27.10.2026) the Leiste's first Schleife: the room it was played in becomes the loops' own (raum.js)
-  if (!o.key && o.eng !== 'bew' && (!HXR.v || !hxLoopsLive().some((X) => X !== L && !X.bew))) hxrTake();
+  // (owner, 27.10.2026) the echo and hall it was played in: the field's at its window's start (a moved window: again)
+  if (!L.room && o.eng !== 'bew') L.room = o.room || (o.key ? null : hxrAt(L.cut ? hxT(L.cut.f0) : hxNowT()) || hxrNow());
   hxPersistAsk();
   return L;
 }
