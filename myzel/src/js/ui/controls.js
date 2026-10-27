@@ -127,8 +127,6 @@ function updInactive() {
   for (const el of document.querySelectorAll('#p-dly-div')) el.parentNode.classList.toggle('inactive', !P['dly.sync']);
 }
 function onParamChanged(id) {
-  if (id === 'hx.fx') { hxFxSet(P['hx.fx']); hxRouteMirror(); return; }   // (Hexenring: the preset's effects on the loops – raum.js)
-  if (id === 'xhxr.route') { if ((P['xhxr.route'] !== 'dir') !== !!P['hx.fx']) setParam('hx.fx', P['xhxr.route'] !== 'dir'); }   // (its node in the console is the same switch)
   if ((id === 't.root' || id === 't.scale') && hxWTonHold(id)) return;   // Hexenring: (step 2a) the field and the loops change key on the announced bar line
   const pre = id.slice(0, id.indexOf('.'));
   if (HX.wFeld && A.ctx && (ENGINES[pre] || id === 'v.eng' || id === 'v.layer')) HX.wKlang = performance.now() + 400;   // Hexenring: (step 2a) loops that sound as the field: anew, once the knob rests
@@ -161,7 +159,7 @@ function onParamChanged(id) {
     case 'pha': updPhaser(); break;
     case 'cho': updChorus(); break;
     case 'dly': updDelay(); break;
-    case 'rev': if (id === 'rev.size' || id === 'rev.damp' || id === 'rev.raum') regenIR(); else updReverbMix(); break;
+    case 'rev': if (id === 'rev.size' || id === 'rev.damp') regenIR(); else updReverbMix(); break;
     case 'mov': updMove(); break;
     case 'mst': updMaster(); break;
     case 'bor': updBordun(); break;
@@ -171,7 +169,7 @@ function onParamChanged(id) {
       if (id === 'neb.cut' || id === 'neb.ymod' || id === 'neb.res') for (const t of touches.values()) for (const { v } of t.voices) if (v.alive && v.eng === 'neb') { v.setY(modY(t)); setP(v.filt.Q, P['neb.res']); }
       break;
     case 'hlm': case 'rnk': case 'hrz': case 'shn': case 'zpf': case 'glt': case 'khl': case 'mdr': case 'boe': case 'amo': case 'nrd': case 'sht': case 'ond': case 'wal': case 'stp': case 'atr': case 'tnl': case 'wkg': case 'bnt': case 'kas': case 'bit': case 'gbs': case 'hht': case 'vox': case 'spu': case 'kto': case 'hng': case 'gml': case 'sit': case 'tbl': case 'did': case 'mtr':   // the sounding voices follow at once (the processor reads its knobs per block; Moder's body, mallet and Nachklang at the next strike)
-      for (const v of A.voices) if (v.alive && v.as === pre && !v.hxOwn) { if (v.wk) v.wk.port.postMessage({ set: wkPrm(pre) }); else if (v.upd) v.upd(); }
+      for (const v of A.voices) if (v.alive && v.as === pre) { if (v.wk) v.wk.port.postMessage({ set: wkPrm(pre) }); else if (v.upd) v.upd(); }
       if (id === 'zpf.koerper') for (const fn of CTL['zpf.klang'] || []) fn(P['zpf.klang'], null);   // (its Nachklang is the body's)
       if (id === 'hrz.koerper') for (const fn of CTL['hrz.daempfung'] || []) fn(P['hrz.daempfung'], null);   // (its Nachklang is the body's)
       if (id === 'hlm.rohr') {   // each pipe names the knobs its own way, and says how it plays
@@ -220,23 +218,14 @@ function patchValues() { const o = {}; for (const id of PATCH_IDS) o[id] = P[id]
 function loadValues(vals, keepUnset) {
   KQ.miss = []; vals = engKeysIn(vals);
   const was = {}; for (const id in FAE_PAR) was[id] = P[id];   // (Hexenring: the Bewegung lanes take the new values)
-  // (owner, 27.10.2026: „wenn die Schleifen erst einmal stehen, darf nichts mehr darauf wirken“) while Schleifen play in a
-  // Takt, a preset keeps the tempo: another one would set every one of them anew in its grid (Maschinenträume, 128 BPM)
-  const keepT = A.ctx && hxLoopsLive().some((L) => !L.bew && L.state !== 'weg' && hxTakt(L)) ? P['seq.bpm'] : null;
   for (const id of PATCH_IDS) {
     const d = PD[id];
     const v = vals && Object.prototype.hasOwnProperty.call(vals, id) ? sanitize(d, vals[id]) : keepUnset ? P[id] : d.d;
     P[id] = v;
   }
-  UI.tempoKept = keepT != null && P['seq.bpm'] !== keepT ? keepT : null;
-  if (keepT != null) P['seq.bpm'] = keepT;
   for (const id of PATCH_IDS) for (const fn of CTL[id] || []) fn(P[id], null);
   hxMvSync(was);
-  // (owner, 26.10.2026: „einzelne Schleifen werden nicht gespielt, wenn ich ein älteres eigenes Preset lade“) another key
-  // while loops follow it: announced as from the knob – they keep sounding until the bar line their new pass is ready for,
-  // the field changes with them there (not at once, with every loop silent until its pass is rendered)
-  if (!hxWTonHold('t.root')) buildNotes();
-  drawBg(); refreshEngineUI(); updLaneTabs(); updInactive(); renderBarInfo();
+  buildNotes(); drawBg(); refreshEngineUI(); updLaneTabs(); updInactive(); renderBarInfo();
   if (A.ctx) { applyAll(); seqRetempo(); warmKS(); dspMaybe(); if (P['kor.src'] === 'echo') ensureCapture(); if (!LIVE_SRC.has(P['kor.src'])) texture(P['kor.src']); }
   syncMic();
   clearTimeout(saveTimer); saveTimer = setTimeout(saveState, 400);
@@ -258,7 +247,6 @@ function restoreState() {
     else if (s && s.values) { const v = engKeysIn(s.values); for (const id of PATCH_IDS) if (id in v) P[id] = sanitize(PD[id], v[id]); UI.preset = s.preset || null; }
     const r = JSON.parse(store.get('myzel.rec.v1') || 'null');
     if (r) for (const id in r) if (PD[id] && PD[id].rec) P[id] = sanitize(PD[id], r[id]);
-    P['xhxr.route'] = P['hx.fx'] ? 'fx' : 'dir';   // (Hexenring: KETTE/DIREKT shows „Effekte des Presets wirken auf die Schleifen“ – raum.js)
     latRestore(dv);   // (the latency: chosen by hand, or the default with this device's step – ui/leistung.js)
   } catch (e) {}
 }

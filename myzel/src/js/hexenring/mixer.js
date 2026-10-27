@@ -159,12 +159,11 @@ function hxmDrawR(R, dt) {
   for (const S of R.st) {
     const L = hxmL(S); if (!L) continue;
     { const c0 = S.col(); if (S.cV !== c0) { S.cV = c0; S.el.style.setProperty('--c', c0); S.bgKey = ''; } }   // (its pigment, when it changes)
-    let m = met.get(L.id); const st = L.state, pend = L.pendTo && L.pendTo !== st ? L.pendTo : null, pv = L.pvMute && HXE.pv && HXE.pv.key === L.key;
-    if (pv && HXE.pv.out.an) m = hxmPvLv(HXE.pv.out.an, L.id);   // (owner, 27.10.2026: the editor listens to it – its strip shows what is heard)
+    const m = met.get(L.id), st = L.state, pend = L.pendTo && L.pendTo !== st ? L.pendTo : null;
     hxmText(S, 'src', S.src, hxEngName(L) + ' · ' + (hxTakt(L) ? dec(+(L.d.beats / (L.bpb || 4)).toFixed(2)) + ' T' : dec(hxLen(L).toFixed(1)) + ' s'));   // (short: the strip is narrow – the card says it whole)
-    hxmText(S, 'state', S.state, (pv ? 'Vorhören' : st === 'spielt' ? 'spielt' : st === 'stumm' ? 'stumm' : 'angehalten') + (pend ? ' → ' + (pend === 'stumm' ? 'stumm' : 'an') : '') + (HX.fokus === L.id ? ' · Fokus' : ''));
+    hxmText(S, 'state', S.state, (st === 'spielt' ? 'spielt' : st === 'stumm' ? 'stumm' : 'angehalten') + (pend ? ' → ' + (pend === 'stumm' ? 'stumm' : 'an') : '') + (HX.fokus === L.id ? ' · Fokus' : ''));
     S.el.classList.toggle('spielt', st === 'spielt'); S.el.classList.toggle('dormant', st !== 'spielt');
-    hxmLv(S, m ? m[1] : 0, m ? m[2] : 0, dt, st === 'spielt' || pv);
+    hxmLv(S, m ? m[1] : 0, m ? m[2] : 0, dt, st === 'spielt');
     try { hxmStrDraw(S); } catch (e) { if (!HXM.err) { HXM.err = 1; console.warn('Hexenring: ein Schleifen-Kanal ließ sich nicht zeichnen', e); } }   // (one strip never blanks the others)
   }
   if (R.all) {
@@ -178,8 +177,6 @@ function hxmDrawR(R, dt) {
 function hxmText(S, k, el, t) { if (S.txt[k] !== t) { S.txt[k] = t; el.textContent = t; } }
 // the loop's level as the processor reports it (15 a second: RMS and peak, after its gain) on the console's law; the
 // peak's spore hangs 1.6 s, then falls
-const HXM_PV = new Float32Array(2048);
-function hxmPvLv(an, id) { an.getFloatTimeDomainData(HXM_PV); let s = 0, p = 0; for (let i = 0; i < HXM_PV.length; i++) { const v = HXM_PV[i]; s += v * v; if (v > p) p = v; else if (-v > p) p = -v; } return [id, Math.sqrt(s / HXM_PV.length), p]; }
 function hxmLv(S, rms, pk, dt, on) {
   const L = S.lv, t = performance.now() / 1000, p = on ? mxPosA(pk) : 0, r = on ? mxPosA(rms) : 0;
   L.pk[0] = L.pk[1] = p; L.rms[0] = L.rms[1] = r;

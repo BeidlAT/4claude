@@ -163,15 +163,11 @@
 .hx-cm-sep { height: 1px; margin: 4px 6px; background: var(--line); }
 .hx-ed { position: fixed; z-index: 40; display: flex; flex-direction: column; gap: 10px; padding: 12px 14px 12px; overflow-y: auto; overscroll-behavior: contain; border-radius: 14px; background: rgba(17, 13, 11, .97); border: 1px solid var(--line); box-shadow: 0 10px 36px rgba(0, 0, 0, .6); color: var(--hypha); font: 500 12px/1.3 var(--font-ui); }
 .hx-ed[hidden] { display: none; }
-.hx-ed-h { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; }
-.hx-ed-t { display: flex; align-items: baseline; gap: 4px 12px; min-width: 0; flex-wrap: wrap; flex: 1 1 240px; }
+.hx-ed-h { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.hx-ed-t { display: flex; align-items: baseline; gap: 12px; min-width: 0; flex-wrap: wrap; }
 .hx-ed-t h3 { margin: 0; font: 600 15px/1.2 var(--font-ui); color: var(--hypha); }
 .hx-ed-t .meta { color: var(--dim); font: 400 11.5px/1.2 var(--font-num); }
-.hx-ed-hb { display: flex; gap: 6px; flex: 0 1 auto; flex-wrap: wrap; justify-content: flex-end; }
-/* (owner, 26.10.2026) the editor's width: dragged at its right edge (it may reach over the panel) */
-.hx-ed-grip { position: fixed; z-index: 41; width: 10px; cursor: ew-resize; touch-action: none; }
-.hx-ed-grip::after { content: ''; position: absolute; left: 3px; top: 50%; width: 4px; height: 44px; margin-top: -22px; border-radius: 2px; background: rgba(240, 230, 216, .22); }
-.hx-ed-grip:hover::after, .hx-ed-grip.on::after { background: var(--spore); }
+.hx-ed-hb { display: flex; gap: 6px; flex: none; }
 .hx-ed-hb .btn { min-height: 34px; padding: 4px 12px; }
 .hx-ed-wave { position: relative; height: clamp(110px, 24vh, 190px); flex: none; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); cursor: crosshair; touch-action: none; }
 .hx-ed-cv { display: block; width: 100%; height: 100%; }

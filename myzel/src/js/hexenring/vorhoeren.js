@@ -28,7 +28,7 @@ function hxPvSrc(L, buf, u) {
   const ctx = A.ctx, t = ctx.currentTime + 0.02, dur = buf.duration, old = HXE.pv && HXE.pv.key === L.key ? HXE.pv : null;
   if (HXE.pv && !old) hxPvStop();
   let out = old ? old.out : null;
-  if (!out) { const g = ctx.createGain(), p = ctx.createStereoPanner(), an = ctx.createAnalyser(); an.fftSize = 2048; g.gain.value = hxPvLvl(L); p.pan.value = L.pan || 0; g.connect(p).connect(stripIn('hxr')); p.connect(an); out = { g, p, an }; }   // (an: its level on the Schleife's strip – it stands in for it)
+  if (!out) { const g = ctx.createGain(), p = ctx.createStereoPanner(); g.gain.value = hxPvLvl(L); p.pan.value = L.pan || 0; g.connect(p).connect(stripIn('hxr')); out = { g, p }; }
   const [a, b] = hxPvRange(dur); let off = clamp(u * dur, 0, dur - 1e-3); if (off < a || off >= b) off = a;
   const src = ctx.createBufferSource(), x = ctx.createGain();
   src.buffer = buf; src.loop = true; src.loopStart = a; src.loopEnd = b; src.connect(x).connect(out.g);
@@ -43,17 +43,11 @@ function hxPvStop() {
   const P = HXE.pv; HXE.pvWant = false; if (!P) return;
   HXE.pvAt = hxPvPos(); HXE.pv = null;
   const t = A.ctx.currentTime; hxPvFade(P, t);
-  setTimeout(() => { try { P.out.g.disconnect(); P.out.p.disconnect(); if (P.out.an) P.out.an.disconnect(); } catch (e) {} }, (HXPV_X + 0.1) * 1000);
+  setTimeout(() => { try { P.out.g.disconnect(); P.out.p.disconnect(); } catch (e) {} }, (HXPV_X + 0.1) * 1000);
   const L = hxByKey(P.key); if (L) { L.pvMute = false; if (L.state !== 'weg') hxGain(L.id, L.gain, null, 0.03); }   // (the loop as it runs, at its own place)
   HXE.wsig = '';
 }
-// (owner, 26.10.2026: „die Schleife läuft beim Stoppen weiter“) Stopp ends the listening and halts the Schleife too –
-// it comes back with its ring or ▶ Weiter
-function hxPvToggle() {
-  if (!(HXE.pv || HXE.pvWant)) { hxPvPlay(); return; }
-  const L = hxEdL(); hxPvStop();
-  if (L && (L.state === 'spielt' || L.state === 'stumm') && A.started && HX.node) { hxState(L.id, 'angehalten'); L.pendTo = null; hxSay(hxName(L) + ' angehalten'); toast(hxName(L) + ' angehalten – ihr Ring oder ▶ Weiter lässt sie wieder spielen.', 3000); hxRailDirty(); }
-}
+function hxPvToggle() { if (HXE.pv || HXE.pvWant) hxPvStop(); else hxPvPlay(); }
 // a jump: playing – from there at once; stopped – the mark moves
 function hxPvJump(u) { u = clamp(u, 0, 0.9999); if (HXE.pv) hxPvPlay(u); else { HXE.pvAt = u; HXE.wsig = ''; } }
 // every frame (the editor's): the render waited for starts it, a new render takes over where it plays, the stretch

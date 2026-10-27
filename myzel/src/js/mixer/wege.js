@@ -132,7 +132,7 @@ function mxdQuelle(k) {
   else if (k === 'rgn') { const q = rgQuelle(); MXD.qu[k] = q; return q; }
   else if (k === 'hxr') kids = [h('p', { class: 'note' }, 'Die Schleifen des Hexenrings – ihre Effektkette ist eingebrannt, Echo und Hall kommen hier dazu.')];   // Hexenring
   else if (k === 'dly') kids = [grid(C('dly.mix', 'Anteil (Send-Meister)'), C('dly.fb'), C('dly.pp'), C('dly.tone'), C('dly.wow')), C('dly.sync'), C('dly.div'), C('dly.ms')];
-  else kids = [C('rev.raum'), grid(C('rev.mix', 'Anteil (Send-Meister)'), C('rev.size'), C('rev.damp'), C('rev.pre'))];
+  else kids = [grid(C('rev.mix', 'Anteil (Send-Meister)'), C('rev.size'), C('rev.damp'), C('rev.pre'))];
   const el = h('div', { class: 'mxd-qbody', 'data-k': k }, ...kids);
   MXD.qu[k] = el;
   return el;

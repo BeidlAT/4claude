@@ -34,7 +34,6 @@ function buildUI() {
   }, true);
   $('#startFingerLine').textContent = 'Mehrere gleichzeitig; Wischen schlägt ' + listDe(famPlay().strike) + ' an';
   $('#btnPuls').addEventListener('click', () => { if (!A.started) return; SEQ.on ? seqStop() : seqStart(); });
-  $('#btnStopAll').addEventListener('click', () => { if (A.started) { if (typeof hxPvStop === 'function') hxPvStop(); panic(); } });   // (owner, 26.10.2026: „ein globaler Stopp, der alle Schleifen und alles andere beendet“)
   $('#btnFreeze').addEventListener('click', () => { if (A.started) setFreeze(!A.frozen); });
   $('#btnHold').addEventListener('click', () => holdSet(!HOLD.on));
   // Halten from the computer keyboard: Enter, where it would press nothing else (the field, the page)

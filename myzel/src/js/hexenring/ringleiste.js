@@ -41,7 +41,7 @@ function hxRailBuild() {
   HXU.len = $('#hxLen'); HXU.lenPop = $('#hxLenPop'); hxLenBuild();   // (owner, 25.10.2026: the length of a new loop)
   const ringBox = h('div', { class: 'hx-rings' });
   for (let i = 0; i < HX_SLOTS; i++) {
-    const b = h('button', { type: 'button', class: 'hxb hx-ring', 'data-slot': i, tabindex: '-1', 'aria-label': 'Schleife ' + (i + 1) + ', leer' }, h('span', { class: 'w' }, ''));
+    const b = h('button', { type: 'button', class: 'hxb hx-ring', 'data-slot': i, tabindex: '-1', 'aria-label': 'Schleife ' + (i + 1) + ', leer' }, h('span', { class: 'w' }, 'aufnehmen'));
     b.addEventListener('pointerdown', (e) => hxRingDown(i, e));
     hxKeyClick(b, () => hxRingTap(i, null));
     b.addEventListener('pointerdown', (e) => { b.hxPt = e.pointerType; }, true);
@@ -179,9 +179,7 @@ function hxRailFrame(ts) {
   const P0 = HXU.pos, gy = fold ? 13 : 23;
   hxDrawKorb(c, P0.korb, gy, fold);
   hxDrawHaupt(c, P0.haupt, gy, fold, ts);
-  // (owner, 27.10.2026: „die Schleifen ein Stück weiter unten, mittig in der Leiste“) the rings sit in the rail's middle
-  const ry = fold ? gy : Math.round(hh / 2);
-  if (!HXU.ringBox.hidden) for (let i = 0; i < HX_SLOTS; i++) if (P0.rings[i]) hxDrawRing(c, i, P0.rings[i], ry, fold, ts);
+  if (!HXU.ringBox.hidden) for (let i = 0; i < HX_SLOTS; i++) if (P0.rings[i]) hxDrawRing(c, i, P0.rings[i], gy, fold, ts);
   hxDrawUndo(c, P0.undo, gy, fold);
   if (P0.redo) hxGlyph(c, P0.redo.cx, gy, '↷', HXC.hypha, fold ? 13 : 18);
   if (P0.form) hxDrawForm(c, P0.form, gy);
@@ -235,7 +233,7 @@ function hxRailState() {
     const L = HX.loops.get(HX.slot[i]), pend = L && HX.pend.find((p) => p.loop === L.id), w = b.firstChild;
     let word, aria;
     if (R && R.slot === i) { word = R.phase === 'rec' ? 'schließen' : 'abbrechen'; aria = 'Schleife ' + (i + 1) + (R.phase === 'rec' ? ', nimmt auf – schließen' : ', wartet – abbrechen'); }
-    else if (!L) { word = '';   // (owner, 27.10.2026: no word under an empty place – the dashed ring with its „+“ says it; the tooltip and the label name it)
+    else if (!L) { word = HX_SLOTS <= 8 || hxZiel() === i ? 'aufnehmen' : '';   // (26.10.2026: 24 places – the word under the next free one only)
       aria = 'Schleife ' + (i + 1) + ', leer' + (hxZiel() === i ? ', Ziel' : '') + ' – aufnehmen'; }
     else {
       word = pend ? 'abbrechen' : '';   // (owner, 25.10.2026: no word under a loop – it glows while it plays; what a tap does is in its tooltip)
@@ -391,21 +389,6 @@ function hxDrawForm(c, r, y) {
   if (i >= 0) hxGlyph(c, x, y + 0.5, String(i + 1), HXC.hypha, 11);
   else if (HX.lich.length) hxGlyph(c, x, y + 0.5, '·', HXC.dim, 14);
 }
-// a loop's loudness over its pass (its first Schicht, 48 steps, 0…1 – the loudest step 1), kept until its audio changes
-function hxRingEnv(L) {
-  const S = HX.sch.get(L.sch[0]); if (!S || !S.aud || !(S.len > 0)) return null;
-  if (L.envR && L.envR.aud === S.aud && L.envR.len === S.len && L.envR.pre === S.pre) return L.envR.v;
-  const N = 48, v = new Float32Array(N), step = Math.max(1, Math.floor(S.len / N / 64));
-  let mx = 1e-9;
-  for (let k = 0; k < N; k++) {
-    let e = 0, n = 0;
-    for (let i = Math.floor(k * S.len / N); i < Math.floor((k + 1) * S.len / N); i += step) { const f = (S.pre || 0) + i, ch = S.aud[Math.floor(f / HX_CH)]; if (!ch) continue; const j = f % HX_CH, a = ch[0][j], b = ch[1][j]; e += a * a + b * b; n++; }
-    v[k] = n ? Math.sqrt(e / n) : 0; mx = Math.max(mx, v[k]);
-  }
-  for (let k = 0; k < N; k++) v[k] = Math.sqrt(v[k] / mx);
-  L.envR = { aud: S.aud, len: S.len, pre: S.pre, v };
-  return v;
-}
 function hxDrawRing(c, i, r, y, fold, ts) {
   if (!r) return;
   const x = r.cx, R0 = fold ? 5 : Math.max(9, Math.min(17, r.w / 2 - 4)), id = HX.slot[i], L = id && HX.loops.get(id), Rc = HX.rec && HX.rec.slot === i ? HX.rec : null;
@@ -465,16 +448,6 @@ function hxDrawRing(c, i, r, y, fold, ts) {
       for (const n of L.notes) { const a = ang(n.ph), rr = R0 * (0.38 + 0.52 * n.r) * br; c.beginPath(); c.moveTo(x + Math.cos(a) * rr * 0.35, y + Math.sin(a) * rr * 0.35); c.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); c.stroke(); }
     }
     if (L.treuBis != null && A.ctx) { const left = clamp((L.treuBis - tgBeat(hxNowT())) / 32, 0, 1); c.strokeStyle = HXC.lumen; c.lineWidth = 1.6; c.beginPath(); c.arc(x, y, R0 + 2.5, -Math.PI / 2, -Math.PI / 2 + left * Math.PI * 2); c.stroke(); }
-    // (owner, 27.10.2026: „sie scheint leer, hat aber Inhalt“) no notes to show – a held Fläche begun before its window, a
-    // microphone, a sound without notes: its loudness as a contour around the ring instead
-    if (!L.notes.length && !L.bew) {
-      const ev = hxRingEnv(L);
-      if (ev) {
-        c.strokeStyle = st === 'spielt' ? hxRgba(pc, 0.95) : 'rgba(168,152,138,' + (0.7 * dimA).toFixed(2) + ')'; c.lineWidth = 1.2; c.beginPath();
-        for (let j = 0; j <= ev.length; j++) { const p = j / ev.length, rr = R0 * (0.3 + 0.55 * ev[j % ev.length]), a = ang(p); if (j) c.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); else c.moveTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
-        c.stroke();
-      }
-    }
     // the notes as spores: angle = phase, radius = pitch within the loop's range
     for (const n of L.notes) {
       const a = ang(n.ph), rr = R0 * (0.38 + 0.52 * n.r) * br, sx = x + Math.cos(a) * rr, sy = y + Math.sin(a) * rr, sz = 1 + 1.3 * clamp(n.v, 0, 1);

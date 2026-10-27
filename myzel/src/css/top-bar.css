@@ -30,12 +30,6 @@
   border-radius: 999px; border: 1px solid var(--line); background: var(--bark);
   font: 500 12px/1 var(--font-num); font-variant-numeric: tabular-nums; color: var(--hypha);
 }
-.stopall { flex: none; display: flex; align-items: center; gap: 7px; height: 38px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--bark); font: 500 12px/1 var(--font-num); color: var(--hypha); cursor: pointer; }
-.stopall .sq { width: 9px; height: 9px; border-radius: 2px; background: var(--hypha); flex: none; }
-.stopall:hover { border-color: var(--hypha); }
-.stopall:active { background: var(--hypha); color: var(--ink); }
-.stopall:active .sq { background: var(--ink); }
-@media (max-width: 560px) { .stopall { padding: 0 10px; font-size: 0; gap: 0; } }
 .recbtn .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--rec); flex: none; }
 .recbtn[data-state="armed"], .recbtn[data-state="cue"] { border-color: var(--rec); color: var(--rec); }
 .recbtn[data-state="armed"] .dot, .recbtn[data-state="cue"] .dot { animation: blink 1s steps(2) infinite; }
@@ -49,27 +43,3 @@
   background-size: 100vw 100%; transition: width .06s linear;
 }
 
-/* (owner, 27.10.2026) the Taktgeber in the bar – ui/tempo.js: a ring with the beat, the tempo, where it comes from, TAP */
-.tmp { flex: none; display: flex; align-items: center; gap: 4px; height: 38px; padding: 0 4px 0 3px; border-radius: 999px; border: 1px solid var(--line); background: var(--bark); }
-.tmp-ring { width: 32px; height: 32px; flex: none; }
-.tmp-v { position: relative; display: flex; flex-direction: column; justify-content: center; min-width: 74px; height: 34px; padding: 0 6px; border-radius: 8px; cursor: ns-resize; touch-action: none; user-select: none; outline: none; }
-.tmp-v:hover, .tmp-v.drag { background: rgba(240, 230, 216, 0.06); }
-.tmp-v:focus-visible { box-shadow: 0 0 0 2px var(--spore); }
-.tmp-row { display: flex; align-items: baseline; gap: 4px; }
-.tmp-n { font: 500 19px/1 var(--font-num); font-variant-numeric: tabular-nums; color: var(--hypha); letter-spacing: -0.01em; }
-.tmp-u { font: 500 9.5px/1 var(--font-ui); letter-spacing: .08em; color: var(--dim); }
-.tmp-s { font: 500 9.5px/1.1 var(--font-ui); letter-spacing: .06em; text-transform: uppercase; color: var(--dim); margin-top: 2px; }
-.tmp[data-src="Schleife"] .tmp-s { color: #e9a35e; } .tmp[data-src="MIDI-Uhr"] .tmp-s { color: var(--lumen); } .tmp[data-src="Puls"] .tmp-s { color: var(--spore); }
-.tmp[data-src="MIDI-Uhr"] .tmp-v { cursor: default; }
-.tmp-v.edit .tmp-row, .tmp-v.edit .tmp-s { visibility: hidden; }
-.tmp-in { position: absolute; inset: 3px 4px; width: calc(100% - 8px); border: 1px solid var(--spore); border-radius: 6px; background: var(--loam); color: var(--hypha); font: 500 17px/1 var(--font-num); text-align: center; padding: 0; }
-.tmp-tap { flex: none; height: 30px; padding: 0 9px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--hypha); font: 600 10.5px/1 var(--font-ui); letter-spacing: .1em; }
-.tmp-tap:hover { border-color: var(--spore); }
-.tmp-tap.hit { animation: tmpHit .25s ease-out; }
-@keyframes tmpHit { from { background: var(--spore); color: var(--ink); } to { background: transparent; } }
-.tmp-pop { position: fixed; z-index: 60; width: 320px; padding: 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--loam); box-shadow: 0 10px 30px rgba(0, 0, 0, .45); display: grid; gap: 8px; }
-.tmp-pop .row { display: flex; flex-wrap: wrap; gap: 6px; }
-.tmp-pop .chip.on { background: var(--spore); color: var(--ink); border-color: var(--spore); }
-.tmp-info { margin: 0; }
-@media (max-width: 700px) { .tmp-tap, .tmp-s { display: none; } .tmp-v { min-width: 58px; } .tmp-n { font-size: 16px; } }
-@media (max-width: 460px) { .tmp-ring { display: none; } }

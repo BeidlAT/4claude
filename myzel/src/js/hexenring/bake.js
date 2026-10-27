@@ -15,11 +15,7 @@ function hxChainFor(inp, evs) {
 function hxSchPlay(S, bak, f) {
   const L = HX.loops.get(S.loop), aud = bak ? S.bak : S.aud;
   if (!L || !aud || !HX.node) return false;
-  // (owner, 27.10.2026: „aufgenommene Schleifen werden nicht mehr von Effekten berührt“) the live chain only for a loop
-  // that follows it (folgt, hx.fx) – or for the moment until its fresh bake is there; one that cannot be baked plays dry
-  // (out 0), never through the preset's chain
-  const due = !S.bakeFail && hxwOk() && !!S.cut && !S.cut.stale && hxNowT() - hxT(S.cut.f0) < 120;
-  const [cp, tr] = hxCopy(aud), out = !bak && S.chain && (L.folgt || due) ? 1 : 0;
+  const [cp, tr] = hxCopy(aud), out = bak || !S.chain ? 0 : 1;
   const au = S.aus ? { off: S.aus.off, len: S.aus.len, fade: S.aus.fade != null ? S.aus.fade : Math.min(Math.round(0.03 * SR), S.aus.len) } : null;
   hxPost({ replace: { loop: S.loop, schicht: S.id, chunks: cp, n: S.n, pre: S.pre, len: S.len, ausklang: au, f, join: S.join, X: S.X, rho: S.rho, zo: S.zo || 0, kc: (bak ? S.kcB : S.kc) || 0, out, dd: out && !L.folgt ? 0 : 1 } }, tr);
   S.out = out; S.baked = !!bak; S.swapF = f; S.ddOn = false; hxCount();
@@ -37,23 +33,19 @@ async function hxAfterFill(S) {
     S.baking = (S.baking || 0) + 1;   // (26.10.2026: the tools wait only while a bake really runs – one that fails leaves the Schicht dry through the live chain, never stuck)
     let r = false; try { r = await hxBake(S); } finally { S.baking--; }
     if (!ok()) return;
-    if (r) { S.bakeFail = false; hxSchPlay(S, true, hxNextSeam(L).f); if (changed) hxSaveSch(S); hxSaveSch(S, 'b'); return; }
-    S.bakeFail = true;   // (dry from its next seam – not left on the live chain)
+    if (r) { hxSchPlay(S, true, hxNextSeam(L).f); if (changed) hxSaveSch(S); hxSaveSch(S, 'b'); return; }
   }
-  if (changed || (S.chain && !L.folgt && !S.baked && S.out)) { hxSchPlay(S, false, hxNextSeam(L).f); if (changed) hxSaveSch(S); }
+  if (changed) { hxSchPlay(S, false, hxNextSeam(L).f); hxSaveSch(S); }
 }
 // → true when S.bak holds the baked audio of S.aud
 async function hxBake(S) {
-  const n = S.n, c = S.cut, ta = c.stale ? null : hxT(c.f0), Lp = HX.loops.get(S.loop);
-  if (!S.aud) return false;
-  // (the chain's record reaches fifteen minutes back; older – a window moved far back in the Ernte, a Schleife that
-  // followed the chain for long – its chain as recorded with the loop, owner 27.10.2026: never left on the live chain)
-  const rec = ta != null && hxNowT() - ta <= 900 ? hxChainRec(ta, ta + n / SR) : Lp && Lp.chainRec ? Lp.chainRec : null;
-  if (!rec) return false;
+  const n = S.n, c = S.cut, ta = c.stale ? null : hxT(c.f0);
+  if (ta == null || !S.aud) return false;
+  if (hxNowT() - ta > 900) return false;   // (the chain's record reaches fifteen minutes back)
   const Lb = new Float32Array(n), Rb = new Float32Array(n);
   for (let i = 0; i < n; i++) { const ch = S.aud[Math.floor(i / HX_CH)], j = i % HX_CH; if (ch) { Lb[i] = ch[0][j]; Rb[i] = ch[1][j]; } }
   const bv = (S.bv = (S.bv || 0) + 1), aud = S.aud;
-  const m = await hxwCall('bake', { sr: SR, n, L: Lb, R: Rb, chain: rec }, [Lb.buffer, Rb.buffer]);
+  const m = await hxwCall('bake', { sr: SR, n, L: Lb, R: Rb, chain: hxChainRec(ta, ta + n / SR) }, [Lb.buffer, Rb.buffer]);
   if (!m || m.err || !m.L || S.bv !== bv || S.aud !== aud) { if (m && m.err) console.warn('Hexenring: Einbrennen', m.err); return false; }
   const [bak] = hxChunks(n);
   for (let i = 0; i < n; i++) { const ch = bak[Math.floor(i / HX_CH)], j = i % HX_CH; ch[0][j] = m.L[i]; ch[1][j] = m.R[i]; }
@@ -62,7 +54,7 @@ async function hxBake(S) {
 }
 // „folgt der Effektkette“ for a loop: its Schichten go dry through the live chain from the next seam on – or back to
 // their baked versions (baked now if they were not)
-function hxFolgt(L, on, quiet) {
+function hxFolgt(L, on) {
   L.folgt = !!on;
   const f = hxNextSeam(L).f;
   for (const id of L.sch) {
@@ -70,7 +62,7 @@ function hxFolgt(L, on, quiet) {
     if (on && S.baked) hxSchPlay(S, false, f);
     else if (!on && !S.baked) { if (S.bak) hxSchPlay(S, true, f); else hxAfterFill(S); }
   }
-  if (!quiet) hxSay(hxName(L) + (on ? ' folgt der Effektkette' : ': Effektkette eingebrannt')); hxSaveMeta(L.id); hxCardDirty();
+  hxSay(hxName(L) + (on ? ' folgt der Effektkette' : ': Effektkette eingebrannt')); hxSaveMeta(L.id); hxCardDirty();
 }
 
 // ---- Taumeln (SPEC §9, per loop, default on): the shared drift bends every live voice; the processor hears it (input
@@ -90,6 +82,6 @@ function hxTauOrig(L) {
   }
 }
 function hxTaumelnSet(L, on) {
-  if (on && HX.tauRest) { HX.tauRest = false; for (const X of hxLoopsLive()) if (X !== L && !X.bew && !!X.taumeln) hxPost({ tau: { loop: X.id, on: true } }); }   // (phone report: „mit“ brings back what the guard let rest, for every loop)
+  if (on && HX.tauRest) { HX.tauRest = false; for (const X of hxLoopsLive()) if (X !== L && !X.bew && X.taumeln !== false) hxPost({ tau: { loop: X.id, on: true } }); }   // (phone report: „mit“ brings back what the guard let rest, for every loop)
   L.taumeln = !!on; hxPost({ tau: { loop: L.id, on: !!on } }); if (!on) hxTauOrig(L); hxCount(); hxSay(hxName(L) + (on ? ': taumelt mit' : ': bleibt in ihrer Stimmung')); hxSaveMeta(L.id); hxCardDirty(); }
 
