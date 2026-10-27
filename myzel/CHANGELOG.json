@@ -2,6 +2,13 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-27s",
+      "punkte": [
+        "Standard jetzt: Schleifen folgen der Tonart des Presets – lädst du ein Preset in einer anderen Tonart, klingen deine Schleifen ab dem angekündigten Takt in der neuen.",
+        "Umstellbar im Wurzelwerk unter „Tonart beim Preset-Wechsel“ (dann bleibt die Tonart der Schleifen und das Preset passt sich an)."
+      ]
+    },
+    {
       "id": "2026-10-27r",
       "punkte": [
         "Firefox: Schleifen lassen sich jetzt in die Tonart des Presets umrechnen – vorher brach das Umrechnen dort sofort ab.",
