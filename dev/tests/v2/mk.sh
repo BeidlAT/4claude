@@ -65,6 +65,7 @@ if 'function hxEdOpen(' in s: extra += ['HXE', 'hxEdOpen', 'hxEdClose', 'hxEdRen
 if 'function tfxSet(' in s: extra += ['TFX', 'tfxSet', 'tfxFreqs', 'TCH', 'tchWeise', 'TCH_W', 'MIX', 'touches', 'ensureDSP']
 if 'function hxHumApply(' in s: extra += ['hxBandReady', 'MXW', 'mxwMini', 'mxwApply', 'openPanel', 'hxPig', 'hxCol', 'hxColSet', 'HX_PIG', 'hxCtxMenu', 'hxAbdruck', 'hxWSet', 'hxWAktiv', 'hxHumApply', 'hxHumReset', 'hxHumKeep', 'hxHumOf', 'hxHumSlice', 'hxEdHumRow', 'hxHumDraw', 'hxMemUsed', 'hxMemOk', 'APC', 'apcPad', 'apcModeSet', 'apcLights', 'apcVel', 'apcSysex', 'apcSeqRun', 'apcNetRun', 'apcTonNote', 'apcZeitBar', 'cbOpen', 'cbClose', 'tgBeat', 'hxLoopsLive', 'HXKR', 'hxKrSave', 'hxKrList', 'hxKrLoad', 'hxKrExport', 'hxKrImport', 'hxKrDel', 'cbModelFor', 'profModel', 'recToggle', 'takes', 'KB', 'kbSpec', 'kbDraw', 'kbFrame', 'PRESET_LEER', 'mxFit', 'saveState', 'UI', 'hxEdPeaks', 'hxEdZoom', 'hxEdClose', 'hxReenter']
 if 'function hxHumWin(' in s: extra += ['hxHumWin']
+if 'const HXR = ' in s: extra += ['HXR', 'MIX'] if "'MIX'" not in str(extra) else ['HXR']
 if 'function cbOpen(' in s: extra += ['CB', 'cbOpen', 'cbClose', 'cbLogical', 'cbData', 'cbCalStart', 'cbCtls', 'CB_MODELS', 'MAP', 'MIDI', 'mtOf']
 if 'function gdRecover(' in s: extra += ['GD', 'gdRecover', 'budgetApply', 'hxTauBack', 'hxGeraet', 'lmEv', 'lmUPoll', 'lmUlog', 'HX_PHONE']
 import re as _re

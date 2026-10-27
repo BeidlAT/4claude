@@ -82,6 +82,6 @@ function hxTauOrig(L) {
   }
 }
 function hxTaumelnSet(L, on) {
-  if (on && HX.tauRest) { HX.tauRest = false; for (const X of hxLoopsLive()) if (X !== L && !X.bew && X.taumeln !== false) hxPost({ tau: { loop: X.id, on: true } }); }   // (phone report: „mit“ brings back what the guard let rest, for every loop)
+  if (on && HX.tauRest) { HX.tauRest = false; for (const X of hxLoopsLive()) if (X !== L && !X.bew && !!X.taumeln) hxPost({ tau: { loop: X.id, on: true } }); }   // (phone report: „mit“ brings back what the guard let rest, for every loop)
   L.taumeln = !!on; hxPost({ tau: { loop: L.id, on: !!on } }); if (!on) hxTauOrig(L); hxCount(); hxSay(hxName(L) + (on ? ': taumelt mit' : ': bleibt in ihrer Stimmung')); hxSaveMeta(L.id); hxCardDirty(); }
 

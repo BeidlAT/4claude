@@ -112,7 +112,7 @@ function updSends(inst) {
       updDrive(S.copy); updRing(S.copy); updFilter(S.copy); updPhaser(S.copy); updChorus(S.copy);
       S.fromCopy = G(0); S.copy.out.connect(S.fromCopy).connect(S.target);
     }
-    for (const st of MIX.src) sendTo(st, fx, node(st), !viaFx(st) ? S.target : copy ? S.copy.in : null);
+    for (const st of MIX.src) sendTo(st, fx, node(st), st.k === 'hxr' && hxrTarget(fx) ? hxrTarget(fx) : !viaFx(st) ? S.target : copy ? S.copy.in : null);   // (Hexenring: its own room – raum.js)
     if (copy !== (S.mode === 'copy')) {
       S.mode = copy ? 'copy' : 'fx';
       const set = inst ? setNow : (q, v) => setP(q, v, 0.01);
