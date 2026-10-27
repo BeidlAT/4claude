@@ -45,6 +45,7 @@ function buildUI() {
   $('#btnGk').addEventListener('click', gkIcoTap);
   $('#btnRec').addEventListener('click', recToggle);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && UI.panel) closePanel(); });
+  wwInit();   // (27.10.2026: the Wurzelwerk – tempo and key in the bar, the knot, Säen)
   refreshEngineUI(); updLaneTabs(); updPulsUI(); updRecUI(); updInactive();
 }
 const panelOf = (key) => PANELS.find((p) => p.key === key);
