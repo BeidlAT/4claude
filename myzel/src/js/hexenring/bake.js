@@ -15,7 +15,11 @@ function hxChainFor(inp, evs) {
 function hxSchPlay(S, bak, f) {
   const L = HX.loops.get(S.loop), aud = bak ? S.bak : S.aud;
   if (!L || !aud || !HX.node) return false;
-  const [cp, tr] = hxCopy(aud), out = bak || !S.chain ? 0 : 1;
+  // (owner, 27.10.2026: „aufgenommene Schleifen werden nicht mehr von Effekten berührt“) the live chain only for a loop
+  // that follows it (folgt, hx.fx) – or for the moment until its fresh bake is there; one that cannot be baked plays dry
+  // (out 0), never through the preset's chain
+  const due = !S.bakeFail && hxwOk() && !!S.cut && !S.cut.stale && hxNowT() - hxT(S.cut.f0) < 120;
+  const [cp, tr] = hxCopy(aud), out = !bak && S.chain && (L.folgt || due) ? 1 : 0;
   const au = S.aus ? { off: S.aus.off, len: S.aus.len, fade: S.aus.fade != null ? S.aus.fade : Math.min(Math.round(0.03 * SR), S.aus.len) } : null;
   hxPost({ replace: { loop: S.loop, schicht: S.id, chunks: cp, n: S.n, pre: S.pre, len: S.len, ausklang: au, f, join: S.join, X: S.X, rho: S.rho, zo: S.zo || 0, kc: (bak ? S.kcB : S.kc) || 0, out, dd: out && !L.folgt ? 0 : 1 } }, tr);
   S.out = out; S.baked = !!bak; S.swapF = f; S.ddOn = false; hxCount();
@@ -33,9 +37,10 @@ async function hxAfterFill(S) {
     S.baking = (S.baking || 0) + 1;   // (26.10.2026: the tools wait only while a bake really runs – one that fails leaves the Schicht dry through the live chain, never stuck)
     let r = false; try { r = await hxBake(S); } finally { S.baking--; }
     if (!ok()) return;
-    if (r) { hxSchPlay(S, true, hxNextSeam(L).f); if (changed) hxSaveSch(S); hxSaveSch(S, 'b'); return; }
+    if (r) { S.bakeFail = false; hxSchPlay(S, true, hxNextSeam(L).f); if (changed) hxSaveSch(S); hxSaveSch(S, 'b'); return; }
+    S.bakeFail = true;   // (dry from its next seam – not left on the live chain)
   }
-  if (changed) { hxSchPlay(S, false, hxNextSeam(L).f); hxSaveSch(S); }
+  if (changed || (S.chain && !L.folgt && !S.baked && S.out)) { hxSchPlay(S, false, hxNextSeam(L).f); if (changed) hxSaveSch(S); }
 }
 // → true when S.bak holds the baked audio of S.aud
 async function hxBake(S) {

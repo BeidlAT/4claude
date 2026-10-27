@@ -105,7 +105,7 @@ function initAudio() {
   }
   // the echo return feeds the hall (its "Hall" send, 0.3 at 100 %)
   MIX.s.dly.hS.connect(A.revIn);
-  hxrBuild();   // Hexenring: the loops' own echo and hall (hexenring/raum.js)
+  hxrBuild();   // Hexenring: the loops' own echo and hall (hexenring/raum.js – built as loops need them)
 
   // ---- master: EQ → level → glue compressor → soft saturating ceiling, all without look-ahead latency ----
   A.lowSh = BQ('lowshelf', 120); A.highSh = BQ('highshelf', 6500);

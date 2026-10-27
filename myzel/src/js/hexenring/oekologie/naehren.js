@@ -93,7 +93,7 @@ function hxFeedRetune() {
 const hxFeedCost = () => { let c = 0; for (const F of HXN.feed.values()) if (F.ctx === A.ctx) c += F.cost; return c; };
 // the loop's send (output 2): on while it feeds a web or a Hof
 function hxSendSync(L) {
-  const n = L.naehrt || {}, on = !!(n.gsp || n.glt || n.shn) && L.slot != null;
+  const n = L.naehrt || {}, on = !!(n.gsp || n.glt || n.shn || L.roomOn) && L.slot != null;   // (27.10.2026: or its own room – raum.js)
   if (on !== !!L.sendOn) { const ch = on ? hxSendCh(L) : -1; if (on && ch < 0) return; L.sendOn = on; hxPost({ send: on ? { loop: L.id, ch, g: 1, X: Math.round(0.03 * SR) } : { loop: L.id, ch: -1, X: Math.round(0.03 * SR) } }); if (!on) L.sendCh = null; }
 }
 // Nähren for one of rhz · rgn · glt · shn (gsp and kor: hxNaehrGsp, hxNaehrKor)

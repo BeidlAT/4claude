@@ -2,6 +2,15 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-27e",
+      "punkte": [
+        "Jede Schleife hat jetzt ihren eigenen Hall und ihr eigenes Echo – die, in denen sie gespielt wurde. Ein späteres Preset ändert sie nicht mehr, auch wenn die Schleifen unter verschiedenen Presets aufgenommen wurden.",
+        "Schleifen von vor diesem Update bekommen den Raum, in dem sie aufgenommen wurden – bisher klangen sie mit Hall und Echo des gerade gewählten Presets.",
+        "Eine Schleife, deren Effekte sich nicht einbrennen lassen, läuft trocken – nie mehr durch die Effekte des aktuellen Presets.",
+        "Geprüft: zwei Schleifen aus Handpan-Kreis und Maschinenträume, danach alle 47 Klangwelten darüber geladen – ihr Klang bleibt jedes Mal identisch."
+      ]
+    },
+    {
       "id": "2026-10-27d",
       "punkte": [
         "Schleifen bleiben beim Preset-Wechsel jetzt wirklich unverändert: ein Preset ändert das Tempo nicht mehr, solange Schleifen laufen – vorher setzte z. B. „Maschinenträume“ (128 BPM) jede Schleife neu ins Raster, das klang wie zusätzliche Effekte.",
