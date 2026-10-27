@@ -567,6 +567,7 @@ BOOL('hx.runde', 'Überspielen: eine Runde', false, { rec: 1 });
 // (step 2a) Wuchs: how a new Schleife begins (exactly as played, or grown anew); the level loops are rendered at (owner: manual,
 // the best by default; „wie gespielt“ = the level the loop was played at); the field's key and the loops' on the same bar line
 SEL('hx.beginn', 'Neue Schleife', [['abdruck', 'Wie gespielt'], ['wuchs', 'Als Wuchs']], 'abdruck', { chips: 1, small: 1, rec: 1 });
+SEL('hx.folgen', 'Neue Schleifen folgen der Tonart', [['fest', 'nie (Original)'], ['diatonisch', 'diatonisch'], ['transponieren', 'transponiert']], 'fest', { chips: 1, small: 1, rec: 1 });   // (owner, 27.10.2026: a Schleife plays its recording; following only when asked)
 SEL('hx.stufe', 'Klangstufe der Schleifen', [['gespielt', 'Wie gespielt'], ['1', '1'], ['2', '2'], ['3', '3']], '3', { chips: 1, small: 1, rec: 1 });
 BOOL('hx.tonartAmTakt', 'Tonart wechselt mit den Schleifen am Takt', true, { rec: 1 });
 NUM('hx.traeg', 'Trägheit des Bands', 0.2, 2, 0.5, 's', { step: 0.05, rec: 1, fmt: (v) => dec(v.toFixed(2)) + ' s' });   // (step 2b: §14)
@@ -609,7 +610,9 @@ SEL('dev.q', 'Qualitätsstufe', [['1', '1 · Leicht'], ['2', '2 · Voll'], ['3',
 SEL('dev.lat', 'Latenz', [['min', 'Minimal'], ['std', 'Standard'], ['safe', 'Sicher']], MOBILE && !ANDROID ? 'std' : 'min', { chips: 1, dev: 1 });
 SEL('midi.map', 'Tasten', [['scale', 'Skala'], ['white', 'Weiße Tasten'], ['chrom', 'Chromatisch']], 'scale', { chips: 1, dev: 1 });
 NUM('midi.y', 'Höhe auf der Spielfläche', 0, 1, 0.55, '%', { dev: 1 });
-BOOL('ui.leer', 'Beim Öffnen mit „Leerer Erde“ beginnen', true, { dev: 1 });   // (owner, 26.10.2026: „leer starten“ – presets.js)
+BOOL('ui.leer', 'Beim Öffnen mit „Leerer Erde“ beginnen', true, { dev: 1 });
+// (owner, 27.10.2026: „die schleife immer die original aufnahme“; „das preset an die tonart der schleife(n) anpassen“)
+BOOL('ui.tonHalt', 'Presets übernehmen die Tonart der Schleifen', true, { dev: 1 });   // (owner, 26.10.2026: „leer starten“ – presets.js)
 BOOL('midi.vel', 'Anschlagdynamik', true, { dev: 1 });
 NUM('midi.bend', 'Tonhöhenrad', 0, 12, 2, 'HT', { step: 1, dev: 1, fmt: (v) => (v ? '±' + v + ' HT' : 'aus') });
 SEL('midi.curve', 'Anschlag', [['soft', 'Weich'], ['lin', 'Linear'], ['mid', 'Mittel'], ['hard', 'Hart'], ['fix', 'Fest']], 'mid', { chips: 1, dev: 1 });
