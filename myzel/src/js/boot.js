@@ -24,6 +24,7 @@ function boot() {
   cvFx.addEventListener('keyup', (e) => keyNote(e, false));
   cvFx.addEventListener('blur', () => { for (const id of Array.from(touches.keys())) if (String(id).startsWith('key-')) onUp({ pointerId: id }); });
   $('#btnStart').addEventListener('click', start);
+  tempoBuild();   // the Taktgeber in the bar (ui/tempo.js)
   $('#btnStartKeys').addEventListener('click', startWithKeys);
   // a Web MIDI shim injected when the document is complete (iOS wrapper apps): the start screen catches up
   for (const [t, ev] of [[document, 'DOMContentLoaded'], [window, 'load']]) t.addEventListener(ev, () => { midiLate(); if (!A.started) updDevUI(); });

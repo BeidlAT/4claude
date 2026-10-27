@@ -96,6 +96,7 @@ function frameBody(ts) {
   if (FR.iv < T * 0.75 && FR.acc < T - 1.17) { frameCtl(); return; }   // (the display's frame interval, smoothed)
   FR.acc = Math.max(0, FR.acc - T);
   FR.drew = true;
+  tempoDraw();   // (the Taktgeber in the bar – ui/tempo.js)
   const k = (VIS.k = T > 20 && FR.iv < 25 ? 2 : 1);   // (steps of the field's motion in this drawn frame)
   const dt = Math.min(0.05, (ts - (VIS.t || ts)) / 1000);
   VIS.t = ts;

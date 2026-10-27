@@ -477,7 +477,7 @@ NUM('mst.comp', 'Verdichtung', 0, 1, 0.35, '%');
 NUM('mst.vol', 'Pegel', -24, 6, 2, 'dB');
 NUM('mst.wid', 'Breite', 0, 2, 1, '%', { step: 0.01, fmt: (v) => (v < 0.005 ? 'Mono' : Math.round(v * 100) + ' %') });
 // Puls
-NUM('seq.bpm', 'Tempo', 30, 200, 84, 'bpm', { step: 1, fmt: (v) => (TG.hxOn ? dec(TG.hx.toFixed(1)) : Math.round(v)) + ' BPM' });   // Hexenring: a Schleife's exact tempo
+NUM('seq.bpm', 'Tempo', 20, 300, 84, 'bpm', { step: 0.1, tick: 1, fmt: (v) => dec((TG.hxOn ? TG.hx : v).toFixed(1)).replace(/,0$/, '') + ' BPM' });   // (27.10.2026: tenths and 20–300 BPM – the Taktgeber in the bar, ui/tempo.js)   // Hexenring: a Schleife's exact tempo
 NUM('seq.swing', 'Swing', 0, 0.6, 0.1, '%');
 const DIV_OPTS = [['1', '1/4'], ['0.5', '1/8'], ['0.3333', '1/8 T'], ['0.25', '1/16'], ['0.1667', '1/16 T'], ['0.125', '1/32']];
 const LANE_DEF = [

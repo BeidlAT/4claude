@@ -82,7 +82,8 @@ function pStep(id, d) {
   const D = PD[id], v = MAP.pend.has(id) ? MAP.pend.get(id) : P[id];
   if (D.kind === 'bool') { mapWrite(id, d > 0); return; }
   if (D.kind === 'sel') { selStep(id, Math.sign(d), false); return; }
-  if (!isVolId(id) && D.step && (D.max - D.min) / D.step <= 400) { mapWrite(id, clamp(v + d * D.step, D.min, D.max)); return; }
+  const st = D.tick || D.step;   // (an encoder's tick: the tempo in whole BPM, though it keeps tenths)
+  if (!isVolId(id) && st && (D.max - D.min) / st <= 400) { mapWrite(id, clamp(Math.round((v + d * st) / st) * st, D.min, D.max)); return; }
   pSet(id, pNorm(id) + d / 100, true);
 }
 function selStep(id, d, wrap) {
