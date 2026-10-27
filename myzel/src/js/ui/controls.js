@@ -238,15 +238,12 @@ function saveState() {
 }
 function restoreState() {
   try {
-    const dv = JSON.parse(store.get('myzel.dev.v1') || 'null');
-    if (dv) for (const id in dv) if (PD[id] && PD[id].dev) P[id] = sanitize(PD[id], dv[id]);
-    // (owner, 26.10.2026: „leer starten“) the sound begins as Leere Erde – unless „Beim Öffnen mit Leerer Erde
-    // beginnen“ is off: then the last one, as before
     const s = JSON.parse(store.get('myzel.patch.v1') || 'null');
-    if (P['ui.leer']) { const v = PRESET_LEER.v; for (const id of PATCH_IDS) P[id] = id in v ? sanitize(PD[id], v[id]) : PD[id].d; UI.preset = 'leer'; }
-    else if (s && s.values) { const v = engKeysIn(s.values); for (const id of PATCH_IDS) if (id in v) P[id] = sanitize(PD[id], v[id]); UI.preset = s.preset || null; }
+    if (s && s.values) { const v = engKeysIn(s.values); for (const id of PATCH_IDS) if (id in v) P[id] = sanitize(PD[id], v[id]); UI.preset = s.preset || null; }
     const r = JSON.parse(store.get('myzel.rec.v1') || 'null');
     if (r) for (const id in r) if (PD[id] && PD[id].rec) P[id] = sanitize(PD[id], r[id]);
+    const dv = JSON.parse(store.get('myzel.dev.v1') || 'null');
+    if (dv) for (const id in dv) if (PD[id] && PD[id].dev) P[id] = sanitize(PD[id], dv[id]);
     latRestore(dv);   // (the latency: chosen by hand, or the default with this device's step – ui/leistung.js)
   } catch (e) {}
 }
@@ -260,6 +257,6 @@ const PANELS = [
   { key: 'puls', title: 'Puls', icon: ICON.puls, build: buildPuls, frame: (dt, ts) => { drawRings(); if (typeof pulsMixFrame === 'function') pulsMixFrame(dt, ts); },
     open: () => { if (typeof pulsMixOpen === 'function') pulsMixOpen(); }, close: () => { if (typeof pulsMixClose === 'function') pulsMixClose(); } },
   { key: 'rec', title: 'Aufnahme', icon: ICON.rec, build: buildRec, open: () => { renderTakes(); renderBarInfo(); hxCardRender(); }, frame: () => hxCardFrame() },   // (Hexenring: its card)
-  { key: 'presets', title: 'Presets', icon: ICON.presets, build: buildPresets, frame: () => kbFrame() },   // (the Klangwelten's pictures move)
+  { key: 'presets', title: 'Presets', icon: ICON.presets, build: buildPresets },
   { key: 'dev', title: 'Gerät', icon: ICON.dev, build: buildDev, open: updDevUI, frame: devFrame },
 ];

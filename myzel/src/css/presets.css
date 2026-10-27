@@ -1,31 +1,5 @@
 /* ---------- presets ---------- */
 .pgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
-/* (owner, 26.10.2026) the Klangwelten as pictures (klangwelten.js): each card its world above, its name, the words, and
-   a line read like the mixer's – the scale as a ring of twelve, the Puls's lanes in their colours, the tempo */
-.pgrid:has(.kb) { grid-template-columns: repeat(auto-fill, minmax(178px, 1fr)); gap: 10px; }
-.pcard.kb { position: relative; padding: 0 0 10px; gap: 0; overflow: hidden; cursor: pointer; background: linear-gradient(180deg, var(--bark-2), color-mix(in srgb, var(--bark-2) 70%, #0a0705)); border-color: rgba(240, 230, 216, .08); transition: border-color .2s, box-shadow .25s, transform .2s; }
-.kb-frame { position: relative; display: block; aspect-ratio: 16 / 10; margin-bottom: 9px; background: #0b0806; }
-.kb-art { display: block; width: 100%; height: 100%; }
-.kb-frame::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--a) 70%, transparent), transparent); opacity: .7; }
-.kb-nr { position: absolute; top: 7px; left: 9px; font: 500 9px/1 var(--font-num); letter-spacing: .14em; color: rgba(240, 230, 216, .5); text-shadow: 0 1px 2px rgba(0, 0, 0, .6); }
-.pcard.kb > b, .pcard.kb > .tags, .pcard.kb > small { padding: 0 11px; }
-.pcard.kb > b { font: 600 14px/1.2 var(--font-ui); letter-spacing: .005em; }
-.pcard.kb > .tags { color: var(--a); margin-top: 3px; opacity: .9; }
-.pcard.kb > small { margin-top: 5px; display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.pcard.kb > .kb-foot { display: flex; align-items: center; gap: 6px; margin: auto 11px 0; padding: 9px 0 0; border-top: 1px dashed rgba(240, 230, 216, .08); font: 400 9.5px/1 var(--font-num); color: var(--dim); letter-spacing: .02em; }
-.pcard.kb > small { margin-bottom: 10px; }
-.kb-ton { width: 17px; height: 17px; flex: none; }
-.kb-sc { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.kb-sp { flex: 1; }
-.kb-puls { flex: none; display: block; }
-.kb-bpm { flex: none; color: var(--hypha); font-variant-numeric: tabular-nums; }
-.pcard.kb:hover, .pcard.kb:focus-visible { border-color: color-mix(in srgb, var(--a) 45%, var(--line)); transform: translateY(-1px); box-shadow: 0 10px 26px rgba(0, 0, 0, .38), 0 0 0 1px color-mix(in srgb, var(--a) 16%, transparent); }
-.pcard.kb[aria-current="true"] { border-color: var(--a); box-shadow: 0 0 0 1px var(--a), 0 0 26px color-mix(in srgb, var(--a) 26%, transparent); }
-.pcard.kb[aria-current="true"] .kb-nr::after { content: ' · spielt'; color: var(--a); }
-.kb-mini { width: 36px; height: 23px; border-radius: 5px; flex: none; box-shadow: 0 0 0 1px rgba(240, 230, 216, .08); }
-.pleer { margin-top: 8px; }
-@media (min-width: 1100px) { .sheet[data-panel="presets"] { width: min(740px, 52vw); } }
-@media (prefers-reduced-motion: reduce) { .pcard.kb { transition: none; } .pcard.kb:hover { transform: none; } }
 .pcard {
   display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 14px; min-width: 0;
   border: 1px solid var(--line); background: var(--bark-2); color: var(--hypha); text-align: left;

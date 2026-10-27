@@ -548,7 +548,6 @@ SEL('hx.start', 'Aufnahme beginnt', [['takt', 'Am Takt'], ['ton', 'Beim ersten T
 SEL('hx.raster', 'Raster', [['frei', 'Frei'], ['takt', 'Takt'], ['halb', '½ Takt'], ['viertel', '¼']], 'frei', { chips: 1, small: 1, rec: 1 });   // (25.10.2026: where a recording by hand begins and ends – grammar.js HX_RASTER)
 SEL('hx.laenge', 'Länge', [['auto', 'Automatisch'], ['wie1', 'Wie Schleife 1'], ['fest', 'Fest']], 'auto', { chips: 1, small: 1, rec: 1 });
 NUM('hx.festT', 'Feste Länge', 1, 128, 4, '', { step: 1, rec: 1, fmt: (v) => v + (v === 1 ? ' Takt' : ' Takte') });
-BOOL('hx.ernte', 'Ganze Ernte behalten', !MOBILE, { rec: 1 });   // (26.10.2026: the whole Humus beside each Schleife – vorrat.js)
 NUM('hx.mem', 'Speichergrenze', 100, 12000, MOBILE ? (IOS && !/iPhone|iPod/.test(navigator.userAgent) ? 600 : 300) : 6000, 'MB', { step: 50, rec: 1, fmt: (v) => v + ' MB' });
 BOOL('hx.autoclose', 'Schließt sich, wenn du den Anfang wiederholst', false, { rec: 1 });
 SEL('hx.rail', 'Ringleiste', [['offen', 'Offen'], ['klein', 'Klein']], 'offen', { chips: 1, small: 1, rec: 1 });
@@ -609,7 +608,6 @@ SEL('dev.q', 'Qualitätsstufe', [['1', '1 · Leicht'], ['2', '2 · Voll'], ['3',
 SEL('dev.lat', 'Latenz', [['min', 'Minimal'], ['std', 'Standard'], ['safe', 'Sicher']], MOBILE && !ANDROID ? 'std' : 'min', { chips: 1, dev: 1 });
 SEL('midi.map', 'Tasten', [['scale', 'Skala'], ['white', 'Weiße Tasten'], ['chrom', 'Chromatisch']], 'scale', { chips: 1, dev: 1 });
 NUM('midi.y', 'Höhe auf der Spielfläche', 0, 1, 0.55, '%', { dev: 1 });
-BOOL('ui.leer', 'Beim Öffnen mit „Leerer Erde“ beginnen', true, { dev: 1 });   // (owner, 26.10.2026: „leer starten“ – presets.js)
 BOOL('midi.vel', 'Anschlagdynamik', true, { dev: 1 });
 NUM('midi.bend', 'Tonhöhenrad', 0, 12, 2, 'HT', { step: 1, dev: 1, fmt: (v) => (v ? '±' + v + ' HT' : 'aus') });
 SEL('midi.curve', 'Anschlag', [['soft', 'Weich'], ['lin', 'Linear'], ['mid', 'Mittel'], ['hard', 'Hart'], ['fix', 'Fest']], 'mid', { chips: 1, dev: 1 });

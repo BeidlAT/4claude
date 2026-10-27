@@ -305,16 +305,13 @@ function kcCard(it) {
   if (on) {
     mapOf(s);
     const p = s.prof, po = profOn(s), o = kcOut(s);
-    const gm = cbModelFor(s), gmn = gm && gm.id !== 'generic' ? (gm.maker ? gm.maker + ' ' : '') + gm.name : '';   // (owner, 26.10.2026: the PCR-M50 „nirgends erkannt“ – the Gerätebild's model, named here too)
     el.append(h('p', { class: 'kc-prof' }, p ? [h('b', null, p.name), ' erkannt – ' + p.what + (po ? '' : ' (Profil aus)')]
-      : gmn ? [h('b', null, gmn), ' erkannt – Tasten, Räder und Pedale spielen; seine Regler und Fader zeigt und belegt das „Gerätebild“' + (cbData(s).model ? '' : ' (dort auch ein anderes Modell wählen)') + '.']
-      : ['Kein eigenes Profil: Tasten, Räder und Pedale spielen', P['midi.std'] ? ', übliche Regler (CC 7, 10, 74, 91 …) wirken' : '', '. Modell nicht erkannt – im „Gerätebild“ wählst du es aus der Liste, weitere Regler weist du unter „Zuordnungen“ zu.']));
+      : ['Kein eigenes Profil: Tasten, Räder und Pedale spielen', P['midi.std'] ? ', übliche Regler (CC 7, 10, 74, 91 …) wirken' : '', '. Weitere Regler weist du unter „Zuordnungen“ zu.']));
     C.last = h('p', { class: 'kc-last idle' });
     el.append(C.last);
     const opts = h('div', { class: 'kc-opts' });
     if (p) opts.append(kcSwitch('Profil nutzen', po, (v) => midiSetProfile(s, v), { aria: 'Profil ' + p.name + ' nutzen', key: it.key + ':prof' }));
     if (o && !o.noClock) opts.append(kcSwitch('Tempo senden', o.clock, (v) => midiSetClockOut(o, v), { aria: 'Tempo an ' + it.name + ' senden (MIDI-Clock)', key: it.key + ':clock' }));
-    opts.append(h('button', { type: 'button', class: 'btn', 'data-kc': it.key + ':bild', title: 'Das Gerät gezeichnet, mit allem, was jeder Regler steuert – einmessen, logisch belegen, einzeln ändern', onclick: () => cbOpen(s) }, 'Gerätebild'));   // (26.10.2026)
     if (opts.childNodes.length) el.append(opts);
     if (p && p.id === 'nks' && po) {   // Hexenring: the pads either strike the Spuren or play the Schleifen (pad 8 stays Stille)
       const hx = hxPadsHx(s), pc = (t, on, v, aria) => h('button', { type: 'button', class: 'chip', 'aria-pressed': String(on), 'data-kc': it.key + ':pads' + v, 'aria-label': aria, onclick: () => hxPadsSet(s, v === 'hx') }, t);

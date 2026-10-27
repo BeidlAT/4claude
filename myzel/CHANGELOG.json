@@ -2,6 +2,13 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-27i",
+      "punkte": [
+        "Zum Testen: Myzel ist auf dem Stand vom 26.10. um 18:23, vor dem Sichern der Leiste.",
+        "Deine Aufnahmen, Schleifen, Kreise und Presets bleiben gespeichert."
+      ]
+    },
+    {
       "id": "2026-10-27h",
       "punkte": [
         "Zurück auf den Stand vom 26.10. nach den Bildern der Klangwelten: alle Änderungen danach sind wieder herausgenommen.",

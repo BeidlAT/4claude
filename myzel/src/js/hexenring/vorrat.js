@@ -13,7 +13,7 @@
 const HX_LAGER = [new Map(), new Map(), new Map(), new Map()];
 const hxLagerGet = (inp, k) => { const r = HX_LAGER[inp] && HX_LAGER[inp].get(k), c = r && r.deref(); if (!c && r) HX_LAGER[inp].delete(k); return c || null; };
 function hxHumKeep(L, S) {
-  if (!P['hx.ernte'] || !L || L.hum || L.humBusy || L.bew || !S || !S.cut || S.cut.stale || !HX.node || typeof WeakRef === 'undefined') return;
+  if (!L || L.hum || L.humBusy || L.bew || !S || !S.cut || S.cut.stale || !HX.node || typeof WeakRef === 'undefined') return;
   const c = S.cut, inp = c.in, f1 = c.f0 + S.n, k0 = Math.ceil(Math.max(Math.ceil(hxOldestF()), f1 - Math.round(P['hx.humus'] * SR)) / HX_CH), f0 = k0 * HX_CH;
   if (f1 - f0 <= S.n + SR) return;   // (the Humus held nothing beyond its own window)
   const k1 = Math.ceil(f1 / HX_CH);   // (chunks k0 … k1 − 1; the last one up to f1)

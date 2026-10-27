@@ -4,7 +4,7 @@ function idbOpen() {
   return new Promise((res) => {
     try {
       // version 2 (Hexenring, SPEC §19): its Schleifen and their audio; only the stores missing are made
-      const rq = indexedDB.open('myzel', 3);   // (3: the Hexenring's Kreise – the Leiste kept under a name)
+      const rq = indexedDB.open('myzel', 3);   // (3 as the later versions: their data, Kreise included, stays as it is)
       rq.onupgradeneeded = () => {
         const db = rq.result, has = (n) => db.objectStoreNames.contains(n);
         if (!has('takes')) db.createObjectStore('takes', { keyPath: 'id' });

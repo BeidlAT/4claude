@@ -574,14 +574,12 @@ function buildRec() {
 function renderBarInfo() {
   for (const w of CTLWRAP['rec.bars'] || []) w.classList.toggle('inactive', P['rec.len'] !== 'bars');
   if (!barInfoEl) return;
-  if (P['rec.len'] !== 'bars') { barInfoEl.textContent = 'Frei: läuft, bis du wieder tippst.'; barInfoEl.title = ''; return; }
+  if (P['rec.len'] !== 'bars') { barInfoEl.textContent = 'Frei: läuft, bis du wieder tippst.'; return; }
   // (phone report 22.10.2026: the tempo the take will have – a Schleife's or a device's where it leads, not the slider's –
   // and the length is set here, in Takten: the tempo is what plays, and moving it moves the Schleifen with it)
   const bars = P['rec.bars'], bpm = A.ctx ? barGrid().bpm : P['seq.bpm'], sec = bars * 4 * 60 / bpm;
   const who = SEQ.ext ? 'das Tempo des Geräts' : TG.hxOn ? 'das Tempo der Schleifen' : 'das Tempo unter „Puls“';
-  barInfoEl.textContent = bars + (bars === 1 ? ' Takt' : ' Takte') + ' im 4/4-Takt bei ' + dec(String(Math.round(bpm * 10) / 10)) + ' BPM (' + who + ') = ' + fmtDur(sec) + '.';
-  // (owner, 26.10.2026: „die lange Beschreibung kürzen“) the rest on hover
-  barInfoEl.title = 'Die Länge stellst du hier in Takten ein; sie ändert nichts an dem, was gerade spielt. ' +
+  barInfoEl.textContent = bars + (bars === 1 ? ' Takt' : ' Takte') + ' im 4/4-Takt bei ' + dec(String(Math.round(bpm * 10) / 10)) + ' BPM (' + who + ') = ' + fmtDur(sec) + '. Die Länge stellst du hier in Takten ein; sie ändert nichts an dem, was gerade spielt. ' +
     'Läuft der Puls, beginnt die Aufnahme auf der nächsten Eins, sonst sofort – oder mit dem ersten Ton, wenn „Erst mit dem ersten Ton starten“ an ist. ' +
     'Die Datei ist auf das Sample genau so lang. Läuft der Puls schon vor dem Start, geht die Schleife von selbst nahtlos weiter; sonst legt „Nachklang“ den Ausklang an den Anfang, wenn am Ende nichts mehr klingt. Tippen während der Aufnahme beendet sie mit dem laufenden Takt, ein zweites Tippen sofort.';
 }
@@ -604,18 +602,6 @@ function renderTakes() {
     takesEl.append(h('div', { class: 'empty' }, 'Noch keine Aufnahmen. Tippe auf REC, spiele und tippe erneut, um zu beenden.'));
     return;
   }
-  // (owner, 26.10.2026) all of them at once – a second tap confirms, and says how many are not saved as a file
-  const nUn = takes.filter((t) => !t.saved).length, delAll = h('button', { type: 'button', class: 'btn ghost danger' }, 'Alle löschen');
-  delAll.addEventListener('click', () => {
-    if (delAll.dataset.confirm) {
-      if (preview) stopPreview();
-      for (const tk of takes.splice(0)) forgetTake(tk);
-      renderTakes(); toast('Alle Aufnahmen gelöscht.', 2500); return;
-    }
-    delAll.dataset.confirm = '1'; delAll.textContent = 'Wirklich alle ' + takes.length + ' löschen?' + (nUn ? ' (' + nUn + ' nicht als Datei gespeichert)' : '');
-    setTimeout(() => { if (delAll.isConnected) { delete delAll.dataset.confirm; delAll.textContent = 'Alle löschen'; } }, 4000);
-  });
-  if (takes.length > 1) takesEl.append(h('div', { class: 'take-all' }, delAll));
   let mem = 0;
   for (const tk of takes) {
     if (tk.L) mem += tk.frames * 8;

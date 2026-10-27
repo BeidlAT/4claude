@@ -415,15 +415,14 @@ function hxDrawRing(c, i, r, y, fold, ts) {
   if (L.gg === 0 && !fold) { c.strokeStyle = HXC.lumen; c.lineWidth = 1.2; c.beginPath(); c.moveTo(x - R0 * 0.35, y - R0 * 0.3); c.lineTo(x - R0 * 0.35, y + R0 * 0.3); c.moveTo(x + R0 * 0.35, y - R0 * 0.3); c.lineTo(x + R0 * 0.35, y + R0 * 0.3); c.stroke(); c.lineWidth = 1.4; }   // (paused by the Gärtner: ‖ in lumen)
   const ph = hxPhase(L, REDUCED ? hxBeatStep(L, now) : now), ang = (p) => -Math.PI / 2 + p * Math.PI * 2;
   // track, bar ticks outside, one thin ring per Schicht inside
-  const pc = hxCol(L);   // (26.10.2026: its pigment)
-  c.strokeStyle = hxRgba(pc, 0.6 * dimA); c.lineWidth = 1.8; c.beginPath(); c.arc(x, y, R0, 0, Math.PI * 2); c.stroke(); c.lineWidth = 1.4;
+  c.strokeStyle = 'rgba(168,152,138,' + (0.55 * dimA).toFixed(2) + ')'; c.beginPath(); c.arc(x, y, R0, 0, Math.PI * 2); c.stroke();
   // (25.10.2026, owner) a playing loop lights up: a light disc and a glowing ring in lumen, brighter on every beat (a loop
   // without a Takt: four times a pass); with reduced motion steady
   if (st === 'spielt') {
     const bt = hxTakt(L) && A.ctx ? tgBeat(now) % 1 : (ph * 4) % 1, pu = REDUCED ? 0.4 : Math.exp(-5 * (bt < 0 ? bt + 1 : bt));
     c.save();
-    c.fillStyle = hxRgba(pc, 0.12 + 0.14 * pu); c.beginPath(); c.arc(x, y, R0, 0, Math.PI * 2); c.fill();
-    c.shadowColor = pc; c.shadowBlur = fold ? 4 : 7 + 9 * pu; c.strokeStyle = hxRgba(pc, 0.75 + 0.25 * pu); c.lineWidth = fold ? 1.6 : 2.4;
+    c.fillStyle = 'rgba(134,240,208,' + (0.10 + 0.12 * pu).toFixed(3) + ')'; c.beginPath(); c.arc(x, y, R0, 0, Math.PI * 2); c.fill();
+    c.shadowColor = HXC.lumen; c.shadowBlur = fold ? 4 : 7 + 9 * pu; c.strokeStyle = 'rgba(134,240,208,' + (0.7 + 0.3 * pu).toFixed(3) + ')'; c.lineWidth = fold ? 1.6 : 2.2;
     c.beginPath(); c.arc(x, y, R0, 0, Math.PI * 2); c.stroke();
     c.restore(); c.lineWidth = 1.4;
   }
