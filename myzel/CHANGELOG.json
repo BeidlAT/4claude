@@ -2,10 +2,12 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
-      "id": "2026-10-27i",
+      "id": "2026-10-27j",
       "punkte": [
-        "Zum Testen: Myzel ist auf dem Stand vom 26.10. um 18:23, vor dem Sichern der Leiste.",
-        "Deine Aufnahmen, Schleifen, Kreise und Presets bleiben gespeichert."
+        "Wieder die neueste Version, mit Kreisen.",
+        "Eigene Presets speichern ihre Schleifen mit: Laden bringt die Leiste des Presets zurück, ↶ die vorige.",
+        "Nimmst du unter einem eigenen Preset neue Schleifen auf, gehen sie beim Wechsel automatisch mit diesem Preset mit.",
+        "Nichts geht mehr verloren: Was du löschst, leerst oder durch Laden ersetzt, liegt unter Kreise → „Automatisch gesichert“, bis du es selbst entfernst."
       ]
     },
     {

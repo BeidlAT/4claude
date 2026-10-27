@@ -37,7 +37,8 @@ const hxmDb = (g) => (g > 0 ? 20 * Math.log10(g) : -Infinity);
 // one strip: o = { name, sub, aria, get db (−∞…+6), set db, pan get/set (or null), mute get/set, solo get/set, dorm(), lv(), open, pidV, pidM, pidS, pidP }
 function hxmStripOf(o) {
   const S = Object.assign({ g: null, w: 0, h: 0, bg: null, bgKey: '', gradKey: '', grad: null, capPos: 0, lv: { pk: [0, 0], rms: [0, 0], hp: [0, 0], ht: [0, 0], hv: [0, 0], lvl: 0, gr: 0, max: 0 }, txt: {} }, o);
-  const el = S.el = h('div', { class: 'hxm-st' + (o.cls ? ' ' + o.cls : ''), role: 'group', 'aria-label': o.aria || o.name, style: '--c:' + HXM_COL });
+  const col = S.col = () => (o.col ? o.col() : HXM_COL);   // (26.10.2026: a loop's pigment)
+  const el = S.el = h('div', { class: 'hxm-st' + (o.cls ? ' ' + o.cls : ''), role: 'group', 'aria-label': o.aria || o.name, style: '--c:' + col() });
   S.nm = h('span', { class: 'hxm-nm' }, h('i', { 'aria-hidden': 'true' }), h('span', null, o.name));
   S.src = h('span', { class: 'hxm-src' });
   S.head = h('button', { type: 'button', class: 'hxm-sh', title: o.headTip || '' }, S.nm, S.src);
@@ -51,7 +52,7 @@ function hxmStripOf(o) {
     S.kv = h('span', { class: 'hxm-kv', 'aria-hidden': 'true' });
     el.append(h('div', { class: 'hxm-kw' }, S.kn, S.kv, h('span', { class: 'hxm-kl', 'aria-hidden': 'true' }, 'Balance')));
     const setN = (n, fine) => { let v = clamp(n * 2 - 1, -1, 1); if (!fine && Math.abs(v) < 0.032) v = 0; o.pan.set(v); };
-    const tip = () => ({ n: o.name + ' · Balance', v: mxPanTxt(o.pan.get()), c: HXM_COL });
+    const tip = () => ({ n: o.name + ' · Balance', v: mxPanTxt(o.pan.get()), c: col() });
     mxDrag(S.kn, { axis: 'y', host: () => MX.root, span: () => 160, get: () => (o.pan.get() + 1) / 2, set: setN, tip, focus: S.kn });
     const step = (d, coarse) => { o.pan.set(clamp(Math.round((o.pan.get() + d * (coarse ? 0.25 : 0.05)) * 100) / 100, -1, 1)); mxTipFlash(MX.root, S.kn, tip()); };
     S.kn.addEventListener('keydown', (e) => {
@@ -82,8 +83,8 @@ function hxmStripOf(o) {
   S.stem = h('div', { class: 'hxm-stem', role: 'slider', tabindex: '0', 'aria-orientation': 'vertical', 'aria-label': o.name + ' Pegel', 'aria-valuemin': '-60', 'aria-valuemax': '6', 'aria-keyshortcuts': MX_VOLKEYS, title: o.faderTip || 'Pegel: ziehen, Mausrad oder Pfeiltasten (Umschalt: fein beim Ziehen, grob mit Pfeilen)' }, S.cv, S.cap);
   S.val = h('button', { type: 'button', class: 'hxm-val', tabindex: '-1', title: 'Doppelklick: 0 dB' }, h('span'));
   el.append(S.stem, S.val);
-  const flash = () => mxTipFlash(MX.root, S.cap, { n: o.name, v: hxmDbTxt(o.db.get()), c: HXM_COL });
-  mxDrag(S.stem, { axis: 'y', host: () => MX.root, span: () => (S.g ? S.g.span : 160), get: () => mxPos(o.db.get()), set: (n) => o.db.set(n <= 0 ? -Infinity : mxDb(n)), tip: () => ({ n: o.name, v: hxmDbTxt(o.db.get()), c: HXM_COL }), focus: S.stem, anchor: () => S.cap });
+  const flash = () => mxTipFlash(MX.root, S.cap, { n: o.name, v: hxmDbTxt(o.db.get()), c: col() });
+  mxDrag(S.stem, { axis: 'y', host: () => MX.root, span: () => (S.g ? S.g.span : 160), get: () => mxPos(o.db.get()), set: (n) => o.db.set(n <= 0 ? -Infinity : mxDb(n)), tip: () => ({ n: o.name, v: hxmDbTxt(o.db.get()), c: col() }), focus: S.stem, anchor: () => S.cap });
   S.stem.addEventListener('keydown', (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     const v = o.db.get(), b = v > -60 ? v : -60; let n = null;
@@ -101,7 +102,8 @@ const hxmDbTxt = (db) => (db > -60 ? mxDbTxt(db) + ' dB' : MX_MINUS + '∞');
 // a loop's strip
 function hxmStrip(L0) {
   const key = L0.key, slot = L0.slot, n = slot + 1, nm = 'Schleife ' + n;
-  const S = hxmStripOf({ name: nm, key, slot, aria: nm,
+  const S = hxmStripOf({ name: nm, key, slot, aria: nm, col: () => hxCol(hxByKey(key)),   // (by its key: S is not made yet when the strip first asks)
+   
     headTip: 'Schleife ' + n + ': antippen öffnet sie zum Ansehen und Bearbeiten (Wellenform, Schichten, Schnitt)',
     open: () => { const L = hxmL(S); if (L) hxEdOpen(L); },
     db: { get: () => { const L = hxmL(S); return L ? hxmDb(L.gain) : -Infinity; }, set: (db) => { const L = hxmL(S); if (L) { hxLevel(L, db > -60 ? dbToGain(db) : 0); L.lvT = performance.now(); hxRailDirty(); } } },
@@ -156,6 +158,7 @@ function hxmDrawR(R, dt) {
   const met = new Map((HX.meter || []).map((m) => [m[0], m]));
   for (const S of R.st) {
     const L = hxmL(S); if (!L) continue;
+    { const c0 = S.col(); if (S.cV !== c0) { S.cV = c0; S.el.style.setProperty('--c', c0); S.bgKey = ''; } }   // (its pigment, when it changes)
     const m = met.get(L.id), st = L.state, pend = L.pendTo && L.pendTo !== st ? L.pendTo : null;
     hxmText(S, 'src', S.src, hxEngName(L) + ' · ' + (hxTakt(L) ? dec(+(L.d.beats / (L.bpb || 4)).toFixed(2)) + ' T' : dec(hxLen(L).toFixed(1)) + ' s'));   // (short: the strip is narrow – the card says it whole)
     hxmText(S, 'state', S.state, (st === 'spielt' ? 'spielt' : st === 'stumm' ? 'stumm' : 'angehalten') + (pend ? ' → ' + (pend === 'stumm' ? 'stumm' : 'an') : '') + (HX.fokus === L.id ? ' · Fokus' : ''));
@@ -218,7 +221,7 @@ function hxmKnobDraw(S, v) {
   c.clearRect(0, 0, 34, 34);
   c.lineCap = 'round';
   c.strokeStyle = 'rgba(240,230,216,.16)'; c.lineWidth = 3; c.beginPath(); c.arc(cx, cy, r, a0 - 0.75 * Math.PI, a0 + 0.75 * Math.PI); c.stroke();
-  c.strokeStyle = S.dorm ? '#7a6d63' : HXM_COL; c.lineWidth = 3; c.beginPath(); if (Math.abs(v) < 0.005) c.arc(cx, cy, r, a0 - 0.04, a0 + 0.04); else c.arc(cx, cy, r, Math.min(a0, a1), Math.max(a0, a1)); c.stroke();
+  c.strokeStyle = S.dorm ? '#7a6d63' : S.col ? S.col() : HXM_COL; c.lineWidth = 3; c.beginPath(); if (Math.abs(v) < 0.005) c.arc(cx, cy, r, a0 - 0.04, a0 + 0.04); else c.arc(cx, cy, r, Math.min(a0, a1), Math.max(a0, a1)); c.stroke();
   c.fillStyle = 'rgba(240,230,216,.9)'; c.beginPath(); c.arc(cx + Math.cos(a1) * (r - 6), cy + Math.sin(a1) * (r - 6), 2, 0, Math.PI * 2); c.fill();
 }
 

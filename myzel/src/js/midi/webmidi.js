@@ -73,6 +73,7 @@ function midiScan() {
   if (sig === MIDI.scanSig && !added.length && !gone.length) return;
   MIDI.scanSig = sig;
   midiSync(added, gone);
+  apcScan();   // (the APC40 MK2: its lights)
 }
 // "Neu suchen": ask again (after a refusal the user may have allowed MIDI in the site settings meanwhile), or fetch a
 // fresh port list – Windows and some polyfills do not always report a newly connected keyboard on their own
