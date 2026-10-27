@@ -2,6 +2,9 @@
 // MessagePort (postMessage only – on file:// the frame is an origin of its own); booted at the first need. When it
 // cannot boot (a sandbox without frames, a blocked URL) the bake is off: loops follow the live chain, the card says so.
 Object.assign(HXW, { frame: null, port: null, st: '', p: null, wait: new Map(), id: 0, why: '', ver: 1, ms: [] });
+// (27.10.2026: in the owner's Firefox no pass came back – what the realms did, for the Leistung report: the last 40 steps)
+HXW.log = [];
+function hxwLog(t) { const L = HXW.log; L.push(Math.round(performance.now() / 100) / 10 + ' ' + t); if (L.length > 40) L.shift(); }
 // (Leistung, 23.10.2026) a realm's document: this page's own HTML with its app script loaded from one Blob made once –
 // Chromium keeps ≈ 5 MB of every document it loaded whose 2.3 MB script was inline, also after the frame went (measured:
 // 40 loads, +4.8 MB each, no plateau; from a script file or a Blob, +0.5–1 MB): the realms are renewed (HX_WRENEW), so
@@ -29,7 +32,7 @@ function hxWerk(R0) {
   R.p = hxwShell().then((shell) => new Promise((res) => {
     let done = false, tA = 0;
     const fail = (why) => {
-      if (done) return; done = true; clearTimeout(tA); R.st = 'kein'; R.why = why;
+      if (done) return; done = true; clearTimeout(tA); R.st = 'kein'; R.why = why; hxwLog('rahmen-kein:' + why);
       try { if (R.frame) R.frame.remove(); } catch (e) {}
       R.frame = null; R.port = null;
       for (const w of R.wait.values()) w(null);
@@ -48,7 +51,8 @@ function hxWerk(R0) {
       const ch = new MessageChannel();
       ch.port1.onmessage = (e) => {
         const m = e.data;
-        if (m && m.ready) { if (done) return; done = true; clearTimeout(tA); R.port = ch.port1; R.st = 'ok'; res(true); hxwWport(R); hxCardDirty(); return; }
+        if (m && m.ready) { if (done) return; done = true; clearTimeout(tA); R.port = ch.port1; R.st = 'ok'; hxwLog('rahmen-ok' + (shell ? ':srcdoc' : ':url')); res(true); hxwWport(R); hxCardDirty(); return; }
+        if (m && m.log) { hxwLog('im-rahmen:' + String(m.log).slice(0, 160)); return; }
         const w = m && R.wait.get(m.id);
         if (m && m.nan) { (HX.nan = HX.nan || []).push({ realm: m.job, n: m.nan }); console.warn('Hexenring: a render held non-finite samples (scrubbed)', m.job, m.nan); }   // (step 2b: the realm's tripwire)
         if (w) { R.wait.delete(m.id); if (m.ms) { R.ms.push([m.job, m.ms, m.dur || 0]); if (R.ms.length > 50) R.ms.shift(); } w(m); }
@@ -147,10 +151,10 @@ function hxwCall(job, d, tr, R0) {
   const R = R0 || HXW;
   if (job === 'wuchs' || job === 'bake' || job === 'tail') { if (!R.used) R.t0 = performance.now(); R.used = (R.used || 0) + 1; if (R.used >= HX_WRENEW && !R.old) { R.old = true; R.oldT = performance.now(); } }
   return hxWerk(R).then((ok) => new Promise((res) => {
-    if (!ok || !R.port) { res(null); return; }
+    if (!ok || !R.port) { hxwLog(job + ':kein-rahmen(' + (R.why || R.st) + ')'); res(null); return; }
     const id = ++R.id;
     R.wait.set(id, res);
-    try { R.port.postMessage(Object.assign({ job, id }, d), tr || []); } catch (e) { R.wait.delete(id); res(null); }
+    try { R.port.postMessage(Object.assign({ job, id }, d), tr || []); } catch (e) { hxwLog(job + ':senden:' + ((e && e.message) || e)); R.wait.delete(id); res(null); }
   }));
 }
 
@@ -179,6 +183,9 @@ function hxwBoot() {
       HXW.jobs.push(d); hxwNext();
     };
     HXW.port.postMessage({ ready: 1, ver: HXW.ver });
+    const say = (t) => { try { HXW.port.postMessage({ log: t }); } catch (e) {} };   // (27.10.2026: what fails in here, told to the page)
+    window.addEventListener('error', (ev) => say('fehler:' + (ev.message || ev.error) + ' @' + (ev.lineno || '')));
+    window.addEventListener('unhandledrejection', (ev) => say('promise:' + ((ev.reason && ev.reason.message) || ev.reason)));
   });
 }
 // (step 2a) myzel-ring reports its frame here every 0.1 s – a streamed pass is paced by it (≤ 1.25 s ahead of what plays)
@@ -196,7 +203,7 @@ async function hxwNext() {
   while (HXW.jobs.length) {
     const d = HXW.jobs.shift(), t0 = performance.now();
     let r;
-    try { r = await (HXW_JOB[d.job] || (async () => ({ err: 'job' })))(d); } catch (e) { console.warn(e); r = { err: String((e && e.message) || e) }; }
+    try { r = await (HXW_JOB[d.job] || (async () => ({ err: 'job' })))(d); } catch (e) { console.warn(e); r = { err: String((e && e.message) || e) + (e && e.stack ? ' | ' + String(e.stack).split('\n').slice(0, 3).join(' < ') : '') }; }
     r = r || {};
     const tr = r.tr || []; delete r.tr;
     try { HXW.port.postMessage(Object.assign({ id: d.id, job: d.job, ms: performance.now() - t0 }, r), tr); } catch (e) {}

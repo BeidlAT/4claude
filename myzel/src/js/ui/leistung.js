@@ -248,6 +248,7 @@ function lmText(R) {
   L.push('loops ' + kv(Object.assign({}, R.lp.sum, { rs: HX.rsw ? 'wasm' : HX.rsw === 0 ? 'js' : '-' })) + (R.lp.each.length ? ' · ' + R.lp.each.join(' ') : ''));
   L.push('werk ' + kv(R.werk));
   L.push('hxstate ' + lmHxState());   // (27.10.2026: Schleifen, die „spielt“ zeigen und stumm sind – der Weg vom Prozessor bis zum Ausgang)
+  L.push('werklog st=' + (HXW.st || '-') + (HXW.why ? ':' + HXW.why : '') + ' late=' + (HX.wLate || 0) + ' · ' + (HXW.log && HXW.log.length ? HXW.log.join(' | ') : 'leer'));   // (27.10.2026: the realms' steps – Firefox renders no pass)
   L.push('ev ' + (LM.ev.length ? LM.ev.slice(-40).map(([t, k]) => Math.round((t - LM.t0) / 100) / 10 + ':' + k).join(' ') : 'none'));
   L.push('ulog ' + (R.ulog.length ? R.ulog.join(' ') : 'none'));
   L.push('guard ' + (R.guard.steps.length ? R.guard.steps.join(' ') : 'none') + ' · ' + kv(R.guard.now));

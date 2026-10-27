@@ -41,17 +41,20 @@ function hxWTonHold(id) {
 // the pass of each following Schicht that holds the bar line, in the new key, from its start, heard from the bar line
 function hxWTonSlots(F) {
   const f = Math.round(hxF(F.t));
+  hxwLog('tonart-folgen: ' + F.loops.length + ' Schleife(n)');
   for (const k of F.loops) {
     const L = hxByKey(k); if (!L) continue;
     const kk = hxPassK(L, f);
-    for (const id of L.sch) { const S = HX.sch.get(id); if (!hxWCan(S)) continue; hxWSlot(L, S, kk, { at: f, must: true, key: F.key, treu: !hxWLebt(L) }); S.wk = Math.max(S.wk == null ? -1 : S.wk, kk); }
+    for (const id of L.sch) { const S = HX.sch.get(id); if (!hxWCan(S)) { hxwLog('tonart-folgen: Schicht kann nicht neu klingen'); continue; } hxWSlot(L, S, kk, { at: f, must: true, key: F.key, treu: !hxWLebt(L) }); S.wk = Math.max(S.wk == null ? -1 : S.wk, kk); }
   }
 }
 function hxWKeyBuilt() {
   const o = HX.tonP, k = { root: P['t.root'], scale: P['t.scale'] };
   HX.tonP = k;
   if (!o || HX.tonGo || !A.ctx || !HX.node || (String(o.root) === String(k.root) && o.scale === k.scale)) return;
-  const list = hxLoopsLive().filter(hxWFolgt); if (!list.length) return;
+  const all = hxLoopsLive(), list = all.filter(hxWFolgt);
+  if (all.length) hxwLog('tonart ' + o.root + '/' + o.scale + '→' + k.root + '/' + k.scale + ': ' + list.length + ' von ' + all.length + ' folgen' + (list.length < all.length ? ' (' + all.filter((L) => !list.includes(L)).map((L) => hxTonOf(L) === 'fest' ? 'fest' : L.bew ? 'bewegung' : 'ohne Noten').join(',') + ')' : ''));
+  if (!list.length) return;
   const F = { t: hxNowT() + 0.03, key: hxWKeyNow(), loops: list.map((L) => L.key) };
   hxWTonSlots(F); for (const L of list) hxWUpdate(L);
 }

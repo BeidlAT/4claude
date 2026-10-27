@@ -261,7 +261,7 @@ function hxWRenderFor(L, S, sig, o = {}) {
 // render to a realm of the pool (the other end); ✕ makes a pass the anchor's; the guard pauses it ----
 function hxWSlot(L, S, k, o = {}) {
   const job = hxWPass(L, S, k, { live: !o.treu, key: o.key, tail: hxWTailEst(S) });
-  if (!job) return false;
+  if (!job) { hxwLog('wuchs:kein-durchgang k' + k + ' (keine Noten)'); return false; }
   const a = hxPassF(L, k), from = o.at != null ? Math.max(0, o.at - a) : 0, ch = new MessageChannel(), R = hxwPick();
   hxPost({ wst: { schicht: S.id, k, len: job.lenF, cap: Math.ceil(job.dur * SR) + HX_CH, at: o.at, must: !!o.must, from, port: ch.port1 } }, [ch.port1]);
   const seed = o.treu ? (S.anc ? S.anc.seed : S.wseed) : hxWSeedK(S, k);
@@ -269,9 +269,11 @@ function hxWSlot(L, S, k, o = {}) {
   R.n++; HX.wJobs++; HX.wLast = performance.now(); lmEv('durchgang'); hxCount(); HX.wSt.n++; HX.wSt.q = Math.max(HX.wSt.q, HX.wJobs);
   const re = S.wRe || (S.wRe = {}); re[k] = R; for (const x in re) if (+x < k - 12) delete re[x];   // (✓ asks the realm that rendered a pass; it keeps its last ten)
   const t0 = performance.now();
+  hxwLog('wuchs:sende k' + k + (o.must ? ' muss' : '') + ' ' + Math.round(job.dur * 10) / 10 + 's');
   (S.wPend || (S.wPend = new Set())).add(k);
   hxwCall('wuchs', d, [ch.port2], R).then((m) => {
     S.wPend.delete(k);
+    hxwLog('wuchs:k' + k + ' ' + (!m ? 'nichts' : m.err ? 'FEHLER ' + String(m.err).slice(0, 200) : m.stopped ? 'gestoppt' : 'fertig ' + Math.round(+m.ms || 0) + 'ms'));
     R.n = Math.max(0, R.n - 1); HX.wJobs = Math.max(0, HX.wJobs - 1); HX.wLast = performance.now(); hxCount(); hxWStat(m, performance.now() - t0, job.dur);
     if (!m || m.stopped) return;
     if (m.rms) { S.wMs = m.rms; S.wDur = m.dur; }
