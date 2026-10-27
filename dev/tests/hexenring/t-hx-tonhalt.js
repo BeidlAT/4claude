@@ -20,7 +20,7 @@ const { ok } = H;
     o.k0 = key();
     const other = M.PRESETS.find((p) => p.v['t.root'] != null && (String(p.v['t.root']) !== String(M.P['t.root']) || p.v['t.scale'] !== M.P['t.scale']));
     o.pk = other.key + ':' + other.v['t.root'] + '/' + other.v['t.scale'];
-    M.loadPreset(other); await sl(400); o.k1 = key(); o.eng = M.P['v.eng'] === (other.v['v.eng'] || M.PD['v.eng'].d);
+    M.setParam('ui.tonart', 'preset'); M.loadPreset(other); await sl(400); o.k1 = key(); o.eng = M.P['v.eng'] === (other.v['v.eng'] || M.PD['v.eng'].d);
     o.folge = !!M.HX.folge;
     M.setParam('ui.tonart', 'schleifen'); o.folgt = M.hxTonOf(L) + '/' + M.hxWFolgt(L); M.loadPreset(M.PRESET_LEER); await sl(200); M.loadPreset(other); await sl(400); o.k2 = key();
     M.setParam('ui.tonart', 'preset'); o.fest = M.hxTonOf(L);
