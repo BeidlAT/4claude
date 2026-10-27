@@ -568,6 +568,7 @@ BOOL('hx.runde', 'Überspielen: eine Runde', false, { rec: 1 });
 // (step 2a) Wuchs: how a new Schleife begins (exactly as played, or grown anew); the level loops are rendered at (owner: manual,
 // the best by default; „wie gespielt“ = the level the loop was played at); the field's key and the loops' on the same bar line
 SEL('hx.folgen', 'Neue Schleife folgt der Tonart', [['fest', 'Nein – Original'], ['diatonisch', 'Diatonisch'], ['transponieren', 'Transponiert']], 'fest', { chips: 1, small: 1, rec: 1 });   // (owner, 27.10.2026: „die Schleife spielt immer die Originalaufnahme“ – folgen nur, wenn eingestellt)
+BOOL('hx.raumFolgt', 'Hall und Echo der Schleifen folgen dem Preset', false, { rec: 1 });   // (owner, 27.10.2026: aus – die Schleifen behalten ihren Raum, raum.js)
 SEL('hx.beginn', 'Neue Schleife', [['abdruck', 'Wie gespielt'], ['wuchs', 'Als Wuchs']], 'abdruck', { chips: 1, small: 1, rec: 1 });
 SEL('hx.stufe', 'Klangstufe der Schleifen', [['gespielt', 'Wie gespielt'], ['1', '1'], ['2', '2'], ['3', '3']], '3', { chips: 1, small: 1, rec: 1 });
 BOOL('hx.tonartAmTakt', 'Tonart wechselt mit den Schleifen am Takt', true, { rec: 1 });

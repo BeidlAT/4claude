@@ -290,7 +290,7 @@ function hxGuardGrenze() {
 // clean for the span (30 s, doubled when it returns within two minutes, ≤ 4 min – hxTauBack); on a phone it stays. ----
 function hxTauGuard() {
   if (HX.tauRest || !(P['mov.drift'] > 0)) return false;
-  const list = hxLoopsLive().filter((L) => !L.bew && L.taumeln !== false);
+  const list = hxLoopsLive().filter((L) => !L.bew && !!L.taumeln);
   if (!list.some((L) => L.state === 'spielt')) return false;
   HX.tauRest = true; hxGuardLog('taumeln');
   for (const L of list) { hxPost({ tau: { loop: L.id, on: false } }); hxTauOrig(L); }
@@ -305,10 +305,11 @@ function hxTauGuard() {
 function hxTauBack(now) {
   if (HX_PHONE || !HX.tauRest || !HX.tauG || now - GD.uT < HX.tauG.span) return;
   HX.tauRest = false; HX.tauG.end = now; hxGuardLog('taumelt');
-  for (const X of hxLoopsLive()) if (!X.bew && X.taumeln !== false) hxPost({ tau: { loop: X.id, on: true } });
+  for (const X of hxLoopsLive()) if (!X.bew && !!X.taumeln) hxPost({ tau: { loop: X.id, on: true } });
   hxCount(); hxCardDirty();
 }
-const hxTauOn = (L) => L.taumeln !== false && !HX.tauRest;   // (what the processor is told: the loop's choice, unless the guard let it rest)
+// (owner, 27.10.2026: „1:1 original“) a loop keeps the tuning it was played with unless „Taumeln: mit“ is chosen
+const hxTauOn = (L) => !!L.taumeln && !HX.tauRest;   // (what the processor is told: the loop's choice, unless the guard let it rest)
 
 // ---- (step 2a) Live mode (SPEC §10.6) – only where there is no Werk-Rahmen (a sandbox without frames): a loop that must
 // grow plays its notes through real voices, scheduled ahead in the scheduler's tick as the Puls's are, into the live

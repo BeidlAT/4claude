@@ -68,6 +68,7 @@ function updDelay() {
   setP(A.wowG.gain, P['dly.wow'] * 0.004); setP(A.flutG.gain, P['dly.wow'] * 0.0006);
   setP(A.dlySend.gain, P['dly.mix']);
   setP(A.dlyIn.gain, A.frozen ? 0 : 1, 0.02);
+  if (HXR.u) hxrApply(false, true);   // (the loops' echo: its sync time follows the tempo)
 }
 function updReverbMix() {
   if (!A.ctx) return;
@@ -75,6 +76,7 @@ function updReverbMix() {
 }
 function regenIR(now) {
   if (!A.ctx || HXW.on) return;   // (Hexenring: the Werk-Rahmen renders without the hall)
+  if (HXR.u) hxrApply(false, true);   // (the loops' hall: again only when the level's channels changed)
   clearTimeout(A.irTimer);
   A.irTimer = setTimeout(() => {
     const job = ++A.irJob;

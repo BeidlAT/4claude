@@ -2,6 +2,15 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-27c",
+      "punkte": [
+        "Schleifen bleiben beim Preset-Wechsel 1:1, wie sie aufgenommen wurden: Hall und Echo der Schleifen sind jetzt ihre eigenen – die der ersten Schleife der Leiste – und ändern sich mit einem anderen Preset nicht mehr.",
+        "Schleifen taumeln nicht mehr mit dem Live-Spiel mit, sie behalten ihre gespielte Stimmung (in der Karte unter „Taumeln: mit“ weiter wählbar).",
+        "Wer es anders will: im Aufnahme-Panel „Hall und Echo der Schleifen folgen dem Preset“.",
+        "Ringleiste: die Schleifen sitzen mittig, ohne „aufnehmen“ darunter; eine gehaltene Fläche ohne neue Anschläge zeigt ihren Lautstärkeverlauf statt eines leeren Rings."
+      ]
+    },
+    {
       "id": "2026-10-27b",
       "punkte": [
         "Schleifen spielen jetzt immer ihre Originalaufnahme – auch wenn du ein Preset mit anderer Tonart lädst. Kein Hinweis „Schleifen folgen …“ mehr beim Preset-Wechsel.",

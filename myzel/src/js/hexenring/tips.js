@@ -196,6 +196,7 @@ const HX_TIP_P = {
   'hx.rail': 'Die Leiste mit den Schleifen unter dem Spielfeld: groß oder klein.',
   'hx.humus': 'Wie viele Sekunden Myzel im Hintergrund mithört – so weit zurück kann der Korb übernehmen.',
   'hx.mem': 'Wie viel Arbeitsspeicher die Schleifen höchstens belegen dürfen.',
+  'hx.raumFolgt': 'Aus: die Schleifen behalten Hall und Echo, mit denen die erste Schleife der Leiste gespielt wurde – ein anderes Preset ändert sie nicht. An: Hall und Echo kommen vom gerade gewählten Preset.',
   'hx.folgen': 'Ob eine neue Schleife einer neuen Tonart folgt. „Nein – Original“: sie spielt immer genau ihre Aufnahme; in ihrer Karte lässt es sich je Schleife umstellen.',
   'hx.beginn': 'Wie neue Schleifen spielen: genau wie gespielt oder gleich von Myzel neu gespielt.',
   'hx.stufe': 'In welcher Klangqualität Myzel Schleifen neu spielt.',
