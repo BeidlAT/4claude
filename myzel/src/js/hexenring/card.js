@@ -133,9 +133,10 @@ function hxCardForm(btn) {
   });
   box.append(h('div', { class: 'hx-gh' }, h('b', null, 'Form'), h('span', null, HX.lich.length ? ' – Lichtungen: welche Schleifen klingen' : ' – noch keine Lichtung')),
     ...rows,
-    h('div', { class: 'hx-acts' }, btn('Merken', () => { hxLichMerken(); hxCardDirty(); }, { cls: 'primary' }), btn(HX.kernBack ? 'Zurück vom Kern' : 'Kern', () => { hxKern(); hxCardDirty(); }),
-      btn('Lücke', () => hxLuecke(1)), btn('Takt-Lücke', () => hxLuecke(4)), HX.schluss ? btn('Schluss abbrechen', () => { hxSchlussAb(); hxCardDirty(); }, { cls: 'ghost danger' }) : btn('Schluss · ' + { ende: 'am Ende', welkend: 'welkend', abbauend: 'abbauend' }[P['hx.schluss']], () => { hxSchluss(); hxCardDirty(); })),
+    h('div', { class: 'hx-acts' }, wwA(btn('Merken', () => { hxLichMerken(); hxCardDirty(); }, { cls: 'primary' }), 'hx.merken'), wwA(btn(HX.kernBack ? 'Zurück vom Kern' : 'Kern', () => { hxKern(); hxCardDirty(); }), 'hx.kern'),
+      wwA(btn('Lücke', () => hxLuecke(1)), 'hx.luecke'), wwA(btn('Takt-Lücke', () => hxLuecke(4)), 'hx.luecke4'), HX.schluss ? btn('Schluss abbrechen', () => { hxSchlussAb(); hxCardDirty(); }, { cls: 'ghost danger' }) : wwA(btn('Schluss · ' + { ende: 'am Ende', welkend: 'welkend', abbauend: 'abbauend' }[P['hx.schluss']], () => { hxSchluss(); hxCardDirty(); }), 'hx.schluss')),
     hxCardFolge(btn) || '', hxCardTreffen(btn) || '');   // (step 2b; step 4: Treffen)
+  wwMarkIn(box);
 }
 // (step 1d) a Schleife of Bewegung's card: what it moves, its state, Verblassen, Löschen
 function hxCardBewOne(L, btn, chip) {

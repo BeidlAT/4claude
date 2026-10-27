@@ -30,6 +30,16 @@ const { chromium } = require('playwright');
   await p.keyboard.press('Escape'); await p.waitForTimeout(500);
   o.reopen = await p.evaluate(() => !document.getElementById('ww').hidden);
   await p.screenshot({ path: (process.argv[2] || ".") + '/ww-gesaet.png' });
+  // the mixer's controls (data-pid) and an action (a MIDI target) sow too
+  await p.click('.ww-saen'); await p.waitForTimeout(200);
+  await p.evaluate(() => window.__M.openPanel('mix')); await p.waitForTimeout(500);
+  const mp = await p.evaluate(() => { const w = [...document.querySelectorAll('#sheetBody [data-pid]')].find((x) => x.offsetParent && !x.dataset.ww); return w && w.dataset.pid; });
+  o.mp = mp;
+  if (mp) { const e2 = await p.$('#sheetBody [data-pid="' + mp + '"]:not([data-ww])'); const v0 = await p.evaluate((id) => window.__M.P[id], mp); await e2.click(); await p.waitForTimeout(300); o.mpVal = (await p.evaluate((id) => window.__M.P[id], mp)) === v0; }
+  await p.keyboard.press('Escape'); await p.waitForTimeout(400);
+  o.act = await p.evaluate(() => { const M = window.__M; M.wwSow('a:hx.kern', true); const t = [...document.querySelectorAll('#ww .ww-tile')].map((x) => x.textContent); return t; });
+  o.set2 = await p.evaluate(() => JSON.parse(localStorage.getItem('myzel.ww.v1') || '[]'));
+  await p.screenshot({ path: (process.argv[2] || ".") + '/ww-gesaet2.png' });
   // tempo: the Puls gives one
   await p.evaluate(() => { window.__M.setParam('seq.bpm', 92); window.__M.seqStart(); }); await p.waitForTimeout(600);
   o.tk1 = await p.textContent('.ww-tk');
@@ -44,6 +54,8 @@ const { chromium } = require('playwright');
   ok(o.open, 'the knot opens the Wurzelwerk');
   ok(o.ban && o.found && o.val && o.set.includes(o.pid) && o.mark, 'Säen: a tap sows ' + o.pid + ', its value untouched, a spore at its home');
   ok(o.reopen, 'Esc ends Säen and shows what was sown');
+  ok(o.mp && o.mpVal && o.set2.includes(o.mp), 'a mixer control sows (' + o.mp + '), its value untouched');
+  ok(o.set2.includes('a:hx.kern') && o.act.some((t) => /Kern/.test(t)), 'an action (Kern) sows as a button');
   ok(/92,0/.test(o.tk1) && /184,0/.test(o.tk2), 'the Puls gives the tempo; 2× doubles it');
   ok(!o.err.length, 'no page errors ' + o.err.join(' | '));
   await b.close();

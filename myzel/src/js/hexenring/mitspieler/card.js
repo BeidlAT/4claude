@@ -7,9 +7,10 @@ function hxCardGd(btn) {
   const st = P['hx.gaertner'], E = Math.round(HXG.Es * 100), lr = HXG.want && HXG.want !== 'still' ? HX_ROLEW[HXG.want] : 'still';
   const plan = HXG.plan ? HXG.plan.items.map((x) => { const L = hxByKey(x.key); return L ? hxName(L) + ' ' + (x.gt === 0 ? 'pausiert' : x.word || 'wie gespielt') : ''; }).filter(Boolean).join(', ') : '';
   box.replaceChildren(...[h('div', { class: 'hx-gh' }, h('b', null, 'Gärtner'), h('span', null, ' – wie sehr die Schleifen auf dich hören')),
-    h('div', { class: 'hx-row' }, h('span', { class: 'lab' }, 'Stufe'), h('div', { class: 'chips small' }, ...HX_GST.map((k) => chip(HX_GSTW[k], st === k, () => setParam('hx.gaertner', k), 'Gärtner ' + HX_GSTW[k])))),
+    h('div', { class: 'hx-row', 'data-ww': 'hx.gaertner' }, h('span', { class: 'lab' }, 'Stufe'), h('div', { class: 'chips small' }, ...HX_GST.map((k) => chip(HX_GSTW[k], st === k, () => setParam('hx.gaertner', k), 'Gärtner ' + HX_GSTW[k])))),
     st !== 'schaut' ? h('p', { class: 'note' }, 'Du spielst: ' + lr + ' · Energie ' + E + ' %' + (plan ? ' · geplant: ' + plan : '') + (HXA.n + HXA.hsN < 40 && st === 'antwortet' ? ' · zum Antworten noch ' + (40 - HXA.n - HXA.hsN) + ' Töne' : '')) : null,
     HXG.plan || HXW_K.wk || hxAntOn() ? h('div', { class: 'hx-row end' }, btn('✕ ablehnen', () => { hxMachNein(); hxCardDirty(); }, { aria: 'Was der Gärtner plant, ablehnen' }), btn('✓ behalten', () => { hxMachLob(); hxCardDirty(); })) : null].filter(Boolean));
+  wwMarkIn(box);
 }
 function hxCardMit(L, chip, row, btn) {
   if (L.bew) return [];

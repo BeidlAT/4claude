@@ -91,6 +91,8 @@ const hxHint = (t) => { hxSay(t); toast(t, 2000); };
   midiTarget('hx.form', 'Nächste Lichtung (an der nächsten Eins)', btn(hxFormTap), { group: G, button: true });
   midiTarget('hx.licht.prev', 'Vorige Lichtung', btn(() => hxLichStep(-1)), { group: G, button: true, step: (d) => hxLichStep(-Math.sign(d)) });
   midiTarget('hx.licht.next', 'Nächste Lichtung', btn(() => hxLichStep(1)), { group: G, button: true, step: (d) => hxLichStep(Math.sign(d)) });
+  midiTarget('hx.merken', 'Lichtung merken (welche Schleifen jetzt klingen)', btn(hxLichMerken), { group: G, button: true });   // (27.10.2026: sown into the Wurzelwerk, also for MIDI)
+  midiTarget('hx.luecke4', 'Takt-Lücke vor der nächsten Eins', btn(() => hxLuecke(4)), { group: G, button: true });
   midiTarget('hx.kern', 'Kern (hin und zurück, auf der Eins)', btn(hxKern), { group: G, button: true });
   midiTarget('hx.luecke', 'Lücke vor der nächsten Eins', btn(() => hxLuecke()), { group: G, button: true });
   midiTarget('hx.schluss', 'Schluss', btn(() => hxSchluss()), { group: G, button: true });

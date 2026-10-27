@@ -2,6 +2,13 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-27p",
+      "punkte": [
+        "Säen erfasst jetzt auch Knöpfe wie Merken, Kern, Lücke, Takt-Lücke und Schluss, die Gärtner-Stufe und die Regler im Mixer.",
+        "Ein gesäter Knopf liegt im Wurzelwerk als Knopf bereit – ein Tipp löst ihn aus."
+      ]
+    },
+    {
       "id": "2026-10-27o",
       "punkte": [
         "Oben in der Leiste stehen jetzt immer Tempo und Tonart – „♩ frei“, solange noch kein Tempo gesetzt ist; ein Tipp darauf: −1, +1, Tippen, ½×, 2×, Tempo freigeben, Tempo behalten.",

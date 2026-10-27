@@ -50,9 +50,9 @@
 .ww-big small { margin-left: 6px; font: 11px var(--font-num); color: var(--dim); }
 .ww-foot { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); font: 11px var(--font-num); color: var(--dim); }
 /* Säen: what can be sown answers to the spore; its insides take no tap (the setting is not changed by it) */
-body.ww-saen-an [data-ww] { outline: 1px dashed rgba(255, 179, 92, .55); outline-offset: 3px; border-radius: 8px; cursor: crosshair; }
-body.ww-saen-an [data-ww] * { pointer-events: none; }
-body.ww-saen-an [data-ww]:hover { outline: 2px solid var(--spore); background: rgba(255, 179, 92, .07); }
+body.ww-saen-an :is([data-ww], [data-wa], [data-pid]) { outline: 1px dashed rgba(255, 179, 92, .55); outline-offset: 3px; border-radius: 8px; cursor: crosshair; }
+body.ww-saen-an :is([data-ww], [data-wa], [data-pid]) * { pointer-events: none; }
+body.ww-saen-an :is([data-ww], [data-wa], [data-pid]):hover { outline: 2px solid var(--spore); background: rgba(255, 179, 92, .07); }
 .ww-ban {
   position: fixed; z-index: 60; left: 50%; bottom: 120px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px;
   padding: 8px 10px 8px 14px; border-radius: 22px; background: var(--loam-2); border: 1px solid var(--spore); color: var(--hypha); font-size: 13px; box-shadow: 0 10px 30px rgba(0, 0, 0, .5);
@@ -64,3 +64,4 @@ body.ww-saen-an [data-ww]:hover { outline: 2px solid var(--spore); background: r
 .ww-gesaet { position: relative; }
 .ww-gesaet::after { content: ""; position: absolute; top: 2px; right: 2px; width: 6px; height: 6px; border-radius: 50%; background: var(--spore); box-shadow: 0 0 6px rgba(255, 179, 92, .8); pointer-events: none; }
 @media (max-width: 420px) { .ww-btn { width: 30px; height: 30px; min-width: 30px; padding: 0; } .ww-btn svg { width: 18px; height: 18px; } }
+.ww-go { width: 100%; }

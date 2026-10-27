@@ -6,7 +6,13 @@
    views). Säen: the spore tool, then a tap on any setting in Myzel sows it into the Wurzelwerk (myzel.ww.v1); a sown
    setting wears a small spore at its home. W (outside the field and text fields) opens and closes it, Esc closes. */
 const WW = { open: false, saen: false, set: new Set(), el: null, tiles: new Map(), taps: [], tk: null, pop: null, sig: '' };
-try { const a = JSON.parse(store.get('myzel.ww.v1') || '[]'); if (Array.isArray(a)) for (const id of a) if (PD[id]) WW.set.add(id); } catch (e) {}
+try { const a = JSON.parse(store.get('myzel.ww.v1') || '[]'); if (Array.isArray(a)) for (const id of a) if (PD[id] || /^a:/.test(id)) WW.set.add(id); } catch (e) {}
+// what can be sown: a param's control (data-ww; the mixer's data-pid) or an action (data-wa: a MIDI target – „a:key“)
+const WW_SEL = '[data-ww],[data-wa],[data-pid]';
+const wwKeyOf = (el) => (el.dataset.ww ? el.dataset.ww : el.dataset.wa ? 'a:' + el.dataset.wa : el.dataset.pid && PD[el.dataset.pid] ? el.dataset.pid : null);
+const wwA = (el, key) => { if (el) el.dataset.wa = key; return el; };
+function wwMarkIn(root) { for (const el of root.querySelectorAll(WW_SEL)) { const k = wwKeyOf(el); if (k) el.classList.toggle('ww-gesaet', WW.set.has(k)); } }
+const wwLabel = (k) => { if (/^a:/.test(k)) { const t = MTARGETS.get(k.slice(2)); return t ? t.label : k.slice(2); } return PD[k] ? PD[k].label : k; };
 ICON.knot = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="2.6"/><path d="M12 9.4V3.8M12 14.6v5.6M9.7 10.8 4.6 7.8M14.3 13.2l5.1 3M9.7 13.2l-5.1 3M14.3 10.8l5.1-3"/><circle cx="12" cy="3.4" r="1.1" fill="currentColor"/><circle cx="4.3" cy="7.6" r="1.1" fill="currentColor"/><circle cx="19.7" cy="16.4" r="1.1" fill="currentColor"/></svg>';
 ICON.spore = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3.4" fill="currentColor" stroke="none"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>';
 const WW_GROUPS = [
@@ -24,7 +30,7 @@ function wwTempoSet(b) {
   if (SEQ.ext) { toast('Das Tempo kommt gerade von der MIDI-Uhr.', 3000); return; }
   b = clamp(Math.round(b * 10) / 10, PD['seq.bpm'].min, PD['seq.bpm'].max);
   if (TG.hxOn) hxTempo(b); else setParam('seq.bpm', b);
-  hxSay && hxSay('Tempo ' + dec(b.toFixed(1)));
+  hxSay('Tempo ' + dec(b.toFixed(1)));
   wwTick(true);
 }
 function wwTempoFrei() {
@@ -75,11 +81,35 @@ function wwPopToggle(on) {
 function wwTile(id) {
   let w = WW.tiles.get(id);
   if (!w) {
-    const rm = h('button', { type: 'button', class: 'ww-rm', title: 'Aus dem Wurzelwerk nehmen', 'aria-label': (PD[id].label || id) + ' aus dem Wurzelwerk nehmen', html: ICON.spore, onclick: () => wwSow(id, false) });
-    w = h('div', { class: 'ww-tile' }, rm, ctl(id, { prefix: 'ww-s-', label: (groupOf(id) ? groupOf(id) + ': ' : '') + PD[id].label }));   // (its group with it: „Hall: Anteil“)
+    const rm = h('button', { type: 'button', class: 'ww-rm', title: 'Aus dem Wurzelwerk nehmen', 'aria-label': wwLabel(id) + ' aus dem Wurzelwerk nehmen', html: ICON.spore, onclick: () => wwSow(id, false) });
+    w = h('div', { class: 'ww-tile' }, rm, /^a:/.test(id) ? wwAct(id.slice(2)) : ctl(id, { prefix: 'ww-s-', label: (groupOf(id) ? groupOf(id) + ': ' : '') + PD[id].label }));   // (its group with it: „Hall: Anteil“)
     WW.tiles.set(id, w);
   }
+  if (w.wwUpd) w.wwUpd();
   return w;
+}
+// an action sown: its MIDI target – a button presses it; a choice „(a · b · c)“ shows its steps; any other continuous one
+// a slider of its 0…1
+function wwAct(key) {
+  const t = MTARGETS.get(key), box = h('div', { class: 'ctl wide ww-act' });
+  if (!t) { box.append(h('p', { class: 'note' }, key + ' gibt es nicht mehr.')); return box; }
+  const m = /^(.*?)\s*\(([^)]*·[^)]*)\)\s*$/.exec(t.label), name = m ? m[1] : t.label;
+  if (t.cont && t.set) {
+    const lab = h('div', { class: 'lab' }, name);
+    if (m) {
+      const steps = m[2].split('·').map((x) => x.trim()), n = steps.length, chips = steps.map((x, i) => h('button', { type: 'button', class: 'chip', onclick: () => { t.set((i + 0.5) / n); upd(); } }, x));
+      const upd = () => { const g = t.get ? t.get() : null; chips.forEach((c, i) => c.setAttribute('aria-checked', String(g != null && Math.min(n - 1, Math.round(g * (n - 1))) === i))); };
+      box.append(lab, h('div', { class: 'chips small' }, ...chips)); box.wwUpd = upd; upd();
+    } else {
+      const r = h('input', { type: 'range', min: 0, max: 1000, step: 1, 'aria-label': name });
+      r.addEventListener('input', () => t.set(r.value / 1000));
+      const upd = () => { const g = t.get ? t.get() : null; if (g != null) r.value = Math.round(g * 1000); };
+      box.append(lab, r); box.wwUpd = upd; upd();
+    }
+    return box;
+  }
+  box.append(h('button', { type: 'button', class: 'btn ww-go', onclick: () => { if (!A.started) { toast('Erst „Klang starten“.', 2000); return; } if (t.run) t.run(1); else if (t.press) { t.press(1, null); if (t.release) setTimeout(() => t.release(null), 120); } }, title: t.label }, name.replace(/\s*\(.*\)\s*$/, '')));
+  return box;
 }
 function wwGesichert() {
   const K = (typeof HXKR !== 'undefined' && HXKR.list) || [], auto = K.filter((k) => k.auto), mb = Math.round(auto.reduce((s, k) => s + (k.bytes || 0), 0) / 1048576), last = auto[0];
@@ -113,17 +143,18 @@ function wwBuild() {
   app.append(WW.ban);
   document.addEventListener('click', (e) => {
     if (!WW.saen) return;
-    const w = e.target.closest && e.target.closest('[data-ww]');
-    if (!w || WW.el.contains(w)) return;
+    const w = e.target.closest && e.target.closest(WW_SEL);
+    if (!w || WW.el.contains(w) || WW.ban.contains(w)) return;
+    const id = wwKeyOf(w); if (!id) return;
     e.preventDefault(); e.stopPropagation();
-    const id = w.dataset.ww;
-    if (WW.set.has(id)) { toast('„' + (PD[id].label || id) + '“ ist schon im Wurzelwerk.', 2000); return; }
+    if (WW.set.has(id)) { toast('„' + wwLabel(id) + '“ ist schon im Wurzelwerk.', 2000); return; }
     wwSow(id, true); wwFly(e.clientX, e.clientY);
   }, true);
 }
 function wwRender() {
   if (!WW.el || WW.el.hidden) return;
   const ids = [...WW.set];
+  for (const id of ids) { const w = WW.tiles.get(id); if (w) { const a = w.querySelector('.ww-act'); if (a && a.wwUpd) a.wwUpd(); } }
   WW.sown.replaceChildren(h('div', { class: 'ww-lab' }, 'GESÄT'), ...(ids.length ? ids.map(wwTile) : [h('p', { class: 'note' }, 'Tippe „Säen“ und dann eine Einstellung irgendwo in Myzel – Regler, Schalter, Auswahl. Sie wächst hier an.')]));
   WW.taktTools.replaceChildren(wwTaktTools());
   WW.ges.replaceChildren(...wwGesichert());
@@ -152,10 +183,10 @@ function wwSaen(on) {
 function wwSow(id, on) {
   if (on) WW.set.add(id); else WW.set.delete(id);
   wwSave(); wwMark(id);
-  if (on) { WW.sowed = true; hxSay && hxSay((PD[id].label || id) + ' ins Wurzelwerk gesät'); }
+  if (on) { WW.sowed = true; hxSay(wwLabel(id) + ' ins Wurzelwerk gesät'); }
   wwRender();
 }
-const wwMark = (id) => { for (const w of document.querySelectorAll('[data-ww="' + CSS.escape(id) + '"]')) if (!WW.el || !WW.el.contains(w)) w.classList.toggle('ww-gesaet', WW.set.has(id)); };
+const wwMark = () => { for (const el of document.querySelectorAll(WW_SEL)) if (!WW.el || !WW.el.contains(el)) { const k = wwKeyOf(el); if (k) el.classList.toggle('ww-gesaet', WW.set.has(k)); } };
 function wwFly(x, y) {
   const r = WW.btn.getBoundingClientRect(), s = h('i', { class: 'ww-fly', html: ICON.spore });
   s.style.left = x + 'px'; s.style.top = y + 'px';
@@ -174,7 +205,7 @@ function wwInit() {
   bar.insertBefore(WW.btn, rec); bar.insertBefore(WW.tk, rec); bar.insertBefore(h('div', { class: 'ww-gap' }), rec);
   $('#app').append(WW.pop);
   wwBuild();
-  for (const id of WW.set) wwMark(id);
+  wwMark();
   setInterval(() => wwTick(false), 250);
   document.addEventListener('pointerdown', (e) => { if (WW.pop && !WW.pop.hidden && !WW.pop.contains(e.target) && !WW.tk.contains(e.target)) wwPopToggle(false); }, true);
   window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && WW.saen) { e.preventDefault(); e.stopImmediatePropagation(); wwSaen(false); } }, true);   // (Säen first: the panel it sows from stays open)
