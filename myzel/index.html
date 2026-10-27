@@ -29992,10 +29992,20 @@ function lmText(R) {
   L.push('voices ' + kv(R.voices) + ' · hx ' + kv(R.hx));
   L.push('loops ' + kv(Object.assign({}, R.lp.sum, { rs: HX.rsw ? 'wasm' : HX.rsw === 0 ? 'js' : '-' })) + (R.lp.each.length ? ' · ' + R.lp.each.join(' ') : ''));
   L.push('werk ' + kv(R.werk));
+  L.push('hxstate ' + lmHxState());   // (27.10.2026: Schleifen, die „spielt“ zeigen und stumm sind – der Weg vom Prozessor bis zum Ausgang)
+  L.push('ev ' + (LM.ev.length ? LM.ev.slice(-40).map(([t, k]) => Math.round((t - LM.t0) / 100) / 10 + ':' + k).join(' ') : 'none'));
   L.push('ulog ' + (R.ulog.length ? R.ulog.join(' ') : 'none'));
   L.push('guard ' + (R.guard.steps.length ? R.guard.steps.join(' ') : 'none') + ' · ' + kv(R.guard.now));
   L.push('latency ' + kv(R.lat));
   return L.join('\n');
+}
+// every gate and level between the Hexenring's processor and the output, each Schleife and Schicht with its route
+function lmHxState() {
+  const g = (n) => (n && n.gain ? +n.gain.value.toFixed(3) : '-'), st = MIX.s.hxr, m = new Map((HX.meter || []).map((x) => [x[0], x[1]]));
+  const o = ['ctx=' + (A.ctx ? A.ctx.state : '-'), 'node=' + (HX.node ? (HX.ctx === A.ctx ? 'ok' : 'alt') : 'kein'), 'g0=' + g(HX.g0), 'g1=' + g(HX.g1), 'gM=' + g(HX.gM), 'out1=' + !!HX.out1, 'f1=' + (HXF1.off ? 'ruht' : 'an'), 'idle=' + !!IDLE.on, 'hxOff=' + !!IDLE.hxOff, 'ruht=' + !!HX.ruht,
+    'route=' + P['xhxr.route'], 'vol=' + P['xhxr.vol'], 'mute=' + P['xhxr.mute'], 'strip=' + (st ? g(st.in) + '/' + g(st.gate || st.mute || null) : '-'), 'pend=' + HX.pend.map((p) => p.kind).join(',')];
+  for (const L of hxLoopsLive()) o.push('[' + (L.slot + 1) + ' ' + L.state + (L.pendTo ? '>' + L.pendTo : '') + ' g' + (+L.gain || 0).toFixed(2) + ' m' + (m.has(L.id) ? (+m.get(L.id)).toFixed(3) : '-') + ' ' + L.sch.map((id) => { const S = HX.sch.get(id); return S ? (S.out ? 'o1' : 'o0') + (S.bak ? 'b' : '') + (S.mute ? 'M' : '') + (S.aud ? '' : '?') : 'x'; }).join(',') + ']');
+  return o.join(' ');
 }
 // the short German summary: what was measured, then where the limit lies
 function lmSummary(R) {
@@ -35633,7 +35643,7 @@ function hxUprLeave() {
   const p = userPresets().find((x) => x.name === U.name); if (!p) return;
   const live = hxLoopsLive(), keys = new Set(U.keys);
   if (!live.length) return;   // (an empty Leiste never replaces the preset's own – only „Speichern“ makes it empty)
-  const changed = live.length !== keys.size || live.some((L) => !keys.has(L.key) || !hxKrIsSafe(L)) || p.kr === undefined || p.kr === 'leer';
+  const changed = live.length !== keys.size || live.some((L) => !keys.has(L.key) || !hxKrIsSafe(L)) || (p.kr === 'leer' && !U.keys.length);   // (a Leiste it only found when it came is not its own)
   if (!changed) return;
   hxUprKr(U.name, hxUprKeep(U.name, p.kr));
 }
