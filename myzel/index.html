@@ -2813,6 +2813,7 @@ BOOL('hx.runde', 'Überspielen: eine Runde', false, { rec: 1 });
 // (step 2a) Wuchs: how a new Schleife begins (exactly as played, or grown anew); the level loops are rendered at (owner: manual,
 // the best by default; „wie gespielt“ = the level the loop was played at); the field's key and the loops' on the same bar line
 SEL('hx.beginn', 'Neue Schleife', [['abdruck', 'Wie gespielt'], ['wuchs', 'Als Wuchs']], 'abdruck', { chips: 1, small: 1, rec: 1 });
+SEL('hx.folgen', 'Neue Schleifen folgen der Tonart', [['fest', 'nie (Original)'], ['diatonisch', 'diatonisch'], ['transponieren', 'transponiert']], 'fest', { chips: 1, small: 1, rec: 1 });   // (owner, 27.10.2026: a Schleife plays its recording; following only when asked)
 SEL('hx.stufe', 'Klangstufe der Schleifen', [['gespielt', 'Wie gespielt'], ['1', '1'], ['2', '2'], ['3', '3']], '3', { chips: 1, small: 1, rec: 1 });
 BOOL('hx.tonartAmTakt', 'Tonart wechselt mit den Schleifen am Takt', true, { rec: 1 });
 NUM('hx.traeg', 'Trägheit des Bands', 0.2, 2, 0.5, 's', { step: 0.05, rec: 1, fmt: (v) => dec(v.toFixed(2)) + ' s' });   // (step 2b: §14)
@@ -2855,7 +2856,9 @@ SEL('dev.q', 'Qualitätsstufe', [['1', '1 · Leicht'], ['2', '2 · Voll'], ['3',
 SEL('dev.lat', 'Latenz', [['min', 'Minimal'], ['std', 'Standard'], ['safe', 'Sicher']], MOBILE && !ANDROID ? 'std' : 'min', { chips: 1, dev: 1 });
 SEL('midi.map', 'Tasten', [['scale', 'Skala'], ['white', 'Weiße Tasten'], ['chrom', 'Chromatisch']], 'scale', { chips: 1, dev: 1 });
 NUM('midi.y', 'Höhe auf der Spielfläche', 0, 1, 0.55, '%', { dev: 1 });
-BOOL('ui.leer', 'Beim Öffnen mit „Leerer Erde“ beginnen', true, { dev: 1 });   // (owner, 26.10.2026: „leer starten“ – presets.js)
+BOOL('ui.leer', 'Beim Öffnen mit „Leerer Erde“ beginnen', true, { dev: 1 });
+// (owner, 27.10.2026: „die schleife immer die original aufnahme“; „das preset an die tonart der schleife(n) anpassen“)
+BOOL('ui.tonHalt', 'Presets übernehmen die Tonart der Schleifen', true, { dev: 1 });   // (owner, 26.10.2026: „leer starten“ – presets.js)
 BOOL('midi.vel', 'Anschlagdynamik', true, { dev: 1 });
 NUM('midi.bend', 'Tonhöhenrad', 0, 12, 2, 'HT', { step: 1, dev: 1, fmt: (v) => (v ? '±' + v + ' HT' : 'aus') });
 SEL('midi.curve', 'Anschlag', [['soft', 'Weich'], ['lin', 'Linear'], ['mid', 'Mittel'], ['hard', 'Hart'], ['fix', 'Fest']], 'mid', { chips: 1, dev: 1 });
@@ -29188,7 +29191,10 @@ function loadPreset(p, own) {
   remember();
   if (p.fmt >= 2) HIST[HIST.length - 1].fae = faeExport();   // "Rückgängig" brings back the Fährte it replaces
   if (p.fmt >= 2 && p.gk && GK.on && GK.p.rez !== false) HIST[HIST.length - 1].gk = gkOwnGet();   // … and the player's own Gestik settings
-  UI.loading = true; loadValues(p.v, false); UI.loading = false;
+  // (owner, 27.10.2026) Schleifen in der Leiste: the preset takes their key – its sound, never another key under them
+  const keep = P['ui.tonHalt'] && hxLoopsLive().some((L) => !L.bew) && (String(p.v['t.root'] ?? PD['t.root'].d) !== String(P['t.root']) || (p.v['t.scale'] ?? PD['t.scale'].d) !== P['t.scale']);
+  const vals = keep ? Object.assign({}, p.v, { 't.root': P['t.root'], 't.scale': P['t.scale'] }) : p.v;
+  UI.loading = true; loadValues(vals, false); UI.loading = false;
   UI.preset = p.key || null;
   rzPreset(p);   // its Gestik recipe (none: the player's own settings) – before a user preset's own Gestik settings
   presetExtraLoad(p);
@@ -29196,7 +29202,8 @@ function loadPreset(p, own) {
   markPresetCards();
   kqUsed(P['v.eng']);
   const miss = engMissSay();
-  toast('„' + p.name + '“ geladen.' + rzSay() + (miss ? ' ' + miss : ''), miss ? 8000 : 4500, UNDO);
+  const ton = keep ? ' Tonart der Schleifen behalten: ' + NOTE_NAMES[+P['t.root']] + ' ' + ((SCALES[P['t.scale']] || {}).n || P['t.scale']) + '.' : '';
+  toast('„' + p.name + '“ geladen.' + ton + rzSay() + (miss ? ' ' + miss : ''), miss || keep ? 8000 : 4500, UNDO);
 }
 // (owner, 26.10.2026: „mit einem leeren Preset beginnen können“) Leere Erde: every setting at its plain start, the
 // effects dry, no second layer, no Bordun, no Puls lane, no Fährte – a sound to build from. Apart from PRESETS, whose
@@ -29213,7 +29220,7 @@ function buildPresets() {
   requestAnimationFrame(() => kbWatch(g));
   undoBtn = h('button', { type: 'button', class: 'btn', disabled: true, onclick: undo }, 'Rückgängig');
   installBtn = h('button', { type: 'button', class: 'btn primary', hidden: !installEvt, onclick: installApp }, 'Als App installieren');
-  box.append(section('Klangwelten', 'Laden ersetzt alle Klangeinstellungen', g, h('div', { class: 'row', style: 'margin-top:10px' }, undoBtn, installBtn), h('div', { class: 'pleer' }, ctl('ui.leer'))));
+  box.append(section('Klangwelten', 'Laden ersetzt alle Klangeinstellungen', g, h('div', { class: 'row', style: 'margin-top:10px' }, undoBtn, installBtn), h('div', { class: 'pleer' }, ctl('ui.leer'), ctl('ui.tonHalt'))));
   const mut = h('input', { type: 'range', id: 'mutAmt', min: 0, max: 100, step: 1, value: Math.round(mutAmt * 100), 'aria-label': 'Stärke der Mutation' });
   const mutVal = h('span', { class: 'val' }, Math.round(mutAmt * 100) + ' %');
   mut.style.setProperty('--p', mut.value + '%');
@@ -32023,7 +32030,7 @@ function hxLoopMake(o) {
   Object.assign(L, { slot: o.slot, key: o.key || hxKey('l'), bpb: o.bpb || 4, notes: o.notes || [], mv: o.mv || null, cut: o.cut || null, eng: o.eng || 'neb', setTG: !!o.setTG,
     gain: o.gain != null ? o.gain : 1, pan: o.pan || 0, made: Date.now(), ps: [], src: o.src || 0, bpm: o.bpm || tgBpm(hxNowT()), lv: [0, 0], taumeln: o.taumeln !== false, folgt: !!o.folgt, eig: HX_EIG.includes(o.eig) ? o.eig : 'treu',
     // (step 2a) Wuchs: why it grows (wahl: hx.beginn for a new one), how it follows, the level it was played at, the patch
-    wwhy: o.wwhy ? Object.assign({}, o.wwhy) : { wahl: !o.key && o.eng !== 'bew' && P['hx.beginn'] === 'wuchs' }, ton: o.ton || 'diatonisch', klang: o.klang || 'eigen', stufe: o.stufe || null, q: o.q || P['dev.q'], P: o.P || (o.key ? null : Object.assign({}, P)), mask: o.mask || [...HX.mask], chainRec: o.chainRec || null, jrg: o.jrg || { age: A.jrgAge || 0, season: A.season || 0 } });   // (jrg: the Jahresring's year as it was played – a Wuchs pass hits that bar, not today's)
+    wwhy: o.wwhy ? Object.assign({}, o.wwhy) : { wahl: !o.key && o.eng !== 'bew' && P['hx.beginn'] === 'wuchs' }, ton: o.ton || P['hx.folgen'] || 'fest', klang: o.klang || 'eigen', stufe: o.stufe || null, q: o.q || P['dev.q'], P: o.P || (o.key ? null : Object.assign({}, P)), mask: o.mask || [...HX.mask], chainRec: o.chainRec || null, jrg: o.jrg || { age: A.jrgAge || 0, season: A.season || 0 } });   // (jrg: the Jahresring's year as it was played – a Wuchs pass hits that bar, not today's)
   HX.slot[o.slot] = id;
   if (o.eng !== 'bew' && (!HX.fokus || !HX.loops.has(HX.fokus) || HX.loops.get(HX.fokus).bew)) HX.fokus = id;   // Hexenring: (step 1d) never a Schleife of Bewegung
   if (o.fokus !== false && o.eng !== 'bew') HX.fokus = id;
@@ -33738,7 +33745,7 @@ function hxCardSec() {
   HXK.gd = h('div', { class: 'hx-form-sec hx-gd' });   // (Etappe 3: the Gärtner)
   const set = foldSec('hxset', 'Einstellungen', [
     grid(ctl('hx.modus'), ctl('hx.start'), ctl('hx.raster'), ctl('hx.ein'), ctl('hx.klick'), ctl('hx.laenge'), ctl('hx.festT'), ctl('hx.pulsMit'), ctl('hx.borMit'), ctl('hx.autoclose'), ctl('hx.runde'), ctl('hx.rail'), ctl('hx.humus'), ctl('hx.ernte'), ctl('hx.mem')),
-    h('div', { class: 'lab hx-sub' }, 'Wuchs'), grid(ctl('hx.beginn'), ctl('hx.stufe'), ctl('hx.tonartAmTakt')),   // (step 2a)
+    h('div', { class: 'lab hx-sub' }, 'Wuchs'), grid(ctl('hx.beginn'), ctl('hx.folgen'), ctl('hx.stufe'), ctl('hx.tonartAmTakt')),   // (step 2a)
     h('div', { class: 'lab hx-sub' }, 'Form'), grid(ctl('hx.regel'), ctl('hx.lichMix'), ctl('hx.lichPuls'), ctl('hx.lueckeT'), ctl('hx.schluss'), ctl('hx.welk')),
     h('div', { class: 'lab hx-sub' }, 'Mitspieler'), grid(ctl('hx.gPlatz'), ctl('hx.gRollen'), ctl('hx.gAntw'), ctl('hx.gBegl'), ctl('hx.gWk'), ctl('hx.gStimme'), ctl('hx.hand')), (HXK.hand = h('div', { class: 'hx-klopf' })),   // (Etappe 3)
     h('div', { class: 'lab hx-sub' }, 'Band und Bühne'), grid(ctl('hx.traeg'), ctl('hx.stopp'), ctl('hx.buehne')),   // (step 2b)
