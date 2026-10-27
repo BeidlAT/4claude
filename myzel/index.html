@@ -10862,7 +10862,9 @@ function myzelDsp() {
     // (or from `at`: a follow change, a tempo change's pass rendered from its start and heard from that frame) the slot
     // becomes the Schicht's version – read from its frame 0 (no margin), its tail past len overlap-added under the passes
     // after it (the Ausklang streams). A slot not there in time: the last complete pass plays on at that position – except
-    // one that must come (a follow change): then the Schicht falls silent until it arrives, never the old key. ----
+    // one that must come (a follow change): then the Schicht falls silent until it arrives, never the old key – only
+    // while it has no version to play (27.10.2026: in the owner's Firefox the pass never came and the loop stayed silent
+    // for good; a loop never goes silent by itself – it plays on until the new pass is there). ----
     wsMsg(d, port) {
       const S = this.sch(d.schicht);
       if (!S || S.dying || S.dead) { if (port) port.close(); return; }
@@ -10952,21 +10954,23 @@ function myzelDsp() {
       if (W.cur && W.cur.hi * this.CH >= W.cur.n && W.prev) this.wsPrev(S, null);   // (complete: no fallback needed)
       if (!Z) { if (W.hold) return; return; }
       if (Z.at > L.s0 + 1) return;   // (its moment comes later in the pass: wsat)
-      const ok = this.wsReady(Z, 0, 4 * this.S);
+      const ok = this.wsReady(Z, 0, 4 * this.S), hold = Z.must && !this.wsHas(S);
       // (a warm version – an Abdruck, joined by its crossfade – goes on in its Ausklang, or its own continuation fading over
       // its X, under the cold Wuchs pass; a cold one's tail was added by advance)
-      if ((ok || Z.must) && S.join !== 'ola' && S.pp && !W.hold) { if (S.aend > S.aoff) this.tail(S, false, 0, S.aoff, 0); else this.tail(S, false, 1, S.pre + S.pe, S.X); }
+      if ((ok || hold) && S.join !== 'ola' && S.pp && !W.hold) { if (S.aend > S.aoff) this.tail(S, false, 0, S.aoff, 0); else this.tail(S, false, 1, S.pre + S.pe, S.X); }
       if (ok) { this.wsTake(S, Z, !W.hold, this.xf()); return; }
       this.port.postMessage({ late: { loop: L.id, schicht: S.id, k } });
-      if (Z.must) this.wsHold(S, this.xf(), true);
+      if (hold) this.wsHold(S, this.xf(), true);
     }
+    // a version to play on: chunks there and frames in them
+    wsHas(S) { return !!(S.ch && S.ch.length && S.tot > 0 && !(S.ws && S.ws.hold)); }
     // a slot's own moment (a follow change at the announced bar, a pre-rolled pass at a tempo change)
     wsAt(d, x) {
       const S = d.S, Z = d.Z, L = this.loopOf(S);
       if (!L || Z.dead || Z.on || !S.ws || S.dying || S.dead || L.k !== Z.k) return;
       if (this.wsReady(Z, S.q, 4 * this.S)) { this.wsTake(S, Z, false, this.xf()); return; }   // (the slot's own position: a pass has no margin – S.pre is the version playing now's)
       this.port.postMessage({ late: { loop: L.id, schicht: S.id, k: Z.k } });
-      if (Z.must) this.wsHold(S, this.xf());
+      if (Z.must && !this.wsHas(S)) this.wsHold(S, this.xf());
     }
     // every span, before the reads: a slot of this pass that came late (or after a hold) is taken at the same place; the
     // pass playing whose blocks are late falls back to the last complete pass there (or silence after a follow change)

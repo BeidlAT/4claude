@@ -2,6 +2,13 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-27m",
+      "punkte": [
+        "Schleifen verstummen nicht mehr nach einem Preset-Wechsel (vor allem in Firefox): Bis ihr neuer Durchgang da ist, spielen sie weiter, was sie haben.",
+        "Vorher blieb eine Schleife stumm, wenn der neu gerechnete Durchgang nicht ankam – obwohl sie „spielt“ zeigte."
+      ]
+    },
+    {
       "id": "2026-10-27l",
       "punkte": [
         "Der Leistungsbericht zeigt jetzt auch, wie der Prozessor jede Schleife gerade liest.",
