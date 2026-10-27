@@ -2,8 +2,8 @@
 // Preset-Wechsel, außer man stellt es bewusst ein“) the Raum der Schleifen: the Hexenring channel's echo and hall are its
 // own – a copy of the echo (the same tape: ping-pong, tone, saturation, wow and flutter) and of the hall (its own IR),
 // with the settings of when the Leiste's first Schleife was made (HXR.v; kept on the device and in a Kreis). A preset
-// changes the field's echo and hall, never these. „Hall und Echo der Schleifen folgen dem Preset“ (hx.raumFolgt) sends
-// the channel to the field's as before. Their returns go straight into the sum – the console's echo and hall returns are
+// changes the field's echo and hall, never these. „Effekte des Presets wirken auf die Schleifen“ (hx.fx) sends the
+// channel to the field's as before, and every loop dry through the live chain (hxFxSet). Their returns go straight into the sum – the console's echo and hall returns are
 // the preset's (their levels, their sends) – and the echo feeds the loops' hall, as the field's echo feeds the field's. ----
 const HXR_IDS = ['dly.sync', 'dly.div', 'dly.ms', 'dly.fb', 'dly.pp', 'dly.tone', 'dly.wow', 'dly.mix', 'rev.size', 'rev.damp', 'rev.pre', 'rev.mix', 'rev.raum'];
 const HXR = { v: null, u: null, job: 0, nch: 0, act: null };
@@ -74,4 +74,13 @@ function hxrIR(nch, key) {
   });
 }
 // where the Hexenring channel's sends go: its own room (or, „folgt dem Preset“, the field's)
-const hxrTarget = (fx) => (!P['hx.raumFolgt'] && HXR.u && HXR.u.ctx === A.ctx ? (fx === 'dly' ? HXR.u.dlySend : HXR.u.revSend) : null);
+const hxrTarget = (fx) => (!P['hx.fx'] && HXR.u && HXR.u.ctx === A.ctx ? (fx === 'dly' ? HXR.u.dlySend : HXR.u.revSend) : null);
+// (owner, 27.10.2026: „ein Schalter, der die Effekte für Schleifen aktiviert oder deaktiviert … wenn die Schleifen erst
+// einmal stehen, darf kein Effekt mehr darauf wirken, außer der User möchte das“) the switch for the whole Leiste: on –
+// every Schleife plays dry through the live chain (its folgt, from its next seam) into the field's echo and hall; off –
+// each its baked version (the chain as it was played) into its own room. One switch, never twice: a loop that follows is
+// never also baked. A new Schleife takes it (ernten.js).
+function hxFxSet(on) {
+  for (const L of hxLoopsLive()) if (!L.bew && !!L.folgt !== !!on) hxFolgt(L, !!on, true);
+  updSends(); hxSay(on ? 'Schleifen: Effekte des Presets wirken (live)' : 'Schleifen: klingen wie aufgenommen'); hxCardDirty();
+}

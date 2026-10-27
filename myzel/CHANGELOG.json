@@ -2,6 +2,14 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-27d",
+      "punkte": [
+        "Schleifen bleiben beim Preset-Wechsel jetzt wirklich unverändert: ein Preset ändert das Tempo nicht mehr, solange Schleifen laufen – vorher setzte z. B. „Maschinenträume“ (128 BPM) jede Schleife neu ins Raster, das klang wie zusätzliche Effekte.",
+        "Neuer Schalter im Aufnahme-Panel: „Effekte des Presets wirken auf die Schleifen“. Aus (Standard): jede Schleife klingt so, wie sie aufgenommen wurde. An: die Schleifen laufen trocken durch Filter, Verzerrung, Chorus, Hall und Echo des gewählten Presets – auch eine Filterfahrt wirkt dann auf sie.",
+        "Geprüft mit allen 47 Klangwelten nacheinander über einer laufenden Schleife: ihr Klang bleibt jedes Mal identisch."
+      ]
+    },
+    {
       "id": "2026-10-27c",
       "punkte": [
         "Schleifen bleiben beim Preset-Wechsel 1:1, wie sie aufgenommen wurden: Hall und Echo der Schleifen sind jetzt ihre eigenen – die der ersten Schleife der Leiste – und ändern sich mit einem anderen Preset nicht mehr.",

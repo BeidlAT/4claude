@@ -2828,7 +2828,7 @@ BOOL('hx.runde', 'Überspielen: eine Runde', false, { rec: 1 });
 // (step 2a) Wuchs: how a new Schleife begins (exactly as played, or grown anew); the level loops are rendered at (owner: manual,
 // the best by default; „wie gespielt“ = the level the loop was played at); the field's key and the loops' on the same bar line
 SEL('hx.folgen', 'Neue Schleife folgt der Tonart', [['fest', 'Nein – Original'], ['diatonisch', 'Diatonisch'], ['transponieren', 'Transponiert']], 'fest', { chips: 1, small: 1, rec: 1 });   // (owner, 27.10.2026: „die Schleife spielt immer die Originalaufnahme“ – folgen nur, wenn eingestellt)
-BOOL('hx.raumFolgt', 'Hall und Echo der Schleifen folgen dem Preset', false, { rec: 1 });   // (owner, 27.10.2026: aus – die Schleifen behalten ihren Raum, raum.js)
+BOOL('hx.fx', 'Effekte des Presets wirken auf die Schleifen', false, { rec: 1 });   // (owner, 27.10.2026: aus – eine Schleife klingt, wie sie aufgenommen wurde; an – Effektkette, Hall und Echo des Presets, live – raum.js)
 SEL('hx.beginn', 'Neue Schleife', [['abdruck', 'Wie gespielt'], ['wuchs', 'Als Wuchs']], 'abdruck', { chips: 1, small: 1, rec: 1 });
 SEL('hx.stufe', 'Klangstufe der Schleifen', [['gespielt', 'Wie gespielt'], ['1', '1'], ['2', '2'], ['3', '3']], '3', { chips: 1, small: 1, rec: 1 });
 BOOL('hx.tonartAmTakt', 'Tonart wechselt mit den Schleifen am Takt', true, { rec: 1 });
@@ -22118,7 +22118,7 @@ function updInactive() {
   for (const el of document.querySelectorAll('#p-dly-div')) el.parentNode.classList.toggle('inactive', !P['dly.sync']);
 }
 function onParamChanged(id) {
-  if (id === 'hx.raumFolgt') { updSends(); return; }   // (Hexenring: the loops' room – raum.js)
+  if (id === 'hx.fx') { hxFxSet(P['hx.fx']); return; }   // (Hexenring: the preset's effects on the loops – raum.js)
   if ((id === 't.root' || id === 't.scale') && hxWTonHold(id)) return;   // Hexenring: (step 2a) the field and the loops change key on the announced bar line
   const pre = id.slice(0, id.indexOf('.'));
   if (HX.wFeld && A.ctx && (ENGINES[pre] || id === 'v.eng' || id === 'v.layer')) HX.wKlang = performance.now() + 400;   // Hexenring: (step 2a) loops that sound as the field: anew, once the knob rests
@@ -22210,11 +22210,16 @@ function patchValues() { const o = {}; for (const id of PATCH_IDS) o[id] = P[id]
 function loadValues(vals, keepUnset) {
   KQ.miss = []; vals = engKeysIn(vals);
   const was = {}; for (const id in FAE_PAR) was[id] = P[id];   // (Hexenring: the Bewegung lanes take the new values)
+  // (owner, 27.10.2026: „wenn die Schleifen erst einmal stehen, darf nichts mehr darauf wirken“) while Schleifen play in a
+  // Takt, a preset keeps the tempo: another one would set every one of them anew in its grid (Maschinenträume, 128 BPM)
+  const keepT = A.ctx && hxLoopsLive().some((L) => !L.bew && L.state !== 'weg' && hxTakt(L)) ? P['seq.bpm'] : null;
   for (const id of PATCH_IDS) {
     const d = PD[id];
     const v = vals && Object.prototype.hasOwnProperty.call(vals, id) ? sanitize(d, vals[id]) : keepUnset ? P[id] : d.d;
     P[id] = v;
   }
+  UI.tempoKept = keepT != null && P['seq.bpm'] !== keepT ? keepT : null;
+  if (keepT != null) P['seq.bpm'] = keepT;
   for (const id of PATCH_IDS) for (const fn of CTL[id] || []) fn(P[id], null);
   hxMvSync(was);
   // (owner, 26.10.2026: „einzelne Schleifen werden nicht gespielt, wenn ich ein älteres eigenes Preset lade“) another key
@@ -29361,7 +29366,7 @@ function loadPreset(p) {
   markPresetCards();
   kqUsed(P['v.eng']);
   const miss = engMissSay();
-  toast('„' + p.name + '“ geladen.' + rzSay() + (miss ? ' ' + miss : ''), miss ? 8000 : 4500, UNDO);
+  toast('„' + p.name + '“ geladen.' + (UI.tempoKept != null ? ' Das Tempo bleibt bei ' + dec(String(Math.round(tgBpm(A.ctx ? A.ctx.currentTime : 0) * 10) / 10)) + ' BPM – deine Schleifen spielen.' : '') + rzSay() + (miss ? ' ' + miss : ''), miss ? 8000 : 4500, UNDO);
 }
 // (owner, 26.10.2026: „mit einem leeren Preset beginnen können“) Leere Erde: every setting at its plain start, the
 // effects dry, no second layer, no Bordun, no Puls lane, no Fährte – a sound to build from. Apart from PRESETS, whose
@@ -31731,8 +31736,8 @@ function hxStripSync() { if (MX.root) { mxRgnSync(); mxSrcAll(); } }
 // Preset-Wechsel, außer man stellt es bewusst ein“) the Raum der Schleifen: the Hexenring channel's echo and hall are its
 // own – a copy of the echo (the same tape: ping-pong, tone, saturation, wow and flutter) and of the hall (its own IR),
 // with the settings of when the Leiste's first Schleife was made (HXR.v; kept on the device and in a Kreis). A preset
-// changes the field's echo and hall, never these. „Hall und Echo der Schleifen folgen dem Preset“ (hx.raumFolgt) sends
-// the channel to the field's as before. Their returns go straight into the sum – the console's echo and hall returns are
+// changes the field's echo and hall, never these. „Effekte des Presets wirken auf die Schleifen“ (hx.fx) sends the
+// channel to the field's as before, and every loop dry through the live chain (hxFxSet). Their returns go straight into the sum – the console's echo and hall returns are
 // the preset's (their levels, their sends) – and the echo feeds the loops' hall, as the field's echo feeds the field's. ----
 const HXR_IDS = ['dly.sync', 'dly.div', 'dly.ms', 'dly.fb', 'dly.pp', 'dly.tone', 'dly.wow', 'dly.mix', 'rev.size', 'rev.damp', 'rev.pre', 'rev.mix', 'rev.raum'];
 const HXR = { v: null, u: null, job: 0, nch: 0, act: null };
@@ -31803,7 +31808,16 @@ function hxrIR(nch, key) {
   });
 }
 // where the Hexenring channel's sends go: its own room (or, „folgt dem Preset“, the field's)
-const hxrTarget = (fx) => (!P['hx.raumFolgt'] && HXR.u && HXR.u.ctx === A.ctx ? (fx === 'dly' ? HXR.u.dlySend : HXR.u.revSend) : null);
+const hxrTarget = (fx) => (!P['hx.fx'] && HXR.u && HXR.u.ctx === A.ctx ? (fx === 'dly' ? HXR.u.dlySend : HXR.u.revSend) : null);
+// (owner, 27.10.2026: „ein Schalter, der die Effekte für Schleifen aktiviert oder deaktiviert … wenn die Schleifen erst
+// einmal stehen, darf kein Effekt mehr darauf wirken, außer der User möchte das“) the switch for the whole Leiste: on –
+// every Schleife plays dry through the live chain (its folgt, from its next seam) into the field's echo and hall; off –
+// each its baked version (the chain as it was played) into its own room. One switch, never twice: a loop that follows is
+// never also baked. A new Schleife takes it (ernten.js).
+function hxFxSet(on) {
+  for (const L of hxLoopsLive()) if (!L.bew && !!L.folgt !== !!on) hxFolgt(L, !!on, true);
+  updSends(); hxSay(on ? 'Schleifen: Effekte des Presets wirken (live)' : 'Schleifen: klingen wie aufgenommen'); hxCardDirty();
+}
 // ---- the calls (times are audio seconds of A.ctx; the processor gets frames). Musical beats: bar lines at 0, 4, 8 … ----
 // hxGrab({in: 0 Gespielt | 1 Alles, t0, t1 | f0, f1, pre, post, tail}) → Promise<{id, chunks: [[L, R]…], f0, n, pre,
 // len, post, tail, lost, in}>: the window [t0 − pre, t1 + post + tail) copied out of a Humus ring (waits until it has
@@ -32273,7 +32287,7 @@ function hxLoopMake(o) {
   const id = hxLoopNew(o.lock === 'frei' ? { lock: 'frei', len: o.Lf, f0: o.ph0, gain: o.gain, pan: o.pan, out: o.out, state: o.state, gap: o.gap } : { lock: 'takt', b0: o.b0, beats: o.beats, gain: o.gain, pan: o.pan, out: o.out, state: o.state });
   const L = HX.loops.get(id);
   Object.assign(L, { slot: o.slot, key: o.key || hxKey('l'), bpb: o.bpb || 4, notes: o.notes || [], mv: o.mv || null, cut: o.cut || null, eng: o.eng || 'neb', setTG: !!o.setTG,
-    gain: o.gain != null ? o.gain : 1, pan: o.pan || 0, made: Date.now(), ps: [], src: o.src || 0, bpm: o.bpm || tgBpm(hxNowT()), lv: [0, 0], taumeln: o.taumeln === true, folgt: !!o.folgt, eig: HX_EIG.includes(o.eig) ? o.eig : 'treu',
+    gain: o.gain != null ? o.gain : 1, pan: o.pan || 0, made: Date.now(), ps: [], src: o.src || 0, bpm: o.bpm || tgBpm(hxNowT()), lv: [0, 0], taumeln: o.taumeln === true, folgt: o.folgt != null ? !!o.folgt : !!P['hx.fx'], eig: HX_EIG.includes(o.eig) ? o.eig : 'treu',
     // (step 2a) Wuchs: why it grows (wahl: hx.beginn for a new one), how it follows, the level it was played at, the patch
     wwhy: o.wwhy ? Object.assign({}, o.wwhy) : { wahl: !o.key && o.eng !== 'bew' && P['hx.beginn'] === 'wuchs' }, ton: o.ton || P['hx.folgen'] || 'fest', klang: o.klang || 'eigen', stufe: o.stufe || null, q: o.q || P['dev.q'], P: o.P || (o.key ? null : Object.assign({}, P)), mask: o.mask || [...HX.mask], chainRec: o.chainRec || null, jrg: o.jrg || { age: A.jrgAge || 0, season: A.season || 0 } });   // (jrg: the Jahresring's year as it was played – a Wuchs pass hits that bar, not today's)
   HX.slot[o.slot] = id;
@@ -34031,7 +34045,7 @@ function hxCardSec() {
   HXK.gd = h('div', { class: 'hx-form-sec hx-gd' });   // (Etappe 3: the Gärtner)
   const set = foldSec('hxset', 'Einstellungen', [
     grid(ctl('hx.modus'), ctl('hx.start'), ctl('hx.raster'), ctl('hx.ein'), ctl('hx.klick'), ctl('hx.laenge'), ctl('hx.festT'), ctl('hx.pulsMit'), ctl('hx.borMit'), ctl('hx.autoclose'), ctl('hx.runde'), ctl('hx.rail'), ctl('hx.humus'), ctl('hx.ernte'), ctl('hx.mem')),
-    h('div', { class: 'lab hx-sub' }, 'Wuchs'), grid(ctl('hx.folgen'), ctl('hx.raumFolgt'), ctl('hx.beginn'), ctl('hx.stufe'), ctl('hx.tonartAmTakt')),   // (step 2a)
+    h('div', { class: 'lab hx-sub' }, 'Wuchs'), grid(ctl('hx.fx'), ctl('hx.folgen'), ctl('hx.beginn'), ctl('hx.stufe'), ctl('hx.tonartAmTakt')),   // (step 2a)
     h('div', { class: 'lab hx-sub' }, 'Form'), grid(ctl('hx.regel'), ctl('hx.lichMix'), ctl('hx.lichPuls'), ctl('hx.lueckeT'), ctl('hx.schluss'), ctl('hx.welk')),
     h('div', { class: 'lab hx-sub' }, 'Mitspieler'), grid(ctl('hx.gPlatz'), ctl('hx.gRollen'), ctl('hx.gAntw'), ctl('hx.gBegl'), ctl('hx.gWk'), ctl('hx.gStimme'), ctl('hx.hand')), (HXK.hand = h('div', { class: 'hx-klopf' })),   // (Etappe 3)
     h('div', { class: 'lab hx-sub' }, 'Band und Bühne'), grid(ctl('hx.traeg'), ctl('hx.stopp'), ctl('hx.buehne')),   // (step 2b)
@@ -36435,13 +36449,16 @@ async function hxAfterFill(S) {
 }
 // → true when S.bak holds the baked audio of S.aud
 async function hxBake(S) {
-  const n = S.n, c = S.cut, ta = c.stale ? null : hxT(c.f0);
-  if (ta == null || !S.aud) return false;
-  if (hxNowT() - ta > 900) return false;   // (the chain's record reaches fifteen minutes back)
+  const n = S.n, c = S.cut, ta = c.stale ? null : hxT(c.f0), Lp = HX.loops.get(S.loop);
+  if (!S.aud) return false;
+  // (the chain's record reaches fifteen minutes back; older – a window moved far back in the Ernte, a Schleife that
+  // followed the chain for long – its chain as recorded with the loop, owner 27.10.2026: never left on the live chain)
+  const rec = ta != null && hxNowT() - ta <= 900 ? hxChainRec(ta, ta + n / SR) : Lp && Lp.chainRec ? Lp.chainRec : null;
+  if (!rec) return false;
   const Lb = new Float32Array(n), Rb = new Float32Array(n);
   for (let i = 0; i < n; i++) { const ch = S.aud[Math.floor(i / HX_CH)], j = i % HX_CH; if (ch) { Lb[i] = ch[0][j]; Rb[i] = ch[1][j]; } }
   const bv = (S.bv = (S.bv || 0) + 1), aud = S.aud;
-  const m = await hxwCall('bake', { sr: SR, n, L: Lb, R: Rb, chain: hxChainRec(ta, ta + n / SR) }, [Lb.buffer, Rb.buffer]);
+  const m = await hxwCall('bake', { sr: SR, n, L: Lb, R: Rb, chain: rec }, [Lb.buffer, Rb.buffer]);
   if (!m || m.err || !m.L || S.bv !== bv || S.aud !== aud) { if (m && m.err) console.warn('Hexenring: Einbrennen', m.err); return false; }
   const [bak] = hxChunks(n);
   for (let i = 0; i < n; i++) { const ch = bak[Math.floor(i / HX_CH)], j = i % HX_CH; ch[0][j] = m.L[i]; ch[1][j] = m.R[i]; }
@@ -36450,7 +36467,7 @@ async function hxBake(S) {
 }
 // „folgt der Effektkette“ for a loop: its Schichten go dry through the live chain from the next seam on – or back to
 // their baked versions (baked now if they were not)
-function hxFolgt(L, on) {
+function hxFolgt(L, on, quiet) {
   L.folgt = !!on;
   const f = hxNextSeam(L).f;
   for (const id of L.sch) {
@@ -36458,7 +36475,7 @@ function hxFolgt(L, on) {
     if (on && S.baked) hxSchPlay(S, false, f);
     else if (!on && !S.baked) { if (S.bak) hxSchPlay(S, true, f); else hxAfterFill(S); }
   }
-  hxSay(hxName(L) + (on ? ' folgt der Effektkette' : ': Effektkette eingebrannt')); hxSaveMeta(L.id); hxCardDirty();
+  if (!quiet) hxSay(hxName(L) + (on ? ' folgt der Effektkette' : ': Effektkette eingebrannt')); hxSaveMeta(L.id); hxCardDirty();
 }
 
 // ---- Taumeln (SPEC §9, per loop, default on): the shared drift bends every live voice; the processor hears it (input
@@ -41239,7 +41256,7 @@ const HX_TIP_P = {
   'hx.rail': 'Die Leiste mit den Schleifen unter dem Spielfeld: groß oder klein.',
   'hx.humus': 'Wie viele Sekunden Myzel im Hintergrund mithört – so weit zurück kann der Korb übernehmen.',
   'hx.mem': 'Wie viel Arbeitsspeicher die Schleifen höchstens belegen dürfen.',
-  'hx.raumFolgt': 'Aus: die Schleifen behalten Hall und Echo, mit denen die erste Schleife der Leiste gespielt wurde – ein anderes Preset ändert sie nicht. An: Hall und Echo kommen vom gerade gewählten Preset.',
+  'hx.fx': 'Aus: jede Schleife klingt genau so, wie sie aufgenommen wurde – mit den Effekten von damals; ein anderes Preset, ein Filter, Hall oder Echo ändern sie nicht mehr. An: die Schleifen laufen trocken durch die Effekte des gerade gewählten Presets (Filterfahrt, Verzerrung, Chorus …, Hall und Echo) – sie klingen mit, wenn du daran drehst.',
   'hx.folgen': 'Ob eine neue Schleife einer neuen Tonart folgt. „Nein – Original“: sie spielt immer genau ihre Aufnahme; in ihrer Karte lässt es sich je Schleife umstellen.',
   'hx.beginn': 'Wie neue Schleifen spielen: genau wie gespielt oder gleich von Myzel neu gespielt.',
   'hx.stufe': 'In welcher Klangqualität Myzel Schleifen neu spielt.',

@@ -351,7 +351,7 @@ function loadPreset(p) {
   markPresetCards();
   kqUsed(P['v.eng']);
   const miss = engMissSay();
-  toast('„' + p.name + '“ geladen.' + rzSay() + (miss ? ' ' + miss : ''), miss ? 8000 : 4500, UNDO);
+  toast('„' + p.name + '“ geladen.' + (UI.tempoKept != null ? ' Das Tempo bleibt bei ' + dec(String(Math.round(tgBpm(A.ctx ? A.ctx.currentTime : 0) * 10) / 10)) + ' BPM – deine Schleifen spielen.' : '') + rzSay() + (miss ? ' ' + miss : ''), miss ? 8000 : 4500, UNDO);
 }
 // (owner, 26.10.2026: „mit einem leeren Preset beginnen können“) Leere Erde: every setting at its plain start, the
 // effects dry, no second layer, no Bordun, no Puls lane, no Fährte – a sound to build from. Apart from PRESETS, whose
