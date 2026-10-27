@@ -178,6 +178,8 @@ function lmStop() {
   try { if (A.ctx.renderCapacity && LM.rc) A.ctx.renderCapacity.stop(); } catch (e) {}
   LM.res = lmResult(performance.now() - LM.t0);
   LM.txt = lmText(LM.res); LM.sum = lmSummary(LM.res);
+  // (27.10.2026) what the processor itself holds of the loops, added once it answers
+  if (HX.node) Promise.race([hxReport(), new Promise((r) => setTimeout(() => r(null), 1500))]).then((rep) => { if (rep && rep.lp && LM.res) { LM.txt += '\nproc ' + JSON.stringify(rep.lp); lmUI(); } });
   toast('Leistung gemessen – das Ergebnis steht unter „Gerät“ → „Leistung“.', 7000, { label: 'Zeigen', fn: () => { openPanel('dev'); setTimeout(() => { if (LM.ui) LM.ui.sec.scrollIntoView({ block: 'start' }); }, 60); } });
   lmUI();
 }
