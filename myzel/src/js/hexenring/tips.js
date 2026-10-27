@@ -196,8 +196,6 @@ const HX_TIP_P = {
   'hx.rail': 'Die Leiste mit den Schleifen unter dem Spielfeld: groß oder klein.',
   'hx.humus': 'Wie viele Sekunden Myzel im Hintergrund mithört – so weit zurück kann der Korb übernehmen.',
   'hx.mem': 'Wie viel Arbeitsspeicher die Schleifen höchstens belegen dürfen.',
-  'hx.fx': 'Aus: jede Schleife klingt genau so, wie sie aufgenommen wurde – mit den Effekten von damals; ein anderes Preset, ein Filter, Hall oder Echo ändern sie nicht mehr. An: die Schleifen laufen trocken durch die Effekte des gerade gewählten Presets (Filterfahrt, Verzerrung, Chorus …, Hall und Echo) – sie klingen mit, wenn du daran drehst.',
-  'hx.folgen': 'Ob eine neue Schleife einer neuen Tonart folgt. „Nein – Original“: sie spielt immer genau ihre Aufnahme; in ihrer Karte lässt es sich je Schleife umstellen.',
   'hx.beginn': 'Wie neue Schleifen spielen: genau wie gespielt oder gleich von Myzel neu gespielt.',
   'hx.stufe': 'In welcher Klangqualität Myzel Schleifen neu spielt.',
   'hx.tonartAmTakt': 'Wechselst du die Tonart, folgen die Schleifen erst am nächsten Takt – nicht mitten in der Phrase.',

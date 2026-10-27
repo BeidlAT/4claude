@@ -78,7 +78,7 @@ function hxWNotesAll(L) { let any = false; for (const id of L.sch) { const S = H
 // a note's pitch in the key the loop follows now (diatonisch: the same degree in the new scale; transponieren: moved with
 // the root; fest: as played) – the nearest way to the new root, never an octave jump; its register stays where it was
 function hxWF(L, W, n, key) {
-  const t = hxTon(L), k0 = W.key;
+  const t = L.ton || 'diatonisch', k0 = W.key;
   if (t === 'fest' || !key) return n.f;
   const sh = ((((key.root - k0.root) % 12) + 18) % 12) - 6;
   if (t === 'transponieren' || key.free || k0.free || n.deg == null) return n.f * Math.pow(2, sh / 12);
@@ -149,7 +149,7 @@ function hxWTailAdd(S, sec, cut) { const a = S.wTails || (S.wTails = []); a.push
 function hxWJob(L, S, job, seed) {
   // (the key it sounds in: the sources tuned by the scale – Gespinst's strings, Rhizom's avalanches, the Bordun – follow it
   // as the notes do; transponieren keeps the scale it was played in, fest the key)
-  const p = hxWPat(L), t = hxTon(L), k = job.key;
+  const p = hxWPat(L), t = L.ton || 'diatonisch', k = job.key;
   if (t !== 'fest' && k && k.id != null) { p['t.root'] = k.id; if (t === 'diatonisch') p['t.scale'] = k.scale; }
   return { sr: SR, dur: job.dur, body: job.body, notes: job.notes, prm: job.prm, P: p, q: hxWQ(L), seed, chain: L.folgt || !L.chainRec ? null : L.chainRec, mask: L.mask || [...HX.mask], jrg: L.jrg || { age: A.jrgAge || 0, season: A.season || 0 } };
 }
@@ -157,9 +157,9 @@ function hxWJob(L, S, job, seed) {
 // throw, the chain – a version made for something else is made again (Treu: once per change)
 function hxWSig(L, S, key) {
   const W = S.wn, k = key || hxWKeyNow(), f = hxNextSeam(L), lenF = hxPassF(L, f.k + 1) - hxPassF(L, f.k);
-  const keyS = hxTon(L) === 'fest' ? '-' : (L.ton === 'transponieren' ? k.root : k.root + ':' + (k.rat || []).map((x) => x.toFixed(6)).join(','));
+  const keyS = (L.ton || 'diatonisch') === 'fest' ? '-' : (L.ton === 'transponieren' ? k.root : k.root + ':' + (k.rat || []).map((x) => x.toFixed(6)).join(','));
   const engs = [...new Set(W.n.map((n) => hxWEng(L, n)))].join(',');
-  return [Math.round((lenF * (L.sp || 1)) / 8), hxTon(L), keyS, engs, hxWQ(L), S.anc ? S.anc.seed + ':' + (S.anc.br != null ? S.anc.br : '') + (S.anc.vn ? ':v' + S.anc.vn.length + ':' + Math.round(S.anc.vn.reduce((a, x) => a + x.t * 97 + x.f, 0)) : '') : S.wseed, L.folgt ? 1 : 0, (L.klang || 'eigen') === 'eigen' ? 'e' : hxWPHash(),
+  return [Math.round((lenF * (L.sp || 1)) / 8), L.ton || 'diatonisch', keyS, engs, hxWQ(L), S.anc ? S.anc.seed + ':' + (S.anc.br != null ? S.anc.br : '') + (S.anc.vn ? ':v' + S.anc.vn.length + ':' + Math.round(S.anc.vn.reduce((a, x) => a + x.t * 97 + x.f, 0)) : '') : S.wseed, L.folgt ? 1 : 0, (L.klang || 'eigen') === 'eigen' ? 'e' : hxWPHash(),
     hxNtOn(L) ? JSON.stringify(L.nt) : '', L.revW ? 'r' : '', S.wn.n.length + ':' + Math.round(S.wn.len * 1000)].join('|');   // (step 2b: the notes' tools, mirrored, a record trimmed, doubled or the Auslese's)   // (a pass's length within 8 frames is the same: a fractional tempo alternates ±1 frame)
 }
 function hxWPHash() { let h = 7; for (const id in P) if (PD[id] && !PD[id].rec && !PD[id].dev && !id.startsWith('x') && !/^(rev|dly|mst|seq|l\d|rec|hx|mix)\./.test(id)) { const v = String(P[id]); for (let i = 0; i < v.length; i++) h = (Math.imul(h, 31) + v.charCodeAt(i)) | 0; } return h; }
@@ -209,7 +209,7 @@ function hxWPlay(S, which, f, keepStream, now) {
 function hxWAktiv(L) { const w = L.wwhy || {}; return !L.bew && !!(w.wahl || w.tempo || w.ausl || hxEigN(L) >= 1 || (L.klang || 'eigen') !== 'eigen' || hxNtOn(L) || hxWTonOff(L)); }   // (step 2b: the notes' tools, the Auslese's consensus)
 // it follows the key and the key is not the one it was played in (the parameters' key – an announced one included)
 const hxWKeyEq = (a, b) => !!a && !!b && a.root === b.root && !!a.free === !!b.free && (a.rat || []).map((x) => x.toFixed(6)).join() === (b.rat || []).map((x) => x.toFixed(6)).join();
-const hxWTonOff = (L) => { const t = hxTon(L); if (t === 'fest') return false; const k = hxWKeyNow(); return L.sch.some((id) => { const S = HX.sch.get(id); return hxWCan(S) && (t === 'transponieren' ? S.wn.key.root !== k.root : !hxWKeyEq(S.wn.key, k)); }); };
+const hxWTonOff = (L) => { const t = L.ton || 'diatonisch'; if (t === 'fest') return false; const k = hxWKeyNow(); return L.sch.some((id) => { const S = HX.sch.get(id); return hxWCan(S) && (t === 'transponieren' ? S.wn.key.root !== k.root : !hxWKeyEq(S.wn.key, k)); }); };
 const hxWLebt = (L) => hxEigN(L) >= 1 && !L.revW && !L.live && hxWAktiv(L) && !(L.treuBis != null && tgBeat(hxNowT()) < L.treuBis) && !(HX.wGuard.pause > performance.now()) && !L.wRefused;
 // the reconciler: what every Schicht of a loop should play now – the Abdruck, the anchor, or a Treu render made for
 // what it follows (rendered first when there is none; swapped at the next seam, or at o.f)
@@ -247,7 +247,7 @@ function hxWRenderFor(L, S, sig, o = {}) {
     if (!X || !HX.sch.has(S.id) || (S.ver || 0) !== ver) return;
     if (V && V.sig === hxWSig(X, S, o.key) && (S.wu || hxMemOk(V.n))) {   // (final pass: a first Treu version within the Speichergrenze, as every other buffer – else the Abdruck plays on)
       S.wu = V; S.wuSaved = 0;
-      if (hxWAktiv(X) && !(S.anc && S.anc.sig === V.sig)) { const late = o.f != null && o.f <= hxF(hxNowT() + 0.05), now = (!!o.now && o.f == null || late) && hxNowOk(X); hxWPlay(S, 'wu', o.f != null && !late ? o.f : now ? hxSwapAt(X).f : hxNextSeam(X).f, false, now); }   // (a key change's version that came late: at once)
+      if (hxWAktiv(X) && !(S.anc && S.anc.sig === V.sig)) { const now = !!o.now && o.f == null && hxNowOk(X); hxWPlay(S, 'wu', o.f != null && o.f > hxF(hxNowT() + 0.05) ? o.f : now ? hxSwapAt(X).f : hxNextSeam(X).f, false, now); }
       hxSaveSch(S, 'w');
     }
     if (S.wAgain || (V && V.sig !== hxWSig(X, S, o.key))) hxWUpdate(X, S.wAgain || {});

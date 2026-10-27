@@ -29,12 +29,12 @@ function mxSrcText(k) {
   if (k === 'gsp') return !gspInUse() ? 'aus' : DSP.state === 'kein' || A.workletBroken.has('gsp') ? 'kein Netz' : (P['gsp.saiten'] === 'zwei' ? 'zwei Oktaven' : 'eine Oktave');   // (the web's own channel)
   // the app writes a dotted value as "1/8 ·", which reads like a dangling separator here: "1/8." as in a score
   if (k === 'dly') return P['dly.sync'] ? fmt(PD['dly.div'], P['dly.div']).replace(' ·', '.') : fmt(PD['dly.ms'], P['dly.ms']);
-  if (k === 'rev') return (P['rev.raum'] !== 'nebel' && ROOMS[P['rev.raum']] ? ROOMS[P['rev.raum']].n + ' · ' : '') + fmt(PD['rev.size'], P['rev.size']);
+  if (k === 'rev') return fmt(PD['rev.size'], P['rev.size']);
   if (k === 'puls') return mxPulsOff() ? 'alle aus' : SEQ.on ? (SEQ.ext ? 'EXT ' + dec(SEQ.ext.bpm.toFixed(1)) : TG.hxOn ? dec(TG.hx.toFixed(1)) : Math.round(P['seq.bpm'])) + ' BPM' : 'steht';
   return (A.monoChk ? 'mono' : 'stereo') + (A.dim ? ' · ' + MX_MINUS + '20 dB' : '');
 }
 const mxPulsOff = () => !P['l0.on'] && !P['l1.on'] && !P['l2.on'] && !P['l3.on'];
-const MX_SRC_IDS = ['v.eng', 'v.layer', 'bor.on', 'bor.wave', 'bor.int', 'gsp.saiten', 'dly.sync', 'dly.div', 'dly.ms', 'rev.size', 'rev.raum', 'seq.bpm', 'l0.on', 'l0.eng', 'l1.on', 'l1.eng', 'l2.on', 'l2.eng', 'l3.on', 'l3.eng'];
+const MX_SRC_IDS = ['v.eng', 'v.layer', 'bor.on', 'bor.wave', 'bor.int', 'gsp.saiten', 'dly.sync', 'dly.div', 'dly.ms', 'rev.size', 'seq.bpm', 'l0.on', 'l0.eng', 'l1.on', 'l1.eng', 'l2.on', 'l2.eng', 'l3.on', 'l3.eng'];
 // A channel whose source plays nothing (Ebene 2, a lane or the Bordun switched off; the Puls group with all four
 // lanes off) is an empty mushroom in the Pult and a hollow spore in the Geflecht – one rule, kept in S.srcoff.
 function mxSrcAll() {

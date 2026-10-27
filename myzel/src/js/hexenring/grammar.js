@@ -224,8 +224,8 @@ function hxSnapS(S) { return S && { key: S.key, len: S.len, pre: S.pre, n: S.n, 
   bak: S.bak, chain: S.chain, zo: S.zo, kc: S.kc, kcB: S.kcB, dr: S.dr, cold: S.cold, cutAus: S.cutAus, spliced: S.spliced, wn: S.wn || null, wseed: S.wseed || 0, wu: S.wu || null, anc: S.anc || null, gate: S.gate || null }; }   // (step 2a: its Wuchs)
 function hxSnap(L) {
   return { key: L.key, slot: L.slot, d: Object.assign({}, L.d), bpb: L.bpb, notes: L.notes, mv: L.mv, cut: L.cut, eng: L.eng, setTG: L.setTG, gain: L.gain, pan: L.pan || 0, src: L.src, bpm: L.bpm, state: L.state, tk: L.tk,
-    folgt: !!L.folgt, taumeln: !!L.taumeln, nudge: L.nudge || 0, eig: L.eig, sch: L.sch.map((id) => hxSnapS(HX.sch.get(id))).filter(Boolean),
-    wwhy: Object.assign({}, L.wwhy || {}), ton: L.ton, klang: L.klang, stufe: L.stufe, q: L.q, P: L.P, room: L.room || null, mask: L.mask, chainRec: L.chainRec, jrg: L.jrg, tb: hxTbOf(L), tr0: L.tr0 || null,   // (step 2a; step 2b: its tools)
+    folgt: !!L.folgt, taumeln: L.taumeln !== false, nudge: L.nudge || 0, eig: L.eig, sch: L.sch.map((id) => hxSnapS(HX.sch.get(id))).filter(Boolean),
+    wwhy: Object.assign({}, L.wwhy || {}), ton: L.ton, klang: L.klang, stufe: L.stufe, q: L.q, P: L.P, mask: L.mask, chainRec: L.chainRec, jrg: L.jrg, tb: hxTbOf(L), tr0: L.tr0 || null,   // (step 2a; step 2b: its tools)
     hum: L.hum || null, col: L.col || null, colA: L.colA || null, bew: L.bew ? { lanes: L.bew.lanes.map((ln) => ({ k: ln.k, src: ln.src, v: ln.v })), disp: L.bew.disp, n: L.bew.n, g0: L.bew.g0, gs: L.bew.gs, fade: L.bew.fade, why: L.bew.why } : null, naehrt: L.naehrt || null, mi: hxMiSave(L), eco: hxEcoOf(L) };   // (step 4: its ecology)
 }
 const hxMiSave = (L) => { const m = L.mi; if (!m) return null; const o = {}; for (const k of ['rolle', 'wk', 'gOff', 'sugg', 'from', 'begl']) if (m[k] != null && m[k] !== false) o[k] = m[k]; return Object.keys(o).length ? o : null; };   // (Etappe 3: role, Gärtner, Wiederkehr, a suggestion)
@@ -243,10 +243,10 @@ function hxRebuild(sn, o = {}) {
   const slot = sn.slot != null && sn.slot < HX_SLOTS && !HX.slot[sn.slot] ? sn.slot : hxZiel();   // (a slot beyond this device's places: a free one)
   if (slot < 0) { toast('Kein freier Platz für ' + 'Schleife ' + ((sn.slot || 0) + 1) + '.'); return null; }
   const L = hxLoopMake({ slot, key: sn.key, lock: sn.d.lock, b0: sn.d.b0 - TG.o, beats: sn.d.beats, Lf: sn.d.L, ph0: sn.d.ph0, gap: !!sn.d.gap, gain: sn.gain, pan: sn.pan || 0, bpb: sn.bpb, notes: sn.notes, mv: sn.mv, cut: sn.cut, eng: sn.eng, setTG: sn.setTG, src: sn.src, bpm: sn.bpm, state: o.state || (sn.state === 'stumm' ? 'stumm' : 'spielt'), fokus: o.fokus, eig: sn.eig,
-    wwhy: sn.wwhy || {}, ton: sn.ton, klang: sn.klang, stufe: sn.stufe, q: sn.q, P: sn.P, room: sn.room || null, mask: sn.mask, chainRec: sn.chainRec, jrg: sn.jrg });   // (step 2a: its Wuchs)
+    wwhy: sn.wwhy || {}, ton: sn.ton, klang: sn.klang, stufe: sn.stufe, q: sn.q, P: sn.P, mask: sn.mask, chainRec: sn.chainRec, jrg: sn.jrg });   // (step 2a: its Wuchs)
   if (sn.hum) L.hum = sn.hum;
   L.col = sn.col || null; L.colA = sn.colA || null;   // (26.10.2026: its pigment)   // (26.10.2026: its whole Ernte comes back with it)
-  L.tk = sn.tk; L.folgt = !!sn.folgt; L.taumeln = !!sn.taumeln; if (sn.nudge) L.nudge = sn.nudge;
+  L.tk = sn.tk; L.folgt = !!sn.folgt; L.taumeln = sn.taumeln !== false; if (sn.nudge) L.nudge = sn.nudge;
   if (sn.mi) L.mi = Object.assign({}, sn.mi);   // (Etappe 3)
   if (sn.tb) { Object.assign(L, sn.tb); if (sn.tr0) L.tr0 = sn.tr0; }   // (step 2b: its tools – sent once its Schichten are there)
   if (sn.bew) { const B = sn.bew; L.bew = { lanes: B.lanes.map((x) => ({ k: x.k, src: x.src, v: x.v, o: Object.assign({ at: 0 }, faeOpts(x.src)) })), disp: B.disp || null, n: B.n, g0: B.g0, gs: B.gs, fade: B.fade, why: B.why, next: null, re: true, on0: L.state === 'spielt', ev: [] }; HX.bewKey = L.key; }

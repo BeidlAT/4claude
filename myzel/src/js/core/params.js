@@ -437,7 +437,7 @@ NUM('glt.kasten', 'Kasten (offen)', 0, 1, 0.5, '%');
 // Effekte
 SEL('drv.type', 'Art', [['tube', 'Röhre'], ['fold', 'Falter'], ['crush', 'Bitbrecher']], 'tube', { chips: 1 });
 NUM('drv.amt', 'Stärke', 0, 1, 0.12, '%');
-NUM('drv.mix', 'Anteil', 0, 1, 0.35, '%');   // (26.10.2026: the soft warmth most presets were made with – the Handpan's „verzerrt“ was a Firefox bug; the Handpan plays clean)
+NUM('drv.mix', 'Anteil', 0, 1, 0.35, '%');
 NUM('rng.freq', 'Frequenz', 0.5, 3000, 220, 'Hz', { curve: 'exp' });
 NUM('rng.mix', 'Anteil', 0, 1, 0, '%');
 SEL('flt.type', 'Typ', [['lowpass', 'Tiefpass'], ['bandpass', 'Bandpass'], ['highpass', 'Hochpass'], ['notch', 'Kerbe']], 'lowpass', { chips: 1 });
@@ -460,7 +460,6 @@ NUM('dly.pp', 'Ping-Pong', 0, 1, 0.7, '%');
 NUM('dly.tone', 'Bandfarbe', 300, 18000, 3800, 'Hz', { curve: 'exp' });
 NUM('dly.wow', 'Leiern', 0, 1, 0.2, '%');
 NUM('dly.mix', 'Anteil', 0, 1, 0.35, '%');
-SEL('rev.raum', 'Raum', [['nebel', 'Nebel'], ['holz', 'Holzsaal'], ['stein', 'Steinkuppel']], 'nebel', { chips: 1, small: 1 });   // (Handpan-Pilot: genRoom)
 NUM('rev.size', 'Nachhallzeit', 0.3, 14, 5, 's', { curve: 'exp' });
 NUM('rev.damp', 'Dämpfung', 0, 1, 0.5, '%');
 NUM('rev.pre', 'Vorverzögerung', 0, 0.25, 0.03, 's');
@@ -477,7 +476,7 @@ NUM('mst.comp', 'Verdichtung', 0, 1, 0.35, '%');
 NUM('mst.vol', 'Pegel', -24, 6, 2, 'dB');
 NUM('mst.wid', 'Breite', 0, 2, 1, '%', { step: 0.01, fmt: (v) => (v < 0.005 ? 'Mono' : Math.round(v * 100) + ' %') });
 // Puls
-NUM('seq.bpm', 'Tempo', 20, 300, 84, 'bpm', { step: 0.1, tick: 1, fmt: (v) => dec((TG.hxOn ? TG.hx : v).toFixed(1)).replace(/,0$/, '') + ' BPM' });   // (27.10.2026: tenths and 20–300 BPM – the Taktgeber in the bar, ui/tempo.js)   // Hexenring: a Schleife's exact tempo
+NUM('seq.bpm', 'Tempo', 30, 200, 84, 'bpm', { step: 1, fmt: (v) => (TG.hxOn ? dec(TG.hx.toFixed(1)) : Math.round(v)) + ' BPM' });   // Hexenring: a Schleife's exact tempo
 NUM('seq.swing', 'Swing', 0, 0.6, 0.1, '%');
 const DIV_OPTS = [['1', '1/4'], ['0.5', '1/8'], ['0.3333', '1/8 T'], ['0.25', '1/16'], ['0.1667', '1/16 T'], ['0.125', '1/32']];
 const LANE_DEF = [
@@ -567,8 +566,6 @@ NUM('hx.welk', 'Welkt über', 4, 16, 8, '', { step: 1, rec: 1, fmt: (v) => v + '
 BOOL('hx.runde', 'Überspielen: eine Runde', false, { rec: 1 });
 // (step 2a) Wuchs: how a new Schleife begins (exactly as played, or grown anew); the level loops are rendered at (owner: manual,
 // the best by default; „wie gespielt“ = the level the loop was played at); the field's key and the loops' on the same bar line
-SEL('hx.folgen', 'Neue Schleife folgt der Tonart', [['fest', 'Nein – Original'], ['diatonisch', 'Diatonisch'], ['transponieren', 'Transponiert']], 'fest', { chips: 1, small: 1, rec: 1 });   // (owner, 27.10.2026: „die Schleife spielt immer die Originalaufnahme“ – folgen nur, wenn eingestellt)
-BOOL('hx.fx', 'Effekte des Presets wirken auf die Schleifen', false, { rec: 1 });   // (owner, 27.10.2026: aus – eine Schleife klingt, wie sie aufgenommen wurde; an – Effektkette, Hall und Echo des Presets, live – raum.js)
 SEL('hx.beginn', 'Neue Schleife', [['abdruck', 'Wie gespielt'], ['wuchs', 'Als Wuchs']], 'abdruck', { chips: 1, small: 1, rec: 1 });
 SEL('hx.stufe', 'Klangstufe der Schleifen', [['gespielt', 'Wie gespielt'], ['1', '1'], ['2', '2'], ['3', '3']], '3', { chips: 1, small: 1, rec: 1 });
 BOOL('hx.tonartAmTakt', 'Tonart wechselt mit den Schleifen am Takt', true, { rec: 1 });
@@ -609,7 +606,6 @@ NUM('rec.bars', 'Takte', 1, 128, 8, '', { step: 1, rec: 1, fmt: (v) => v + (v ==
 SEL('dev.q', 'Qualitätsstufe', [['1', '1 · Leicht'], ['2', '2 · Voll'], ['3', '3 · Gewaltig']], MOBILE ? '1' : '2', { chips: 1, dev: 1 });
 // (24.10.2026: Android starts in „Minimal“ – Chrome there opens its fast output only for the numeric hint; lasting
 // underruns step back by themselves, latStep. iPhone and iPad „Standard“, computers „Minimal“ as before)
-BOOL('dev.bg', 'Im Hintergrund weiterspielen', !(IOS || MOBILE), { dev: 1 });   // (owner, 26.10.2026, iPad: „spielt weiter, obwohl geschlossen“) boot.js
 SEL('dev.lat', 'Latenz', [['min', 'Minimal'], ['std', 'Standard'], ['safe', 'Sicher']], MOBILE && !ANDROID ? 'std' : 'min', { chips: 1, dev: 1 });
 SEL('midi.map', 'Tasten', [['scale', 'Skala'], ['white', 'Weiße Tasten'], ['chrom', 'Chromatisch']], 'scale', { chips: 1, dev: 1 });
 NUM('midi.y', 'Höhe auf der Spielfläche', 0, 1, 0.55, '%', { dev: 1 });

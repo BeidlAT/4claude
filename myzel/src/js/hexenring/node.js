@@ -140,10 +140,7 @@ function hxMask(keys) {
 }
 // the strip „Hexenring“: straight to the master (its chain is burnt in) – or, set to the chain, through a copy of it
 // (the same settings and modulators) that ends at the master as well, never in A.masterSum where „Alles“ listens
-// (owner, 27.10.2026: „wenn ich es auf eingebrannt lasse, kann ich mittels Filter den Sound immer noch ändern“) the channel
-// itself always goes straight to the sum: the live chain reaches loops only one by one, dry, when they follow it (folgt,
-// hx.fx) – its node in the console (KETTE/DIREKT) is that switch (controls.js), never a second chain over baked loops
-function hxRoute() { return hxGateM(); }
+function hxRoute() { return P['xhxr.route'] !== 'dir' ? hxChain('fx').in : hxGateM(); }
 // the Hexenring's way into the master's input, straight or through the chain's copy: a gate at 1 (Ruhe: at 0 while the
 // graph sleeps, so the master rests while what is before it runs on – hxGates)
 function hxGateM() { if (!HX.gM || HX.gM.context !== A.ctx) { HX.gM = G(1); HX.gM.connect(A.masterIn); } return HX.gM; }
@@ -229,5 +226,5 @@ function hxF1Tick(now) {
 }
 const hxSrcText = () => { const n = HX.loops.size; return n ? n + (n === 1 ? ' Schleife' : ' Schleifen') : 'aus'; };
 // the mixer shows the strip from the first Schleife on (or once something of it was set)
-function hxStripSync() { hxrSync(); if (MX.root) { mxRgnSync(); mxSrcAll(); } }   // (27.10.2026: and the loops' rooms)
+function hxStripSync() { if (MX.root) { mxRgnSync(); mxSrcAll(); } }
 

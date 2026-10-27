@@ -1,13 +1,6 @@
 function ensureRunning() {
   if (A.ctx && A.ctx.state !== 'running') { try { const p = A.ctx.resume(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
 }
-// out of sight (and not to play on there): the sound stops, the silent element too – else iOS keeps the page playing
-// (iOS: the audio session leaves „playback“ as well – the one category that may sound in the background; back: iosUnmute)
-function bgStop() {
-  A.userSuspended = true; try { A.ctx.suspend(); } catch (e) {}
-  try { if (A.unmute && !A.unmute.paused) A.unmute.pause(); } catch (e) {}
-  try { if (IOS && navigator.audioSession && navigator.audioSession.type === 'playback') { navigator.audioSession.type = 'ambient'; A.bgSess = true; } } catch (e) {}
-}
 async function keepAwake() {
   try {
     if ('wakeLock' in navigator && document.visibilityState === 'visible' && !A.wake) {

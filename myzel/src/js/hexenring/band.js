@@ -7,7 +7,7 @@ function hxSpeed(L, sp, o = {}) {
   const pw = HX.pend.find((x) => x.kind === 'band' && x.loop === L.id && !x.replay); if (pw) { hxPendDrop(pw); pw.cancel(); }
   const was = L.sp || 1; if (Math.abs(was - sp) < 1e-9) { hxCardDirty(); hxRailDirty(); return; }
   const sw = hxNextSeam(L), f = sw.f, k = sw.k - 1, takt = hxTakt(L);
-  const geo = takt ? { beats: +((L.d.beats * was) / sp).toFixed(6) } : { L: Math.round((L.d.L * was) / sp) }, P1 = takt ? (geo.beats * 60) / tgBpm(hxT(f)) : geo.L / SR;
+  const geo = takt ? { beats: (L.d.beats * was) / sp } : { L: Math.round((L.d.L * was) / sp) }, P1 = takt ? (geo.beats * 60) / tgBpm(hxT(f)) : geo.L / SR;
   const T = Math.max(0.05, Math.min(P['hx.traeg'], 0.9 * P1));
   const d0 = Object.assign({}, L.d);
   hxBatch(() => hxPost({ geom: Object.assign({ loop: L.id, f }, geo), band: { loop: L.id, f, vs: sp, T: Math.round(T * SR) } }));
@@ -113,7 +113,7 @@ function hxBandTrimDo(L, f, a) {
     const S = hxSchByKey(s.key); if (!S || !s.aud) return;
     const len = Math.max(1, Math.round(s.len * f)), pre = s.pre + Math.round(s.len * a), X = Math.round(0.01 * SR);
     const c = Object.assign({}, s.cut, { pre, len, post: s.n - pre - len, n: s.n, aus: whole && s.aus ? Object.assign({}, s.aus) : null, stale: true });
-    const geom = j === 0 ? (tk ? { beats: +(T0.d.beats * f * ks).toFixed(6) } : { L: Math.round(T0.d.L * f * ks) }) : null;
+    const geom = j === 0 ? (tk ? { beats: T0.d.beats * f * ks } : { L: Math.round(T0.d.L * f * ks) }) : null;
     hxSchSwap(S, c, { aud: s.aud, bak: s.bak, f: sw.f, join: whole ? s.join : 'xf', X: whole ? s.X : X, rho: whole ? s.rho : hxRho(s.bak && S.chain && !L.folgt ? s.bak : s.aud, s.n, pre, len, X), zo: whole ? s.zo : 0, kc: whole ? s.kc : hxSeamOf({ pre, len, X, zo: 0 }, s.aud), kcB: whole ? s.kcB : s.bak ? hxSeamOf({ pre, len, X, zo: 0 }, s.bak) : null, dr: s.dr, geom,
       fade: whole && s.aus ? Math.min(Math.round(0.03 * SR), s.aus.len) : 0 });
     S.wn = s.wn ? hxWnWin(s.wn, a, f) : S.wn;

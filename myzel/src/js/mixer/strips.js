@@ -77,7 +77,6 @@ function gates(st, set) {
   gspGate(st, set);
   if (st.eS) set(st.eS.gain, on ? mp(p + 'dly') : 0);
   if (st.hS) set(st.hS.gain, on ? (st.k === 'dly' ? 0.3 : 1) * mp(p + 'rev') : 0);
-  if (st.k === 'hxr' && typeof hxrLevels === 'function') hxrLevels(set);   // (the Schleifen's own rooms – raum.js)
 }
 // dry path: through the insert chain or straight into the sum; a move fades the channel out and back in
 function wireStrip(st) {
@@ -113,7 +112,7 @@ function updSends(inst) {
       updDrive(S.copy); updRing(S.copy); updFilter(S.copy); updPhaser(S.copy); updChorus(S.copy);
       S.fromCopy = G(0); S.copy.out.connect(S.fromCopy).connect(S.target);
     }
-    for (const st of MIX.src) sendTo(st, fx, node(st), st.k === 'hxr' && !P['hx.fx'] ? null : !viaFx(st) ? S.target : copy ? S.copy.in : null);   // (Hexenring: its own room – raum.js)
+    for (const st of MIX.src) sendTo(st, fx, node(st), !viaFx(st) ? S.target : copy ? S.copy.in : null);
     if (copy !== (S.mode === 'copy')) {
       S.mode = copy ? 'copy' : 'fx';
       const set = inst ? setNow : (q, v) => setP(q, v, 0.01);

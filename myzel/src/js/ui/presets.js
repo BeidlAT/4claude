@@ -128,7 +128,7 @@ const PRESETS = [
     'l0.on': true, 'l0.eng': 'mdr', 'l0.steps': 16, 'l0.puls': 5, 'l0.oct': -1, 'l0.bright': 0.7,
     'l1.on': true, 'l1.eng': 'zpf', 'l1.steps': 12, 'l1.puls': 7, 'l1.bright': 0.35, 'l1.vol': 0.4,
     'l2.on': true, 'l2.eng': 'jrg', 'l2.steps': 7, 'l2.puls': 3, 'l2.div': '0.5', 'l2.walk': 0.5,
-    'l3.on': true, 'l3.eng': 'gsp', 'l3.steps': 11, 'l3.puls': 2, 'l3.div': '1', 'gsp.kopplung': 0.5, 'drv.amt': 0.2, 'drv.mix': 0.35, 'rev.mix': 0.35 } },
+    'l3.on': true, 'l3.eng': 'gsp', 'l3.steps': 11, 'l3.puls': 2, 'l3.div': '1', 'gsp.kopplung': 0.5, 'drv.amt': 0.2, 'rev.mix': 0.35 } },
   { key: 'atemrohr', name: 'Atemrohr', tags: 'Experimentell · Atem', desc: 'Ein Rohrblatt, darunter eine Oktave tiefer eine Rückkopplung, die nachglüht; eine Spur bläst kurze Stöße ins Echo.', v: {
     'v.eng': 'hlm', 'hlm.rohr': 'rohrblatt', 'hlm.luft': 0.5, 'v.layer': 'glt', 'v.layerInt': -12, 'v.layerLvl': 0.35, 'glt.gluehen': 0.45, 'glt.nachgluehen': 2.5,
     't.root': '2', 't.scale': 'dor', 't.oct': 3, 't.range': 2, 'v.glide': 0.15,
@@ -139,7 +139,7 @@ const PRESETS = [
     't.root': '4', 't.scale': 'phrdom', 't.oct': 3, 't.range': 2,
     'l0.on': true, 'l0.eng': 'elm', 'l0.steps': 16, 'l0.puls': 7, 'l0.div': '0.25', 'l0.bright': 0.9, 'l0.vol': 0.5, 'l1.on': false,
     'l2.on': true, 'l2.eng': 'zpf', 'l2.steps': 9, 'l2.puls': 4, 'l2.bright': 0.95, 'zpf.koerper': 'fels', 'l3.on': false,
-    'drv.type': 'fold', 'drv.amt': 0.35, 'drv.mix': 0.35, 'flt.type': 'lowpass', 'flt.freq': 5000, 'flt.lfoDepth': 0.8, 'rev.mix': 0.3, 'seq.bpm': 110 } },
+    'drv.type': 'fold', 'drv.amt': 0.35, 'flt.type': 'lowpass', 'flt.freq': 5000, 'flt.lfoDepth': 0.8, 'rev.mix': 0.3, 'seq.bpm': 110 } },
   { key: 'wurzelnetz', name: 'Wurzelnetz', tags: 'Perkussiv · Generativ', desc: 'Jeder Schlag läuft als Lawine durch die Tonleiter – Finger und zwei Spuren laden und erschöpfen dasselbe Netz.', v: {
     'v.eng': 'rhz', 'rhz.knoten': 'holz', 'rhz.reiz': 0.55, 'rhz.erholung': 0.8, 'rhz.weg': 45, 'rhz.glimmen': 0.14, 'rhz.streuung': 0.35,
     't.root': '2', 't.scale': 'mpent', 't.oct': 3, 't.range': 3, 'seq.bpm': 88,
@@ -195,13 +195,10 @@ const PRESETS = [
     'rev.size': 5, 'rev.damp': 0.4, 'rev.mix': 0.4, 'dly.div': '0.75', 'dly.fb': 0.35, 'dly.mix': 0.22, 'seq.bpm': 70,
     'l0.on': false, 'l1.on': false, 'l2.on': true, 'l2.eng': 'kto', 'l2.steps': 9, 'l2.puls': 4, 'l2.div': '0.5', 'l2.walk': 0.6, 'l2.vol': 0.35, 'l2.bright': 0.45,
     'l3.on': true, 'l3.eng': 'hng', 'l3.steps': 13, 'l3.puls': 3, 'l3.div': '1', 'l3.oct': -1, 'l3.vol': 0.35, 'l3.bright': 0.2 } },
-  { key: 'handpankreis', name: 'Handpan-Kreis', tags: 'Welt · Meditation', desc: 'Ein Stahlfeld unter der Hand, ein zweites spielt Kreise im Akebono, unter einer Steinkuppel.', v: { 'drv.mix': 0,
+  { key: 'handpankreis', name: 'Handpan-Kreis', tags: 'Welt · Meditation', desc: 'Ein Stahlfeld unter der Hand, ein zweites spielt Kreise im Akebono, warmer Raum.', v: {
     'v.eng': 'hng', 't.root': '2', 't.scale': 'akebono', 't.oct': 3, 't.range': 2,
     'hng.glanz': 0.5, 'hng.nachklang': 0.7, 'hng.koerper': 0.65, 'hng.schweben': 0.55,
-    // (Handpan-Pilot) a real room, a stone dome; the steel without the app's default motion (no vibrato, drift, phaser,
-    // circling, chorus – a handpan has none)
-    'rev.raum': 'stein', 'rev.size': 4.5, 'rev.damp': 0.45, 'rev.pre': 0.018, 'rev.mix': 0.42, 'cho.mix': 0, 'pha.mix': 0, 'flt.lfoDepth': 0, 'mov.vib': 0, 'mov.drift': 0, 'mov.pan': 0,
-    'dly.div': '0.75', 'dly.fb': 0.3, 'dly.mix': 0.18, 'seq.bpm': 76,
+    'rev.size': 6, 'rev.damp': 0.5, 'rev.mix': 0.45, 'cho.mix': 0.15, 'dly.div': '0.75', 'dly.fb': 0.3, 'dly.mix': 0.18, 'seq.bpm': 76,
     'l0.on': false, 'l1.on': true, 'l1.eng': 'hng', 'l1.steps': 11, 'l1.puls': 4, 'l1.div': '0.5', 'l1.walk': 0.7, 'l1.vol': 0.4, 'l1.bright': 0.35, 'l2.on': false, 'l3.on': false } },
   // Sphäre
   { key: 'nordlichtfeld', name: 'Nordlichtfeld', tags: 'Ambient · Spektral', desc: 'Lichtvorhänge wandern über 48 Teiltöne, ein Glockenschimmer fällt hinein.', v: {
@@ -351,7 +348,7 @@ function loadPreset(p) {
   markPresetCards();
   kqUsed(P['v.eng']);
   const miss = engMissSay();
-  toast('„' + p.name + '“ geladen.' + (UI.tempoKept != null ? ' Das Tempo bleibt bei ' + dec(String(Math.round(tgBpm(A.ctx ? A.ctx.currentTime : 0) * 10) / 10)) + ' BPM – deine Schleifen spielen.' : '') + rzSay() + (miss ? ' ' + miss : ''), miss ? 8000 : 4500, UNDO);
+  toast('„' + p.name + '“ geladen.' + rzSay() + (miss ? ' ' + miss : ''), miss ? 8000 : 4500, UNDO);
 }
 // (owner, 26.10.2026: „mit einem leeren Preset beginnen können“) Leere Erde: every setting at its plain start, the
 // effects dry, no second layer, no Bordun, no Puls lane, no Fährte – a sound to build from. Apart from PRESETS, whose

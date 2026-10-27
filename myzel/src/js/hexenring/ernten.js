@@ -51,15 +51,12 @@ function hxLoopMake(o) {
   const id = hxLoopNew(o.lock === 'frei' ? { lock: 'frei', len: o.Lf, f0: o.ph0, gain: o.gain, pan: o.pan, out: o.out, state: o.state, gap: o.gap } : { lock: 'takt', b0: o.b0, beats: o.beats, gain: o.gain, pan: o.pan, out: o.out, state: o.state });
   const L = HX.loops.get(id);
   Object.assign(L, { slot: o.slot, key: o.key || hxKey('l'), bpb: o.bpb || 4, notes: o.notes || [], mv: o.mv || null, cut: o.cut || null, eng: o.eng || 'neb', setTG: !!o.setTG,
-    gain: o.gain != null ? o.gain : 1, pan: o.pan || 0, made: Date.now(), ps: [], src: o.src || 0, bpm: o.bpm || tgBpm(hxNowT()), lv: [0, 0], taumeln: o.taumeln === true, folgt: o.folgt != null ? !!o.folgt : !!P['hx.fx'], eig: HX_EIG.includes(o.eig) ? o.eig : 'treu',
+    gain: o.gain != null ? o.gain : 1, pan: o.pan || 0, made: Date.now(), ps: [], src: o.src || 0, bpm: o.bpm || tgBpm(hxNowT()), lv: [0, 0], taumeln: o.taumeln !== false, folgt: !!o.folgt, eig: HX_EIG.includes(o.eig) ? o.eig : 'treu',
     // (step 2a) Wuchs: why it grows (wahl: hx.beginn for a new one), how it follows, the level it was played at, the patch
-    wwhy: o.wwhy ? Object.assign({}, o.wwhy) : { wahl: !o.key && o.eng !== 'bew' && P['hx.beginn'] === 'wuchs' }, ton: o.ton || P['hx.folgen'] || 'fest', klang: o.klang || 'eigen', stufe: o.stufe || null, q: o.q || P['dev.q'], P: o.P || (o.key ? null : Object.assign({}, P)), mask: o.mask || [...HX.mask], chainRec: o.chainRec || null, jrg: o.jrg || { age: A.jrgAge || 0, season: A.season || 0 } });   // (jrg: the Jahresring's year as it was played – a Wuchs pass hits that bar, not today's)
+    wwhy: o.wwhy ? Object.assign({}, o.wwhy) : { wahl: !o.key && o.eng !== 'bew' && P['hx.beginn'] === 'wuchs' }, ton: o.ton || 'diatonisch', klang: o.klang || 'eigen', stufe: o.stufe || null, q: o.q || P['dev.q'], P: o.P || (o.key ? null : Object.assign({}, P)), mask: o.mask || [...HX.mask], chainRec: o.chainRec || null, jrg: o.jrg || { age: A.jrgAge || 0, season: A.season || 0 } });   // (jrg: the Jahresring's year as it was played – a Wuchs pass hits that bar, not today's)
   HX.slot[o.slot] = id;
   if (o.eng !== 'bew' && (!HX.fokus || !HX.loops.has(HX.fokus) || HX.loops.get(HX.fokus).bew)) HX.fokus = id;   // Hexenring: (step 1d) never a Schleife of Bewegung
   if (o.fokus !== false && o.eng !== 'bew') HX.fokus = id;
-  // (owner, 27.10.2026) the Leiste's first Schleife: the room it was played in becomes the loops' own (raum.js)
-  // (owner, 27.10.2026) the echo and hall it was played in: the field's at its window's start (a moved window: again)
-  if (!L.room && o.eng !== 'bew') L.room = o.room || (o.key ? null : hxrAt(L.cut ? hxT(L.cut.f0) : hxNowT()) || hxrNow());
   hxPersistAsk();
   return L;
 }
@@ -75,8 +72,8 @@ const hxName = (L) => 'Schleife ' + (L.slot + 1);
 const hxEngName = (L) => (L.bew ? 'Bewegung' : ENG_NAME[L.eng] || '');
 function hxLenText(L) {
   if (!hxTakt(L)) return 'frei · ' + dec(hxLen(L).toFixed(1)) + ' s';
-  const bt = +L.d.beats.toFixed(4), bars = +(bt / (L.bpb || 4)).toFixed(4);   // (26.10.2026: a trim's 16.000000000000004 Schläge – 4 Takte)
-  return (Number.isInteger(bars) ? bars + (bars === 1 ? ' Takt' : ' Takte') : dec(+bt.toFixed(2)) + ' Schläge') + (L.bpb === 3 ? ' (3er)' : '');
+  const bars = L.d.beats / (L.bpb || 4);
+  return (Number.isInteger(bars) ? bars + (bars === 1 ? ' Takt' : ' Takte') : L.d.beats + ' Schläge') + (L.bpb === 3 ? ' (3er)' : '');
 }
 
 // ---- Ernten (KONZEPT §2.3): what a Korb tap at heard time T takes – and where the Schleife enters ----

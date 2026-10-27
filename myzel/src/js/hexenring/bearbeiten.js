@@ -63,23 +63,13 @@ function hxEdOpen(L) {
   HXE.ed.querySelector('.hx-ed-x').focus({ preventScroll: true });
   hxSay(hxName(L) + ': bearbeiten');
 }
-function hxEdClose() { if (!HXE.ed || HXE.ed.hidden) return; hxPvStop(); HXE.ed.hidden = true; if (HXE.grip) HXE.grip.hidden = true; HXE.key = null; HXE.drag = null; HXE.rw = null; HXE.zv = null; }   // (the rendered pass freed – a long loop's is large)
+function hxEdClose() { if (!HXE.ed || HXE.ed.hidden) return; hxPvStop(); HXE.ed.hidden = true; HXE.key = null; HXE.drag = null; HXE.rw = null; HXE.zv = null; }   // (the rendered pass freed – a long loop's is large)
 function hxEdBuild() {
   const ed = HXE.ed = h('section', { class: 'hx-ed', role: 'dialog', 'aria-label': 'Schleife bearbeiten', hidden: true });
   ed.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); hxEdClose(); } });
   document.body.append(ed);
   window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !ed.hidden && !HXE.menu && !(MX.open && MX.detailK)) { e.preventDefault(); e.stopPropagation(); hxEdClose(); } }, true);   // (wherever the focus is)
   window.addEventListener('resize', () => { if (!ed.hidden) { hxEdPlace(); HXE.wsig = ''; } });
-  // (owner, 26.10.2026: „die Leiste nach rechts verschiebbar“) its width, dragged at the right edge (double click: as before)
-  try { HXE.w = +localStorage.getItem('myzel.edW') || 0; } catch (e) {}
-  const g = HXE.grip = h('div', { class: 'hx-ed-grip', role: 'separator', 'aria-orientation': 'vertical', 'aria-label': 'Breite des Bearbeiten-Fensters', title: 'Ziehen: breiter oder schmaler · Doppelklick: wie zuerst', hidden: true });
-  let x0 = 0, w0 = 0;
-  g.addEventListener('pointerdown', (e) => { if (e.button > 0) return; e.preventDefault(); x0 = e.clientX; w0 = ed.getBoundingClientRect().width; try { g.setPointerCapture(e.pointerId); } catch (x) {} g.classList.add('on'); });
-  g.addEventListener('pointermove', (e) => { if (!g.classList.contains('on')) return; HXE.w = Math.max(360, w0 + e.clientX - x0); hxEdPlace(); HXE.wsig = ''; });
-  const end = () => { if (!g.classList.contains('on')) return; g.classList.remove('on'); try { localStorage.setItem('myzel.edW', String(Math.round(HXE.w || 0))); } catch (e) {} };
-  g.addEventListener('pointerup', end); g.addEventListener('pointercancel', end);
-  g.addEventListener('dblclick', () => { HXE.w = 0; try { localStorage.removeItem('myzel.edW'); } catch (e) {} hxEdPlace(); HXE.wsig = ''; });
-  document.body.append(g);
   hxBlitzOn(ed);
 }
 // over the field (its column), never over the rail: you still play and the rings still answer
@@ -87,9 +77,7 @@ function hxEdPlace() {
   const st = typeof stage !== 'undefined' && stage.getBoundingClientRect(), ed = HXE.ed; if (!st || !ed) return;
   const m = st.width < 700 ? 6 : 14;
   ed.style.left = Math.round(st.left + m) + 'px'; ed.style.top = Math.round(st.top + m) + 'px';
-  const wd = HXE.w ? Math.min(HXE.w, window.innerWidth - st.left - m - 8) : st.width - 2 * m;
-  ed.style.width = Math.round(wd) + 'px'; ed.style.maxHeight = Math.round(st.height - 2 * m) + 'px';
-  if (HXE.grip) { const g = HXE.grip; g.hidden = ed.hidden; g.style.left = Math.round(st.left + m + wd - 5) + 'px'; g.style.top = Math.round(st.top + m + 14) + 'px'; g.style.height = Math.max(40, Math.round(Math.min(ed.getBoundingClientRect().height || st.height, st.height - 2 * m) - 28)) + 'px'; }
+  ed.style.width = Math.round(st.width - 2 * m) + 'px'; ed.style.maxHeight = Math.round(st.height - 2 * m) + 'px';
 }
 // what the editor shows depends on: rebuilt when it changes (a frame compares it), the playhead drawn every frame
 // (the ↶ ↷ buttons follow the history: it is part of what is shown, not of what is rendered)
@@ -213,17 +201,10 @@ function hxEdWaveDrag(box) {
   box.addEventListener('pointerdown', (e) => {
     const L = hxEdL(); if (!L || e.button > 0) return;
     e.preventDefault(); try { box.setPointerCapture(e.pointerId); } catch (x) {} box.focus({ preventScroll: true });
-    const r = HXE.cv.getBoundingClientRect();
-    if (HXE.zv && e.clientY > r.bottom - 14) {   // (owner, 26.10.2026: the bar under a zoomed view – dragged to the end of the take)
-      const [v0, v1] = HXE.zv, s = v1 - v0, u = px(e);
-      if (u < v0 || u > v1) hxEdPan((u - (v0 + v1) / 2) / s);
-      HXE.drag = { id: e.pointerId, bar: true, cx: e.clientX, v0: HXE.zv[0] }; HXE.wsig = ''; return;
-    }
     HXE.drag = { id: e.pointerId, x0: at(e), cx: e.clientX, moved: false };
   });
   box.addEventListener('pointermove', (e) => {
     const D = HXE.drag, L = hxEdL(); if (!D || e.pointerId !== D.id || !L) return;
-    if (D.bar) { const r = HXE.cv.getBoundingClientRect(), s = HXE.zv[1] - HXE.zv[0], n0 = clamp(D.v0 + (e.clientX - D.cx) / Math.max(1, r.width * hxEdWf(L)), 0, 1 - s); HXE.zv = [n0, n0 + s]; HXE.wsig = ''; return; }
     const x = at(e); if (Math.abs(e.clientX - D.cx) > 4) D.moved = true; if (!D.moved) return;
     const u = hxEdStep(L) / (e.altKey ? 4 : 1), a = Math.floor(Math.min(D.x0, x) / u + 1e-9) * u, b = Math.min(1, Math.ceil(Math.max(D.x0, x) / u - 1e-9) * u);   // (Alt: a sixteenth of a beat)
     HXE.sel = { a, b: Math.max(b, a + u) }; HXE.wsig = '';
@@ -231,7 +212,6 @@ function hxEdWaveDrag(box) {
   // a click: it plays from there (owner, 26.10.2026) – inside the selection the selection stays, outside it goes
   const up = (e) => {
     const D = HXE.drag; if (!D || e.pointerId !== D.id) return; HXE.drag = null;
-    if (D.bar) return;
     if (D.moved) { hxEdRender(); return; }
     const had = !!HXE.sel; if (HXE.sel && (D.x0 < HXE.sel.a || D.x0 >= HXE.sel.b)) HXE.sel = null;
     hxPvPlay(D.x0); HXE.wsig = '';
@@ -354,7 +334,7 @@ function hxEdWave(force) {
     const bar = (n, D0) => { const x = X(n.ph), y = 16 + (1 - (n.r != null ? n.r : 0.5)) * (hh - 30), len = Math.max(3, ((n.d || 0.1) / D0 / vs) * ww); if (x + len >= 0 && x <= ww) c.fillRect(x, y - 1.5, len, 3); };
     if (mk) { c.fillStyle = 'rgba(134,240,208,.22)'; for (const n of mk.was) bar(n, 1); c.fillStyle = 'rgba(134,240,208,.9)'; for (const n of mk.now) bar(n, 1); }
     else { c.fillStyle = 'rgba(134,240,208,.85)'; for (const n of L.notes) bar(n, D); }
-    if (HXE.zv) { c.fillStyle = 'rgba(240,230,216,.12)'; c.fillRect(0, hh - 8, ww, 8); c.fillStyle = 'rgba(240,230,216,.6)'; c.beginPath(); c.roundRect ? c.roundRect(v0 * ww, hh - 7, Math.max(10, vs * ww), 6, 3) : c.rect(v0 * ww, hh - 7, Math.max(10, vs * ww), 6); c.fill(); }   // (where the view is in the whole – drag it)
+    if (HXE.zv) { c.fillStyle = 'rgba(240,230,216,.10)'; c.fillRect(0, hh - 4, ww, 4); c.fillStyle = 'rgba(240,230,216,.55)'; c.fillRect(v0 * ww, hh - 4, Math.max(3, vs * ww), 4); }   // (where the view is in the whole)
   }
   const c = mxFit(cv, w, hh, 0, Math.min(2, devicePixelRatio || 1));
   c.clearRect(0, 0, w, hh); c.drawImage(HXE.bg, 0, 0, w, hh);

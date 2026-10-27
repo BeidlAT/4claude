@@ -24,7 +24,6 @@ function boot() {
   cvFx.addEventListener('keyup', (e) => keyNote(e, false));
   cvFx.addEventListener('blur', () => { for (const id of Array.from(touches.keys())) if (String(id).startsWith('key-')) onUp({ pointerId: id }); });
   $('#btnStart').addEventListener('click', start);
-  tempoBuild();   // the Taktgeber in the bar (ui/tempo.js)
   $('#btnStartKeys').addEventListener('click', startWithKeys);
   // a Web MIDI shim injected when the document is complete (iOS wrapper apps): the start screen catches up
   for (const [t, ev] of [[document, 'DOMContentLoaded'], [window, 'load']]) t.addEventListener(ev, () => { midiLate(); if (!A.started) updDevUI(); });
@@ -36,18 +35,13 @@ function boot() {
   document.addEventListener('visibilitychange', () => {
     if (!A.ctx) return;
     if (document.visibilityState === 'visible') {
-      if (A.bgSess) { A.bgSess = false; iosUnmute(); }   // (the audio session back to „playback“)
       A.userSuspended = false; ensureRunning(); keepAwake();
       if (A.unmute && A.unmute.paused) { const p = A.unmute.play(); if (p && p.catch) p.catch(() => {}); }
     } else {
       releaseAllTouches();
-      // (Hexenring: a Schleife plays on – Puls, Bordun, Freeze and a recording too – but only with „Im Hintergrund
-      // weiterspielen“; owner, 26.10.2026: on the iPad Myzel played on after it was closed – off there by default)
-      if (!P['dev.bg'] || (CAP.state === 'idle' && !SEQ.on && !A.bor && !A.frozen && !hxBusy())) bgStop();
+      if (CAP.state === 'idle' && !SEQ.on && !A.bor && !A.frozen && !hxBusy()) { A.userSuspended = true; try { A.ctx.suspend(); } catch (e) {} }   // (Hexenring: a Schleife plays on)
     }
   });
-  window.addEventListener('pagehide', () => { if (A.ctx && !P['dev.bg']) bgStop(); });
-  document.addEventListener('freeze', () => { if (A.ctx && !P['dev.bg']) bgStop(); });
   window.addEventListener('blur', () => { if (document.visibilityState !== 'visible') releaseAllTouches(); });
   // Gestik: back from the background, a turned view (both do nothing while it is off)
   document.addEventListener('visibilitychange', () => { if (GK.on) gkVis(); });
