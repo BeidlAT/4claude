@@ -21,7 +21,7 @@ function hxCtxMenu(slot, x, y) {
     it('Hier aufnehmen', () => hxRingTap(slot, null), { tip: 'Nimmt eine neue Schleife auf diesem Platz auf – wie ein Tipp auf den Ring.' });
   } else {
     const notes = L.sch.some((id) => hxWCan(HX.sch.get(id)));
-    box.append(h('div', { class: 'hx-cm-h' }, h('i', { class: 'hx-cm-dot', style: 'background:' + hxCol(L) }), hxName(L) + (hxEngName(L) ? ' · ' + hxEngName(L) : '') + ' · ' + hxLenText(L)), hxColRow(L, hxCtxClose));   // (26.10.2026: its pigment)
+    box.append(h('div', { class: 'hx-cm-h' }, hxName(L) + (hxEngName(L) ? ' · ' + hxEngName(L) : '') + ' · ' + hxLenText(L)));
     it('Ansehen und bearbeiten …', () => hxEdOpen(L), { key: '⇧' + (slot + 1), tip: 'Wellenform, Noten und Schichten ansehen; schneiden, Band, Zeit und Noten bearbeiten.' });
     it('Karte – alle Einstellungen', () => hxCardOpen(slot), { tip: 'Die Karte der Schleife im Aufnahme-Panel.' });
     sep();
@@ -100,7 +100,7 @@ function hxEdRender() {
   const sch = L.sch.map((id) => HX.sch.get(id)).filter(Boolean), notes = sch.some(hxWCan), tk = hxTakt(L), k = hxCorrs(L);
   const bpm = tk ? dec(tgBpm(hxNowT()).toFixed(1)) + ' BPM' : '';
   const head = h('div', { class: 'hx-ed-h' },
-    h('div', { class: 'hx-ed-t' }, h('h3', { style: 'color:' + hxCol(L) }, h('i', { class: 'hx-cm-dot', style: 'background:' + hxCol(L) }), hxName(L)), h('span', { class: 'meta' }, [hxEngName(L), hxLenText(L), bpm, { spielt: 'spielt', stumm: 'stumm', angehalten: 'angehalten' }[L.state] || L.state, HX.fokus === L.id ? 'Fokus' : ''].filter(Boolean).join(' · '))),
+    h('div', { class: 'hx-ed-t' }, h('h3', null, hxName(L)), h('span', { class: 'meta' }, [hxEngName(L), hxLenText(L), bpm, { spielt: 'spielt', stumm: 'stumm', angehalten: 'angehalten' }[L.state] || L.state, HX.fokus === L.id ? 'Fokus' : ''].filter(Boolean).join(' · '))),
     h('div', { class: 'hx-ed-hb' },
       loops.length > 1 ? btn('‹', () => go(-1), 'Vorige Schleife', 'ghost') : null, loops.length > 1 ? btn('›', () => go(1), 'Nächste Schleife', 'ghost') : null,
       (() => { const u = btn('↶', hxUndoStep, HX.hist.length ? 'Rückgängig: ' + HX.hist[HX.hist.length - 1].label + ' (Strg+Z)' : 'Nichts rückgängig zu machen', 'ghost'); u.disabled = !HX.hist.length && !HX.pend.length; u.setAttribute('aria-label', 'Rückgängig'); return u; })(),
@@ -148,7 +148,6 @@ function hxEdRender() {
   const audible = sch.filter((S) => !S.mute).length;
   const sp = L.sp || 1, slc = L.slc || {}, nt = L.nt || {};
   const tools = [
-    row('Farbe', 'Das Pigment der Schleife – in der Ringleiste, im Mixer und hier. „aus dem Klang“: dunkle Klänge tiefe Pigmente, helle leuchtende.', hxColRow(L)),
     row('Band', 'Wie ein Tonband: langsamer und tiefer, schneller und höher, rückwärts, auslaufen, verdoppeln.', ...HX_SP.map(([v, t]) => chip(t, Math.abs(sp - v) < 1e-6, () => hxSpeed(L, v), 'Bandgeschwindigkeit ' + t)),
       chip('rückwärts', !!L.rev, () => hxRev(L), 'Rückwärts – sofort, ab der gespiegelten Stelle'), chip('Stopp', false, () => hxBandstopp([L]), 'Bandstopp: das Band läuft aus'), chip('Verdoppeln', false, () => hxDouble(L), 'Doppelt so lang durch Wiederholung')),
     row('Trimmen', 'Nur einen Teil spielen – oder oben einen Teil auswählen.', chip('½', !!(L.trim && L.trim.f === 0.5), () => hxBandTrim(L, 'h'), 'Die halbe Schleife'), chip('¼', !!(L.trim && L.trim.f === 0.25), () => hxBandTrim(L, 'v'), 'Ein Viertel'),

@@ -11,8 +11,6 @@
 // except clock and active sensing (the monitor); MIDI.take / MIDI.route are plug-in slots ahead of the layers.
 function midiTake(src, ev) {
   if (ev.ch === 15 && gkrTake(src, ev)) return true;   // channel 16: a phone's Gestik over the Funkstrecke (only with its signature)
-  if (CB.on && cbIn(src, ev)) return true;   // (26.10.2026: the Gerätebild – lights its controls; while calibrating it takes them)
-  if (APC.src && apcIn(src, ev)) return true;   // (26.10.2026: the APC40 MK2's pads in one of its five modes)
   if (MIDI.take && MIDI.take(src, ev) === true) return true;
   if (LEARN.on && learnIn(src, ev)) return true;
   return mapTake(src, ev);
@@ -49,8 +47,7 @@ const MT_P = new Map();
 function mtParam(id) {
   if (MT_P.has(id)) return MT_P.get(id);
   const d = Object.prototype.hasOwnProperty.call(PD, id) ? PD[id] : null;   // an imported "constructor" is no parameter
-  const T = d && (!d.rec || /^xhxr\.(vol|pan|mute|solo)$/.test(id)) && !d.dev ?   // (26.10.2026: the Hexenring's channel is no part of a patch, but a fader steers it)
-    { key: id, pid: id, label: d.label, group: groupOf(id), cont: d.kind !== 'bool', bool: d.kind === 'bool' } : null;
+  const T = d && !d.rec && !d.dev ? { key: id, pid: id, label: d.label, group: groupOf(id), cont: d.kind !== 'bool', bool: d.kind === 'bool' } : null;
   MT_P.set(id, T);
   return T;
 }

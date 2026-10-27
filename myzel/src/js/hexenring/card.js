@@ -7,12 +7,11 @@ function hxCardSec() {
   HXK.acts = h('div', { class: 'hx-acts' });
   HXK.list = h('div', { class: 'hx-cards' });
   HXK.grave = h('div', { class: 'hx-grave' });
-  HXK.kreise = h('div', { class: 'hx-kreise' });   // (26.10.2026: the Leiste kept and loaded – kreise.js)
   HXK.mem = h('p', { class: 'note' }); HXK.cost = h('p', { class: 'note', id: 'hxCost' });
   HXK.form = h('div', { class: 'hx-form-sec' });   // (step 1d: Lichtungen, Kern, Lücke, Schluss)
   HXK.gd = h('div', { class: 'hx-form-sec hx-gd' });   // (Etappe 3: the Gärtner)
   const set = foldSec('hxset', 'Einstellungen', [
-    grid(ctl('hx.modus'), ctl('hx.start'), ctl('hx.raster'), ctl('hx.ein'), ctl('hx.klick'), ctl('hx.laenge'), ctl('hx.festT'), ctl('hx.pulsMit'), ctl('hx.borMit'), ctl('hx.autoclose'), ctl('hx.runde'), ctl('hx.rail'), ctl('hx.humus'), ctl('hx.ernte'), ctl('hx.mem')),
+    grid(ctl('hx.modus'), ctl('hx.start'), ctl('hx.raster'), ctl('hx.ein'), ctl('hx.klick'), ctl('hx.laenge'), ctl('hx.festT'), ctl('hx.pulsMit'), ctl('hx.borMit'), ctl('hx.autoclose'), ctl('hx.runde'), ctl('hx.rail'), ctl('hx.humus'), ctl('hx.mem')),
     h('div', { class: 'lab hx-sub' }, 'Wuchs'), grid(ctl('hx.beginn'), ctl('hx.stufe'), ctl('hx.tonartAmTakt')),   // (step 2a)
     h('div', { class: 'lab hx-sub' }, 'Form'), grid(ctl('hx.regel'), ctl('hx.lichMix'), ctl('hx.lichPuls'), ctl('hx.lueckeT'), ctl('hx.schluss'), ctl('hx.welk')),
     h('div', { class: 'lab hx-sub' }, 'Mitspieler'), grid(ctl('hx.gPlatz'), ctl('hx.gRollen'), ctl('hx.gAntw'), ctl('hx.gBegl'), ctl('hx.gWk'), ctl('hx.gStimme'), ctl('hx.hand')), (HXK.hand = h('div', { class: 'hx-klopf' })),   // (Etappe 3)
@@ -25,7 +24,7 @@ function hxCardSec() {
     HXK.mem,
     h('p', { class: 'note' }, 'Der Korb erntet, was du gespielt hast („Gespielt“: deine Klangquellen nach Stumm und Solo, ohne Echo und Hall); „Alles“ wählst du pro Schleife – es hört auch die Schleifen mit, wie ein Zusammenmischen. Die Humus-Länge gilt ab dem nächsten Klangstart.'),
   ]);
-  HXK.sec = h('div', { class: 'sec hx-sec', id: 'hxSec' }, h('div', { class: 'sec-h' }, h('h3', null, 'Hexenring'), HXK.sub), HXK.acts, HXK.cost, HXK.list, HXK.kreise, HXK.gd, HXK.form, HXK.grave, set);
+  HXK.sec = h('div', { class: 'sec hx-sec', id: 'hxSec' }, h('div', { class: 'sec-h' }, h('h3', null, 'Hexenring'), HXK.sub), HXK.acts, HXK.cost, HXK.list, HXK.gd, HXK.form, HXK.grave, set);
   HXK.dirty = true; hxCardRender();
   hxTipsWatch(HXK.sec);   // (25.10.2026: every control explains itself on hover)
   hxBlitzOn(HXK.sec);   // (25.10.2026: every press flashes)
@@ -51,7 +50,6 @@ function hxKlopfRender() {
 function hxCardDirty() { HXK.dirty = true; if (UI.panel === 'rec') { clearTimeout(HXK.tm); HXK.tm = setTimeout(hxCardRender, 120); } }
 function hxCardOpen(slot) {
   if (UI.panel !== 'rec') openPanel('rec');
-  { const L = slot != null ? hxRingL(slot) : null; if (L && !HXK.auf.has(L.key)) { HXK.auf.add(L.key); hxAufSave(); } }   // (the one asked for: open)
   hxCardRender();
   const el = slot != null && document.getElementById('hxc-' + slot);
   setTimeout(() => { const t = el || HXK.sec; if (t) { t.scrollIntoView({ block: 'start', behavior: 'smooth' }); if (el) el.classList.add('flash'); setTimeout(() => el && el.classList.remove('flash'), 900); } }, 60);
@@ -96,9 +94,7 @@ function hxCardRender() {
   const loops = hxLoopsLive().sort((a, b) => a.slot - b.slot);
   HXK.list.replaceChildren();
   if (!loops.length) HXK.list.append(h('div', { class: 'empty' }, 'Noch keine Schleife. Spiel etwas und tippe den Korb unter dem Spielfeld – oder tippe den runden Knopf daneben, spiel und tippe noch einmal.'));
-  if (loops.length > 1) { const all = loops.every((L) => HXK.auf.has(L.key)); HXK.list.append(h('div', { class: 'hx-row end hx-foldall' }, btn(all ? 'Alle zuklappen' : 'Alle aufklappen', () => { for (const L of loops) all ? HXK.auf.delete(L.key) : HXK.auf.add(L.key); hxAufSave(); hxCardDirty(); }, { cls: 'ghost' }))); }
-  for (const L of loops) HXK.list.append(hxCardFold(hxCardOne(L, btn), L));
-  hxKrRender(btn);
+  for (const L of loops) HXK.list.append(hxCardOne(L, btn));
   hxCardForm(btn);   // (step 1d)
   hxCardGd(btn); hxCardHand(btn);   // (Etappe 3)
   if (HXK.setl) HXK.setl.replaceChildren(hxCardSet(btn));   // (step 2b)
@@ -180,22 +176,6 @@ function hxCardChain(L, sch, chip, row) {
   const wait = !L.folgt && ch.some((S) => !S.baked), no = !hxwOk();
   return row('Effektkette', chip('eingebrannt', !L.folgt, () => hxFolgt(L, false), 'Effektkette eingebrannt: Regler und Presets ändern die Schleife nicht'), chip('folgt', !!L.folgt, () => hxFolgt(L, true), 'Folgt der Effektkette: die Schleife läuft trocken durch die Live-Kette'),
     no && !L.folgt ? h('span', { class: 'hx-ms' }, 'Einbrennen geht hier nicht – sie folgt der Kette') : wait ? h('span', { class: 'hx-ms' }, 'wird eingebrannt …') : null);
-}
-// (owner, 26.10.2026: „die einzelnen Schleifen-Einträge zum Einklappen“) closed, a Schleife shows only its line – its
-// Pigment, name and state; a tap on the line opens it (which ones are open is remembered)
-const HX_AUF_KEY = 'myzel.hxAuf';
-HXK.auf = (() => { try { return new Set(JSON.parse(localStorage.getItem(HX_AUF_KEY) || '[]')); } catch (e) { return new Set(); } })();
-function hxAufSave() { try { localStorage.setItem(HX_AUF_KEY, JSON.stringify([...HXK.auf].filter((k) => hxByKey(k)))); } catch (e) {} }
-function hxCardFold(el, L) {
-  const head = el.querySelector('.hx-ch'), open = HXK.auf.has(L.key);
-  if (!head) return el;
-  el.classList.toggle('zu', !open); el.style.setProperty('--pig', hxCol(L));
-  const t = h('button', { type: 'button', class: 'hx-fold', 'aria-expanded': String(open), 'aria-label': hxName(L) + (open ? ' zuklappen' : ' aufklappen'), html: ICON_CHEV });
-  const go = () => { if (HXK.auf.has(L.key)) HXK.auf.delete(L.key); else HXK.auf.add(L.key); hxAufSave(); hxCardDirty(); };
-  t.addEventListener('click', (e) => { e.stopPropagation(); go(); });
-  head.addEventListener('click', (e) => { if (!e.target.closest('button, input, a')) go(); });
-  head.prepend(t, h('i', { class: 'hx-pigdot', 'aria-hidden': 'true' }));
-  return el;
 }
 function hxCardOne(L, btn) {
   const chip = (t, on, fn, aria) => { const b = h('button', { type: 'button', class: 'chip', 'aria-pressed': on ? 'true' : 'false', 'aria-label': aria || null }, t); b.addEventListener('click', fn); return b; };
