@@ -15,7 +15,13 @@ function onDoubleTap(el, fn) {
     if (t - last < 350) { last = 0; fn(); } else last = t;
   });
 }
+// every control carries its param (data-ww): the Wurzelwerk sows it from there, and marks it when sown (wurzelwerk.js)
 function ctl(id, opts = {}) {
+  const w = ctl0(id, opts);
+  if (w && w.dataset) { w.dataset.ww = id; if (typeof WW !== 'undefined' && WW.set.has(id) && !/^ww-/.test(opts.prefix || '')) w.classList.add('ww-gesaet'); }
+  return w;
+}
+function ctl0(id, opts = {}) {
   const d = PD[id];
   const did = domId(id, opts.prefix || ''), pid = d.dev || d.rec ? null : id;   // a target for MIDI „Zuweisen“
   const name = (opts.label || d.label) + (groupOf(id) ? ' – ' + groupOf(id) : '');

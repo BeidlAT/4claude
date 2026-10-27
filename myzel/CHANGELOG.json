@@ -2,6 +2,14 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-27o",
+      "punkte": [
+        "Oben in der Leiste stehen jetzt immer Tempo und Tonart – „♩ frei“, solange noch kein Tempo gesetzt ist; ein Tipp darauf: −1, +1, Tippen, ½×, 2×, Tempo freigeben, Tempo behalten.",
+        "Neu: das Wurzelwerk (der Knoten oben, oder Taste W) – Schleifen, Klang & Presets, Takt, Gerät und Gesichert auf einen Blick.",
+        "Säen: Tippe im Wurzelwerk „Säen“ und dann irgendeine Einstellung in Myzel – sie wächst im Wurzelwerk an; an ihrem Platz trägt sie eine kleine Spore."
+      ]
+    },
+    {
       "id": "2026-10-27n",
       "punkte": [
         "Neue Schleifen spielen ihre Aufnahme, auch wenn sich die Tonart ändert. Folgen stellst du unter Hexenring → Wuchs ein („Neue Schleifen folgen der Tonart“) oder je Schleife.",
