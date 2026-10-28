@@ -2,6 +2,14 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-28g",
+      "punkte": [
+        "Hinweise erscheinen jetzt immer über dem Bearbeiten-Fenster – nichts wird mehr verdeckt.",
+        "Färben, Verwandeln, Tonhöhe, Verstimmen und Einspielen gehen jetzt auch ohne Auswahl – dann für die ganze Schleife.",
+        "Spielt eine Schleife gerade neu gewachsene Noten (z. B. weil sie der Tonart folgt), wird sie beim ersten Bearbeiten automatisch so festgehalten, wie sie klingt („Erstarren“) – das Fenster sagt es vorher, ↶ nimmt es zurück."
+      ]
+    },
+    {
       "id": "2026-10-28f",
       "punkte": [
         "Abschnitt bearbeiten, neu „Direkt“: Löschen (die Schleife bleibt gleich lang), Merken – dann mit einem anderen Teil Tauschen oder ihn dort Einsetzen.",

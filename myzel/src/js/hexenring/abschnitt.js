@@ -82,7 +82,10 @@ function hxRxOp(ch, r0, r1, op, v, u, seed) {
 // anew (Wuchs – it would not be heard: the Abdruck is what changes) or is still being caught
 function hxRegionEdit(L, a, b, op, v) {
   if (!L || L.bew || !(b > a)) return false;
-  if (hxWAktiv(L)) { toast('Diese Schleife spielt ihre Noten neu (Wuchs) – Abschnitte lassen sich nur an der Aufnahme bearbeiten. Zuerst „Erstarren“ oder Noten wie gespielt.', 5000); return false; }
+  // (owner, 28.10.2026: „sollte man dies nicht an ort und stelle ändern können“) a loop that plays its notes anew (Wuchs:
+  // it follows the key, the tempo, another sound, its notes' tools …) is first frozen as it sounds now – Erstarren –
+  // then edited; two steps, ↶ takes each back
+  if (hxWAktiv(L)) { hxRxFreeze(L, () => hxRegionEdit(L, a, b, op, v)); return true; }
   const sch0 = hxBandReady(L); if (!sch0) return false;
   if (sch0.some((S) => !hxMemOk(2 * S.n))) return false;
   const u = hxBandU(L).map((p) => (p - a) / (b - a)).filter((p) => p >= 0 && p < 1), seed = ((Math.random() * 2147483646) | 0) + 1;   // (one random for every Schicht and the Vorhören's quick version)
@@ -98,7 +101,16 @@ function hxRegionEdit(L, a, b, op, v) {
   return true;
 }
 // what is still to be written, at once – before ↶ or ↷ (they must find the edit in the history)
+const HX_RX_WHOLE = new Set(['pitch', 'erde', 'licht', 'wurzel', 'krone', 'gain']);
 function hxRxFlush() { while (HX.rxP && HX.rxP.length) HX.rxP.shift()(); }
+async function hxRxFreeze(L, then) {
+  if (HX.rxFrz) return;
+  HX.rxFrz = true;
+  let ok = false; try { ok = await hxErstarren(L); } finally { HX.rxFrz = false; }
+  if (!ok || hxWAktiv(L)) { toast('Die Schleife ließ sich gerade nicht festhalten – bitte gleich noch einmal.', 3500); return; }
+  toast('Zuerst festgehalten (Erstarren): so, wie sie gerade klang – dann bearbeitet. ↶ nimmt beides einzeln zurück.', 4500);
+  hxEdRender(); then();
+}
 function hxRegionWrite(L, a, b, op, v, u, seed) {
   const sch = hxBandReady(L); if (!sch) return false;
   if (sch.some((S) => !hxMemOk(2 * S.n))) return false;
@@ -108,7 +120,7 @@ function hxRegionWrite(L, a, b, op, v, u, seed) {
   if (!L.rx0) L.rx0 = { rev: !!L.rev, dbl: L.dbl || 1, sch: sch.map((S) => ({ key: S.key, aud: S.aud, bak: S.bak || null, n: S.n, s: hxSnapS(S) })) };
   const done = [];
   for (const S of sch) {
-    const [r0, r1] = hxRxFrames(S, a, b); if (r1 - r0 < 64) continue;
+    const [r0, r1] = a <= 0 && b >= 1 && HX_RX_WHOLE.has(op) ? [0, S.n] : hxRxFrames(S, a, b); if (r1 - r0 < 64) continue;   // (the whole loop in a colour that does not depend on time: its pre-roll and its Ausklang too – no seam of the old sound)
     // (28.10.2026, Direkt: Einspielen goes into its one Schicht – dry, and baked as it was heard; Tauschen and Einsetzen
     // move the frames of the stretch marked – direkt.js)
     if (op === 'take' && S.key !== v.key) continue;

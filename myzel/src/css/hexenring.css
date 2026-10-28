@@ -195,6 +195,7 @@
 .hx-ed-part .hx-ed-st { color: var(--lumen); }
 .hx-ed-part .note { margin: 2px 0 0; color: var(--dim); font-size: 11.5px; }
 .hx-ed-wait { color: var(--spore); font: 500 12px/1.3 var(--font-ui); }
+.hx-ed-frz { margin: 0 0 4px; padding: 7px 10px; border-radius: 9px; border: 1px solid rgba(255, 179, 92, .45); background: rgba(255, 179, 92, .08); color: var(--hypha); font: 500 12px/1.4 var(--font-ui); }
 .hx-ed-take { color: var(--rec, #ff5b4d); font: 500 12px/1.3 var(--font-ui); margin-left: 6px; }
 .hx-ed-take:empty { display: none; }
 /* (owner, 26.10.2026) the editor's transport: Vorhören, the clock, the zoom */
