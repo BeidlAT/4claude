@@ -956,6 +956,10 @@
       return J.T ? budget : m0;   // (a conversion takes this block's whole share of the jobs: blk frames × 160 taps)
     }
     process(inputs, outputs) {
+      // (28.10.2026, owner's PC: three bursts of 160–790 ms silence in one log) the audio thread watches itself: the gap
+      // since the last call (a stall anywhere on this thread) and this call's own duration – told to the page when one
+      // exceeds 20 / 8 ms, at most twice a second (Date.now: 1 ms, the one clock a worklet has)
+      const tw = Date.now(), gap = this.pT ? tw - this.pT : 0; this.pT = tw;
       const o0 = outputs[0], o1 = outputs[1], n = o0 && o0[0] ? o0[0].length : 128;
       const est = currentFrame - this.done;
       if (est > this.base) this.base = est;
@@ -988,6 +992,8 @@
         this.lv[0] = this.lv[1] = this.lv[2] = this.lv[3] = 0; this.lvN = 0;
         this.port.postMessage({ meter: { loops: lo, inp, F } });
       }
+      const dd = Date.now() - tw;
+      if ((gap >= 20 || dd >= 8) && F - (this.thrF == null ? -1e9 : this.thrF) >= SR / 2) { this.thrF = F; this.port.postMessage({ thr: { gap, dur: dd, F } }); }
       return true;
     }
     // the drift at frame f as the ring kept it – 0 before the first frame (a window reaching back past the start: a

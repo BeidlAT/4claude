@@ -164,5 +164,6 @@ function initAudio() {
   applyAll(true);
   A.started = true;
   dspMaybe();   // a worklet engine is selected (restored patch): its module now, before the first note
+  if (typeof hxwPreboot === 'function') setTimeout(hxwPreboot, 2500);   // Hexenring (28.10.2026): the Werk-Rahmen in the first quiet moment, not mid-performance – werk.js
 }
 

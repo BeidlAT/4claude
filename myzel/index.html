@@ -4032,6 +4032,7 @@ function initAudio() {
   applyAll(true);
   A.started = true;
   dspMaybe();   // a worklet engine is selected (restored patch): its module now, before the first note
+  if (typeof hxwPreboot === 'function') setTimeout(hxwPreboot, 2500);   // Hexenring (28.10.2026): the Werk-Rahmen in the first quiet moment, not mid-performance – werk.js
 }
 
 /* ---------- insert chain ---------- */
@@ -11465,6 +11466,10 @@ function myzelDsp() {
       return J.T ? budget : m0;   // (a conversion takes this block's whole share of the jobs: blk frames × 160 taps)
     }
     process(inputs, outputs) {
+      // (28.10.2026, owner's PC: three bursts of 160–790 ms silence in one log) the audio thread watches itself: the gap
+      // since the last call (a stall anywhere on this thread) and this call's own duration – told to the page when one
+      // exceeds 20 / 8 ms, at most twice a second (Date.now: 1 ms, the one clock a worklet has)
+      const tw = Date.now(), gap = this.pT ? tw - this.pT : 0; this.pT = tw;
       const o0 = outputs[0], o1 = outputs[1], n = o0 && o0[0] ? o0[0].length : 128;
       const est = currentFrame - this.done;
       if (est > this.base) this.base = est;
@@ -11497,6 +11502,8 @@ function myzelDsp() {
         this.lv[0] = this.lv[1] = this.lv[2] = this.lv[3] = 0; this.lvN = 0;
         this.port.postMessage({ meter: { loops: lo, inp, F } });
       }
+      const dd = Date.now() - tw;
+      if ((gap >= 20 || dd >= 8) && F - (this.thrF == null ? -1e9 : this.thrF) >= SR / 2) { this.thrF = F; this.port.postMessage({ thr: { gap, dur: dd, F } }); }
       return true;
     }
     // the drift at frame f as the ring kept it – 0 before the first frame (a window reaching back past the start: a
@@ -30008,7 +30015,7 @@ function lmStart() {
   const rc = A.ctx.renderCapacity;
   if (rc && rc.start) try { LM.rc = { n: 0, avg: 0, peak: 0, und: 0 }; rc.onupdate = (e) => { const R = LM.rc; if (!R) return; R.n++; R.avg += e.averageLoad || 0; R.peak = Math.max(R.peak, e.peakLoad || 0); R.und = Math.max(R.und, e.underrunRatio || 0); }; rc.start({ updateInterval: 1 }); } catch (e) { LM.rc = null; }
   lmObserve(true);
-  LM.ev = []; LM.ul = []; LM.up = {};
+  LM.ev = []; LM.ul = []; LM.up = {}; LM.thr = { n: 0, gap: 0, dur: 0 };   // (28.10.2026: the audio thread's own stalls – dsp/ring.js)
   LM.t0 = performance.now(); LM.on = true;
   lmUPoll(); LM.ut = setInterval(lmUPoll, 100);
   lmClock();
@@ -30124,7 +30131,8 @@ function lmResult(ms) {
   R.under = R.ps ? (R.ps.underrunEvents != null ? R.ps.underrunEvents : R.ps.fallbackFramesEvents != null ? R.ps.fallbackFramesEvents : null) : null;
   if (R.under == null) R.under = K.n;
   R.rc = LM.rc && LM.rc.n ? { avg: Math.round(100 * LM.rc.avg / LM.rc.n), peak: Math.round(100 * LM.rc.peak), und: r1(100 * LM.rc.und) } : null;
-  R.audio = { sr: c.sampleRate, base: r1((c.baseLatency || 0) * 1000), out: r1((c.outputLatency || 0) * 1000), lat: P['dev.lat'], latCtx: A.latMode, q: P['dev.q'], budget: VBUDGET, scale: A.budgetScale || 1, lite: !!A.lite };
+  R.audio = { sr: c.sampleRate, base: r1((c.baseLatency || 0) * 1000), out: r1((c.outputLatency || 0) * 1000), lat: P['dev.lat'], latCtx: A.latMode, q: P['dev.q'], budget: VBUDGET, scale: A.budgetScale || 1, lite: !!A.lite,
+    stockt: LM.thr ? LM.thr.n : 0, stocktGap: LM.thr ? LM.thr.gap : 0, blockMax: LM.thr ? LM.thr.dur : 0 };   // (28.10.2026: stalls the audio thread saw itself – ms; 0 while nothing stalled)
   R.voices = { load: S.n ? Math.round(100 * S.load / S.n) : 0, loadMax: Math.round(100 * S.loadMax), max: S.vMax, grains: S.gr, idle: S.n ? Math.round(100 * S.idle / S.n) : 0 };
   R.hx = { loops: S.loops, spielt: S.spielt, sch: S.sch, leb: S.leb, tau: !!HX.tauRest, f1: HXF1.off ? 'ruht' : 'an', werk: HXW.st || '-', wg: HX.wGuard ? HX.wGuard.n || 0 : 0, state: HX.state, nichtLeb: [...LM.why].map(([k, v]) => k + ':' + Math.round(100 * v / Math.max(1, LM.lsum.n)) + '%').join(',') || '-' };
   R.lp = lmLoopsRes(); R.werk = lmWerk(secs); R.guard = lmGuard(); R.ulog = lmUlog();
@@ -33382,6 +33390,10 @@ function hxMsg2(m) {
   if (m.late) { HX.wLate++; const S = HX.sch.get(m.late.schicht); if (S) S.wLate = (S.wLate || 0) + 1; }   // (step 2a: a pass not there in time)
   if (m.bandstopp) hxBandStopped(m.bandstopp.loop);   // (step 2b: a tape stood still)
   if (m.wilted) { const L = HX.loops.get(m.wilted.loop); if (L && L.state !== 'weg') { L.state = 'angehalten'; L.pendTo = null; hxCount(); hxRailDirty(); hxCardDirty(); hxSaveMeta(L.id); } }   // (step 1d: a Schluss „welkend“ ended)
+  if (m.thr) {   // (28.10.2026) the audio thread stalled (gap between two blocks) or a block took long – dsp/ring.js
+    HX.thr = { gap: Math.max((HX.thr && HX.thr.gap) || 0, m.thr.gap), dur: Math.max((HX.thr && HX.thr.dur) || 0, m.thr.dur), n: ((HX.thr && HX.thr.n) || 0) + 1, t: performance.now() };
+    if (typeof LM !== 'undefined' && LM.on && LM.thr) { LM.thr.n++; LM.thr.gap = Math.max(LM.thr.gap, m.thr.gap); LM.thr.dur = Math.max(LM.thr.dur, m.thr.dur); lmEv('audio-stockt:' + m.thr.gap + '/' + m.thr.dur + 'ms'); }
+  }
   if (m.meter && m.meter.inp) {   // the rings' input level, 15 per second, two minutes
     HX.lvl[HX.lvlI] = [hxT(m.meter.F), m.meter.inp[0], m.meter.inp[1], m.meter.inp[2] || 0, m.meter.inp[3] || 0];   // (step 4: the Mikro's)
     HX.lvlI = (HX.lvlI + 1) % 13600;   // (15 min, as far as the Humus)
@@ -36618,12 +36630,26 @@ function hxwShell() {
     } catch (e) { return null; }
   })());
 }
+// (owner, 28.10.2026, PC: the one cluster of dropouts in a 20-s log – 160, 790 and 130 ms of silence – fell together with
+// the realm's first boot, mid-performance; measured here: ≈ 100 underruns more while it boots under a dense arpeggio)
+// so a computer or a tablet boots it early: in the first quiet moment after „Klang starten“ (nothing sounding, nothing
+// recorded), tried every 3 s for three minutes, its shared buffers warmed – a harvest before that boots it as before;
+// a phone keeps its memory (it boots at the first harvest)
+function hxwPreboot() {
+  if (HXW.on || HXW.p || !A.started || !A.ctx || (typeof HX_PHONE !== 'undefined' && HX_PHONE)) return;
+  const quiet = A.voices.size === 0 && CAP.state === 'idle' && !SEQ.on && !A.bor && !HX.rec && !HX.punch && document.visibilityState === 'visible';
+  if (!quiet) { if ((HXW.preN = (HXW.preN || 0) + 1) < 60) setTimeout(hxwPreboot, 3000); return; }
+  hxwLog('vorab');
+  hxWerk().then((ok) => { if (ok && A.voices.size === 0) hxwCall('warm', { sr: SR }); });
+}
 function hxWerk(R0) {
   const R = R0 || HXW;   // (step 2a: one of the realms – HXW, the first, or one of its pool)
   if (HXW.on) return Promise.resolve(false);
   if (R.p) return R.p;
-  R.st = 'laden';
+  R.st = 'laden'; R.bootT = performance.now();
+  if (R === HXW) hxwLog('rahmen-start' + (A.voices.size ? ':' + A.voices.size + '-stimmen' : ''));   // (what sounded while it booted)
   R.p = hxwShell().then((shell) => new Promise((res) => {
+    if (R === HXW) hxwLog('rahmen-huelle:' + Math.round(performance.now() - R.bootT) + 'ms');
     let done = false, tA = 0;
     const fail = (why) => {
       if (done) return; done = true; clearTimeout(tA); R.st = 'kein'; R.why = why; hxwLog('rahmen-kein:' + why);
@@ -36645,7 +36671,7 @@ function hxWerk(R0) {
       const ch = new MessageChannel();
       ch.port1.onmessage = (e) => {
         const m = e.data;
-        if (m && m.ready) { if (done) return; done = true; clearTimeout(tA); R.port = ch.port1; R.st = 'ok'; hxwLog('rahmen-ok' + (shell ? ':srcdoc' : ':url')); res(true); hxwWport(R); hxCardDirty(); return; }
+        if (m && m.ready) { if (done) return; done = true; clearTimeout(tA); R.port = ch.port1; R.st = 'ok'; hxwLog('rahmen-ok' + (shell ? ':srcdoc' : ':url') + (R.bootT ? ':' + Math.round(performance.now() - R.bootT) + 'ms' : '')); res(true); hxwWport(R); hxCardDirty(); return; }
         if (m && m.log) { hxwLog('im-rahmen:' + String(m.log).slice(0, 160)); return; }
         const w = m && R.wait.get(m.id);
         if (m && m.nan) { (HX.nan = HX.nan || []).push({ realm: m.job, n: m.nan }); console.warn('Hexenring: a render held non-finite samples (scrubbed)', m.job, m.nan); }   // (step 2b: the realm's tripwire)
@@ -42628,10 +42654,12 @@ const GD = { uT: 0, upT: 0, stepT: 0, said: false };
 // begins there instead of at the start measurement's figure (that one overrated the owner's PC: underruns at 94 % of it)
 const GDL = { k: 'myzel.guard.v1', t: 0 };
 function gdlAll() { try { return JSON.parse(store.get(GDL.k) || '{}') || {}; } catch (e) { return {}; } }
-function gdlGet(q) { if (HX_PHONE) return 1; const v = +gdlAll()[q]; return v > 0 && v < 1 ? Math.max(0.3, v) : 1; }
-function gdlSet(q, v) { if (HX_PHONE) return; const m = gdlAll(); m[q] = Math.round(Math.min(1, v) * 1000) / 1000; store.set(GDL.k, JSON.stringify(m)); GDL.t = performance.now(); }
-// the scale learned for the level now (from the start and after a change of level)
-function gdLearned() { const v = gdlGet(P['dev.q']); if (v < 1) { A.budgetScale = v; budgetApply(); hxGuardLog('gelernt', VBUDGET); } }
+// (owner, 28.10.2026: „ohne dass die Klangqualität irgendwie verändert werden darf“ – his PC started every session at 51 %
+// of its voices, learned from earlier dropouts; the one cluster of dropouts in his log had a one-off cause) nothing is
+// learned across sessions any more: every session starts with the full budget, the guard steps only within a session
+function gdlGet() { return 1; }
+function gdlSet() { GDL.t = performance.now(); }
+function gdLearned() { try { if (store.get(GDL.k)) store.set(GDL.k, ''); } catch (e) {} }   // (the scale a device learned before today: forgotten)
 function watchUnderruns() {
   const ps = A.ctx.playbackStats || A.ctx.playoutStats;
   if (!ps && !(MOBILE && !HX_TABLET)) return;

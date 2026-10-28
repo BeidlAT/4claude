@@ -35,12 +35,26 @@ function hxwShell() {
     } catch (e) { return null; }
   })());
 }
+// (owner, 28.10.2026, PC: the one cluster of dropouts in a 20-s log – 160, 790 and 130 ms of silence – fell together with
+// the realm's first boot, mid-performance; measured here: ≈ 100 underruns more while it boots under a dense arpeggio)
+// so a computer or a tablet boots it early: in the first quiet moment after „Klang starten“ (nothing sounding, nothing
+// recorded), tried every 3 s for three minutes, its shared buffers warmed – a harvest before that boots it as before;
+// a phone keeps its memory (it boots at the first harvest)
+function hxwPreboot() {
+  if (HXW.on || HXW.p || !A.started || !A.ctx || (typeof HX_PHONE !== 'undefined' && HX_PHONE)) return;
+  const quiet = A.voices.size === 0 && CAP.state === 'idle' && !SEQ.on && !A.bor && !HX.rec && !HX.punch && document.visibilityState === 'visible';
+  if (!quiet) { if ((HXW.preN = (HXW.preN || 0) + 1) < 60) setTimeout(hxwPreboot, 3000); return; }
+  hxwLog('vorab');
+  hxWerk().then((ok) => { if (ok && A.voices.size === 0) hxwCall('warm', { sr: SR }); });
+}
 function hxWerk(R0) {
   const R = R0 || HXW;   // (step 2a: one of the realms – HXW, the first, or one of its pool)
   if (HXW.on) return Promise.resolve(false);
   if (R.p) return R.p;
-  R.st = 'laden';
+  R.st = 'laden'; R.bootT = performance.now();
+  if (R === HXW) hxwLog('rahmen-start' + (A.voices.size ? ':' + A.voices.size + '-stimmen' : ''));   // (what sounded while it booted)
   R.p = hxwShell().then((shell) => new Promise((res) => {
+    if (R === HXW) hxwLog('rahmen-huelle:' + Math.round(performance.now() - R.bootT) + 'ms');
     let done = false, tA = 0;
     const fail = (why) => {
       if (done) return; done = true; clearTimeout(tA); R.st = 'kein'; R.why = why; hxwLog('rahmen-kein:' + why);
@@ -62,7 +76,7 @@ function hxWerk(R0) {
       const ch = new MessageChannel();
       ch.port1.onmessage = (e) => {
         const m = e.data;
-        if (m && m.ready) { if (done) return; done = true; clearTimeout(tA); R.port = ch.port1; R.st = 'ok'; hxwLog('rahmen-ok' + (shell ? ':srcdoc' : ':url')); res(true); hxwWport(R); hxCardDirty(); return; }
+        if (m && m.ready) { if (done) return; done = true; clearTimeout(tA); R.port = ch.port1; R.st = 'ok'; hxwLog('rahmen-ok' + (shell ? ':srcdoc' : ':url') + (R.bootT ? ':' + Math.round(performance.now() - R.bootT) + 'ms' : '')); res(true); hxwWport(R); hxCardDirty(); return; }
         if (m && m.log) { hxwLog('im-rahmen:' + String(m.log).slice(0, 160)); return; }
         const w = m && R.wait.get(m.id);
         if (m && m.nan) { (HX.nan = HX.nan || []).push({ realm: m.job, n: m.nan }); console.warn('Hexenring: a render held non-finite samples (scrubbed)', m.job, m.nan); }   // (step 2b: the realm's tripwire)
