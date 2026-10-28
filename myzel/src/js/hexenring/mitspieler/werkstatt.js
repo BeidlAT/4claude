@@ -5,11 +5,16 @@
 // same kind – rendered in the Werk-Rahmen one after another while the loop plays on. A creation plays from the next 1
 // (the processor's replace, as every version); „Ja“ keeps it as a Trieb: its recipe is stored with the loop (its audio
 // is made again from it – the same seed, the same sound), the original is never touched. Umfang „Leiste“: the same
-// creation index for every loop with notes, chosen and played together. ----
+// creation index for every loop with notes, chosen and played together.
+// Etappe 2 (28.10.2026): Effekte – a creation may colour the loop too (Filterwelle, Phaser, Chorus, Wärme, Kreisen,
+// Bandfilter), burnt into its audio through the loop's insert chain as a Wuchs pass is (hxwChain); the waves move in whole
+// cycles per pass, so each pass sounds as the one before. A creation differs clearly from the original (≥ 30 % of its
+// notes), and each one in the automatic run plays at least 10 s („geht viel zu schnell“). ----
 const HXWS = { auto: null, gen: null, pop: null, slot: null, glyphs: [], t: 0 };
 const hxWsOn = (L) => !!(L && !L.bew && L.state !== 'weg' && L.sch.some((id) => hxWCan(HX.sch.get(id))));
 const hxWsOf = (L) => L.krea || (L.krea = { list: [], sel: null, triebe: [] });
 function hxWsRecipe(T) { return { seed: T.seed, sch: T.sch, name: T.name, t: T.t }; }
+const HX_WS_DIFF = 0.3;   // (how much of the notes a creation changes at least – hxVDist)
 function hxWsRestore(L, krt, krs) {
   const K = hxWsOf(L);
   K.triebe = krt.filter((x) => x && x.sch).map((x) => ({ seed: x.seed, sch: x.sch, name: x.name || 'Trieb', t: x.t || Date.now(), V: null }));
@@ -22,12 +27,15 @@ function hxWsNotes(W0, seed) {
   const al = { nb: P['hx.ws.noten'], th: P['hx.ws.noten'], fi: P['hx.ws.noten'], orn: P['hx.ws.noten'], eu: P['hx.ws.rhythmus'], sw: P['hx.ws.rhythmus'], ok: P['hx.ws.oktaven'] };
   if (!Object.values(al).some(Boolean)) return null;
   const wts = {}; for (const k in al) wts[k] = al[k] ? 1 : 0;
-  let prev = { n: W0.n, hist: [] }, changed = false;
-  for (let s = 0; s < 12 && (!changed || s < 3); s++) {
+  let prev = { n: W0.n, hist: [] }, best = null, bd = 0;
+  for (let s = 0; s < 24; s++) {
     const r = hxVarStep(W0, W0.n, prev, { seed: (seed ^ Math.imul(s + 1, 0x2c1b3c6d)) | 0, lvl: 3, wts, gd: 0, segs: [], bpb: 4 });
-    if (r.ops.length && r.ops[0] !== 'ret') { prev = r; changed = true; }
+    if (!r.ops.length || r.ops[0] === 'ret') continue;
+    prev = r;
+    const d = hxVDist(W0, W0.n, r.n); if (d > bd) { bd = d; best = r.n; }
+    if (s >= 2 && d >= HX_WS_DIFF) break;   // (clearly another – „er merkte oft nichts“)
   }
-  return changed ? prev.n : null;
+  return best;
 }
 // another source of the same kind (holds, strikes or both) – its family first
 function hxWsEng(eng, R) {
@@ -36,15 +44,42 @@ function hxWsEng(eng, R) {
   const fam = same.filter((k) => ENG_META[k].fam === M.fam), pool = fam.length && R() < 0.6 ? fam : same;
   return pool.length ? pool[Math.floor(R() * pool.length)] : null;
 }
+// Effekte: one or two colours, each a set of the insert chain's settings (HX_CHAIN); a wave moves k whole cycles per pass
+const HX_WS_FX = {
+  filter: { n: 'Filterwelle', g: 'flt', v: (R, w) => ({ 'flt.type': 'lowpass', 'flt.freq': 650 * Math.pow(4, R()), 'flt.q': 1.2 + 4 * R(), 'flt.lfoRate': w([1, 2]), 'flt.lfoDepth': 0.8 + 1.2 * R() }) },
+  band: { n: 'Bandfilter', g: 'flt', v: (R) => ({ 'flt.type': 'bandpass', 'flt.freq': 700 * Math.pow(2.6, R()), 'flt.q': 0.7 + 0.9 * R(), 'flt.lfoDepth': 0 }) },
+  phaser: { n: 'Phaser', g: 'pha', v: (R, w) => ({ 'pha.mix': 0.35 + 0.25 * R(), 'pha.rate': w([1, 2, 4]), 'pha.depth': 0.5 + 0.4 * R(), 'pha.fb': 0.3 + 0.35 * R() }) },
+  chorus: { n: 'Chorus', g: 'cho', v: (R) => ({ 'cho.mix': 0.35 + 0.2 * R(), 'cho.rate': 0.25 + 0.65 * R(), 'cho.depth': 0.35 + 0.4 * R() }) },
+  waerme: { n: 'Wärme', g: 'drv', v: (R) => ({ 'drv.type': 'tube', 'drv.amt': 0.18 + 0.22 * R(), 'drv.mix': 0.35 + 0.25 * R() }) },
+  kreisen: { n: 'Kreisen', g: 'mov', v: (R, w) => ({ 'mov.pan': 0.35 + 0.45 * R(), 'mov.panRate': w([1, 2]) }) },
+};
+// the chain as the loop has it (dry: every colour off), the recipe's colours over it
+const HX_WS_DRY = { 'drv.mix': 0, 'rng.mix': 0, 'flt.type': 'lowpass', 'flt.freq': 18000, 'flt.lfoDepth': 0, 'pha.mix': 0, 'cho.mix': 0, 'mov.pan': 0 };
+function hxWsFx(R, passS) {
+  const w = (ks) => { let k = ks[Math.floor(R() * ks.length)]; while (k / passS > 1.5 && k > 1) k /= 2; return clamp(k / passS, 0.02, 3); };   // (whole cycles per pass, never a flutter)
+  const keys = Object.keys(HX_WS_FX), n = R() < 0.6 ? 1 : 2, out = [];
+  while (out.length < n) { const k = keys[Math.floor(R() * keys.length)]; if (!out.some((x) => x === k || HX_WS_FX[x].g === HX_WS_FX[k].g)) out.push(k); }
+  const v = {}; for (const k of out) Object.assign(v, HX_WS_FX[k].v(R, w));
+  return { k: out, v };
+}
+function hxWsChain(L, fx, seed) {
+  const C0 = L.chainRec, R = hxRng(seed ^ 0x5bd1e995), base = {};
+  HX_CHAIN.forEach((id, i) => { base[id] = C0 ? C0.snap[i] : id in HX_WS_DRY ? HX_WS_DRY[id] : PD[id].d; });
+  Object.assign(base, fx.v);
+  const rate = { rng: base['rng.freq'], flt: base['flt.lfoRate'], pha: base['pha.rate'], cho1: base['cho.rate'], cho2: base['cho.rate'] * 1.13, pan: base['mov.panRate'] };
+  const lfo = {}; for (const k in HX_LFO) lfo[k] = [R(), rate[k], rate[k], 1];   // (a phase of its own, the rate as set)
+  return { ids: HX_CHAIN, snap: HX_CHAIN.map((id) => base[id]), os: QP[3].os, lite: false, ev: [], lfo, mod: {} };   // (always the best oversampling)
+}
+const hxWsWhat = (it) => { if (!it || !it.sch) return ''; const r = Object.values(it.sch), w = []; if (r.some((x) => x.vn)) w.push('Noten'); const e = r.find((x) => x.eng); if (e) w.push(ENG_NAME[e.eng] || e.eng); const f = r.find((x) => x.fx); if (f) for (const k of f.fx.k) w.push(HX_WS_FX[k].n); return w.join(' · '); };
 // a recipe for loop L: per Schicht (by its place in the loop) its notes and source
 function hxWsMake(L, seed) {
-  const sch = {}, R = hxRng(seed);
+  const sch = {}, R = hxRng(seed), sw = hxNextSeam(L), fx = P['hx.ws.effekte'] && !L.folgt ? hxWsFx(R, Math.max(0.25, (hxPassF(L, sw.k + 1) - hxPassF(L, sw.k)) / SR)) : null;   // (a loop that follows the live chain: its colours are the field's)
   L.sch.forEach((id, i) => {
     const S = HX.sch.get(id); if (!hxWCan(S)) return;
     const W0 = hxWBase(L, S); if (!W0) return;
     const vn = hxWsNotes(W0, (seed ^ Math.imul(i + 3, 0x61c88647)) | 0);
     const eng0 = (W0.n.find((n) => n.src === 'fin' || n.src === 'eb2') || W0.n[0] || {}).eng, eng = P['hx.ws.klang'] ? hxWsEng(hxWEng(L, { src: 'fin', eng: eng0 }), R) : null;
-    if (vn || eng) sch[i] = { vn: vn || null, eng: eng || null };
+    if (vn || eng || fx) sch[i] = { vn: vn || null, eng: eng || null, fx };
   });
   return Object.keys(sch).length ? sch : null;
 }
@@ -56,7 +91,8 @@ async function hxWsRender(L, rec, seed) {
     const W0 = hxWBase(L, S), r = rec[i], W = r.vn ? Object.assign({}, W0, { n: r.vn }) : W0;
     const k = hxNextSeam(L).k, job = hxWPass(L, S, k, { W }); if (!job) continue;
     if (r.eng) for (const n of job.notes) if (n.src === 'fin' || n.src === 'eb2' || !n.src) n.eng = r.eng;
-    const m = await hxwCall('wuchs', hxWJob(L, S, job, seed));
+    const d = hxWJob(L, S, job, seed); if (r.fx) d.chain = hxWsChain(L, r.fx, seed);
+    const m = await hxwCall('wuchs', d);
     if (!m || m.err || !m.L) { if (m && m.err) hxwLog('werkstatt: ' + String(m.err).slice(0, 120)); return null; }
     const n = hxWTrim(m.L, m.R, job.lenF);
     if (!hxMemOk(n)) return null;
@@ -71,7 +107,7 @@ async function hxWsRender(L, rec, seed) {
 async function hxWsGrow(L0) {
   if (HXWS.gen) return;
   if (HXW.st === 'kein') { toast('Der Werk-Rahmen fehlt hier – die Werkstatt kann nichts wachsen lassen.', 4000); return; }
-  if (!P['hx.ws.noten'] && !P['hx.ws.rhythmus'] && !P['hx.ws.oktaven'] && !P['hx.ws.klang']) { toast('Wähle, was der Gärtner verändern darf: Noten, Rhythmus, Oktaven oder Klang.', 4000); return; }
+  if (!P['hx.ws.noten'] && !P['hx.ws.rhythmus'] && !P['hx.ws.oktaven'] && !P['hx.ws.klang'] && !P['hx.ws.effekte']) { toast('Wähle, was der Gärtner verändern darf: Noten, Rhythmus, Oktaven, Klang oder Effekte.', 4000); return; }
   const loops = hxWsLoops(L0); if (!loops.length) return;
   const N = +P['hx.ws.anzahl'] || 10, G = (HXWS.gen = { loops: loops.map((L) => L.key), n: 0, N, stop: false });
   for (const L of loops) { const K = hxWsOf(L); K.list = []; if (typeof K.sel === 'number') hxWsPlay(L, null); }
@@ -156,7 +192,14 @@ function hxWsAutoNext() {
   A0.wait = false; A0.idx = nx.i;
   const k0 = A0.until >= 0 ? A0.until : hxNextSeam(L).k;   // (seamless: the next one at the end of the last one's passes)
   hxWsPlay(L, nx.i, hxPassF(L, k0));
-  A0.until = k0 + (+P['hx.ws.durchg'] || 1);   // (its passes from its first on – all its bars)
+  A0.until = k0 + hxWsPasses(L, k0);   // (its passes from its first on – all its bars)
+  const what = hxWsWhat(nx); hxSay('Kreation ' + (nx.i + 1) + (what ? ': ' + what : ''));
+}
+// how many passes a creation plays in the automatic run: as set, or („mind. 10 s“) as many as make 10 s, two at least
+function hxWsPasses(L, k0) {
+  const v = P['hx.ws.durchg']; if (v !== 'auto') return +v || 1;
+  const s = Math.max(0.25, (hxPassF(L, k0 + 1) - hxPassF(L, k0)) / SR);
+  return Math.max(2, Math.ceil(10 / s - 1e-6));
 }
 // every tick: the automatic run's turn, a Trieb wanted after a reload, the glyphs at the rings
 function hxWsTick() {
@@ -236,10 +279,11 @@ function hxWsRender2() {
   for (let c = 0; c < N; c++) {
     const it = K.list.find((x) => x.i === c);
     if (it && !it.V && it.st !== 'waechst') continue;
-    list.append(row(String(c + 1), K.sel === c, () => { if (it && it.V) { if (HXWS.auto) hxWsAuto(null, true); hxWsPlay(L, c); } }, { cls: !it ? 'warte' : it.V ? '' : 'waechst' }));
+    const what = it && it.V ? hxWsWhat(it) : '';
+    list.append(row(String(c + 1), K.sel === c, () => { if (it && it.V) { if (HXWS.auto) hxWsAuto(null, true); hxWsPlay(L, c); } }, { cls: !it ? 'warte' : it.V ? '' : 'waechst', tip: what || null, extra: what ? h('small', { class: 'hx-wsw' }, what) : null }));
   }
   const kids = [head, list];
-  if (HXWS.set) kids.push(HXWS.setBox || (HXWS.setBox = h('div', { class: 'hx-wss' }, ctl('hx.ws.umfang', { prefix: 'ws-' }), h('div', { class: 'hx-wsrow' }, ctl('hx.ws.noten', { prefix: 'ws-' }), ctl('hx.ws.rhythmus', { prefix: 'ws-' }), ctl('hx.ws.oktaven', { prefix: 'ws-' }), ctl('hx.ws.klang', { prefix: 'ws-' })), ctl('hx.ws.anzahl', { prefix: 'ws-' }), ctl('hx.ws.durchg', { prefix: 'ws-' }), ctl('hx.ws.danach', { prefix: 'ws-' }))));   // (built once: a control binds for good)
+  if (HXWS.set) kids.push(HXWS.setBox || (HXWS.setBox = h('div', { class: 'hx-wss' }, ctl('hx.ws.umfang', { prefix: 'ws-' }), h('div', { class: 'hx-wsrow' }, ctl('hx.ws.noten', { prefix: 'ws-' }), ctl('hx.ws.rhythmus', { prefix: 'ws-' }), ctl('hx.ws.oktaven', { prefix: 'ws-' }), ctl('hx.ws.klang', { prefix: 'ws-' }), ctl('hx.ws.effekte', { prefix: 'ws-' })), ctl('hx.ws.anzahl', { prefix: 'ws-' }), ctl('hx.ws.durchg', { prefix: 'ws-' }), ctl('hx.ws.danach', { prefix: 'ws-' }))));   // (built once: a control binds for good)
   P0.replaceChildren(...kids);
   // above its ring, inside the app
   const rb = HXU.rings[HXWS.slot].getBoundingClientRect(), ab = document.getElementById('app').getBoundingClientRect(), w = P0.offsetWidth || 200;

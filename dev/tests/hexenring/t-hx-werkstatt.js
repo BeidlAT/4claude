@@ -15,7 +15,7 @@ const { ok } = H;
     M.HX.chips = null; M.hxRailDirty();   // (the chips after the harvest: gone, as after a while or a tap)
     return L.slot;
   });
-  await page.evaluate(async () => { const M = window.__M; await window.__reset(); window.__grid(120); M.setParam('hx.laenge', 'fest'); M.setParam('hx.festT', 1); M.setParam('hx.ws.anzahl', '5'); M.setParam('hx.ws.umfang', 'schleife'); M.setParam('hx.ws.klang', true); await window.__sleep(500); });
+  await page.evaluate(async () => { const M = window.__M; await window.__reset(); window.__grid(120); M.setParam('hx.laenge', 'fest'); M.setParam('hx.festT', 1); M.setParam('hx.ws.anzahl', '5'); M.setParam('hx.ws.umfang', 'schleife'); M.setParam('hx.ws.klang', true); M.setParam('hx.ws.effekte', false); M.setParam('hx.ws.durchg', '1'); await window.__sleep(500); });
   const slot = await mk();
   await page.waitForSelector('.hx-wsg:not([hidden])', { timeout: 30000 }).catch(() => {});   // (the chips after a harvest take the rings' place a while)
   const r = {};

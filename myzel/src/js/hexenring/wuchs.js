@@ -88,7 +88,7 @@ function hxWF(L, W, n, key) {
 }
 // the source a note sounds with: its own, the field's (Spielfeld: the layer it was played on), or one chosen
 function hxWEng(L, n) {
-  const k = L.klang || 'eigen';
+  const k = hxKlangOf(L);
   if (k === 'eigen' || (n.src !== 'fin' && n.src !== 'eb2')) return n.eng;
   if (k === 'feld') return n.src === 'eb2' && P['v.layer'] !== 'off' ? P['v.layer'] : P['v.eng'];
   return ENGINES[k] ? k : n.eng;
@@ -97,7 +97,7 @@ const hxWQ = (L) => { const s = L.stufe || P['hx.stufe'] || '3'; return s === 'g
 const hxWKeyNow = () => { const sig = P['t.root'] + '|' + P['t.scale'] + '|' + P['t.just']; if (HX.wKeyS !== sig) { HX.wKeyS = sig; HX.wKeyV = hxWScale(P['t.root'], P['t.scale']); } return HX.wKeyV; };   // (cached: the rail asks every frame)
 // the patch a pass is rendered with: the loop's own (as it was played), or the field's now – never a drift (Taumeln is the
 // processor's: a Wuchs version reads at the live drift), never an echo or a hall (they stay live)
-function hxWPat(L) { const p = Object.assign({}, (L.klang || 'eigen') === 'eigen' && L.P ? L.P : P); p['mov.drift'] = 0; return p; }
+function hxWPat(L) { const p = Object.assign({}, hxKlangOf(L) === 'eigen' && L.P ? L.P : P); p['mov.drift'] = 0; return p; }
 // a throw: the Schicht's own seed (Treu, the anchor's when it has one), a pass's (Lebendig)
 const hxWSeedK = (S, k) => { let h = ((S.wseed | 0) ^ Math.imul(k + 7, 0x9e3779b1)) | 0; h ^= h >>> 16; h = Math.imul(h, 0x7feb352d); h ^= h >>> 15; return (h >>> 0) % 2147483646 + 1; };
 // Voss–McCartney pink noise, seeded: the breath of Lebendig wanders slowly from pass to pass (step n of the loop's notes)
@@ -159,7 +159,7 @@ function hxWSig(L, S, key) {
   const W = S.wn, k = key || hxWKeyNow(), f = hxNextSeam(L), lenF = hxPassF(L, f.k + 1) - hxPassF(L, f.k);
   const keyS = hxTonOf(L) === 'fest' ? '-' : (hxTonOf(L) === 'transponieren' ? k.root : k.root + ':' + (k.rat || []).map((x) => x.toFixed(6)).join(','));
   const engs = [...new Set(W.n.map((n) => hxWEng(L, n)))].join(',');
-  return [Math.round((lenF * (L.sp || 1)) / 8), hxTonOf(L), keyS, engs, hxWQ(L), S.anc ? S.anc.seed + ':' + (S.anc.br != null ? S.anc.br : '') + (S.anc.vn ? ':v' + S.anc.vn.length + ':' + Math.round(S.anc.vn.reduce((a, x) => a + x.t * 97 + x.f, 0)) : '') : S.wseed, L.folgt ? 1 : 0, (L.klang || 'eigen') === 'eigen' ? 'e' : hxWPHash(),
+  return [Math.round((lenF * (L.sp || 1)) / 8), hxTonOf(L), keyS, engs, hxWQ(L), S.anc ? S.anc.seed + ':' + (S.anc.br != null ? S.anc.br : '') + (S.anc.vn ? ':v' + S.anc.vn.length + ':' + Math.round(S.anc.vn.reduce((a, x) => a + x.t * 97 + x.f, 0)) : '') : S.wseed, L.folgt ? 1 : 0, hxKlangOf(L) === 'eigen' ? 'e' : hxWPHash(),
     hxNtOn(L) ? JSON.stringify(L.nt) : '', L.revW ? 'r' : '', S.wn.n.length + ':' + Math.round(S.wn.len * 1000)].join('|');   // (step 2b: the notes' tools, mirrored, a record trimmed, doubled or the Auslese's)   // (a pass's length within 8 frames is the same: a fractional tempo alternates ±1 frame)
 }
 function hxWPHash() { let h = 7; for (const id in P) if (PD[id] && !PD[id].rec && !PD[id].dev && !id.startsWith('x') && !/^(rev|dly|mst|seq|l\d|rec|hx|mix)\./.test(id)) { const v = String(P[id]); for (let i = 0; i < v.length; i++) h = (Math.imul(h, 31) + v.charCodeAt(i)) | 0; } return h; }
@@ -206,10 +206,13 @@ function hxWPlay(S, which, f, keepStream, now, VV) {
   return true;
 }
 // what a loop grows for: chosen (the card, or hx.beginn), the key, the tempo, the sound – or Eigensinn above Treu
-function hxWAktiv(L) { const w = L.wwhy || {}; return !L.bew && !!(w.wahl || w.tempo || w.ausl || hxEigN(L) >= 1 || (L.klang || 'eigen') !== 'eigen' || hxNtOn(L) || hxWTonOff(L)); }   // (step 2b: the notes' tools, the Auslese's consensus)
+function hxWAktiv(L) { const w = L.wwhy || {}; return !L.bew && !!(w.wahl || w.tempo || w.ausl || hxEigN(L) >= 1 || hxKlangOf(L) !== 'eigen' || hxNtOn(L) || hxWTonOff(L)); }   // (step 2b: the notes' tools, the Auslese's consensus)
 // it follows the key and the key is not the one it was played in (the parameters' key – an announced one included)
 const hxWKeyEq = (a, b) => !!a && !!b && a.root === b.root && !!a.free === !!b.free && (a.rat || []).map((x) => x.toFixed(6)).join() === (b.rat || []).map((x) => x.toFixed(6)).join();
 // how a loop follows the key: its own setting – „Schleifen folgen dem Preset“ (ui.tonart) makes a fixed one follow too
+// the sound a loop plays with: its own setting – „Instrument folgt dem Preset“ (ui.instrument, owner 28.10.2026) makes its
+// own one the field's (the preset's) too, as ui.tonart does it for the key
+const hxKlangOf = (L) => { const k = L.klang || 'eigen'; return k === 'eigen' && P['ui.instrument'] === 'preset' && !(L.mi && L.mi.from) ? 'feld' : k; };   // (an accompaniment keeps the sources it was made for)
 const hxTonOf = (L) => { const t = L.ton || 'diatonisch'; return t === 'fest' && P['ui.tonart'] === 'schleifen' ? 'diatonisch' : t; };
 const hxWTonOff = (L) => { const t = hxTonOf(L); if (t === 'fest') return false; const k = hxWKeyNow(); return L.sch.some((id) => { const S = HX.sch.get(id); return hxWCan(S) && (t === 'transponieren' ? S.wn.key.root !== k.root : !hxWKeyEq(S.wn.key, k)); }); };
 const hxWLebt = (L) => hxEigN(L) >= 1 && !L.revW && !L.live && hxWAktiv(L) && !(L.treuBis != null && tgBeat(hxNowT()) < L.treuBis) && !(HX.wGuard.pause > performance.now()) && !L.wRefused;
@@ -221,7 +224,7 @@ function hxWUpdate(L, o = {}) {
   hxWNotesAll(L);
   if (HXW.st === 'kein' || L.live) { hxWLiveSync(L); hxCardDirty(); hxRailDirty(); return; }   // (no Werk-Rahmen: Live mode; step 4: or chosen)
   if (L.sch.some((id) => { const S = HX.sch.get(id); return S && S.lm; })) hxWLiveSync(L);   // (back from Live: its versions sound again)
-  HX.wFeld = hxLoopsLive().some((X) => (X.klang || 'eigen') === 'feld' && hxWAktiv(X));
+  HX.wFeld = hxLoopsLive().some((X) => hxKlangOf(X) === 'feld' && hxWAktiv(X));
   const on = hxWAktiv(L), F = HX.folge && HX.folge.loops.includes(L.key) ? HX.folge : null;
   // (while a key change is announced, nothing of this loop changes before its bar line)
   // (owner, 26.10.2026: „on the fly“ – o.now: a tool of the notes is heard at once, crossfaded mid-pass)
@@ -266,7 +269,7 @@ function hxWSlot(L, S, k, o = {}) {
   const a = hxPassF(L, k), from = o.at != null ? Math.max(0, o.at - a) : 0, ch = new MessageChannel(), R = hxwPick();
   hxPost({ wst: { schicht: S.id, k, len: job.lenF, cap: Math.ceil(job.dur * SR) + HX_CH, at: o.at, must: !!o.must, from, port: ch.port1 } }, [ch.port1]);
   const seed = o.treu ? (S.anc ? S.anc.seed : S.wseed) : hxWSeedK(S, k);
-  const d = Object.assign(hxWJob(L, S, job, seed), { port: ch.port2, F0: a, lead: HX_WLEAD, from: from / SR, keep: S.key + ':' + k, feld: (L.klang || 'eigen') === 'feld' });
+  const d = Object.assign(hxWJob(L, S, job, seed), { port: ch.port2, F0: a, lead: HX_WLEAD, from: from / SR, keep: S.key + ':' + k, feld: hxKlangOf(L) === 'feld' });
   R.n++; HX.wJobs++; HX.wLast = performance.now(); lmEv('durchgang'); hxCount(); HX.wSt.n++; HX.wSt.q = Math.max(HX.wSt.q, HX.wJobs);
   const re = S.wRe || (S.wRe = {}); re[k] = R; for (const x in re) if (+x < k - 12) delete re[x];   // (✓ asks the realm that rendered a pass; it keeps its last ten)
   const t0 = performance.now();
@@ -315,7 +318,7 @@ function hxWTick(now, horizon) {
   hxWLiveTick(now, horizon);   // (Live mode: no Werk-Rahmen, or chosen – step 4)
   if (HX.folge && horizon + 0.04 >= HX.folge.t) hxWTonGo();
   if (HX.wTempo && now >= HX.wTempo.due) hxWTempoGo();
-  if (HX.wKlang && performance.now() >= HX.wKlang) { HX.wKlang = 0; for (const L of hxLoopsLive()) if ((L.klang || 'eigen') === 'feld' && hxWAktiv(L)) hxWUpdate(L); }
+  if (HX.wKlang && performance.now() >= HX.wKlang) { HX.wKlang = 0; for (const L of hxLoopsLive()) if (hxKlangOf(L) === 'feld' && hxWAktiv(L)) hxWUpdate(L); }
   const fNow = hxF(now), pnow = performance.now(), G = HX.wGuard;
   if (G.max < Infinity && pnow - G.t > 60000) { G.t = pnow; G.max = G.max + 1 >= HX_WPOOL ? Infinity : G.max + 1; }   // (a minute without an underrun: one more at once again)
   if (pnow - (HXW.renT || 0) > 1000) { HXW.renT = pnow; hxwRenew(); }   // (Leistung: realms renewed – their renders' memory freed)
