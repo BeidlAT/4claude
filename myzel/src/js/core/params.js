@@ -581,6 +581,15 @@ BOOL('hx.gRollen', 'Die anderen spielen', true, { rec: 1 });
 BOOL('hx.gAntw', 'Antworten', true, { rec: 1 });
 BOOL('hx.gBegl', 'Begleiten vorschlagen', true, { rec: 1 });
 BOOL('hx.gWk', 'Wiederkehr', true, { rec: 1 });
+// (owner, 28.10.2026) the Gärtner's Werkstatt: creations grown in the background, played through, kept as Triebe
+SEL('hx.ws.umfang', 'Kreationen für', [['schleife', 'diese Schleife'], ['leiste', 'die ganze Leiste']], 'schleife', { chips: 1, small: 1, rec: 1 });
+BOOL('hx.ws.noten', 'Noten', true, { rec: 1 });
+BOOL('hx.ws.rhythmus', 'Rhythmus', true, { rec: 1 });
+BOOL('hx.ws.oktaven', 'Oktaven', false, { rec: 1 });
+BOOL('hx.ws.klang', 'Klang', false, { rec: 1 });
+SEL('hx.ws.anzahl', 'Anzahl', [['5', '5'], ['10', '10'], ['20', '20']], '10', { chips: 1, small: 1, rec: 1 });
+SEL('hx.ws.durchg', 'Durchgänge je Kreation', [['1', '1'], ['2', '2'], ['4', '4']], '1', { chips: 1, small: 1, rec: 1 });
+SEL('hx.ws.danach', 'Wenn alle gespielt sind', [['stopp', 'anhalten'], ['neu', 'neue wachsen lassen']], 'stopp', { chips: 1, small: 1, rec: 1 });
 SEL('hx.gStimme', 'Antwort mit', [['feld', 'Spielfeld'], ['ebene', 'Ebene 2'], ['schleife', 'Melodie-Schleife']], 'feld', { chips: 1, small: 1, rec: 1 });
 SEL('hx.hand', 'Handschrift', [['aus', 'Aus'], ['an', 'An']], 'aus', { chips: 1, small: 1, rec: 1 });
 NUM('mix.pulsVol', 'Puls gesamt', -60, 6, 0, 'dB', { step: 0.1, fmt: fmtFader });

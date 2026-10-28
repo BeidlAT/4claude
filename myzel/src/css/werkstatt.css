@@ -1,0 +1,30 @@
+/* ---------- the Gärtner's Werkstatt: the Keimling at a ring, the list above it ---------- */
+.hx-mid { position: relative; }
+.hx-wsg { position: absolute; z-index: 3; width: 16px; height: 20px; padding: 0; border: 0; background: none; color: var(--c, var(--spore)); opacity: .45; display: grid; place-items: center; cursor: pointer; }
+.hx-wsg svg { width: 12px; height: 15px; }
+.hx-wsg:hover, .hx-wsg[data-st="da"] { opacity: 1; }
+.hx-wsg[data-st="waechst"] { opacity: 1; animation: hxWsPulse 1.4s ease-in-out infinite; }
+@keyframes hxWsPulse { 50% { opacity: .35; } }
+.hx-wsg i { position: absolute; right: -7px; top: -5px; font: 9px/1 var(--font-num); font-style: normal; color: var(--ink); background: var(--c, var(--spore)); border-radius: 6px; padding: 1px 3px; }
+.hx-wsg i:empty { display: none; }
+.hx-ws { position: absolute; z-index: 45; width: 216px; max-height: min(60vh, 520px); overflow: auto; background: rgba(26, 19, 16, .97); border: 1px solid var(--line); border-radius: 14px; padding: 8px; box-shadow: 0 18px 50px rgba(0, 0, 0, .6); }
+.hx-wsh { display: flex; align-items: center; gap: 4px; margin-bottom: 6px; }
+.hx-wsh > b { font: 12px var(--font-num); color: var(--hypha); margin-right: auto; }
+.hx-wsi { color: var(--c); display: grid; }
+.hx-wsi svg { width: 13px; height: 16px; }
+.hx-wsb { min-width: 30px; height: 28px; padding: 0 8px; border-radius: 14px; border: 1px solid var(--line); background: var(--bark); color: var(--hypha); font: 600 12px var(--font-ui); display: inline-flex; align-items: center; justify-content: center; gap: 2px; }
+.hx-wsb svg { width: 11px; height: 14px; color: var(--spore); }
+.hx-wsb.on { border-color: var(--lumen); color: var(--lumen); }
+.hx-wsb.ja { border-color: var(--lumen); background: var(--lumen); color: var(--ink); }
+.hx-wsl { display: flex; flex-direction: column; gap: 3px; }
+.hx-wsr { display: flex; align-items: center; gap: 8px; padding: 6px 9px; border-radius: 9px; border: 1px solid transparent; cursor: pointer; font-size: 13px; color: var(--hypha); }
+.hx-wsr:hover { background: rgba(240, 230, 216, .05); }
+.hx-wsr.sel { border-color: var(--lumen); background: rgba(134, 240, 208, .08); }
+.hx-wsr.trieb .hx-wsn::before { content: "❦ "; color: var(--spore); }
+.hx-wsr.orig { color: var(--dim); }
+.hx-wsr.waechst, .hx-wsr.warte { color: var(--dim); cursor: default; }
+.hx-wsr.waechst::after { content: ""; width: 6px; height: 6px; margin-left: auto; border-radius: 50%; background: var(--spore); animation: hxWsPulse 1.2s ease-in-out infinite; }
+.hx-wsr.warte { opacity: .45; }
+.hx-wss { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); display: grid; gap: 6px; }
+.hx-wsrow { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.hx-wss .ctl { margin: 0; }

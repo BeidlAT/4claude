@@ -2,6 +2,16 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-28b",
+      "punkte": [
+        "Neu: die Gärtner-Werkstatt – das kleine Keimling-Symbol rechts an jeder Schleife mit Noten öffnet sie.",
+        "Der Gärtner lässt im Hintergrund Kreationen wachsen (5, 10 oder 20): andere Noten, Rhythmus, Oktaven oder ein anderes Instrument – was er darf, stellst du unter ⚙ ein.",
+        "Ein Tipp auf eine Kreation spielt sie ab der nächsten Eins; ▶ spielt alle nacheinander, jede über alle ihre Takte.",
+        "„Ja“ behält die Kreation als Trieb – das Original bleibt immer; Triebe werden mit der Schleife gespeichert (gedrückt halten löscht einen).",
+        "Für eine Schleife oder die ganze Leiste; wenn alle gespielt sind: anhalten oder neue wachsen lassen."
+      ]
+    },
+    {
       "id": "2026-10-28a",
       "punkte": [
         "Schleifen mit dem Klang „Spielfeld“ übernehmen jetzt sofort den Klang eines geladenen Presets – ohne Umweg über Stille und Weiter.",
