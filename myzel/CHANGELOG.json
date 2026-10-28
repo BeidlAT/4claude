@@ -2,6 +2,14 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-28k",
+      "punkte": [
+        "Keyboard: Noten beginnen jetzt in festem Abstand zum Tastendruck (ein Ausgabepuffer plus 5 ms), sample-genau – die Latenz schwankt nicht mehr, auch wenn der Rechner gerade zu tun hat. Unter Gerät › Keyboard › Zeit umschaltbar auf „Sofort“ (so früh wie möglich, dafür schwankend).",
+        "Der Stimmen-Wächter reagiert nicht mehr auf einen einzelnen kurzen Aussetzer, sondern nur noch, wenn sie anhalten oder eine Sekunde 200 ms verliert.",
+        "Gerät › Latenz nennt den Puffer, den der Browser wirklich benutzt – eine ASIO-Einstellung des Interfaces gilt im Browser nicht."
+      ]
+    },
+    {
       "id": "2026-10-28j",
       "punkte": [
         "PC und iPad: Der Werk-Rahmen (die Hintergrund-Rechnung für Schleifen) startet jetzt im ersten ruhigen Moment nach „Klang starten“ – nicht mehr mitten im Spiel bei der ersten Ernte, wo sein Start Aussetzer verursachen konnte.",

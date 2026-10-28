@@ -99,6 +99,20 @@ function ctxSync() {
   // it was up to 1 ms, two calls between two pulses: 2 ms) – a 15-ms stall is walked in a second
 }
 const perfAt = (t) => t * 1000 + A.ctxOff;
+// (owner, 28.10.2026: „Latenz schwankt auf jeden Fall, bis zu 20 ms … nicht reproduzierbar“) a key's note started when the
+// main thread got round to it – its pauses (a GC each second, a long task) and where in the output buffer the key fell
+// (0 … one buffer) went straight into the latency. Gleichmäßig: the note starts at a fixed distance from the moment the
+// key arrived (the MIDI timestamp): one output buffer and 5 ms – sample-exact, however the main thread fared, as long
+// as it was less than that late (later: as soon as possible, as before). Never before now, at most 60 ms ahead (a clock
+// that drifted). Sofort: as before – the earliest moment, with its jitter.
+function midiAt(ts) {
+  if (!A.ctx) return 0;
+  const now = A.ctx.currentTime;
+  if (P['midi.zeit'] !== 'gleich' || !(ts > 0)) return now;
+  ctxSync();
+  const lead = (A.ctx.baseLatency || 128 / A.ctx.sampleRate) + 0.005;
+  return clamp(ctxAt(ts) + lead, now, now + 0.06);
+}
 const ctxAt = (ms) => { if (A.ctxOff == null) ctxSync(); return (ms - A.ctxOff) / 1000; };
 // Send: the Puls's beat as 24 pulses per quarter to the chosen outputs, Start/Stop with the Puls – the arpeggiators
 // of the nanoKEY Studio and microKEY follow it over USB (over Bluetooth KORG ignores clock). Pulses are stamped ahead from
