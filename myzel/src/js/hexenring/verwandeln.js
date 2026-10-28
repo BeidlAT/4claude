@@ -45,14 +45,24 @@ function hxRvBq(c, type, fr, Q) {
 const HX_RV_K = (() => { const T = 16, k = new Float32Array(2 * T), I0 = (x) => { let a = 1, t = 1; for (let j = 1; j < 40; j++) { t *= (x / (2 * j)) * (x / (2 * j)); a += t; } return a; }; let s = 0;
   for (let j = 0; j < 2 * T; j++) { const x = j - T + 0.5, u = x / T; k[j] = (Math.sin(Math.PI * x) / (Math.PI * x)) * (I0(9 * Math.sqrt(Math.max(0, 1 - u * u))) / I0(9)); s += k[j]; }
   for (let j = 0; j < 2 * T; j++) k[j] /= s; return k; })();
-const hxRvAt = (c, p) => { const i = Math.floor(p); if (p === i) return i >= 0 && i < c.length ? c[i] : 0; let s = 0; for (let j = 0; j < 32; j++) { const q = i - 15 + j; if (q >= 0 && q < c.length) s += HX_RV_K[j] * c[q]; } return s; };
-// grains of the stretch, Hann-windowed, overlapped four times, read at rate rt (½: at half samples, through the sinc;
-// 2: every second sample of the stretch low-passed below the new Nyquist first – no folding) – the length kept, the
-// pitch an octave down or up
+// any other fraction (Tonhöhe, Verstimmen): the same sinc in 512 phases, the two nearest blended
+const HX_RV_PP = (() => { const T = 16, P = 512, k = new Float32Array((P + 1) * 2 * T), I0 = (x) => { let a = 1, t = 1; for (let j = 1; j < 40; j++) { t *= (x / (2 * j)) * (x / (2 * j)); a += t; } return a; };
+  for (let ph = 0; ph <= P; ph++) { let s = 0; for (let j = 0; j < 2 * T; j++) { const x = j - T + 1 - ph / P, u = x / T, v = (x === 0 ? 1 : Math.sin(Math.PI * x) / (Math.PI * x)) * (Math.abs(u) < 1 ? I0(9 * Math.sqrt(1 - u * u)) / I0(9) : 0); k[ph * 2 * T + j] = v; s += v; } for (let j = 0; j < 2 * T; j++) k[ph * 2 * T + j] /= s; }
+  return k; })();
+function hxRvAt(c, p) {
+  const i = Math.floor(p), fr = p - i, n = c.length; if (fr === 0) return i >= 0 && i < n ? c[i] : 0;
+  let s = 0;
+  if (fr === 0.5) { for (let j = 0; j < 32; j++) { const q = i - 15 + j; if (q >= 0 && q < n) s += HX_RV_K[j] * c[q]; } return s; }
+  const ph = fr * 512, p0 = Math.floor(ph), w = ph - p0, o0 = p0 * 32, o1 = o0 + 32;
+  for (let j = 0; j < 32; j++) { const q = i - 15 + j; if (q >= 0 && q < n) s += (HX_RV_PP[o0 + j] + w * (HX_RV_PP[o1 + j] - HX_RV_PP[o0 + j])) * c[q]; }
+  return s;
+}
+// grains of the stretch, Hann-windowed, overlapped four times, read at rate rt (through the sinc; faster than about a
+// semitone: low-passed below the new Nyquist first – no folding) – the length kept, the pitch moved by rt
 function hxRvShift(src, N, rt, R) {
   const G = Math.round(0.085 * SR) & ~1, H = G >> 2, l = new Float32Array(N), r = new Float32Array(N);
   let x = src;
-  if (rt > 1) { x = [src[0].slice(), src[1].slice()]; for (const c of x) for (let k = 0; k < 4; k++) hxRvBq(c, 'lp', () => 0.23 * SR, [0.51, 0.6, 0.9, 2.56][k]); }   // (8th order Butterworth)
+  if (rt > 1.04) { x = [src[0].slice(), src[1].slice()]; for (const c of x) for (let k = 0; k < 4; k++) hxRvBq(c, 'lp', () => (0.46 * SR) / rt, [0.51, 0.6, 0.9, 2.56][k]); }   // (8th order Butterworth below the new Nyquist – no folding)
   for (let t = -G; t < N; t += H) {
     const c0 = t + G / 2 + Math.round((R() - 0.5) * H * 0.5);   // (a little jitter: no comb of equal grains)
     for (let j = 0; j < G; j++) {
@@ -65,6 +75,48 @@ function hxRvShift(src, N, rt, R) {
 }
 // a read at any place near rate 1 (Sporen's few cents): 4-point Hermite
 const hxRvHm = (c, p) => { const i = Math.floor(p), f = p - i, a = c[i - 1] || 0, b = c[i] || 0, d = c[i + 1] || 0, e = c[i + 2] || 0, c1 = 0.5 * (d - a), c2 = a - 2.5 * b + 2 * d - 0.5 * e, c3 = 0.5 * (e - a) + 1.5 * (b - d); return ((c3 * f + c2) * f + c1) * f + b; };
+// Tonhöhe and Verstimmen exactly: a phase vocoder stretches the stretch by rt (STFT 2048, hop 512 in, Hann, the
+// phases locked to their peaks – Laroche & Dolson's identity locking: no phasiness between a partial's bins), then it
+// is read back at rate rt (the sinc; faster: low-passed below the new Nyquist first) – the length kept, every partial
+// moved by rt
+function hxRvPv(x, rt) {
+  const W = 2048, Ha = 512, N = x.length, B = W / 2 + 1, out = new Float32Array(Math.ceil(N * rt) + 2 * W), win = new Float32Array(W);
+  for (let i = 0; i < W; i++) win[i] = 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / W);
+  const re = new Float64Array(W), im = new Float64Array(W), mag = new Float64Array(B), ph = new Float64Array(B), phA = new Float64Array(B), phS = new Float64Array(B), nx = new Float64Array(B), om = new Float64Array(B), near = new Int32Array(B);
+  for (let k = 0; k < B; k++) om[k] = (2 * Math.PI * k * Ha) / W;
+  const frames = Math.ceil(N / Ha) + 4, at = (f) => Math.round(f * Ha * rt);   // (analysis every 512 frames; each synthesis frame at its whole place, its hop 512·rt ± ½)
+  for (let f = 0; f < frames; f++) {
+    const ta = f * Ha - W / 2, dS = at(f) - at(f - 1);
+    for (let i = 0; i < W; i++) { const q = ta + i; re[i] = q >= 0 && q < N ? x[q] * win[i] : 0; im[i] = 0; }
+    hxFFT(re, im);
+    for (let k = 0; k < B; k++) { mag[k] = Math.hypot(re[k], im[k]); ph[k] = Math.atan2(im[k], re[k]); }
+    if (f === 0) { for (let k = 0; k < B; k++) nx[k] = ph[k]; }
+    else {
+      // the peaks: each bin belongs to the peak of its region (the valleys between peaks the borders)
+      const pk = []; for (let k = 1; k < B - 1; k++) if (mag[k] > mag[k - 1] && mag[k] >= mag[k + 1]) pk.push(k);
+      if (!pk.length) pk.push(1);
+      let j = 0; for (let k = 0; k < B; k++) { while (j + 1 < pk.length) { let lo = pk[j], v = mag[lo]; for (let q = pk[j]; q <= pk[j + 1]; q++) if (mag[q] < v) { v = mag[q]; lo = q; } if (k > lo) j++; else break; } near[k] = pk[j]; }
+      for (const p of pk) { let d = ph[p] - phA[p] - om[p]; d -= 2 * Math.PI * Math.round(d / (2 * Math.PI)); nx[p] = phS[p] + ((om[p] + d) * dS) / Ha; }
+      for (let k = 0; k < B; k++) { const p = near[k]; if (p !== k) nx[k] = nx[p] + ph[k] - ph[p]; }
+    }
+    for (let k = 0; k < B; k++) { phA[k] = ph[k]; phS[k] = nx[k]; re[k] = mag[k] * Math.cos(nx[k]); im[k] = -mag[k] * Math.sin(nx[k]); }   // (conjugated: the inverse by the forward transform)
+    im[0] = 0; im[W / 2] = 0;
+    for (let k = 1; k < W / 2; k++) { re[W - k] = re[k]; im[W - k] = -im[k]; }
+    hxFFT(re, im);
+    const to = at(f) - W / 2;
+    for (let i = 0; i < W; i++) { const q = to + i; if (q >= 0 && q < out.length) out[q] += (re[i] / W) * win[i] * (2 / 3); }   // (Hann² at 4× overlap sums to 1.5)
+  }
+  return out;
+}
+function hxRvPitch(src, N, rt) {
+  const out = [new Float32Array(N), new Float32Array(N)];
+  for (let c = 0; c < 2; c++) {
+    let y = hxRvPv(src[c], rt);
+    if (rt > 1.04) { y = y.slice(); for (let k = 0; k < 4; k++) hxRvBq(y, 'lp', () => (0.46 * SR) / rt, [0.51, 0.6, 0.9, 2.56][k]); }
+    for (let i = 0; i < N; i++) out[c][i] = hxRvAt(y, i * rt);
+  }
+  return out;
+}
 // a hall of its own: eight delay lines (prime lengths, 29–83 ms), a Householder matrix, each line damped (one pole) to
 // T60 ≈ 3 s; left and right read from different lines; the wet fades out over the stretch's last 80 ms (the tape after
 // it comes back clean)
@@ -110,6 +162,7 @@ const HX_RV = {
   },
   wurzel(ch, r0, N, R) { const s = hxRvIn(ch, r0, N); return hxRvLevel(s, hxRvShift(s, N, 0.5, R)); },
   krone(ch, r0, N, R) { const s = hxRvIn(ch, r0, N); return hxRvLevel(s, hxRvShift(s, N, 2, R)); },
+  pitch(ch, r0, N, R, v) { const s = hxRvIn(ch, r0, N); return hxRvLevel(s, hxRvPitch(s, N, Math.pow(2, v / 12))); },   // (Direkt: Tonhöhe in semitones, Verstimmen in cents/100)
   erde(ch, r0, N) { const s = hxRvIn(ch, r0, N), o = [s[0].slice(), s[1].slice()]; for (const c of o) { hxRvBq(c, 'lp', () => 650, 0.8); hxRvBq(c, 'lp', () => 650, 0.6); } return hxRvLevel(s, o); },
   licht(ch, r0, N) { const s = hxRvIn(ch, r0, N), o = [s[0].slice(), s[1].slice()]; for (const c of o) { hxRvBq(c, 'hp', () => 900, 0.54); hxRvBq(c, 'hp', () => 900, 1.31); } return hxRvLevel(s, o); },   // (4th order Butterworth)
   welken(ch, r0, N) { const o = hxRvIn(ch, r0, N); for (const c of o) { hxRvBq(c, 'lp', (x) => 16000 * Math.pow(260 / 16000, x), 0.7); for (let i = 0; i < c.length; i++) c[i] *= Math.pow(1 - i / c.length, 1.6); } return o; },
@@ -119,12 +172,18 @@ const HX_RV = {
 // gets the same edit straight away (the same processor, the same random) – the exact render takes over a moment later,
 // crossfaded; not playing yet: it starts at the stretch, which repeats. A loop whose tape runs faster or slower or is
 // sliced: its pass is not the Schicht's frames one to one – the render alone (a moment later).
-function hxPvEdit(L, a, b, mk) {
+function hxPvEdit(L, a, b, mk, full) {   // (full: the whole pass handed over – Tauschen and Einsetzen read outside the stretch)
   if (!HXE.ed || HXE.ed.hidden || hxEdL() !== L || !A.ctx) return;
   hxEdTouch(L);   // (the render made before the edit is not this one any more)
   const P = HXE.pv, buf = P && P.key === L.key ? P.buf : HXE.rw && HXE.rw.buf ? HXE.rw.buf : null;
   if (!buf || (L.sp || 1) !== 1 || hxBandSliceOf(L)) { if (!HXE.pv) hxPvPlay(a); return; }
   const n = buf.length, r0 = Math.round(a * n), r1 = Math.min(n, Math.round(b * n)); if (r1 - r0 < 64) { if (!HXE.pv) hxPvPlay(a); return; }
+  if (full) {
+    const ch = []; for (let k = 0; k * HX_CH < n; k++) { const x = [new Float32Array(HX_CH), new Float32Array(HX_CH)]; x[0].set(buf.getChannelData(0).subarray(k * HX_CH, Math.min(n, (k + 1) * HX_CH))); x[1].set(buf.getChannelData(1).subarray(k * HX_CH, Math.min(n, (k + 1) * HX_CH))); ch.push(x); }
+    const dst = full(ch, n), nb = new AudioBuffer({ numberOfChannels: 2, length: n, sampleRate: buf.sampleRate }), ol = new Float32Array(n), or = new Float32Array(n);
+    for (let k = 0; k < dst.length; k++) { const m = Math.min(HX_CH, n - k * HX_CH); ol.set(dst[k][0].subarray(0, m), k * HX_CH); or.set(dst[k][1].subarray(0, m), k * HX_CH); }
+    nb.copyToChannel(ol, 0); nb.copyToChannel(or, 1); hxPvSrc(L, nb, P ? hxPvPos() : a); HXE.pvWant = false; return;
+  }
   // (only the stretch is worked on: a chunk list of its frames alone – the whole pass is not copied twice)
   const cl = buf.getChannelData(0), cr = buf.getChannelData(1), N = r1 - r0, ch = [];
   for (let k = 0; k * HX_CH < N; k++) { const x = [new Float32Array(HX_CH), new Float32Array(HX_CH)], q = r0 + k * HX_CH, e = Math.min(r1, q + HX_CH); x[0].set(cl.subarray(q, e)); x[1].set(cr.subarray(q, e)); ch.push(x); }
