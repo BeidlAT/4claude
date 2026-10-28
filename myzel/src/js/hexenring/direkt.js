@@ -53,13 +53,17 @@ function hxTakeArm(L, a, b, mode) {
   if (!hxMicOk(true)) return;
   const sch = hxBandReady(L); if (!sch || !sch.length) return;
   hxPvStop();   // (the loop itself is heard: the context to play into)
-  if (mode === 'ersetzen') hxRegionWrite(L, a, b, 'loeschen', 0, [], 1);   // (the gap at once – one step of its own)
   const at = hxTakeAt(L, a, b); if (!at) return;
+  // the gap at once – one step of its own; taken back by itself when no take comes into it (hxTakeUngap)
+  let gap = null;
+  if (mode === 'ersetzen' && hxRegionWrite(L, a, b, 'loeschen', 0, [], 1)) gap = HX.hist[HX.hist.length - 1] || null;
   const inp = hxInp();
-  HX.take = { key: L.key, a, b, mode, k: at.k, fa: at.fa, fb: at.fb, inp, sh: inp === 3 ? hxMicRt() : 0, st: 'wartet' };
+  HX.take = { key: L.key, a, b, mode, k: at.k, fa: at.fa, fb: at.fb, inp, sh: inp === 3 ? hxMicRt() : 0, st: 'wartet', gap };
   hxSay('Einspielen bereit – ' + hxName(L)); HXE.wsig = ''; hxEdRender();
 }
-function hxTakeStop(say) { if (!HX.take) return; HX.take = null; HXE.wsig = ''; if (say !== false) hxSay('Einspielen abgebrochen'); hxEdRender(); }
+function hxTakeStop(say) { const T = HX.take; if (!T) return; HX.take = null; HXE.wsig = ''; if (say !== false) hxSay('Einspielen abgebrochen'); hxTakeUngap(T); hxEdRender(); }
+// „ersetzen“ without a take: its gap back (while it is still the last step – a later one is the player's own)
+function hxTakeUngap(T) { if (T && T.gap && HX.hist[HX.hist.length - 1] === T.gap) { T.gap = null; hxUndoStep(); } }
 // what it says in the editor
 function hxTakeText() {
   const T = HX.take; if (!T) return '';
@@ -74,11 +78,13 @@ async function hxTakeTick() {
   const L = hxByKey(T.key); if (!L || L.state === 'weg') { HX.take = null; return; }
   const now = hxF(hxNowT());
   if (T.st === 'wartet' && now >= T.fa) { T.st = 'nimmt'; HXE.wsig = ''; hxSay('Nimmt auf'); }
-  if (T.st === 'nimmt' && now >= T.fb + Math.round(0.3 * SR)) { T.st = 'baut'; HXE.wsig = ''; await hxTakeBuild(L, T); if (HX.take === T) HX.take = null; HXE.wsig = ''; hxEdRender(); }
+  if (T.st === 'nimmt' && now >= T.fb + Math.round(0.3 * SR)) { T.st = 'baut'; HXE.wsig = ''; const ok = await hxTakeBuild(L, T); if (HX.take === T) { HX.take = null; if (!ok) hxTakeUngap(T); } HXE.wsig = ''; hxEdRender(); }
   if (HXE.takeEl) { const t = hxTakeText(); if (HXE.takeEl.textContent !== t) HXE.takeEl.textContent = t; }
 }
+// (after each wait: still wanted – Abbrechen or a new take while it was built drops it)
 async function hxTakeBuild(L, T) {
   const g = await hxGrab({ in: T.inp, f0: T.fa + T.sh, f1: T.fb + T.sh });
+  if (HX.take !== T || L.state === 'weg') return false;
   if (!g || !g.chunks) { toast('Das Gespielte ließ sich nicht holen – bitte noch einmal.', 3500); return false; }
   const sch = hxBandReady(L); if (!sch || !sch.length) return false;
   const S = sch[0], [r0, r1] = hxRxFrames(S, T.a, T.b), N = r1 - r0, n = g.n;
@@ -93,6 +99,7 @@ async function hxTakeBuild(L, T) {
   if (S.bak && S.chain && !L.folgt && HXW.st !== 'kein') {
     const lb = l.slice(), rb = r.slice(), ta = hxT(T.fa + T.sh);
     const k = await hxwCall('bake', { sr: SR, n: m, L: lb, R: rb, chain: hxChainRec(ta, ta + m / SR) }, [lb.buffer, rb.buffer]);
+    if (HX.take !== T || L.state === 'weg') return false;
     if (k && !k.err && k.L) wet = [k.L, k.R];
   }
   return hxRegionEdit(L, T.a, T.b, 'take', { key: S.key, mode: T.mode, dry: [l, r], wet });

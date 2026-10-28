@@ -40,10 +40,11 @@ function hxwShell() {
 // so a computer or a tablet boots it early: in the first quiet moment after „Klang starten“ (nothing sounding, nothing
 // recorded), tried every 3 s for three minutes, its shared buffers warmed – a harvest before that boots it as before;
 // a phone keeps its memory (it boots at the first harvest)
+// a quiet moment: nothing sounds or records (playing Schleifen and Freeze use no voices – they count too)
+const hxwQuiet = () => A.voices.size === 0 && CAP.state === 'idle' && !SEQ.on && !A.bor && !A.frozen && !hxBusy() && !HX.rec && !HX.punch && document.visibilityState === 'visible';
 function hxwPreboot() {
   if (HXW.on || HXW.p || !A.started || !A.ctx || (typeof HX_PHONE !== 'undefined' && HX_PHONE)) return;
-  const quiet = A.voices.size === 0 && CAP.state === 'idle' && !SEQ.on && !A.bor && !HX.rec && !HX.punch && document.visibilityState === 'visible';
-  if (!quiet) { if ((HXW.preN = (HXW.preN || 0) + 1) < 60) setTimeout(hxwPreboot, 3000); return; }
+  if (!hxwQuiet()) { if ((HXW.preN = (HXW.preN || 0) + 1) < 60) setTimeout(hxwPreboot, 3000); return; }
   hxwLog('vorab');
   hxWerk().then((ok) => { if (ok && A.voices.size === 0) hxwCall('warm', { sr: SR }); });
 }

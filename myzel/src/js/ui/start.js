@@ -22,9 +22,14 @@ function akkuTick() {
 setInterval(akkuTick, 15000);
 async function keepAwake() {
   try {
-    if ('wakeLock' in navigator && document.visibilityState === 'visible' && !A.wake) {
-      A.wake = await navigator.wakeLock.request('screen');
-      A.wake.addEventListener('release', () => { A.wake = null; });
+    // (one request at a time: every pointermove asks while one is underway – the sentinels made meanwhile were never
+    // released, and the screen stayed on in a silence despite Akku schonen)
+    if ('wakeLock' in navigator && document.visibilityState === 'visible' && !A.wake && !A.wakeAsk) {
+      A.wakeAsk = true;
+      try {
+        const w = await navigator.wakeLock.request('screen');
+        if (A.wake) w.release(); else { A.wake = w; w.addEventListener('release', () => { if (A.wake === w) A.wake = null; }); }
+      } finally { A.wakeAsk = false; }
     }
     return !!A.wake;
   } catch (e) { return false; }

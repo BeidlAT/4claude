@@ -110,7 +110,7 @@ async function hxErstarren(L) {
     // (its notes are now what it froze: the tools applied, in the key it sounds in)
     const W = hxWNotesT(L, S); if (W) { const n = W.n.map((x) => { const f = hxWF(L, W, x, key); const y = Object.assign({}, x, { f }); const d = hxDeg(f); return Object.assign(y, { deg: d.deg, oct: d.oct, alt: d.alt }); }); S.wn = Object.assign({}, W, { key: { base: N.base, ...key }, n }); S.wnT = null; }
   }
-  L.nt = null; L.eig = 'treu'; L.klang = 'eigen'; L.P = Object.assign({}, hxWPat(L)); L.wwhy = { wahl: false };
+  L.nt = null; L.eig = 'treu'; L.klang = 'eigen'; L.P = Object.assign({}, hxWPat(L)); L.wwhy = { wahl: false, erst: true };   // (erst: it plays as it sounded – „Instrument beim Preset-Wechsel“ no longer re-plays it, hxKlangOf)
   const key2 = L.key;
   hxHist({ kind: 'wuchs', label: hxName(L) + ' erstarrt', undo() { const X = hxByKey(key2); if (X) { hxGeoBack(X, before); Object.assign(X, { wwhy: was.wwhy, eig: was.eig, nt: was.nt, klang: was.klang, ton: was.ton }); hxWUpdate(X); } }, redo() {} });
   hxSay(hxName(L) + ' erstarrt – ein neuer Abdruck'); toast(hxName(L) + ': dieser Durchgang ist jetzt ihr Abdruck.', 2400);

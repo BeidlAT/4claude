@@ -93,6 +93,7 @@ function hxRegionEdit(L, a, b, op, v) {
   // (every Schicht's audio, its bake, its seam, the store) – while the Vorhören plays, that follows in a task of its own,
   // one edit after another (a quick second click works on the first one's result)
   if (op === 'swap' || op === 'paste') hxPvEdit(L, a, b, null, (ch, n) => hxRxMove(ch, Math.round(a * n), Math.round(b * n), [Math.round(v.a2 * n), Math.round(v.b2 * n)], op));   // (Direkt – direkt.js)
+  else if (op === 'take' && (!HXE.pv || HXE.pv.key !== L.key)) hxEdTouch(L);   // (a take was played to the loop itself: no Vorhören starts – it would mute the loop mid-play, out of time)
   else hxPvEdit(L, a, b, op === 'take' ? (ch, q0) => hxRxAdd(ch, q0, v.wet || v.dry) : (ch, q0, q1) => hxRxOp(ch, q0, q1, op, v, u, seed));
   if (!HXE.pv || HXE.pv.key !== L.key) return hxRegionWrite(L, a, b, op, v, u, seed);
   const job = () => { if (L.state !== 'weg') hxRegionWrite(L, a, b, op, v, u, seed); };
