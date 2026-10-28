@@ -174,7 +174,21 @@ function hxEdRender() {
   let part = null;
   if (HXE.sel) {
     const s = HXE.sel, go = (op, v) => () => { hxRegionEdit(L, s.a, s.b, op, v); }, act = (t, op, v, tip) => chip(t, false, go(op, v), tip);
+    // (28.10.2026, Direkt – direkt.js)
+    const mk = HXE.mark && HXE.mark.key === L.key ? HXE.mark : null, mOk = hxRxMarkOk(L, s.a, s.b), tk = HX.take && HX.take.key === L.key ? HX.take : null;
+    HXE.takeEl = h('span', { class: 'hx-ed-take', role: 'status' }, hxTakeText());
+    const semis = [-12, -7, -5, -2, -1, 1, 2, 5, 7, 12], cents = [-50, -20, -10, 10, 20, 50], sg = (x) => (x > 0 ? '+' : '−') + Math.abs(x);
     part = h('div', { class: 'hx-ed-sec hx-ed-part' }, h('div', { class: 'hx-ed-st' }, 'Abschnitt bearbeiten – ' + hxRxName(L, s.a, s.b) + ' (nur dieser Teil; der Rest bleibt)'),
+      row('Direkt', 'Den Abschnitt löschen (die Schleife bleibt gleich lang), merken – und dann einen anderen Teil mit ihm tauschen oder ihn dort einsetzen.',
+        act('Löschen', 'loeschen', 0, 'Den Abschnitt leeren – die Schleife bleibt gleich lang'),
+        chip(mk && Math.abs(mk.a - s.a) < 1e-9 && Math.abs(mk.b - s.b) < 1e-9 ? 'Gemerkt ✓' : 'Merken', !!(mk && Math.abs(mk.a - s.a) < 1e-9 && Math.abs(mk.b - s.b) < 1e-9), () => hxRxMark(L, s.a, s.b), 'Diesen Abschnitt merken – dann einen anderen Teil wählen'),
+        chip('Tauschen ⇄', false, () => hxRxMoveGo(L, s.a, s.b, 'swap'), mk ? 'Dieser Teil und der gemerkte tauschen die Plätze' : 'Zuerst einen anderen Abschnitt merken', { dis: !mOk }),
+        chip('Einsetzen', false, () => hxRxMoveGo(L, s.a, s.b, 'paste'), mk ? 'Der gemerkte Abschnitt wird hier eingesetzt (er selbst bleibt)' : 'Zuerst einen anderen Abschnitt merken', { dis: !mOk })),
+      row('Einspielen', 'Spiel etwas – es wird genau an dieser Stelle in die Schleife eingebaut, wenn der Abschnitt das nächste Mal kommt. „ersetzen“ leert ihn vorher, „dazu“ legt es darüber.',
+        tk ? chip('Abbrechen', true, () => hxTakeStop(), 'Einspielen abbrechen') : chip('● ersetzen', false, () => hxTakeArm(L, s.a, s.b, 'ersetzen'), 'Der Abschnitt wird geleert – spiel hinein, wenn er kommt'),
+        tk ? null : chip('● dazu', false, () => hxTakeArm(L, s.a, s.b, 'dazu'), 'Was du spielst, kommt zum Abschnitt dazu'), HXE.takeEl),
+      row('Tonhöhe', 'Den Abschnitt in Halbtönen höher oder tiefer – er behält seine Länge.', ...semis.map((x) => act(sg(x), 'pitch', x, 'Den Abschnitt ' + Math.abs(x) + (Math.abs(x) === 1 ? ' Halbton ' : ' Halbtöne ') + (x > 0 ? 'höher' : 'tiefer')))),
+      row('Verstimmen', 'Den Abschnitt um einige Cent verstimmen (100 Cent sind ein Halbton) – er behält seine Länge.', ...cents.map((x) => act(sg(x) + ' ct', 'pitch', x / 100, 'Den Abschnitt um ' + Math.abs(x) + ' Cent ' + (x > 0 ? 'höher' : 'tiefer') + ' stimmen'))),
       row('Band', 'Der Abschnitt wie ein Tonband langsamer oder schneller – er behält seine Länge: ×2 spielt ihn zweimal, ½ seine erste Hälfte langsam.', ...HX_SP.filter(([v]) => v !== 1).map(([v, t]) => act(t, 'band', v, 'Abschnitt mit Band ' + t)), act('rückwärts', 'rev', 0, 'Den Abschnitt rückwärts')),
       row('Weglassen', 'Lässt Anschläge in diesem Abschnitt weg.', ...HX_SLP.filter(([v]) => v).map(([v, t]) => act(t, 'weg', v, 'Im Abschnitt ' + t + ' der Anschläge weglassen'))),
       row('Tauschen', 'Vertauscht Anschläge in diesem Abschnitt.', ...HX_SLP.filter(([v]) => v).map(([v, t]) => act(t, 'tausch', v, 'Im Abschnitt ' + t + ' der Anschläge tauschen'))),
@@ -305,7 +319,7 @@ const hxEdWf = (L) => (L ? Math.min(1, 1 / (L.sp || 1)) : 1);
 function hxEdWave(force) {
   const L = hxEdL(), cv = HXE.cv; if (!L || !cv || !cv.isConnected) return;
   const w = cv.clientWidth, hh = cv.clientHeight; if (!w || !hh) return;
-  const ws = HXE.rsig + '|' + (HXE.rw ? HXE.rw.sig : '') + '|' + w + 'x' + hh + '|' + JSON.stringify(HXE.sel || 0) + '|' + JSON.stringify(HXE.zv || 0);
+  const ws = HXE.rsig + '|' + (HXE.rw ? HXE.rw.sig : '') + '|' + w + 'x' + hh + '|' + JSON.stringify(HXE.sel || 0) + '|' + JSON.stringify(HXE.zv || 0) + '|' + JSON.stringify(HXE.mark || 0) + '|' + (HX.take ? HX.take.st + HX.take.a : '');
   if (force || ws !== HXE.wsig || !HXE.bg) {   // the still layer: grid, waveform, notes, the selection
     HXE.wsig = ws;
     const raw = hxEdPeaks(L, HXE_W), rd = HXE.rw && HXE.rw.sig === HXE.rsig && !HXE.rw.none ? HXE.rw : null, W = HXE_W;
@@ -327,6 +341,9 @@ function hxEdWave(force) {
       if (one && b < B) { c.fillStyle = 'rgba(255,179,92,.85)'; c.font = '500 10px ' + COL.fontNum; c.textAlign = 'left'; c.textBaseline = 'top'; c.fillText(String(b / bpb + 1), x + 3, 2); }
     }
     if (HXE.sel) { const xa = X(HXE.sel.a), xb = X(HXE.sel.b); c.fillStyle = 'rgba(134,240,208,.16)'; c.fillRect(xa, 0, xb - xa, hh); c.strokeStyle = 'rgba(134,240,208,.7)'; c.strokeRect(xa + 0.5, 0.5, xb - xa - 1, hh - 1); }
+    // (28.10.2026, Direkt) the stretch kept for Tauschen/Einsetzen – dashed spore; the one armed for Einspielen – rec red
+    if (HXE.mark && HXE.mark.key === HXE.key) { const xa = X(HXE.mark.a), xb = X(HXE.mark.b); c.save(); c.setLineDash([5, 4]); c.strokeStyle = HXC.spore; c.lineWidth = 1.5; c.strokeRect(xa + 1, 1.5, xb - xa - 2, hh - 3); c.restore(); }
+    if (HX.take && HX.take.key === HXE.key) { const xa = X(HX.take.a), xb = X(HX.take.b); c.fillStyle = HX.take.st === 'nimmt' ? 'rgba(255,91,77,.22)' : 'rgba(255,91,77,.1)'; c.fillRect(xa, 0, xb - xa, hh); c.strokeStyle = HXC.rec; c.strokeRect(xa + 0.5, 0.5, xb - xa - 1, hh - 1); }
     if (!L.sch.some((id) => { const S = HX.sch.get(id); return S && S.aud; })) { c.fillStyle = HXC.dim; c.font = '400 12px ' + COL.fontNum; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('Die Schleife wird noch fertig eingefangen …', w / 2, hh / 2); }
     // the scale: the recording's own peak – so quieter (Verblassen, a Schicht down) or emptier (gaps) shows as such
     let m = 1e-4; const whole = rd || raw; for (let x = 0; x < W; x++) m = Math.max(m, -raw.mn[x], raw.mx[x], -whole.mn[x], whole.mx[x]);   // (the whole pass's: zooming keeps the scale)

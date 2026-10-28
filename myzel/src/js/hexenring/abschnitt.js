@@ -46,7 +46,7 @@ function hxRxApply(ch, r0, r1, out) {
 // the operations: what the stretch plays, frame by frame
 function hxRxOp(ch, r0, r1, op, v, u, seed) {
   const N = r1 - r0, get = hxRxGet(ch);
-  if (HX_RV[op]) { const [l, r] = HX_RV[op](ch, r0, N, hxRng(seed || 1)); return (i) => [l[i], r[i]]; }   // (28.10.2026: Verwandeln, Färben – verwandeln.js)
+  if (HX_RV[op]) { const [l, r] = HX_RV[op](ch, r0, N, hxRng(seed || 1), v); return (i) => [l[i], r[i]]; }   // (28.10.2026: Verwandeln, Färben – verwandeln.js)
   if (op === 'band') {   // the tape at v: its sound read v times as fast; it keeps its length – repeated (v > 1) or cut (v < 1)
     const fc = Math.min(1, 1 / v) * 0.97, M = Math.max(16, Math.floor(N / v)), X = Math.min(HX_RX, Math.floor(M / 4));
     const seq = new Float32Array((M + X) * 2);
@@ -61,6 +61,7 @@ function hxRxOp(ch, r0, r1, op, v, u, seed) {
   }
   if (op === 'rev') return (i) => get(r1 - 1 - i);
   if (op === 'gain') return (i) => { const s = get(r0 + i); return [s[0] * v, s[1] * v]; };
+  if (op === 'loeschen') return () => [0, 0];   // (Direkt: the stretch empty, the loop as long as before)
   // Weglassen / Tauschen: the stretch's slices at the loop's onsets (u: shares of the window, a slice from its start)
   const cuts = [0].concat(u.filter((x) => x > 1e-6 && x < 1 - 1e-6).map((x) => Math.round(x * N))).filter((x, i, A) => i === 0 || x - A[i - 1] > 2 * HX_RX).concat([N]);
   const sl = []; for (let i = 0; i + 1 < cuts.length; i++) sl.push([cuts[i], cuts[i + 1]]);
@@ -88,7 +89,8 @@ function hxRegionEdit(L, a, b, op, v) {
   // (owner, 28.10.2026: „on the fly hörbar“) the Vorhören gets it first; writing it into the Schichten takes a moment
   // (every Schicht's audio, its bake, its seam, the store) – while the Vorhören plays, that follows in a task of its own,
   // one edit after another (a quick second click works on the first one's result)
-  hxPvEdit(L, a, b, (ch, q0, q1) => hxRxOp(ch, q0, q1, op, v, u, seed));
+  if (op === 'swap' || op === 'paste') hxPvEdit(L, a, b, null, (ch, n) => hxRxMove(ch, Math.round(a * n), Math.round(b * n), [Math.round(v.a2 * n), Math.round(v.b2 * n)], op));   // (Direkt – direkt.js)
+  else hxPvEdit(L, a, b, op === 'take' ? (ch, q0) => hxRxAdd(ch, q0, v.wet || v.dry) : (ch, q0, q1) => hxRxOp(ch, q0, q1, op, v, u, seed));
   if (!HXE.pv || HXE.pv.key !== L.key) return hxRegionWrite(L, a, b, op, v, u, seed);
   const job = () => { if (L.state !== 'weg') hxRegionWrite(L, a, b, op, v, u, seed); };
   (HX.rxP || (HX.rxP = [])).push(job);
@@ -107,8 +109,11 @@ function hxRegionWrite(L, a, b, op, v, u, seed) {
   const done = [];
   for (const S of sch) {
     const [r0, r1] = hxRxFrames(S, a, b); if (r1 - r0 < 64) continue;
-    const ed = (ch) => hxRxApply(ch, r0, r1, hxRxOp(ch, r0, r1, op, v, u, seed));
-    const aud = ed(S.aud), bak = S.bak ? ed(S.bak) : null, X = S.X || Math.round(0.01 * SR), g = { pre: S.pre, len: S.len, X, zo: S.zo || 0 };
+    // (28.10.2026, Direkt: Einspielen goes into its one Schicht – dry, and baked as it was heard; Tauschen and Einsetzen
+    // move the frames of the stretch marked – direkt.js)
+    if (op === 'take' && S.key !== v.key) continue;
+    const ed = (ch, bk) => (op === 'take' ? hxRxApply(ch, r0, r1, hxRxAdd(ch, r0, bk && v.wet ? v.wet : v.dry)) : op === 'swap' || op === 'paste' ? hxRxMove(ch, r0, r1, hxRxFrames(S, v.a2, v.b2), op) : hxRxApply(ch, r0, r1, hxRxOp(ch, r0, r1, op, v, u, seed)));
+    const aud = ed(S.aud, false), bak = S.bak ? ed(S.bak, true) : null, X = S.X || Math.round(0.01 * SR), g = { pre: S.pre, len: S.len, X, zo: S.zo || 0 };
     const c = Object.assign({}, S.cut, { pre: S.pre, len: S.len, n: S.n, aus: S.aus ? Object.assign({}, S.aus) : null, stale: true });
     done.push([S.key, S.aud, aud, S.bak, bak]);
     hxSchSwap(S, c, { aud, bak, f: sw.f, now: !!sw.now, join: 'xf', X, rho: hxRho(bak && S.chain && !L.folgt ? bak : aud, S.n, S.pre, S.len, X), zo: S.zo || 0, kc: hxSeamOf(g, aud), kcB: bak ? hxSeamOf(g, bak) : null, dr: S.dr });
@@ -116,7 +121,7 @@ function hxRegionWrite(L, a, b, op, v, u, seed) {
   if (!done.length) { toast('Der Abschnitt ist zu kurz.'); return false; }
   // a trimmed loop: its whole keeps the edit too (the same frames of the same audio)
   if (L.tr0) L.tr0 = Object.assign({}, L.tr0, { sch: L.tr0.sch.map((s) => { const d = done.find((x) => x[0] === s.key && x[1] === s.aud); return d ? Object.assign({}, s, { aud: d[2], bak: s.bak === d[3] ? d[4] : s.bak }) : s; }) });
-  const lab = { band: 'Band ' + (HX_SP.find((x) => Math.abs(x[0] - v) < 1e-6) || [0, '×' + v])[1], rev: 'rückwärts', weg: 'Weglassen ' + Math.round(v * 100) + ' %', tausch: 'Tauschen ' + Math.round(v * 100) + ' %', gain: v === 0 ? 'stumm' : (v > 1 ? 'lauter ' : 'leiser ') + Math.round(Math.abs(20 * Math.log10(v))) + ' dB' }[op] || HX_RV_NAME[op] || op;
+  const lab = { band: 'Band ' + (HX_SP.find((x) => Math.abs(x[0] - v) < 1e-6) || [0, '×' + v])[1], rev: 'rückwärts', weg: 'Weglassen ' + Math.round(v * 100) + ' %', tausch: 'Tauschen ' + Math.round(v * 100) + ' %', pitch: hxRxPitchName(v), take: v && v.mode === 'dazu' ? 'eingespielt (dazu)' : 'eingespielt', swap: 'getauscht', paste: 'eingesetzt', loeschen: 'gelöscht', gain: v === 0 ? 'stumm' : (v > 1 ? 'lauter ' : 'leiser ') + Math.round(Math.abs(20 * Math.log10(v))) + ' dB' }[op] || HX_RV_NAME[op] || op;
   hxBandStep(L, 'Abschnitt ' + hxRxName(L, a, b) + ' ' + lab, before, fl0, { now: true });
   hxSay(hxName(L) + ': Abschnitt ' + lab); hxSaveLoop(L); hxCardDirty();
   return true;

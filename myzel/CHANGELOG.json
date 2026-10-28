@@ -2,6 +2,15 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-28f",
+      "punkte": [
+        "Abschnitt bearbeiten, neu „Direkt“: Löschen (die Schleife bleibt gleich lang), Merken – dann mit einem anderen Teil Tauschen oder ihn dort Einsetzen.",
+        "Neu „Einspielen“: spiel etwas, wenn der rot markierte Teil das nächste Mal kommt – es wird genau dort eingebaut; „ersetzen“ leert ihn vorher, „dazu“ legt es darüber.",
+        "Neu „Tonhöhe“ (Halbtöne) und „Verstimmen“ (Cent) für einen Abschnitt – er behält seine Länge.",
+        "Alles ist sofort zu hören und mit ↶ zurückzunehmen."
+      ]
+    },
+    {
       "id": "2026-10-28e",
       "punkte": [
         "Abschnitt bearbeiten: jede Änderung ist sofort zu hören – das Vorhören startet von selbst und wiederholt die Auswahl.",
