@@ -228,6 +228,7 @@ function hxHarvest(plan, o = {}) {
   if (pw1 > now - 0.05) L.notesDue = pw1;   // (its window still sounding: its notes once it has)
   L.rep = plan.rep || null;   // (step 1d: its repetitions – the Auslese, once the window has sounded)
   const chain = hxChainFor(plan.in, evs);
+  if (chain && !L.notesDue && !L.chainRec) L.chainRec = hxChainRec(hxT(c.w0), hxT(c.w1));   // (28.10.2026: the chain as played, stored with the loop at once when its window has sounded – before, only a window still sounding got it, hxNotesRefresh; a lost bake is made again from it, bake.js)
   const sid = hxSchNew(L.id, c, plan.entry.now ? { fin: 0.01, kind: o.kind || 'ernte', chain } : { seamK: 0, fin: 0, kind: o.kind || 'ernte', chain });
   hxAuftaktLater(L, c, plan.in);
   if (!HXW.p) setTimeout(hxWerk, 0);   // (the Werk-Rahmen boots at the first harvest)

@@ -52,6 +52,49 @@ async function hxBake(S) {
   S.bak = bak; S.kcB = S.join === 'xf' ? hxSeamOf(S, bak) : null;
   return true;
 }
+// (owner, 28.10.2026, iPad report: every loop „out1“ – dry through the live chain's copy, which costs and colours them with
+// the chain of now) a Schicht that should play baked and has no baked version – stored at another sample rate (the
+// iPad's speaker 48 kHz, an interface or a headset 44.1), never stored, or a bake that failed – is baked again from the
+// chain stored with its loop (L.chainRec, in seconds from the loop's window: shifted by the Schicht's pre-roll, its
+// modulators' phases moved back as far) – one after another, a few seconds after the loops are back
+function hxRecShift(C, p) {
+  const lfo = {}; for (const k in C.lfo) { const L = C.lfo[k]; lfo[k] = [L[0] - L[1] * p, L[1], L[2], L[3]]; }
+  const mod = {}; for (const k in C.mod) { const pts = C.mod[k]; mod[k] = [[0, pts[0][1]]].concat(pts.map((q) => [q[0] + p, q[1]])); }
+  return Object.assign({}, C, { ev: C.ev.map((e) => [e[0] + p].concat(e.slice(1))), lfo, mod });
+}
+async function hxBakeRec(L, S) {
+  if (!S.aud || !L.chainRec) return false;
+  const n = S.n, Lb = new Float32Array(n), Rb = new Float32Array(n);
+  for (let i = 0; i < n; i++) { const ch = S.aud[Math.floor(i / HX_CH)], j = i % HX_CH; if (ch) { Lb[i] = ch[0][j]; Rb[i] = ch[1][j]; } }
+  const bv = (S.bv = (S.bv || 0) + 1), aud = S.aud;
+  const m = await hxwCall('bake', { sr: SR, n, L: Lb, R: Rb, chain: hxRecShift(L.chainRec, (S.pre || 0) / SR) }, [Lb.buffer, Rb.buffer]);
+  if (!m || m.err || !m.L || S.bv !== bv || S.aud !== aud) { if (m && m.err) console.warn('Hexenring: Nachbrennen', m.err); return false; }
+  const [bak] = hxChunks(n);
+  for (let i = 0; i < n; i++) { const ch = bak[Math.floor(i / HX_CH)], j = i % HX_CH; ch[0][j] = m.L[i]; ch[1][j] = m.R[i]; }
+  S.bak = bak; S.kcB = S.join === 'xf' ? hxSeamOf(S, bak) : null;
+  return true;
+}
+const HX_REBAKE = { q: [], run: false };
+function hxRebakeLater(L) { if (HXW.on) return; HX_REBAKE.q.push(L.key); setTimeout(hxRebakeRun, 4000); }
+async function hxRebakeRun() {
+  if (HX_REBAKE.run) return; HX_REBAKE.run = true;
+  try {
+    while (HX_REBAKE.q.length) {
+      const L = hxByKey(HX_REBAKE.q.shift()); if (!L || L.state === 'weg' || L.folgt || !L.chainRec || !hxwOk()) continue;
+      for (const id of L.sch) {
+        const S = HX.sch.get(id); if (!S || !S.aud || !S.chain || S.bak || (S.baking || 0) > 0) continue;
+        S.baking = (S.baking || 0) + 1;
+        let r = false; try { r = await hxBakeRec(L, S); } finally { S.baking--; }
+        if (r && HX.sch.has(S.id) && !L.folgt) {
+          S.bakWhy = 'nach'; hxSchPlay(S, true, hxNextSeam(L).f); hxwLog('nachgebrannt ' + hxName(L));
+          // (stored only at the rate its Abdruck is stored at – a converted one is baked anew at every start, never
+          // kept beside an Abdruck of another rate)
+          if (!S.sr0 || S.sr0 === SR) { hxSaveSch(S, 'b'); hxSaveMeta(L.id); }
+        }
+      }
+    }
+  } finally { HX_REBAKE.run = false; }
+}
 // „folgt der Effektkette“ for a loop: its Schichten go dry through the live chain from the next seam on – or back to
 // their baked versions (baked now if they were not)
 function hxFolgt(L, on) {

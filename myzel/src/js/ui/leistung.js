@@ -149,11 +149,19 @@ function lmLoops(live) {
   }
   const hx = hxLoad(); Z.n++; Z.loops += sum; if (sum > Z.max) Z.max = sum; Z.hx += hx;
 }
+// (28.10.2026) a loop's Schichten: the rate each was recorded at (> now, where another), baked or dry through the live
+// chain's copy and why (rate: another sample rate; nie: never stored baked; lesen: not read; nach: baked again)
+function lmSchDesc(L) {
+  if (!L) return '';
+  const sch = L.sch.map((id) => HX.sch.get(id)).filter(Boolean);
+  return sch.map((S) => (S.sr0 && S.sr0 !== SR ? S.sr0 + '>' + SR : String(S.sr0 || SR)) + ':' + (!S.chain ? 'trocken' : S.baked ? 'gebrannt' : S.bak ? 'bak' : 'live') + (S.bakWhy ? '/' + S.bakWhy : '')).join(' ') + (!L.chainRec && sch.some((S) => S.chain && !S.bak) ? ' ohne Kette' : '');
+}
 function lmLoopsRes() {
   const Z = LM.lsum, n = Math.max(1, Z.n), r2 = (x) => Math.round(x * 100) / 100;
   const each = [...LM.lp.values()].sort((a, b) => a.slot - b.slot).map((e) => {
     const f = [e.sp * 2 > e.n ? 'spielt' : e.sp ? 'teils' : 'halt', e.leb * 2 > e.n ? 'leb' : '', e.hold ? 'hold' : '', e.tau * 2 > e.n ? 'tau-ruht' : '', e.o1 * 2 > e.n ? 'out1' : ''].filter(Boolean).join(',');
-    return 'S' + (e.slot + 1) + '=' + r2(e.c / Math.max(1, e.n)) + '(' + f + ')';
+    const sd = lmSchDesc(typeof hxRingL === 'function' ? hxRingL(e.slot) : null);
+    return 'S' + (e.slot + 1) + '=' + r2(e.c / Math.max(1, e.n)) + '(' + f + (sd ? '; ' + sd : '') + ')';
   });
   return { sum: { loops: r2(Z.loops / n), max: r2(Z.max), hx: r2(Z.hx / n), rest: r2((Z.hx - Z.loops) / n), budget: VBUDGET, f1: HX.node && HX.o1 ? HX_COST.fx1 : 0 }, each };
 }
