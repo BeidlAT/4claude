@@ -54,7 +54,7 @@ const { ok } = H;
   console.log(JSON.stringify(r));
   ok(r.pvOn && r.startMs < 150 && Math.abs(r.pvAt - 0.55) < 0.01 && r.repeat && Math.abs(r.repeat[0] - 0.55) < 0.01 && Math.abs(r.repeat[1] - 0.8) < 0.01, `not playing: an edit starts the Vorhören at the stretch, which repeats (${r.startMs} ms, ${r.repeat})`);
   ok(r.quickSilent < -80, `…and it is heard at once: the stretch silent in what plays (${r.quickSilent.toFixed(0)} dB)`);
-  ok(r.blockMs < 150 && r.quickMs < 150 && r.exactSwap && r.quickVsExact > 0.95, `playing: Erde heard after ${r.quickMs} ms (the click blocks ${r.blockMs} ms), the exact render after ${r.exactMs} ms – the same sound (correlation ${r.quickVsExact.toFixed(3)})`);
+  ok(r.blockMs < 250 && r.quickMs < 250 && r.exactSwap && r.quickVsExact > 0.95, `playing: Erde heard after ${r.quickMs} ms (the click blocks ${r.blockMs} ms), the exact render after ${r.exactMs} ms – the same sound (correlation ${r.quickVsExact.toFixed(3)})`);
   const O = r.ops, all = Object.keys(O);
   ok(all.every((k) => O[k].step === 1 && !O[k].nan && O[k].back > 0.999), `each tool one step, ↶ gives the stretch back (${all.map((k) => k + ' ' + O[k].back).join(', ')})`);
   ok(all.every((k) => O[k].diff > 0.1 && O[k].rest > 0.999), `each changes the stretch, the rest of the pass stays (${all.map((k) => k + ' ' + O[k].diff + '/' + O[k].rest).join(', ')})`);

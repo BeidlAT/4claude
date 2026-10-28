@@ -321,6 +321,7 @@ function hxTempoKeep() { HX.keepT = null; TG.keep = true; HX.chips = null; hxSay
 // first, else undoes the last step; ↷ for 8 s. Depth is limited only by the memory cap (the oldest go first). ----
 function hxHist(step) { step.t = Date.now(); HX.hist.push(step); HX.redo.length = 0; HX.redoT = 0; if (HX.hist.length > 200) HX.hist.shift(); hxRailDirty(); hxCardDirty(); }
 function hxUndoStep() {
+  hxRxFlush();   // (28.10.2026: a stretch's edit still being written – abschnitt.js)
   const p = HX.pend.filter((x) => !x.replay).pop();   // (26.10.2026: the switch an ↶ or ↷ itself waits for is no step to cancel – the next ↶ takes the step before)
   if (p) { hxPendDrop(p); p.cancel(); hxSay('Abgebrochen: ' + p.label); return; }
   if (HX.rec) { hxRecCancel(); return; }
@@ -332,6 +333,7 @@ function hxUndoStep() {
   hxSay('Zurückgenommen: ' + s.label); hxRailDirty(); hxCardDirty(); hxSaveAll();
 }
 function hxRedoStep() {
+  hxRxFlush();
   const s = HX.redo.pop(); if (!s) return;
   s.redo(); HX.hist.push(s);
   HX.redoT = HX.redo.length ? performance.now() + HX_REDO_S * 1000 : 0;

@@ -90,9 +90,13 @@ function hxRegionEdit(L, a, b, op, v) {
   // one edit after another (a quick second click works on the first one's result)
   hxPvEdit(L, a, b, (ch, q0, q1) => hxRxOp(ch, q0, q1, op, v, u, seed));
   if (!HXE.pv || HXE.pv.key !== L.key) return hxRegionWrite(L, a, b, op, v, u, seed);
-  HX.rxQ = (HX.rxQ || Promise.resolve()).then(() => new Promise((res) => setTimeout(() => { try { if (L.state !== 'weg') hxRegionWrite(L, a, b, op, v, u, seed); } finally { res(); } }, 0)));
+  const job = () => { if (L.state !== 'weg') hxRegionWrite(L, a, b, op, v, u, seed); };
+  (HX.rxP || (HX.rxP = [])).push(job);
+  HX.rxQ = (HX.rxQ || Promise.resolve()).then(() => new Promise((res) => setTimeout(() => { try { const j = HX.rxP.shift(); if (j) j(); } finally { res(); } }, 0)));
   return true;
 }
+// what is still to be written, at once – before ↶ or ↷ (they must find the edit in the history)
+function hxRxFlush() { while (HX.rxP && HX.rxP.length) HX.rxP.shift()(); }
 function hxRegionWrite(L, a, b, op, v, u, seed) {
   const sch = hxBandReady(L); if (!sch) return false;
   if (sch.some((S) => !hxMemOk(2 * S.n))) return false;

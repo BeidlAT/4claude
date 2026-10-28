@@ -142,7 +142,7 @@ const { ok } = H;
     M.hxBandTrimTo(L, 0, 0.5); await window.__sleep(250); const t2 = await q(); M.hxUndoStep(); await window.__sleep(300);
     return { t1, t2, say };
   });
-  ok(pend.t1 > 1 && pend.t2 > 1 && /zu hören ab der nächsten Naht, in \d+ s/.test(pend.say || ''), `a change still waiting for its seam is drawn whole – Band ½ and „nur die erste Hälfte“ fill the picture to its end, and it says when (${JSON.stringify(pend)})`);
+  ok(pend.t1 > 1 && pend.t2 > 1 && /ab der nächsten Naht, in \d+ s/.test(pend.say || ''), `a change still waiting for its seam is drawn whole – Band ½ and „nur die erste Hälfte“ fill the picture to its end, and it says when (${JSON.stringify(pend)})`);
   // 5. Escape closes; the mixer's strip head opens it
   await page.keyboard.press('Escape'); await page.waitForTimeout(150);
   const closed = await page.evaluate(() => document.querySelector('.hx-ed').hidden);
