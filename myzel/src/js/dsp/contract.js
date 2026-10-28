@@ -18,7 +18,9 @@
       this.q = []; this.act = false; this.off = false; this.silent = 0; this.dead = false; this.lite = this.po.lite ? 1 : 0;   // lite: after underruns, level 3's second bore/head is left out
       this.f = 220; this.y = 0.5; this.gN = 0; this.gS = 0; this.g = 1;
       this.inj = Math.max(0, +this.po.inj || 0); this.ix = null;   // (Hexenring step 4: Nähren – a Schleife's audio into Sehne's and Glut's loops, × inj; numberOfInputs 1)
-      this.port.onmessage = (e) => { const m = e.data; if (!m) return; if (m.kill) this.dead = true; else this.q.push(m); };
+      // (a message without a moment – a knob's {set} – goes ahead of a note-off still waiting for its moment (a key's
+      // MIDI moment, ≤ 60 ms ahead): the release starts with the new settings, as when the note-off came at once)
+      this.port.onmessage = (e) => { const m = e.data; if (!m) return; if (m.kill) { this.dead = true; return; } const q = this.q; let i = q.length; if (m.on == null && m.off == null && m.t == null) while (i > 0 && q[i - 1].off != null && q[i - 1].on == null) i--; q.splice(i, 0, m); };
       if (this.po.on) this.q.push(this.po.on);   // the note itself comes with the node: no port latency (offline renders deliver port messages only at the next suspend)
     }
     process(inputs, outputs, params) {

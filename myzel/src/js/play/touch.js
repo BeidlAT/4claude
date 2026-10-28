@@ -107,8 +107,9 @@ function onUp(e) {
   touches.delete(e.pointerId);
   if (GK.on) gkNote(tt, false, e);
   modTouch();
-  // a key's note-off at its MIDI moment (e.at, midiAt), never before its own note began
-  const at = e.at > 0 ? Math.max(e.at, tt.t0) : 0;
+  // a key's note-off at its MIDI moment (e.at, midiAt); any release never before its own note began (a pedal, Halten or
+  // all-notes-off within the lead of a Gleichmäßig note: from its start, not before it – relT makes a past one now)
+  const at = Math.max(e.at > 0 ? e.at : 0, tt.t0);
   for (const { v } of tt.voices) if (v.alive && v.release) v.release(e.relK, at);
   VIS.touchEnd(tt);
 }

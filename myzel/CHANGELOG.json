@@ -2,6 +2,14 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-28m",
+      "punkte": [
+        "Firefox: Eine kurz angeschlagene Note mit langsamer Einschwingzeit (z. B. Nebel) setzte beim Loslassen für einige Millisekunden aus – behoben.",
+        "Funken und Zapfen klingen beim Loslassen wieder sauber aus; Glut glüht vom Moment des Loslassens an nach.",
+        "Ein Regler, der gerade beim Loslassen einer Note bewegt wird, wirkt sofort auch auf ihren Ausklang."
+      ]
+    },
+    {
       "id": "2026-10-28l",
       "punkte": [
         "Keyboard: Auch das Loslassen einer Taste wirkt jetzt in festem Abstand zum Tastenereignis – eine Note klingt genau so lang, wie die Taste gehalten wurde, statt einen Puffer länger oder kürzer (Gerät › Keyboard › Zeit „Gleichmäßig“).",

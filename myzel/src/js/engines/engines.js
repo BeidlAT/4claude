@@ -1188,10 +1188,10 @@ const ENGINES = {
       v.release = (kr, at) => {
         if (!v.alive || v.released) return;
         v.released = true; kr = kr || 1;
-        const now = relT(at), soon = now > A.ctx.currentTime + 0.001;
+        const now = relT(at), soon = now > A.ctx.currentTime;
         v.relAt = now;
-        // (a note-off ahead, at its MIDI moment: held where the automation stands then – .value is now's)
-        const off = (p, tc) => { if (soon) holdParam(p, now); else { const x = p.value; p.cancelScheduledValues(now); p.setValueAtTime(x, now); } p.setTargetAtTime(0, now, tc * kr); };
+        // (a note-off ahead, at its MIDI moment: the decay from wherever the param stands then – fadeAt)
+        const off = (p, tc) => { if (soon) { fadeAt(p, now, tc * kr); return; } const x = p.value; p.cancelScheduledValues(now); p.setValueAtTime(x, now); p.setTargetAtTime(0, now, tc * kr); };
         off(humG.gain, 0.004);
         for (const S of sides) { off(S.cg.gain, 0.08); if (S.arc) { off(S.arc.k.gain, 0.01); off(S.arc.ag.gain, 0.01); } }
         v.finish(now + 0.55 * kr + 0.05);
