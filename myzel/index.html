@@ -11496,7 +11496,11 @@ function myzelDsp() {
       // (28.10.2026, owner's PC: three bursts of 160–790 ms silence in one log) the audio thread watches itself: the gap
       // since the last call (a stall anywhere on this thread) and this call's own duration – told to the page when one
       // exceeds 20 / 8 ms, at most twice a second (Date.now: 1 ms, the one clock a worklet has)
-      const tw = Date.now(), gap = this.pT ? tw - this.pT : 0; this.pT = tw;
+      // (a browser that renders its blocks in bursts – Firefox with ≈ 21-ms callbacks – leaves a gap of one callback
+      // between bursts: the bar is twice the usual gap between bursts, at least 20 ms; a gap over 2 s is the context
+      // suspended and resumed, no stall)
+      const tw = Date.now(), gap0 = this.pT ? tw - this.pT : 0, gap = gap0 > 2000 ? 0 : gap0; this.pT = tw;
+      if (gap > 2) this.gE = this.gE ? this.gE + 0.02 * (Math.min(gap, 4 * this.gE) - this.gE) : gap;
       const o0 = outputs[0], o1 = outputs[1], n = o0 && o0[0] ? o0[0].length : 128;
       const est = currentFrame - this.done;
       if (est > this.base) this.base = est;
@@ -11530,7 +11534,7 @@ function myzelDsp() {
         this.port.postMessage({ meter: { loops: lo, inp, F } });
       }
       const dd = Date.now() - tw;
-      if ((gap >= 20 || dd >= 8) && F - (this.thrF == null ? -1e9 : this.thrF) >= SR / 2) { this.thrF = F; this.port.postMessage({ thr: { gap, dur: dd, F } }); }
+      if ((gap >= Math.max(20, 2 * (this.gE || 0)) || dd >= 8) && F - (this.thrF == null ? -1e9 : this.thrF) >= SR / 2) { this.thrF = F; this.port.postMessage({ thr: { gap, dur: dd, F } }); }
       return true;
     }
     // the drift at frame f as the ring kept it – 0 before the first frame (a window reaching back past the start: a
@@ -31732,9 +31736,14 @@ function akkuTick() {
 setInterval(akkuTick, 15000);
 async function keepAwake() {
   try {
-    if ('wakeLock' in navigator && document.visibilityState === 'visible' && !A.wake) {
-      A.wake = await navigator.wakeLock.request('screen');
-      A.wake.addEventListener('release', () => { A.wake = null; });
+    // (one request at a time: every pointermove asks while one is underway – the sentinels made meanwhile were never
+    // released, and the screen stayed on in a silence despite Akku schonen)
+    if ('wakeLock' in navigator && document.visibilityState === 'visible' && !A.wake && !A.wakeAsk) {
+      A.wakeAsk = true;
+      try {
+        const w = await navigator.wakeLock.request('screen');
+        if (A.wake) w.release(); else { A.wake = w; w.addEventListener('release', () => { if (A.wake === w) A.wake = null; }); }
+      } finally { A.wakeAsk = false; }
     }
     return !!A.wake;
   } catch (e) { return false; }
@@ -35586,6 +35595,7 @@ function hxRegionEdit(L, a, b, op, v) {
   // (every Schicht's audio, its bake, its seam, the store) – while the Vorhören plays, that follows in a task of its own,
   // one edit after another (a quick second click works on the first one's result)
   if (op === 'swap' || op === 'paste') hxPvEdit(L, a, b, null, (ch, n) => hxRxMove(ch, Math.round(a * n), Math.round(b * n), [Math.round(v.a2 * n), Math.round(v.b2 * n)], op));   // (Direkt – direkt.js)
+  else if (op === 'take' && (!HXE.pv || HXE.pv.key !== L.key)) hxEdTouch(L);   // (a take was played to the loop itself: no Vorhören starts – it would mute the loop mid-play, out of time)
   else hxPvEdit(L, a, b, op === 'take' ? (ch, q0) => hxRxAdd(ch, q0, v.wet || v.dry) : (ch, q0, q1) => hxRxOp(ch, q0, q1, op, v, u, seed));
   if (!HXE.pv || HXE.pv.key !== L.key) return hxRegionWrite(L, a, b, op, v, u, seed);
   const job = () => { if (L.state !== 'weg') hxRegionWrite(L, a, b, op, v, u, seed); };
@@ -35913,13 +35923,17 @@ function hxTakeArm(L, a, b, mode) {
   if (!hxMicOk(true)) return;
   const sch = hxBandReady(L); if (!sch || !sch.length) return;
   hxPvStop();   // (the loop itself is heard: the context to play into)
-  if (mode === 'ersetzen') hxRegionWrite(L, a, b, 'loeschen', 0, [], 1);   // (the gap at once – one step of its own)
   const at = hxTakeAt(L, a, b); if (!at) return;
+  // the gap at once – one step of its own; taken back by itself when no take comes into it (hxTakeUngap)
+  let gap = null;
+  if (mode === 'ersetzen' && hxRegionWrite(L, a, b, 'loeschen', 0, [], 1)) gap = HX.hist[HX.hist.length - 1] || null;
   const inp = hxInp();
-  HX.take = { key: L.key, a, b, mode, k: at.k, fa: at.fa, fb: at.fb, inp, sh: inp === 3 ? hxMicRt() : 0, st: 'wartet' };
+  HX.take = { key: L.key, a, b, mode, k: at.k, fa: at.fa, fb: at.fb, inp, sh: inp === 3 ? hxMicRt() : 0, st: 'wartet', gap };
   hxSay('Einspielen bereit – ' + hxName(L)); HXE.wsig = ''; hxEdRender();
 }
-function hxTakeStop(say) { if (!HX.take) return; HX.take = null; HXE.wsig = ''; if (say !== false) hxSay('Einspielen abgebrochen'); hxEdRender(); }
+function hxTakeStop(say) { const T = HX.take; if (!T) return; HX.take = null; HXE.wsig = ''; if (say !== false) hxSay('Einspielen abgebrochen'); hxTakeUngap(T); hxEdRender(); }
+// „ersetzen“ without a take: its gap back (while it is still the last step – a later one is the player's own)
+function hxTakeUngap(T) { if (T && T.gap && HX.hist[HX.hist.length - 1] === T.gap) { T.gap = null; hxUndoStep(); } }
 // what it says in the editor
 function hxTakeText() {
   const T = HX.take; if (!T) return '';
@@ -35934,11 +35948,13 @@ async function hxTakeTick() {
   const L = hxByKey(T.key); if (!L || L.state === 'weg') { HX.take = null; return; }
   const now = hxF(hxNowT());
   if (T.st === 'wartet' && now >= T.fa) { T.st = 'nimmt'; HXE.wsig = ''; hxSay('Nimmt auf'); }
-  if (T.st === 'nimmt' && now >= T.fb + Math.round(0.3 * SR)) { T.st = 'baut'; HXE.wsig = ''; await hxTakeBuild(L, T); if (HX.take === T) HX.take = null; HXE.wsig = ''; hxEdRender(); }
+  if (T.st === 'nimmt' && now >= T.fb + Math.round(0.3 * SR)) { T.st = 'baut'; HXE.wsig = ''; const ok = await hxTakeBuild(L, T); if (HX.take === T) { HX.take = null; if (!ok) hxTakeUngap(T); } HXE.wsig = ''; hxEdRender(); }
   if (HXE.takeEl) { const t = hxTakeText(); if (HXE.takeEl.textContent !== t) HXE.takeEl.textContent = t; }
 }
+// (after each wait: still wanted – Abbrechen or a new take while it was built drops it)
 async function hxTakeBuild(L, T) {
   const g = await hxGrab({ in: T.inp, f0: T.fa + T.sh, f1: T.fb + T.sh });
+  if (HX.take !== T || L.state === 'weg') return false;
   if (!g || !g.chunks) { toast('Das Gespielte ließ sich nicht holen – bitte noch einmal.', 3500); return false; }
   const sch = hxBandReady(L); if (!sch || !sch.length) return false;
   const S = sch[0], [r0, r1] = hxRxFrames(S, T.a, T.b), N = r1 - r0, n = g.n;
@@ -35953,6 +35969,7 @@ async function hxTakeBuild(L, T) {
   if (S.bak && S.chain && !L.folgt && HXW.st !== 'kein') {
     const lb = l.slice(), rb = r.slice(), ta = hxT(T.fa + T.sh);
     const k = await hxwCall('bake', { sr: SR, n: m, L: lb, R: rb, chain: hxChainRec(ta, ta + m / SR) }, [lb.buffer, rb.buffer]);
+    if (HX.take !== T || L.state === 'weg') return false;
     if (k && !k.err && k.L) wet = [k.L, k.R];
   }
   return hxRegionEdit(L, T.a, T.b, 'take', { key: S.key, mode: T.mode, dry: [l, r], wet });
@@ -36738,10 +36755,11 @@ function hxwShell() {
 // so a computer or a tablet boots it early: in the first quiet moment after „Klang starten“ (nothing sounding, nothing
 // recorded), tried every 3 s for three minutes, its shared buffers warmed – a harvest before that boots it as before;
 // a phone keeps its memory (it boots at the first harvest)
+// a quiet moment: nothing sounds or records (playing Schleifen and Freeze use no voices – they count too)
+const hxwQuiet = () => A.voices.size === 0 && CAP.state === 'idle' && !SEQ.on && !A.bor && !A.frozen && !hxBusy() && !HX.rec && !HX.punch && document.visibilityState === 'visible';
 function hxwPreboot() {
   if (HXW.on || HXW.p || !A.started || !A.ctx || (typeof HX_PHONE !== 'undefined' && HX_PHONE)) return;
-  const quiet = A.voices.size === 0 && CAP.state === 'idle' && !SEQ.on && !A.bor && !HX.rec && !HX.punch && document.visibilityState === 'visible';
-  if (!quiet) { if ((HXW.preN = (HXW.preN || 0) + 1) < 60) setTimeout(hxwPreboot, 3000); return; }
+  if (!hxwQuiet()) { if ((HXW.preN = (HXW.preN || 0) + 1) < 60) setTimeout(hxwPreboot, 3000); return; }
   hxwLog('vorab');
   hxWerk().then((ok) => { if (ok && A.voices.size === 0) hxwCall('warm', { sr: SR }); });
 }
@@ -37250,7 +37268,10 @@ async function hxBakeRec(L, S) {
 const HX_REBAKE = { q: [], run: false };
 function hxRebakeLater(L) { if (HXW.on) return; HX_REBAKE.q.push(L.key); setTimeout(hxRebakeRun, 4000); }
 async function hxRebakeRun() {
-  if (HX_REBAKE.run) return; HX_REBAKE.run = true;
+  if (HX_REBAKE.run) return;
+  // (the Werk-Rahmen's boot is what drops out while playing – PR #86: it waits for a quiet moment, as hxwPreboot does)
+  if (HXW.st !== 'ok' && !hxwQuiet()) { if (!HX_REBAKE.tm && (HX_REBAKE.n = (HX_REBAKE.n || 0) + 1) < 200) HX_REBAKE.tm = setTimeout(() => { HX_REBAKE.tm = 0; hxRebakeRun(); }, 3000); return; }
+  HX_REBAKE.run = true;
   try {
     while (HX_REBAKE.q.length) {
       const L = hxByKey(HX_REBAKE.q.shift()); if (!L || L.state === 'weg' || L.folgt || !L.chainRec || !hxwOk()) continue;
@@ -38879,7 +38900,9 @@ const hxWKeyEq = (a, b) => !!a && !!b && a.root === b.root && !!a.free === !!b.f
 // how a loop follows the key: its own setting – „Schleifen folgen dem Preset“ (ui.tonart) makes a fixed one follow too
 // the sound a loop plays with: its own setting – „Instrument folgt dem Preset“ (ui.instrument, owner 28.10.2026) makes its
 // own one the field's (the preset's) too, as ui.tonart does it for the key
-const hxKlangOf = (L) => { const k = L.klang || 'eigen'; return k === 'eigen' && P['ui.instrument'] === 'preset' && !(L.mi && L.mi.from) ? 'feld' : k; };   // (an accompaniment keeps the sources it was made for)
+// (an accompaniment keeps the sources it was made for; an erstarrt loop plays as it sounded – its edits stay; a loop
+// without notes – the microphone's – has nothing the preset's instrument could play)
+const hxKlangOf = (L) => { const k = L.klang || 'eigen'; return k === 'eigen' && P['ui.instrument'] === 'preset' && !(L.mi && L.mi.from) && !(L.wwhy && L.wwhy.erst) && L.sch.some((id) => hxWCan(HX.sch.get(id))) ? 'feld' : k; };
 const hxTonOf = (L) => { const t = L.ton || 'diatonisch'; return t === 'fest' && P['ui.tonart'] === 'schleifen' ? 'diatonisch' : t; };
 const hxWTonOff = (L) => { const t = hxTonOf(L); if (t === 'fest') return false; const k = hxWKeyNow(); return L.sch.some((id) => { const S = HX.sch.get(id); return hxWCan(S) && (t === 'transponieren' ? S.wn.key.root !== k.root : !hxWKeyEq(S.wn.key, k)); }); };
 const hxWLebt = (L) => hxEigN(L) >= 1 && !L.revW && !L.live && hxWAktiv(L) && !(L.treuBis != null && tgBeat(hxNowT()) < L.treuBis) && !(HX.wGuard.pause > performance.now()) && !L.wRefused;
@@ -39892,7 +39915,7 @@ async function hxErstarren(L) {
     // (its notes are now what it froze: the tools applied, in the key it sounds in)
     const W = hxWNotesT(L, S); if (W) { const n = W.n.map((x) => { const f = hxWF(L, W, x, key); const y = Object.assign({}, x, { f }); const d = hxDeg(f); return Object.assign(y, { deg: d.deg, oct: d.oct, alt: d.alt }); }); S.wn = Object.assign({}, W, { key: { base: N.base, ...key }, n }); S.wnT = null; }
   }
-  L.nt = null; L.eig = 'treu'; L.klang = 'eigen'; L.P = Object.assign({}, hxWPat(L)); L.wwhy = { wahl: false };
+  L.nt = null; L.eig = 'treu'; L.klang = 'eigen'; L.P = Object.assign({}, hxWPat(L)); L.wwhy = { wahl: false, erst: true };   // (erst: it plays as it sounded – „Instrument beim Preset-Wechsel“ no longer re-plays it, hxKlangOf)
   const key2 = L.key;
   hxHist({ kind: 'wuchs', label: hxName(L) + ' erstarrt', undo() { const X = hxByKey(key2); if (X) { hxGeoBack(X, before); Object.assign(X, { wwhy: was.wwhy, eig: was.eig, nt: was.nt, klang: was.klang, ton: was.ton }); hxWUpdate(X); } }, redo() {} });
   hxSay(hxName(L) + ' erstarrt – ein neuer Abdruck'); toast(hxName(L) + ': dieser Durchgang ist jetzt ihr Abdruck.', 2400);

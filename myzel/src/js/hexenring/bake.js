@@ -77,7 +77,10 @@ async function hxBakeRec(L, S) {
 const HX_REBAKE = { q: [], run: false };
 function hxRebakeLater(L) { if (HXW.on) return; HX_REBAKE.q.push(L.key); setTimeout(hxRebakeRun, 4000); }
 async function hxRebakeRun() {
-  if (HX_REBAKE.run) return; HX_REBAKE.run = true;
+  if (HX_REBAKE.run) return;
+  // (the Werk-Rahmen's boot is what drops out while playing – PR #86: it waits for a quiet moment, as hxwPreboot does)
+  if (HXW.st !== 'ok' && !hxwQuiet()) { if (!HX_REBAKE.tm && (HX_REBAKE.n = (HX_REBAKE.n || 0) + 1) < 200) HX_REBAKE.tm = setTimeout(() => { HX_REBAKE.tm = 0; hxRebakeRun(); }, 3000); return; }
+  HX_REBAKE.run = true;
   try {
     while (HX_REBAKE.q.length) {
       const L = hxByKey(HX_REBAKE.q.shift()); if (!L || L.state === 'weg' || L.folgt || !L.chainRec || !hxwOk()) continue;
