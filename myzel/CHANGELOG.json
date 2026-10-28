@@ -2,6 +2,15 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-28i",
+      "punkte": [
+        "Schleifen behalten ihre eingebrannten Effekte, auch wenn sich die Abtastrate des Geräts geändert hat (z. B. iPad-Lautsprecher und Kopfhörer) – vorher liefen sie dann durch die aktuelle Effektkette, klangen nach dem Preset und kosteten mehr Rechenzeit.",
+        "Fehlt einer Schleife ihre eingebrannte Fassung, wird sie mit der gespeicherten Effektkette der Schleife neu eingebrannt.",
+        "Neue Schleifen speichern ihre Effektkette jetzt immer mit; auch neu gewachsene Durchgänge und Werkstatt-Kreationen klingen dann mit den Effekten, unter denen sie aufgenommen wurden.",
+        "Der Leistungsbericht zeigt je Schleife ihre Aufnahmerate und ob sie eingebrannt spielt."
+      ]
+    },
+    {
       "id": "2026-10-28h",
       "punkte": [
         "Wechselst du die Klangquelle, während Schleifen spielen oder eine Aufnahme läuft, ertönt keine Probe der neuen Quelle mehr.",

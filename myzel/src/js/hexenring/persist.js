@@ -163,8 +163,12 @@ async function hxRecBuild(r, segsOf, o = {}) {
   if (!sch.length) return null;
   // another sample rate: the processor's resampler, then every frame count scaled (one it could not convert stays out
   // of the loop – never played at the wrong speed – and the toast says so)
+  for (const s of sch) { s.sr0 = s.sr; if (s.chain && !s.bak) s.bakWhy = s.bakd ? 'lesen' : 'nie'; }   // (28.10.2026: what it was recorded at, why it has no baked version – the Leistungsbericht says it)
+  // (28.10.2026: the baked version is converted with it – before, it was dropped and the Schicht played dry through the
+  // live chain's copy from then on, coloured by the chain of now; one that cannot be converted is baked again, bake.js)
+  for (const s of sch) if (s.sr !== SR && s.bak) { const t = await hxResampleS({ aud: s.bak, n: s.n, sr: s.sr, pre: s.pre, len: s.len, X: s.X, aus: s.aus, cut: null }); s.bakR = t.sr === SR ? t.aud : null; if (!s.bakR) s.bakWhy = 'rate'; }
   for (const s of sch) if (s.sr !== SR) { s.bak = null; s.kcB = null; s.zo = Math.round((s.zo || 0) * SR / s.sr); }   // (another rate: the dry Abdruck is converted; it plays dry through the live chain)
-  for (const s of sch) if (s.sr !== SR) await hxResampleS(s);
+  for (const s of sch) if (s.sr !== SR) { await hxResampleS(s); if (s.sr === SR && s.bakR) { s.bak = s.bakR; s.kcBnew = true; } delete s.bakR; }
   for (let i = sch.length - 1; i >= 0; i--) if (sch[i].sr !== SR) { sch.splice(i, 1); if (o.lost) o.lost.n++; }
   if (!sch.length) return null;
   if (o.fresh) for (const x of sch) x.key = hxKey('s');   // (a Kreis loaded: new keys – it may come twice, beside the Schleifen it was made of)
@@ -172,6 +176,7 @@ async function hxRecBuild(r, segsOf, o = {}) {
   const sn = { key: o.fresh ? hxKey('l') : r.id, col: r.col || null, colA: r.colA || null, slot: r.slot, d: { lock: r.lock, b0: r.b0 + TG.o, beats: r.beats, L: r.L ? (k === 1 ? r.L : r.L * k) : r.L, ph0: 0, gap: !!r.gap }, bpb: r.bpb, eco: r.eco || null, notes: r.notes || [], mv: r.mv, cut: r.cut ? Object.assign({}, r.cut, { stale: true }) : null, eng: r.eng, setTG: r.setTG, gain: r.gain, pan: r.pan || 0, src: r.src, bpm: r.bpm, state: 'angehalten', tk: r.tk, folgt: r.folgt, taumeln: r.taumeln, eig: r.eig, naehrt: r.naehrt || null, sch,
     wwhy: r.wwhy || {}, krt: r.krt || null, krs: r.krs || null, ton: r.ton, klang: r.klang, stufe: r.stufe, q: r.q, P: r.P, mask: r.mask, chainRec: r.chainRec, jrg: r.jrg, tb: r.tb || null, mi: r.mi || null };   // (step 2a; step 2b: its tools; Etappe 3: role, Gärtner, Wiederkehr)
   const L = hxRebuild(sn, { state: 'angehalten', fokus: false, noSave: true });
+  if (L) { for (const id of L.sch) { const S = HX.sch.get(id), s = S && sch.find((x) => x.key === S.key); if (s) { S.sr0 = s.sr0; S.bakWhy = s.bakWhy || null; if (s.kcBnew && S.bak) S.kcB = S.join === 'xf' ? hxSeamOf(S, S.bak) : null; } } hxRebakeLater(L); }   // (28.10.2026: a Schicht without its baked version gets it again – bake.js)
   if (L && o.fresh) { L.nudge = r.nudge || 0; L.plan = r.plan; L.made = Date.now(); hxSaveLoop(L); return L; }
   if (L) { L.nudge = r.nudge || 0; L.plan = r.plan; L.made = r.made || Date.now(); for (const id of L.sch) { const S = HX.sch.get(id); if (S) { S.saved = hxSegs(S); if (S.bak) S.savedB = hxSegs(S); if (S.wu) S.savedW = hxSegsV(S, 'w'); if (S.anc) S.savedX = hxSegsV(S, 'x'); } } hxSaveMeta(L.id); }
   return L;
