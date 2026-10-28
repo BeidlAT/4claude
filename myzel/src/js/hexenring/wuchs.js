@@ -108,8 +108,8 @@ function hxWPink(seed, n) { let s = 0; for (let r = 0; r < 8; r++) { let h = ((s
 // sounds at the end of the pass before it (it rings over the seam – as the original did), one held over the whole loop is
 // struck anew each pass (documented limit); Lebendig: each note a little early or late, by the breath
 function hxWPass(L, S, k, o = {}) {
-  const W0 = hxWBase(L, S); if (!W0 || !W0.n.length) return null;   // (step 2b: the notes' tools applied; Etappe 3: a kept varied pass's notes)
-  const W = (o.live && o.br == null && hxEigN(L) >= 2) ? hxVarW(L, S, k, W0) : W0;   // (Etappe 3: Variieren, Wandern – this pass's own notes)
+  const W0 = o.W || hxWBase(L, S); if (!W0 || !W0.n.length) return null;   // (step 2b: the notes' tools applied; Etappe 3: a kept varied pass's notes; 28.10.2026: o.W – a Werkstatt creation's)
+  const W = !o.W && (o.live && o.br == null && hxEigN(L) >= 2) ? hxVarW(L, S, k, W0) : W0;   // (Etappe 3: Variieren, Wandern – this pass's own notes)
   // (step 2b: a tape at another speed reads the version at that speed – it is rendered as long as it reads)
   const sp = L.sp || 1, a = hxPassF(L, k), b = hxPassF(L, k + 1), lenF = Math.max(1, Math.round((b - a) * sp)), len = lenF / SR, takt = W.u === 'b' && hxTakt(L) && sp === 1;
   const B0 = takt ? L.d.b0 + k * L.d.beats : 0, U = W.len;
@@ -194,10 +194,10 @@ async function hxWRender(L, S, sig, key) {
   return { aud, n, len: job.lenF, sig, seed, ms: m.rms || m.ms || 0, dur: job.dur };
 }
 // a Schicht's version to the processor at frame f: the Abdruck (dry or baked), its Treu render, or its anchor
-function hxWPlay(S, which, f, keepStream, now) {
+function hxWPlay(S, which, f, keepStream, now, VV) {
   const L = HX.loops.get(S.loop); if (!L || !HX.node) return false;
   if (which === 'ab') { S.play = 'ab'; hxWStop(S); return hxSchPlay(S, !!(S.bak && S.chain && !L.folgt), f); }
-  const V = which === 'anc' ? S.anc : S.wu; if (!V || !V.aud) return false;
+  const V = VV || (which === 'anc' ? S.anc : S.wu); if (!V || !V.aud) return false;   // (28.10.2026: VV – a Werkstatt creation, which 'krea')
   const [cp, tr] = hxCopy(V.aud), out = L.folgt ? 1 : 0;
   if (out) hxOut1();
   hxPost({ replace: { loop: S.loop, schicht: S.id, chunks: cp, n: V.n, pre: V.pre || 0, len: V.len, ausklang: V.rev ? null : { off: V.len, len: Math.max(0, V.n - V.len) }, f, join: V.rev ? 'xf' : 'ola', X: Math.round(0.01 * SR), XM: now ? HX_XM : undefined, rho: 0, zo: 0, kc: V.rev ? hxSeamOf({ pre: V.pre || 0, len: V.len, X: Math.round(0.01 * SR), zo: 0 }, V.aud) : 0, out, dd: 1, wu: 1 } }, tr);   // (step 2b: a mirrored version: its margin before it, joined warm)
@@ -217,6 +217,7 @@ const hxWLebt = (L) => hxEigN(L) >= 1 && !L.revW && !L.live && hxWAktiv(L) && !(
 // what it follows (rendered first when there is none; swapped at the next seam, or at o.f)
 function hxWUpdate(L, o = {}) {
   if (!L || L.bew || L.state === 'weg' || !HX.node) return;
+  if (L.krea && L.krea.sel != null) { hxCardDirty(); hxRailDirty(); return; }   // (28.10.2026: a Werkstatt creation or a Trieb plays – werkstatt.js)
   hxWNotesAll(L);
   if (HXW.st === 'kein' || L.live) { hxWLiveSync(L); hxCardDirty(); hxRailDirty(); return; }   // (no Werk-Rahmen: Live mode; step 4: or chosen)
   if (L.sch.some((id) => { const S = HX.sch.get(id); return S && S.lm; })) hxWLiveSync(L);   // (back from Live: its versions sound again)

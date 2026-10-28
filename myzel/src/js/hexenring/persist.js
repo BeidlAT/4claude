@@ -19,7 +19,7 @@ function hxRecOf(L) {
       wn: S.wn || null, wseed: S.wseed || 0, gate: S.gate || null, play: S.play || 'ab',
       wu: S.wu && (S.savedW || 0) >= hxSegsV(S, 'w') ? { n: S.wu.n, len: S.wu.len, sig: S.wu.sig, seed: S.wu.seed } : null,
       anc: S.anc && (S.savedX || 0) >= hxSegsV(S, 'x') ? { n: S.anc.n, len: S.anc.len, sig: S.anc.sig, seed: S.anc.seed, br: S.anc.br != null ? S.anc.br : null, vn: S.anc.vn || null } : null })),
-    wwhy: L.wwhy || {}, ton: L.ton || 'diatonisch', klang: L.klang || 'eigen', stufe: L.stufe || null, q: L.q || null, P: L.P || null, mask: L.mask || null, chainRec: L.chainRec || null, jrg: L.jrg || null, tb: hxTbOf(L),
+    wwhy: L.wwhy || {}, krt: L.krea && L.krea.triebe.length ? L.krea.triebe.map(hxWsRecipe) : null, krs: L.krea && typeof L.krea.sel === 'string' ? L.krea.sel : null, ton: L.ton || 'diatonisch', klang: L.klang || 'eigen', stufe: L.stufe || null, q: L.q || null, P: L.P || null, mask: L.mask || null, chainRec: L.chainRec || null, jrg: L.jrg || null, tb: hxTbOf(L),
     bew: L.bew ? { n: L.bew.n, g0: L.bew.g0, gs: L.bew.gs - L.d.b0, fade: L.bew.fade, why: L.bew.why, lanes: L.bew.lanes.map((ln) => ({ k: ln.k, src: ln.src, d: faeEnc(ln.v) })), disp: L.bew.disp ? Object.fromEntries(Object.entries(L.bew.disp).map(([k, v]) => [k, faeEnc(v)])) : null } : null };   // (step 1d: a Schleife of Bewegung, its lanes as the Fährte kept them)
 }
 function hxSaveMeta(loopId) {
@@ -170,7 +170,7 @@ async function hxRecBuild(r, segsOf, o = {}) {
   if (o.fresh) for (const x of sch) x.key = hxKey('s');   // (a Kreis loaded: new keys – it may come twice, beside the Schleifen it was made of)
   const k = r.sr && r.sr !== SR ? SR / r.sr : 1;
   const sn = { key: o.fresh ? hxKey('l') : r.id, col: r.col || null, colA: r.colA || null, slot: r.slot, d: { lock: r.lock, b0: r.b0 + TG.o, beats: r.beats, L: r.L ? (k === 1 ? r.L : r.L * k) : r.L, ph0: 0, gap: !!r.gap }, bpb: r.bpb, eco: r.eco || null, notes: r.notes || [], mv: r.mv, cut: r.cut ? Object.assign({}, r.cut, { stale: true }) : null, eng: r.eng, setTG: r.setTG, gain: r.gain, pan: r.pan || 0, src: r.src, bpm: r.bpm, state: 'angehalten', tk: r.tk, folgt: r.folgt, taumeln: r.taumeln, eig: r.eig, naehrt: r.naehrt || null, sch,
-    wwhy: r.wwhy || {}, ton: r.ton, klang: r.klang, stufe: r.stufe, q: r.q, P: r.P, mask: r.mask, chainRec: r.chainRec, jrg: r.jrg, tb: r.tb || null, mi: r.mi || null };   // (step 2a; step 2b: its tools; Etappe 3: role, Gärtner, Wiederkehr)
+    wwhy: r.wwhy || {}, krt: r.krt || null, krs: r.krs || null, ton: r.ton, klang: r.klang, stufe: r.stufe, q: r.q, P: r.P, mask: r.mask, chainRec: r.chainRec, jrg: r.jrg, tb: r.tb || null, mi: r.mi || null };   // (step 2a; step 2b: its tools; Etappe 3: role, Gärtner, Wiederkehr)
   const L = hxRebuild(sn, { state: 'angehalten', fokus: false, noSave: true });
   if (L && o.fresh) { L.nudge = r.nudge || 0; L.plan = r.plan; L.made = Date.now(); hxSaveLoop(L); return L; }
   if (L) { L.nudge = r.nudge || 0; L.plan = r.plan; L.made = r.made || Date.now(); for (const id of L.sch) { const S = HX.sch.get(id); if (S) { S.saved = hxSegs(S); if (S.bak) S.savedB = hxSegs(S); if (S.wu) S.savedW = hxSegsV(S, 'w'); if (S.anc) S.savedX = hxSegsV(S, 'x'); } } hxSaveMeta(L.id); }

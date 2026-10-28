@@ -277,6 +277,36 @@ body.ww-saen-an :is([data-ww], [data-wa], [data-pid]):hover { outline: 2px solid
 .ww-gesaet::after { content: ""; position: absolute; top: 2px; right: 2px; width: 6px; height: 6px; border-radius: 50%; background: var(--spore); box-shadow: 0 0 6px rgba(255, 179, 92, .8); pointer-events: none; }
 @media (max-width: 420px) { .ww-btn { width: 30px; height: 30px; min-width: 30px; padding: 0; } .ww-btn svg { width: 18px; height: 18px; } }
 .ww-go { width: 100%; }
+/* ---------- the Gärtner's Werkstatt: the Keimling at a ring, the list above it ---------- */
+.hx-mid { position: relative; }
+.hx-wsg { position: absolute; z-index: 3; width: 16px; height: 20px; padding: 0; border: 0; background: none; color: var(--c, var(--spore)); opacity: .45; display: grid; place-items: center; cursor: pointer; }
+.hx-wsg svg { width: 12px; height: 15px; }
+.hx-wsg:hover, .hx-wsg[data-st="da"] { opacity: 1; }
+.hx-wsg[data-st="waechst"] { opacity: 1; animation: hxWsPulse 1.4s ease-in-out infinite; }
+@keyframes hxWsPulse { 50% { opacity: .35; } }
+.hx-wsg i { position: absolute; right: -7px; top: -5px; font: 9px/1 var(--font-num); font-style: normal; color: var(--ink); background: var(--c, var(--spore)); border-radius: 6px; padding: 1px 3px; }
+.hx-wsg i:empty { display: none; }
+.hx-ws { position: absolute; z-index: 45; width: 216px; max-height: min(60vh, 520px); overflow: auto; background: rgba(26, 19, 16, .97); border: 1px solid var(--line); border-radius: 14px; padding: 8px; box-shadow: 0 18px 50px rgba(0, 0, 0, .6); }
+.hx-wsh { display: flex; align-items: center; gap: 4px; margin-bottom: 6px; }
+.hx-wsh > b { font: 12px var(--font-num); color: var(--hypha); margin-right: auto; }
+.hx-wsi { color: var(--c); display: grid; }
+.hx-wsi svg { width: 13px; height: 16px; }
+.hx-wsb { min-width: 30px; height: 28px; padding: 0 8px; border-radius: 14px; border: 1px solid var(--line); background: var(--bark); color: var(--hypha); font: 600 12px var(--font-ui); display: inline-flex; align-items: center; justify-content: center; gap: 2px; }
+.hx-wsb svg { width: 11px; height: 14px; color: var(--spore); }
+.hx-wsb.on { border-color: var(--lumen); color: var(--lumen); }
+.hx-wsb.ja { border-color: var(--lumen); background: var(--lumen); color: var(--ink); }
+.hx-wsl { display: flex; flex-direction: column; gap: 3px; }
+.hx-wsr { display: flex; align-items: center; gap: 8px; padding: 6px 9px; border-radius: 9px; border: 1px solid transparent; cursor: pointer; font-size: 13px; color: var(--hypha); }
+.hx-wsr:hover { background: rgba(240, 230, 216, .05); }
+.hx-wsr.sel { border-color: var(--lumen); background: rgba(134, 240, 208, .08); }
+.hx-wsr.trieb .hx-wsn::before { content: "❦ "; color: var(--spore); }
+.hx-wsr.orig { color: var(--dim); }
+.hx-wsr.waechst, .hx-wsr.warte { color: var(--dim); cursor: default; }
+.hx-wsr.waechst::after { content: ""; width: 6px; height: 6px; margin-left: auto; border-radius: 50%; background: var(--spore); animation: hxWsPulse 1.2s ease-in-out infinite; }
+.hx-wsr.warte { opacity: .45; }
+.hx-wss { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); display: grid; gap: 6px; }
+.hx-wsrow { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.hx-wss .ctl { margin: 0; }
 /* ---------- puls panel ---------- */
 .transport { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-bottom: 10px; }
 .lanehead {
@@ -2894,6 +2924,15 @@ BOOL('hx.gRollen', 'Die anderen spielen', true, { rec: 1 });
 BOOL('hx.gAntw', 'Antworten', true, { rec: 1 });
 BOOL('hx.gBegl', 'Begleiten vorschlagen', true, { rec: 1 });
 BOOL('hx.gWk', 'Wiederkehr', true, { rec: 1 });
+// (owner, 28.10.2026) the Gärtner's Werkstatt: creations grown in the background, played through, kept as Triebe
+SEL('hx.ws.umfang', 'Kreationen für', [['schleife', 'diese Schleife'], ['leiste', 'die ganze Leiste']], 'schleife', { chips: 1, small: 1, rec: 1 });
+BOOL('hx.ws.noten', 'Noten', true, { rec: 1 });
+BOOL('hx.ws.rhythmus', 'Rhythmus', true, { rec: 1 });
+BOOL('hx.ws.oktaven', 'Oktaven', false, { rec: 1 });
+BOOL('hx.ws.klang', 'Klang', false, { rec: 1 });
+SEL('hx.ws.anzahl', 'Anzahl', [['5', '5'], ['10', '10'], ['20', '20']], '10', { chips: 1, small: 1, rec: 1 });
+SEL('hx.ws.durchg', 'Durchgänge je Kreation', [['1', '1'], ['2', '2'], ['4', '4']], '1', { chips: 1, small: 1, rec: 1 });
+SEL('hx.ws.danach', 'Wenn alle gespielt sind', [['stopp', 'anhalten'], ['neu', 'neue wachsen lassen']], 'stopp', { chips: 1, small: 1, rec: 1 });
 SEL('hx.gStimme', 'Antwort mit', [['feld', 'Spielfeld'], ['ebene', 'Ebene 2'], ['schleife', 'Melodie-Schleife']], 'feld', { chips: 1, small: 1, rec: 1 });
 SEL('hx.hand', 'Handschrift', [['aus', 'Aus'], ['an', 'An']], 'aus', { chips: 1, small: 1, rec: 1 });
 NUM('mix.pulsVol', 'Puls gesamt', -60, 6, 0, 'dB', { step: 0.1, fmt: fmtFader });
@@ -32792,7 +32831,7 @@ function hxSnapS(S) { return S && { key: S.key, len: S.len, pre: S.pre, n: S.n, 
 function hxSnap(L) {
   return { key: L.key, slot: L.slot, d: Object.assign({}, L.d), bpb: L.bpb, notes: L.notes, mv: L.mv, cut: L.cut, eng: L.eng, setTG: L.setTG, gain: L.gain, pan: L.pan || 0, src: L.src, bpm: L.bpm, state: L.state, tk: L.tk,
     folgt: !!L.folgt, taumeln: L.taumeln !== false, nudge: L.nudge || 0, eig: L.eig, sch: L.sch.map((id) => hxSnapS(HX.sch.get(id))).filter(Boolean),
-    wwhy: Object.assign({}, L.wwhy || {}), ton: L.ton, klang: L.klang, stufe: L.stufe, q: L.q, P: L.P, mask: L.mask, chainRec: L.chainRec, jrg: L.jrg, tb: hxTbOf(L), tr0: L.tr0 || null,   // (step 2a; step 2b: its tools)
+    wwhy: Object.assign({}, L.wwhy || {}), krt: L.krea && L.krea.triebe.length ? L.krea.triebe.map(hxWsRecipe) : null, krs: L.krea && typeof L.krea.sel === 'string' ? L.krea.sel : null, ton: L.ton, klang: L.klang, stufe: L.stufe, q: L.q, P: L.P, mask: L.mask, chainRec: L.chainRec, jrg: L.jrg, tb: hxTbOf(L), tr0: L.tr0 || null,   // (step 2a; step 2b: its tools)
     hum: L.hum || null, col: L.col || null, colA: L.colA || null, bew: L.bew ? { lanes: L.bew.lanes.map((ln) => ({ k: ln.k, src: ln.src, v: ln.v })), disp: L.bew.disp, n: L.bew.n, g0: L.bew.g0, gs: L.bew.gs, fade: L.bew.fade, why: L.bew.why } : null, naehrt: L.naehrt || null, mi: hxMiSave(L), eco: hxEcoOf(L) };   // (step 4: its ecology)
 }
 const hxMiSave = (L) => { const m = L.mi; if (!m) return null; const o = {}; for (const k of ['rolle', 'wk', 'gOff', 'sugg', 'from', 'begl']) if (m[k] != null && m[k] !== false) o[k] = m[k]; return Object.keys(o).length ? o : null; };   // (Etappe 3: role, Gärtner, Wiederkehr, a suggestion)
@@ -32812,6 +32851,7 @@ function hxRebuild(sn, o = {}) {
   const L = hxLoopMake({ slot, key: sn.key, lock: sn.d.lock, b0: sn.d.b0 - TG.o, beats: sn.d.beats, Lf: sn.d.L, ph0: sn.d.ph0, gap: !!sn.d.gap, gain: sn.gain, pan: sn.pan || 0, bpb: sn.bpb, notes: sn.notes, mv: sn.mv, cut: sn.cut, eng: sn.eng, setTG: sn.setTG, src: sn.src, bpm: sn.bpm, state: o.state || (sn.state === 'stumm' ? 'stumm' : 'spielt'), fokus: o.fokus, eig: sn.eig,
     wwhy: sn.wwhy || {}, ton: sn.ton, klang: sn.klang, stufe: sn.stufe, q: sn.q, P: sn.P, mask: sn.mask, chainRec: sn.chainRec, jrg: sn.jrg });   // (step 2a: its Wuchs)
   if (sn.hum) L.hum = sn.hum;
+  if (sn.krt && sn.krt.length) hxWsRestore(L, sn.krt, sn.krs);   // (28.10.2026: its Triebe – werkstatt.js)
   L.col = sn.col || null; L.colA = sn.colA || null;   // (26.10.2026: its pigment)   // (26.10.2026: its whole Ernte comes back with it)
   L.tk = sn.tk; L.folgt = !!sn.folgt; L.taumeln = sn.taumeln !== false; if (sn.nudge) L.nudge = sn.nudge;
   if (sn.mi) L.mi = Object.assign({}, sn.mi);   // (Etappe 3)
@@ -35442,7 +35482,7 @@ function hxRecOf(L) {
       wn: S.wn || null, wseed: S.wseed || 0, gate: S.gate || null, play: S.play || 'ab',
       wu: S.wu && (S.savedW || 0) >= hxSegsV(S, 'w') ? { n: S.wu.n, len: S.wu.len, sig: S.wu.sig, seed: S.wu.seed } : null,
       anc: S.anc && (S.savedX || 0) >= hxSegsV(S, 'x') ? { n: S.anc.n, len: S.anc.len, sig: S.anc.sig, seed: S.anc.seed, br: S.anc.br != null ? S.anc.br : null, vn: S.anc.vn || null } : null })),
-    wwhy: L.wwhy || {}, ton: L.ton || 'diatonisch', klang: L.klang || 'eigen', stufe: L.stufe || null, q: L.q || null, P: L.P || null, mask: L.mask || null, chainRec: L.chainRec || null, jrg: L.jrg || null, tb: hxTbOf(L),
+    wwhy: L.wwhy || {}, krt: L.krea && L.krea.triebe.length ? L.krea.triebe.map(hxWsRecipe) : null, krs: L.krea && typeof L.krea.sel === 'string' ? L.krea.sel : null, ton: L.ton || 'diatonisch', klang: L.klang || 'eigen', stufe: L.stufe || null, q: L.q || null, P: L.P || null, mask: L.mask || null, chainRec: L.chainRec || null, jrg: L.jrg || null, tb: hxTbOf(L),
     bew: L.bew ? { n: L.bew.n, g0: L.bew.g0, gs: L.bew.gs - L.d.b0, fade: L.bew.fade, why: L.bew.why, lanes: L.bew.lanes.map((ln) => ({ k: ln.k, src: ln.src, d: faeEnc(ln.v) })), disp: L.bew.disp ? Object.fromEntries(Object.entries(L.bew.disp).map(([k, v]) => [k, faeEnc(v)])) : null } : null };   // (step 1d: a Schleife of Bewegung, its lanes as the Fährte kept them)
 }
 function hxSaveMeta(loopId) {
@@ -35593,7 +35633,7 @@ async function hxRecBuild(r, segsOf, o = {}) {
   if (o.fresh) for (const x of sch) x.key = hxKey('s');   // (a Kreis loaded: new keys – it may come twice, beside the Schleifen it was made of)
   const k = r.sr && r.sr !== SR ? SR / r.sr : 1;
   const sn = { key: o.fresh ? hxKey('l') : r.id, col: r.col || null, colA: r.colA || null, slot: r.slot, d: { lock: r.lock, b0: r.b0 + TG.o, beats: r.beats, L: r.L ? (k === 1 ? r.L : r.L * k) : r.L, ph0: 0, gap: !!r.gap }, bpb: r.bpb, eco: r.eco || null, notes: r.notes || [], mv: r.mv, cut: r.cut ? Object.assign({}, r.cut, { stale: true }) : null, eng: r.eng, setTG: r.setTG, gain: r.gain, pan: r.pan || 0, src: r.src, bpm: r.bpm, state: 'angehalten', tk: r.tk, folgt: r.folgt, taumeln: r.taumeln, eig: r.eig, naehrt: r.naehrt || null, sch,
-    wwhy: r.wwhy || {}, ton: r.ton, klang: r.klang, stufe: r.stufe, q: r.q, P: r.P, mask: r.mask, chainRec: r.chainRec, jrg: r.jrg, tb: r.tb || null, mi: r.mi || null };   // (step 2a; step 2b: its tools; Etappe 3: role, Gärtner, Wiederkehr)
+    wwhy: r.wwhy || {}, krt: r.krt || null, krs: r.krs || null, ton: r.ton, klang: r.klang, stufe: r.stufe, q: r.q, P: r.P, mask: r.mask, chainRec: r.chainRec, jrg: r.jrg, tb: r.tb || null, mi: r.mi || null };   // (step 2a; step 2b: its tools; Etappe 3: role, Gärtner, Wiederkehr)
   const L = hxRebuild(sn, { state: 'angehalten', fokus: false, noSave: true });
   if (L && o.fresh) { L.nudge = r.nudge || 0; L.plan = r.plan; L.made = Date.now(); hxSaveLoop(L); return L; }
   if (L) { L.nudge = r.nudge || 0; L.plan = r.plan; L.made = r.made || Date.now(); for (const id of L.sch) { const S = HX.sch.get(id); if (S) { S.saved = hxSegs(S); if (S.bak) S.savedB = hxSegs(S); if (S.wu) S.savedW = hxSegsV(S, 'w'); if (S.anc) S.savedX = hxSegsV(S, 'x'); } } hxSaveMeta(L.id); }
@@ -38083,8 +38123,8 @@ function hxWPink(seed, n) { let s = 0; for (let r = 0; r < 8; r++) { let h = ((s
 // sounds at the end of the pass before it (it rings over the seam – as the original did), one held over the whole loop is
 // struck anew each pass (documented limit); Lebendig: each note a little early or late, by the breath
 function hxWPass(L, S, k, o = {}) {
-  const W0 = hxWBase(L, S); if (!W0 || !W0.n.length) return null;   // (step 2b: the notes' tools applied; Etappe 3: a kept varied pass's notes)
-  const W = (o.live && o.br == null && hxEigN(L) >= 2) ? hxVarW(L, S, k, W0) : W0;   // (Etappe 3: Variieren, Wandern – this pass's own notes)
+  const W0 = o.W || hxWBase(L, S); if (!W0 || !W0.n.length) return null;   // (step 2b: the notes' tools applied; Etappe 3: a kept varied pass's notes; 28.10.2026: o.W – a Werkstatt creation's)
+  const W = !o.W && (o.live && o.br == null && hxEigN(L) >= 2) ? hxVarW(L, S, k, W0) : W0;   // (Etappe 3: Variieren, Wandern – this pass's own notes)
   // (step 2b: a tape at another speed reads the version at that speed – it is rendered as long as it reads)
   const sp = L.sp || 1, a = hxPassF(L, k), b = hxPassF(L, k + 1), lenF = Math.max(1, Math.round((b - a) * sp)), len = lenF / SR, takt = W.u === 'b' && hxTakt(L) && sp === 1;
   const B0 = takt ? L.d.b0 + k * L.d.beats : 0, U = W.len;
@@ -38169,10 +38209,10 @@ async function hxWRender(L, S, sig, key) {
   return { aud, n, len: job.lenF, sig, seed, ms: m.rms || m.ms || 0, dur: job.dur };
 }
 // a Schicht's version to the processor at frame f: the Abdruck (dry or baked), its Treu render, or its anchor
-function hxWPlay(S, which, f, keepStream, now) {
+function hxWPlay(S, which, f, keepStream, now, VV) {
   const L = HX.loops.get(S.loop); if (!L || !HX.node) return false;
   if (which === 'ab') { S.play = 'ab'; hxWStop(S); return hxSchPlay(S, !!(S.bak && S.chain && !L.folgt), f); }
-  const V = which === 'anc' ? S.anc : S.wu; if (!V || !V.aud) return false;
+  const V = VV || (which === 'anc' ? S.anc : S.wu); if (!V || !V.aud) return false;   // (28.10.2026: VV – a Werkstatt creation, which 'krea')
   const [cp, tr] = hxCopy(V.aud), out = L.folgt ? 1 : 0;
   if (out) hxOut1();
   hxPost({ replace: { loop: S.loop, schicht: S.id, chunks: cp, n: V.n, pre: V.pre || 0, len: V.len, ausklang: V.rev ? null : { off: V.len, len: Math.max(0, V.n - V.len) }, f, join: V.rev ? 'xf' : 'ola', X: Math.round(0.01 * SR), XM: now ? HX_XM : undefined, rho: 0, zo: 0, kc: V.rev ? hxSeamOf({ pre: V.pre || 0, len: V.len, X: Math.round(0.01 * SR), zo: 0 }, V.aud) : 0, out, dd: 1, wu: 1 } }, tr);   // (step 2b: a mirrored version: its margin before it, joined warm)
@@ -38192,6 +38232,7 @@ const hxWLebt = (L) => hxEigN(L) >= 1 && !L.revW && !L.live && hxWAktiv(L) && !(
 // what it follows (rendered first when there is none; swapped at the next seam, or at o.f)
 function hxWUpdate(L, o = {}) {
   if (!L || L.bew || L.state === 'weg' || !HX.node) return;
+  if (L.krea && L.krea.sel != null) { hxCardDirty(); hxRailDirty(); return; }   // (28.10.2026: a Werkstatt creation or a Trieb plays – werkstatt.js)
   hxWNotesAll(L);
   if (HXW.st === 'kein' || L.live) { hxWLiveSync(L); hxCardDirty(); hxRailDirty(); return; }   // (no Werk-Rahmen: Live mode; step 4: or chosen)
   if (L.sch.some((id) => { const S = HX.sch.get(id); return S && S.lm; })) hxWLiveSync(L);   // (back from Live: its versions sound again)
@@ -40482,6 +40523,256 @@ function hxChipsMach(chip, box) {
   return false;
 }
 
+// ---- the Gärtner's Werkstatt (owner, 28.10.2026: „der gärtner designt im hintergrund laufend … 10 kreationen … aus der
+// liste auswählen und on the fly durchklicken … alle 10 automatisch durchgespielt und der user kann on the fly ja sagen“).
+// A creation is a recipe per Schicht – its notes varied by the operators the player allows (Noten: neighbour degrees,
+// thinner, passing notes, ornaments; Rhythmus: euclid, half-bar swaps; Oktaven) and, if allowed, another source of the
+// same kind – rendered in the Werk-Rahmen one after another while the loop plays on. A creation plays from the next 1
+// (the processor's replace, as every version); „Ja“ keeps it as a Trieb: its recipe is stored with the loop (its audio
+// is made again from it – the same seed, the same sound), the original is never touched. Umfang „Leiste“: the same
+// creation index for every loop with notes, chosen and played together. ----
+const HXWS = { auto: null, gen: null, pop: null, slot: null, glyphs: [], t: 0 };
+const hxWsOn = (L) => !!(L && !L.bew && L.state !== 'weg' && L.sch.some((id) => hxWCan(HX.sch.get(id))));
+const hxWsOf = (L) => L.krea || (L.krea = { list: [], sel: null, triebe: [] });
+function hxWsRecipe(T) { return { seed: T.seed, sch: T.sch, name: T.name, t: T.t }; }
+function hxWsRestore(L, krt, krs) {
+  const K = hxWsOf(L);
+  K.triebe = krt.filter((x) => x && x.sch).map((x) => ({ seed: x.seed, sch: x.sch, name: x.name || 'Trieb', t: x.t || Date.now(), V: null }));
+  if (krs && /^t\d+$/.test(krs) && K.triebe[+krs.slice(1)]) K.want = krs;   // (played again once its audio is made – hxWsTick)
+}
+// the loops a creation is for
+const hxWsLoops = (L) => (P['hx.ws.umfang'] === 'leiste' ? hxLoopsLive().filter(hxWsOn) : [L]);
+// a creation's notes for one Schicht: the operators allowed, chained three steps from the Schicht's own notes
+function hxWsNotes(W0, seed) {
+  const al = { nb: P['hx.ws.noten'], th: P['hx.ws.noten'], fi: P['hx.ws.noten'], orn: P['hx.ws.noten'], eu: P['hx.ws.rhythmus'], sw: P['hx.ws.rhythmus'], ok: P['hx.ws.oktaven'] };
+  if (!Object.values(al).some(Boolean)) return null;
+  const wts = {}; for (const k in al) wts[k] = al[k] ? 1 : 0;
+  let prev = { n: W0.n, hist: [] }, changed = false;
+  for (let s = 0; s < 12 && (!changed || s < 3); s++) {
+    const r = hxVarStep(W0, W0.n, prev, { seed: (seed ^ Math.imul(s + 1, 0x2c1b3c6d)) | 0, lvl: 3, wts, gd: 0, segs: [], bpb: 4 });
+    if (r.ops.length && r.ops[0] !== 'ret') { prev = r; changed = true; }
+  }
+  return changed ? prev.n : null;
+}
+// another source of the same kind (holds, strikes or both) – its family first
+function hxWsEng(eng, R) {
+  const M = ENG_META[eng]; if (!M) return null;
+  const same = Object.keys(ENG_META).filter((k) => k !== eng && ENG_META[k].art === M.art && ENGINES[k] && !['gsp', 'rhz', 'kor'].includes(k));
+  const fam = same.filter((k) => ENG_META[k].fam === M.fam), pool = fam.length && R() < 0.6 ? fam : same;
+  return pool.length ? pool[Math.floor(R() * pool.length)] : null;
+}
+// a recipe for loop L: per Schicht (by its place in the loop) its notes and source
+function hxWsMake(L, seed) {
+  const sch = {}, R = hxRng(seed);
+  L.sch.forEach((id, i) => {
+    const S = HX.sch.get(id); if (!hxWCan(S)) return;
+    const W0 = hxWBase(L, S); if (!W0) return;
+    const vn = hxWsNotes(W0, (seed ^ Math.imul(i + 3, 0x61c88647)) | 0);
+    const eng0 = (W0.n.find((n) => n.src === 'fin' || n.src === 'eb2') || W0.n[0] || {}).eng, eng = P['hx.ws.klang'] ? hxWsEng(hxWEng(L, { src: 'fin', eng: eng0 }), R) : null;
+    if (vn || eng) sch[i] = { vn: vn || null, eng: eng || null };
+  });
+  return Object.keys(sch).length ? sch : null;
+}
+// its audio: each Schicht rendered as the loop's next pass would be, with the recipe's notes and source
+async function hxWsRender(L, rec, seed) {
+  const V = {};
+  for (const i in rec) {
+    const S = HX.sch.get(L.sch[+i]); if (!S || !hxWCan(S)) continue;
+    const W0 = hxWBase(L, S), r = rec[i], W = r.vn ? Object.assign({}, W0, { n: r.vn }) : W0;
+    const k = hxNextSeam(L).k, job = hxWPass(L, S, k, { W }); if (!job) continue;
+    if (r.eng) for (const n of job.notes) if (n.src === 'fin' || n.src === 'eb2' || !n.src) n.eng = r.eng;
+    const m = await hxwCall('wuchs', hxWJob(L, S, job, seed));
+    if (!m || m.err || !m.L) { if (m && m.err) hxwLog('werkstatt: ' + String(m.err).slice(0, 120)); return null; }
+    const n = hxWTrim(m.L, m.R, job.lenF);
+    if (!hxMemOk(n)) return null;
+    const [aud] = hxChunks(n);
+    for (let j = 0; j < n; j++) { const ch = aud[Math.floor(j / HX_CH)], q = j % HX_CH; ch[0][q] = m.L[j]; ch[1][q] = m.R[j]; }
+    if (n >= m.L.length) hxWFadeEnd(aud, n, job.lenF);
+    V[i] = { aud, n, len: job.lenF, sig: 'krea', seed };
+  }
+  return Object.keys(V).length ? V : null;
+}
+// grow the creations (the count set), one after another, for every loop of the Umfang
+async function hxWsGrow(L0) {
+  if (HXWS.gen) return;
+  if (HXW.st === 'kein') { toast('Der Werk-Rahmen fehlt hier – die Werkstatt kann nichts wachsen lassen.', 4000); return; }
+  if (!P['hx.ws.noten'] && !P['hx.ws.rhythmus'] && !P['hx.ws.oktaven'] && !P['hx.ws.klang']) { toast('Wähle, was der Gärtner verändern darf: Noten, Rhythmus, Oktaven oder Klang.', 4000); return; }
+  const loops = hxWsLoops(L0); if (!loops.length) return;
+  const N = +P['hx.ws.anzahl'] || 10, G = (HXWS.gen = { loops: loops.map((L) => L.key), n: 0, N, stop: false });
+  for (const L of loops) { const K = hxWsOf(L); K.list = []; if (typeof K.sel === 'number') hxWsPlay(L, null); }
+  hxSay('Gärtner: ' + N + ' Kreationen wachsen'); hxWsDirty();
+  for (let c = 0; c < N && !G.stop; c++) {
+    const seed = ((Math.random() * 2147483646) | 0) + 1;
+    for (const key of G.loops) {
+      const L = hxByKey(key); if (!L || !hxWsOn(L)) continue;
+      const K = hxWsOf(L), item = { i: c, seed, sch: null, V: null, st: 'waechst' };
+      K.list.push(item); hxWsDirty();
+      item.sch = hxWsMake(L, seed);
+      item.V = item.sch ? await hxWsRender(L, item.sch, seed) : null;
+      item.st = item.V ? 'fertig' : 'leer';
+      hxWsDirty();
+      if (G.stop) break;
+    }
+    G.n = c + 1;
+  }
+  HXWS.gen = null;
+  for (const key of G.loops) { const L = hxByKey(key); if (L) L.krea.list = L.krea.list.filter((x) => x.st === 'fertig'); }
+  if (!G.stop) hxSay('Gärtner: Kreationen fertig');
+  hxWsDirty();
+}
+function hxWsStop() { if (HXWS.gen) HXWS.gen.stop = true; if (HXWS.auto) hxWsAuto(null); hxWsDirty(); }
+// play a creation (its index), a Trieb ('t' + index) or the original (null) – for every loop of the Umfang, from the next 1
+function hxWsPlay(L0, which, fAt) {
+  const lst = P['hx.ws.umfang'] === 'leiste', has = (L) => (which == null ? L.krea && L.krea.sel != null : typeof which === 'number' ? L.krea && L.krea.list.some((x) => x.i === which && x.V) : L.krea && L.krea.triebe[+String(which).slice(1)]);
+  const loops = lst ? [L0].concat(hxLoopsLive().filter((L) => L !== L0 && has(L))) : [L0];   // (die ganze Leiste: every loop together – the original too)
+  for (const L of loops) {
+    const K = hxWsOf(L), T = which == null ? null : typeof which === 'number' ? K.list.find((x) => x.i === which) : K.triebe[+String(which).slice(1)];
+    if (which != null && (!T || !T.V)) continue;
+    const f = fAt != null && L === L0 ? fAt : hxNextSeam(L).f;
+    if (which == null) { K.sel = null; hxWUpdate(L, { f }); }   // (what it played before: the Abdruck, its anchor or its render)
+    else {
+      K.sel = which;
+      L.sch.forEach((id, i) => { const S = HX.sch.get(id), V = T.V[i]; if (S && V) hxWPlay(S, 'krea', f, false, false, V); });
+    }
+    hxSaveMeta(L.id);
+  }
+  hxWsDirty(); hxRailDirty();
+}
+// „Ja“: what plays becomes a Trieb (kept, saved with the loop) – for every loop of the Umfang that plays a creation
+function hxWsJa(L0) {
+  const loops = P['hx.ws.umfang'] === 'leiste' ? hxLoopsLive().filter((L) => L.krea && typeof L.krea.sel === 'number') : [L0];
+  let n = 0;
+  for (const L of loops) {
+    const K = hxWsOf(L); if (typeof K.sel !== 'number') continue;
+    const T = K.list.find((x) => x.i === K.sel); if (!T || !T.V) continue;
+    K.triebe.unshift({ seed: T.seed, sch: T.sch, name: 'Trieb ' + (K.triebe.length + 1), t: Date.now(), V: T.V });
+    K.list = K.list.filter((x) => x !== T);
+    K.sel = 't0'; n++;
+    hxSaveMeta(L.id);
+  }
+  if (HXWS.auto) hxWsAuto(null, true);
+  if (n) { hxSay('Behalten – ein neuer Trieb'); toast('Behalten: ein neuer Trieb. Das Original bleibt.', 2500); }
+  hxWsDirty();
+}
+function hxWsDel(L, j) {
+  const K = hxWsOf(L); const sel = K.sel;
+  if (sel === 't' + j) hxWsPlay(L, null);
+  K.triebe.splice(j, 1);
+  if (typeof K.sel === 'string') { const s = +K.sel.slice(1); if (s > j) K.sel = 't' + (s - 1); }
+  hxSaveMeta(L.id); hxWsDirty();
+}
+// automatic: every ready creation in turn, each for its passes (all its bars), then stop or grow new ones
+function hxWsAuto(L, keep) {
+  if (!L) { const A0 = HXWS.auto; HXWS.auto = null; if (A0 && !keep) { const X = hxByKey(A0.key); if (X && typeof X.krea.sel === 'number') hxWsPlay(X, null); } hxWsDirty(); return; }
+  const K = hxWsOf(L); if (!K.list.some((x) => x.V)) { toast('Noch keine Kreation fertig.', 2000); return; }
+  HXWS.auto = { key: L.key, idx: -1, until: -1 };
+  hxWsAutoNext();
+}
+function hxWsAutoNext() {
+  const A0 = HXWS.auto; if (!A0) return;
+  const L = hxByKey(A0.key); if (!L) { HXWS.auto = null; return; }
+  const ready = L.krea.list.filter((x) => x.V);
+  const nx = ready.find((x) => x.i > A0.idx);
+  if (!nx) {
+    if (P['hx.ws.danach'] === 'neu' && !HXWS.gen) { HXWS.auto = null; hxWsPlay(L, null); hxWsGrow(L).then(() => { if (!HXWS.auto) hxWsAuto(L); }); return; }
+    if (HXWS.gen) { A0.wait = true; return; }   // (still growing: the next one when it is there)
+    hxWsAuto(null); return;
+  }
+  A0.wait = false; A0.idx = nx.i;
+  const k0 = A0.until >= 0 ? A0.until : hxNextSeam(L).k;   // (seamless: the next one at the end of the last one's passes)
+  hxWsPlay(L, nx.i, hxPassF(L, k0));
+  A0.until = k0 + (+P['hx.ws.durchg'] || 1);   // (its passes from its first on – all its bars)
+}
+// every tick: the automatic run's turn, a Trieb wanted after a reload, the glyphs at the rings
+function hxWsTick() {
+  const now = performance.now(); if (now - HXWS.t < 120) return; HXWS.t = now;
+  const A0 = HXWS.auto;
+  if (A0) { const L = hxByKey(A0.key); if (!L) HXWS.auto = null; else if (A0.wait ? L.krea.list.some((x) => x.V && x.i > A0.idx) : L.k >= A0.until - 1) { if (A0.wait) A0.until = -1; hxWsAutoNext(); } }
+  for (const L of hxLoopsLive()) {
+    const K = L.krea; if (!K || !K.want || K.wantBusy) continue;
+    const j = +K.want.slice(1), T = K.triebe[j]; if (!T) { K.want = null; continue; }
+    K.wantBusy = true;
+    hxWsRender(L, T.sch, T.seed).then((V) => { K.wantBusy = false; K.want = null; if (V) { T.V = V; hxWsPlay(L, 't' + j); } });
+  }
+  hxWsGlyphs();
+}
+// ---- on the rail: a small Keimling at the right of each ring with notes; a tap opens the Werkstatt above it ----
+const HX_WS_ICON = '<svg viewBox="0 0 16 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M8 17V8"/><path d="M8 10C8 6 5 4 2 4c0 3 2 6 6 6"/><path d="M8 8c0-3 2-5 6-5 0 3-2 5-6 5"/></svg>';
+function hxWsGlyphs() {
+  if (!HXU.mid || !HXU.rings) return;
+  const box = HXU.mid, mb = box.getBoundingClientRect();
+  for (let i = 0; i < HXU.rings.length; i++) {
+    let g = HXWS.glyphs[i];
+    const L = hxRingL(i), rb = HXU.rings[i], show = !!(L && hxWsOn(L) && rb.getClientRects().length && rb.getBoundingClientRect().width > 0);   // (offsetParent: null inside a fixed rail)
+    if (!show) { if (g) g.hidden = true; continue; }
+    if (!g) {
+      g = HXWS.glyphs[i] = h('button', { type: 'button', class: 'hx-wsg', tabindex: '-1', html: HX_WS_ICON + '<i></i>' });
+      g.addEventListener('pointerdown', (e) => e.stopPropagation());
+      g.addEventListener('click', (e) => { e.stopPropagation(); hxWsOpen(i); });
+      box.append(g);
+    }
+    const r = rb.getBoundingClientRect(), K = L.krea, n = K ? K.list.filter((x) => x.V).length + K.triebe.length : 0;
+    const x = Math.round(r.right - mb.left - 7), y = Math.round(r.top - mb.top + r.height / 2 - 9);
+    if (g.hxX !== x || g.hxY !== y) { g.style.left = x + 'px'; g.style.top = y + 'px'; g.hxX = x; g.hxY = y; }
+    g.hidden = false;
+    g.style.setProperty('--c', hxPigOf(L.col || L.colA) ? hxPigOf(L.col || L.colA).c : 'var(--spore)');
+    const st = HXWS.gen && HXWS.gen.loops.includes(L.key) ? 'waechst' : n ? 'da' : '';
+    if (g.dataset.st !== st) g.dataset.st = st;
+    const lab = 'Gärtner-Werkstatt, Schleife ' + (i + 1) + (n ? ': ' + n + ' Kreationen' : '');
+    if (g.getAttribute('aria-label') !== lab) g.setAttribute('aria-label', lab);
+    const cnt = g.querySelector('i'), t = n ? String(n) : ''; if (cnt.textContent !== t) cnt.textContent = t;
+  }
+}
+// ---- the Werkstatt above the ring: the list (Triebe, Original, the creations), ▶ / ■, Ja, ⚙ ----
+function hxWsDirty() { HXWS.dirty = true; if (HXWS.pop && !HXWS.pop.hidden) requestAnimationFrame(hxWsRender2); hxCardDirty(); }
+function hxWsOpen(slot) {
+  if (!HXWS.pop) {
+    HXWS.pop = h('div', { class: 'hx-ws', role: 'dialog', 'aria-label': 'Gärtner-Werkstatt', hidden: true });
+    document.getElementById('app').append(HXWS.pop);
+    document.addEventListener('pointerdown', (e) => { const p = HXWS.pop; if (p && !p.hidden && !p.contains(e.target) && !(e.target.closest && e.target.closest('.hx-wsg'))) p.hidden = true; }, true);
+    window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && HXWS.pop && !HXWS.pop.hidden) { HXWS.pop.hidden = true; e.stopPropagation(); } }, true);
+  }
+  const P0 = HXWS.pop;
+  if (!P0.hidden && HXWS.slot === slot) { P0.hidden = true; return; }
+  HXWS.slot = slot; P0.hidden = false; HXWS.set = false;
+  hxWsRender2();
+}
+function hxWsRender2() {
+  const P0 = HXWS.pop; if (!P0 || P0.hidden) return;
+  const L = hxRingL(HXWS.slot); if (!L) { P0.hidden = true; return; }
+  const K = hxWsOf(L), b = (t, fn, o = {}) => h('button', { type: 'button', class: 'hx-wsb' + (o.cls ? ' ' + o.cls : ''), title: o.tip || null, 'aria-label': o.aria || o.tip || null, html: o.html || null, onclick: fn }, o.html ? null : t);
+  const gen = HXWS.gen && HXWS.gen.loops.includes(L.key), auto = HXWS.auto && HXWS.auto.key === L.key;
+  const ready = K.list.filter((x) => x.V);
+  const head = h('div', { class: 'hx-wsh' }, h('span', { class: 'hx-wsi', style: '--c:' + (hxPigOf(L.col || L.colA) ? hxPigOf(L.col || L.colA).c : 'var(--spore)'), html: HX_WS_ICON }), h('b', null, String(L.slot + 1)),
+    gen ? b('■', hxWsStop, { tip: 'Wachsen anhalten' }) : b('', () => hxWsGrow(L), { tip: 'Kreationen wachsen lassen', html: HX_WS_ICON + '<span>+</span>', cls: 'grow' }),
+    auto ? b('■', () => hxWsAuto(null), { tip: 'Durchspielen anhalten', cls: 'on' }) : b('▶', () => hxWsAuto(L), { tip: 'Alle nacheinander durchspielen' }),
+    auto || typeof K.sel === 'number' ? b('Ja', () => hxWsJa(L), { tip: 'Diese Kreation behalten', cls: 'ja' }) : null,
+    b('⚙', () => { HXWS.set = !HXWS.set; hxWsRender2(); }, { tip: 'Was der Gärtner verändern darf', cls: HXWS.set ? 'on' : '' }));
+  const row = (lab, sel, fn, o = {}) => {
+    const r = h('div', { class: 'hx-wsr' + (sel ? ' sel' : '') + (o.cls ? ' ' + o.cls : ''), role: 'button', tabindex: '0', title: o.tip || null }, h('span', { class: 'hx-wsn' }, lab), o.extra || null);
+    r.addEventListener('click', fn); r.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); } });
+    if (o.del) { let tm = 0; r.addEventListener('pointerdown', () => { tm = setTimeout(() => { tm = -1; o.del(); }, 700); }); for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) r.addEventListener(ev, () => { if (tm > 0) clearTimeout(tm); }); r.addEventListener('click', (e) => { if (tm === -1) { e.stopImmediatePropagation(); tm = 0; } }, true); }
+    return r;
+  };
+  const list = h('div', { class: 'hx-wsl' });
+  K.triebe.forEach((T, j) => list.append(row(T.name, K.sel === 't' + j, () => (T.V ? hxWsPlay(L, 't' + j) : (K.want = 't' + j)), { cls: 'trieb', tip: 'Gedrückt halten: löschen', del: () => hxWsDel(L, j) })));
+  list.append(row('Original', K.sel == null, () => hxWsPlay(L, null), { cls: 'orig' }));
+  const N = HXWS.gen && gen ? HXWS.gen.N : K.list.length;
+  for (let c = 0; c < N; c++) {
+    const it = K.list.find((x) => x.i === c);
+    if (it && !it.V && it.st !== 'waechst') continue;
+    list.append(row(String(c + 1), K.sel === c, () => { if (it && it.V) { if (HXWS.auto) hxWsAuto(null, true); hxWsPlay(L, c); } }, { cls: !it ? 'warte' : it.V ? '' : 'waechst' }));
+  }
+  const kids = [head, list];
+  if (HXWS.set) kids.push(HXWS.setBox || (HXWS.setBox = h('div', { class: 'hx-wss' }, ctl('hx.ws.umfang', { prefix: 'ws-' }), h('div', { class: 'hx-wsrow' }, ctl('hx.ws.noten', { prefix: 'ws-' }), ctl('hx.ws.rhythmus', { prefix: 'ws-' }), ctl('hx.ws.oktaven', { prefix: 'ws-' }), ctl('hx.ws.klang', { prefix: 'ws-' })), ctl('hx.ws.anzahl', { prefix: 'ws-' }), ctl('hx.ws.durchg', { prefix: 'ws-' }), ctl('hx.ws.danach', { prefix: 'ws-' }))));   // (built once: a control binds for good)
+  P0.replaceChildren(...kids);
+  // above its ring, inside the app
+  const rb = HXU.rings[HXWS.slot].getBoundingClientRect(), ab = document.getElementById('app').getBoundingClientRect(), w = P0.offsetWidth || 200;
+  P0.style.left = clamp(rb.left - ab.left + rb.width / 2 - w / 2, 8, ab.width - w - 8) + 'px';
+  P0.style.bottom = Math.max(8, ab.bottom - rb.top + 8) + 'px';
+}
+
+if (!HXW.on) setInterval(() => { try { hxWsTick(); } catch (e) { console.warn(e); } }, 150);   // (not in a Werk-Rahmen realm)
 /* ---------- Hexenring: Ökologie (Etappe 4) ---------- */
 // (dev/looper/SPEC.md §15, §10.6, §17, §12.3/§12.4 leftovers) Schleifen that feed the instrument and each other, meet,
 // root and rot; the microphone; the Live playback; Ladung on loops, per-note vetoes, Wiederkehr without a Takt.
