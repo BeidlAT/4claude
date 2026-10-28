@@ -278,6 +278,6 @@ function hxRailTips(hw) {
     const b = HXU.rings[i], L = HX.loops.get(HX.slot[i]), R = HX.rec;
     set(b, R && R.slot === i ? (R.phase === 'rec' ? 'Nimmt auf – tippen beendet die Aufnahme.' : 'Wartet auf die Eins – tippen bricht ab.')
       : !L ? 'Leerer Platz ' + (i + 1) + ': tippen nimmt hier eine neue Schleife auf.'
-        : 'Schleife ' + (i + 1) + (L.state === 'spielt' ? ' spielt' : L.state === 'stumm' ? ' ist stumm' : ' ist angehalten') + '. Tippen: ' + (L.state === 'spielt' ? 'stumm' : L.state === 'stumm' ? 'wieder an' : 'weiterspielen') + ' (mit Takt auf der nächsten Eins). Hoch- oder runterziehen: lauter oder leiser. Halten: ihre Karte mit allen Einstellungen.');
+        : 'Schleife ' + (i + 1) + (L.state === 'spielt' ? ' spielt' : L.state === 'stumm' ? ' ist stumm' : ' ist angehalten') + '. Tippen: ' + (L.state === 'spielt' ? 'stumm' : L.state === 'stumm' ? 'wieder an' : 'weiterspielen') + ' (mit Takt auf der nächsten Eins). Hoch- oder runterziehen: lauter oder leiser. Halten oder Rechtsklick: ihr Menü – bearbeiten, Karte, Solo, Export, Farbe, Löschen.');
   }
 }

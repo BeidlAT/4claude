@@ -125,16 +125,17 @@ function hxRailShow() {
   // (step 1d: the panel's own layout may settle a frame later – the mixer's, the library's – look again then)
   if (UI.panel && !HXU.reT) HXU.reT = requestAnimationFrame(() => { HXU.reT = 0; const f2 = P['hx.rail'] === 'klein' || hxRailAuto(); if (HXU.rail && (HXU.rail.dataset.fold === '1') !== f2) hxRailShow(); });
 }
-// a ring pressed: it acts at once; held 0.5 s it opens its card instead, dragged up or down it sets the level
+// a ring pressed: it acts at once; held 0.5 s it opens its menu instead (as a right click – the iPad has none; its card is
+// one of the items: owner, 28.10.2026), dragged up or down it sets the level
 function hxRingDown(i, e) {
   if (e.button > 0) return;
   e.preventDefault();
   const b = HXU.rings[i];
   try { b.setPointerCapture(e.pointerId); } catch (x) {}
   const id = HX.slot[i], L = id && HX.loops.get(id), g0 = L ? L.gain : 1;
-  const G = { i, pid: e.pointerId, y0: e.clientY, mode: 'tap', g0, L, did: null };
+  const G = { i, pid: e.pointerId, x0: e.clientX, y0: e.clientY, mode: 'tap', g0, L, did: null };
   G.did = hxRingTap(i, e);
-  G.tm = setTimeout(() => { if (G.mode === 'tap') { G.mode = 'card'; hxRingRevert(G); hxCardOpen(i); } }, HX_HOLD * 1000);
+  G.tm = setTimeout(() => { if (G.mode === 'tap') { G.mode = 'menu'; hxRingRevert(G); const r0 = b.getBoundingClientRect(); hxCtxMenu(i, G.x0, Math.min(G.y0, r0.top) - 8); } }, HX_HOLD * 1000);   // (above the finger: lifting it touches no item)
   const mv = (ev) => {
     if (ev.pointerId !== G.pid || !G.L || G.L.state === 'weg') return;
     const dy = G.y0 - ev.clientY;
