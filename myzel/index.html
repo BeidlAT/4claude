@@ -22136,6 +22136,9 @@ function loadValues(vals, keepUnset) {
   buildNotes(); drawBg(); refreshEngineUI(); updLaneTabs(); updInactive(); renderBarInfo();
   if (A.ctx) { applyAll(); seqRetempo(); warmKS(); dspMaybe(); if (P['kor.src'] === 'echo') ensureCapture(); if (!LIVE_SRC.has(P['kor.src'])) texture(P['kor.src']); }
   syncMic();
+  // (owner, 27.10.2026: „man muss erst auf stille gehen … dann ein preset … dann auf weiter“) a preset's values come in here,
+  // past setParam: the loops that sound as the field take the new sound too (as a knob turned does it – onParamChanged)
+  if (A.ctx && hxLoopsLive().some((X) => (X.klang || 'eigen') === 'feld')) { HX.wFeld = true; HX.wKlang = performance.now() + 50; }
   clearTimeout(saveTimer); saveTimer = setTimeout(saveState, 400);
 }
 function saveState() {

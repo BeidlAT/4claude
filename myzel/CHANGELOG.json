@@ -2,6 +2,13 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-28a",
+      "punkte": [
+        "Schleifen mit dem Klang „Spielfeld“ übernehmen jetzt sofort den Klang eines geladenen Presets – ohne Umweg über Stille und Weiter.",
+        "Vorher spielten sie nach dem Laden eines Presets in derselben Tonart weiter mit dem alten Klang."
+      ]
+    },
+    {
       "id": "2026-10-27s",
       "punkte": [
         "Standard jetzt: Schleifen folgen der Tonart des Presets – lädst du ein Preset in einer anderen Tonart, klingen deine Schleifen ab dem angekündigten Takt in der neuen.",
