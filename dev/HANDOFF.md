@@ -1,5 +1,7 @@
 # Übergabe: Myzel (Stand 22.10.2026 – Klangquellen, Ruhe und der Hexenring fertig, Schlussprüfung grün)
 
+**→ Zuerst `dev/STAND-2026-10-28.md` lesen** (Stand, Arbeitsweise, alles Offene, 28.10.2026).
+
 ## Nächste Sitzung – zuerst lesen (Stand 26.10.2026, nachts)
 
 **ZURÜCKGESETZT (27.10.2026, Besitzer):** `myzel/` steht wieder auf `cd268ce` (26.10., nach den Klangwelt-Bildern). Alles danach (PR #49–#62) ist heraus – die Einträge unten dazu beschreiben Code, der **nicht mehr** in der App ist. Offen: `dev/OFFEN-2026-10-27.md` – zuerst lesen, mit der Lehre daraus.
