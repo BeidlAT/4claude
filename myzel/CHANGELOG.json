@@ -2,6 +2,13 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-28n",
+      "punkte": [
+        "Chrome: Attraktor, Sitar, Kehlchen, Schimmer, Glut und Stufentreppe erzeugen im Audio-Thread keinen Speichermüll mehr – weniger Aufräumpausen, die zu Aussetzern führen können. Der Klang ist bitgenau derselbe.",
+        "Firefox und Safari waren davon nicht betroffen."
+      ]
+    },
+    {
       "id": "2026-10-28m",
       "punkte": [
         "Firefox: Eine kurz angeschlagene Note mit langsamer Einschwingzeit (z. B. Nebel) setzte beim Loslassen für einige Millisekunden aus – behoben.",

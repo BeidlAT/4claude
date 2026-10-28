@@ -8,15 +8,18 @@
   // string as it rings. ----
   const SIT_OUT = 0.018;
   class SitStr {
-    constructor(n) { this.b = new Float32Array(n); this.m = n - 1; this.w = 0; this.z = 0; this.d = 100; this.g = 0.999; this.c = 0.5; this.x1 = 0; }
+    constructor(n) { this.b = new Float32Array(n); this.m = n - 1; this.w = 0; this.z = 0; this.d = 100; this.g = 0.999; this.c = 0.5; this.x1 = 0; this.xin = 0; this.jaw = 0; this.f0 = 0; }
     tune(f, t60, bright) {
       this.c = Math.min(0.98, 0.18 + 0.8 * bright * Math.min(1, 1600 / f));
       this.d = Math.max(4, SR / f - pd1(this.c, f) - 1);
       this.g = Math.pow(0.001, 1 / (Math.max(0.05, t60) * f));
     }
-    // one sample: the excitation in, the string's output at the bridge out; jaw: how much the bridge shortens it
-    tick(x, jaw) {   // (the bridge's contact shortens the string while it presses: the open length is set a little longer, see Sit.tune)
-      const b = this.b, m = this.m;
+    // one sample: the excitation in (xin), the string's output at the bridge out (x1); jaw: how much the bridge shortens
+    // it. In and out through fields, not arguments and a return: V8 does not inline every string's call into Sit's
+    // render, and there each number passed or returned is a new heap object – two per sample, 1.5 MB of the audio
+    // thread's garbage per voice and second in Chrome (28.10.2026)
+    step() {   // (the bridge's contact shortens the string while it presses: the open length is set a little longer, see Sit.tune)
+      const b = this.b, m = this.m, x = this.xin, jaw = this.jaw;
       // the contact: the string's last output towards the bridge (positive side) shortens the delay, smoothly
       const u = this.x1 > 0 ? this.x1 * 6 : 0, ct = u < 1 ? u * u * (3 - 2 * u) : 1, d = this.d * (1 - jaw * 0.018 * ct);
       const i = Math.floor(d), f = d - i, p = f + 1, w = this.w + 1 - i;
@@ -24,7 +27,6 @@
       this.z += this.c * (o - this.z);
       this.w = (this.w + 1) & m; b[this.w] = x + this.z * this.g;
       this.x1 = o;
-      return o;
     }
     clear() { this.b.fill(0); this.z = 0; this.x1 = 0; }
   }
@@ -64,11 +66,13 @@
       const s = this.s, ch = this.ch, tar = this.tar, nt = tar.length, rng = this.rng;
       const og = R ? SIT_OUT * Math.SQRT1_2 : SIT_OUT, jaw = Math.min(1.6, this.p.jawari * (0.25 + 1.5 * this.y0)), tg = 0.06 * this.p.tarab, chA = this.chA;
       let exI = this.exI, lp = this.lp;
+      s.jaw = jaw; for (let k = 0; k < ch.length; k++) ch[k].jaw = jaw * 0.8;
       for (let i = a; i < b; i++) {
         let x = 0, xc = 0;
         if (exI < this.exN) { const u = exI / this.exN; x = this.exA * (u < 0.5 ? 2 * u : 2 - 2 * u) + 0.08 * this.exA * (rng.next() * 2 - 1); xc = x * chA; exI++; }
-        const o = s.tick(x, jaw);
-        let c = 0; for (let k = 0; k < ch.length; k++) c += ch[k].tick(xc, jaw * 0.8);
+        s.xin = x; s.step();
+        const o = s.x1;
+        let c = 0; for (let k = 0; k < ch.length; k++) { const st = ch[k]; st.xin = xc; st.step(); c += st.x1; }
         // the tarab strings hear the main string (through the bridge), softly
         lp += 0.3 * (o - lp);
         let tl = 0, tr = 0; for (let k = 0; k < nt; k++) { const t = tar[k], v = t.r.tick(lp * tg); tl += v * (1 - t.pan); tr += v * (1 + t.pan); }

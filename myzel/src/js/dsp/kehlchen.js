@@ -28,6 +28,7 @@
       this.pr = -0.6; this.ys = this.y; this.yT = this.y;
       this.zA = { last: 0, cnt: 0, arm: false, amp: 0, flip: 1 }; this.zB = { last: 0, cnt: 0, arm: false, amp: 0, flip: 1 };
       this.bA = this.bB = 0; this.sy = 0; this.syN = 0; this.syD = 1; this.tr = 0; this.ruf = 0;
+      this.dA = 0; this.dB = 0;   // (the throat's DC, declared here: a field render only added later was boxed on every sample in V8 – 0.8 MB of the audio thread's garbage per voice and second in Chrome, 28.10.2026)
       for (const q of [this.tA, this.tB]) if (q) for (const f of q) f.z1 = f.z2 = 0;
     }
     set(p) {
