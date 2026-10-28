@@ -79,21 +79,22 @@ function midiNoteOn(cs, note, vel, ts) {
   const tt = touches.get(id);
   if (tt) { tt.cs = cs; tt.msrc = cs.src; tt.mpe = mpe; tt.rel74 = tt0.rel74; if (mpe) tt.pp = tt0.pp; }
 }
-function midiNoteOff(cs, note, rv) {
+function midiNoteOff(cs, note, rv, ts) {
   const src = cs.src, id = midiId(src, cs.ch, note), r = MIDI.notes.get(id);
   if (!r) { if (src.dbl === id) { src.count = true; src.dbl = null; } return; }   // the second note-off of a doubled note
   if (r.n > 1 && !midiCounts(src)) { src.dbl = id; r.n = 1; }
   if (--r.n > 0) return;   // still held by another key, the arpeggiator or a chord pad
-  noteUp(r, relK(src, rv));
+  noteUp(r, relK(src, rv), ts);
 }
-// a note let go: the sustain pedal holds it, sostenuto keeps it, else it ends (k: how fast, from release velocity)
-function noteUp(r, k) {
+// a note let go: the sustain pedal holds it, sostenuto keeps it, else it ends (k: how fast, from release velocity; ts:
+// the key's MIDI timestamp – Gleichmäßig ends it at the same distance from the key as its start, midiAt)
+function noteUp(r, k, ts) {
   r.n = 0;
   if (!touches.has(r.id)) { MIDI.notes.delete(r.id); return; }
   if (pedalOf(r.cs).sus) r.held = true;
   if (r.held || r.sost) return;
   MIDI.notes.delete(r.id);
-  onUp({ pointerId: r.id, relK: k });
+  onUp({ pointerId: r.id, relK: k, at: ts > 0 ? midiAt(ts) : 0 });
 }
 function midiRelease(r) { MIDI.notes.delete(r.id); onUp({ pointerId: r.id }); }
 // release velocity: a quick lift ends a held sound sooner, a slow one later – only from keyboards that really send it:

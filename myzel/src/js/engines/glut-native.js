@@ -9,12 +9,12 @@ function gltEnv(v, t, vel, o) {
   const peak = vel * GLT_PEAK, ng = P['glt.nachgluehen'];
   if (o.burst) { burstEnv(v, t, peak, 0.003, o.gate + ng * (o.decayMul || 1), 0.3); return; }
   adsrStart(v, t, peak, 0.003);
-  v.release = (k) => {
+  v.release = (k, at) => {
     if (!v.alive || v.released) return;
-    const now = A.ctx.currentTime, tg = ng * (k || 1);
+    const now = relT(at), tg = ng * (k || 1);
     if (v.wk) v.wk.port.postMessage({ off: now, k: k || 1 }); else if (v.glow) v.glow(now, tg);
     v.released = true; v.relAt = now;
-    holdParam(v.out.gain, now); v.out.gain.setTargetAtTime(0, now + tg, 0.15);
+    holdParam(v.out.gain, now, envAt(v, now)); v.out.gain.setTargetAtTime(0, now + tg, 0.15);
     v.finish(now + tg + 0.8);
   };
 }

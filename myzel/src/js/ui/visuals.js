@@ -80,6 +80,8 @@ function drawBg() {
 // field two steps (VIS.k) and fades it as two would – the same speed and the same trails, half the drawing.
 const FR = { iv: 16.7, prev: 0, acc: 0, drew: false };
 const FADE = [null, 'rgba(0,0,0,' + (REDUCED ? 0.4 : 0.085) + ')', 'rgba(0,0,0,' + (1 - Math.pow(1 - (REDUCED ? 0.4 : 0.085), 2)).toFixed(4) + ')'];
+// a spore's colour per whole degree of hue (its alpha is the canvas's globalAlpha)
+const SPORE_COL = [], visHsl = (hd) => SPORE_COL[hd] || (SPORE_COL[hd] = 'hsl(' + hd + ',70%,70%)');
 function frameCtl() {
   if (MIDI.mbDue) midiFrame();
   if (MAP.due) mapFlush();   // controller values of this frame
@@ -108,108 +110,34 @@ function frameBody(ts) {
   const now = A.ctx ? A.ctx.currentTime : 0;
   // scheduled events
   if (VIS.events.length) {
-    const keep = [];
-    for (const ev of VIS.events) {
-      if (ev.t > now) { keep.push(ev); continue; }
+    const E = VIS.events;
+    let j = 0;   // (kept in place: no new list each frame)
+    for (let i = 0; i < E.length; i++) {
+      const ev = E[i];
+      if (ev.t > now) { E[j++] = ev; continue; }
       if (ev.kind === 'step') { SEQ.lanes[ev.lane].cur = ev.step; continue; }
       if (ev.kind === 'hx') { if (ev.t >= now - 0.25) hxVisAdd(ev); continue; }   // Hexenring: a loop's note
       if (ev.t < now - 0.25) continue;   // stale (page was hidden): skip the burst
       else VIS.burst(ev.x * w, (1 - ev.y) * h, ev.hue != null ? ev.hue : VIS.hueAt(ev.x), ev.n || (ev.lane != null ? 6 : 9), ev.s || 0.7);   // (n: Sporenregen's small bloom)
     }
-    VIS.events = keep;
+    E.length = j;
   }
   if (VIS.gk) gkVisFrame(c, w, h, dt);
   if (VIS.rg) rgVisFrame(c, w, h);   // Sporenregen: Keime, spores, the slope
-  // spores
-  for (const s of VIS.spores) {
-    if (VIS.rg) { rgSpore(s); if (k > 1) rgSpore(s); }   // raining: they follow the slope instead of rising
-    else { s.y -= s.v * (REDUCED ? 0 : VIS.sv) * k; if (s.y < -0.02) { s.y = 1.02; s.x = Math.random(); } }
-    const a = (0.12 + 0.1 * Math.sin(ts / 900 + s.p)) * VIS.sa;
-    c.fillStyle = 'hsla(' + ((VIS.hue + s.x * 120) % 360) + ',70%,70%,' + a.toFixed(3) + ')';
-    c.fillRect(s.x * w, s.y * h, 1.6, 1.6);
-  }
-  // touches keep sprouting hyphae; while Anlehnen shapes them their glow leans with the hand (a carried note's hangs
-  // on the lean, away from where the finger was)
-  // (owner, 25.10.2026: a Touché – any control on Formen · Höhe or Tonhöhe – moves the held note's glow with it: up the
-  // field with its height, sideways with its bend)
-  const mv = !GA.vis && (MOD.t.hoehe.s.size > 0 || MOD.t.bend.s.size > 0), gnw = GA.vis || mv ? modNewest() : null, mt = mv && A.ctx ? A.ctx.currentTime : 0;
-  for (const tt of touches.values()) {
-    const q = GA.vis ? gaGlow(tt, gnw) : mv ? [tt.px + (modCents(tt, gnw, mt) / 100) * (w / (12 * P['t.range'])), (1 - modY(tt, gnw, mt)) * h] : null, gx = q ? q[0] : tt.px, gy = q ? q[1] : tt.py;
-    for (let i = 0; i < k; i++) if (Math.random() < 0.6) VIS.burst(mv ? gx : tt.px, mv ? gy : tt.py, tt.hue, 1, 0.5);
-    const rr = 26 + 6 * Math.sin(ts / 140);
-    const g = c.createRadialGradient(gx, gy, 0, gx, gy, rr * 1.8);
-    g.addColorStop(0, 'hsla(' + tt.hue + ',90%,72%,0.35)'); g.addColorStop(1, 'hsla(' + tt.hue + ',90%,60%,0)');
-    c.fillStyle = g; c.beginPath(); c.arc(gx, gy, rr * 1.8, 0, Math.PI * 2); c.fill();
-  }
-  // hyphae: segments are grouped by quantised colour, alpha and width, so each group is one path and one stroke (the
-  // groups' arrays and the list's second array are kept from frame to frame: no garbage each frame)
-  c.lineCap = 'round';
-  const buckets = VIS.bk || (VIS.bk = new Map());
-  for (const seg of buckets.values()) seg.length = 0;
-  let hy = VIS.hy;
-  for (let st = 0; st < k; st++) {
-    const keepH = VIS.hyB && VIS.hyB !== hy ? VIS.hyB : [];
-    keepH.length = 0;
-    for (const f of hy) {
-      const nx = f.x + Math.cos(f.a) * f.sp + VIS.lx, ny = f.y + Math.sin(f.a) * f.sp + VIS.ly;   // (Sporenregen: they lean with the slope)
-      const hue = ((f.hue % 360) + 360) % 360;
-      const key = ((hue / 12) | 0) * 100 + Math.min(5, (f.life * 6) | 0) * 10 + (f.w > 1.2 ? 1 : 0);
-      let seg = buckets.get(key);
-      if (!seg) { seg = []; buckets.set(key, seg); }
-      seg.push(f.x, f.y, nx, ny);
-      f.x = nx; f.y = ny; f.a += rand(-0.38, 0.38); f.life -= 0.011; f.sp *= 0.995;
-      if (f.life > 0.45 && Math.random() < 0.035 && hy.length + keepH.length < HY_MAX) keepH.push({ x: f.x, y: f.y, a: f.a + pick([-0.7, 0.7]), life: f.life * 0.8, hue: f.hue + 8, w: f.w * 0.7, sp: f.sp });
-      if (f.life > 0 && f.x > -10 && f.x < w + 10 && f.y > -10 && f.y < h + 10) keepH.push(f);
-    }
-    VIS.hyB = hy; hy = keepH;
-  }
-  for (const [key, seg] of buckets) {
-    if (!seg.length) continue;
-    const hueQ = Math.floor(key / 100) * 12 + 6, life = ((Math.floor(key / 10) % 10) + 0.5) / 6;
-    c.strokeStyle = 'hsla(' + hueQ + ',85%,66%,' + (life * 0.55).toFixed(3) + ')';
-    c.lineWidth = key % 10 ? 1.8 : 0.9;
-    c.beginPath();
-    for (let i = 0; i < seg.length; i += 4) { c.moveTo(seg[i], seg[i + 1]); c.lineTo(seg[i + 2], seg[i + 3]); }
-    c.stroke();
-  }
-  VIS.hy = hy;
-  // ripples, grouped the same way
-  const keepR = VIS.ripB && VIS.ripB !== VIS.rip ? VIS.ripB : [], rb = VIS.rb || (VIS.rb = new Map());
-  keepR.length = 0;
-  for (const list of rb.values()) list.length = 0;
-  for (const r of VIS.rip) {
-    r.r += r.v * k; r.life -= 0.022 * k;
-    if (r.life <= 0) continue;
-    const hue = ((r.hue % 360) + 360) % 360, key = ((hue / 12) | 0) * 10 + Math.min(5, (r.life * 6) | 0);
-    let list = rb.get(key);
-    if (!list) { list = []; rb.set(key, list); }
-    list.push(r);
-    keepR.push(r);
-  }
-  c.lineWidth = 1.2;
-  for (const [key, list] of rb) {
-    if (!list.length) continue;
-    c.strokeStyle = 'hsla(' + (Math.floor(key / 10) * 12 + 6) + ',80%,70%,' + ((((key % 10) + 0.5) / 6) * 0.5).toFixed(3) + ')';
-    c.beginPath();
-    for (const r of list) { c.moveTo(r.x + r.r, r.y); c.arc(r.x, r.y, r.r, 0, Math.PI * 2); }
-    c.stroke();
-  }
-  VIS.ripB = VIS.rip; VIS.rip = keepR;
+  visSpores(c, ts, k, w, h);
+  visGlow(c, ts, k, w, h);
+  visHyphae(c, k, w, h);
+  visRipples(c, k);
   // scope (and the output level for the meters while no recording tap exists)
   if (A.analyser) {
     A.analyser.getFloatTimeDomainData(A.scopeBuf);
-    const b = A.scopeBuf;
-    let pk = 0; for (let i = 0; i < b.length; i++) { const x = b[i] < 0 ? -b[i] : b[i]; if (x > pk) pk = x; }
+    const b = A.scopeBuf, pk = visPeak(b);
     A.anaPeak = Math.max(A.anaPeak || 0, pk);
     if (pk > 0.01) {
       c.globalCompositeOperation = 'source-over';
       c.strokeStyle = 'hsla(' + ((VIS.hue + 180) % 360).toFixed(0) + ',70%,72%,' + Math.min(0.16, pk * 0.5).toFixed(3) + ')';
       c.lineWidth = 1; c.beginPath();
-      const step = Math.max(1, Math.floor(b.length / w));
-      for (let i = 0, x = 0; i < b.length; i += step, x += w / (b.length / step)) {
-        const y = h * 0.5 - b[i] * h * 0.22;
-        if (i === 0) c.moveTo(x, y); else c.lineTo(x, y);
-      }
+      visScope(c, b, w, h);
       c.stroke();
     }
   }
@@ -234,5 +162,120 @@ function frameBody(ts) {
   if (midiDot) midiDot.classList.toggle('on', ts - MIDI.flash < 140);
   tickTry(24, frameCtl);
   if (UI.panel === 'dev' && ts - (VIS.devT || 0) > 400) { VIS.devT = ts; tickTry(25, updDevLive); }
+}
+// The field's parts drawn each frame, each a small function of its own: frameBody is too large and varied to stay
+// optimised (V8 drops it back to the interpreter, measured 28.10.2026), and there every number a loop computes is
+// a new heap object – in these loops thousands a frame, most of the main thread's garbage. Small and steady, they stay
+// compiled: no garbage.
+function visSpores(c, ts, k, w, h) {
+  // spores (their colour from a list per whole degree, the alpha as globalAlpha: no new string each spore and frame)
+  const ga0 = c.globalAlpha;
+  for (let i = 0; i < VIS.spores.length; i++) {
+    const s = VIS.spores[i];
+    if (VIS.rg) { rgSpore(s); if (k > 1) rgSpore(s); }   // raining: they follow the slope instead of rising
+    else { s.y -= s.v * (REDUCED ? 0 : VIS.sv) * k; if (s.y < -0.02) { s.y = 1.02; s.x = Math.random(); } }
+    c.globalAlpha = ga0 * (0.12 + 0.1 * Math.sin(ts / 900 + s.p)) * VIS.sa;
+    c.fillStyle = visHsl(Math.round(VIS.hue + s.x * 120) % 360);
+    c.fillRect(s.x * w, s.y * h, 1.6, 1.6);
+  }
+  c.globalAlpha = ga0;
+}
+function visGlow(c, ts, k, w, h) {
+  // touches keep sprouting hyphae; while Anlehnen shapes them their glow leans with the hand (a carried note's hangs
+  // on the lean, away from where the finger was)
+  // (owner, 25.10.2026: a Touché – any control on Formen · Höhe or Tonhöhe – moves the held note's glow with it: up the
+  // field with its height, sideways with its bend)
+  const mv = !GA.vis && (MOD.t.hoehe.s.size > 0 || MOD.t.bend.s.size > 0), gnw = GA.vis || mv ? modNewest() : null, mt = mv && A.ctx ? A.ctx.currentTime : 0;
+  for (const tt of touches.values()) {
+    const q = GA.vis ? gaGlow(tt, gnw) : mv ? [tt.px + (modCents(tt, gnw, mt) / 100) * (w / (12 * P['t.range'])), (1 - modY(tt, gnw, mt)) * h] : null, gx = q ? q[0] : tt.px, gy = q ? q[1] : tt.py;
+    for (let i = 0; i < k; i++) if (Math.random() < 0.6) VIS.burst(mv ? gx : tt.px, mv ? gy : tt.py, tt.hue, 1, 0.5);
+    const rr = 26 + 6 * Math.sin(ts / 140);
+    // the glow: one gradient of radius 1 per finger and colour, drawn scaled (it was a new one each frame)
+    if (!tt.glow || tt.glowH !== tt.hue) { const g = (tt.glow = c.createRadialGradient(0, 0, 0, 0, 0, 1)); tt.glowH = tt.hue; g.addColorStop(0, 'hsla(' + tt.hue + ',90%,72%,0.35)'); g.addColorStop(1, 'hsla(' + tt.hue + ',90%,60%,0)'); }
+    c.save(); c.translate(gx, gy); c.scale(rr * 1.8, rr * 1.8);
+    c.fillStyle = tt.glow; c.beginPath(); c.arc(0, 0, 1, 0, Math.PI * 2); c.fill();
+    c.restore();
+  }
+}
+function visHyphae(c, k, w, h) {
+  // hyphae: segments are grouped by quantised colour, alpha and width, so each group is one path and one stroke. No
+  // garbage each frame (the main thread's GC, 28.10.2026: 5–12 MB/s, most of it here): a group keeps its array, its
+  // count and its colour string; the list's second array is kept and filled by index (length = 0 would free an array's
+  // storage, and the next push allocate it anew)
+  c.lineCap = 'round';
+  const BK = VIS.bk || (VIS.bk = { m: new Map(), l: [] });
+  for (let i = 0; i < BK.l.length; i++) BK.l[i].n = 0;
+  let hy = VIS.hy;
+  for (let st = 0; st < k; st++) {
+    const keepH = VIS.hyB && VIS.hyB !== hy ? VIS.hyB : [], n0 = hy.length;
+    let nk = 0;
+    for (let i = 0; i < n0; i++) {
+      const f = hy[i];
+      const nx = f.x + Math.cos(f.a) * f.sp + VIS.lx, ny = f.y + Math.sin(f.a) * f.sp + VIS.ly;   // (Sporenregen: they lean with the slope)
+      const hue = ((f.hue % 360) + 360) % 360;
+      const key = ((hue / 12) | 0) * 100 + Math.min(5, (f.life * 6) | 0) * 10 + (f.w > 1.2 ? 1 : 0);
+      let B = BK.m.get(key);
+      if (!B) {
+        const hueQ = Math.floor(key / 100) * 12 + 6, life = ((Math.floor(key / 10) % 10) + 0.5) / 6;
+        B = { seg: [], n: 0, ss: 'hsla(' + hueQ + ',85%,66%,' + (life * 0.55).toFixed(3) + ')', lw: key % 10 ? 1.8 : 0.9 };
+        BK.m.set(key, B); BK.l.push(B);
+      }
+      const sg = B.seg, j = B.n;
+      sg[j] = f.x; sg[j + 1] = f.y; sg[j + 2] = nx; sg[j + 3] = ny; B.n = j + 4;
+      f.x = nx; f.y = ny; f.a += rand(-0.38, 0.38); f.life -= 0.011; f.sp *= 0.995;
+      if (f.life > 0.45 && Math.random() < 0.035 && n0 + nk < HY_MAX) keepH[nk++] = { x: f.x, y: f.y, a: f.a + (Math.random() < 0.5 ? -0.7 : 0.7), life: f.life * 0.8, hue: f.hue + 8, w: f.w * 0.7, sp: f.sp };
+      if (f.life > 0 && f.x > -10 && f.x < w + 10 && f.y > -10 && f.y < h + 10) keepH[nk++] = f;
+    }
+    keepH.length = nk;
+    VIS.hyB = hy; hy = keepH;
+  }
+  for (let b = 0; b < BK.l.length; b++) {
+    const B = BK.l[b], sg = B.seg;
+    if (!B.n) continue;
+    c.strokeStyle = B.ss;
+    c.lineWidth = B.lw;
+    c.beginPath();
+    for (let i = 0; i < B.n; i += 4) { c.moveTo(sg[i], sg[i + 1]); c.lineTo(sg[i + 2], sg[i + 3]); }
+    c.stroke();
+  }
+  VIS.hy = hy;
+}
+function visRipples(c, k) {
+  // ripples, grouped the same way
+  const keepR = VIS.ripB && VIS.ripB !== VIS.rip ? VIS.ripB : [], RB = VIS.rb || (VIS.rb = { m: new Map(), l: [] }), rip = VIS.rip;
+  let nr = 0;
+  for (let i = 0; i < RB.l.length; i++) RB.l[i].n = 0;
+  for (let i = 0; i < rip.length; i++) {
+    const r = rip[i];
+    r.r += r.v * k; r.life -= 0.022 * k;
+    if (r.life <= 0) continue;
+    const hue = ((r.hue % 360) + 360) % 360, key = ((hue / 12) | 0) * 10 + Math.min(5, (r.life * 6) | 0);
+    let B = RB.m.get(key);
+    if (!B) { B = { list: [], n: 0, ss: 'hsla(' + (Math.floor(key / 10) * 12 + 6) + ',80%,70%,' + ((((key % 10) + 0.5) / 6) * 0.5).toFixed(3) + ')' }; RB.m.set(key, B); RB.l.push(B); }
+    B.list[B.n++] = r;
+    keepR[nr++] = r;
+  }
+  keepR.length = nr;
+  c.lineWidth = 1.2;
+  for (let b = 0; b < RB.l.length; b++) {
+    const B = RB.l[b];
+    if (!B.n) continue;
+    c.strokeStyle = B.ss;
+    c.beginPath();
+    for (let i = 0; i < B.n; i++) { const r = B.list[i]; c.moveTo(r.x + r.r, r.y); c.arc(r.x, r.y, r.r, 0, Math.PI * 2); }
+    c.stroke();
+  }
+  VIS.ripB = rip; VIS.rip = keepR;
+}
+function visPeak(b) {
+  let pk = 0; for (let i = 0; i < b.length; i++) { const x = b[i] < 0 ? -b[i] : b[i]; if (x > pk) pk = x; }
+  return pk;
+}
+function visScope(c, b, w, h) {
+  const step = Math.max(1, Math.floor(b.length / w));
+  for (let i = 0, x = 0; i < b.length; i += step, x += w / (b.length / step)) {
+    const y = h * 0.5 - b[i] * h * 0.22;
+    if (i === 0) c.moveTo(x, y); else c.lineTo(x, y);
+  }
 }
 

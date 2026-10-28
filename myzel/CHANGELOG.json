@@ -2,6 +2,13 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-28l",
+      "punkte": [
+        "Keyboard: Auch das Loslassen einer Taste wirkt jetzt in festem Abstand zum Tastenereignis – eine Note klingt genau so lang, wie die Taste gehalten wurde, statt einen Puffer länger oder kürzer (Gerät › Keyboard › Zeit „Gleichmäßig“).",
+        "Das Spielfeld zeichnet mit einem Viertel des bisherigen Speichermülls: weniger Aufräumpausen im Browser, die Bedienung und Bilder kurz stocken lassen konnten. Es sieht aus wie vorher."
+      ]
+    },
+    {
       "id": "2026-10-28k",
       "punkte": [
         "Keyboard: Noten beginnen jetzt in festem Abstand zum Tastendruck (ein Ausgabepuffer plus 5 ms), sample-genau – die Latenz schwankt nicht mehr, auch wenn der Rechner gerade zu tun hat. Unter Gerät › Keyboard › Zeit umschaltbar auf „Sofort“ (so früh wie möglich, dafür schwankend).",

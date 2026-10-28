@@ -34,7 +34,7 @@ function midiMsg(src, st, d1, d2, ts) {
   switch (type) {
     case 0x90: if (d2) { mpeSeen(cs, ts); midiNoteOn(cs, d1, d2, ts); break; }   // velocity 0 is a note-off
     // falls through
-    case 0x80: midiNoteOff(cs, d1, type === 0x80 ? d2 : 0); break;
+    case 0x80: midiNoteOff(cs, d1, type === 0x80 ? d2 : 0, ts); break;
     case 0xb0: midiCC(cs, d1, d2, ev); break;
     case 0xe0: cs.bend = (((d2 << 7) | d1) - 8192) / 8192; cs.pre = ts; if (chRole(cs).mem) mpeBend(cs, false); else applyBendCs(cs); break;
     case 0xd0:

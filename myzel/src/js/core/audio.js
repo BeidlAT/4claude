@@ -67,9 +67,11 @@ function setP(param, v, tc = 0.03) {
   if (param._hx) hxPrm(param._hx, t, v, tc);   // Hexenring: the chain's modulators and the drift, followed for their phases
   try { param.cancelScheduledValues(t); param.setTargetAtTime(v, t, tc); } catch (e) { param.value = v; }
 }
-function holdParam(param, t) {
+// (val: the value at t when it is known – without cancelAndHoldAtTime (Firefox) .value is now's, not t's: a note-off a
+// few ms ahead, at its MIDI moment, would otherwise hold a value its attack has already left)
+function holdParam(param, t, val) {
   if (param.cancelAndHoldAtTime) { param.cancelAndHoldAtTime(t); return; }
-  const v = param.value;
+  const v = val != null ? val : param.value;
   param.cancelScheduledValues(t);
   param.setValueAtTime(v, t);
 }
