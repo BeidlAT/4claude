@@ -62,6 +62,7 @@ const { ok } = H;
   // 2. heard at once
   const now = await page.evaluate(async () => {
     const M = window.__M, A = M.A, L = M.hxLoopsLive()[0], S = () => M.HX.sch.get(L.sch[0]), o = {};
+    M.hxEdClose(); await M.HX.rxQ; await window.__sleep(200);   // (28.10.2026: in the editor a stretch's edit starts the Vorhören – here the loop itself is heard)
     // (early in a pass, so its seam is far)
     const P = M.hxLen(L); while (M.hxPhase(L, A.ctx.currentTime) > 0.15) await window.__sleep(30);
     const n0 = M.HX.hist.length;
@@ -71,6 +72,7 @@ const { ok } = H;
     M.hxNtSet(L, 'krebs'); await window.__wu(L); o.nt = +(M.hxT(S().swapF) - A.ctx.currentTime).toFixed(2); o.ntPlay = S().play;
     M.hxUndoStep(); await window.__wu(L); o.steps = M.HX.hist.length - n0;
     o.P = +P.toFixed(2);
+    M.hxEdOpen(L); await window.__sleep(600);
     return o;
   });
   ok(now.ok && now.nt < 0.3 && now.ntPlay === 'wu' && now.rx < 0.2 && now.rxU < 0.2 && now.rev < 0.2 && now.steps === 0, `heard at once, mid-pass: a stretch rückwärts and its ↶, the whole rückwärts, Krebs as soon as it is rendered (s until heard: ${JSON.stringify(now)}; the pass is ${now.P} s)`);

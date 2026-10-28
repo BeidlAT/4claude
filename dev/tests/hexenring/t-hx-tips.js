@@ -19,13 +19,14 @@ const { ok } = H;
     M.hxState(M.hxLoopsLive()[1].id, 'stumm'); await window.__sleep(2500);
     M.openPanel('rec'); await window.__sleep(800);
     M.HX.chips = null; M.hxRailDirty(); await window.__sleep(600);
+    for (const L of M.hxLoopsLive()) M.HXK.auf.add(L.key); M.hxCardDirty(); await window.__sleep(600);   // (the cards fold since 26.10.2026: all open, every row seen)
   });
   const r = await page.evaluate(() => {
     const miss = [], n = { all: 0, ok: 0 };
     for (const root of [document.getElementById('hxRail'), document.getElementById('hxSec')]) for (const el of root.querySelectorAll('button, select, input[type="range"]')) {
       if (el.hidden || !el.offsetParent) continue; n.all++; if (el.title && el.title.length > 8) n.ok++; else miss.push((el.textContent || el.getAttribute('aria-label') || el.tagName).trim().slice(0, 30));
     }
-    const labs = [...document.querySelectorAll('#hxSec .hx-row > .lab')].filter((l) => l.offsetParent), labOk = labs.filter((l) => l.title).length;
+    const labs = [...document.querySelectorAll('#hxSec .hx-row > .lab')].filter((l) => l.offsetParent), labOk = labs.filter((l) => l.title).length; n.labMiss = labs.filter((l) => !l.title).map((l) => l.textContent.trim().slice(0, 24));
     const rings = [...document.querySelectorAll('.hx-ring')].slice(0, 3).map((b) => b.classList.contains('spielt'));
     const words = [...document.querySelectorAll('.hx-ring')].slice(0, 3).map((b) => b.querySelector('.w').textContent);
     return { n, miss, labs: labs.length, labOk, rings, words, chips: window.__chipsLeft };
@@ -33,7 +34,7 @@ const { ok } = H;
   await page.evaluate(() => { for (const t of document.querySelectorAll('.toast, #toast')) t.style.display = 'none'; });
   await (await page.$('#hxRail')).screenshot({ path: 'out/rail-glow.png' });
   ok(r.n.all > 100 && r.n.ok === r.n.all, `every visible control of the rail and the card has a tooltip (${r.n.ok} of ${r.n.all}${r.miss.length ? '; without: ' + r.miss.join(', ') : ''})`);
-  ok(r.labs > 10 && r.labOk >= r.labs - 1, `the card's rows explain themselves on their label (${r.labOk} of ${r.labs})`);
+  ok(r.labs > 10 && r.labOk >= r.labs - 1, `the card's rows explain themselves on their label (${r.labOk} of ${r.labs}${r.n.labMiss.length ? '; without: ' + r.n.labMiss.join(', ') : ''})`);
   ok(r.rings[0] && !r.rings[1] && r.rings[2], `playing loops light up, a muted one not (${r.rings.join(', ')})`);
   ok(r.chips === 'ernte', `the row after a harvest is still there 10 s later (${r.chips}) – it stays until you close it`);
   ok(r.words.every((w) => w === ''), `no word under a loop's ring – it glows while it plays (${JSON.stringify(r.words)})`);
