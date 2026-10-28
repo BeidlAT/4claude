@@ -2975,6 +2975,8 @@ NUM('rec.bars', 'Takte', 1, 128, 8, '', { step: 1, rec: 1, fmt: (v) => v + (v ==
 SEL('dev.q', 'Qualitätsstufe', [['1', '1 · Leicht'], ['2', '2 · Voll'], ['3', '3 · Gewaltig']], MOBILE ? '1' : '2', { chips: 1, dev: 1 });
 // (24.10.2026: Android starts in „Minimal“ – Chrome there opens its fast output only for the numeric hint; lasting
 // underruns step back by themselves, latStep. iPhone and iPad „Standard“, computers „Minimal“ as before)
+BOOL('dev.bg', 'Im Hintergrund weiterspielen', !(IOS || MOBILE), { dev: 1 });   // (owner, 26.10.2026 and again 28.10.2026, iPad: „spielt weiter, obwohl die App beendet wurde“) boot.js, start.js bgStop
+BOOL('dev.akku', 'Akku schonen', IOS, { dev: 1 });   // (owner, 28.10.2026: „die app zieht am ipad sehr viel akku … ohne an soundqualität und funktionalität einzubüßen“) visuals.js, start.js akkuTick
 SEL('dev.lat', 'Latenz', [['min', 'Minimal'], ['std', 'Standard'], ['safe', 'Sicher']], MOBILE && !ANDROID ? 'std' : 'min', { chips: 1, dev: 1 });
 SEL('midi.map', 'Tasten', [['scale', 'Skala'], ['white', 'Weiße Tasten'], ['chrom', 'Chromatisch']], 'scale', { chips: 1, dev: 1 });
 NUM('midi.y', 'Höhe auf der Spielfläche', 0, 1, 0.55, '%', { dev: 1 });
@@ -17649,6 +17651,7 @@ function midiHint() {
 // doubled note itself (src.dbl): then it counts too.
 const midiCounts = (src) => src.count || (mapOf(src), !!src.prof && !!src.prof.count);
 function midiNoteOn(cs, note, vel, ts) {
+  AKKU.inT = performance.now();   // (Akku schonen: a keyboard plays – the field draws at 60)
   MIDI.flash = performance.now();
   if (!A.started) { midiHint(); return; }
   const id = midiId(cs.src, cs.ch, note), pc = pedalOf(cs), m = midiNote(note);
@@ -21809,7 +21812,7 @@ function frameCtl() {
 // throws can no longer stop the drawing, the meters, the recorder's time or the count-in for good)
 function frame(ts) { requestAnimationFrame(frame); if (PH.on || LM.on) phFrame(ts); tickTry(20, () => frameBody(ts)); }
 function frameBody(ts) {
-  const T = PH.load ? 33.33 : 16.67;   // (the drawing's interval: 60 frames a second, the Handy-Modus under load 30)
+  const T = PH.load || (P['dev.akku'] && !touches.size && ts - AKKU.inT > 1500) ? 33.33 : 16.67;   // (the drawing's interval: 60 frames a second, the Handy-Modus under load 30 – and „Akku schonen“ while no hand is at work: 30, back to 60 at the first touch)
   if (FR.prev) { const d = ts - FR.prev; if (d > 2 && d < 40) FR.iv += (d - FR.iv) * 0.1; FR.acc = Math.min(FR.acc + d, T + 33.33); }
   FR.prev = ts;
   FR.drew = false;
@@ -27347,13 +27350,16 @@ function kqStepTo(T, d) {
   for (let j = i + d; j >= 0 && j < L.length; j += d) if (L[j][0] === 'off' || !T.allow(L[j][0])) return L[j][0];
   return null;
 }
-// how: 'step' (‹ ›: no probe while the place sounds), 'pick' (a tile: always a probe), 'quiet' (no probe)
+// how: 'step' (‹ ›: no probe while the place sounds), 'pick' (a tile: a probe), 'quiet' (no probe) – never a probe while
+// Myzel sounds or records (owner, 28.10.2026: „während eines schleifen-spiels … ertönt kurz der sound der neuen klangquelle
+// … störend, insbesondere wenn gerade eine aufnahme läuft“); „Anhören“ on a tile still plays it
+const kqLoud = () => !!A.started && (CAP.state !== 'idle' || SEQ.on || !!A.bor || touches.size > 0 || (typeof hxLoopsLive === 'function' && hxLoopsLive().some((L) => L.state === 'spielt')) || !!(typeof HX !== 'undefined' && (HX.rec || HX.punch)));
 function kqChoose(T, k, how) {
   const why = k === 'off' ? '' : T.allow(k);
   if (why) { kqSay(ENG_NAME[k] + ': ' + why + '.'); return false; }
   if (T.get() !== k) T.set(k);
   if (k === 'off') kqProbeEnd();
-  else if (how === 'pick' || (how === 'step' && !T.busy())) kqHear(T, k);
+  else if (!kqLoud() && (how === 'pick' || (how === 'step' && !T.busy()))) kqHear(T, k);
   kqSay(k === 'off' ? 'Zweite Ebene aus' : ENG_NAME[k] + ' gewählt für ' + (KQ.T === T && KQ.where !== T.where ? KQ.where : T.dat));
   return true;
 }
@@ -29575,6 +29581,9 @@ function buildDev() {
   const latBtn = h('button', { type: 'button', class: 'btn primary', hidden: true, onclick: restartAudio }, 'Klang neu starten');
   const latAutoB = h('button', { type: 'button', class: 'btn ghost', id: 'latAuto', hidden: true, onclick: latAutoAgain }, 'Wieder automatisch');
   box.append(section('Latenz', 'Zeit vom Anschlag bis zum Ton', grid(ctl('dev.lat', { label: 'Ausgabe' })), latInfo, h('div', { class: 'row' }, latBtn, latAutoB)));
+  box.append(section('Hintergrund und Akku', 'Wenn Myzel nicht zu sehen ist – und wie sparsam es mit dem Akku umgeht', grid(ctl('dev.bg'), ctl('dev.akku')),
+    h('p', { class: 'note' }, 'Im Hintergrund weiterspielen – an: laufen Puls, Schleifen, Bordun, Freeze oder eine Aufnahme, spielt Myzel weiter, wenn du die App wechselst oder den Bildschirm sperrst. Aus: Myzel verstummt, sobald es nicht zu sehen ist oder beendet wird, und spielt weiter, wenn du zurückkommst. Auf iPad und Handy ist es anfangs aus.'),
+    h('p', { class: 'note' }, 'Akku schonen – der Klang bleibt genau gleich. Die Spielfläche zeichnet ruhiger (30 statt 60 Bilder in der Sekunde), solange du sie nicht berührst oder spielst; der Bildschirm bleibt nur wach, solange etwas klingt oder du in den letzten drei Minuten etwas getan hast. Auf dem iPad anfangs an.')));
   box.append(lmBuild());   // Leistung: the Handy-Modus and „Leistung messen“ (ui/leistung.js)
   box.append(section('Computertastatur', null, h('p', { class: 'note' }, 'Ohne Keyboard spielen die Tasten A bis Ö (Grundreihe) die ersten Töne der Spielfläche, mit Umschalt weiter oben.')));
   Object.assign(devEls, { qInfo, qLive, latInfo, latBtn, latAuto: latAutoB });
@@ -31583,6 +31592,25 @@ function updReload() { if (UPD.done || A.started) return; UPD.done = true; locat
 function ensureRunning() {
   if (A.ctx && A.ctx.state !== 'running') { try { const p = A.ctx.resume(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
 }
+// out of sight (and not to play on there): the sound stops, the silent element too – else iOS keeps the page playing;
+// the iOS audio session leaves „playback“ as well – the one category that may sound in the background (back: iosUnmute)
+function bgStop() {
+  A.userSuspended = true; try { A.ctx.suspend(); } catch (e) {}
+  try { if (A.unmute && !A.unmute.paused) A.unmute.pause(); } catch (e) {}
+  try { if (IOS && navigator.audioSession && navigator.audioSession.type === 'playback') { navigator.audioSession.type = 'ambient'; A.bgSess = true; } } catch (e) {}
+  try { if (navigator.mediaSession) navigator.mediaSession.playbackState = 'paused'; } catch (e) {}
+}
+// Akku schonen (iPad by default): the screen is kept awake while something sounds or was touched in the last three
+// minutes – in a silence without a hand it may lock as the iPad is set to (the sound is never touched by it)
+const AKKU = { inT: 0 };
+const akkuIn = () => { AKKU.inT = performance.now(); if (P['dev.akku'] && !A.wake && A.started && document.visibilityState === 'visible') keepAwake(); };
+function akkuTick() {
+  if (!P['dev.akku'] || !A.started || document.visibilityState !== 'visible') return;
+  const quiet = IDLE.on && !touches.size && CAP.state === 'idle' && performance.now() - AKKU.inT > 180000;
+  if (quiet && A.wake) { try { A.wake.release(); } catch (e) {} A.wake = null; }
+  else if (!quiet && !A.wake) keepAwake();
+}
+setInterval(akkuTick, 15000);
 async function keepAwake() {
   try {
     if ('wakeLock' in navigator && document.visibilityState === 'visible' && !A.wake) {
@@ -42656,13 +42684,19 @@ function boot() {
   document.addEventListener('visibilitychange', () => {
     if (!A.ctx) return;
     if (document.visibilityState === 'visible') {
+      if (A.bgSess) { A.bgSess = false; iosUnmute(); }   // (the audio session back to „playback“)
       A.userSuspended = false; ensureRunning(); keepAwake();
       if (A.unmute && A.unmute.paused) { const p = A.unmute.play(); if (p && p.catch) p.catch(() => {}); }
     } else {
       releaseAllTouches();
-      if (CAP.state === 'idle' && !SEQ.on && !A.bor && !A.frozen && !hxBusy()) { A.userSuspended = true; try { A.ctx.suspend(); } catch (e) {} }   // (Hexenring: a Schleife plays on)
+      // (Hexenring: a Schleife plays on – Puls, Bordun, Freeze and a recording too – but only with „Im Hintergrund
+      // weiterspielen“; owner, 26./28.10.2026: on the iPad Myzel played on after it was closed – off there by default)
+      if (!P['dev.bg'] || (CAP.state === 'idle' && !SEQ.on && !A.bor && !A.frozen && !hxBusy())) bgStop();
     }
   });
+  window.addEventListener('pagehide', () => { if (A.ctx && !P['dev.bg']) bgStop(); });
+  document.addEventListener('freeze', () => { if (A.ctx && !P['dev.bg']) bgStop(); });
+  for (const ev of ['pointerdown', 'pointermove', 'keydown']) document.addEventListener(ev, akkuIn, { capture: true, passive: true });   // (Akku schonen: a hand at work – start.js)
   window.addEventListener('blur', () => { if (document.visibilityState !== 'visible') releaseAllTouches(); });
   // Gestik: back from the background, a turned view (both do nothing while it is off)
   document.addEventListener('visibilitychange', () => { if (GK.on) gkVis(); });

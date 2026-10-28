@@ -159,13 +159,16 @@ function kqStepTo(T, d) {
   for (let j = i + d; j >= 0 && j < L.length; j += d) if (L[j][0] === 'off' || !T.allow(L[j][0])) return L[j][0];
   return null;
 }
-// how: 'step' (‹ ›: no probe while the place sounds), 'pick' (a tile: always a probe), 'quiet' (no probe)
+// how: 'step' (‹ ›: no probe while the place sounds), 'pick' (a tile: a probe), 'quiet' (no probe) – never a probe while
+// Myzel sounds or records (owner, 28.10.2026: „während eines schleifen-spiels … ertönt kurz der sound der neuen klangquelle
+// … störend, insbesondere wenn gerade eine aufnahme läuft“); „Anhören“ on a tile still plays it
+const kqLoud = () => !!A.started && (CAP.state !== 'idle' || SEQ.on || !!A.bor || touches.size > 0 || (typeof hxLoopsLive === 'function' && hxLoopsLive().some((L) => L.state === 'spielt')) || !!(typeof HX !== 'undefined' && (HX.rec || HX.punch)));
 function kqChoose(T, k, how) {
   const why = k === 'off' ? '' : T.allow(k);
   if (why) { kqSay(ENG_NAME[k] + ': ' + why + '.'); return false; }
   if (T.get() !== k) T.set(k);
   if (k === 'off') kqProbeEnd();
-  else if (how === 'pick' || (how === 'step' && !T.busy())) kqHear(T, k);
+  else if (!kqLoud() && (how === 'pick' || (how === 'step' && !T.busy()))) kqHear(T, k);
   kqSay(k === 'off' ? 'Zweite Ebene aus' : ENG_NAME[k] + ' gewählt für ' + (KQ.T === T && KQ.where !== T.where ? KQ.where : T.dat));
   return true;
 }

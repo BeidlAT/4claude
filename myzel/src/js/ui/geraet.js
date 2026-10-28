@@ -65,6 +65,9 @@ function buildDev() {
   const latBtn = h('button', { type: 'button', class: 'btn primary', hidden: true, onclick: restartAudio }, 'Klang neu starten');
   const latAutoB = h('button', { type: 'button', class: 'btn ghost', id: 'latAuto', hidden: true, onclick: latAutoAgain }, 'Wieder automatisch');
   box.append(section('Latenz', 'Zeit vom Anschlag bis zum Ton', grid(ctl('dev.lat', { label: 'Ausgabe' })), latInfo, h('div', { class: 'row' }, latBtn, latAutoB)));
+  box.append(section('Hintergrund und Akku', 'Wenn Myzel nicht zu sehen ist – und wie sparsam es mit dem Akku umgeht', grid(ctl('dev.bg'), ctl('dev.akku')),
+    h('p', { class: 'note' }, 'Im Hintergrund weiterspielen – an: laufen Puls, Schleifen, Bordun, Freeze oder eine Aufnahme, spielt Myzel weiter, wenn du die App wechselst oder den Bildschirm sperrst. Aus: Myzel verstummt, sobald es nicht zu sehen ist oder beendet wird, und spielt weiter, wenn du zurückkommst. Auf iPad und Handy ist es anfangs aus.'),
+    h('p', { class: 'note' }, 'Akku schonen – der Klang bleibt genau gleich. Die Spielfläche zeichnet ruhiger (30 statt 60 Bilder in der Sekunde), solange du sie nicht berührst oder spielst; der Bildschirm bleibt nur wach, solange etwas klingt oder du in den letzten drei Minuten etwas getan hast. Auf dem iPad anfangs an.')));
   box.append(lmBuild());   // Leistung: the Handy-Modus and „Leistung messen“ (ui/leistung.js)
   box.append(section('Computertastatur', null, h('p', { class: 'note' }, 'Ohne Keyboard spielen die Tasten A bis Ö (Grundreihe) die ersten Töne der Spielfläche, mit Umschalt weiter oben.')));
   Object.assign(devEls, { qInfo, qLive, latInfo, latBtn, latAuto: latAutoB });
