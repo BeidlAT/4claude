@@ -77,7 +77,7 @@ async function mkLoops(P, n, nl) {
     ok(!s1.lite && s1.sc < 1 && s1.sc >= 0.3 - 1e-9 && s1.log.every((x) => /^stimmen/.test(x)) && s1.log.length >= 4 && s1.log.length <= 7, `1. a computer, 14 s of underruns, no loops: a voice limit in steps at most every 2 s, never under 30 % (${s1.log.join(' → ')}; budget ${s0.vb} → ${s1.vb}, scale ${s1.sc.toFixed(2)}), A.lite ${s1.lite}`);
     ok(/weniger Stimmen gleichzeitig/.test(s1.toasts), `1.   said once: „${(s1.toasts.match(/Das Gerät kam an seine Grenze[^|]*/) || [''])[0].slice(0, 70)}…“`);
     const learn = await P.page.evaluate(() => JSON.parse(localStorage.getItem('myzel.guard.v1') || '{}'));
-    ok(Math.abs((learn['3'] || 1) - s1.sc) < 0.002, `1.   remembered for this device and level 3: ${JSON.stringify(learn)} (scale ${s1.sc.toFixed(3)})`);
+    ok(!Object.keys(learn).length, `1.   (28.10.2026) nothing remembered for the next session: ${JSON.stringify(learn)} (scale now ${s1.sc.toFixed(3)})`);
     await drop(P, 1);   // (one more)
     await P.page.waitForTimeout(31500);
     const s2 = await st(P);
@@ -95,7 +95,8 @@ async function mkLoops(P, n, nl) {
     const s0 = await st(P);
     await guardOn(P);
     const s1 = await st(P);
-    ok(Math.abs(s1.sc - 0.64) < 1e-9 && s1.log[0] && /^gelernt/.test(s1.log[0]) && s1.vb < s0.vb, `1b. a reload: the device starts at the scale it learned (0.64 → ${s1.sc}; budget ${s0.vb} → ${s1.vb}; ${s1.log.join(' → ')})`);
+    const left = await P.page.evaluate(() => localStorage.getItem('myzel.guard.v1'));
+    ok(s1.sc === 1 && !s1.log.some((x) => /^gelernt/.test(x)) && s1.vb === s0.vb && !left, `1b. (28.10.2026) a scale learned before is forgotten: the device starts with its full budget (${s1.sc}; budget ${s0.vb} → ${s1.vb}; stored: ${JSON.stringify(left)})`);
     await P.ctx.close();
   }
   if (PARTS.includes('5')) {

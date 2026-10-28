@@ -127,10 +127,12 @@ const GD = { uT: 0, upT: 0, stepT: 0, said: false };
 // begins there instead of at the start measurement's figure (that one overrated the owner's PC: underruns at 94 % of it)
 const GDL = { k: 'myzel.guard.v1', t: 0 };
 function gdlAll() { try { return JSON.parse(store.get(GDL.k) || '{}') || {}; } catch (e) { return {}; } }
-function gdlGet(q) { if (HX_PHONE) return 1; const v = +gdlAll()[q]; return v > 0 && v < 1 ? Math.max(0.3, v) : 1; }
-function gdlSet(q, v) { if (HX_PHONE) return; const m = gdlAll(); m[q] = Math.round(Math.min(1, v) * 1000) / 1000; store.set(GDL.k, JSON.stringify(m)); GDL.t = performance.now(); }
-// the scale learned for the level now (from the start and after a change of level)
-function gdLearned() { const v = gdlGet(P['dev.q']); if (v < 1) { A.budgetScale = v; budgetApply(); hxGuardLog('gelernt', VBUDGET); } }
+// (owner, 28.10.2026: „ohne dass die Klangqualität irgendwie verändert werden darf“ – his PC started every session at 51 %
+// of its voices, learned from earlier dropouts; the one cluster of dropouts in his log had a one-off cause) nothing is
+// learned across sessions any more: every session starts with the full budget, the guard steps only within a session
+function gdlGet() { return 1; }
+function gdlSet() { GDL.t = performance.now(); }
+function gdLearned() { try { if (store.get(GDL.k)) store.set(GDL.k, ''); } catch (e) {} }   // (the scale a device learned before today: forgotten)
 function watchUnderruns() {
   const ps = A.ctx.playbackStats || A.ctx.playoutStats;
   if (!ps && !(MOBILE && !HX_TABLET)) return;

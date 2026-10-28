@@ -2,6 +2,14 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-28j",
+      "punkte": [
+        "PC und iPad: Der Werk-Rahmen (die Hintergrund-Rechnung für Schleifen) startet jetzt im ersten ruhigen Moment nach „Klang starten“ – nicht mehr mitten im Spiel bei der ersten Ernte, wo sein Start Aussetzer verursachen konnte.",
+        "Der Stimmen-Wächter merkt sich seine Absenkung nicht mehr über Sitzungen hinweg: jede Sitzung beginnt mit allen Stimmen. Vorher konnte ein Gerät dauerhaft mit halbem Stimmenvorrat starten.",
+        "Der Leistungsbericht zeigt jetzt, ob der Audio-Thread selbst gestockt hat (Zeile „audio“: stockt, stocktGap, blockMax) und wann der Werk-Rahmen startete."
+      ]
+    },
+    {
       "id": "2026-10-28i",
       "punkte": [
         "Schleifen behalten ihre eingebrannten Effekte, auch wenn sich die Abtastrate des Geräts geändert hat (z. B. iPad-Lautsprecher und Kopfhörer) – vorher liefen sie dann durch die aktuelle Effektkette, klangen nach dem Preset und kosteten mehr Rechenzeit.",

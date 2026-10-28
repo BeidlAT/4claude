@@ -72,6 +72,10 @@ function hxMsg2(m) {
   if (m.late) { HX.wLate++; const S = HX.sch.get(m.late.schicht); if (S) S.wLate = (S.wLate || 0) + 1; }   // (step 2a: a pass not there in time)
   if (m.bandstopp) hxBandStopped(m.bandstopp.loop);   // (step 2b: a tape stood still)
   if (m.wilted) { const L = HX.loops.get(m.wilted.loop); if (L && L.state !== 'weg') { L.state = 'angehalten'; L.pendTo = null; hxCount(); hxRailDirty(); hxCardDirty(); hxSaveMeta(L.id); } }   // (step 1d: a Schluss „welkend“ ended)
+  if (m.thr) {   // (28.10.2026) the audio thread stalled (gap between two blocks) or a block took long – dsp/ring.js
+    HX.thr = { gap: Math.max((HX.thr && HX.thr.gap) || 0, m.thr.gap), dur: Math.max((HX.thr && HX.thr.dur) || 0, m.thr.dur), n: ((HX.thr && HX.thr.n) || 0) + 1, t: performance.now() };
+    if (typeof LM !== 'undefined' && LM.on && LM.thr) { LM.thr.n++; LM.thr.gap = Math.max(LM.thr.gap, m.thr.gap); LM.thr.dur = Math.max(LM.thr.dur, m.thr.dur); lmEv('audio-stockt:' + m.thr.gap + '/' + m.thr.dur + 'ms'); }
+  }
   if (m.meter && m.meter.inp) {   // the rings' input level, 15 per second, two minutes
     HX.lvl[HX.lvlI] = [hxT(m.meter.F), m.meter.inp[0], m.meter.inp[1], m.meter.inp[2] || 0, m.meter.inp[3] || 0];   // (step 4: the Mikro's)
     HX.lvlI = (HX.lvlI + 1) % 13600;   // (15 min, as far as the Humus)

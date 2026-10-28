@@ -105,7 +105,7 @@ function lmStart() {
   const rc = A.ctx.renderCapacity;
   if (rc && rc.start) try { LM.rc = { n: 0, avg: 0, peak: 0, und: 0 }; rc.onupdate = (e) => { const R = LM.rc; if (!R) return; R.n++; R.avg += e.averageLoad || 0; R.peak = Math.max(R.peak, e.peakLoad || 0); R.und = Math.max(R.und, e.underrunRatio || 0); }; rc.start({ updateInterval: 1 }); } catch (e) { LM.rc = null; }
   lmObserve(true);
-  LM.ev = []; LM.ul = []; LM.up = {};
+  LM.ev = []; LM.ul = []; LM.up = {}; LM.thr = { n: 0, gap: 0, dur: 0 };   // (28.10.2026: the audio thread's own stalls – dsp/ring.js)
   LM.t0 = performance.now(); LM.on = true;
   lmUPoll(); LM.ut = setInterval(lmUPoll, 100);
   lmClock();
@@ -221,7 +221,8 @@ function lmResult(ms) {
   R.under = R.ps ? (R.ps.underrunEvents != null ? R.ps.underrunEvents : R.ps.fallbackFramesEvents != null ? R.ps.fallbackFramesEvents : null) : null;
   if (R.under == null) R.under = K.n;
   R.rc = LM.rc && LM.rc.n ? { avg: Math.round(100 * LM.rc.avg / LM.rc.n), peak: Math.round(100 * LM.rc.peak), und: r1(100 * LM.rc.und) } : null;
-  R.audio = { sr: c.sampleRate, base: r1((c.baseLatency || 0) * 1000), out: r1((c.outputLatency || 0) * 1000), lat: P['dev.lat'], latCtx: A.latMode, q: P['dev.q'], budget: VBUDGET, scale: A.budgetScale || 1, lite: !!A.lite };
+  R.audio = { sr: c.sampleRate, base: r1((c.baseLatency || 0) * 1000), out: r1((c.outputLatency || 0) * 1000), lat: P['dev.lat'], latCtx: A.latMode, q: P['dev.q'], budget: VBUDGET, scale: A.budgetScale || 1, lite: !!A.lite,
+    stockt: LM.thr ? LM.thr.n : 0, stocktGap: LM.thr ? LM.thr.gap : 0, blockMax: LM.thr ? LM.thr.dur : 0 };   // (28.10.2026: stalls the audio thread saw itself – ms; 0 while nothing stalled)
   R.voices = { load: S.n ? Math.round(100 * S.load / S.n) : 0, loadMax: Math.round(100 * S.loadMax), max: S.vMax, grains: S.gr, idle: S.n ? Math.round(100 * S.idle / S.n) : 0 };
   R.hx = { loops: S.loops, spielt: S.spielt, sch: S.sch, leb: S.leb, tau: !!HX.tauRest, f1: HXF1.off ? 'ruht' : 'an', werk: HXW.st || '-', wg: HX.wGuard ? HX.wGuard.n || 0 : 0, state: HX.state, nichtLeb: [...LM.why].map(([k, v]) => k + ':' + Math.round(100 * v / Math.max(1, LM.lsum.n)) + '%').join(',') || '-' };
   R.lp = lmLoopsRes(); R.werk = lmWerk(secs); R.guard = lmGuard(); R.ulog = lmUlog();
