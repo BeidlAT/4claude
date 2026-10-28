@@ -67,13 +67,22 @@ function setP(param, v, tc = 0.03) {
   if (param._hx) hxPrm(param._hx, t, v, tc);   // Hexenring: the chain's modulators and the drift, followed for their phases
   try { param.cancelScheduledValues(t); param.setTargetAtTime(v, t, tc); } catch (e) { param.value = v; }
 }
-// (val: the value at t when it is known – without cancelAndHoldAtTime (Firefox) .value is now's, not t's: a note-off a
-// few ms ahead, at its MIDI moment, would otherwise hold a value its attack has already left)
+// Without cancelAndHoldAtTime (Firefox): val, the value at t when it is known (.value is now's, not t's). A t ahead (a
+// note-off at its MIDI moment): cancelScheduledValues(t) also drops a ramp still running at t (its event is its end),
+// so the param would stand at the event before it until t – an attack's 0, a dropout. A linear ramp to val at t
+// draws that line again instead (an attack: from its start at 0 to where it is at t – the same line)
 function holdParam(param, t, val) {
   if (param.cancelAndHoldAtTime) { param.cancelAndHoldAtTime(t); return; }
   const v = val != null ? val : param.value;
   param.cancelScheduledValues(t);
-  param.setValueAtTime(v, t);
+  if (t > A.ctx.currentTime) param.linearRampToValueAtTime(v, t); else param.setValueAtTime(v, t);
+}
+// a param let go toward 0 from a moment ahead (a note-off at its MIDI moment) on params setP/setTarget drive: no hold
+// (in Chromium a hold during a setTargetAtTime drops to 0 at once – rampP; Firefox has none), the events from at on
+// dropped and the decay starting at at from wherever the param stands then
+function fadeAt(param, at, tc) {
+  param.cancelScheduledValues(at);
+  param.setTargetAtTime(0, at, tc);
 }
 // A ramp on a param only Gestik moves (the mod layer's sources, a finger's bend, the Ocarina's depth): from where it
 // is now. Inside a running ramp it is held there; after the last ramp ended it starts from that ramp's known end – a

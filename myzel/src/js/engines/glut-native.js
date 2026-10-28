@@ -12,7 +12,7 @@ function gltEnv(v, t, vel, o) {
   v.release = (k, at) => {
     if (!v.alive || v.released) return;
     const now = relT(at), tg = ng * (k || 1);
-    if (v.wk) v.wk.port.postMessage({ off: now, k: k || 1 }); else if (v.glow) v.glow(now, tg);
+    if (v.wk) v.wk.port.postMessage({ off: now, k: k || 1 }); else if (v.glow) v.glow(now, tg, now > A.ctx.currentTime ? now : undefined);   // (sched: a note-off ahead – the native loop's afterglow from then, not from now)
     v.released = true; v.relAt = now;
     holdParam(v.out.gain, now, envAt(v, now)); v.out.gain.setTargetAtTime(0, now + tg, 0.15);
     v.finish(now + tg + 0.8);

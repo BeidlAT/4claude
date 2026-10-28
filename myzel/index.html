@@ -3187,13 +3187,22 @@ function setP(param, v, tc = 0.03) {
   if (param._hx) hxPrm(param._hx, t, v, tc);   // Hexenring: the chain's modulators and the drift, followed for their phases
   try { param.cancelScheduledValues(t); param.setTargetAtTime(v, t, tc); } catch (e) { param.value = v; }
 }
-// (val: the value at t when it is known – without cancelAndHoldAtTime (Firefox) .value is now's, not t's: a note-off a
-// few ms ahead, at its MIDI moment, would otherwise hold a value its attack has already left)
+// Without cancelAndHoldAtTime (Firefox): val, the value at t when it is known (.value is now's, not t's). A t ahead (a
+// note-off at its MIDI moment): cancelScheduledValues(t) also drops a ramp still running at t (its event is its end),
+// so the param would stand at the event before it until t – an attack's 0, a dropout. A linear ramp to val at t
+// draws that line again instead (an attack: from its start at 0 to where it is at t – the same line)
 function holdParam(param, t, val) {
   if (param.cancelAndHoldAtTime) { param.cancelAndHoldAtTime(t); return; }
   const v = val != null ? val : param.value;
   param.cancelScheduledValues(t);
-  param.setValueAtTime(v, t);
+  if (t > A.ctx.currentTime) param.linearRampToValueAtTime(v, t); else param.setValueAtTime(v, t);
+}
+// a param let go toward 0 from a moment ahead (a note-off at its MIDI moment) on params setP/setTarget drive: no hold
+// (in Chromium a hold during a setTargetAtTime drops to 0 at once – rampP; Firefox has none), the events from at on
+// dropped and the decay starting at at from wherever the param stands then
+function fadeAt(param, at, tc) {
+  param.cancelScheduledValues(at);
+  param.setTargetAtTime(0, at, tc);
 }
 // A ramp on a param only Gestik moves (the mod layer's sources, a finger's bend, the Ocarina's depth): from where it
 // is now. Inside a running ramp it is held there; after the last ramp ended it starts from that ramp's known end – a
@@ -5115,7 +5124,7 @@ function zpfNative(v, t, f, y, vel, o) {
   const rel = sustainRelease(v, fels ? 0.5 : 0.3);
   v.release = (k, at) => {
     if (!v.alive || v.released) return;
-    if (at > A.ctx.currentTime) { for (const p of [src.playbackRate, osc.frequency]) { holdParam(p, at); p.setTargetAtTime(0, at, 0.2); } }   // (a note-off at its MIDI moment)
+    if (at > A.ctx.currentTime) { fadeAt(src.playbackRate, at, 0.2); fadeAt(osc.frequency, at, 0.2); }   // (a note-off at its MIDI moment)
     else { setP(src.playbackRate, 0, 0.2); setP(osc.frequency, 0, 0.2); }
     rel(k, at);
   };
@@ -5136,7 +5145,7 @@ function gltEnv(v, t, vel, o) {
   v.release = (k, at) => {
     if (!v.alive || v.released) return;
     const now = relT(at), tg = ng * (k || 1);
-    if (v.wk) v.wk.port.postMessage({ off: now, k: k || 1 }); else if (v.glow) v.glow(now, tg);
+    if (v.wk) v.wk.port.postMessage({ off: now, k: k || 1 }); else if (v.glow) v.glow(now, tg, now > A.ctx.currentTime ? now : undefined);   // (sched: a note-off ahead – the native loop's afterglow from then, not from now)
     v.released = true; v.relAt = now;
     holdParam(v.out.gain, now, envAt(v, now)); v.out.gain.setTargetAtTime(0, now + tg, 0.15);
     v.finish(now + tg + 0.8);
@@ -6464,10 +6473,10 @@ const ENGINES = {
       v.release = (kr, at) => {
         if (!v.alive || v.released) return;
         v.released = true; kr = kr || 1;
-        const now = relT(at), soon = now > A.ctx.currentTime + 0.001;
+        const now = relT(at), soon = now > A.ctx.currentTime;
         v.relAt = now;
-        // (a note-off ahead, at its MIDI moment: held where the automation stands then – .value is now's)
-        const off = (p, tc) => { if (soon) holdParam(p, now); else { const x = p.value; p.cancelScheduledValues(now); p.setValueAtTime(x, now); } p.setTargetAtTime(0, now, tc * kr); };
+        // (a note-off ahead, at its MIDI moment: the decay from wherever the param stands then – fadeAt)
+        const off = (p, tc) => { if (soon) { fadeAt(p, now, tc * kr); return; } const x = p.value; p.cancelScheduledValues(now); p.setValueAtTime(x, now); p.setTargetAtTime(0, now, tc * kr); };
         off(humG.gain, 0.004);
         for (const S of sides) { off(S.cg.gain, 0.08); if (S.arc) { off(S.arc.k.gain, 0.01); off(S.arc.ag.gain, 0.01); } }
         v.finish(now + 0.55 * kr + 0.05);
@@ -7634,7 +7643,9 @@ function myzelDsp() {
       this.q = []; this.act = false; this.off = false; this.silent = 0; this.dead = false; this.lite = this.po.lite ? 1 : 0;   // lite: after underruns, level 3's second bore/head is left out
       this.f = 220; this.y = 0.5; this.gN = 0; this.gS = 0; this.g = 1;
       this.inj = Math.max(0, +this.po.inj || 0); this.ix = null;   // (Hexenring step 4: Nähren – a Schleife's audio into Sehne's and Glut's loops, × inj; numberOfInputs 1)
-      this.port.onmessage = (e) => { const m = e.data; if (!m) return; if (m.kill) this.dead = true; else this.q.push(m); };
+      // (a message without a moment – a knob's {set} – goes ahead of a note-off still waiting for its moment (a key's
+      // MIDI moment, ≤ 60 ms ahead): the release starts with the new settings, as when the note-off came at once)
+      this.port.onmessage = (e) => { const m = e.data; if (!m) return; if (m.kill) { this.dead = true; return; } const q = this.q; let i = q.length; if (m.on == null && m.off == null && m.t == null) while (i > 0 && q[i - 1].off != null && q[i - 1].on == null) i--; q.splice(i, 0, m); };
       if (this.po.on) this.q.push(this.po.on);   // the note itself comes with the node: no port latency (offline renders deliver port messages only at the next suspend)
     }
     process(inputs, outputs, params) {
@@ -15183,8 +15194,9 @@ function onUp(e) {
   touches.delete(e.pointerId);
   if (GK.on) gkNote(tt, false, e);
   modTouch();
-  // a key's note-off at its MIDI moment (e.at, midiAt), never before its own note began
-  const at = e.at > 0 ? Math.max(e.at, tt.t0) : 0;
+  // a key's note-off at its MIDI moment (e.at, midiAt); any release never before its own note began (a pedal, Halten or
+  // all-notes-off within the lead of a Gleichmäßig note: from its start, not before it – relT makes a past one now)
+  const at = Math.max(e.at > 0 ? e.at : 0, tt.t0);
   for (const { v } of tt.voices) if (v.alive && v.release) v.release(e.relK, at);
   VIS.touchEnd(tt);
 }

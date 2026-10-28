@@ -132,7 +132,7 @@ function zpfNative(v, t, f, y, vel, o) {
   const rel = sustainRelease(v, fels ? 0.5 : 0.3);
   v.release = (k, at) => {
     if (!v.alive || v.released) return;
-    if (at > A.ctx.currentTime) { for (const p of [src.playbackRate, osc.frequency]) { holdParam(p, at); p.setTargetAtTime(0, at, 0.2); } }   // (a note-off at its MIDI moment)
+    if (at > A.ctx.currentTime) { fadeAt(src.playbackRate, at, 0.2); fadeAt(osc.frequency, at, 0.2); }   // (a note-off at its MIDI moment)
     else { setP(src.playbackRate, 0, 0.2); setP(osc.frequency, 0, 0.2); }
     rel(k, at);
   };
