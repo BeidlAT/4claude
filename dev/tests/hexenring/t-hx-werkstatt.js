@@ -33,7 +33,7 @@ const { ok } = H;
     o.engs = K.list.map((x) => Object.values(x.sch || {}).map((y) => y.eng || '-').join(',')).join(' ');
     const meter = async () => { const m = await window.__meter(L.id, 1500); return Math.max(...m.map((x) => x[1])); };
     // a click on creation 2 in the list
-    const row = [...document.querySelectorAll('.hx-ws .hx-wsr')].find((x) => x.textContent.trim() === '2'); row.click();
+    const row = [...document.querySelectorAll('.hx-ws .hx-wsr')].find((x) => x.querySelector('.hx-wsn').textContent.trim() === '2'); row.click();
     for (let i = 0; i < 60 && M.HX.sch.get(L.sch[0]).play !== 'krea'; i++) await sl(100);
     await sl(2600);
     o.play = M.HX.sch.get(L.sch[0]).play; o.sel = K.sel; o.lvl = await meter();
