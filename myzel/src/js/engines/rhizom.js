@@ -162,7 +162,7 @@ function rhzClear() {
 function wkHold(v, t, peak, att, rel) {
   adsrStart(v, t, peak, att);
   const r = sustainRelease(v, rel);
-  v.release = (k) => { if (v.alive && !v.released && v.wk) v.wk.port.postMessage({ off: A.ctx.currentTime }); r(k); };
+  v.release = (k, at) => { if (v.alive && !v.released && v.wk) v.wk.port.postMessage({ off: relT(at) }); r(k, at); };
 }
 // Gestik: each swing of a shake is one more hammer on every Ranke ring that sounds (KONZEPT §2.6), a burst on every
 // Amöbe (§2.5)

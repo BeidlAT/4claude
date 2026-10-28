@@ -130,10 +130,11 @@ function zpfNative(v, t, f, y, vel, o) {
   v.setF = (nf, glide) => { st.f = nf; for (const m of md) glideTo(m.bq.frequency, nf * B.r[m.k], glide); glideTo(sh.frequency, clamp(0.35 * nf, 30, 400), glide); const R = zpfRate(nf, st.y, st); set(R, Math.max(0.004, glide / 3)); };
   // let go: the stick coasts (R → 0, τ 0.2 s) while the voice fades
   const rel = sustainRelease(v, fels ? 0.5 : 0.3);
-  v.release = (k) => {
+  v.release = (k, at) => {
     if (!v.alive || v.released) return;
-    setP(src.playbackRate, 0, 0.2); setP(osc.frequency, 0, 0.2);
-    rel(k);
+    if (at > A.ctx.currentTime) { for (const p of [src.playbackRate, osc.frequency]) { holdParam(p, at); p.setTargetAtTime(0, at, 0.2); } }   // (a note-off at its MIDI moment)
+    else { setP(src.playbackRate, 0, 0.2); setP(osc.frequency, 0, 0.2); }
+    rel(k, at);
   };
   adsrStart(v, t, peak, 0.002);
 }

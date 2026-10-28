@@ -27,8 +27,11 @@ class Voice {
     if (!this.alive) return;
     this.alive = false;
     clearTimeout(this.timer);
-    for (const [src, p] of this.mods) { try { src.disconnect(p); } catch (e) {} }
-    for (const n of this.nodes) { try { n.disconnect(); } catch (e) {} }
+    // (by index: a voice ends seldom enough to stay unoptimised, where for…of made an iterator result per node – 0.6 MB/s
+    // of the main thread's garbage under an arp, 28.10.2026)
+    const M = this.mods, N = this.nodes;
+    for (let i = 0; i < M.length; i++) { try { M[i][0].disconnect(M[i][1]); } catch (e) {} }
+    for (let i = 0; i < N.length; i++) { try { N[i].disconnect(); } catch (e) {} }
     try { this.out.disconnect(); } catch (e) {}
     if (this.wk) { try { this.wk.port.postMessage({ kill: 1 }); } catch (e) {} }
     A.voices.delete(this); A.grainVoices.delete(this);
@@ -47,18 +50,23 @@ function adsrStart(v, t, peak, att) {
   v.out.gain.setValueAtTime(0, t);
   v.out.gain.linearRampToValueAtTime(peak, t + v.att);
 }
+// a release's moment: at (a key's note-off at its MIDI timestamp, midiAt – the same distance from the key as its
+// note-on, so the gate is as long as the key was held), never before now
+const relT = (at) => (at > A.ctx.currentTime ? at : A.ctx.currentTime);
+// v.out's envelope at t, as adsrStart set it (holdParam's value where cancelAndHoldAtTime is missing)
+const envAt = (v, t) => (v.peak ? (t - v.tA < v.att ? v.peak * Math.max(0, t - v.tA) / v.att : v.peak) : null);
 // k stretches the release (MIDI release velocity: a quick lift ends sooner)
 function sustainRelease(v, rel) {
-  return (k) => {
+  return (k, at) => {
     if (!v.alive || v.released) return;
     v.released = true;
     if (k) rel *= k;
-    const t = A.ctx.currentTime;
-    holdParam(v.out.gain, t);
+    const t = relT(at);
+    holdParam(v.out.gain, t, envAt(v, t));
     // a quick tap ends during a slow attack: finish to at least half the peak so short notes stay audible
     let t1 = t;
     if (v.peak && t - v.tA < v.att) {
-      const cur = v.peak * Math.max(0, t - v.tA) / v.att;
+      const cur = envAt(v, t);
       t1 = t + 0.03;
       v.out.gain.linearRampToValueAtTime(Math.max(cur, v.peak * 0.5), t1);
     }

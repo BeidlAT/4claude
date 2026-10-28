@@ -1185,12 +1185,13 @@ const ENGINES = {
       }
       adsrStart(v, t, peak, 0.003);
       // letting go: the hum drops with a click, the arc goes out, the last crackles die away
-      v.release = (kr) => {
+      v.release = (kr, at) => {
         if (!v.alive || v.released) return;
         v.released = true; kr = kr || 1;
-        const now = A.ctx.currentTime;
+        const now = relT(at), soon = now > A.ctx.currentTime + 0.001;
         v.relAt = now;
-        const off = (p, tc) => { const x = p.value; p.cancelScheduledValues(now); p.setValueAtTime(x, now); p.setTargetAtTime(0, now, tc * kr); };
+        // (a note-off ahead, at its MIDI moment: held where the automation stands then – .value is now's)
+        const off = (p, tc) => { if (soon) holdParam(p, now); else { const x = p.value; p.cancelScheduledValues(now); p.setValueAtTime(x, now); } p.setTargetAtTime(0, now, tc * kr); };
         off(humG.gain, 0.004);
         for (const S of sides) { off(S.cg.gain, 0.08); if (S.arc) { off(S.arc.k.gain, 0.01); off(S.arc.ag.gain, 0.01); } }
         v.finish(now + 0.55 * kr + 0.05);
@@ -1349,7 +1350,7 @@ const ENGINES = {
       wkVoice(v, 'myzel-tbl', f, y, { prm: wkPrm('tbl'), seed: wkSeed(), on: { on: t, f, y, vel, dmul, seed: wkSeed() } });
       v.out.gain.setValueAtTime(TBL_PEAK, t);
       if (o.burst) { wkRing(v, t, TBL_PEAK, life); return; }
-      v.release = () => { if (!v.alive || v.released) return; const now = A.ctx.currentTime; v.wk.port.postMessage({ off: now }); v.released = true; v.relAt = now; v.out.gain.setTargetAtTime(0, now + life, 0.05); v.finish(now + life + 0.3); };
+      v.release = (k, at) => { if (!v.alive || v.released) return; const now = relT(at); v.wk.port.postMessage({ off: now }); v.released = true; v.relAt = now; v.out.gain.setTargetAtTime(0, now + life, 0.05); v.finish(now + life + 0.3); };
     },
   },
   // Didgeridoo: lips in a long tube (myzel-did) – Höhe is the tongue; a Puls hit is a toot. Stand-in: Obertöne.
@@ -1471,7 +1472,7 @@ const ENGINES = {
       wkVoice(v, 'myzel-kas', f, y, { prm: wkPrm('kas'), seed: wkSeed(), on: { on: t, f, y, vel, dmul, seed: wkSeed() } });
       v.out.gain.setValueAtTime(KAS_PEAK, t);
       if (o.burst) { wkRing(v, t, KAS_PEAK, life); return; }
-      v.release = () => { if (!v.alive || v.released) return; const now = A.ctx.currentTime; v.wk.port.postMessage({ off: now }); v.released = true; v.relAt = now; v.out.gain.setTargetAtTime(0, now + 0.6, 0.08); v.finish(now + 1.1); };
+      v.release = (k, at) => { if (!v.alive || v.released) return; const now = relT(at); v.wk.port.postMessage({ off: now }); v.released = true; v.relAt = now; v.out.gain.setTargetAtTime(0, now + 0.6, 0.08); v.finish(now + 1.1); };
       v.finish(t + life);
     },
   },
@@ -1535,7 +1536,7 @@ const ENGINES = {
       wkVoice(v, 'myzel-kto', f, y, { prm: wkPrm('kto'), seed: wkSeed(), on: { on: t, f, y, vel, dmul, seed: wkSeed() } });
       v.out.gain.setValueAtTime(KTO_PEAK, t);
       if (o.burst) { wkRing(v, t, KTO_PEAK, life); return; }
-      v.release = () => { if (!v.alive || v.released) return; const now = A.ctx.currentTime; v.wk.port.postMessage({ off: now }); v.released = true; v.relAt = now; v.out.gain.setTargetAtTime(0, now + 0.6, 0.08); v.finish(now + 1.1); };
+      v.release = (k, at) => { if (!v.alive || v.released) return; const now = relT(at); v.wk.port.postMessage({ off: now }); v.released = true; v.relAt = now; v.out.gain.setTargetAtTime(0, now + 0.6, 0.08); v.finish(now + 1.1); };
       v.finish(t + life);
     },
   },
@@ -1611,7 +1612,7 @@ const ENGINES = {
       // held: the native envelope, and the processor fades with it (a slow or quick lift stretches both)
       adsrStart(v, t, peak, P['amo.att']);
       const r = sustainRelease(v, P['amo.rel'] * AMO_REL);
-      v.release = (k) => { if (v.alive && !v.released && v.wk) v.wk.port.postMessage({ off: A.ctx.currentTime, k }); r(k); };
+      v.release = (k, at) => { if (v.alive && !v.released && v.wk) v.wk.port.postMessage({ off: relT(at), k }); r(k, at); };
     },
   },
   // Gespinst: a plucked string on the finger (Saite's, its own colour: Höhe opens it) and its send into the one web

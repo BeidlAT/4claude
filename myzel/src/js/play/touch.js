@@ -41,10 +41,10 @@ function onDown(e) {
   if (NA.q.length) noteAfterRun();   // (the last note's own work first: in order)
   ensureRunning();
   if (HOLD.on && holdNew()) holdRelease();   // Halten: a new stroke from an empty hand lets the held ones go
-  if (touches.has(e.pointerId)) onUp({ pointerId: e.pointerId, force: true });   // never leave a note hanging on a reused pointer id
+  if (touches.has(e.pointerId)) onUp({ pointerId: e.pointerId, force: true, at: e.at });   // never leave a note hanging on a reused pointer id (a key struck again: the old note ends where the new one starts)
   if (e.pointerType) { try { cvFx.setPointerCapture(e.pointerId); } catch (err) {} }
   const pt = e.pt || stagePoint(e), n = e.note || noteAt(pt.x), now = e.at > A.ctx.currentTime ? e.at : A.ctx.currentTime;   // (a key: at its moment – midiAt)
-  const tt = { id: e.pointerId, x: pt.x, y: pt.y, px: pt.px, py: pt.py, col: n.idx, f: n.f, name: n.name, layers: layers(), voices: [], rollNext: null, hue: VIS.hueAt(pt.x), vel: e.vel, bend: e.bend || false, vn: e.vn, mb: e.mb || 0, mpe: e.mpe, seq: ++MOD.seq, stk: modStroke(e.stkT), ptype: e.pointerType || null };
+  const tt = { id: e.pointerId, t0: now, x: pt.x, y: pt.y, px: pt.px, py: pt.py, col: n.idx, f: n.f, name: n.name, layers: layers(), voices: [], rollNext: null, hue: VIS.hueAt(pt.x), vel: e.vel, bend: e.bend || false, vn: e.vn, mb: e.mb || 0, mpe: e.mpe, seq: ++MOD.seq, stk: modStroke(e.stkT), ptype: e.pointerType || null };
   const y0 = (tt.my = modY(tt, tt));   // the newest note: Höhe's full share from its first moment
   for (const ly of tt.layers) {
     if (ENGINES[ly.eng].sustain) {
@@ -107,7 +107,9 @@ function onUp(e) {
   touches.delete(e.pointerId);
   if (GK.on) gkNote(tt, false, e);
   modTouch();
-  for (const { v } of tt.voices) if (v.alive && v.release) v.release(e.relK);
+  // a key's note-off at its MIDI moment (e.at, midiAt), never before its own note began
+  const at = e.at > 0 ? Math.max(e.at, tt.t0) : 0;
+  for (const { v } of tt.voices) if (v.alive && v.release) v.release(e.relK, at);
   VIS.touchEnd(tt);
 }
 function releaseAllTouches() { for (const id of Array.from(touches.keys())) onUp({ pointerId: id, force: true }); holdUI(); }

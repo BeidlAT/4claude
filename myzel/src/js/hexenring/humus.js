@@ -38,7 +38,7 @@ function hxNote(v, eng, t, f, y, vel, o) {
   };
   if (v.setF) { const sf = v.setF; v.setF = (nf, gl) => { pt(e.curves.f, nf); return sf(nf, gl); }; }
   if (v.setY) { const sy = v.setY; v.setY = (ny) => { pt(e.curves.y, ny); return sy(ny); }; }
-  if (v.release) { const rl = v.release; v.release = (k) => { if (e.id === id && e.t1 == null) e.t1 = A.ctx.currentTime; return rl(k); }; }
+  if (v.release) { const rl = v.release; v.release = (k, at) => { if (e.id === id && e.t1 == null) e.t1 = relT(at); return rl(k, at); }; }
 }
 function hxEvProbe(v) { if (v && v.hxE) v.hxE.probe = true; }
 // the Bordun is no voice: its start and end are one event of its own
