@@ -237,7 +237,7 @@ function hxWsGlyphs() {
     const st = HXWS.gen && HXWS.gen.loops.includes(L.key) ? 'waechst' : n ? 'da' : '';
     if (g.dataset.st !== st) g.dataset.st = st;
     const lab = 'Gärtner-Werkstatt, Schleife ' + (i + 1) + (n ? ': ' + n + ' Kreationen' : '');
-    if (g.getAttribute('aria-label') !== lab) g.setAttribute('aria-label', lab);
+    if (g.getAttribute('aria-label') !== lab) { g.setAttribute('aria-label', lab); g.title = lab + ' – tippen öffnet sie'; }
     const cnt = g.querySelector('i'), t = n ? String(n) : ''; if (cnt.textContent !== t) cnt.textContent = t;
   }
 }

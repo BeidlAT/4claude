@@ -932,6 +932,7 @@ body.mlearn #stage::after { content: ""; position: absolute; inset: 0; backgroun
 .hx-cm-i { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 34px; padding: 6px 10px; border: 0; border-radius: 8px; background: none; color: var(--hypha); font: 500 13px/1.2 var(--font-ui); text-align: left; cursor: pointer; }
 .hx-cm-i:hover, .hx-cm-i:focus-visible { background: var(--bark-2); outline: none; }
 .hx-cm-i:disabled { opacity: .45; cursor: default; }
+@media (pointer: coarse) { .hx-cm-i { min-height: 44px; font-size: 15px; } .hx-cm-i kbd { display: none; } }   /* (iPad: the menu by a hold – fingers, no keys) */
 .hx-cm-i.danger { color: var(--rose); }
 .hx-cm-i kbd { font: 500 10.5px/1 var(--font-num); color: var(--dim); }
 .hx-cm-sep { height: 1px; margin: 4px 6px; background: var(--line); }
@@ -33574,16 +33575,17 @@ function hxRailShow() {
   // (step 1d: the panel's own layout may settle a frame later – the mixer's, the library's – look again then)
   if (UI.panel && !HXU.reT) HXU.reT = requestAnimationFrame(() => { HXU.reT = 0; const f2 = P['hx.rail'] === 'klein' || hxRailAuto(); if (HXU.rail && (HXU.rail.dataset.fold === '1') !== f2) hxRailShow(); });
 }
-// a ring pressed: it acts at once; held 0.5 s it opens its card instead, dragged up or down it sets the level
+// a ring pressed: it acts at once; held 0.5 s it opens its menu instead (as a right click – the iPad has none; its card is
+// one of the items: owner, 28.10.2026), dragged up or down it sets the level
 function hxRingDown(i, e) {
   if (e.button > 0) return;
   e.preventDefault();
   const b = HXU.rings[i];
   try { b.setPointerCapture(e.pointerId); } catch (x) {}
   const id = HX.slot[i], L = id && HX.loops.get(id), g0 = L ? L.gain : 1;
-  const G = { i, pid: e.pointerId, y0: e.clientY, mode: 'tap', g0, L, did: null };
+  const G = { i, pid: e.pointerId, x0: e.clientX, y0: e.clientY, mode: 'tap', g0, L, did: null };
   G.did = hxRingTap(i, e);
-  G.tm = setTimeout(() => { if (G.mode === 'tap') { G.mode = 'card'; hxRingRevert(G); hxCardOpen(i); } }, HX_HOLD * 1000);
+  G.tm = setTimeout(() => { if (G.mode === 'tap') { G.mode = 'menu'; hxRingRevert(G); const r0 = b.getBoundingClientRect(); hxCtxMenu(i, G.x0, Math.min(G.y0, r0.top) - 8); } }, HX_HOLD * 1000);   // (above the finger: lifting it touches no item)
   const mv = (ev) => {
     if (ev.pointerId !== G.pid || !G.L || G.L.state === 'weg') return;
     const dy = G.y0 - ev.clientY;
@@ -40843,7 +40845,7 @@ function hxWsGlyphs() {
     const st = HXWS.gen && HXWS.gen.loops.includes(L.key) ? 'waechst' : n ? 'da' : '';
     if (g.dataset.st !== st) g.dataset.st = st;
     const lab = 'Gärtner-Werkstatt, Schleife ' + (i + 1) + (n ? ': ' + n + ' Kreationen' : '');
-    if (g.getAttribute('aria-label') !== lab) g.setAttribute('aria-label', lab);
+    if (g.getAttribute('aria-label') !== lab) { g.setAttribute('aria-label', lab); g.title = lab + ' – tippen öffnet sie'; }
     const cnt = g.querySelector('i'), t = n ? String(n) : ''; if (cnt.textContent !== t) cnt.textContent = t;
   }
 }
@@ -41858,7 +41860,7 @@ function hxRailTips(hw) {
     const b = HXU.rings[i], L = HX.loops.get(HX.slot[i]), R = HX.rec;
     set(b, R && R.slot === i ? (R.phase === 'rec' ? 'Nimmt auf – tippen beendet die Aufnahme.' : 'Wartet auf die Eins – tippen bricht ab.')
       : !L ? 'Leerer Platz ' + (i + 1) + ': tippen nimmt hier eine neue Schleife auf.'
-        : 'Schleife ' + (i + 1) + (L.state === 'spielt' ? ' spielt' : L.state === 'stumm' ? ' ist stumm' : ' ist angehalten') + '. Tippen: ' + (L.state === 'spielt' ? 'stumm' : L.state === 'stumm' ? 'wieder an' : 'weiterspielen') + ' (mit Takt auf der nächsten Eins). Hoch- oder runterziehen: lauter oder leiser. Halten: ihre Karte mit allen Einstellungen.');
+        : 'Schleife ' + (i + 1) + (L.state === 'spielt' ? ' spielt' : L.state === 'stumm' ? ' ist stumm' : ' ist angehalten') + '. Tippen: ' + (L.state === 'spielt' ? 'stumm' : L.state === 'stumm' ? 'wieder an' : 'weiterspielen') + ' (mit Takt auf der nächsten Eins). Hoch- oder runterziehen: lauter oder leiser. Halten oder Rechtsklick: ihr Menü – bearbeiten, Karte, Solo, Export, Farbe, Löschen.');
   }
 }
 // ---- Mikro-Schleifen (SPEC §15): the microphone – only when the player switches it on (in the card), with its own sign

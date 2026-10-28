@@ -158,6 +158,7 @@
 .hx-cm-i { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 34px; padding: 6px 10px; border: 0; border-radius: 8px; background: none; color: var(--hypha); font: 500 13px/1.2 var(--font-ui); text-align: left; cursor: pointer; }
 .hx-cm-i:hover, .hx-cm-i:focus-visible { background: var(--bark-2); outline: none; }
 .hx-cm-i:disabled { opacity: .45; cursor: default; }
+@media (pointer: coarse) { .hx-cm-i { min-height: 44px; font-size: 15px; } .hx-cm-i kbd { display: none; } }   /* (iPad: the menu by a hold – fingers, no keys) */
 .hx-cm-i.danger { color: var(--rose); }
 .hx-cm-i kbd { font: 500 10.5px/1 var(--font-num); color: var(--dim); }
 .hx-cm-sep { height: 1px; margin: 4px 6px; background: var(--line); }
