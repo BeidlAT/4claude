@@ -627,6 +627,7 @@ BOOL('ui.leer', 'Beim Öffnen mit „Leerer Erde“ beginnen', true, { dev: 1 })
 SEL('ui.tonart', 'Tonart beim Preset-Wechsel', [['schleifen', 'Schleifen folgen dem Preset'], ['preset', 'Preset passt sich den Schleifen an']], 'schleifen', { chips: 1, small: 1, dev: 1 });   // (owner, 27.10.2026, later: „DIE SCHLEIFEN SOLLEN SICH DEM PRESET ANPASSEN“ – the default)   // (owner, 27.10.2026: „entweder die schleifen in die tonart der presets bringen oder die tonart der presets sich den schleifen anpassen“)   // (owner, 26.10.2026: „leer starten“ – presets.js)
 SEL('ui.instrument', 'Instrument beim Preset-Wechsel', [['eigen', 'Schleifen behalten ihr Instrument'], ['preset', 'Schleifen spielen mit dem Instrument des Presets']], 'eigen', { chips: 1, small: 1, dev: 1 });   // (owner, 28.10.2026: „Instrument folgt dem Preset“ – separat zuschaltbar, zusätzlich zur Tonart; a loop's own Klang „eigener“ then sounds as the field – hxKlangOf)
 BOOL('midi.vel', 'Anschlagdynamik', true, { dev: 1 });
+SEL('midi.zeit', 'Zeitpunkt einer Note', [['gleich', 'Gleichmäßig'], ['sofort', 'Sofort']], MOBILE ? 'sofort' : 'gleich', { chips: 1, dev: 1 });   // (owner, 28.10.2026: „Latenz schwankt bis 20 ms“ – clock.js midiAt)
 NUM('midi.bend', 'Tonhöhenrad', 0, 12, 2, 'HT', { step: 1, dev: 1, fmt: (v) => (v ? '±' + v + ' HT' : 'aus') });
 SEL('midi.curve', 'Anschlag', [['soft', 'Weich'], ['lin', 'Linear'], ['mid', 'Mittel'], ['hard', 'Hart'], ['fix', 'Fest']], 'mid', { chips: 1, dev: 1 });
 NUM('midi.fix', 'Fester Anschlag', 1, 127, 100, '', { step: 1, dev: 1, fmt: (v) => String(v) });

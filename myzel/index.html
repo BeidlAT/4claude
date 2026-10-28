@@ -2985,6 +2985,7 @@ BOOL('ui.leer', 'Beim Öffnen mit „Leerer Erde“ beginnen', true, { dev: 1 })
 SEL('ui.tonart', 'Tonart beim Preset-Wechsel', [['schleifen', 'Schleifen folgen dem Preset'], ['preset', 'Preset passt sich den Schleifen an']], 'schleifen', { chips: 1, small: 1, dev: 1 });   // (owner, 27.10.2026, later: „DIE SCHLEIFEN SOLLEN SICH DEM PRESET ANPASSEN“ – the default)   // (owner, 27.10.2026: „entweder die schleifen in die tonart der presets bringen oder die tonart der presets sich den schleifen anpassen“)   // (owner, 26.10.2026: „leer starten“ – presets.js)
 SEL('ui.instrument', 'Instrument beim Preset-Wechsel', [['eigen', 'Schleifen behalten ihr Instrument'], ['preset', 'Schleifen spielen mit dem Instrument des Presets']], 'eigen', { chips: 1, small: 1, dev: 1 });   // (owner, 28.10.2026: „Instrument folgt dem Preset“ – separat zuschaltbar, zusätzlich zur Tonart; a loop's own Klang „eigener“ then sounds as the field – hxKlangOf)
 BOOL('midi.vel', 'Anschlagdynamik', true, { dev: 1 });
+SEL('midi.zeit', 'Zeitpunkt einer Note', [['gleich', 'Gleichmäßig'], ['sofort', 'Sofort']], MOBILE ? 'sofort' : 'gleich', { chips: 1, dev: 1 });   // (owner, 28.10.2026: „Latenz schwankt bis 20 ms“ – clock.js midiAt)
 NUM('midi.bend', 'Tonhöhenrad', 0, 12, 2, 'HT', { step: 1, dev: 1, fmt: (v) => (v ? '±' + v + ' HT' : 'aus') });
 SEL('midi.curve', 'Anschlag', [['soft', 'Weich'], ['lin', 'Linear'], ['mid', 'Mittel'], ['hard', 'Hart'], ['fix', 'Fest']], 'mid', { chips: 1, dev: 1 });
 NUM('midi.fix', 'Fester Anschlag', 1, 127, 100, '', { step: 1, dev: 1, fmt: (v) => String(v) });
@@ -15106,7 +15107,7 @@ function onDown(e) {
   if (HOLD.on && holdNew()) holdRelease();   // Halten: a new stroke from an empty hand lets the held ones go
   if (touches.has(e.pointerId)) onUp({ pointerId: e.pointerId, force: true });   // never leave a note hanging on a reused pointer id
   if (e.pointerType) { try { cvFx.setPointerCapture(e.pointerId); } catch (err) {} }
-  const pt = e.pt || stagePoint(e), n = e.note || noteAt(pt.x), now = A.ctx.currentTime;
+  const pt = e.pt || stagePoint(e), n = e.note || noteAt(pt.x), now = e.at > A.ctx.currentTime ? e.at : A.ctx.currentTime;   // (a key: at its moment – midiAt)
   const tt = { id: e.pointerId, x: pt.x, y: pt.y, px: pt.px, py: pt.py, col: n.idx, f: n.f, name: n.name, layers: layers(), voices: [], rollNext: null, hue: VIS.hueAt(pt.x), vel: e.vel, bend: e.bend || false, vn: e.vn, mb: e.mb || 0, mpe: e.mpe, seq: ++MOD.seq, stk: modStroke(e.stkT), ptype: e.pointerType || null };
   const y0 = (tt.my = modY(tt, tt));   // the newest note: Höhe's full share from its first moment
   for (const ly of tt.layers) {
@@ -15124,7 +15125,7 @@ function onDown(e) {
   // what does not play comes after the note: the recorder's start (its moment taken now) and the screen's burst, in a
   // task of their own – the browser starts a voice once the task that made it has ended; a release or the next press
   // runs them first
-  const at = A.ctx.currentTime;
+  const at = now;
   noteAfter(() => { noteEvent(at); VIS.touchStart(tt); });
   if (lmT) lmTouch(e, lmT);
 }
@@ -17673,7 +17674,7 @@ function midiNoteOn(cs, note, vel, ts) {
   if (pc.soft) v = Math.max(0.02, v * 0.6);   // soft pedal: quieter, and darker in midiY
   // an MPE note starts with the pressure and CC 74 its channel sent just before (the spec's initial values)
   const mpe = cs.mem, tt0 = { vn, cs, mpe, rel74: mpe && cs.c74 === 64, pp: mpe ? cs.press : 0 }, y = midiY(tt0);
-  onDown({ pointerId: id, pt: { x: m.x, y, px: m.x * VIS.w, py: (1 - y) * VIS.h }, note: m, vel: v, bend: busOf(pc) || true, vn, mb: mpe ? cs.bend * cs.z.memR : 0, mpe, stkT: ts });   // (stkT: when the key arrived – a chord is one stroke even if the page was busy between its notes)
+  onDown({ pointerId: id, pt: { x: m.x, y, px: m.x * VIS.w, py: (1 - y) * VIS.h }, note: m, vel: v, bend: busOf(pc) || true, vn, mb: mpe ? cs.bend * cs.z.memR : 0, mpe, stkT: ts, at: midiAt(ts) });   // (at: when the note starts – Gleichmäßig, clock.js; stkT: when the key arrived – a chord is one stroke even if the page was busy between its notes)
   const tt = touches.get(id);
   if (tt) { tt.cs = cs; tt.msrc = cs.src; tt.mpe = mpe; tt.rel74 = tt0.rel74; if (mpe) tt.pp = tt0.pp; }
 }
@@ -18053,6 +18054,20 @@ function ctxSync() {
   // it was up to 1 ms, two calls between two pulses: 2 ms) – a 15-ms stall is walked in a second
 }
 const perfAt = (t) => t * 1000 + A.ctxOff;
+// (owner, 28.10.2026: „Latenz schwankt auf jeden Fall, bis zu 20 ms … nicht reproduzierbar“) a key's note started when the
+// main thread got round to it – its pauses (a GC each second, a long task) and where in the output buffer the key fell
+// (0 … one buffer) went straight into the latency. Gleichmäßig: the note starts at a fixed distance from the moment the
+// key arrived (the MIDI timestamp): one output buffer and 5 ms – sample-exact, however the main thread fared, as long
+// as it was less than that late (later: as soon as possible, as before). Never before now, at most 60 ms ahead (a clock
+// that drifted). Sofort: as before – the earliest moment, with its jitter.
+function midiAt(ts) {
+  if (!A.ctx) return 0;
+  const now = A.ctx.currentTime;
+  if (P['midi.zeit'] !== 'gleich' || !(ts > 0)) return now;
+  ctxSync();
+  const lead = (A.ctx.baseLatency || 128 / A.ctx.sampleRate) + 0.005;
+  return clamp(ctxAt(ts) + lead, now, now + 0.06);
+}
 const ctxAt = (ms) => { if (A.ctxOff == null) ctxSync(); return (ms - A.ctxOff) / 1000; };
 // Send: the Puls's beat as 24 pulses per quarter to the chosen outputs, Start/Stop with the Puls – the arpeggiators
 // of the nanoKEY Studio and microKEY follow it over USB (over Bluetooth KORG ignores clock). Pulses are stamped ahead from
@@ -29639,6 +29654,7 @@ function kcBuild() {
   E.setSec = foldSec('set', 'Spielweise am Keyboard', [
     sub('tasten & räder'), grid(ctl('midi.map'), ctl('midi.y', { wide: MOBILE }), ctl('midi.bend', { wide: MOBILE })),
     sub('dynamik'), grid(ctl('midi.vel'), ctl('midi.curve'), ctl('midi.fix')),
+    sub('zeit'), grid(ctl('midi.zeit')), h('p', { class: 'note' }, 'Gleichmäßig: jede Note beginnt in festem Abstand zu ihrem Tastendruck (ein Ausgabepuffer plus 5 ms) – sample-genau, auch wenn der Rechner gerade zu tun hat; die Latenz schwankt nicht mehr. Sofort: so früh wie möglich, dafür je nach Moment bis zu einem Puffer und einer Rechnerpause später – die Latenz schwankt. Der Klang ist gleich.'),
     sub('ausdruck'), grid(ctl('midi.mpe'), h('p', { class: 'note wide' }, 'Für MPE-Controller (Seaboard, LinnStrument, Osmose …): jeder Ton biegt, drückt und färbt sich für sich. Auto schaltet ein, sobald das Gerät seine MPE-Zone meldet.')),
     sub('steuerung'), grid(ctl('midi.pc'), ctl('midi.transport'), ctl('midi.clock'), ctl('midi.pads'), ctl('midi.std')),
     h('details', { class: 'kc-more' }, h('summary', null, 'Was die Einstellungen bewirken'), h('ul', { class: 'help', style: 'margin-bottom:8px' },
@@ -31087,6 +31103,7 @@ function updLatText() {
   // (Android, 24.10.2026: „Minimal“ by default, stepping back by itself – ui/leistung.js)
   if (ANDROID) lt += LAT.own ? ' Von dir eingestellt.' : LAT.auto ? ' Automatisch: nach wiederholten Aussetzern auf „' + LAT_NAME[LAT.auto] + '“ gestellt.' : ' Automatisch: setzt der Klang immer wieder aus, nimmt Myzel ab dem nächsten Start „Standard“, danach „Sicher“.';
   if (IOS) lt += ' iPhone und iPad wählen den Puffer selbst.';
+  else if (!MOBILE && A.ctx && A.ctx.baseLatency) lt += ' Den Puffer bestimmt der Browser: hier ' + Math.round(A.ctx.baseLatency * A.ctx.sampleRate) + ' Samples (' + dec((A.ctx.baseLatency * 1000).toFixed(1)) + ' ms) – eine ASIO-Einstellung des Interfaces (etwa 128) gilt im Browser nicht.';   // (owner, 28.10.2026)
   if (A.ctx) lt += A.latMode !== mode ? ' Der neue Puffer gilt nach einem Neustart des Klangs.' : ' Nach Änderungen am Audiotreiber den Klang neu starten, dann misst der Browser neu.';
   if (A.ctx) { const tip = latHint(((A.ctx.baseLatency || 0) + (A.ctx.outputLatency || 0)) * 1000); if (tip) lt += ' ' + tip; }
   if (devEls.latInfo.textContent !== lt) devEls.latInfo.textContent = lt;
@@ -42708,7 +42725,9 @@ function watchUnderruns() {
     // first second, the step came 2 s later) –, a step at most every 2 s, never under 30 % of the budget; then what is
     // over the new budget fades out, the oldest held voices first and the second layer before the first (owner,
     // 25.10.2026: held notes kept the overload going – a new budget held only new notes back)
-    if ((hits.length < 2 && dM < 0.03) || now - GD.stepT < 2000 || (A.budgetScale || 1) <= 0.3) return;
+    // (28.10.2026, owner's PC: one hiccup of 30 ms cut the voices by a fifth for half a minute – audible, for nothing)
+    // a step at once only when a second lost 200 ms or more (a real stall); else only when it lasts: three of the last ten seconds
+    if ((hits.length < 3 && dM < 0.2) || now - GD.stepT < 2000 || (A.budgetScale || 1) <= 0.3) return;
     A.budgetScale = Math.max(0.3, (A.budgetScale || 1) * 0.8); GD.stepT = now; budgetApply();
     const shed = vShed();
     gdlSet(P['dev.q'], A.budgetScale);

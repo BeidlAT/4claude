@@ -116,6 +116,7 @@ function kcBuild() {
   E.setSec = foldSec('set', 'Spielweise am Keyboard', [
     sub('tasten & räder'), grid(ctl('midi.map'), ctl('midi.y', { wide: MOBILE }), ctl('midi.bend', { wide: MOBILE })),
     sub('dynamik'), grid(ctl('midi.vel'), ctl('midi.curve'), ctl('midi.fix')),
+    sub('zeit'), grid(ctl('midi.zeit')), h('p', { class: 'note' }, 'Gleichmäßig: jede Note beginnt in festem Abstand zu ihrem Tastendruck (ein Ausgabepuffer plus 5 ms) – sample-genau, auch wenn der Rechner gerade zu tun hat; die Latenz schwankt nicht mehr. Sofort: so früh wie möglich, dafür je nach Moment bis zu einem Puffer und einer Rechnerpause später – die Latenz schwankt. Der Klang ist gleich.'),
     sub('ausdruck'), grid(ctl('midi.mpe'), h('p', { class: 'note wide' }, 'Für MPE-Controller (Seaboard, LinnStrument, Osmose …): jeder Ton biegt, drückt und färbt sich für sich. Auto schaltet ein, sobald das Gerät seine MPE-Zone meldet.')),
     sub('steuerung'), grid(ctl('midi.pc'), ctl('midi.transport'), ctl('midi.clock'), ctl('midi.pads'), ctl('midi.std')),
     h('details', { class: 'kc-more' }, h('summary', null, 'Was die Einstellungen bewirken'), h('ul', { class: 'help', style: 'margin-bottom:8px' },

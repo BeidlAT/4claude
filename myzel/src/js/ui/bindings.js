@@ -230,6 +230,7 @@ function updLatText() {
   // (Android, 24.10.2026: „Minimal“ by default, stepping back by itself – ui/leistung.js)
   if (ANDROID) lt += LAT.own ? ' Von dir eingestellt.' : LAT.auto ? ' Automatisch: nach wiederholten Aussetzern auf „' + LAT_NAME[LAT.auto] + '“ gestellt.' : ' Automatisch: setzt der Klang immer wieder aus, nimmt Myzel ab dem nächsten Start „Standard“, danach „Sicher“.';
   if (IOS) lt += ' iPhone und iPad wählen den Puffer selbst.';
+  else if (!MOBILE && A.ctx && A.ctx.baseLatency) lt += ' Den Puffer bestimmt der Browser: hier ' + Math.round(A.ctx.baseLatency * A.ctx.sampleRate) + ' Samples (' + dec((A.ctx.baseLatency * 1000).toFixed(1)) + ' ms) – eine ASIO-Einstellung des Interfaces (etwa 128) gilt im Browser nicht.';   // (owner, 28.10.2026)
   if (A.ctx) lt += A.latMode !== mode ? ' Der neue Puffer gilt nach einem Neustart des Klangs.' : ' Nach Änderungen am Audiotreiber den Klang neu starten, dann misst der Browser neu.';
   if (A.ctx) { const tip = latHint(((A.ctx.baseLatency || 0) + (A.ctx.outputLatency || 0)) * 1000); if (tip) lt += ' ' + tip; }
   if (devEls.latInfo.textContent !== lt) devEls.latInfo.textContent = lt;

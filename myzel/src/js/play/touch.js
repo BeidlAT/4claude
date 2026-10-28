@@ -43,7 +43,7 @@ function onDown(e) {
   if (HOLD.on && holdNew()) holdRelease();   // Halten: a new stroke from an empty hand lets the held ones go
   if (touches.has(e.pointerId)) onUp({ pointerId: e.pointerId, force: true });   // never leave a note hanging on a reused pointer id
   if (e.pointerType) { try { cvFx.setPointerCapture(e.pointerId); } catch (err) {} }
-  const pt = e.pt || stagePoint(e), n = e.note || noteAt(pt.x), now = A.ctx.currentTime;
+  const pt = e.pt || stagePoint(e), n = e.note || noteAt(pt.x), now = e.at > A.ctx.currentTime ? e.at : A.ctx.currentTime;   // (a key: at its moment – midiAt)
   const tt = { id: e.pointerId, x: pt.x, y: pt.y, px: pt.px, py: pt.py, col: n.idx, f: n.f, name: n.name, layers: layers(), voices: [], rollNext: null, hue: VIS.hueAt(pt.x), vel: e.vel, bend: e.bend || false, vn: e.vn, mb: e.mb || 0, mpe: e.mpe, seq: ++MOD.seq, stk: modStroke(e.stkT), ptype: e.pointerType || null };
   const y0 = (tt.my = modY(tt, tt));   // the newest note: Höhe's full share from its first moment
   for (const ly of tt.layers) {
@@ -61,7 +61,7 @@ function onDown(e) {
   // what does not play comes after the note: the recorder's start (its moment taken now) and the screen's burst, in a
   // task of their own – the browser starts a voice once the task that made it has ended; a release or the next press
   // runs them first
-  const at = A.ctx.currentTime;
+  const at = now;
   noteAfter(() => { noteEvent(at); VIS.touchStart(tt); });
   if (lmT) lmTouch(e, lmT);
 }

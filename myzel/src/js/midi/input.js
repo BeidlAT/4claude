@@ -75,7 +75,7 @@ function midiNoteOn(cs, note, vel, ts) {
   if (pc.soft) v = Math.max(0.02, v * 0.6);   // soft pedal: quieter, and darker in midiY
   // an MPE note starts with the pressure and CC 74 its channel sent just before (the spec's initial values)
   const mpe = cs.mem, tt0 = { vn, cs, mpe, rel74: mpe && cs.c74 === 64, pp: mpe ? cs.press : 0 }, y = midiY(tt0);
-  onDown({ pointerId: id, pt: { x: m.x, y, px: m.x * VIS.w, py: (1 - y) * VIS.h }, note: m, vel: v, bend: busOf(pc) || true, vn, mb: mpe ? cs.bend * cs.z.memR : 0, mpe, stkT: ts });   // (stkT: when the key arrived – a chord is one stroke even if the page was busy between its notes)
+  onDown({ pointerId: id, pt: { x: m.x, y, px: m.x * VIS.w, py: (1 - y) * VIS.h }, note: m, vel: v, bend: busOf(pc) || true, vn, mb: mpe ? cs.bend * cs.z.memR : 0, mpe, stkT: ts, at: midiAt(ts) });   // (at: when the note starts – Gleichmäßig, clock.js; stkT: when the key arrived – a chord is one stroke even if the page was busy between its notes)
   const tt = touches.get(id);
   if (tt) { tt.cs = cs; tt.msrc = cs.src; tt.mpe = mpe; tt.rel74 = tt0.rel74; if (mpe) tt.pp = tt0.pp; }
 }

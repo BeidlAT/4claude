@@ -181,7 +181,9 @@ function watchUnderruns() {
     // first second, the step came 2 s later) –, a step at most every 2 s, never under 30 % of the budget; then what is
     // over the new budget fades out, the oldest held voices first and the second layer before the first (owner,
     // 25.10.2026: held notes kept the overload going – a new budget held only new notes back)
-    if ((hits.length < 2 && dM < 0.03) || now - GD.stepT < 2000 || (A.budgetScale || 1) <= 0.3) return;
+    // (28.10.2026, owner's PC: one hiccup of 30 ms cut the voices by a fifth for half a minute – audible, for nothing)
+    // a step at once only when a second lost 200 ms or more (a real stall); else only when it lasts: three of the last ten seconds
+    if ((hits.length < 3 && dM < 0.2) || now - GD.stepT < 2000 || (A.budgetScale || 1) <= 0.3) return;
     A.budgetScale = Math.max(0.3, (A.budgetScale || 1) * 0.8); GD.stepT = now; budgetApply();
     const shed = vShed();
     gdlSet(P['dev.q'], A.budgetScale);
