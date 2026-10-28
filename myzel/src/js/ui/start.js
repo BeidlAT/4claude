@@ -1,6 +1,25 @@
 function ensureRunning() {
   if (A.ctx && A.ctx.state !== 'running') { try { const p = A.ctx.resume(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
 }
+// out of sight (and not to play on there): the sound stops, the silent element too – else iOS keeps the page playing;
+// the iOS audio session leaves „playback“ as well – the one category that may sound in the background (back: iosUnmute)
+function bgStop() {
+  A.userSuspended = true; try { A.ctx.suspend(); } catch (e) {}
+  try { if (A.unmute && !A.unmute.paused) A.unmute.pause(); } catch (e) {}
+  try { if (IOS && navigator.audioSession && navigator.audioSession.type === 'playback') { navigator.audioSession.type = 'ambient'; A.bgSess = true; } } catch (e) {}
+  try { if (navigator.mediaSession) navigator.mediaSession.playbackState = 'paused'; } catch (e) {}
+}
+// Akku schonen (iPad by default): the screen is kept awake while something sounds or was touched in the last three
+// minutes – in a silence without a hand it may lock as the iPad is set to (the sound is never touched by it)
+const AKKU = { inT: 0 };
+const akkuIn = () => { AKKU.inT = performance.now(); if (P['dev.akku'] && !A.wake && A.started && document.visibilityState === 'visible') keepAwake(); };
+function akkuTick() {
+  if (!P['dev.akku'] || !A.started || document.visibilityState !== 'visible') return;
+  const quiet = IDLE.on && !touches.size && CAP.state === 'idle' && performance.now() - AKKU.inT > 180000;
+  if (quiet && A.wake) { try { A.wake.release(); } catch (e) {} A.wake = null; }
+  else if (!quiet && !A.wake) keepAwake();
+}
+setInterval(akkuTick, 15000);
 async function keepAwake() {
   try {
     if ('wakeLock' in navigator && document.visibilityState === 'visible' && !A.wake) {

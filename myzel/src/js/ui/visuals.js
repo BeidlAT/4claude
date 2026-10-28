@@ -89,7 +89,7 @@ function frameCtl() {
 // throws can no longer stop the drawing, the meters, the recorder's time or the count-in for good)
 function frame(ts) { requestAnimationFrame(frame); if (PH.on || LM.on) phFrame(ts); tickTry(20, () => frameBody(ts)); }
 function frameBody(ts) {
-  const T = PH.load ? 33.33 : 16.67;   // (the drawing's interval: 60 frames a second, the Handy-Modus under load 30)
+  const T = PH.load || (P['dev.akku'] && !touches.size && ts - AKKU.inT > 1500) ? 33.33 : 16.67;   // (the drawing's interval: 60 frames a second, the Handy-Modus under load 30 – and „Akku schonen“ while no hand is at work: 30, back to 60 at the first touch)
   if (FR.prev) { const d = ts - FR.prev; if (d > 2 && d < 40) FR.iv += (d - FR.iv) * 0.1; FR.acc = Math.min(FR.acc + d, T + 33.33); }
   FR.prev = ts;
   FR.drew = false;

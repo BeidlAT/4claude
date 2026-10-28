@@ -60,6 +60,7 @@ function midiHint() {
 // doubled note itself (src.dbl): then it counts too.
 const midiCounts = (src) => src.count || (mapOf(src), !!src.prof && !!src.prof.count);
 function midiNoteOn(cs, note, vel, ts) {
+  AKKU.inT = performance.now();   // (Akku schonen: a keyboard plays – the field draws at 60)
   MIDI.flash = performance.now();
   if (!A.started) { midiHint(); return; }
   const id = midiId(cs.src, cs.ch, note), pc = pedalOf(cs), m = midiNote(note);
