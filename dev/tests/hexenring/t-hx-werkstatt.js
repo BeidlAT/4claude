@@ -15,7 +15,7 @@ const { ok } = H;
     M.HX.chips = null; M.hxRailDirty();   // (the chips after the harvest: gone, as after a while or a tap)
     return L.slot;
   });
-  await page.evaluate(async () => { const M = window.__M; await window.__reset(); window.__grid(120); M.setParam('hx.laenge', 'fest'); M.setParam('hx.festT', 1); M.setParam('hx.ws.anzahl', '5'); M.setParam('hx.ws.umfang', 'schleife'); M.setParam('hx.ws.klang', true); await window.__sleep(500); });
+  await page.evaluate(async () => { const M = window.__M; await window.__reset(); window.__grid(120); M.setParam('hx.laenge', 'fest'); M.setParam('hx.festT', 1); M.setParam('hx.ws.anzahl', '5'); M.setParam('hx.ws.umfang', 'schleife'); M.setParam('hx.ws.klang', true); M.setParam('hx.ws.effekte', false); M.setParam('hx.ws.durchg', '1'); await window.__sleep(500); });
   const slot = await mk();
   await page.waitForSelector('.hx-wsg:not([hidden])', { timeout: 30000 }).catch(() => {});   // (the chips after a harvest take the rings' place a while)
   const r = {};
@@ -33,7 +33,7 @@ const { ok } = H;
     o.engs = K.list.map((x) => Object.values(x.sch || {}).map((y) => y.eng || '-').join(',')).join(' ');
     const meter = async () => { const m = await window.__meter(L.id, 1500); return Math.max(...m.map((x) => x[1])); };
     // a click on creation 2 in the list
-    const row = [...document.querySelectorAll('.hx-ws .hx-wsr')].find((x) => x.textContent.trim() === '2'); row.click();
+    const row = [...document.querySelectorAll('.hx-ws .hx-wsr')].find((x) => x.querySelector('.hx-wsn').textContent.trim() === '2'); row.click();
     for (let i = 0; i < 60 && M.HX.sch.get(L.sch[0]).play !== 'krea'; i++) await sl(100);
     await sl(2600);
     o.play = M.HX.sch.get(L.sch[0]).play; o.sel = K.sel; o.lvl = await meter();

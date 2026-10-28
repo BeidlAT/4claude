@@ -65,3 +65,12 @@ body.ww-saen-an :is([data-ww], [data-wa], [data-pid]):hover { outline: 2px solid
 .ww-gesaet::after { content: ""; position: absolute; top: 2px; right: 2px; width: 6px; height: 6px; border-radius: 50%; background: var(--spore); box-shadow: 0 0 6px rgba(255, 179, 92, .8); pointer-events: none; }
 @media (max-width: 420px) { .ww-btn { width: 30px; height: 30px; min-width: 30px; padding: 0; } .ww-btn svg { width: 18px; height: 18px; } }
 .ww-go { width: 100%; }
+/* Suche (Etappe 2): the field in the head, the found settings as tiles with their home above them */
+.ww-q { flex: 0 1 260px; min-width: 120px; padding: 7px 12px; border-radius: 18px; border: 1px solid var(--line); background: var(--loam-2); color: var(--hypha); font: 13px var(--font-ui); }
+.ww-q:focus { outline: none; border-color: var(--lumen); box-shadow: 0 0 0 2px rgba(134, 240, 208, .18); }
+.ww-res { display: flex; flex-wrap: wrap; gap: 10px; align-items: stretch; margin-bottom: 14px; }
+.ww-res > .note { margin: 0; }
+.ww-qwo { font: 10px var(--font-num); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); margin-bottom: 4px; }
+.ww-qt .ww-qs { opacity: .45; }
+.ww-qt.gesaet .ww-qs { opacity: 1; color: var(--spore); }
+@media (max-width: 640px) { .ww-hd { flex-wrap: wrap; } .ww-q { order: 9; flex: 1 1 100%; } }

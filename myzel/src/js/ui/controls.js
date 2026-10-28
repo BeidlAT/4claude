@@ -137,6 +137,7 @@ function onParamChanged(id) {
   const pre = id.slice(0, id.indexOf('.'));
   if (HX.wFeld && A.ctx && (ENGINES[pre] || id === 'v.eng' || id === 'v.layer')) HX.wKlang = performance.now() + 400;   // Hexenring: (step 2a) loops that sound as the field: anew, once the knob rests
   if (id === 'v.eng' || id === 'v.layer') { refreshEngineUI(); }
+  if (id === 'ui.instrument' && A.ctx) for (const L of hxLoopsLive()) hxWUpdate(L);   // Hexenring: (28.10.2026) the loops take the preset's instrument, or their own again, from their next seam
   if (KQ_PIDS.includes(id) && !UI.loading) kqUsed(P[id]);
   if ((id === 'v.eng' || id === 'v.layer' || /^l\d\.eng$/.test(id)) && WORKLET_ENGINES.has(P[id])) dspMaybe();
   if (id === 'flt.type') for (const fn of CTL['flt.q'] || []) fn(P['flt.q'], null);
@@ -236,7 +237,7 @@ function loadValues(vals, keepUnset) {
   syncMic();
   // (owner, 27.10.2026: „man muss erst auf stille gehen … dann ein preset … dann auf weiter“) a preset's values come in here,
   // past setParam: the loops that sound as the field take the new sound too (as a knob turned does it – onParamChanged)
-  if (A.ctx && hxLoopsLive().some((X) => (X.klang || 'eigen') === 'feld')) { HX.wFeld = true; HX.wKlang = performance.now() + 50; }
+  if (A.ctx && hxLoopsLive().some((X) => hxKlangOf(X) === 'feld')) { HX.wFeld = true; HX.wKlang = performance.now() + 50; }
   clearTimeout(saveTimer); saveTimer = setTimeout(saveState, 400);
 }
 function saveState() {
@@ -256,6 +257,7 @@ function restoreState() {
     else if (s && s.values) { const v = engKeysIn(s.values); for (const id of PATCH_IDS) if (id in v) P[id] = sanitize(PD[id], v[id]); UI.preset = s.preset || null; }
     const r = JSON.parse(store.get('myzel.rec.v1') || 'null');
     if (r) for (const id in r) if (PD[id] && PD[id].rec) P[id] = sanitize(PD[id], r[id]);
+    if (!store.get('myzel.ws.v2')) { store.set('myzel.ws.v2', '1'); if (P['hx.ws.durchg'] === '1') P['hx.ws.durchg'] = 'auto'; }   // (once, 28.10.2026: the Werkstatt's creations „gehen viel zu schnell“ – at least 10 s each now)
     latRestore(dv);   // (the latency: chosen by hand, or the default with this device's step – ui/leistung.js)
   } catch (e) {}
 }

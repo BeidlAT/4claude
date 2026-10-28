@@ -7,7 +7,7 @@
 @keyframes hxWsPulse { 50% { opacity: .35; } }
 .hx-wsg i { position: absolute; right: -7px; top: -5px; font: 9px/1 var(--font-num); font-style: normal; color: var(--ink); background: var(--c, var(--spore)); border-radius: 6px; padding: 1px 3px; }
 .hx-wsg i:empty { display: none; }
-.hx-ws { position: absolute; z-index: 45; width: 216px; max-height: min(60vh, 520px); overflow: auto; background: rgba(26, 19, 16, .97); border: 1px solid var(--line); border-radius: 14px; padding: 8px; box-shadow: 0 18px 50px rgba(0, 0, 0, .6); }
+.hx-ws { position: absolute; z-index: 45; width: 256px; max-height: min(60vh, 520px); overflow: auto; background: rgba(26, 19, 16, .97); border: 1px solid var(--line); border-radius: 14px; padding: 8px; box-shadow: 0 18px 50px rgba(0, 0, 0, .6); }
 .hx-wsh { display: flex; align-items: center; gap: 4px; margin-bottom: 6px; }
 .hx-wsh > b { font: 12px var(--font-num); color: var(--hypha); margin-right: auto; }
 .hx-wsi { color: var(--c); display: grid; }
@@ -25,6 +25,8 @@
 .hx-wsr.waechst, .hx-wsr.warte { color: var(--dim); cursor: default; }
 .hx-wsr.waechst::after { content: ""; width: 6px; height: 6px; margin-left: auto; border-radius: 50%; background: var(--spore); animation: hxWsPulse 1.2s ease-in-out infinite; }
 .hx-wsr.warte { opacity: .45; }
+.hx-wsw { margin-left: auto; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--dim); }
+.hx-wsr.sel .hx-wsw { color: var(--hypha); }
 .hx-wss { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); display: grid; gap: 6px; }
 .hx-wsrow { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
 .hx-wss .ctl { margin: 0; }

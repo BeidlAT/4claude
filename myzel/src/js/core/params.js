@@ -587,8 +587,9 @@ BOOL('hx.ws.noten', 'Noten', true, { rec: 1 });
 BOOL('hx.ws.rhythmus', 'Rhythmus', true, { rec: 1 });
 BOOL('hx.ws.oktaven', 'Oktaven', false, { rec: 1 });
 BOOL('hx.ws.klang', 'Klang', false, { rec: 1 });
+BOOL('hx.ws.effekte', 'Effekte', false, { rec: 1 });   // (Etappe 2: Filterwelle, Phaser, Chorus, Wärme, Kreisen, Bandfilter – baked into the creation)
 SEL('hx.ws.anzahl', 'Anzahl', [['5', '5'], ['10', '10'], ['20', '20']], '10', { chips: 1, small: 1, rec: 1 });
-SEL('hx.ws.durchg', 'Durchgänge je Kreation', [['1', '1'], ['2', '2'], ['4', '4']], '1', { chips: 1, small: 1, rec: 1 });
+SEL('hx.ws.durchg', 'Durchgänge je Kreation', [['auto', 'mind. 10 s'], ['1', '1'], ['2', '2'], ['4', '4'], ['8', '8']], 'auto', { chips: 1, small: 1, rec: 1 });
 SEL('hx.ws.danach', 'Wenn alle gespielt sind', [['stopp', 'anhalten'], ['neu', 'neue wachsen lassen']], 'stopp', { chips: 1, small: 1, rec: 1 });
 SEL('hx.gStimme', 'Antwort mit', [['feld', 'Spielfeld'], ['ebene', 'Ebene 2'], ['schleife', 'Melodie-Schleife']], 'feld', { chips: 1, small: 1, rec: 1 });
 SEL('hx.hand', 'Handschrift', [['aus', 'Aus'], ['an', 'An']], 'aus', { chips: 1, small: 1, rec: 1 });
@@ -622,6 +623,7 @@ NUM('midi.y', 'Höhe auf der Spielfläche', 0, 1, 0.55, '%', { dev: 1 });
 BOOL('ui.leer', 'Beim Öffnen mit „Leerer Erde“ beginnen', true, { dev: 1 });
 // (owner, 27.10.2026: „die schleife immer die original aufnahme“; „das preset an die tonart der schleife(n) anpassen“)
 SEL('ui.tonart', 'Tonart beim Preset-Wechsel', [['schleifen', 'Schleifen folgen dem Preset'], ['preset', 'Preset passt sich den Schleifen an']], 'schleifen', { chips: 1, small: 1, dev: 1 });   // (owner, 27.10.2026, later: „DIE SCHLEIFEN SOLLEN SICH DEM PRESET ANPASSEN“ – the default)   // (owner, 27.10.2026: „entweder die schleifen in die tonart der presets bringen oder die tonart der presets sich den schleifen anpassen“)   // (owner, 26.10.2026: „leer starten“ – presets.js)
+SEL('ui.instrument', 'Instrument beim Preset-Wechsel', [['eigen', 'Schleifen behalten ihr Instrument'], ['preset', 'Schleifen spielen mit dem Instrument des Presets']], 'eigen', { chips: 1, small: 1, dev: 1 });   // (owner, 28.10.2026: „Instrument folgt dem Preset“ – separat zuschaltbar, zusätzlich zur Tonart; a loop's own Klang „eigener“ then sounds as the field – hxKlangOf)
 BOOL('midi.vel', 'Anschlagdynamik', true, { dev: 1 });
 NUM('midi.bend', 'Tonhöhenrad', 0, 12, 2, 'HT', { step: 1, dev: 1, fmt: (v) => (v ? '±' + v + ' HT' : 'aus') });
 SEL('midi.curve', 'Anschlag', [['soft', 'Weich'], ['lin', 'Linear'], ['mid', 'Mittel'], ['hard', 'Hart'], ['fix', 'Fest']], 'mid', { chips: 1, dev: 1 });
