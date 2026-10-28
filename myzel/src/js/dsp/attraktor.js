@@ -15,6 +15,7 @@
       this.rng = new PRNG(this.po.seed || 53);
       this.x = 1; this.yv = 1; this.z = 0.05; this.m = 1; this.last = 0; this.cnt = 0; this.ys = this.y; this.env = 0; this.lp = 0; this.lp2 = 0; this.hp = 0; this.zx = 0; this.dv = 0; this.dw = 0;
       this.dc = new DcBlock(15); this.dc2 = new DcBlock(15); this.vel = 0.75; this.burst = false; this.gate = 0;
+      this.kH = 0; this.kA = 0; this.kB = 0; this.kC = 0;   // (rk's step and constants, set once a block)
     }
     set(p) { for (const k in p) if (k in this.p) this.p[k] = +p[k] || 0; }
     reset() { this.x = 1; this.yv = 1; this.z = 0.05; this.env = 0; }
@@ -23,8 +24,11 @@
       if (!this.wasOn) { this.ys = this.y; this.wasOn = true; this.m = 1.0; }
     }
     stop() { this.off = true; }
-    // one Runge–Kutta step of the system (written out: no closure, no array in the inner loop)
-    rk(h, a, bb, c) {
+    // one Runge–Kutta step of the system (written out: no closure, no array in the inner loop). Its step and constants
+    // come in fields, not as arguments: render is too large for V8 to inline rk, and every number passed to a call is a
+    // new heap object there – four per step, 3 MB of the audio thread's garbage per voice and second in Chrome (28.10.2026)
+    rk() {
+      const h = this.kH, a = this.kA, bb = this.kB, c = this.kC;
       const x = this.x, y = this.yv, z = this.z;
       const a1 = -y - z, b1 = x + a * y, c1 = bb + z * (x - c);
       let X = x + 0.5 * h * a1, Y = y + 0.5 * h * b1, Z = z + 0.5 * h * c1;
@@ -48,8 +52,9 @@
       const mix = p.mischung + 0.55 * this.ys * (1 - p.mischung), cut = 1 - Math.exp(-2 * Math.PI * Math.min(0.42 * SR, f * (1.5 + 14 * p.farbe) * (0.7 + 0.8 * this.ys)) / SR), og = R ? ATR_OUT * Math.SQRT1_2 : ATR_OUT;
       const att = 1 - Math.exp(-1 / (0.01 * SR)), rel = 1 - Math.exp(-1 / (0.08 * SR)), envT = this.off ? 0 : 1;
       let env = this.env, lp = this.lp, lp2 = this.lp2;
+      this.kH = h; this.kA = A; this.kB = B; this.kC = c;
       for (let i = a; i < b; i++) {
-        for (let s = 0; s < sub; s++) this.rk(h, A, B, c);
+        for (let s = 0; s < sub; s++) this.rk();
         env += (envT - env) * (envT > env ? att : rel);
         // the lock: x's upward zero crossings, the loop's length against the period (≈ 30 ms to settle)
         this.cnt++;

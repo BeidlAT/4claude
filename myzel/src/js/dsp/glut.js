@@ -27,6 +27,7 @@
   class Ember extends MyzelProc {
     constructor(o) {
       super(o);
+      this.lgD = 0; this.lgW = 0; this.lpd = 0; this.lmag = 1;   // (lagH's input and output)
       const po = this.po;
       this.rich = !!po.rich;
       const K = this.Kx = this.rich ? 2 : 1;
@@ -106,7 +107,7 @@
       this.Fc[k] = F;
       // the delay: one period of the note, the 4-tap interpolator's phase error at F taken out (one correction step)
       let D = SR / fk;
-      this.lagH(D, w0); D += D - this.lpd; this.lagH(D, w0);
+      this.lgW = w0; this.lgD = D; this.lagH(); D += D - this.lpd; this.lgD = D; this.lagH();
       this.Dt[k] = Math.max(2, Math.min(this.N - 8, D));
       if (!this.D[k]) this.D[k] = this.Dt[k];
       this.G0[k] = 1 / Math.max(0.5, this.lmag);
@@ -126,8 +127,9 @@
       this.qD[k] = Math.exp(sg * this.D[k] / SR);
     }
     // the 4-tap Lagrange interpolator at delay d, at w0: its phase delay (lpd, samples) and gain (lmag)
-    lagH(d, w0) {
-      const i = d | 0, q = d - i + 1, h0 = -(q - 1) * (q - 2) * (q - 3) / 6, h1 = q * (q - 2) * (q - 3) / 2, h2 = -q * (q - 1) * (q - 3) / 2, h3 = q * (q - 1) * (q - 2) / 6;
+    // (d and w0 come in fields: V8 does not inline it into coef, and each number passed to a call is a new heap object)
+    lagH() {
+      const d = this.lgD, w0 = this.lgW, i = d | 0, q = d - i + 1, h0 = -(q - 1) * (q - 2) * (q - 3) / 6, h1 = q * (q - 2) * (q - 3) / 2, h2 = -q * (q - 1) * (q - 3) / 2, h3 = q * (q - 1) * (q - 2) / 6;
       const c0 = w0 * (i - 1), re = h0 * Math.cos(c0) + h1 * Math.cos(c0 + w0) + h2 * Math.cos(c0 + 2 * w0) + h3 * Math.cos(c0 + 3 * w0), im = -(h0 * Math.sin(c0) + h1 * Math.sin(c0 + w0) + h2 * Math.sin(c0 + 2 * w0) + h3 * Math.sin(c0 + 3 * w0));
       let pd = -Math.atan2(im, re) / w0; const c = 2 * Math.PI / w0; pd += Math.round((d - pd) / c) * c;
       this.lpd = pd; this.lmag = Math.hypot(re, im);
@@ -238,7 +240,7 @@
       const hc = Math.exp(-2 * Math.PI * fh / SR), og = EMB_OUT * (two ? Math.SQRT1_2 : 1), lp = this.lp, hp = this.hp;
       for (let c = 0; c < (two ? 2 : 1); c++) {
         const X = c ? R : L, s = 3 * c, t = 2 * c;
-        if (c && K === 1) { R.set(L.subarray(a, b), a); break; }
+        if (c && K === 1) { for (let i = a; i < b; i++) R[i] = L[i]; break; }
         let s1 = lp[s], s2 = lp[s + 1], hx = hp[t], hy = hp[t + 1];
         for (let i = a; i < b; i++) {
           const x = X[i], yv = lb0 * x + s1; s1 = lb1 * x - la1 * yv + s2; s2 = lb0 * x - la2 * yv;
@@ -247,7 +249,7 @@
         }
         lp[s] = flush(s1); lp[s + 1] = flush(s2); hp[t] = hx; hp[t + 1] = flush(hy);
       }
-      if (!two && R) R.set(L.subarray(a, b), a);
+      if (!two && R) for (let i = a; i < b; i++) R[i] = L[i];   // (a copy, not R.set(L.subarray()): a view object a block)
       else if (two) { let e = 0; for (let i = a; i < b; i++) e += R[i] * R[i]; if (!(e < 1e6)) { this.reset(); L.fill(0, a, b); R.fill(0, a, b); } }   // (the contract's guard reads the left side only)
     }
   }

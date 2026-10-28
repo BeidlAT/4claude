@@ -9915,6 +9915,7 @@ function myzelDsp() {
       this.pr = -0.6; this.ys = this.y; this.yT = this.y;
       this.zA = { last: 0, cnt: 0, arm: false, amp: 0, flip: 1 }; this.zB = { last: 0, cnt: 0, arm: false, amp: 0, flip: 1 };
       this.bA = this.bB = 0; this.sy = 0; this.syN = 0; this.syD = 1; this.tr = 0; this.ruf = 0;
+      this.dA = 0; this.dB = 0;   // (the throat's DC, declared here: a field render only added later was boxed on every sample in V8 – 0.8 MB of the audio thread's garbage per voice and second in Chrome, 28.10.2026)
       for (const q of [this.tA, this.tB]) if (q) for (const f of q) f.z1 = f.z2 = 0;
     }
     set(p) {
@@ -10307,6 +10308,7 @@ function myzelDsp() {
   class Ember extends MyzelProc {
     constructor(o) {
       super(o);
+      this.lgD = 0; this.lgW = 0; this.lpd = 0; this.lmag = 1;   // (lagH's input and output)
       const po = this.po;
       this.rich = !!po.rich;
       const K = this.Kx = this.rich ? 2 : 1;
@@ -10386,7 +10388,7 @@ function myzelDsp() {
       this.Fc[k] = F;
       // the delay: one period of the note, the 4-tap interpolator's phase error at F taken out (one correction step)
       let D = SR / fk;
-      this.lagH(D, w0); D += D - this.lpd; this.lagH(D, w0);
+      this.lgW = w0; this.lgD = D; this.lagH(); D += D - this.lpd; this.lgD = D; this.lagH();
       this.Dt[k] = Math.max(2, Math.min(this.N - 8, D));
       if (!this.D[k]) this.D[k] = this.Dt[k];
       this.G0[k] = 1 / Math.max(0.5, this.lmag);
@@ -10406,8 +10408,9 @@ function myzelDsp() {
       this.qD[k] = Math.exp(sg * this.D[k] / SR);
     }
     // the 4-tap Lagrange interpolator at delay d, at w0: its phase delay (lpd, samples) and gain (lmag)
-    lagH(d, w0) {
-      const i = d | 0, q = d - i + 1, h0 = -(q - 1) * (q - 2) * (q - 3) / 6, h1 = q * (q - 2) * (q - 3) / 2, h2 = -q * (q - 1) * (q - 3) / 2, h3 = q * (q - 1) * (q - 2) / 6;
+    // (d and w0 come in fields: V8 does not inline it into coef, and each number passed to a call is a new heap object)
+    lagH() {
+      const d = this.lgD, w0 = this.lgW, i = d | 0, q = d - i + 1, h0 = -(q - 1) * (q - 2) * (q - 3) / 6, h1 = q * (q - 2) * (q - 3) / 2, h2 = -q * (q - 1) * (q - 3) / 2, h3 = q * (q - 1) * (q - 2) / 6;
       const c0 = w0 * (i - 1), re = h0 * Math.cos(c0) + h1 * Math.cos(c0 + w0) + h2 * Math.cos(c0 + 2 * w0) + h3 * Math.cos(c0 + 3 * w0), im = -(h0 * Math.sin(c0) + h1 * Math.sin(c0 + w0) + h2 * Math.sin(c0 + 2 * w0) + h3 * Math.sin(c0 + 3 * w0));
       let pd = -Math.atan2(im, re) / w0; const c = 2 * Math.PI / w0; pd += Math.round((d - pd) / c) * c;
       this.lpd = pd; this.lmag = Math.hypot(re, im);
@@ -10518,7 +10521,7 @@ function myzelDsp() {
       const hc = Math.exp(-2 * Math.PI * fh / SR), og = EMB_OUT * (two ? Math.SQRT1_2 : 1), lp = this.lp, hp = this.hp;
       for (let c = 0; c < (two ? 2 : 1); c++) {
         const X = c ? R : L, s = 3 * c, t = 2 * c;
-        if (c && K === 1) { R.set(L.subarray(a, b), a); break; }
+        if (c && K === 1) { for (let i = a; i < b; i++) R[i] = L[i]; break; }
         let s1 = lp[s], s2 = lp[s + 1], hx = hp[t], hy = hp[t + 1];
         for (let i = a; i < b; i++) {
           const x = X[i], yv = lb0 * x + s1; s1 = lb1 * x - la1 * yv + s2; s2 = lb0 * x - la2 * yv;
@@ -10527,7 +10530,7 @@ function myzelDsp() {
         }
         lp[s] = flush(s1); lp[s + 1] = flush(s2); hp[t] = hx; hp[t + 1] = flush(hy);
       }
-      if (!two && R) R.set(L.subarray(a, b), a);
+      if (!two && R) for (let i = a; i < b; i++) R[i] = L[i];   // (a copy, not R.set(L.subarray()): a view object a block)
       else if (two) { let e = 0; for (let i = a; i < b; i++) e += R[i] * R[i]; if (!(e < 1e6)) { this.reset(); L.fill(0, a, b); R.fill(0, a, b); } }   // (the contract's guard reads the left side only)
     }
   }
@@ -12441,15 +12444,18 @@ function myzelDsp() {
   // string as it rings. ----
   const SIT_OUT = 0.018;
   class SitStr {
-    constructor(n) { this.b = new Float32Array(n); this.m = n - 1; this.w = 0; this.z = 0; this.d = 100; this.g = 0.999; this.c = 0.5; this.x1 = 0; }
+    constructor(n) { this.b = new Float32Array(n); this.m = n - 1; this.w = 0; this.z = 0; this.d = 100; this.g = 0.999; this.c = 0.5; this.x1 = 0; this.xin = 0; this.jaw = 0; this.f0 = 0; }
     tune(f, t60, bright) {
       this.c = Math.min(0.98, 0.18 + 0.8 * bright * Math.min(1, 1600 / f));
       this.d = Math.max(4, SR / f - pd1(this.c, f) - 1);
       this.g = Math.pow(0.001, 1 / (Math.max(0.05, t60) * f));
     }
-    // one sample: the excitation in, the string's output at the bridge out; jaw: how much the bridge shortens it
-    tick(x, jaw) {   // (the bridge's contact shortens the string while it presses: the open length is set a little longer, see Sit.tune)
-      const b = this.b, m = this.m;
+    // one sample: the excitation in (xin), the string's output at the bridge out (x1); jaw: how much the bridge shortens
+    // it. In and out through fields, not arguments and a return: V8 does not inline every string's call into Sit's
+    // render, and there each number passed or returned is a new heap object – two per sample, 1.5 MB of the audio
+    // thread's garbage per voice and second in Chrome (28.10.2026)
+    step() {   // (the bridge's contact shortens the string while it presses: the open length is set a little longer, see Sit.tune)
+      const b = this.b, m = this.m, x = this.xin, jaw = this.jaw;
       // the contact: the string's last output towards the bridge (positive side) shortens the delay, smoothly
       const u = this.x1 > 0 ? this.x1 * 6 : 0, ct = u < 1 ? u * u * (3 - 2 * u) : 1, d = this.d * (1 - jaw * 0.018 * ct);
       const i = Math.floor(d), f = d - i, p = f + 1, w = this.w + 1 - i;
@@ -12457,7 +12463,6 @@ function myzelDsp() {
       this.z += this.c * (o - this.z);
       this.w = (this.w + 1) & m; b[this.w] = x + this.z * this.g;
       this.x1 = o;
-      return o;
     }
     clear() { this.b.fill(0); this.z = 0; this.x1 = 0; }
   }
@@ -12497,11 +12502,13 @@ function myzelDsp() {
       const s = this.s, ch = this.ch, tar = this.tar, nt = tar.length, rng = this.rng;
       const og = R ? SIT_OUT * Math.SQRT1_2 : SIT_OUT, jaw = Math.min(1.6, this.p.jawari * (0.25 + 1.5 * this.y0)), tg = 0.06 * this.p.tarab, chA = this.chA;
       let exI = this.exI, lp = this.lp;
+      s.jaw = jaw; for (let k = 0; k < ch.length; k++) ch[k].jaw = jaw * 0.8;
       for (let i = a; i < b; i++) {
         let x = 0, xc = 0;
         if (exI < this.exN) { const u = exI / this.exN; x = this.exA * (u < 0.5 ? 2 * u : 2 - 2 * u) + 0.08 * this.exA * (rng.next() * 2 - 1); xc = x * chA; exI++; }
-        const o = s.tick(x, jaw);
-        let c = 0; for (let k = 0; k < ch.length; k++) c += ch[k].tick(xc, jaw * 0.8);
+        s.xin = x; s.step();
+        const o = s.x1;
+        let c = 0; for (let k = 0; k < ch.length; k++) { const st = ch[k]; st.xin = xc; st.step(); c += st.x1; }
         // the tarab strings hear the main string (through the bridge), softly
         lp += 0.3 * (o - lp);
         let tl = 0, tr = 0; for (let k = 0; k < nt; k++) { const t = tar[k], v = t.r.tick(lp * tg); tl += v * (1 - t.pan); tr += v * (1 + t.pan); }
@@ -12913,6 +12920,7 @@ function myzelDsp() {
       this.rng = new PRNG(this.po.seed || 37);
       const mx = Math.ceil(0.08 * 1.7 * SR) + 8;
       this.dl = SHT_D.map(() => ({ b: new Float32Array(1 << Math.ceil(Math.log2(mx))), w: 0, z: 0 }));
+      this.len = new Int32Array(4); this.gfb = new Float64Array(4);   // (the room's lengths and gains, kept: two arrays and two closures a block were 0.2 MB/s of garbage per voice)
       this.ps = new Float32Array(1 << 14); this.psW = 0; this.psD = 0; this.psD2 = 0;
       this.p1 = this.rng.next(); this.p2 = this.rng.next(); this.p3 = 0; this.lp1 = 0; this.lp2 = 0; this.env = 0; this.vel = 0.75; this.burst = false; this.gate = 0; this.ys = this.y;
       this.dcU = new DcBlock(12); this.dcL = new DcBlock(12); this.dcR = new DcBlock(12);   // (no DC may circle in the room)
@@ -12926,7 +12934,8 @@ function myzelDsp() {
       this.ys += (this.y - this.ys) * (1 - Math.exp(-n / (0.05 * SR)));
       if (this.burst) { this.gate -= n; if (this.gate <= 0) this.off = true; }
       const sh = Math.min(1, this.ys * (0.3 + 1.0 * p.schimmer)), size = 0.6 + p.raum, t60 = this.off ? Math.min(2.2, 1.5 + 9 * p.raum) : 1.5 + 9 * p.raum;   // (let go, the halo rings out within ≈ 2 s – the voice ends with it)
-      const len = SHT_D.map((d) => Math.round(d * size * SR)), gfb = len.map((l) => Math.pow(0.001, l / (t60 * SR)));
+      const len = this.len, gfb = this.gfb;
+      for (let k = 0; k < 4; k++) { len[k] = Math.round(SHT_D[k] * size * SR); gfb[k] = Math.pow(0.001, len[k] / (t60 * SR)); }
       const damp = 1 - Math.exp(-2 * Math.PI * (2500 + 7000 * p.farbe) / SR), cut = 1 - Math.exp(-2 * Math.PI * Math.min(0.4 * SR, f * (2 + 10 * p.farbe) * (0.4 + 2.6 * this.ys * this.ys)) / SR);   // (Höhe opens the surface too: dark below, glassy above)
       const dt1 = f * 1.0035 / SR, dt2 = f * 0.9965 / SR, dt3 = f * 0.5 / SR, att = 1 - Math.exp(-1 / ((this.burst ? 0.01 : 0.25) * SR)), rel = 1 - Math.exp(-1 / (0.5 * SR));
       const W = 2048, PM = this.ps.length - 1, q = p.quinte, wet = 0.25 + 0.65 * sh, fbs = 0.24 * sh;
@@ -13047,6 +13056,8 @@ function myzelDsp() {
   // middle the faster (Tempo: the fastest, in octaves a second). The note's pitch class is always in the chord: when the
   // stair stands, it stands on the note. ----
   const STP_OUT = 0.24;
+  // the bell over the octaves (centre bc, width wb) – a function of its own, not a closure made each block
+  const stpBell = (x, bc, wb) => { const u = (x - bc) / (0.5 * wb); return Math.abs(u) >= 1 ? 0 : 0.5 + 0.5 * Math.cos(Math.PI * u); };
   class Stp extends MyzelProc {
     constructor(o) {
       super(o);
@@ -13080,11 +13091,11 @@ function myzelDsp() {
       if (!this.E || this.E.length < n) this.E = new Float32Array(Math.max(256, n));
       const E = this.E; for (let i = 0; i < n; i++) { env += (envT - env) * (envT > env ? att : rel); E[i] = env; }
       const dphi = this.rate * n / SR;
-      const bc = 0.5 + 0.2 * (this.ys - 0.5), bell = (x) => { const u = (x - bc) / (0.5 * wb); return Math.abs(u) >= 1 ? 0 : 0.5 + 0.5 * Math.cos(Math.PI * u); };
+      const bc = 0.5 + 0.2 * (this.ys - 0.5);
       for (let k = 0; k < K; k++) {
         // its place over the block (start, end): the frequency and the bell glide linearly
         const x0 = (k + phi) / K, x1 = (k + phi + dphi) / K;
-        const g0 = bell(x0), g1 = bell(x1); if (g0 === 0 && g1 === 0) continue;
+        const g0 = stpBell(x0, bc, wb), g1 = stpBell(x1, bc, wb); if (g0 === 0 && g1 === 0) continue;
         const f0 = base * Math.pow(2, k + phi), f1 = base * Math.pow(2, k + phi + dphi); if (f0 >= lim) continue;
         for (let j = 0; j < 2; j++) {
           let q = pa[2 * k + j]; const sh = j ? br : -br;
@@ -13122,6 +13133,7 @@ function myzelDsp() {
       this.rng = new PRNG(this.po.seed || 53);
       this.x = 1; this.yv = 1; this.z = 0.05; this.m = 1; this.last = 0; this.cnt = 0; this.ys = this.y; this.env = 0; this.lp = 0; this.lp2 = 0; this.hp = 0; this.zx = 0; this.dv = 0; this.dw = 0;
       this.dc = new DcBlock(15); this.dc2 = new DcBlock(15); this.vel = 0.75; this.burst = false; this.gate = 0;
+      this.kH = 0; this.kA = 0; this.kB = 0; this.kC = 0;   // (rk's step and constants, set once a block)
     }
     set(p) { for (const k in p) if (k in this.p) this.p[k] = +p[k] || 0; }
     reset() { this.x = 1; this.yv = 1; this.z = 0.05; this.env = 0; }
@@ -13130,8 +13142,11 @@ function myzelDsp() {
       if (!this.wasOn) { this.ys = this.y; this.wasOn = true; this.m = 1.0; }
     }
     stop() { this.off = true; }
-    // one Runge–Kutta step of the system (written out: no closure, no array in the inner loop)
-    rk(h, a, bb, c) {
+    // one Runge–Kutta step of the system (written out: no closure, no array in the inner loop). Its step and constants
+    // come in fields, not as arguments: render is too large for V8 to inline rk, and every number passed to a call is a
+    // new heap object there – four per step, 3 MB of the audio thread's garbage per voice and second in Chrome (28.10.2026)
+    rk() {
+      const h = this.kH, a = this.kA, bb = this.kB, c = this.kC;
       const x = this.x, y = this.yv, z = this.z;
       const a1 = -y - z, b1 = x + a * y, c1 = bb + z * (x - c);
       let X = x + 0.5 * h * a1, Y = y + 0.5 * h * b1, Z = z + 0.5 * h * c1;
@@ -13155,8 +13170,9 @@ function myzelDsp() {
       const mix = p.mischung + 0.55 * this.ys * (1 - p.mischung), cut = 1 - Math.exp(-2 * Math.PI * Math.min(0.42 * SR, f * (1.5 + 14 * p.farbe) * (0.7 + 0.8 * this.ys)) / SR), og = R ? ATR_OUT * Math.SQRT1_2 : ATR_OUT;
       const att = 1 - Math.exp(-1 / (0.01 * SR)), rel = 1 - Math.exp(-1 / (0.08 * SR)), envT = this.off ? 0 : 1;
       let env = this.env, lp = this.lp, lp2 = this.lp2;
+      this.kH = h; this.kA = A; this.kB = B; this.kC = c;
       for (let i = a; i < b; i++) {
-        for (let s = 0; s < sub; s++) this.rk(h, A, B, c);
+        for (let s = 0; s < sub; s++) this.rk();
         env += (envT - env) * (envT > env ? att : rel);
         // the lock: x's upward zero crossings, the loop's length against the period (≈ 30 ms to settle)
         this.cnt++;

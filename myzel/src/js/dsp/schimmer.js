@@ -15,6 +15,7 @@
       this.rng = new PRNG(this.po.seed || 37);
       const mx = Math.ceil(0.08 * 1.7 * SR) + 8;
       this.dl = SHT_D.map(() => ({ b: new Float32Array(1 << Math.ceil(Math.log2(mx))), w: 0, z: 0 }));
+      this.len = new Int32Array(4); this.gfb = new Float64Array(4);   // (the room's lengths and gains, kept: two arrays and two closures a block were 0.2 MB/s of garbage per voice)
       this.ps = new Float32Array(1 << 14); this.psW = 0; this.psD = 0; this.psD2 = 0;
       this.p1 = this.rng.next(); this.p2 = this.rng.next(); this.p3 = 0; this.lp1 = 0; this.lp2 = 0; this.env = 0; this.vel = 0.75; this.burst = false; this.gate = 0; this.ys = this.y;
       this.dcU = new DcBlock(12); this.dcL = new DcBlock(12); this.dcR = new DcBlock(12);   // (no DC may circle in the room)
@@ -28,7 +29,8 @@
       this.ys += (this.y - this.ys) * (1 - Math.exp(-n / (0.05 * SR)));
       if (this.burst) { this.gate -= n; if (this.gate <= 0) this.off = true; }
       const sh = Math.min(1, this.ys * (0.3 + 1.0 * p.schimmer)), size = 0.6 + p.raum, t60 = this.off ? Math.min(2.2, 1.5 + 9 * p.raum) : 1.5 + 9 * p.raum;   // (let go, the halo rings out within ≈ 2 s – the voice ends with it)
-      const len = SHT_D.map((d) => Math.round(d * size * SR)), gfb = len.map((l) => Math.pow(0.001, l / (t60 * SR)));
+      const len = this.len, gfb = this.gfb;
+      for (let k = 0; k < 4; k++) { len[k] = Math.round(SHT_D[k] * size * SR); gfb[k] = Math.pow(0.001, len[k] / (t60 * SR)); }
       const damp = 1 - Math.exp(-2 * Math.PI * (2500 + 7000 * p.farbe) / SR), cut = 1 - Math.exp(-2 * Math.PI * Math.min(0.4 * SR, f * (2 + 10 * p.farbe) * (0.4 + 2.6 * this.ys * this.ys)) / SR);   // (Höhe opens the surface too: dark below, glassy above)
       const dt1 = f * 1.0035 / SR, dt2 = f * 0.9965 / SR, dt3 = f * 0.5 / SR, att = 1 - Math.exp(-1 / ((this.burst ? 0.01 : 0.25) * SR)), rel = 1 - Math.exp(-1 / (0.5 * SR));
       const W = 2048, PM = this.ps.length - 1, q = p.quinte, wet = 0.25 + 0.65 * sh, fbs = 0.24 * sh;

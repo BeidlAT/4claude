@@ -6,6 +6,8 @@
   // middle the faster (Tempo: the fastest, in octaves a second). The note's pitch class is always in the chord: when the
   // stair stands, it stands on the note. ----
   const STP_OUT = 0.24;
+  // the bell over the octaves (centre bc, width wb) – a function of its own, not a closure made each block
+  const stpBell = (x, bc, wb) => { const u = (x - bc) / (0.5 * wb); return Math.abs(u) >= 1 ? 0 : 0.5 + 0.5 * Math.cos(Math.PI * u); };
   class Stp extends MyzelProc {
     constructor(o) {
       super(o);
@@ -39,11 +41,11 @@
       if (!this.E || this.E.length < n) this.E = new Float32Array(Math.max(256, n));
       const E = this.E; for (let i = 0; i < n; i++) { env += (envT - env) * (envT > env ? att : rel); E[i] = env; }
       const dphi = this.rate * n / SR;
-      const bc = 0.5 + 0.2 * (this.ys - 0.5), bell = (x) => { const u = (x - bc) / (0.5 * wb); return Math.abs(u) >= 1 ? 0 : 0.5 + 0.5 * Math.cos(Math.PI * u); };
+      const bc = 0.5 + 0.2 * (this.ys - 0.5);
       for (let k = 0; k < K; k++) {
         // its place over the block (start, end): the frequency and the bell glide linearly
         const x0 = (k + phi) / K, x1 = (k + phi + dphi) / K;
-        const g0 = bell(x0), g1 = bell(x1); if (g0 === 0 && g1 === 0) continue;
+        const g0 = stpBell(x0, bc, wb), g1 = stpBell(x1, bc, wb); if (g0 === 0 && g1 === 0) continue;
         const f0 = base * Math.pow(2, k + phi), f1 = base * Math.pow(2, k + phi + dphi); if (f0 >= lim) continue;
         for (let j = 0; j < 2; j++) {
           let q = pa[2 * k + j]; const sh = j ? br : -br;
