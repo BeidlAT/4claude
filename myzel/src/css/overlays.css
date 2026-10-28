@@ -28,7 +28,7 @@
 .upd-row .btn { min-height: 44px; padding: 8px 18px; }
 
 .toast {
-  position: absolute; left: 50%; bottom: 128px; transform: translate(-50%, 8px); z-index: 12;
+  position: absolute; left: 50%; bottom: 128px; transform: translate(-50%, 8px); z-index: 95;   /* (28.10.2026: above the editor and every panel – a hint is never covered) */
   width: max-content; max-width: min(calc(100% - 32px), 30rem); display: flex; align-items: center; gap: 12px;
   padding: 10px 12px 10px 16px; border-radius: 12px; background: var(--hypha); color: var(--ink); font: 500 13px/1.35 var(--font-ui);
   box-shadow: 0 8px 30px rgba(0, 0, 0, .5); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;

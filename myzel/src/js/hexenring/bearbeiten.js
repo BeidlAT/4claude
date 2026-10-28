@@ -172,14 +172,14 @@ function hxEdRender() {
     btn('Löschen', () => { hxDelete(L); hxEdClose(); }, 'Die Schleife löschen (↶ holt sie zurück)', 'ghost danger'));
   // (owner, 26.10.2026) a stretch chosen: its own tools – they change only that part (written into the audio, ↶ back)
   let part = null;
-  if (HXE.sel) {
-    const s = HXE.sel, go = (op, v) => () => { hxRegionEdit(L, s.a, s.b, op, v); }, act = (t, op, v, tip) => chip(t, false, go(op, v), tip);
+  {   // (28.10.2026: without a selection the whole loop – its colours, its pitch, Einspielen over all of it)
+    const s = HXE.sel || { a: 0, b: 1 }, whole = !HXE.sel, go = (op, v) => () => { hxRegionEdit(L, s.a, s.b, op, v); }, act = (t, op, v, tip) => chip(t, false, go(op, v), tip);
     // (28.10.2026, Direkt – direkt.js)
     const mk = HXE.mark && HXE.mark.key === L.key ? HXE.mark : null, mOk = hxRxMarkOk(L, s.a, s.b), tk = HX.take && HX.take.key === L.key ? HX.take : null;
     HXE.takeEl = h('span', { class: 'hx-ed-take', role: 'status' }, hxTakeText());
     const semis = [-12, -7, -5, -2, -1, 1, 2, 5, 7, 12], cents = [-50, -20, -10, 10, 20, 50], sg = (x) => (x > 0 ? '+' : '−') + Math.abs(x);
-    part = h('div', { class: 'hx-ed-sec hx-ed-part' }, h('div', { class: 'hx-ed-st' }, 'Abschnitt bearbeiten – ' + hxRxName(L, s.a, s.b) + ' (nur dieser Teil; der Rest bleibt)'),
-      row('Direkt', 'Den Abschnitt löschen (die Schleife bleibt gleich lang), merken – und dann einen anderen Teil mit ihm tauschen oder ihn dort einsetzen.',
+    part = h('div', { class: 'hx-ed-sec hx-ed-part' }, h('div', { class: 'hx-ed-st' }, whole ? 'Klang verwandeln – die ganze Schleife (oder oben einen Teil wählen: dann nur ihn)' : 'Abschnitt bearbeiten – ' + hxRxName(L, s.a, s.b) + ' (nur dieser Teil; der Rest bleibt)'), hxWAktiv(L) ? h('p', { class: 'hx-ed-frz' }, 'Diese Schleife spielt gerade neu gewachsene Noten' + (hxWWhy(L) ? ' (' + hxWWhy(L) + ')' : '') + '. Bearbeitet wird ein fester Klang: beim ersten Klick hier wird sie so festgehalten, wie sie jetzt klingt („Erstarren“) – danach folgt sie Tonart und Tempo nicht mehr von selbst. ↶ nimmt es zurück.') : null,
+      whole ? null : row('Direkt', 'Den Abschnitt löschen (die Schleife bleibt gleich lang), merken – und dann einen anderen Teil mit ihm tauschen oder ihn dort einsetzen.',
         act('Löschen', 'loeschen', 0, 'Den Abschnitt leeren – die Schleife bleibt gleich lang'),
         chip(mk && Math.abs(mk.a - s.a) < 1e-9 && Math.abs(mk.b - s.b) < 1e-9 ? 'Gemerkt ✓' : 'Merken', !!(mk && Math.abs(mk.a - s.a) < 1e-9 && Math.abs(mk.b - s.b) < 1e-9), () => hxRxMark(L, s.a, s.b), 'Diesen Abschnitt merken – dann einen anderen Teil wählen'),
         chip('Tauschen ⇄', false, () => hxRxMoveGo(L, s.a, s.b, 'swap'), mk ? 'Dieser Teil und der gemerkte tauschen die Plätze' : 'Zuerst einen anderen Abschnitt merken', { dis: !mOk }),
@@ -189,17 +189,17 @@ function hxEdRender() {
         tk ? null : chip('● dazu', false, () => hxTakeArm(L, s.a, s.b, 'dazu'), 'Was du spielst, kommt zum Abschnitt dazu'), HXE.takeEl),
       row('Tonhöhe', 'Den Abschnitt in Halbtönen höher oder tiefer – er behält seine Länge.', ...semis.map((x) => act(sg(x), 'pitch', x, 'Den Abschnitt ' + Math.abs(x) + (Math.abs(x) === 1 ? ' Halbton ' : ' Halbtöne ') + (x > 0 ? 'höher' : 'tiefer')))),
       row('Verstimmen', 'Den Abschnitt um einige Cent verstimmen (100 Cent sind ein Halbton) – er behält seine Länge.', ...cents.map((x) => act(sg(x) + ' ct', 'pitch', x / 100, 'Den Abschnitt um ' + Math.abs(x) + ' Cent ' + (x > 0 ? 'höher' : 'tiefer') + ' stimmen'))),
-      row('Band', 'Der Abschnitt wie ein Tonband langsamer oder schneller – er behält seine Länge: ×2 spielt ihn zweimal, ½ seine erste Hälfte langsam.', ...HX_SP.filter(([v]) => v !== 1).map(([v, t]) => act(t, 'band', v, 'Abschnitt mit Band ' + t)), act('rückwärts', 'rev', 0, 'Den Abschnitt rückwärts')),
-      row('Weglassen', 'Lässt Anschläge in diesem Abschnitt weg.', ...HX_SLP.filter(([v]) => v).map(([v, t]) => act(t, 'weg', v, 'Im Abschnitt ' + t + ' der Anschläge weglassen'))),
-      row('Tauschen', 'Vertauscht Anschläge in diesem Abschnitt.', ...HX_SLP.filter(([v]) => v).map(([v, t]) => act(t, 'tausch', v, 'Im Abschnitt ' + t + ' der Anschläge tauschen'))),
-      row('Pegel', 'Der Abschnitt lauter, leiser oder still.', act('stumm', 'gain', 0, 'Den Abschnitt still'), act('−6 dB', 'gain', dbToGain(-6), 'Leiser'), act('−3 dB', 'gain', dbToGain(-3), 'Etwas leiser'), act('+3 dB', 'gain', dbToGain(3), 'Etwas lauter'), act('+6 dB', 'gain', dbToGain(6), 'Lauter')),
+      whole ? null : row('Band', 'Der Abschnitt wie ein Tonband langsamer oder schneller – er behält seine Länge: ×2 spielt ihn zweimal, ½ seine erste Hälfte langsam.', ...HX_SP.filter(([v]) => v !== 1).map(([v, t]) => act(t, 'band', v, 'Abschnitt mit Band ' + t)), act('rückwärts', 'rev', 0, 'Den Abschnitt rückwärts')),
+      whole ? null : row('Weglassen', 'Lässt Anschläge in diesem Abschnitt weg.', ...HX_SLP.filter(([v]) => v).map(([v, t]) => act(t, 'weg', v, 'Im Abschnitt ' + t + ' der Anschläge weglassen'))),
+      whole ? null : row('Tauschen', 'Vertauscht Anschläge in diesem Abschnitt.', ...HX_SLP.filter(([v]) => v).map(([v, t]) => act(t, 'tausch', v, 'Im Abschnitt ' + t + ' der Anschläge tauschen'))),
+      whole ? null : row('Pegel', 'Der Abschnitt lauter, leiser oder still.', act('stumm', 'gain', 0, 'Den Abschnitt still'), act('−6 dB', 'gain', dbToGain(-6), 'Leiser'), act('−3 dB', 'gain', dbToGain(-3), 'Etwas leiser'), act('+3 dB', 'gain', dbToGain(3), 'Etwas lauter'), act('+6 dB', 'gain', dbToGain(6), 'Lauter')),
       // (28.10.2026: Verwandeln and Färben – verwandeln.js)
       row('Verwandeln', 'Der Abschnitt wächst um – wie ein Myzel: er löst sich auf, zerstäubt, keimt, wurzelt tiefer oder wächst in die Krone.',
         act('Nebel', 'nebel', 0, 'Nebel: der Abschnitt löst sich in einen eigenen Hall auf'), act('Sporen', 'sporen', 0, 'Sporen: der Abschnitt zerstäubt in kleine Körner, breit verstreut'),
         act('Keimen', 'keimen', 0, 'Keimen: sein Anfang treibt aus – wiederholt, immer schneller'), act('Wurzel', 'wurzel', 0, 'Wurzel: eine Oktave tiefer, gleiche Länge'), act('Krone', 'krone', 0, 'Krone: eine Oktave höher, gleiche Länge')),
       row('Färben', 'Der Abschnitt dunkler, heller, verwelkend oder aufkeimend.',
         act('Erde', 'erde', 0, 'Erde: dunkel – nur die Tiefen'), act('Licht', 'licht', 0, 'Licht: luftig – nur die Höhen'), act('Welken', 'welken', 0, 'Welken: wird zum Ende dunkler und leiser'), act('Sprießen', 'spriessen', 0, 'Sprießen: kommt aus der Stille und öffnet sich zum Ende')),
-      h('p', { class: 'note' }, 'Jeder Klick ist ein Schritt und sofort zu hören – das Vorhören startet von selbst und wiederholt die Auswahl. ↶ nimmt ihn zurück. Die Auswahl bleibt, du kannst weiter darauf arbeiten oder einen anderen Teil wählen.'));
+      h('p', { class: 'note' }, whole ? 'Jeder Klick ist ein Schritt und sofort zu hören – das Vorhören startet von selbst. ↶ nimmt ihn zurück. Für einen Teil: in der Wellenform oben ziehen.' : 'Jeder Klick ist ein Schritt und sofort zu hören – das Vorhören startet von selbst und wiederholt die Auswahl. ↶ nimmt ihn zurück. Die Auswahl bleibt, du kannst weiter darauf arbeiten oder einen anderen Teil wählen.'));
   }
   const hum = hxEdHumRow(L);   // (26.10.2026: the whole Ernte, the loop's window in it)
   ed.replaceChildren(head, tp, wbox, HXE.waitEl, selRow, ...(hum ? [hum] : []), ...(part ? [part] : []), h('div', { class: 'hx-ed-sec' }, h('div', { class: 'hx-ed-st' }, sch.length === 1 ? 'Schicht' : sch.length + ' Schichten'), ...schRows), h('div', { class: 'hx-ed-sec' }, h('div', { class: 'hx-ed-st' }, HXE.sel ? 'Ganze Schleife' : 'Bearbeiten'), ...tools), foot);

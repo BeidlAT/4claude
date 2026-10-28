@@ -692,7 +692,7 @@ details.lm-rep { margin: 0 0 10px; max-width: none; }
 .upd-row .btn { min-height: 44px; padding: 8px 18px; }
 
 .toast {
-  position: absolute; left: 50%; bottom: 128px; transform: translate(-50%, 8px); z-index: 12;
+  position: absolute; left: 50%; bottom: 128px; transform: translate(-50%, 8px); z-index: 95;   /* (28.10.2026: above the editor and every panel – a hint is never covered) */
   width: max-content; max-width: min(calc(100% - 32px), 30rem); display: flex; align-items: center; gap: 12px;
   padding: 10px 12px 10px 16px; border-radius: 12px; background: var(--hypha); color: var(--ink); font: 500 13px/1.35 var(--font-ui);
   box-shadow: 0 8px 30px rgba(0, 0, 0, .5); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;
@@ -969,6 +969,7 @@ body.mlearn #stage::after { content: ""; position: absolute; inset: 0; backgroun
 .hx-ed-part .hx-ed-st { color: var(--lumen); }
 .hx-ed-part .note { margin: 2px 0 0; color: var(--dim); font-size: 11.5px; }
 .hx-ed-wait { color: var(--spore); font: 500 12px/1.3 var(--font-ui); }
+.hx-ed-frz { margin: 0 0 4px; padding: 7px 10px; border-radius: 9px; border: 1px solid rgba(255, 179, 92, .45); background: rgba(255, 179, 92, .08); color: var(--hypha); font: 500 12px/1.4 var(--font-ui); }
 .hx-ed-take { color: var(--rec, #ff5b4d); font: 500 12px/1.3 var(--font-ui); margin-left: 6px; }
 .hx-ed-take:empty { display: none; }
 /* (owner, 26.10.2026) the editor's transport: Vorhören, the clock, the zoom */
@@ -34837,14 +34838,14 @@ function hxEdRender() {
     btn('Löschen', () => { hxDelete(L); hxEdClose(); }, 'Die Schleife löschen (↶ holt sie zurück)', 'ghost danger'));
   // (owner, 26.10.2026) a stretch chosen: its own tools – they change only that part (written into the audio, ↶ back)
   let part = null;
-  if (HXE.sel) {
-    const s = HXE.sel, go = (op, v) => () => { hxRegionEdit(L, s.a, s.b, op, v); }, act = (t, op, v, tip) => chip(t, false, go(op, v), tip);
+  {   // (28.10.2026: without a selection the whole loop – its colours, its pitch, Einspielen over all of it)
+    const s = HXE.sel || { a: 0, b: 1 }, whole = !HXE.sel, go = (op, v) => () => { hxRegionEdit(L, s.a, s.b, op, v); }, act = (t, op, v, tip) => chip(t, false, go(op, v), tip);
     // (28.10.2026, Direkt – direkt.js)
     const mk = HXE.mark && HXE.mark.key === L.key ? HXE.mark : null, mOk = hxRxMarkOk(L, s.a, s.b), tk = HX.take && HX.take.key === L.key ? HX.take : null;
     HXE.takeEl = h('span', { class: 'hx-ed-take', role: 'status' }, hxTakeText());
     const semis = [-12, -7, -5, -2, -1, 1, 2, 5, 7, 12], cents = [-50, -20, -10, 10, 20, 50], sg = (x) => (x > 0 ? '+' : '−') + Math.abs(x);
-    part = h('div', { class: 'hx-ed-sec hx-ed-part' }, h('div', { class: 'hx-ed-st' }, 'Abschnitt bearbeiten – ' + hxRxName(L, s.a, s.b) + ' (nur dieser Teil; der Rest bleibt)'),
-      row('Direkt', 'Den Abschnitt löschen (die Schleife bleibt gleich lang), merken – und dann einen anderen Teil mit ihm tauschen oder ihn dort einsetzen.',
+    part = h('div', { class: 'hx-ed-sec hx-ed-part' }, h('div', { class: 'hx-ed-st' }, whole ? 'Klang verwandeln – die ganze Schleife (oder oben einen Teil wählen: dann nur ihn)' : 'Abschnitt bearbeiten – ' + hxRxName(L, s.a, s.b) + ' (nur dieser Teil; der Rest bleibt)'), hxWAktiv(L) ? h('p', { class: 'hx-ed-frz' }, 'Diese Schleife spielt gerade neu gewachsene Noten' + (hxWWhy(L) ? ' (' + hxWWhy(L) + ')' : '') + '. Bearbeitet wird ein fester Klang: beim ersten Klick hier wird sie so festgehalten, wie sie jetzt klingt („Erstarren“) – danach folgt sie Tonart und Tempo nicht mehr von selbst. ↶ nimmt es zurück.') : null,
+      whole ? null : row('Direkt', 'Den Abschnitt löschen (die Schleife bleibt gleich lang), merken – und dann einen anderen Teil mit ihm tauschen oder ihn dort einsetzen.',
         act('Löschen', 'loeschen', 0, 'Den Abschnitt leeren – die Schleife bleibt gleich lang'),
         chip(mk && Math.abs(mk.a - s.a) < 1e-9 && Math.abs(mk.b - s.b) < 1e-9 ? 'Gemerkt ✓' : 'Merken', !!(mk && Math.abs(mk.a - s.a) < 1e-9 && Math.abs(mk.b - s.b) < 1e-9), () => hxRxMark(L, s.a, s.b), 'Diesen Abschnitt merken – dann einen anderen Teil wählen'),
         chip('Tauschen ⇄', false, () => hxRxMoveGo(L, s.a, s.b, 'swap'), mk ? 'Dieser Teil und der gemerkte tauschen die Plätze' : 'Zuerst einen anderen Abschnitt merken', { dis: !mOk }),
@@ -34854,17 +34855,17 @@ function hxEdRender() {
         tk ? null : chip('● dazu', false, () => hxTakeArm(L, s.a, s.b, 'dazu'), 'Was du spielst, kommt zum Abschnitt dazu'), HXE.takeEl),
       row('Tonhöhe', 'Den Abschnitt in Halbtönen höher oder tiefer – er behält seine Länge.', ...semis.map((x) => act(sg(x), 'pitch', x, 'Den Abschnitt ' + Math.abs(x) + (Math.abs(x) === 1 ? ' Halbton ' : ' Halbtöne ') + (x > 0 ? 'höher' : 'tiefer')))),
       row('Verstimmen', 'Den Abschnitt um einige Cent verstimmen (100 Cent sind ein Halbton) – er behält seine Länge.', ...cents.map((x) => act(sg(x) + ' ct', 'pitch', x / 100, 'Den Abschnitt um ' + Math.abs(x) + ' Cent ' + (x > 0 ? 'höher' : 'tiefer') + ' stimmen'))),
-      row('Band', 'Der Abschnitt wie ein Tonband langsamer oder schneller – er behält seine Länge: ×2 spielt ihn zweimal, ½ seine erste Hälfte langsam.', ...HX_SP.filter(([v]) => v !== 1).map(([v, t]) => act(t, 'band', v, 'Abschnitt mit Band ' + t)), act('rückwärts', 'rev', 0, 'Den Abschnitt rückwärts')),
-      row('Weglassen', 'Lässt Anschläge in diesem Abschnitt weg.', ...HX_SLP.filter(([v]) => v).map(([v, t]) => act(t, 'weg', v, 'Im Abschnitt ' + t + ' der Anschläge weglassen'))),
-      row('Tauschen', 'Vertauscht Anschläge in diesem Abschnitt.', ...HX_SLP.filter(([v]) => v).map(([v, t]) => act(t, 'tausch', v, 'Im Abschnitt ' + t + ' der Anschläge tauschen'))),
-      row('Pegel', 'Der Abschnitt lauter, leiser oder still.', act('stumm', 'gain', 0, 'Den Abschnitt still'), act('−6 dB', 'gain', dbToGain(-6), 'Leiser'), act('−3 dB', 'gain', dbToGain(-3), 'Etwas leiser'), act('+3 dB', 'gain', dbToGain(3), 'Etwas lauter'), act('+6 dB', 'gain', dbToGain(6), 'Lauter')),
+      whole ? null : row('Band', 'Der Abschnitt wie ein Tonband langsamer oder schneller – er behält seine Länge: ×2 spielt ihn zweimal, ½ seine erste Hälfte langsam.', ...HX_SP.filter(([v]) => v !== 1).map(([v, t]) => act(t, 'band', v, 'Abschnitt mit Band ' + t)), act('rückwärts', 'rev', 0, 'Den Abschnitt rückwärts')),
+      whole ? null : row('Weglassen', 'Lässt Anschläge in diesem Abschnitt weg.', ...HX_SLP.filter(([v]) => v).map(([v, t]) => act(t, 'weg', v, 'Im Abschnitt ' + t + ' der Anschläge weglassen'))),
+      whole ? null : row('Tauschen', 'Vertauscht Anschläge in diesem Abschnitt.', ...HX_SLP.filter(([v]) => v).map(([v, t]) => act(t, 'tausch', v, 'Im Abschnitt ' + t + ' der Anschläge tauschen'))),
+      whole ? null : row('Pegel', 'Der Abschnitt lauter, leiser oder still.', act('stumm', 'gain', 0, 'Den Abschnitt still'), act('−6 dB', 'gain', dbToGain(-6), 'Leiser'), act('−3 dB', 'gain', dbToGain(-3), 'Etwas leiser'), act('+3 dB', 'gain', dbToGain(3), 'Etwas lauter'), act('+6 dB', 'gain', dbToGain(6), 'Lauter')),
       // (28.10.2026: Verwandeln and Färben – verwandeln.js)
       row('Verwandeln', 'Der Abschnitt wächst um – wie ein Myzel: er löst sich auf, zerstäubt, keimt, wurzelt tiefer oder wächst in die Krone.',
         act('Nebel', 'nebel', 0, 'Nebel: der Abschnitt löst sich in einen eigenen Hall auf'), act('Sporen', 'sporen', 0, 'Sporen: der Abschnitt zerstäubt in kleine Körner, breit verstreut'),
         act('Keimen', 'keimen', 0, 'Keimen: sein Anfang treibt aus – wiederholt, immer schneller'), act('Wurzel', 'wurzel', 0, 'Wurzel: eine Oktave tiefer, gleiche Länge'), act('Krone', 'krone', 0, 'Krone: eine Oktave höher, gleiche Länge')),
       row('Färben', 'Der Abschnitt dunkler, heller, verwelkend oder aufkeimend.',
         act('Erde', 'erde', 0, 'Erde: dunkel – nur die Tiefen'), act('Licht', 'licht', 0, 'Licht: luftig – nur die Höhen'), act('Welken', 'welken', 0, 'Welken: wird zum Ende dunkler und leiser'), act('Sprießen', 'spriessen', 0, 'Sprießen: kommt aus der Stille und öffnet sich zum Ende')),
-      h('p', { class: 'note' }, 'Jeder Klick ist ein Schritt und sofort zu hören – das Vorhören startet von selbst und wiederholt die Auswahl. ↶ nimmt ihn zurück. Die Auswahl bleibt, du kannst weiter darauf arbeiten oder einen anderen Teil wählen.'));
+      h('p', { class: 'note' }, whole ? 'Jeder Klick ist ein Schritt und sofort zu hören – das Vorhören startet von selbst. ↶ nimmt ihn zurück. Für einen Teil: in der Wellenform oben ziehen.' : 'Jeder Klick ist ein Schritt und sofort zu hören – das Vorhören startet von selbst und wiederholt die Auswahl. ↶ nimmt ihn zurück. Die Auswahl bleibt, du kannst weiter darauf arbeiten oder einen anderen Teil wählen.'));
   }
   const hum = hxEdHumRow(L);   // (26.10.2026: the whole Ernte, the loop's window in it)
   ed.replaceChildren(head, tp, wbox, HXE.waitEl, selRow, ...(hum ? [hum] : []), ...(part ? [part] : []), h('div', { class: 'hx-ed-sec' }, h('div', { class: 'hx-ed-st' }, sch.length === 1 ? 'Schicht' : sch.length + ' Schichten'), ...schRows), h('div', { class: 'hx-ed-sec' }, h('div', { class: 'hx-ed-st' }, HXE.sel ? 'Ganze Schleife' : 'Bearbeiten'), ...tools), foot);
@@ -35422,7 +35423,10 @@ function hxRxOp(ch, r0, r1, op, v, u, seed) {
 // anew (Wuchs – it would not be heard: the Abdruck is what changes) or is still being caught
 function hxRegionEdit(L, a, b, op, v) {
   if (!L || L.bew || !(b > a)) return false;
-  if (hxWAktiv(L)) { toast('Diese Schleife spielt ihre Noten neu (Wuchs) – Abschnitte lassen sich nur an der Aufnahme bearbeiten. Zuerst „Erstarren“ oder Noten wie gespielt.', 5000); return false; }
+  // (owner, 28.10.2026: „sollte man dies nicht an ort und stelle ändern können“) a loop that plays its notes anew (Wuchs:
+  // it follows the key, the tempo, another sound, its notes' tools …) is first frozen as it sounds now – Erstarren –
+  // then edited; two steps, ↶ takes each back
+  if (hxWAktiv(L)) { hxRxFreeze(L, () => hxRegionEdit(L, a, b, op, v)); return true; }
   const sch0 = hxBandReady(L); if (!sch0) return false;
   if (sch0.some((S) => !hxMemOk(2 * S.n))) return false;
   const u = hxBandU(L).map((p) => (p - a) / (b - a)).filter((p) => p >= 0 && p < 1), seed = ((Math.random() * 2147483646) | 0) + 1;   // (one random for every Schicht and the Vorhören's quick version)
@@ -35438,7 +35442,16 @@ function hxRegionEdit(L, a, b, op, v) {
   return true;
 }
 // what is still to be written, at once – before ↶ or ↷ (they must find the edit in the history)
+const HX_RX_WHOLE = new Set(['pitch', 'erde', 'licht', 'wurzel', 'krone', 'gain']);
 function hxRxFlush() { while (HX.rxP && HX.rxP.length) HX.rxP.shift()(); }
+async function hxRxFreeze(L, then) {
+  if (HX.rxFrz) return;
+  HX.rxFrz = true;
+  let ok = false; try { ok = await hxErstarren(L); } finally { HX.rxFrz = false; }
+  if (!ok || hxWAktiv(L)) { toast('Die Schleife ließ sich gerade nicht festhalten – bitte gleich noch einmal.', 3500); return; }
+  toast('Zuerst festgehalten (Erstarren): so, wie sie gerade klang – dann bearbeitet. ↶ nimmt beides einzeln zurück.', 4500);
+  hxEdRender(); then();
+}
 function hxRegionWrite(L, a, b, op, v, u, seed) {
   const sch = hxBandReady(L); if (!sch) return false;
   if (sch.some((S) => !hxMemOk(2 * S.n))) return false;
@@ -35448,7 +35461,7 @@ function hxRegionWrite(L, a, b, op, v, u, seed) {
   if (!L.rx0) L.rx0 = { rev: !!L.rev, dbl: L.dbl || 1, sch: sch.map((S) => ({ key: S.key, aud: S.aud, bak: S.bak || null, n: S.n, s: hxSnapS(S) })) };
   const done = [];
   for (const S of sch) {
-    const [r0, r1] = hxRxFrames(S, a, b); if (r1 - r0 < 64) continue;
+    const [r0, r1] = a <= 0 && b >= 1 && HX_RX_WHOLE.has(op) ? [0, S.n] : hxRxFrames(S, a, b); if (r1 - r0 < 64) continue;   // (the whole loop in a colour that does not depend on time: its pre-roll and its Ausklang too – no seam of the old sound)
     // (28.10.2026, Direkt: Einspielen goes into its one Schicht – dry, and baked as it was heard; Tauschen and Einsetzen
     // move the frames of the stretch marked – direkt.js)
     if (op === 'take' && S.key !== v.key) continue;
@@ -35706,6 +35719,8 @@ function hxPvEdit(L, a, b, mk, full) {   // (full: the whole pass handed over �
 //                 into the gap), „dazu“ lays it over; dry where the Schicht is dry, burnt through the chain as it was
 //                 heard where the Schicht is baked; its level as played (the Schicht's own level taken out)
 //   Tonhöhe     – semitones, Verstimmen – cents: grains read faster or slower, the length kept (verwandeln.js) ----
+// why a loop plays its notes anew (Wuchs) – said in the editor before it is frozen for an edit
+const hxWWhy = (L) => { const w = L.wwhy || {}, r = []; if (hxWTonOff(L)) r.push('sie folgt der Tonart'); if (w.tempo) r.push('sie folgt dem Tempo'); if (hxKlangOf(L) !== 'eigen') r.push('ein anderer Klang'); if (w.wahl) r.push('Wiedergabe „Wuchs“'); if (hxEigN(L) >= 1) r.push('Eigensinn'); if (hxNtOn(L)) r.push('Noten-Werkzeuge'); if (w.ausl) r.push('Auslese'); return r.join(', '); };
 const hxRxPitchName = (v) => (Math.abs(v - Math.round(v)) < 1e-6 ? 'Tonhöhe ' + (v > 0 ? '+' : '−') + Math.abs(Math.round(v)) : 'verstimmt ' + (v > 0 ? '+' : '−') + Math.round(Math.abs(v) * 100) + ' ct');
 // a take laid over the stretch: frame i of the stretch plus frame i of the take (where it has one)
 const hxRxAdd = (ch, r0, seg) => { const get = hxRxGet(ch), n = seg[0].length; return (i) => { const s = get(r0 + i); return i < n ? [s[0] + seg[0][i], s[1] + seg[1][i]] : s; }; };
@@ -35740,7 +35755,7 @@ function hxTakeAt(L, a, b) {
 function hxTakeArm(L, a, b, mode) {
   if (!L || L.bew || !A.ctx) return;
   if (HX.take) { hxTakeStop(); return; }
-  if (hxWAktiv(L)) { toast('Diese Schleife spielt ihre Noten neu (Wuchs) – Einspielen geht nur an der Aufnahme. Zuerst „Erstarren“ oder Noten wie gespielt.', 5000); return; }
+  if (hxWAktiv(L)) { hxRxFreeze(L, () => hxTakeArm(L, a, b, mode)); return; }   // (frozen first, as for every edit – abschnitt.js)
   if ((L.sp || 1) !== 1 || hxBandSliceOf(L)) { toast('Einspielen geht, wenn das Band auf ×1 läuft und nichts weggelassen oder getauscht ist.', 4500); return; }
   if (L.state !== 'spielt') { toast('Die Schleife muss spielen – dann hörst du, wo du einsetzt.', 3500); return; }
   if (!hxMicOk(true)) return;

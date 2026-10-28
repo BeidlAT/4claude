@@ -11,6 +11,8 @@
 //                 into the gap), „dazu“ lays it over; dry where the Schicht is dry, burnt through the chain as it was
 //                 heard where the Schicht is baked; its level as played (the Schicht's own level taken out)
 //   Tonhöhe     – semitones, Verstimmen – cents: grains read faster or slower, the length kept (verwandeln.js) ----
+// why a loop plays its notes anew (Wuchs) – said in the editor before it is frozen for an edit
+const hxWWhy = (L) => { const w = L.wwhy || {}, r = []; if (hxWTonOff(L)) r.push('sie folgt der Tonart'); if (w.tempo) r.push('sie folgt dem Tempo'); if (hxKlangOf(L) !== 'eigen') r.push('ein anderer Klang'); if (w.wahl) r.push('Wiedergabe „Wuchs“'); if (hxEigN(L) >= 1) r.push('Eigensinn'); if (hxNtOn(L)) r.push('Noten-Werkzeuge'); if (w.ausl) r.push('Auslese'); return r.join(', '); };
 const hxRxPitchName = (v) => (Math.abs(v - Math.round(v)) < 1e-6 ? 'Tonhöhe ' + (v > 0 ? '+' : '−') + Math.abs(Math.round(v)) : 'verstimmt ' + (v > 0 ? '+' : '−') + Math.round(Math.abs(v) * 100) + ' ct');
 // a take laid over the stretch: frame i of the stretch plus frame i of the take (where it has one)
 const hxRxAdd = (ch, r0, seg) => { const get = hxRxGet(ch), n = seg[0].length; return (i) => { const s = get(r0 + i); return i < n ? [s[0] + seg[0][i], s[1] + seg[1][i]] : s; }; };
@@ -45,7 +47,7 @@ function hxTakeAt(L, a, b) {
 function hxTakeArm(L, a, b, mode) {
   if (!L || L.bew || !A.ctx) return;
   if (HX.take) { hxTakeStop(); return; }
-  if (hxWAktiv(L)) { toast('Diese Schleife spielt ihre Noten neu (Wuchs) – Einspielen geht nur an der Aufnahme. Zuerst „Erstarren“ oder Noten wie gespielt.', 5000); return; }
+  if (hxWAktiv(L)) { hxRxFreeze(L, () => hxTakeArm(L, a, b, mode)); return; }   // (frozen first, as for every edit – abschnitt.js)
   if ((L.sp || 1) !== 1 || hxBandSliceOf(L)) { toast('Einspielen geht, wenn das Band auf ×1 läuft und nichts weggelassen oder getauscht ist.', 4500); return; }
   if (L.state !== 'spielt') { toast('Die Schleife muss spielen – dann hörst du, wo du einsetzt.', 3500); return; }
   if (!hxMicOk(true)) return;
