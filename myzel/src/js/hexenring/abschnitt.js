@@ -44,8 +44,9 @@ function hxRxApply(ch, r0, r1, out) {
   return dst;
 }
 // the operations: what the stretch plays, frame by frame
-function hxRxOp(ch, r0, r1, op, v, u) {
+function hxRxOp(ch, r0, r1, op, v, u, seed) {
   const N = r1 - r0, get = hxRxGet(ch);
+  if (HX_RV[op]) { const [l, r] = HX_RV[op](ch, r0, N, hxRng(seed || 1)); return (i) => [l[i], r[i]]; }   // (28.10.2026: Verwandeln, Färben – verwandeln.js)
   if (op === 'band') {   // the tape at v: its sound read v times as fast; it keeps its length – repeated (v > 1) or cut (v < 1)
     const fc = Math.min(1, 1 / v) * 0.97, M = Math.max(16, Math.floor(N / v)), X = Math.min(HX_RX, Math.floor(M / 4));
     const seq = new Float32Array((M + X) * 2);
@@ -63,7 +64,7 @@ function hxRxOp(ch, r0, r1, op, v, u) {
   // Weglassen / Tauschen: the stretch's slices at the loop's onsets (u: shares of the window, a slice from its start)
   const cuts = [0].concat(u.filter((x) => x > 1e-6 && x < 1 - 1e-6).map((x) => Math.round(x * N))).filter((x, i, A) => i === 0 || x - A[i - 1] > 2 * HX_RX).concat([N]);
   const sl = []; for (let i = 0; i + 1 < cuts.length; i++) sl.push([cuts[i], cuts[i + 1]]);
-  const rnd = hxRng(((Math.random() * 2147483646) | 0) + 1), ord = sl.map((x, i) => i), keep = sl.map(() => true);
+  const rnd = hxRng(seed || ((Math.random() * 2147483646) | 0) + 1), ord = sl.map((x, i) => i), keep = sl.map(() => true);
   if (op === 'weg') { for (let i = 0; i < sl.length; i++) if (rnd() < v) keep[i] = false; if (keep.every(Boolean) && sl.length > 1) keep[Math.floor(rnd() * sl.length)] = false; }
   else { const pick = ord.filter(() => rnd() < Math.max(v, 0.0001)); if (pick.length < 2 && sl.length >= 2) { pick.length = 0; const a = Math.floor(rnd() * sl.length); pick.push(a, (a + 1 + Math.floor(rnd() * (sl.length - 1))) % sl.length); } const sh = pick.slice(); for (let i = sh.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [sh[i], sh[j]] = [sh[j], sh[i]]; } pick.forEach((p, i) => { ord[p] = sh[i]; }); }
   // the stretch rebuilt slice by slice: each slot plays its (other) slice from its start, as long as the slot – with 5-ms fades
@@ -81,16 +82,28 @@ function hxRxOp(ch, r0, r1, op, v, u) {
 function hxRegionEdit(L, a, b, op, v) {
   if (!L || L.bew || !(b > a)) return false;
   if (hxWAktiv(L)) { toast('Diese Schleife spielt ihre Noten neu (Wuchs) – Abschnitte lassen sich nur an der Aufnahme bearbeiten. Zuerst „Erstarren“ oder Noten wie gespielt.', 5000); return false; }
+  const sch0 = hxBandReady(L); if (!sch0) return false;
+  if (sch0.some((S) => !hxMemOk(2 * S.n))) return false;
+  const u = hxBandU(L).map((p) => (p - a) / (b - a)).filter((p) => p >= 0 && p < 1), seed = ((Math.random() * 2147483646) | 0) + 1;   // (one random for every Schicht and the Vorhören's quick version)
+  // (owner, 28.10.2026: „on the fly hörbar“) the Vorhören gets it first; writing it into the Schichten takes a moment
+  // (every Schicht's audio, its bake, its seam, the store) – while the Vorhören plays, that follows in a task of its own,
+  // one edit after another (a quick second click works on the first one's result)
+  hxPvEdit(L, a, b, (ch, q0, q1) => hxRxOp(ch, q0, q1, op, v, u, seed));
+  if (!HXE.pv || HXE.pv.key !== L.key) return hxRegionWrite(L, a, b, op, v, u, seed);
+  HX.rxQ = (HX.rxQ || Promise.resolve()).then(() => new Promise((res) => setTimeout(() => { try { if (L.state !== 'weg') hxRegionWrite(L, a, b, op, v, u, seed); } finally { res(); } }, 0)));
+  return true;
+}
+function hxRegionWrite(L, a, b, op, v, u, seed) {
   const sch = hxBandReady(L); if (!sch) return false;
   if (sch.some((S) => !hxMemOk(2 * S.n))) return false;
-  const before = hxGeo(L), fl0 = hxBandFl(L), sw = hxSwapAt(L), u = hxBandU(L).map((p) => (p - a) / (b - a)).filter((p) => p >= 0 && p < 1);
+  const before = hxGeo(L), fl0 = hxBandFl(L), sw = hxSwapAt(L);
   // (26.10.2026, owner: „Grundeinstellung funktioniert nicht immer“ – a stretch's edit is written into the audio; the
   // audio as recorded is kept from the first edit on, so „Grundeinstellung“ can give it back – hxRxRestore)
   if (!L.rx0) L.rx0 = { rev: !!L.rev, dbl: L.dbl || 1, sch: sch.map((S) => ({ key: S.key, aud: S.aud, bak: S.bak || null, n: S.n, s: hxSnapS(S) })) };
   const done = [];
   for (const S of sch) {
     const [r0, r1] = hxRxFrames(S, a, b); if (r1 - r0 < 64) continue;
-    const ed = (ch) => hxRxApply(ch, r0, r1, hxRxOp(ch, r0, r1, op, v, u));
+    const ed = (ch) => hxRxApply(ch, r0, r1, hxRxOp(ch, r0, r1, op, v, u, seed));
     const aud = ed(S.aud), bak = S.bak ? ed(S.bak) : null, X = S.X || Math.round(0.01 * SR), g = { pre: S.pre, len: S.len, X, zo: S.zo || 0 };
     const c = Object.assign({}, S.cut, { pre: S.pre, len: S.len, n: S.n, aus: S.aus ? Object.assign({}, S.aus) : null, stale: true });
     done.push([S.key, S.aud, aud, S.bak, bak]);
@@ -99,7 +112,7 @@ function hxRegionEdit(L, a, b, op, v) {
   if (!done.length) { toast('Der Abschnitt ist zu kurz.'); return false; }
   // a trimmed loop: its whole keeps the edit too (the same frames of the same audio)
   if (L.tr0) L.tr0 = Object.assign({}, L.tr0, { sch: L.tr0.sch.map((s) => { const d = done.find((x) => x[0] === s.key && x[1] === s.aud); return d ? Object.assign({}, s, { aud: d[2], bak: s.bak === d[3] ? d[4] : s.bak }) : s; }) });
-  const lab = { band: 'Band ' + (HX_SP.find((x) => Math.abs(x[0] - v) < 1e-6) || [0, '×' + v])[1], rev: 'rückwärts', weg: 'Weglassen ' + Math.round(v * 100) + ' %', tausch: 'Tauschen ' + Math.round(v * 100) + ' %', gain: v === 0 ? 'stumm' : (v > 1 ? 'lauter ' : 'leiser ') + Math.round(Math.abs(20 * Math.log10(v))) + ' dB' }[op];
+  const lab = { band: 'Band ' + (HX_SP.find((x) => Math.abs(x[0] - v) < 1e-6) || [0, '×' + v])[1], rev: 'rückwärts', weg: 'Weglassen ' + Math.round(v * 100) + ' %', tausch: 'Tauschen ' + Math.round(v * 100) + ' %', gain: v === 0 ? 'stumm' : (v > 1 ? 'lauter ' : 'leiser ') + Math.round(Math.abs(20 * Math.log10(v))) + ' dB' }[op] || HX_RV_NAME[op] || op;
   hxBandStep(L, 'Abschnitt ' + hxRxName(L, a, b) + ' ' + lab, before, fl0, { now: true });
   hxSay(hxName(L) + ': Abschnitt ' + lab); hxSaveLoop(L); hxCardDirty();
   return true;

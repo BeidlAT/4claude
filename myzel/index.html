@@ -34789,7 +34789,7 @@ function hxEdRender() {
   HXE.waitEl = h('span', { class: 'hx-ed-wait' }, '');
   const selRow = h('div', { class: 'hx-ed-sel' },
     h('span', { class: 'hx-ms' }, HXE.sel ? 'Auswahl: ' + selTxt : L.trim ? 'Getrimmt – es spielt nur ein Teil der Aufnahme.' : 'Ziehe über die Wellenform, um einen Teil auszuwählen – dann lässt er sich allein bearbeiten.'),
-    HXE.sel ? btn('Nur die Auswahl spielen', () => hxEdTrimSel(L), 'Die Schleife spielt ab der nächsten Naht nur diesen Teil (↶ macht es rückgängig). Den Teil bearbeiten: die Zeilen „Abschnitt bearbeiten“ darunter.', 'primary') : null,
+    HXE.sel ? btn('Schleife auf die Auswahl kürzen', () => hxEdTrimSel(L), 'Die Schleife besteht ab der nächsten Naht nur noch aus diesem Teil (↶ macht es rückgängig). Nur anhören: ▶ Abspielen mit „Auswahl wiederholen“. Den Teil bearbeiten: „Abschnitt bearbeiten“ darunter – jede Änderung ist sofort zu hören.', 'primary') : null,
     HXE.sel ? btn('Auswahl aufheben', () => { HXE.sel = null; hxEdRender(); }, '', 'ghost') : null,
     L.trim ? btn('Wieder ganz', () => hxBandTrim(L, 'ganz'), 'Wieder die ganze Aufnahme spielen', '') : null);
   // the Schichten
@@ -34840,7 +34840,13 @@ function hxEdRender() {
       row('Weglassen', 'Lässt Anschläge in diesem Abschnitt weg.', ...HX_SLP.filter(([v]) => v).map(([v, t]) => act(t, 'weg', v, 'Im Abschnitt ' + t + ' der Anschläge weglassen'))),
       row('Tauschen', 'Vertauscht Anschläge in diesem Abschnitt.', ...HX_SLP.filter(([v]) => v).map(([v, t]) => act(t, 'tausch', v, 'Im Abschnitt ' + t + ' der Anschläge tauschen'))),
       row('Pegel', 'Der Abschnitt lauter, leiser oder still.', act('stumm', 'gain', 0, 'Den Abschnitt still'), act('−6 dB', 'gain', dbToGain(-6), 'Leiser'), act('−3 dB', 'gain', dbToGain(-3), 'Etwas leiser'), act('+3 dB', 'gain', dbToGain(3), 'Etwas lauter'), act('+6 dB', 'gain', dbToGain(6), 'Lauter')),
-      h('p', { class: 'note' }, 'Jeder Klick ist ein Schritt – ↶ nimmt ihn zurück. Die Auswahl bleibt, du kannst weiter darauf arbeiten oder einen anderen Teil wählen.'));
+      // (28.10.2026: Verwandeln and Färben – verwandeln.js)
+      row('Verwandeln', 'Der Abschnitt wächst um – wie ein Myzel: er löst sich auf, zerstäubt, keimt, wurzelt tiefer oder wächst in die Krone.',
+        act('Nebel', 'nebel', 0, 'Nebel: der Abschnitt löst sich in einen eigenen Hall auf'), act('Sporen', 'sporen', 0, 'Sporen: der Abschnitt zerstäubt in kleine Körner, breit verstreut'),
+        act('Keimen', 'keimen', 0, 'Keimen: sein Anfang treibt aus – wiederholt, immer schneller'), act('Wurzel', 'wurzel', 0, 'Wurzel: eine Oktave tiefer, gleiche Länge'), act('Krone', 'krone', 0, 'Krone: eine Oktave höher, gleiche Länge')),
+      row('Färben', 'Der Abschnitt dunkler, heller, verwelkend oder aufkeimend.',
+        act('Erde', 'erde', 0, 'Erde: dunkel – nur die Tiefen'), act('Licht', 'licht', 0, 'Licht: luftig – nur die Höhen'), act('Welken', 'welken', 0, 'Welken: wird zum Ende dunkler und leiser'), act('Sprießen', 'spriessen', 0, 'Sprießen: kommt aus der Stille und öffnet sich zum Ende')),
+      h('p', { class: 'note' }, 'Jeder Klick ist ein Schritt und sofort zu hören – das Vorhören startet von selbst und wiederholt die Auswahl. ↶ nimmt ihn zurück. Die Auswahl bleibt, du kannst weiter darauf arbeiten oder einen anderen Teil wählen.'));
   }
   const hum = hxEdHumRow(L);   // (26.10.2026: the whole Ernte, the loop's window in it)
   ed.replaceChildren(head, tp, wbox, HXE.waitEl, selRow, ...(hum ? [hum] : []), ...(part ? [part] : []), h('div', { class: 'hx-ed-sec' }, h('div', { class: 'hx-ed-st' }, sch.length === 1 ? 'Schicht' : sch.length + ' Schichten'), ...schRows), h('div', { class: 'hx-ed-sec' }, h('div', { class: 'hx-ed-st' }, HXE.sel ? 'Ganze Schleife' : 'Bearbeiten'), ...tools), foot);
@@ -35357,8 +35363,9 @@ function hxRxApply(ch, r0, r1, out) {
   return dst;
 }
 // the operations: what the stretch plays, frame by frame
-function hxRxOp(ch, r0, r1, op, v, u) {
+function hxRxOp(ch, r0, r1, op, v, u, seed) {
   const N = r1 - r0, get = hxRxGet(ch);
+  if (HX_RV[op]) { const [l, r] = HX_RV[op](ch, r0, N, hxRng(seed || 1)); return (i) => [l[i], r[i]]; }   // (28.10.2026: Verwandeln, Färben – verwandeln.js)
   if (op === 'band') {   // the tape at v: its sound read v times as fast; it keeps its length – repeated (v > 1) or cut (v < 1)
     const fc = Math.min(1, 1 / v) * 0.97, M = Math.max(16, Math.floor(N / v)), X = Math.min(HX_RX, Math.floor(M / 4));
     const seq = new Float32Array((M + X) * 2);
@@ -35376,7 +35383,7 @@ function hxRxOp(ch, r0, r1, op, v, u) {
   // Weglassen / Tauschen: the stretch's slices at the loop's onsets (u: shares of the window, a slice from its start)
   const cuts = [0].concat(u.filter((x) => x > 1e-6 && x < 1 - 1e-6).map((x) => Math.round(x * N))).filter((x, i, A) => i === 0 || x - A[i - 1] > 2 * HX_RX).concat([N]);
   const sl = []; for (let i = 0; i + 1 < cuts.length; i++) sl.push([cuts[i], cuts[i + 1]]);
-  const rnd = hxRng(((Math.random() * 2147483646) | 0) + 1), ord = sl.map((x, i) => i), keep = sl.map(() => true);
+  const rnd = hxRng(seed || ((Math.random() * 2147483646) | 0) + 1), ord = sl.map((x, i) => i), keep = sl.map(() => true);
   if (op === 'weg') { for (let i = 0; i < sl.length; i++) if (rnd() < v) keep[i] = false; if (keep.every(Boolean) && sl.length > 1) keep[Math.floor(rnd() * sl.length)] = false; }
   else { const pick = ord.filter(() => rnd() < Math.max(v, 0.0001)); if (pick.length < 2 && sl.length >= 2) { pick.length = 0; const a = Math.floor(rnd() * sl.length); pick.push(a, (a + 1 + Math.floor(rnd() * (sl.length - 1))) % sl.length); } const sh = pick.slice(); for (let i = sh.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [sh[i], sh[j]] = [sh[j], sh[i]]; } pick.forEach((p, i) => { ord[p] = sh[i]; }); }
   // the stretch rebuilt slice by slice: each slot plays its (other) slice from its start, as long as the slot – with 5-ms fades
@@ -35394,16 +35401,28 @@ function hxRxOp(ch, r0, r1, op, v, u) {
 function hxRegionEdit(L, a, b, op, v) {
   if (!L || L.bew || !(b > a)) return false;
   if (hxWAktiv(L)) { toast('Diese Schleife spielt ihre Noten neu (Wuchs) – Abschnitte lassen sich nur an der Aufnahme bearbeiten. Zuerst „Erstarren“ oder Noten wie gespielt.', 5000); return false; }
+  const sch0 = hxBandReady(L); if (!sch0) return false;
+  if (sch0.some((S) => !hxMemOk(2 * S.n))) return false;
+  const u = hxBandU(L).map((p) => (p - a) / (b - a)).filter((p) => p >= 0 && p < 1), seed = ((Math.random() * 2147483646) | 0) + 1;   // (one random for every Schicht and the Vorhören's quick version)
+  // (owner, 28.10.2026: „on the fly hörbar“) the Vorhören gets it first; writing it into the Schichten takes a moment
+  // (every Schicht's audio, its bake, its seam, the store) – while the Vorhören plays, that follows in a task of its own,
+  // one edit after another (a quick second click works on the first one's result)
+  hxPvEdit(L, a, b, (ch, q0, q1) => hxRxOp(ch, q0, q1, op, v, u, seed));
+  if (!HXE.pv || HXE.pv.key !== L.key) return hxRegionWrite(L, a, b, op, v, u, seed);
+  HX.rxQ = (HX.rxQ || Promise.resolve()).then(() => new Promise((res) => setTimeout(() => { try { if (L.state !== 'weg') hxRegionWrite(L, a, b, op, v, u, seed); } finally { res(); } }, 0)));
+  return true;
+}
+function hxRegionWrite(L, a, b, op, v, u, seed) {
   const sch = hxBandReady(L); if (!sch) return false;
   if (sch.some((S) => !hxMemOk(2 * S.n))) return false;
-  const before = hxGeo(L), fl0 = hxBandFl(L), sw = hxSwapAt(L), u = hxBandU(L).map((p) => (p - a) / (b - a)).filter((p) => p >= 0 && p < 1);
+  const before = hxGeo(L), fl0 = hxBandFl(L), sw = hxSwapAt(L);
   // (26.10.2026, owner: „Grundeinstellung funktioniert nicht immer“ – a stretch's edit is written into the audio; the
   // audio as recorded is kept from the first edit on, so „Grundeinstellung“ can give it back – hxRxRestore)
   if (!L.rx0) L.rx0 = { rev: !!L.rev, dbl: L.dbl || 1, sch: sch.map((S) => ({ key: S.key, aud: S.aud, bak: S.bak || null, n: S.n, s: hxSnapS(S) })) };
   const done = [];
   for (const S of sch) {
     const [r0, r1] = hxRxFrames(S, a, b); if (r1 - r0 < 64) continue;
-    const ed = (ch) => hxRxApply(ch, r0, r1, hxRxOp(ch, r0, r1, op, v, u));
+    const ed = (ch) => hxRxApply(ch, r0, r1, hxRxOp(ch, r0, r1, op, v, u, seed));
     const aud = ed(S.aud), bak = S.bak ? ed(S.bak) : null, X = S.X || Math.round(0.01 * SR), g = { pre: S.pre, len: S.len, X, zo: S.zo || 0 };
     const c = Object.assign({}, S.cut, { pre: S.pre, len: S.len, n: S.n, aus: S.aus ? Object.assign({}, S.aus) : null, stale: true });
     done.push([S.key, S.aud, aud, S.bak, bak]);
@@ -35412,7 +35431,7 @@ function hxRegionEdit(L, a, b, op, v) {
   if (!done.length) { toast('Der Abschnitt ist zu kurz.'); return false; }
   // a trimmed loop: its whole keeps the edit too (the same frames of the same audio)
   if (L.tr0) L.tr0 = Object.assign({}, L.tr0, { sch: L.tr0.sch.map((s) => { const d = done.find((x) => x[0] === s.key && x[1] === s.aud); return d ? Object.assign({}, s, { aud: d[2], bak: s.bak === d[3] ? d[4] : s.bak }) : s; }) });
-  const lab = { band: 'Band ' + (HX_SP.find((x) => Math.abs(x[0] - v) < 1e-6) || [0, '×' + v])[1], rev: 'rückwärts', weg: 'Weglassen ' + Math.round(v * 100) + ' %', tausch: 'Tauschen ' + Math.round(v * 100) + ' %', gain: v === 0 ? 'stumm' : (v > 1 ? 'lauter ' : 'leiser ') + Math.round(Math.abs(20 * Math.log10(v))) + ' dB' }[op];
+  const lab = { band: 'Band ' + (HX_SP.find((x) => Math.abs(x[0] - v) < 1e-6) || [0, '×' + v])[1], rev: 'rückwärts', weg: 'Weglassen ' + Math.round(v * 100) + ' %', tausch: 'Tauschen ' + Math.round(v * 100) + ' %', gain: v === 0 ? 'stumm' : (v > 1 ? 'lauter ' : 'leiser ') + Math.round(Math.abs(20 * Math.log10(v))) + ' dB' }[op] || HX_RV_NAME[op] || op;
   hxBandStep(L, 'Abschnitt ' + hxRxName(L, a, b) + ' ' + lab, before, fl0, { now: true });
   hxSay(hxName(L) + ': Abschnitt ' + lab); hxSaveLoop(L); hxCardDirty();
   return true;
@@ -35447,6 +35466,143 @@ function hxRxRestore(L) {
   hxBandStep(L, 'Abschnitte wie aufgenommen', before, fl0, { now: !!sw.now });
   hxSaveLoop(L);
   return true;
+}
+// ---- (owner, 28.10.2026: „weitere bearbeitungsoptionen … gerne kann das myzel thema fortgeführt werden und in seiner
+// klangästhetik ausdruck finden“) Verwandeln and Färben – a chosen stretch grown over, written into the audio as the other
+// stretch tools are (hxRegionEdit: every Schicht, dry and baked alike, one step, ↶ back). Each one a processor
+// (ch, r0, N, R) → [left, right] of the stretch's N frames, read from the chunk list ch at r0, R the edit's own random
+// (the same in every Schicht and in the Vorhören's quick version). The loudness stays the stretch's own (RMS), never
+// more than +9 dB (Licht, the body gone, stays quieter).
+//   Nebel     – the stretch dissolves into a hall of its own (a feedback delay network: eight lines, Householder, damped)
+//   Sporen    – it scatters into grains (50–150 ms), strewn over the stretch, a few cents apart, wide
+//   Keimen    – its beginning sprouts: repeated, quicker and quicker (⅛, 1/16, 1/32, 1/64 of the stretch)
+//   Wurzel    – an octave down, its length kept (grains read at half speed, overlapped)
+//   Krone     – an octave up, its length kept
+//   Erde      – dark: a low-pass at 650 Hz
+//   Licht     – airy: a high-pass at 900 Hz (4th order)
+//   Welken    – it withers: darker and quieter to its end
+//   Sprießen  – it sprouts: from silence and dark, opening to its end ----
+const HX_RV_NAME = { nebel: 'Nebel', sporen: 'Sporen', keimen: 'Keimen', wurzel: 'Wurzel', krone: 'Krone', erde: 'Erde', licht: 'Licht', welken: 'Welken', spriessen: 'Sprießen' };
+// the stretch read plainly (frame i of it)
+function hxRvIn(ch, r0, N) {
+  const l = new Float32Array(N), r = new Float32Array(N);
+  for (let i = 0; i < N;) { const f = r0 + i, c = ch[Math.floor(f / HX_CH)], j = f % HX_CH, m = Math.min(N - i, HX_CH - j); if (c && f >= 0) { l.set(c[0].subarray(j, j + m), i); r.set(c[1].subarray(j, j + m), i); } i += m; }
+  return [l, r];
+}
+const hxRvRms = (l, r) => { let s = 0; for (let i = 0; i < l.length; i++) s += l[i] * l[i] + r[i] * r[i]; return Math.sqrt(s / Math.max(1, 2 * l.length)); };
+// its loudness as the stretch's own (at most +9 dB – a near-silent result stays quiet)
+function hxRvLevel(src, out) {
+  const a = hxRvRms(src[0], src[1]), b = hxRvRms(out[0], out[1]); if (!(a > 1e-7) || !(b > 1e-9)) return out;
+  const g = Math.min(2.8, a / b); for (const c of out) for (let i = 0; i < c.length; i++) c[i] *= g;
+  return out;
+}
+// a biquad (RBJ), its cutoff per 32 frames from fr(x) (x: 0 … 1 through the stretch) – direct form I, per channel
+function hxRvBq(c, type, fr, Q) {
+  let x1 = 0, x2 = 0, y1 = 0, y2 = 0, b0 = 1, b1 = 0, b2 = 0, a1 = 0, a2 = 0;
+  const N = c.length, set = (f) => {
+    const w = 2 * Math.PI * clamp(f, 10, 0.45 * SR) / SR, cs = Math.cos(w), al = Math.sin(w) / (2 * Q), a0 = 1 + al;
+    if (type === 'lp') { b0 = (1 - cs) / 2 / a0; b1 = (1 - cs) / a0; b2 = b0; } else { b0 = (1 + cs) / 2 / a0; b1 = -(1 + cs) / a0; b2 = b0; }
+    a1 = (-2 * cs) / a0; a2 = (1 - al) / a0;
+  };
+  for (let i = 0; i < N; i++) {
+    if ((i & 31) === 0) set(fr(i / Math.max(1, N - 1)));
+    const x = c[i], y = b0 * x + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
+    x2 = x1; x1 = x; y2 = y1; y1 = y; c[i] = y;
+  }
+}
+// a half-sample read: a 32-tap windowed sinc (Kaiser, β 9) at the fraction ½, made once
+const HX_RV_K = (() => { const T = 16, k = new Float32Array(2 * T), I0 = (x) => { let a = 1, t = 1; for (let j = 1; j < 40; j++) { t *= (x / (2 * j)) * (x / (2 * j)); a += t; } return a; }; let s = 0;
+  for (let j = 0; j < 2 * T; j++) { const x = j - T + 0.5, u = x / T; k[j] = (Math.sin(Math.PI * x) / (Math.PI * x)) * (I0(9 * Math.sqrt(Math.max(0, 1 - u * u))) / I0(9)); s += k[j]; }
+  for (let j = 0; j < 2 * T; j++) k[j] /= s; return k; })();
+const hxRvAt = (c, p) => { const i = Math.floor(p); if (p === i) return i >= 0 && i < c.length ? c[i] : 0; let s = 0; for (let j = 0; j < 32; j++) { const q = i - 15 + j; if (q >= 0 && q < c.length) s += HX_RV_K[j] * c[q]; } return s; };
+// grains of the stretch, Hann-windowed, overlapped four times, read at rate rt (½: at half samples, through the sinc;
+// 2: every second sample of the stretch low-passed below the new Nyquist first – no folding) – the length kept, the
+// pitch an octave down or up
+function hxRvShift(src, N, rt, R) {
+  const G = Math.round(0.085 * SR) & ~1, H = G >> 2, l = new Float32Array(N), r = new Float32Array(N);
+  let x = src;
+  if (rt > 1) { x = [src[0].slice(), src[1].slice()]; for (const c of x) for (let k = 0; k < 4; k++) hxRvBq(c, 'lp', () => 0.23 * SR, [0.51, 0.6, 0.9, 2.56][k]); }   // (8th order Butterworth)
+  for (let t = -G; t < N; t += H) {
+    const c0 = t + G / 2 + Math.round((R() - 0.5) * H * 0.5);   // (a little jitter: no comb of equal grains)
+    for (let j = 0; j < G; j++) {
+      const d = t + j; if (d < 0 || d >= N) continue;
+      const w = 0.25 - 0.25 * Math.cos((2 * Math.PI * j) / G), p = clamp(c0 + (j - G / 2) * rt, 0, N - 1);
+      l[d] += w * hxRvAt(x[0], p); r[d] += w * hxRvAt(x[1], p);
+    }
+  }
+  return [l, r];
+}
+// a read at any place near rate 1 (Sporen's few cents): 4-point Hermite
+const hxRvHm = (c, p) => { const i = Math.floor(p), f = p - i, a = c[i - 1] || 0, b = c[i] || 0, d = c[i + 1] || 0, e = c[i + 2] || 0, c1 = 0.5 * (d - a), c2 = a - 2.5 * b + 2 * d - 0.5 * e, c3 = 0.5 * (e - a) + 1.5 * (b - d); return ((c3 * f + c2) * f + c1) * f + b; };
+// a hall of its own: eight delay lines (prime lengths, 29–83 ms), a Householder matrix, each line damped (one pole) to
+// T60 ≈ 3 s; left and right read from different lines; the wet fades out over the stretch's last 80 ms (the tape after
+// it comes back clean)
+function hxRvNebel(ch, r0, N, R) {
+  const src = hxRvIn(ch, r0, N), [l0, r0c] = src, M = [1427, 1601, 1871, 2053, 2357, 2671, 3089, 3659].map((x) => Math.round((x * SR) / 44100)), K = M.length;
+  const buf = M.map((m) => new Float32Array(m)), pos = new Int32Array(K), lp = new Float32Array(K), T60 = 3, damp = 0.32;
+  const g = M.map((m) => Math.pow(10, (-3 * m) / (T60 * SR))), ol = new Float32Array(N), or = new Float32Array(N), y = new Float32Array(K);
+  for (let i = 0; i < N; i++) {
+    let s = 0;
+    for (let k = 0; k < K; k++) { const v = buf[k][pos[k]]; lp[k] += (1 - damp) * (v - lp[k]); y[k] = lp[k] * g[k]; s += y[k]; }
+    s *= 2 / K;
+    const xi = 0.5 * (l0[i] + r0c[i]), xd = 0.5 * (l0[i] - r0c[i]);
+    for (let k = 0; k < K; k++) { buf[k][pos[k]] = y[k] - s + (k & 1 ? xi + 0.4 * xd : xi - 0.4 * xd) * 0.35; if (++pos[k] >= M[k]) pos[k] = 0; }
+    ol[i] = y[0] + y[2] + y[4] - y[6]; or[i] = y[1] + y[3] - y[5] + y[7];
+  }
+  hxRvLevel(src, [ol, or]);
+  const F = Math.min(Math.round(0.08 * SR), N >> 2), out = [new Float32Array(N), new Float32Array(N)];
+  for (let i = 0; i < N; i++) { const e = i >= N - F ? (N - i) / F : 1; out[0][i] = 0.3 * l0[i] + 0.85 * e * ol[i]; out[1][i] = 0.3 * r0c[i] + 0.85 * e * or[i]; }
+  return hxRvLevel(src, out);
+}
+const HX_RV = {
+  nebel: hxRvNebel,
+  sporen(ch, r0, N, R) {
+    const src = hxRvIn(ch, r0, N), l = new Float32Array(N), r = new Float32Array(N), n = Math.max(4, Math.round((N / SR) * 32));
+    for (let k = 0; k < n; k++) {
+      const G = Math.min(N, Math.round((0.05 + 0.1 * R()) * SR)), sp = Math.floor(R() * Math.max(1, N - G)), dp = Math.floor(R() * Math.max(1, N - G));
+      const rt = Math.pow(2, ((R() - 0.5) * 20) / 1200), pn = (R() - 0.5) * 1.4, gl = Math.cos((pn + 1) * Math.PI / 4), gr = Math.sin((pn + 1) * Math.PI / 4);
+      for (let j = 0; j < G; j++) { const w = 0.5 - 0.5 * Math.cos((2 * Math.PI * j) / G), p = Math.min(N - 1, sp + j * rt), m = 0.5 * (hxRvHm(src[0], p) + hxRvHm(src[1], p)) * w; l[dp + j] += m * gl; r[dp + j] += m * gr; }
+    }
+    const out = hxRvLevel(src, [l, r]);
+    for (let i = 0; i < N; i++) { out[0][i] = 0.8 * out[0][i] + 0.2 * src[0][i]; out[1][i] = 0.8 * out[1][i] + 0.2 * src[1][i]; }   // (a trace of its shape stays)
+    return hxRvLevel(src, out);
+  },
+  keimen(ch, r0, N) {
+    const get = hxRxGet(ch), l = new Float32Array(N), r = new Float32Array(N), parts = [[8, 2], [16, 4], [32, 8], [64, 16]];
+    let d = 0;
+    parts.forEach(([div, rep], pi) => {
+      const n = Math.max(32, Math.floor(N / div)), X = Math.min(Math.round(0.003 * SR), n >> 2), gn = 0.8 + 0.2 * (pi / 3);   // (it grows a little as it quickens)
+      for (let q = 0; q < rep && d < N; q++) for (let j = 0; j < n && d < N; j++, d++) { const w = X ? Math.min(1, j / X, (n - 1 - j) / X) : 1, s = get(r0 + j); l[d] = s[0] * w * gn; r[d] = s[1] * w * gn; }
+    });
+    for (; d < N; d++) { const s = get(r0 + d); l[d] = s[0]; r[d] = s[1]; }
+    return [l, r];
+  },
+  wurzel(ch, r0, N, R) { const s = hxRvIn(ch, r0, N); return hxRvLevel(s, hxRvShift(s, N, 0.5, R)); },
+  krone(ch, r0, N, R) { const s = hxRvIn(ch, r0, N); return hxRvLevel(s, hxRvShift(s, N, 2, R)); },
+  erde(ch, r0, N) { const s = hxRvIn(ch, r0, N), o = [s[0].slice(), s[1].slice()]; for (const c of o) { hxRvBq(c, 'lp', () => 650, 0.8); hxRvBq(c, 'lp', () => 650, 0.6); } return hxRvLevel(s, o); },
+  licht(ch, r0, N) { const s = hxRvIn(ch, r0, N), o = [s[0].slice(), s[1].slice()]; for (const c of o) { hxRvBq(c, 'hp', () => 900, 0.54); hxRvBq(c, 'hp', () => 900, 1.31); } return hxRvLevel(s, o); },   // (4th order Butterworth)
+  welken(ch, r0, N) { const o = hxRvIn(ch, r0, N); for (const c of o) { hxRvBq(c, 'lp', (x) => 16000 * Math.pow(260 / 16000, x), 0.7); for (let i = 0; i < c.length; i++) c[i] *= Math.pow(1 - i / c.length, 1.6); } return o; },
+  spriessen(ch, r0, N) { const o = hxRvIn(ch, r0, N); for (const c of o) { hxRvBq(c, 'lp', (x) => 260 * Math.pow(16000 / 260, x), 0.7); for (let i = 0; i < c.length; i++) c[i] *= Math.pow(i / c.length, 1.6); } return o; },
+};
+// the Vorhören at once (owner, 28.10.2026: „die änderungen bei der auswahl gleich on the fly hörbar“): the pass it plays
+// gets the same edit straight away (the same processor, the same random) – the exact render takes over a moment later,
+// crossfaded; not playing yet: it starts at the stretch, which repeats. A loop whose tape runs faster or slower or is
+// sliced: its pass is not the Schicht's frames one to one – the render alone (a moment later).
+function hxPvEdit(L, a, b, mk) {
+  if (!HXE.ed || HXE.ed.hidden || hxEdL() !== L || !A.ctx) return;
+  hxEdTouch(L);   // (the render made before the edit is not this one any more)
+  const P = HXE.pv, buf = P && P.key === L.key ? P.buf : HXE.rw && HXE.rw.buf ? HXE.rw.buf : null;
+  if (!buf || (L.sp || 1) !== 1 || hxBandSliceOf(L)) { if (!HXE.pv) hxPvPlay(a); return; }
+  const n = buf.length, r0 = Math.round(a * n), r1 = Math.min(n, Math.round(b * n)); if (r1 - r0 < 64) { if (!HXE.pv) hxPvPlay(a); return; }
+  // (only the stretch is worked on: a chunk list of its frames alone – the whole pass is not copied twice)
+  const cl = buf.getChannelData(0), cr = buf.getChannelData(1), N = r1 - r0, ch = [];
+  for (let k = 0; k * HX_CH < N; k++) { const x = [new Float32Array(HX_CH), new Float32Array(HX_CH)], q = r0 + k * HX_CH, e = Math.min(r1, q + HX_CH); x[0].set(cl.subarray(q, e)); x[1].set(cr.subarray(q, e)); ch.push(x); }
+  const dst = hxRxApply(ch, 0, N, mk(ch, 0, N)), nb = new AudioBuffer({ numberOfChannels: 2, length: n, sampleRate: buf.sampleRate });
+  const ol = cl.slice(), or = cr.slice();
+  for (let k = 0; k < dst.length; k++) { const m = Math.min(HX_CH, N - k * HX_CH); ol.set(dst[k][0].subarray(0, m), r0 + k * HX_CH); or.set(dst[k][1].subarray(0, m), r0 + k * HX_CH); }
+  nb.copyToChannel(ol, 0); nb.copyToChannel(or, 1);
+  hxPvSrc(L, nb, P ? hxPvPos() : a);
+  HXE.pvWant = false;
 }
 // ---- (owner, 26.10.2026: „in der Schleifen-Ansicht auch ein Play und Stopp – und dass man auf eine beliebige Stelle
 // klickt und es dort weiterspielt; bei längeren Schleifen muss man sonst immer alles durchlaufen lassen“) Vorhören: the
@@ -41586,6 +41742,7 @@ function hxWk(type, o) {
 // chips carry an explaining one) – and the row's own tip ('@Row') stands on the row's label and is the last resort. The
 // settings of the looper get theirs by parameter (HX_TIP_P). hxTips(root) after every render; the rail sets its own. ----
 const HX_TIP = {
+  'Alle aufklappen': 'Öffnet die Karten aller Schleifen – alle Einstellungen auf einen Blick.', 'Alle zuklappen': 'Klappt die Karten aller Schleifen zu – nur ihre Kopfzeilen bleiben.',   // (28.10.2026)
   // the rows of a loop's card
   '@Zustand': 'Ob die Schleife gerade klingt: spielt, stumm (läuft lautlos im Takt weiter) oder angehalten (steht still).',
   '@Pegel': 'Wie laut die ganze Schleife ist.',

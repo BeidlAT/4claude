@@ -2,6 +2,16 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-28e",
+      "punkte": [
+        "Abschnitt bearbeiten: jede Änderung ist sofort zu hören – das Vorhören startet von selbst und wiederholt die Auswahl.",
+        "Neu „Verwandeln“: Nebel (löst sich in Hall auf), Sporen (zerstäubt in Körner), Keimen (treibt immer schneller aus), Wurzel (Oktave tiefer), Krone (Oktave höher).",
+        "Neu „Färben“: Erde (dunkel), Licht (luftig), Welken (verblüht zum Ende), Sprießen (öffnet sich aus der Stille).",
+        "Der Knopf „Nur die Auswahl spielen“ heißt jetzt „Schleife auf die Auswahl kürzen“ – das tut er nämlich.",
+        "Mehr Tooltips im Aufnahme-Panel."
+      ]
+    },
+    {
       "id": "2026-10-28d",
       "punkte": [
         "iPad: lange auf einen Ring drücken öffnet jetzt dasselbe Menü wie der Rechtsklick am PC – Ansehen und bearbeiten, Karte, Stumm, Solo, Export als WAV oder MIDI, Farbe, Löschen.",

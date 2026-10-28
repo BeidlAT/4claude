@@ -4,6 +4,7 @@
 // chips carry an explaining one) – and the row's own tip ('@Row') stands on the row's label and is the last resort. The
 // settings of the looper get theirs by parameter (HX_TIP_P). hxTips(root) after every render; the rail sets its own. ----
 const HX_TIP = {
+  'Alle aufklappen': 'Öffnet die Karten aller Schleifen – alle Einstellungen auf einen Blick.', 'Alle zuklappen': 'Klappt die Karten aller Schleifen zu – nur ihre Kopfzeilen bleiben.',   // (28.10.2026)
   // the rows of a loop's card
   '@Zustand': 'Ob die Schleife gerade klingt: spielt, stumm (läuft lautlos im Takt weiter) oder angehalten (steht still).',
   '@Pegel': 'Wie laut die ganze Schleife ist.',

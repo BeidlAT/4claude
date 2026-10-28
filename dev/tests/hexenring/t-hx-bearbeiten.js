@@ -52,7 +52,7 @@ const { ok } = H;
   await page.screenshot({ path: 'out/edit-trim.png' });
   const u1 = await page.evaluate(async () => { const M = window.__M; M.hxUndoStep(); await window.__sleep(400); const L = M.hxLoopsLive()[0]; return { trim: L.trim, beats: L.d.beats, notes: L.notes.length }; });
   ok(s1.sel && s1.sel.a === 0.25 && s1.sel.b === 0.625 && /Schlag 3–5 von 8/.test(s1.txt), `a drag chooses whole beats (${JSON.stringify(s1)})`);
-  ok(t1.beats === 3 && t1.trim && Math.abs(t1.trim.a - 0.25) < 1e-9 && Math.abs(t1.trim.f - 0.375) < 1e-9 && t1.notes === 3, `„Nur die Auswahl spielen“: 3 beats from beat 3, its 3 notes (${JSON.stringify(t1)})`);
+  ok(t1.beats === 3 && t1.trim && Math.abs(t1.trim.a - 0.25) < 1e-9 && Math.abs(t1.trim.f - 0.375) < 1e-9 && t1.notes === 3, `„Schleife auf die Auswahl kürzen“: 3 beats from beat 3, its 3 notes (${JSON.stringify(t1)})`);
   ok(u1.beats === 8 && !u1.trim && u1.notes === 8, `↶ gives the whole loop back (${JSON.stringify(u1)})`);
   // 4. ½, ▶ and ganz still work (the card's chips)
   const t2 = await page.evaluate(async () => {
