@@ -464,6 +464,11 @@ NUM('rev.size', 'Nachhallzeit', 0.3, 14, 5, 's', { curve: 'exp' });
 NUM('rev.damp', 'Dämpfung', 0, 1, 0.5, '%');
 NUM('rev.pre', 'Vorverzögerung', 0, 0.25, 0.03, 's');
 NUM('rev.mix', 'Anteil', 0, 1, 0.45, '%');
+// (29.10.2026) the room the hall is (raeume-liste.js): Nebel as ever, real, computed and special rooms; Abstand and Länge
+// shape those (Nachhallzeit and Dämpfung are Nebel's)
+SEL('rev.typ', 'Raum', RAUM_LISTE.map((r) => [r.id, r.name, RAUM_ART[r.art]]), 'nebel');
+NUM('rev.dist', 'Abstand', 0, 1, 0.5, '%');
+NUM('rev.len', 'Länge', 0.5, 1.5, 1, '', { fmt: (v) => '×' + dec(v.toFixed(2)) });
 NUM('mov.vib', 'Vibrato', 0, 60, 4, 'ct');
 NUM('mov.vibRate', 'Vibrato-Tempo', 0.1, 9, 4.5, 'Hz', { curve: 'exp' });
 NUM('mov.drift', 'Taumeln', 0, 80, 6, 'ct');

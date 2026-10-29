@@ -9,6 +9,7 @@ mkdir -p "$P/$NAME" "$P/$NAME-inst"
 HEAD='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><script>try{var k="myzel.dev.v1",d=JSON.parse(localStorage.getItem(k)||"{}");if(!("ui.leer" in d)&&!window.__leer){d["ui.leer"]=false;localStorage.setItem(k,JSON.stringify(d));}}catch(e){}</script></head><body>'
 { printf '%s' "$HEAD"; cat "$SRC/index.html"; printf '</body></html>'; } > "$P/$NAME/index.html"
 cp "$SRC/tap-worklet.js" "$P/$NAME/" ; cp "$SRC/tap-worklet.js" "$P/$NAME-inst/"
+[ -d "$SRC/raeume" ] && { rm -rf "$P/$NAME/raeume" "$P/$NAME-inst/raeume"; cp -r "$SRC/raeume" "$P/$NAME/"; cp -r "$SRC/raeume" "$P/$NAME-inst/"; }   # (the hall's real rooms, loaded on demand)
 python3 - "$P/$NAME/index.html" "$P/$NAME-inst/index.html" <<'PY'
 import sys,re
 s=open(sys.argv[1]).read()

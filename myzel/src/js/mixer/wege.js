@@ -132,7 +132,8 @@ function mxdQuelle(k) {
   else if (k === 'rgn') { const q = rgQuelle(); MXD.qu[k] = q; return q; }
   else if (k === 'hxr') kids = [h('p', { class: 'note' }, 'Die Schleifen des Hexenrings – ihre Effektkette ist eingebrannt, Echo und Hall kommen hier dazu.')];   // Hexenring
   else if (k === 'dly') kids = [grid(C('dly.mix', 'Anteil (Send-Meister)'), C('dly.fb'), C('dly.pp'), C('dly.tone'), C('dly.wow')), C('dly.sync'), C('dly.div'), C('dly.ms')];
-  else kids = [grid(C('rev.mix', 'Anteil (Send-Meister)'), C('rev.size'), C('rev.damp'), C('rev.pre'))];
+  else { const txt = h('p', { class: 'note mxd-raum' }), nb = grid(C('rev.size'), C('rev.damp')), rm = grid(C('rev.dist'), C('rev.len')), upd = () => { const neb = P['rev.typ'] === 'nebel'; nb.hidden = !neb; rm.hidden = neb; txt.textContent = raumText(); }; bindCtl('rev.typ', upd); upd();
+    kids = [C('rev.typ', 'Raum'), txt, grid(C('rev.mix', 'Anteil (Send-Meister)'), C('rev.pre')), nb, rm]; }
   const el = h('div', { class: 'mxd-qbody', 'data-k': k }, ...kids);
   MXD.qu[k] = el;
   return el;
