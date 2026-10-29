@@ -177,9 +177,12 @@ const HX_RV = {
 // gets the same edit straight away (the same processor, the same random) – the exact render takes over a moment later,
 // crossfaded; not playing yet: it starts at the stretch, which repeats. A loop whose tape runs faster or slower or is
 // sliced: its pass is not the Schicht's frames one to one – the render alone (a moment later).
-function hxPvEdit(L, a, b, mk, full) {   // (full: the whole pass handed over – Tauschen and Einsetzen read outside the stretch)
+function hxPvEdit(L, a, b, mk, full, wk) {   // (full: the whole pass handed over – Tauschen and Einsetzen read outside the stretch)
   if (!HXE.ed || HXE.ed.hidden || hxEdL() !== L || !A.ctx) return;
   hxEdTouch(L);   // (the render made before the edit is not this one any more)
+  // (29.10.2026) worked out in a Worker (wk: the edit – abschnitt-werk.js), one after another: a quick second edit
+  // finds the first one in the pass
+  if (wk) { HXE.pvQ = (HXE.pvQ || Promise.resolve()).then(() => hxPvEditW(L, a, b, wk)).catch(() => {}); return; }
   const P = HXE.pv, buf = P && P.key === L.key ? P.buf : HXE.rw && HXE.rw.buf ? HXE.rw.buf : null;
   if (!buf || (L.sp || 1) !== 1 || hxBandSliceOf(L)) { if (!HXE.pv) hxPvPlay(a); return; }
   const n = buf.length, r0 = Math.round(a * n), r1 = Math.min(n, Math.round(b * n)); if (r1 - r0 < 64) { if (!HXE.pv) hxPvPlay(a); return; }
@@ -197,5 +200,22 @@ function hxPvEdit(L, a, b, mk, full) {   // (full: the whole pass handed over �
   for (let k = 0; k < dst.length; k++) { const m = Math.min(HX_CH, N - k * HX_CH); ol.set(dst[k][0].subarray(0, m), r0 + k * HX_CH); or.set(dst[k][1].subarray(0, m), r0 + k * HX_CH); }
   nb.copyToChannel(ol, 0); nb.copyToChannel(or, 1);
   hxPvSrc(L, nb, P ? hxPvPos() : a);
+  HXE.pvWant = false;
+}
+const hxPvBufOf = (L) => { const P = HXE.pv; return P && P.key === L.key ? P.buf : HXE.rw && HXE.rw.buf ? HXE.rw.buf : null; };
+async function hxPvEditW(L, a, b, wk) {
+  if (!HXE.ed || HXE.ed.hidden || hxEdL() !== L || !A.ctx) return;
+  const buf = hxPvBufOf(L);
+  if (!buf || (L.sp || 1) !== 1 || hxBandSliceOf(L)) { if (!HXE.pv) hxPvPlay(a); return; }
+  const n = buf.length, r0 = Math.round(a * n), r1 = Math.min(n, Math.round(b * n)); if (r1 - r0 < 64) { if (!HXE.pv) hxPvPlay(a); return; }
+  const cl = buf.getChannelData(0), cr = buf.getChannelData(1), N = r1 - r0, ch = [];
+  for (let k = 0; k * HX_CH < N; k++) { const x = [new Float32Array(HX_CH), new Float32Array(HX_CH)], q = r0 + k * HX_CH, e = Math.min(r1, q + HX_CH); x[0].set(cl.subarray(q, e)); x[1].set(cr.subarray(q, e)); ch.push(x); }
+  const res = await hxRw(ch, 0, N, wk.op, wk.v, wk.u, wk.seed);
+  // (the editor closed, another loop, or the exact render took over meanwhile – it carries the edit already)
+  if (!HXE.ed || HXE.ed.hidden || hxEdL() !== L || !A.ctx || hxPvBufOf(L) !== buf) return;
+  const nb = new AudioBuffer({ numberOfChannels: 2, length: n, sampleRate: buf.sampleRate }), ol = cl.slice(), or = cr.slice();
+  ol.set(res[0], r0); or.set(res[1], r0);
+  nb.copyToChannel(ol, 0); nb.copyToChannel(or, 1);
+  hxPvSrc(L, nb, HXE.pv ? hxPvPos() : a);
   HXE.pvWant = false;
 }

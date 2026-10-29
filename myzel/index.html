@@ -35596,7 +35596,19 @@ function hxRegionEdit(L, a, b, op, v) {
   // one edit after another (a quick second click works on the first one's result)
   if (op === 'swap' || op === 'paste') hxPvEdit(L, a, b, null, (ch, n) => hxRxMove(ch, Math.round(a * n), Math.round(b * n), [Math.round(v.a2 * n), Math.round(v.b2 * n)], op));   // (Direkt – direkt.js)
   else if (op === 'take' && (!HXE.pv || HXE.pv.key !== L.key)) hxEdTouch(L);   // (a take was played to the loop itself: no Vorhören starts – it would mute the loop mid-play, out of time)
-  else hxPvEdit(L, a, b, op === 'take' ? (ch, q0) => hxRxAdd(ch, q0, v.wet || v.dry) : (ch, q0, q1) => hxRxOp(ch, q0, q1, op, v, u, seed));
+  else hxPvEdit(L, a, b, op === 'take' ? (ch, q0) => hxRxAdd(ch, q0, v.wet || v.dry) : (ch, q0, q1) => hxRxOp(ch, q0, q1, op, v, u, seed), null, hxRwOk(op) ? { op, v, u, seed } : null);
+  // (29.10.2026) what the stretch becomes is worked out in Workers (abschnitt-werk.js), then written in – the page goes
+  // on meanwhile; ↶ or ↷ before it is done write it at once (hxRxFlush), here, to the same bit
+  if (hxRwOk(op)) {
+    const job = (pre) => { if (L.state !== 'weg') hxRegionWrite(L, a, b, op, v, u, seed, pre); };
+    (HX.rxP || (HX.rxP = [])).push(job);
+    HX.rxQ = (HX.rxQ || Promise.resolve()).then(async () => {
+      if (HX.rxP[0] !== job) return;
+      let pre = null; try { pre = await hxRegionPrep(L, a, b, op, v, u, seed); } catch (e) { pre = null; }
+      if (HX.rxP[0] === job) { HX.rxP.shift(); job(pre); }
+    });
+    return true;
+  }
   if (!HXE.pv || HXE.pv.key !== L.key) return hxRegionWrite(L, a, b, op, v, u, seed);
   const job = () => { if (L.state !== 'weg') hxRegionWrite(L, a, b, op, v, u, seed); };
   (HX.rxP || (HX.rxP = [])).push(job);
@@ -35614,7 +35626,24 @@ async function hxRxFreeze(L, then) {
   toast('Zuerst festgehalten (Erstarren): so, wie sie gerade klang – dann bearbeitet. ↶ nimmt beides einzeln zurück.', 4500);
   hxEdRender(); then();
 }
-function hxRegionWrite(L, a, b, op, v, u, seed) {
+// every Schicht's stretch (dry and baked) worked out in the Workers: Map S.key → { aud, bak } as [chunk list read,
+// r0, r1, [left, right]] – hxRegionWrite takes a result only if the Schicht's audio is still the one it was made from
+function hxRegionPrep(L, a, b, op, v, u, seed) {
+  const sch = hxBandReady(L), m = new Map(), all = []; if (!sch) return Promise.resolve(m);
+  for (const S of sch) {
+    const [r0, r1] = a <= 0 && b >= 1 && HX_RX_WHOLE.has(op) ? [0, S.n] : hxRxFrames(S, a, b); if (r1 - r0 < 64) continue;
+    const e = {}; m.set(S.key, e);
+    for (const [k, ch] of [['aud', S.aud], ['bak', S.bak]]) if (ch) all.push(hxRw(ch, r0, r1, op, v, u, seed).then((res) => { e[k] = [ch, r0, r1, res]; }));
+  }
+  return Promise.all(all).then(() => m);
+}
+// a stretch's result written into a copy of the chunk list (as hxRxApply writes it)
+function hxRwPut(ch, r0, res) {
+  const dst = hxRxCopy(ch), [l, r] = res;
+  for (let i = 0; i < l.length; i++) hxRxSet(dst, r0 + i, l[i], r[i]);
+  return dst;
+}
+function hxRegionWrite(L, a, b, op, v, u, seed, pre) {
   const sch = hxBandReady(L); if (!sch) return false;
   if (sch.some((S) => !hxMemOk(2 * S.n))) return false;
   const before = hxGeo(L), fl0 = hxBandFl(L), sw = hxSwapAt(L);
@@ -35627,7 +35656,8 @@ function hxRegionWrite(L, a, b, op, v, u, seed) {
     // (28.10.2026, Direkt: Einspielen goes into its one Schicht – dry, and baked as it was heard; Tauschen and Einsetzen
     // move the frames of the stretch marked – direkt.js)
     if (op === 'take' && S.key !== v.key) continue;
-    const ed = (ch, bk) => (op === 'take' ? hxRxApply(ch, r0, r1, hxRxAdd(ch, r0, bk && v.wet ? v.wet : v.dry)) : op === 'swap' || op === 'paste' ? hxRxMove(ch, r0, r1, hxRxFrames(S, v.a2, v.b2), op) : hxRxApply(ch, r0, r1, hxRxOp(ch, r0, r1, op, v, u, seed)));
+    const pw = (ch, bk) => { const e = pre && pre.get(S.key), x = e && e[bk ? 'bak' : 'aud']; return x && x[0] === ch && x[1] === r0 && x[2] === r1 ? x[3] : null; };
+    const ed = (ch, bk) => (op === 'take' ? hxRxApply(ch, r0, r1, hxRxAdd(ch, r0, bk && v.wet ? v.wet : v.dry)) : op === 'swap' || op === 'paste' ? hxRxMove(ch, r0, r1, hxRxFrames(S, v.a2, v.b2), op) : pw(ch, bk) ? hxRwPut(ch, r0, pw(ch, bk)) : hxRxApply(ch, r0, r1, hxRxOp(ch, r0, r1, op, v, u, seed)));
     const aud = ed(S.aud, false), bak = S.bak ? ed(S.bak, true) : null, X = S.X || Math.round(0.01 * SR), g = { pre: S.pre, len: S.len, X, zo: S.zo || 0 };
     const c = Object.assign({}, S.cut, { pre: S.pre, len: S.len, n: S.n, aus: S.aus ? Object.assign({}, S.aus) : null, stale: true });
     done.push([S.key, S.aud, aud, S.bak, bak]);
@@ -35851,9 +35881,12 @@ const HX_RV = {
 // gets the same edit straight away (the same processor, the same random) – the exact render takes over a moment later,
 // crossfaded; not playing yet: it starts at the stretch, which repeats. A loop whose tape runs faster or slower or is
 // sliced: its pass is not the Schicht's frames one to one – the render alone (a moment later).
-function hxPvEdit(L, a, b, mk, full) {   // (full: the whole pass handed over – Tauschen and Einsetzen read outside the stretch)
+function hxPvEdit(L, a, b, mk, full, wk) {   // (full: the whole pass handed over – Tauschen and Einsetzen read outside the stretch)
   if (!HXE.ed || HXE.ed.hidden || hxEdL() !== L || !A.ctx) return;
   hxEdTouch(L);   // (the render made before the edit is not this one any more)
+  // (29.10.2026) worked out in a Worker (wk: the edit – abschnitt-werk.js), one after another: a quick second edit
+  // finds the first one in the pass
+  if (wk) { HXE.pvQ = (HXE.pvQ || Promise.resolve()).then(() => hxPvEditW(L, a, b, wk)).catch(() => {}); return; }
   const P = HXE.pv, buf = P && P.key === L.key ? P.buf : HXE.rw && HXE.rw.buf ? HXE.rw.buf : null;
   if (!buf || (L.sp || 1) !== 1 || hxBandSliceOf(L)) { if (!HXE.pv) hxPvPlay(a); return; }
   const n = buf.length, r0 = Math.round(a * n), r1 = Math.min(n, Math.round(b * n)); if (r1 - r0 < 64) { if (!HXE.pv) hxPvPlay(a); return; }
@@ -35873,6 +35906,81 @@ function hxPvEdit(L, a, b, mk, full) {   // (full: the whole pass handed over �
   hxPvSrc(L, nb, P ? hxPvPos() : a);
   HXE.pvWant = false;
 }
+const hxPvBufOf = (L) => { const P = HXE.pv; return P && P.key === L.key ? P.buf : HXE.rw && HXE.rw.buf ? HXE.rw.buf : null; };
+async function hxPvEditW(L, a, b, wk) {
+  if (!HXE.ed || HXE.ed.hidden || hxEdL() !== L || !A.ctx) return;
+  const buf = hxPvBufOf(L);
+  if (!buf || (L.sp || 1) !== 1 || hxBandSliceOf(L)) { if (!HXE.pv) hxPvPlay(a); return; }
+  const n = buf.length, r0 = Math.round(a * n), r1 = Math.min(n, Math.round(b * n)); if (r1 - r0 < 64) { if (!HXE.pv) hxPvPlay(a); return; }
+  const cl = buf.getChannelData(0), cr = buf.getChannelData(1), N = r1 - r0, ch = [];
+  for (let k = 0; k * HX_CH < N; k++) { const x = [new Float32Array(HX_CH), new Float32Array(HX_CH)], q = r0 + k * HX_CH, e = Math.min(r1, q + HX_CH); x[0].set(cl.subarray(q, e)); x[1].set(cr.subarray(q, e)); ch.push(x); }
+  const res = await hxRw(ch, 0, N, wk.op, wk.v, wk.u, wk.seed);
+  // (the editor closed, another loop, or the exact render took over meanwhile – it carries the edit already)
+  if (!HXE.ed || HXE.ed.hidden || hxEdL() !== L || !A.ctx || hxPvBufOf(L) !== buf) return;
+  const nb = new AudioBuffer({ numberOfChannels: 2, length: n, sampleRate: buf.sampleRate }), ol = cl.slice(), or = cr.slice();
+  ol.set(res[0], r0); or.set(res[1], r0);
+  nb.copyToChannel(ol, 0); nb.copyToChannel(or, 1);
+  hxPvSrc(L, nb, HXE.pv ? hxPvPos() : a);
+  HXE.pvWant = false;
+}
+// ---- (owner, 29.10.2026: „mach alles aus Punkt 3“) the stretch edits off the main thread: what a stretch becomes
+// (hxRxOp, and its crossfade into the audio around it – hxRxApply) is worked out in Workers, the very same functions
+// (copied by toString), so the result is the same to the bit; the main thread only writes it in. A Tonhöhe over a
+// whole loop of three Schichten froze the page for ≈ 8–9 s before. Without Workers (or a Worker that fails) it runs
+// here as before. ----
+const HXRW = { pool: [], seq: 0, wait: new Map(), broken: false, src: null };
+// the Worker's source: the stretch functions and the constants they read (SR comes with every job)
+function hxRwSrc() {
+  if (HXRW.src) return HXRW.src;
+  const fn = (f) => { const s = f.toString(); return /^(function|\(|[A-Za-z_$][\w$]*\s*=>|async)/.test(s) ? s : 'function ' + s; };   // (a method's shorthand made a function)
+  const named = [hxRxOp, hxRvIn, hxRvLevel, hxRvBq, hxRvAt, hxRvShift, hxRvPv, hxRvPitch, hxRvNebel, hxRsWin, hxRsRead, hxFFT, hxRwRun].map(fn);
+  const vars = { clamp, hxRng, hxRxGet, hxRvRms, hxRvHm };
+  HXRW.src = 'var SR=48000;var HX_CH=' + HX_CH + ';var HX_RX=' + HX_RX + ';var HX_RS={T:' + HX_RS.T + ',n:' + HX_RS.n + ',w:null};var HX_RSO=[0,0];var HX_RV_K,HX_RV_PP;\n' +
+    Object.entries(vars).map(([k, f]) => 'var ' + k + '=' + f.toString() + ';').join('\n') + '\n' + named.join('\n') + '\n' +
+    'var HX_RV={' + Object.keys(HX_RV).map((k) => JSON.stringify(k) + ':' + fn(HX_RV[k])).join(',\n') + '};\n' +
+    'onmessage=function(e){var d=e.data;if(d.init){HX_RV_K=d.init.K;HX_RV_PP=d.init.PP;return;}var r=null;try{SR=d.o.sr;r=hxRwRun(d.o);}catch(x){r=null;}postMessage({id:d.id,r:r},r?[r[0].buffer,r[1].buffer]:[]);};';
+  return HXRW.src;
+}
+// the job itself (here and in the Worker): the stretch [r0, r1) of the chunk list – as hxRxApply writes it in
+function hxRwRun(o) {
+  const ch = o.ch, r0 = o.r0, N = o.r1 - o.r0, out = hxRxOp(ch, r0, o.r1, o.op, o.v, o.u, o.seed), get = hxRxGet(ch), X = Math.min(HX_RX, Math.floor(N / 4));
+  const l = new Float32Array(N), r = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const y = out(i), w = X ? Math.min(1, Math.min(i, N - 1 - i) / X) : 1, e = Math.sin(0.5 * Math.PI * w), q = Math.cos(0.5 * Math.PI * w), x = get(r0 + i);
+    l[i] = y[0] * e + x[0] * q; r[i] = y[1] * e + x[1] * q;
+  }
+  return [l, r];
+}
+// the chunks a job reads (the stretch, the sinc's taps around it, a faster tape's last tile and its fade) – copied, the
+// others left out
+function hxRwChunks(ch, r0, r1, op, v) {
+  const lo = Math.max(0, Math.floor((r0 - 32) / HX_CH)), ex = op === 'band' ? Math.ceil((HX_RX + 2) * Math.max(1, v)) + 64 : 32, hi = Math.min(ch.length - 1, Math.floor((r1 + ex) / HX_CH)), o = [];
+  for (let k = lo; k <= hi; k++) if (ch[k]) o[k] = [ch[k][0].slice(), ch[k][1].slice()];
+  return o;
+}
+function hxRwWorker() {
+  if (HXRW.broken) return null;
+  const n = Math.max(1, Math.min(3, (navigator.hardwareConcurrency || 2) - 1));
+  if (HXRW.pool.length < n) {
+    try {
+      const w = new Worker(URL.createObjectURL(new Blob([hxRwSrc()], { type: 'text/javascript' })));
+      w.postMessage({ init: { K: HX_RV_K, PP: HX_RV_PP } });
+      w.busy = 0;
+      w.onmessage = (e) => { w.busy--; const j = HXRW.wait.get(e.data.id); if (!j) return; HXRW.wait.delete(e.data.id); j.resolve(e.data.r || hxRwRun(j.o)); };
+      w.onerror = (e) => { if (e && e.preventDefault) e.preventDefault(); HXRW.broken = true; HXRW.pool.forEach((x) => x.terminate()); HXRW.pool.length = 0; for (const j of HXRW.wait.values()) j.resolve(hxRwRun(j.o)); HXRW.wait.clear(); };
+      HXRW.pool.push(w);
+    } catch (e) { HXRW.broken = true; }
+  }
+  return HXRW.pool.length ? HXRW.pool.reduce((a, b) => (b.busy < a.busy ? b : a)) : null;
+}
+// a stretch worked out off the thread: → [left, right] of its N frames (the same as hxRwRun here)
+function hxRw(ch, r0, r1, op, v, u, seed) {
+  const o = { ch: hxRwChunks(ch, r0, r1, op, v), r0, r1, op, v, u, seed, sr: SR }, w = hxRwWorker();
+  if (!w) return Promise.resolve(hxRwRun(o));
+  return new Promise((resolve) => { const id = ++HXRW.seq; HXRW.wait.set(id, { resolve, o }); w.busy++; w.postMessage({ id, o }); });
+}
+// the ops that go there (Einspielen, Tauschen and Einsetzen are quick and stay here)
+const hxRwOk = (op) => op !== 'take' && op !== 'swap' && op !== 'paste';
 // ---- (owner, 28.10.2026: „ein direktes bearbeiten der schleifen … abschnitte löschen (ohne dass sich dadurch die länge
 // der schleife ändert). abschnitte gegeneinander auswechseln. die schleife stellenweise mit neuem input füttern (der user
 // spielt etwas und dieses spiel wird in die bestehende schleife an jener stelle eingebaut). abschnitte der schleife in der
