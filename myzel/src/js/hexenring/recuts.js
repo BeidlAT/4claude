@@ -49,7 +49,7 @@ function hxGeomMirror(L, f, k, beats, Lf) {
   else { L.d.L = Lf; L.d.ph0 = f - (k + 1) * Lf; }
 }
 // what a loop is now (geometry, tempo, its Schichten) – a re-cut's undo goes back to it
-function hxGeo(L) { if (HX.rxP && HX.rxP.length && !HX.rxRun) hxRxFlush(); return { d: Object.assign({}, L.d), bpb: L.bpb, bpm: TG.hx, hxOn: TG.hxOn, o: TG.o, sch: L.sch.map((id) => hxSnapS(HX.sch.get(id))).filter(Boolean), nudge: L.nudge || 0 }; }
+function hxGeo(L) { hxRxWait(); return { d: Object.assign({}, L.d), bpb: L.bpb, bpm: TG.hx, hxOn: TG.hxOn, o: TG.o, sch: L.sch.map((id) => hxSnapS(HX.sch.get(id))).filter(Boolean), nudge: L.nudge || 0 }; }
 function hxGeoBack(L, g, o = {}) {
   const same = g.d.beats === L.d.beats && g.d.L === L.d.L && Math.abs(g.bpm - TG.hx) < 1e-9 && Math.abs(g.o - TG.o) < 1e-9 && g.nudge === (L.nudge || 0);
   const sw = o.now && same ? hxSwapAt(L) : hxNextSeam(L);   // (the undo of a change heard at once: at once too)
@@ -77,6 +77,7 @@ function hxTempoGeo(L, bpm, beats, bpb) {
   updDelay();
 }
 function hxKorr(L, what) {
+  hxRxWait();   // (a stretch's edit still in the Workers: written first – abschnitt.js)
   const S = L && HX.sch.get(L.sch[0]), cr = L && hxCorrs(L);
   if (!S || !L) return;
   const c = S.cut, beatF = hxTakt(L) ? c.len / L.d.beats : 0, before = hxGeo(L), key = L.key;
@@ -137,6 +138,7 @@ function hxKorr(L, what) {
 }
 // a re-cut asked for by a second Korb tap or the card (a new window for a one-Schicht loop)
 function hxRecut(L, o) {
+  hxRxWait();   // (a stretch's edit still in the Workers: written first – abschnitt.js)
   const S = HX.sch.get(L.sch[0]); if (!S) return;
   const before = hxGeo(L), c = hxCut(S.cut.in, o.w0, o.w1);
   if (!hxReach(c)) return;
@@ -148,6 +150,7 @@ function hxRecut(L, o) {
 }
 // the phase in 5-ms or one-beat steps (the card): every Schicht read that much earlier or later, crossed at once
 function hxNudge(L, sec) {
+  hxRxWait();   // (a stretch's edit still in the Workers: written first – abschnitt.js)
   const sch = L.sch.map((id) => HX.sch.get(id)).filter(Boolean);
   if (sch.some((S) => !S.aud)) { toast('Einen Moment – die Schleife wird noch aufgenommen.'); return; }
   const dF = Math.round(sec * SR);

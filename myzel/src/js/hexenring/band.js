@@ -71,6 +71,7 @@ const hxDrMap = (dr, n, map) => { if (!dr) return null; const o = new Float32Arr
 // continuation after it now; the seam is the warm crossfade. At once (owner, 26.10.2026: mid-pass, from the mirrored
 // place – crossfaded), or at the seam while a new length waits for it
 function hxRev(L) {
+  hxRxWait();   // (a stretch's edit still in the Workers: written first – abschnitt.js)
   const sch = hxBandReady(L); if (!sch) return false;
   const before = hxGeo(L), sw = hxSwapAt(L), was = !!L.rev;
   for (const S of sch) {
@@ -105,6 +106,7 @@ function hxBandTrimTo(L, a, f) {
   return hxBandTrimDo(L, Math.min(1, f), clamp(a, 0, 1 - f));
 }
 function hxBandTrimDo(L, f, a) {
+  hxRxWait();   // (a stretch's edit still in the Workers: written first – abschnitt.js)
   const sch = hxBandReady(L); if (!sch) return false;
   const T0 = L.tr0 || Object.assign(hxGeo(L), { rev: !!L.rev, revW: !!L.revW, sp: L.sp || 1 }), cur = L.trim || { f: 1, i: 0 }, ks = (T0.sp || 1) / (L.sp || 1);   // (26.10.2026: the tape's speed since the whole was kept – „ganz“ after Band ½ was half as long)   // (26.10.2026: the whole's direction – „ganz“ plays its audio as it was, so the loop says that direction again)
   if (Math.abs(f - cur.f) < 1e-9 && Math.abs(a - hxTrA(cur)) < 1e-9) return false;
@@ -137,6 +139,7 @@ function hxWnWin(W, a, f) {
 // passes (the seam inside as it sounds, its margins as a loop has them: before, the pass before; after, the next pass –
 // or, for a cold Schicht, its Ausklang alone), so a longer Schicht fits over it
 async function hxDouble(L) {
+  hxRxWait();   // (a stretch's edit still in the Workers: written first – abschnitt.js)
   const sch = hxBandReady(L); if (!sch) return false;
   if (sch.some((S) => !hxMemOk(2 * S.n))) return false;
   const before = hxGeo(L), lk = L.key, out = [];
@@ -211,6 +214,7 @@ function hxSlcSet(L, k, v, o = {}) {
 // Verblassen, Abrieb, the notes as played – as one step (↶ gives them back); its level, balance and Schichten stay, and
 // a doubled loop stays doubled (that is its new whole – ↶ takes the doubling back)
 function hxDefaults(L) {
+  hxRxWait();   // (a stretch's edit still in the Workers: written first – abschnitt.js)
   if (!L || L.bew) return false;
   if (!hxBandReady(L)) { if (L.hum) { const n1 = HX.hist.length; hxHumReset(L); return hxHistGroup(n1, hxName(L) + ': Ausschnitt wie geerntet'); } return false; }   // (26.10.2026: the window in the Ernte needs no finished bake)
   const n0 = HX.hist.length;

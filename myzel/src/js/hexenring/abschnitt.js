@@ -118,6 +118,7 @@ const HX_RX_WHOLE = new Set(['pitch', 'erde', 'licht', 'wurzel', 'krone', 'gain'
 function hxRxFlush() { while (HX.rxP && HX.rxP.length && !HX.rxRun) hxRxRun(HX.rxP.shift()); }
 // (29.10.2026) a job written now: any other change of the loop meanwhile (hxGeo – every step's „before“) writes what is
 // still waiting first, so it finds the audio as the edits left it; not from inside a job (its own step)
+function hxRxWait() { if (HX.rxP && HX.rxP.length && !HX.rxRun) hxRxFlush(); }
 function hxRxRun(job, pre) { HX.rxRun = true; try { job(pre); } finally { HX.rxRun = false; } }
 async function hxRxFreeze(L, then) {
   if (HX.rxFrz) return;
@@ -182,6 +183,7 @@ function hxRxName(L, a, b) {
 // it was kept while the loop played backwards and plays forwards now), one step (↶ gives the edits back). Not after
 // „Verdoppeln“ or a Schicht that is not the same any more (merged, newly recorded) – those keep what they have.
 function hxRxRestore(L) {
+  hxRxWait();   // (a stretch's edit still in the Workers: written first – abschnitt.js)
   const R = L.rx0; if (!R) return false;
   if ((L.dbl || 1) !== R.dbl) { L.rx0 = null; return false; }
   const sch = hxBandReady(L); if (!sch) return false;

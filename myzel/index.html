@@ -33262,7 +33262,7 @@ function hxGeomMirror(L, f, k, beats, Lf) {
   else { L.d.L = Lf; L.d.ph0 = f - (k + 1) * Lf; }
 }
 // what a loop is now (geometry, tempo, its Schichten) – a re-cut's undo goes back to it
-function hxGeo(L) { if (HX.rxP && HX.rxP.length && !HX.rxRun) hxRxFlush(); return { d: Object.assign({}, L.d), bpb: L.bpb, bpm: TG.hx, hxOn: TG.hxOn, o: TG.o, sch: L.sch.map((id) => hxSnapS(HX.sch.get(id))).filter(Boolean), nudge: L.nudge || 0 }; }
+function hxGeo(L) { hxRxWait(); return { d: Object.assign({}, L.d), bpb: L.bpb, bpm: TG.hx, hxOn: TG.hxOn, o: TG.o, sch: L.sch.map((id) => hxSnapS(HX.sch.get(id))).filter(Boolean), nudge: L.nudge || 0 }; }
 function hxGeoBack(L, g, o = {}) {
   const same = g.d.beats === L.d.beats && g.d.L === L.d.L && Math.abs(g.bpm - TG.hx) < 1e-9 && Math.abs(g.o - TG.o) < 1e-9 && g.nudge === (L.nudge || 0);
   const sw = o.now && same ? hxSwapAt(L) : hxNextSeam(L);   // (the undo of a change heard at once: at once too)
@@ -33290,6 +33290,7 @@ function hxTempoGeo(L, bpm, beats, bpb) {
   updDelay();
 }
 function hxKorr(L, what) {
+  hxRxWait();   // (a stretch's edit still in the Workers: written first – abschnitt.js)
   const S = L && HX.sch.get(L.sch[0]), cr = L && hxCorrs(L);
   if (!S || !L) return;
   const c = S.cut, beatF = hxTakt(L) ? c.len / L.d.beats : 0, before = hxGeo(L), key = L.key;
@@ -33350,6 +33351,7 @@ function hxKorr(L, what) {
 }
 // a re-cut asked for by a second Korb tap or the card (a new window for a one-Schicht loop)
 function hxRecut(L, o) {
+  hxRxWait();   // (a stretch's edit still in the Workers: written first – abschnitt.js)
   const S = HX.sch.get(L.sch[0]); if (!S) return;
   const before = hxGeo(L), c = hxCut(S.cut.in, o.w0, o.w1);
   if (!hxReach(c)) return;
@@ -33361,6 +33363,7 @@ function hxRecut(L, o) {
 }
 // the phase in 5-ms or one-beat steps (the card): every Schicht read that much earlier or later, crossed at once
 function hxNudge(L, sec) {
+  hxRxWait();   // (a stretch's edit still in the Workers: written first – abschnitt.js)
   const sch = L.sch.map((id) => HX.sch.get(id)).filter(Boolean);
   if (sch.some((S) => !S.aud)) { toast('Einen Moment – die Schleife wird noch aufgenommen.'); return; }
   const dF = Math.round(sec * SR);
@@ -35302,6 +35305,7 @@ function hxHumSlice(H, c) {
 // the loop's window moved or resized in its Ernte (frames, absolute): heard at once when its length stays, else from the
 // next seam; one step in the history
 function hxHumApply(L, w0, w1, label) {
+  hxRxWait();   // (a stretch's edit still in the Workers: written first – abschnitt.js)
   const S = L && HX.sch.get(L.sch[0]), H = L && L.hum;
   if (!S || !H) return false;
   if (L.sch.length > 1) { toast('Den Ausschnitt in der Ernte wählst du bei einer Schleife mit einer Schicht – lege die Schichten erst zusammen.'); return false; }
@@ -35620,6 +35624,7 @@ const HX_RX_WHOLE = new Set(['pitch', 'erde', 'licht', 'wurzel', 'krone', 'gain'
 function hxRxFlush() { while (HX.rxP && HX.rxP.length && !HX.rxRun) hxRxRun(HX.rxP.shift()); }
 // (29.10.2026) a job written now: any other change of the loop meanwhile (hxGeo – every step's „before“) writes what is
 // still waiting first, so it finds the audio as the edits left it; not from inside a job (its own step)
+function hxRxWait() { if (HX.rxP && HX.rxP.length && !HX.rxRun) hxRxFlush(); }
 function hxRxRun(job, pre) { HX.rxRun = true; try { job(pre); } finally { HX.rxRun = false; } }
 async function hxRxFreeze(L, then) {
   if (HX.rxFrz) return;
@@ -35684,6 +35689,7 @@ function hxRxName(L, a, b) {
 // it was kept while the loop played backwards and plays forwards now), one step (↶ gives the edits back). Not after
 // „Verdoppeln“ or a Schicht that is not the same any more (merged, newly recorded) – those keep what they have.
 function hxRxRestore(L) {
+  hxRxWait();   // (a stretch's edit still in the Workers: written first – abschnitt.js)
   const R = L.rx0; if (!R) return false;
   if ((L.dbl || 1) !== R.dbl) { L.rx0 = null; return false; }
   const sch = hxBandReady(L); if (!sch) return false;
@@ -37429,6 +37435,7 @@ function hxFolgt(L, on) {
 // (step 1d) Taumeln off: a de-drifted Schicht plays its own audio again from the next seam – as recorded, bit for bit
 // (the processor holds only the de-drifted version; read against its own drift it would be resampled and ~ −69 dB off)
 function hxTauOrig(L) {
+  hxRxWait();   // (a stretch's edit still in the Workers: written first – abschnitt.js)
   const sw = hxNextSeam(L);
   for (const id of L.sch) {
     const S = HX.sch.get(id); if (!S || !S.ddOn || S.ddZ || !S.aud) continue;
@@ -38749,6 +38756,7 @@ function hxAusleseFor(L, rep) {
 }
 // the chip: that repetition's audio becomes the Schicht (from the Humus, swapped at the next seam; ↶ brings the harvest back)
 function hxAusleseDo(L) {
+  hxRxWait();   // (a stretch's edit still in the Workers: written first – abschnitt.js)
   const A0 = L && L.ausl, S = L && HX.sch.get(L.sch[0]);
   if (!A0 || !S) return false;
   if (A0.w0 == null) return A0.cons ? hxAusleseWuchs(L) : false;   // (step 2b: only the consensus to offer)
@@ -39757,6 +39765,7 @@ const hxDrMap = (dr, n, map) => { if (!dr) return null; const o = new Float32Arr
 // continuation after it now; the seam is the warm crossfade. At once (owner, 26.10.2026: mid-pass, from the mirrored
 // place – crossfaded), or at the seam while a new length waits for it
 function hxRev(L) {
+  hxRxWait();   // (a stretch's edit still in the Workers: written first – abschnitt.js)
   const sch = hxBandReady(L); if (!sch) return false;
   const before = hxGeo(L), sw = hxSwapAt(L), was = !!L.rev;
   for (const S of sch) {
@@ -39791,6 +39800,7 @@ function hxBandTrimTo(L, a, f) {
   return hxBandTrimDo(L, Math.min(1, f), clamp(a, 0, 1 - f));
 }
 function hxBandTrimDo(L, f, a) {
+  hxRxWait();   // (a stretch's edit still in the Workers: written first – abschnitt.js)
   const sch = hxBandReady(L); if (!sch) return false;
   const T0 = L.tr0 || Object.assign(hxGeo(L), { rev: !!L.rev, revW: !!L.revW, sp: L.sp || 1 }), cur = L.trim || { f: 1, i: 0 }, ks = (T0.sp || 1) / (L.sp || 1);   // (26.10.2026: the tape's speed since the whole was kept – „ganz“ after Band ½ was half as long)   // (26.10.2026: the whole's direction – „ganz“ plays its audio as it was, so the loop says that direction again)
   if (Math.abs(f - cur.f) < 1e-9 && Math.abs(a - hxTrA(cur)) < 1e-9) return false;
@@ -39823,6 +39833,7 @@ function hxWnWin(W, a, f) {
 // passes (the seam inside as it sounds, its margins as a loop has them: before, the pass before; after, the next pass –
 // or, for a cold Schicht, its Ausklang alone), so a longer Schicht fits over it
 async function hxDouble(L) {
+  hxRxWait();   // (a stretch's edit still in the Workers: written first – abschnitt.js)
   const sch = hxBandReady(L); if (!sch) return false;
   if (sch.some((S) => !hxMemOk(2 * S.n))) return false;
   const before = hxGeo(L), lk = L.key, out = [];
@@ -39897,6 +39908,7 @@ function hxSlcSet(L, k, v, o = {}) {
 // Verblassen, Abrieb, the notes as played – as one step (↶ gives them back); its level, balance and Schichten stay, and
 // a doubled loop stays doubled (that is its new whole – ↶ takes the doubling back)
 function hxDefaults(L) {
+  hxRxWait();   // (a stretch's edit still in the Workers: written first – abschnitt.js)
   if (!L || L.bew) return false;
   if (!hxBandReady(L)) { if (L.hum) { const n1 = HX.hist.length; hxHumReset(L); return hxHistGroup(n1, hxName(L) + ': Ausschnitt wie geerntet'); } return false; }   // (26.10.2026: the window in the Ernte needs no finished bake)
   const n0 = HX.hist.length;
@@ -40011,6 +40023,7 @@ function hxGroovePuls(L) {
 // Erstarren: the Wuchs pass that sounds becomes the Schicht's new Abdruck (its audio exactly – the realm kept it); the
 // loop plays its Abdruck again, the notes' tools and the key it froze in become its own (↶ back)
 async function hxErstarren(L) {
+  hxRxWait();   // (a stretch's edit still in the Workers: written first – abschnitt.js)
   if (!L || !hxWAktiv(L)) { hxHint('Nichts zu erstarren – die Schleife spielt ihren Abdruck'); return false; }
   const k = hxPassK(L, Math.round(hxF(hxHeard()))), got = [];
   for (const id of L.sch) {
@@ -42060,6 +42073,7 @@ function hxAccMake(A, ratio, fb) {
 }
 // its feedback, on and off (Festhalten keeps the tape as it is), its tape cleared
 function hxAccSet(B, what, v) {
+  hxRxWait();   // (a stretch's edit still in the Workers: written first – abschnitt.js)
   const R = B && B.acc; if (!R) return;
   const A = hxByKey(R.src);
   if (what === 'fb') R.fb = v;

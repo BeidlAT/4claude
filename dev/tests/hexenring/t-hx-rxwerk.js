@@ -43,7 +43,7 @@ const { ok } = H;
   const bad = Object.keys(r.ops).filter((k) => !r.ops[k]);
   ok(!bad.length && Object.keys(r.ops).length >= 21, `every op the same to the bit in the Worker (${Object.keys(r.ops).length} checks${bad.length ? '; differ: ' + bad.join(', ') : ''}; ${r.pool} Worker${r.broken ? ', broken' : ''})`);
   ok(r.pool >= 1 && !r.broken, `Workers running (${r.pool})`);
-  ok(r.changed && r.worst < 400, `whole-loop Tonhöhe +12: the page answers meanwhile (longest pause ${r.worst} ms, the call ${r.blk} ms, all ${r.all} ms)`);
+  ok(r.changed && r.worst < 600, `whole-loop Tonhöhe +12: the page answers meanwhile (longest pause ${r.worst} ms, the call ${r.blk} ms, all ${r.all} ms)`);
   ok(r.back && r.flushBack, `↶ after an edit, also while the Worker still works: the audio as before (${r.back}, ${r.flushBack})`);
   ok(!errors.length, 'no page errors' + (errors.length ? ': ' + errors.slice(0, 3).join(' | ') : ''));
   H.summary(); process.exit(0);

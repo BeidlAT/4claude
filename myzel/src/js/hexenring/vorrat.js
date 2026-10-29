@@ -67,6 +67,7 @@ function hxHumSlice(H, c) {
 // the loop's window moved or resized in its Ernte (frames, absolute): heard at once when its length stays, else from the
 // next seam; one step in the history
 function hxHumApply(L, w0, w1, label) {
+  hxRxWait();   // (a stretch's edit still in the Workers: written first – abschnitt.js)
   const S = L && HX.sch.get(L.sch[0]), H = L && L.hum;
   if (!S || !H) return false;
   if (L.sch.length > 1) { toast('Den Ausschnitt in der Ernte wählst du bei einer Schleife mit einer Schicht – lege die Schichten erst zusammen.'); return false; }

@@ -73,6 +73,7 @@ function hxAusleseFor(L, rep) {
 }
 // the chip: that repetition's audio becomes the Schicht (from the Humus, swapped at the next seam; ↶ brings the harvest back)
 function hxAusleseDo(L) {
+  hxRxWait();   // (a stretch's edit still in the Workers: written first – abschnitt.js)
   const A0 = L && L.ausl, S = L && HX.sch.get(L.sch[0]);
   if (!A0 || !S) return false;
   if (A0.w0 == null) return A0.cons ? hxAusleseWuchs(L) : false;   // (step 2b: only the consensus to offer)

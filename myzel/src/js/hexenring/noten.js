@@ -88,6 +88,7 @@ function hxGroovePuls(L) {
 // Erstarren: the Wuchs pass that sounds becomes the Schicht's new Abdruck (its audio exactly – the realm kept it); the
 // loop plays its Abdruck again, the notes' tools and the key it froze in become its own (↶ back)
 async function hxErstarren(L) {
+  hxRxWait();   // (a stretch's edit still in the Workers: written first – abschnitt.js)
   if (!L || !hxWAktiv(L)) { hxHint('Nichts zu erstarren – die Schleife spielt ihren Abdruck'); return false; }
   const k = hxPassK(L, Math.round(hxF(hxHeard()))), got = [];
   for (const id of L.sch) {

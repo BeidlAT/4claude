@@ -120,6 +120,7 @@ function hxFolgt(L, on) {
 // (step 1d) Taumeln off: a de-drifted Schicht plays its own audio again from the next seam – as recorded, bit for bit
 // (the processor holds only the de-drifted version; read against its own drift it would be resampled and ~ −69 dB off)
 function hxTauOrig(L) {
+  hxRxWait();   // (a stretch's edit still in the Workers: written first – abschnitt.js)
   const sw = hxNextSeam(L);
   for (const id of L.sch) {
     const S = HX.sch.get(id); if (!S || !S.ddOn || S.ddZ || !S.aud) continue;
