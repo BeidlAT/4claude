@@ -2,6 +2,13 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-29h",
+      "punkte": [
+        "Mixer: Jeder Kanal hat jetzt „Anschlag“ und „Ausklang“ (unter Formen): Anschläge knackiger oder weicher machen, den Nachklang verlängern oder kürzen – ohne Kompressor-Pumpen.",
+        "Auf 0 bleibt der Klang genau wie bisher."
+      ]
+    },
+    {
       "id": "2026-10-29g",
       "punkte": [
         "Hall: Unter „Raum“ gibt es jetzt 23 echte, gemessene Räume (Kathedrale, Steinkuppel, Kirchen, Säle, Steinkammer, Höhle, Tunnel, Wald …) – jeder lädt beim ersten Wählen und bleibt dann auch offline da.",
