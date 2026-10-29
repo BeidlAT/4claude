@@ -80,7 +80,7 @@ const hxRvHm = (c, p) => { const i = Math.floor(p), f = p - i, a = c[i - 1] || 0
 // is read back at rate rt (the sinc; faster: low-passed below the new Nyquist first) – the length kept, every partial
 // moved by rt
 function hxRvPv(x, rt) {
-  const W = 2048, Ha = 512, N = x.length, B = W / 2 + 1, out = new Float32Array(Math.ceil(N * rt) + 2 * W), win = new Float32Array(W);
+  const W = 2048, Ha = 512, N = x.length, B = W / 2 + 1, out = new Float32Array(Math.ceil(N * rt) + 2 * W), ws = new Float32Array(out.length), win = new Float32Array(W);
   for (let i = 0; i < W; i++) win[i] = 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / W);
   const re = new Float64Array(W), im = new Float64Array(W), mag = new Float64Array(B), ph = new Float64Array(B), phA = new Float64Array(B), phS = new Float64Array(B), nx = new Float64Array(B), om = new Float64Array(B), near = new Int32Array(B);
   for (let k = 0; k < B; k++) om[k] = (2 * Math.PI * k * Ha) / W;
@@ -104,8 +104,13 @@ function hxRvPv(x, rt) {
     for (let k = 1; k < W / 2; k++) { re[W - k] = re[k]; im[W - k] = -im[k]; }
     hxFFT(re, im);
     const to = at(f) - W / 2;
-    for (let i = 0; i < W; i++) { const q = to + i; if (q >= 0 && q < out.length) out[q] += (re[i] / W) * win[i] * (2 / 3); }   // (Hann² at 4× overlap sums to 1.5)
+    for (let i = 0; i < W; i++) { const q = to + i; if (q >= 0 && q < out.length) { out[q] += (re[i] / W) * win[i]; ws[q] += win[i] * win[i]; } }
   }
+  // each sample divided by the Hann² that landed on it: the synthesis hop is 512·rt, so a fixed ⅔ (right only at 4×
+  // overlap) left a ripple at the frame rate – ≈ 6 dB at +12 (owner, 29.10.2026: „die Korrektur macht absolut Sinn“);
+  // a floor at a tenth of the full sum keeps the open ends from blowing up
+  let mx = 0; for (let q = 0; q < ws.length; q++) if (ws[q] > mx) mx = ws[q];
+  const fl = 0.1 * mx; for (let q = 0; q < out.length; q++) out[q] /= Math.max(ws[q], fl);
   return out;
 }
 function hxRvPitch(src, N, rt) {
