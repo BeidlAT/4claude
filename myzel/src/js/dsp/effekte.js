@@ -101,6 +101,9 @@
       const N = 1 << 19; this.N = N; this.M = N - 1; this.bL = new Float32Array(N); this.bR = new Float32Array(N); this.fL = new Float32Array(N); this.fR = new Float32Array(N); this.w = 0;
       this.lpL = FX_LP(2); this.lpR = FX_LP(2);
       const G = 48; this.G = G; this.gOn = new Uint8Array(G); this.gPos = new Float64Array(G); this.gRate = new Float32Array(G); this.gLen = new Float32Array(G); this.gT = new Float32Array(G); this.gL = new Float32Array(G); this.gR = new Float32Array(G); this.gF = new Uint8Array(G);
+      // (29.10.2026, measured: 5.7 units at full density) the window by rotation (its cosine and sine carried from sample to
+      // sample, not computed – the same curve to 1e-12) and the ringing grains in a list of their own
+      this.gC = new Float64Array(G); this.gS = new Float64Array(G); this.gCd = new Float64Array(G); this.gSd = new Float64Array(G); this.act = new Int32Array(G); this.nAct = 0;
       this.next = 0; this.rnd = new PRNG(0x77011e); this.fbL = 0; this.fbR = 0;
     }
     rd(b, p) { const M = this.M, i = Math.floor(p), f = p - i, x0 = b[(i - 1) & M], x1 = b[i & M], x2 = b[(i + 1) & M], x3 = b[(i + 2) & M], c = (x2 - x0) * 0.5, v = x1 - x2, w = c + v, a = w + v + (x3 - x1) * 0.5, bn = w + a; return ((a * f - bn) * f + c) * f + x1; }
@@ -119,16 +122,17 @@
             this.gOn[k] = 1; this.gRate[k] = back ? -rate : rate; this.gLen[k] = len * (0.6 + 0.8 * R.next()); this.gT[k] = 0; this.gF[k] = rate > 1.01 ? 1 : 0;
             this.gPos[k] = back ? this.w - delay + this.gLen[k] * rate : this.w - delay;
             const pan = (R.next() * 2 - 1) * p.streu, a = (pan + 1) * Math.PI / 4; this.gL[k] = Math.cos(a); this.gR[k] = Math.sin(a);
+            const dw = 2 * Math.PI / this.gLen[k]; this.gC[k] = 1; this.gS[k] = 0; this.gCd[k] = Math.cos(dw); this.gSd[k] = Math.sin(dw); this.act[this.nAct++] = k;
             break;
           }
         }
         let sl = 0, sr = 0;
-        for (let k = 0; k < this.G; k++) {
-          if (!this.gOn[k]) continue;
-          const t = this.gT[k], L = this.gLen[k], wv = 0.5 - 0.5 * Math.cos(2 * Math.PI * t / L), pos = this.gPos[k] + t * this.gRate[k];
+        for (let q = 0; q < this.nAct; q++) {
+          const k = this.act[q], t = this.gT[k], L = this.gLen[k], c = this.gC[k], wv = 0.5 - 0.5 * c, pos = this.gPos[k] + t * this.gRate[k];
           const a = this.gF[k] ? this.rd(this.fL, pos) : this.rd(this.bL, pos), b = this.gF[k] ? this.rd(this.fR, pos) : this.rd(this.bR, pos), m = 0.5 * (a + b);
           sl += wv * (0.5 * a + m * this.gL[k]); sr += wv * (0.5 * b + m * this.gR[k]);
-          if ((this.gT[k] = t + 1) >= L) this.gOn[k] = 0;
+          const s = this.gS[k], cd = this.gCd[k], sd = this.gSd[k]; this.gC[k] = c * cd - s * sd; this.gS[k] = s * cd + c * sd;
+          if ((this.gT[k] = t + 1) >= L) { this.gOn[k] = 0; this.act[q--] = this.act[--this.nAct]; }
         }
         sl *= norm; sr *= norm; this.fbL = sl; this.fbR = sr;
         oL[i] = sl; oR[i] = sr;
@@ -148,37 +152,55 @@
       this.inL = new Float32Array(N); this.inR = new Float32Array(N); this.outL = new Float32Array(N + H); this.outR = new Float32Array(N + H); this.ip = 0; this.op = 0; this.cnt = 0;
       this.mL = new Float64Array(this.B); this.mR = new Float64Array(this.B);
       this.re = new Float64Array(N); this.im = new Float64Array(N); this.rnd = new PRNG(0x5bec);
-      this.os = new Float32Array(2 * H); this.oq = 0; this.oL = new Float32Array(H); this.oR = new Float32Array(H); this.ok = 0;
+      // (29.10.2026, measured: 8.8 units) both sides in one complex transform each way (L real, R imaginary – their
+      // spectra parted by symmetry), the bit reversal and the twiddles from tables, the tilt per bin kept until hell moves
+      this.yL = [new Float64Array(this.B), new Float64Array(this.B)]; this.yR = [new Float64Array(this.B), new Float64Array(this.B)];
+      this.rev = new Uint32Array(N); for (let i = 1, j = 0; i < N; i++) { let b = N >> 1; for (; j & b; b >>= 1) j ^= b; j ^= b; this.rev[i] = j; }
+      this.cs = new Float64Array(N / 2); this.sn = new Float64Array(N / 2); for (let j = 0; j < N / 2; j++) { this.cs[j] = Math.cos(2 * Math.PI * j / N); this.sn[j] = Math.sin(2 * Math.PI * j / N); }
+      this.g = new Float64Array(this.B); this.gKey = null;
     }
     fft(re, im, inv) {
-      const n = re.length;
-      for (let i = 1, j = 0; i < n; i++) { let b = n >> 1; for (; j & b; b >>= 1) j ^= b; j ^= b; if (i < j) { let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; } }
-      for (let L = 2; L <= n; L <<= 1) { const a = (inv ? 2 : -2) * Math.PI / L, wr = Math.cos(a), wi = Math.sin(a); for (let i = 0; i < n; i += L) { let cr = 1, ci = 0; for (let j = 0; j < L / 2; j++) { const u = i + j, v = u + L / 2, tr = re[v] * cr - im[v] * ci, ti = re[v] * ci + im[v] * cr; re[v] = re[u] - tr; im[v] = im[u] - ti; re[u] += tr; im[u] += ti; const nr = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = nr; } } }
+      const n = re.length, rv = this.rev, cs = this.cs, sn = this.sn, sg = inv ? 1 : -1;
+      for (let i = 1; i < n; i++) { const j = rv[i]; if (i < j) { let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; } }
+      for (let L = 2; L <= n; L <<= 1) { const h = L >> 1, st = n / L; for (let i = 0; i < n; i += L) for (let j = 0, q = 0; j < h; j++, q += st) { const u = i + j, v = u + h, cr = cs[q], ci = sg * sn[q], tr = re[v] * cr - im[v] * ci, ti = re[v] * ci + im[v] * cr; re[v] = re[u] - tr; im[v] = im[u] - ti; re[u] += tr; im[u] += ti; } }
     }
-    frame(inp, m, out) {
-      const N = this.N, H = this.H, re = this.re, im = this.im, w = this.win, p = this.p, R = this.rnd;
-      for (let i = 0; i < N; i++) { re[i] = inp[(this.ip + i) % N] * w[i]; im[i] = 0; }
-      this.fft(re, im, false);
-      const a = p.halten > 0.5 ? 1 : Math.exp(-H / (0.3 * Math.pow(66, p.zeit) * SR)), tilt = (p.hell - 0.5) * 2;
+    // one side's new spectrum from its magnitudes (xr, xi: its transform's bins 0 … N/2): held, tilted, phases free
+    side(xr, xi, m, y) {
+      const N = this.N, H = this.H, p = this.p, R = this.rnd, g = this.g, a = p.halten > 0.5 ? 1 : Math.exp(-H / (0.3 * Math.pow(66, p.zeit) * SR)), sq = Math.sqrt(N / H);
       for (let k = 0; k < this.B; k++) {
-        const mag = Math.hypot(re[k], im[k]); m[k] = a * m[k] + (1 - a) * mag;
-        const f = k * SR / N, g = Math.pow(Math.max(f, 50) / 1000, tilt * 0.5), ph = 2 * Math.PI * R.next(), v = m[k] * g * Math.sqrt(N / H);
-        re[k] = v * Math.cos(ph); im[k] = v * Math.sin(ph);
+        const mag = Math.sqrt(xr[k] * xr[k] + xi[k] * xi[k]); m[k] = a * m[k] + (1 - a) * mag;
+        const ph = 2 * Math.PI * R.next(), v = m[k] * g[k] * sq;
+        y[0][k] = v * Math.cos(ph); y[1][k] = v * Math.sin(ph);
       }
-      for (let k = 1; k < N / 2; k++) { re[N - k] = re[k]; im[N - k] = -im[k]; } im[0] = 0; im[N / 2] = 0;
+      y[1][0] = 0; y[1][N / 2] = 0;
+    }
+    frame() {
+      const N = this.N, M = N - 1, B = this.B, re = this.re, im = this.im, w = this.win, p = this.p, iL = this.inL, iR = this.inR, ip = this.ip;
+      if (this.gKey !== p.hell) { this.gKey = p.hell; const tilt = (p.hell - 0.5) * 2; for (let k = 0; k < B; k++) this.g[k] = Math.pow(Math.max(k * SR / N, 50) / 1000, tilt * 0.5); }
+      for (let i = 0; i < N; i++) { const j = (ip + i) & M; re[i] = iL[j] * w[i]; im[i] = iR[j] * w[i]; }
+      this.fft(re, im, false);
+      // L = (Z[k] + conj Z[N−k]) / 2, R = (Z[k] − conj Z[N−k]) / 2i
+      const [lr, li] = this.yL, [rr, ri] = this.yR;
+      for (let k = 0; k < B; k++) { const n = (N - k) & M, zr = re[k], zi = im[k], nr = re[n], ni = im[n]; lr[k] = 0.5 * (zr + nr); li[k] = 0.5 * (zi - ni); rr[k] = 0.5 * (zi + ni); ri[k] = 0.5 * (nr - zr); }
+      // (the phases drawn as before: all of L's bins, then all of R's)
+      this.side(lr, li, this.mL, this.yL); this.side(rr, ri, this.mR, this.yR);
+      // back as one: Y = L + i·R over the whole circle (each side's spectrum mirrored), L the real part, R the imaginary
+      for (let k = 0; k < B; k++) { re[k] = lr[k] - ri[k]; im[k] = li[k] + rr[k]; }
+      for (let k = 1; k < N / 2; k++) { re[N - k] = lr[k] + ri[k]; im[N - k] = rr[k] - li[k]; }
       this.fft(re, im, true);
-      // overlap-add: Hann² sums to 3 at 8× overlap
-      for (let i = 0; i < N; i++) out[i] += (re[i] / N) * w[i] * (2.75 / 3);   // (×2.75: measured, the surface at the input's level – its peaks are spread, its energy not)
+      // overlap-add: Hann² sums to 3 at 8× overlap (×2.75: measured, the surface at the input's level – its peaks are spread, its energy not)
+      const oL = this.outL, oR = this.outR, k = 2.75 / 3 / N;
+      for (let i = 0; i < N; i++) { oL[i] += re[i] * k * w[i]; oR[i] += im[i] * k * w[i]; }
     }
     run(iL, iR, oL, oR, n) {
       const N = this.N, H = this.H;
       for (let i = 0; i < n; i++) {
-        this.inL[this.ip] = iL ? iL[i] : 0; this.inR[this.ip] = iR ? iR[i] : 0; this.ip = (this.ip + 1) % N;
+        this.inL[this.ip] = iL ? iL[i] : 0; this.inR[this.ip] = iR ? iR[i] : 0; this.ip = (this.ip + 1) & (N - 1);
         oL[i] = this.outL[this.cnt]; oR[i] = this.outR[this.cnt];
         if (++this.cnt === H) {
           this.cnt = 0;
           this.outL.copyWithin(0, H); this.outR.copyWithin(0, H); this.outL.fill(0, N); this.outR.fill(0, N);
-          this.frame(this.inL, this.mL, this.outL); this.frame(this.inR, this.mR, this.outR);
+          this.frame();
         }
       }
     }

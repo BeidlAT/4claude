@@ -71,3 +71,23 @@ function fxInsUpd(st, inst) {
   if (I.r === r && I.cur && I.cur.typ === typ) { I.cur.node.port.postMessage({ set: fxSet(fxType(r), r) }); return; }
   I.r = r; fxSwap(I, I.from, I.wet, typ);
 }
+// What the mixer's own processors cost (units of a Nebel voice, as VCOST – dev/tests/klang/tests/cost.js, candidates fx…;
+// see FX_COST's note) – counted in voiceLoad() beside the voices, so the budget knows them: the returns' effects and the
+// Einschübe while they exist, a channel's Sättigung and Transienten-Former while they work (at 0 they pass the sound
+// through and cost next to nothing), the Begrenzer always
+// (provisional: the first measurement, before the processors were made faster – replaced by the second)
+const FX_COST = { netz: [1.02, 1.07, 0.5], wolke: 5.69, spektral: 8.77, oktav: 0.9, vokal: 1, trans: 0.36, sat: 2.2, lim: 2.12 };
+function fxLoad() {
+  if (!A.fxR) return 0;
+  const cost = (typ, r) => { const c = FX_COST[typ]; return Array.isArray(c) ? c[Math.round(+P[r + '.art']) || 0] || c[0] : c || 0; };
+  let c = A.lim ? FX_COST.lim : 0;
+  for (const r in A.fxR) { const S = A.fxR[r]; if (S.cur) c += cost(S.cur.typ, r); }
+  for (const st of MIX.list) {
+    const x = st.proc;
+    if (!x) continue;
+    if (x.satW && P['x' + st.k + '.sat'] > 0) c += FX_COST.sat;
+    if (x.tr && (P['x' + st.k + '.att'] || P['x' + st.k + '.aus'])) c += FX_COST.trans;
+    if (x.ins && x.ins.cur) c += cost(x.ins.cur.typ, x.ins.r);
+  }
+  return c;
+}
