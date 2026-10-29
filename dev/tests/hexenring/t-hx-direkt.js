@@ -54,7 +54,7 @@ const { ok } = H;
     const t0 = M.hxT(tk.fa), beat = 60 / 110, notes = [t0 + 0.0, t0 + beat, t0 + 2 * beat, t0 + 3 * beat];
     await window.__until(t0 - 0.4); o.wasWaiting = M.HX.take && M.HX.take.st;
     window.__play(notes.map((t, i) => [t, [7, 9, 11, 12][i], 0.9, 0.25]), { eng: 'glo' });
-    for (let i = 0; i < 300 && M.HX.take; i++) await sl(50);
+    for (let i = 0; i < 900 && M.HX.take; i++) await sl(50);   // (29.10.2026: up to 45 s – the stretch may come round only in the next pass, 17.5 s, then 4 s caught and built; 15 s cut it short)
     o.built = !M.HX.take; await done(); b = await rw();
     const st = seg(b, ...T1); o.take = { lvl: db(rms(st)), rest: +corr(seg(base, 0.8, 1), seg(b, 0.8, 1)).toFixed(4) };
     // on time: the first onset in the stretch where the first note was played (frames from the stretch's start)
@@ -67,7 +67,7 @@ const { ok } = H;
     M.hxTakeArm(L, ...T1, 'dazu'); await sl(200);
     const tk2 = M.HX.take, t2 = M.hxT(tk2.fa);
     window.__play([0, 1, 2, 3].map((i) => [t2 + i * beat, [7, 9, 11, 12][i], 0.9, 0.25]), { eng: 'glo' });
-    for (let i = 0; i < 300 && M.HX.take; i++) await sl(50);
+    for (let i = 0; i < 900 && M.HX.take; i++) await sl(50);   // (29.10.2026: up to 45 s – the stretch may come round only in the next pass, 17.5 s, then 4 s caught and built; 15 s cut it short)
     await done(); b = await rw(); const s2 = seg(b, ...T1), s0 = seg(base, ...T1);
     o.dazu = { keeps: +corr(s0, s2).toFixed(3), more: +(db(rms(s2)) - db(rms(s0))).toFixed(1) };
     return o;

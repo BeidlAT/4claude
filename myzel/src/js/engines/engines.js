@@ -44,7 +44,7 @@ const ENGINES = {
       // grains share four fixed stereo positions per finger instead of one panner each
       const w = P['v.width'];
       const pans = (Q.rich ? [-1, -0.71, -0.43, -0.14, 0.14, 0.43, 0.71, 1] : [-1, -0.33, 0.33, 1]).map((x) => { const p = v.n(PAN(x * w)); p.connect(v.out); return p; });
-      v.kor = { f, y, next: t, buf: src && src.buf, rev: src && src.rev, ref: src ? src.ref : TEX_F, pans };
+      v.kor = { f, y, next: t, buf: src && src.buf, rev: src && src.rev, ref: src ? src.ref : TEX_F, pans, src };   // (src: its low-passed copies are kept there – grains/mic.js korMip)
       const peak = vel * 0.55;
       A.grainVoices.add(v);
       v.setF = (nf) => { v.kor.f = nf; };

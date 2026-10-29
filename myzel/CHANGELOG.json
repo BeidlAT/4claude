@@ -2,6 +2,13 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-29e",
+      "punkte": [
+        "Chrome und iPad: Körner, die schneller als ihr Material gelesen werden (hohe Töne, Oktavsprünge), klingen jetzt ohne Spiegelfrequenzen – sie lesen eine dafür gefilterte Kopie.",
+        "Saite und Gespinst: Bis eine neue Saite fertig gerechnet ist, springt eine höhere statt einer tieferen ein – auch das ohne Spiegelfrequenzen."
+      ]
+    },
+    {
       "id": "2026-10-29d",
       "punkte": [
         "Mischpult, „Sättigung“: bei hohen Tönen und viel Sättigung keine Spiegelfrequenzen mehr (gemessen von −33 auf −70 dB) – die Kurve klingt sonst wie bisher.",
