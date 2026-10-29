@@ -26,6 +26,10 @@ const { ok } = H;
         o.ops[op + ' ' + v + ' ' + k] = same(here, w);
       }
     }
+    // 1b. (29.10.2026) the edges' crossfade on alike sides (−1 dB): never above both sides (sin/cos rose up to +3 dB)
+    { const [r0, r1] = M.hxRxFrames(S, 0.25, 0.75), g = Math.pow(10, -1 / 20), d = M.hxRxApply(S.aud, r0, r1, M.hxRxOp(S.aud, r0, r1, 'gain', g, u, 1)), rd = (ch, f) => { const c = ch[Math.floor(f / 8192)]; return c ? c[0][f % 8192] : 0; };
+      let worst = -99; for (const e of [r0, r1]) for (let f = e - 400; f < e + 400; f++) { const a = rd(S.aud, f); if (Math.abs(a) > 1e-3) worst = Math.max(worst, 20 * Math.log10(Math.abs(rd(d, f) / a))); }
+      o.edge = +worst.toFixed(2); }
     o.pool = M.HXRW.pool.length; o.broken = M.HXRW.broken;
     // 2. a whole-loop Tonhöhe: the page answers meanwhile
     M.hxEdOpen(L); await sl(600);
@@ -43,6 +47,7 @@ const { ok } = H;
   const bad = Object.keys(r.ops).filter((k) => !r.ops[k]);
   ok(!bad.length && Object.keys(r.ops).length >= 21, `every op the same to the bit in the Worker (${Object.keys(r.ops).length} checks${bad.length ? '; differ: ' + bad.join(', ') : ''}; ${r.pool} Worker${r.broken ? ', broken' : ''})`);
   ok(r.pool >= 1 && !r.broken, `Workers running (${r.pool})`);
+  ok(r.edge <= 0.05, `a stretch 1 dB softer: its edges never rise above the louder side (${r.edge} dB at most)`);
   ok(r.changed && r.worst < 600, `whole-loop Tonhöhe +12: the page answers meanwhile (longest pause ${r.worst} ms, the call ${r.blk} ms, all ${r.all} ms)`);
   ok(r.back && r.flushBack, `↶ after an edit, also while the Worker still works: the audio as before (${r.back}, ${r.flushBack})`);
   ok(!errors.length, 'no page errors' + (errors.length ? ': ' + errors.slice(0, 3).join(' | ') : ''));

@@ -8,9 +8,9 @@ const HXRW = { pool: [], seq: 0, wait: new Map(), broken: false, src: null };
 function hxRwSrc() {
   if (HXRW.src) return HXRW.src;
   const fn = (f) => { const s = f.toString(); return /^(function|\(|[A-Za-z_$][\w$]*\s*=>|async)/.test(s) ? s : 'function ' + s; };   // (a method's shorthand made a function)
-  const named = [hxRxOp, hxRvIn, hxRvLevel, hxRvBq, hxRvAt, hxRvShift, hxRvPv, hxRvPitch, hxRvNebel, hxRsWin, hxRsRead, hxFFT, hxRwRun].map(fn);
+  const named = [hxRxOp, hxRvIn, hxRvLevel, hxRvBq, hxRvAt, hxRvShift, hxRvPv, hxRvPitch, hxRvNebel, hxRsWin, hxRsRead, hxFFT, hxRxRho, hxRxXf, hxRwRun].map(fn);
   const vars = { clamp, hxRng, hxRxGet, hxRvRms, hxRvHm };
-  HXRW.src = 'var SR=48000;var HX_CH=' + HX_CH + ';var HX_RX=' + HX_RX + ';var HX_RS={T:' + HX_RS.T + ',n:' + HX_RS.n + ',w:null};var HX_RSO=[0,0];var HX_RV_K,HX_RV_PP;\n' +
+  HXRW.src = 'var SR=48000;var HX_CH=' + HX_CH + ';var HX_RX=' + HX_RX + ';var HX_RS={T:' + HX_RS.T + ',n:' + HX_RS.n + ',w:null};var HX_RSO=[0,0];var HX_RX1=[1,0],HX_RX2=[0,0];var HX_RV_K,HX_RV_PP;\n' +
     Object.entries(vars).map(([k, f]) => 'var ' + k + '=' + f.toString() + ';').join('\n') + '\n' + named.join('\n') + '\n' +
     'var HX_RV={' + Object.keys(HX_RV).map((k) => JSON.stringify(k) + ':' + fn(HX_RV[k])).join(',\n') + '};\n' +
     'onmessage=function(e){var d=e.data;if(d.init){HX_RV_K=d.init.K;HX_RV_PP=d.init.PP;return;}var r=null;try{SR=d.o.sr;r=hxRwRun(d.o);}catch(x){r=null;}postMessage({id:d.id,r:r},r?[r[0].buffer,r[1].buffer]:[]);};';
@@ -18,10 +18,10 @@ function hxRwSrc() {
 }
 // the job itself (here and in the Worker): the stretch [r0, r1) of the chunk list – as hxRxApply writes it in
 function hxRwRun(o) {
-  const ch = o.ch, r0 = o.r0, N = o.r1 - o.r0, out = hxRxOp(ch, r0, o.r1, o.op, o.v, o.u, o.seed), get = hxRxGet(ch), X = Math.min(HX_RX, Math.floor(N / 4));
+  const ch = o.ch, r0 = o.r0, N = o.r1 - o.r0, out = hxRxOp(ch, r0, o.r1, o.op, o.v, o.u, o.seed), get = hxRxGet(ch), X = Math.min(HX_RX, Math.floor(N / 4)), rho = hxRxRho(out, get, r0, N, X);
   const l = new Float32Array(N), r = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    const y = out(i), w = X ? Math.min(1, Math.min(i, N - 1 - i) / X) : 1, e = Math.sin(0.5 * Math.PI * w), q = Math.cos(0.5 * Math.PI * w), x = get(r0 + i);
+    const y = out(i), x = get(r0 + i), [e, q] = hxRxXf(i, N, X, rho);
     l[i] = y[0] * e + x[0] * q; r[i] = y[1] * e + x[1] * q;
   }
   return [l, r];

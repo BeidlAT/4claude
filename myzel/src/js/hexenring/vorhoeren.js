@@ -31,13 +31,30 @@ function hxPvSrc(L, buf, u) {
   if (!out) { const g = ctx.createGain(), p = ctx.createStereoPanner(); g.gain.value = hxPvLvl(L); p.pan.value = L.pan || 0; g.connect(p).connect(stripIn('hxr')); out = { g, p }; }
   const [a, b] = hxPvRange(dur); let off = clamp(u * dur, 0, dur - 1e-3); if (off < a || off >= b) off = a;
   const src = ctx.createBufferSource(), x = ctx.createGain();
-  src.buffer = buf; src.loop = true; src.loopStart = a; src.loopEnd = b; src.connect(x).connect(out.g);
+  src.buffer = hxPvSeam(buf, a, b); src.loop = true; src.loopStart = a; src.loopEnd = b; src.connect(x).connect(out.g);
   x.gain.setValueAtTime(0, t); x.gain.linearRampToValueAtTime(1, t + HXPV_X);
   src.start(t, off);
   if (old) hxPvFade(old, t);
   HXE.pv = { key: L.key, src, x, out, buf, t0: t, off, a, b, dur };
   if (!old) { L.pvMute = true; hxGain(L.id, 0, null, 0.03); if (IDLE.on) idleWake(); hxSay(hxName(L) + ': Vorhören'); }
 }
+// (29.10.2026) a chosen stretch repeats without a click: its last 10 ms crossfade (equal power) into the 10 ms just before
+// its start (the pass is a circle: before the start of the pass lies its end), so the jump from its end back to its start
+// is no splice; the whole pass loops as it is. The pass itself stays as it was (HXE.pv.buf – the edits work on it).
+function hxPvSeam(buf, a, b) {
+  const n = buf.length, r = buf.sampleRate, i0 = Math.round(a * r), i1 = Math.min(n, Math.round(b * r));
+  if (i0 <= 0 && i1 >= n) return buf;
+  const C = HXPV_SEAM; if (C.src === buf && C.i0 === i0 && C.i1 === i1) return C.out;
+  const X = Math.min(Math.round(0.01 * r), (i1 - i0) >> 2), out = new AudioBuffer({ numberOfChannels: buf.numberOfChannels, length: n, sampleRate: r });
+  for (let c = 0; c < buf.numberOfChannels; c++) {
+    const d = buf.getChannelData(c).slice();
+    for (let k = 0; k < X; k++) { const u = (k + 0.5) / X, j = i1 - X + k; d[j] = d[j] * Math.cos(0.5 * Math.PI * u) + d[(i0 - X + k + n) % n] * Math.sin(0.5 * Math.PI * u); }
+    out.copyToChannel(d, c);
+  }
+  Object.assign(C, { src: buf, i0, i1, out });
+  return out;
+}
+const HXPV_SEAM = { src: null, i0: 0, i1: 0, out: null };
 function hxPvFade(P, t) { try { P.x.gain.cancelScheduledValues(t); P.x.gain.setValueAtTime(P.x.gain.value, t); P.x.gain.linearRampToValueAtTime(0, t + HXPV_X); P.src.stop(t + HXPV_X + 0.02); } catch (e) {} }
 function hxPvStop() {
   const P = HXE.pv; HXE.pvWant = false; if (!P) return;

@@ -67,7 +67,7 @@ function hxRvShift(src, N, rt, R) {
     const c0 = t + G / 2 + Math.round((R() - 0.5) * H * 0.5);   // (a little jitter: no comb of equal grains)
     for (let j = 0; j < G; j++) {
       const d = t + j; if (d < 0 || d >= N) continue;
-      const w = 0.25 - 0.25 * Math.cos((2 * Math.PI * j) / G), p = clamp(c0 + (j - G / 2) * rt, 0, N - 1);
+      const w = 0.25 - 0.25 * Math.cos((2 * Math.PI * j) / G), p = c0 + (j - G / 2) * rt;   // (29.10.2026: beyond the stretch it reads silence – clamped, a grain at Krone's end repeated the last sample: a thump of DC)
       l[d] += w * hxRvAt(x[0], p); r[d] += w * hxRvAt(x[1], p);
     }
   }
@@ -75,16 +75,16 @@ function hxRvShift(src, N, rt, R) {
 }
 // a read at any place near rate 1 (Sporen's few cents): 4-point Hermite
 const hxRvHm = (c, p) => { const i = Math.floor(p), f = p - i, a = c[i - 1] || 0, b = c[i] || 0, d = c[i + 1] || 0, e = c[i + 2] || 0, c1 = 0.5 * (d - a), c2 = a - 2.5 * b + 2 * d - 0.5 * e, c3 = 0.5 * (e - a) + 1.5 * (b - d); return ((c3 * f + c2) * f + c1) * f + b; };
-// Tonhöhe and Verstimmen exactly: a phase vocoder stretches the stretch by rt (STFT 2048, hop 512 in, Hann, the
+// Tonhöhe and Verstimmen exactly: a phase vocoder stretches the stretch by rt (STFT 2048, hop 256 in, Hann, the
 // phases locked to their peaks – Laroche & Dolson's identity locking: no phasiness between a partial's bins), then it
 // is read back at rate rt (the sinc; faster: low-passed below the new Nyquist first) – the length kept, every partial
 // moved by rt
 function hxRvPv(x, rt) {
-  const W = 2048, Ha = 512, N = x.length, B = W / 2 + 1, out = new Float32Array(Math.ceil(N * rt) + 2 * W), ws = new Float32Array(out.length), win = new Float32Array(W);
+  const W = 2048, Ha = 256, N = x.length, B = W / 2 + 1, out = new Float32Array(Math.ceil(N * rt) + 2 * W), ws = new Float32Array(out.length), win = new Float32Array(W);
   for (let i = 0; i < W; i++) win[i] = 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / W);
   const re = new Float64Array(W), im = new Float64Array(W), mag = new Float64Array(B), ph = new Float64Array(B), phA = new Float64Array(B), phS = new Float64Array(B), nx = new Float64Array(B), om = new Float64Array(B), near = new Int32Array(B);
   for (let k = 0; k < B; k++) om[k] = (2 * Math.PI * k * Ha) / W;
-  const frames = Math.ceil(N / Ha) + 4, at = (f) => Math.round(f * Ha * rt);   // (analysis every 512 frames; each synthesis frame at its whole place, its hop 512·rt ± ½)
+  const frames = Math.ceil(N / Ha) + 8, at = (f) => Math.round(f * Ha * rt);   // (analysis every 256 frames – 29.10.2026: 8× overlap, so even at +12 (hop 512) the frames overlap 4×: what keeps no steady phase, noise, added by power and rippled 1–2 dB at 2×; each synthesis frame at its whole place, its hop 256·rt ± ½)
   for (let f = 0; f < frames; f++) {
     const ta = f * Ha - W / 2, dS = at(f) - at(f - 1);
     for (let i = 0; i < W; i++) { const q = ta + i; re[i] = q >= 0 && q < N ? x[q] * win[i] : 0; im[i] = 0; }
