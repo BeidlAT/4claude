@@ -108,7 +108,8 @@ registerProcessor('hx-gap', HxGap);`;
       return { t0: t, t1: sus ? t + 0.6 : null, eng, f: M.N.notes[3 + d].f, y0: y, vel: v, pan: d / 6 - 0.3, src: 'fin', burst: false, hold: !!sus, curves: { y: sus ? [[t + 0.3, Math.min(1, y + 0.2)]] : [], f: [] } };
     });
     for (const eng of ENGS) {
-      const job = (seed) => M.hxwCall('wuchs', { sr: SR, dur: 4, notes: phrase(eng), P: Object.assign({}, M.P, { 'v.eng': eng }), q: QL, seed, jrg: { age: 2, season: 0.3 } });
+      // (Kalimba: its only throw is the Schnarren – 0 by default since 29.10.2026, and then every seed rings alike, −127 dB; with it its seed is tested)
+      const job = (seed) => M.hxwCall('wuchs', { sr: SR, dur: 4, notes: phrase(eng), P: Object.assign({}, M.P, { 'v.eng': eng }, eng === 'klb' ? { 'klb.buzz': 0.3 } : {}), q: QL, seed, jrg: { age: 2, season: 0.3 } });
       const a = await job(11), b = await job(11), c = await job(12);
       if (!a || !b || a.err || b.err) { out[eng] = { err: (a && a.err) || (b && b.err) || 'none' }; continue; }
       let pk = 0, d = 0, dc = 0;
@@ -124,7 +125,7 @@ registerProcessor('hx-gap', HxGap);`;
   // documented exceptions (SPEC §8 as built 1c): Chromium sums three or more connections into a node or a param in an
   // order it picks anew in every context (a last-bit difference, measured −137 dB in a plain graph); Schwarm's coupled
   // sines blow it up to another performance, Tropfen's chirped droplets carry it into their phase (−84 … −92 dB)
-  const EXC = { swm: 'chaotic FM loop', trp: 'chirped droplets' };
+  const EXC = { swm: 'chaotic FM loop', trp: 'chirped droplets', gng: 'high modes through a delay whose time two modulators sum into' };   // (Gong, measured 29.10.2026: −86 … −109 dB; Schimmer 0 −102, Helligkeit 0 −111 … −135)
   const bad = rows.filter(([k, v]) => v.err || !(v.pk > 1e-3) || (!(v.same <= -100) && !EXC[k]));
   const held = rows.filter(([k, v]) => !EXC[k] && !v.err), worst = Math.max(...held.map(([, v]) => v.same));
   ok(!bad.length, `determinism, level ${QL}: ${held.length - bad.filter(([k]) => !EXC[k]).length} of ${held.length} sources render the same pass seed twice within −100 dB (worst ${worst} dB)` + (bad.length ? ' – off: ' + bad.map(([k, v]) => k + ' ' + (v.err || v.same)).join(', ') : ''));
