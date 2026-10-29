@@ -1,0 +1,9 @@
+/* Sporenwerk (arp/sporenwerk-ui.js): the living picture on top, the Trickkiste below */
+.spw-head { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.spw-head .ctl { flex: 1; }
+.spw-dice { min-height: 36px; padding: 4px 14px; font: 600 13px/1 var(--font-ui); }
+.spw-stage { position: relative; margin: 10px 0 4px; border-radius: 16px; overflow: hidden; border: 1px solid rgba(240, 230, 216, .08); box-shadow: inset 0 0 40px rgba(0, 0, 0, .5); }
+.spw-cv { display: block; width: 100%; height: clamp(260px, 42vh, 380px); }
+.spw-read { position: absolute; left: 12px; right: 12px; bottom: 8px; margin: 0; font: 400 11px/1.3 var(--font-num); color: rgba(240, 230, 216, .72); letter-spacing: .02em; text-shadow: 0 1px 6px #000; pointer-events: none; }
+.spw-forms .chip { min-height: 30px; }
+.spw-form { margin: 6px 2px 0; font-size: 12.5px; color: var(--dim); line-height: 1.4; min-height: 2.8em; }

@@ -32,7 +32,7 @@
 // (final pass) 'rhzo1' Rhizom's voices each striking a net of its own (rhzNet, as a loop nourishing Rhizom) – with
 // rhz-pings.js OWN=1 the pings they ring – rhz-fit.js fits RHZ_COST over both
 // (29.10.2026) 'fxnetzS1' / 'fxnetzG1' / 'fxnetzK1' (Resonanz-Netz: Saiten, Glocken, Holzkörper), 'fxwolke1', 'fxspek1',
-// 'fxoktav1', 'fxvokal1', 'fxtrans1', 'fxsat1', 'fxlim1': NV of the mixer's processors fed by noise – FX_COST = fx… − hxz
+// 'fxoktav1', 'fxvokal1', 'fxharmo1', 'fxtrans1', 'fxsat1', 'fxlim1': NV of the mixer's processors fed by noise – FX_COST = fx… − hxz
 process.env.SEED_BLOBS = '';
 const { chromium, openInst } = require('../../v2/lib');
 const ROUNDS = +process.argv[2] || 6, DUR = +process.env.DUR || 4, NV = +process.env.NV || 24, NW = +process.env.NW || 1, NH = +process.env.NH || 8;
@@ -59,7 +59,7 @@ const XP = JSON.parse(process.env.PARAMS || '{}');
         const t0 = performance.now(); await ctx.startRendering(); return performance.now() - t0;
       }
       if (eng.startsWith('fx')) {   // (29.10.2026) the mixer's own processors, NV of them, each fed by a noise source – against 'hxz1' (the sources alone): FX_COST
-        const kind = eng.slice(2), SR = 48000, nb = ctx.createBuffer(2, SR, SR), FX = { netzS: ['myzel-netz', { art: 0 }], netzG: ['myzel-netz', { art: 1 }], netzK: ['myzel-netz', { art: 2 }], wolke: ['myzel-wolke', { dichte: 1 }], spek: ['myzel-spek', {}], oktav: ['myzel-oktav', { onach: 1 }], vokal: ['myzel-vokal', { beweg: 1 }], trans: ['myzel-trans', null], sat: ['myzel-sat', null], lim: ['myzel-lim', null] }[kind];
+        const kind = eng.slice(2), SR = 48000, nb = ctx.createBuffer(2, SR, SR), FX = { netzS: ['myzel-netz', { art: 0 }], netzG: ['myzel-netz', { art: 1 }], netzK: ['myzel-netz', { art: 2 }], wolke: ['myzel-wolke', { dichte: 1 }], spek: ['myzel-spek', {}], oktav: ['myzel-oktav', { onach: 1 }], vokal: ['myzel-vokal', { beweg: 1 }], harmo: ['myzel-harmo', { v1: 2, v2: 4, v3: -3, modus: 1, form: 0.6 }], trans: ['myzel-trans', null], sat: ['myzel-sat', null], lim: ['myzel-lim', null] }[kind];
         for (let c = 0; c < 2; c++) { const d = nb.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * 0.3; }
         for (let k = 0; k < NV; k++) {
           const nd = new AudioWorkletNode(ctx, FX[0], { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit', processorOptions: FX[1] ? { set: FX[1], beat: 0.5, freqs: [220, 247, 294, 330, 392] } : {} });

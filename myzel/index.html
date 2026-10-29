@@ -336,6 +336,15 @@ body.ww-saen-an :is([data-ww], [data-wa], [data-pid]):hover { outline: 2px solid
 .lane-tab[aria-pressed="true"] { border-color: var(--c); background: var(--bark-2); }
 .lane-tab.off b { color: var(--dim); }
 
+/* Sporenwerk (arp/sporenwerk-ui.js): the living picture on top, the Trickkiste below */
+.spw-head { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.spw-head .ctl { flex: 1; }
+.spw-dice { min-height: 36px; padding: 4px 14px; font: 600 13px/1 var(--font-ui); }
+.spw-stage { position: relative; margin: 10px 0 4px; border-radius: 16px; overflow: hidden; border: 1px solid rgba(240, 230, 216, .08); box-shadow: inset 0 0 40px rgba(0, 0, 0, .5); }
+.spw-cv { display: block; width: 100%; height: clamp(260px, 42vh, 380px); }
+.spw-read { position: absolute; left: 12px; right: 12px; bottom: 8px; margin: 0; font: 400 11px/1.3 var(--font-num); color: rgba(240, 230, 216, .72); letter-spacing: .02em; text-shadow: 0 1px 6px #000; pointer-events: none; }
+.spw-forms .chip { min-height: 30px; }
+.spw-form { margin: 6px 2px 0; font-size: 12.5px; color: var(--dim); line-height: 1.4; min-height: 2.8em; }
 /* ---------- recording panel ---------- */
 .recbig { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: center; }
 .recbig .big {
@@ -2437,6 +2446,7 @@ const RAUM_BY = Object.fromEntries(RAUM_LISTE.map((r) => [r.id, r]));
    ===================================================================== */
 const PD = {};
 // (29.10.2026) the mixer's effect returns (mixer/effekt.js): key, name, colour, the effect each starts with
+const ARP_FORMS_P = [['auf', 'Aufwärts'], ['ab', 'Abwärts'], ['pendel', 'Pendel'], ['gespielt', 'Wie gespielt'], ['zufall', 'Zufall'], ['hyphe', 'Hyphe'], ['spirale', 'Spirale'], ['sporen', 'Sporenflug'], ['pilzring', 'Pilzring'], ['wachsen', 'Wachsen']];   // (the Sporenwerk's Wuchsformen – arp/sporenwerk.js)
 const FX_RETS = [['fx', 'Effekt', '#9fe3b0', 'netz'], ['fx2', 'Effekt 2', '#f2a8d8', 'wolke']];
 const def = (id, o) => (PD[id] = Object.assign({ id }, o));
 const NUM = (id, label, min, max, d, unit = '', o = {}) => def(id, Object.assign({ kind: 'num', label, min, max, d, unit, curve: 'lin' }, o));
@@ -2909,7 +2919,7 @@ NUM('rev.len', 'Länge', 0.5, 1.5, 1, '', { fmt: (v) => '×' + dec(v.toFixed(2))
 // knobs – the same set for both (FX_RETS: key, name, colour, the effect it starts with)
 for (const [r, , , typ] of FX_RETS) {
   const q = r + '.';
-  SEL(q + 'typ', 'Effekt', [['netz', 'Resonanz-Netz'], ['wolke', 'Wolke'], ['spektral', 'Spektral-Nebel'], ['oktav', 'Oktav-Echo'], ['vokal', 'Vokal-Filter']], typ);
+  SEL(q + 'typ', 'Effekt', [['netz', 'Resonanz-Netz'], ['wolke', 'Wolke'], ['spektral', 'Spektral-Nebel'], ['oktav', 'Oktav-Echo'], ['vokal', 'Vokal-Filter'], ['harmo', 'Harmonizer']], typ);
   NUM(q + 'mix', 'Anteil', 0, 1, 0, '%');
   SEL(q + 'art', 'Art', [['0', 'Saiten'], ['1', 'Glocken'], ['2', 'Holzkörper']], '0', { chips: 1, small: 1 });
   NUM(q + 'klang', 'Nachklang', 0, 1, 0.5, '%'); NUM(q + 'hell', 'Helligkeit', 0, 1, 0.6, '%'); NUM(q + 'breite', 'Breite', 0, 1, 0.7, '%');
@@ -2919,8 +2929,37 @@ for (const [r, , , typ] of FX_RETS) {
   NUM(q + 'szeit', 'Zerfließen', 0, 1, 0.5, '%'); NUM(q + 'shell', 'Helligkeit', 0, 1, 0.5, '%'); BOOL(q + 'halten', 'Halten', false);
   NUM(q + 'ozeit', 'Zeit', 0, 1, 0.6, '', { fmt: (v) => ['¼', '½', '¾', '1', '1½', '2'][Math.round(v * 5)] + ' Schlag' }); NUM(q + 'onach', 'Wiederholungen', 0, 1, 0.5, '%');
   SEL(q + 'schritt', 'Schritt', [['0', 'Oktave ab'], ['1', 'Quarte'], ['2', 'Quinte'], ['3', 'Oktave'], ['4', 'Duodezime']], '3', { chips: 1, small: 1 }); NUM(q + 'ohell', 'Helligkeit', 0, 1, 0.6, '%');
+  // (29.10.2026) the Harmonizer: three voices – steps of the key (Tonart) or semitones; 0 is off
+  const hmName = (v) => { v = Math.round(v); if (!v) return 'aus'; if (P[q + 'hmod'] !== 'ton') return (v > 0 ? '+' : '−') + Math.abs(v) + ' HT'; const a = Math.abs(v), o = Math.floor(a / 7), w = ['Prime', 'Sekunde', 'Terz', 'Quarte', 'Quinte', 'Sexte', 'Septime'][a % 7]; return (v > 0 ? '↑ ' : '↓ ') + (a % 7 === 0 ? (o === 1 ? 'Oktave' : o + ' Oktaven') : (o ? o + ' Okt. + ' : '') + w); };
+  SEL(q + 'hmod', 'Stimmen in', [['ton', 'der Tonart'], ['halb', 'Halbtönen']], 'ton', { chips: 1, small: 1 });
+  NUM(q + 'hv1', 'Stimme 1', -12, 12, 2, '', { step: 1, fmt: hmName }); NUM(q + 'hv2', 'Stimme 2', -12, 12, 4, '', { step: 1, fmt: hmName }); NUM(q + 'hv3', 'Stimme 3', -12, 12, 0, '', { step: 1, fmt: hmName });
+  NUM(q + 'hform', 'Formant halten', 0, 1, 0.6, '%'); NUM(q + 'hbreit', 'Breite', 0, 1, 0.6, '%'); NUM(q + 'hschim', 'Schimmer', 0, 1, 0.2, '%');
   NUM(q + 'vokal', 'Vokal', 0, 1, 0, '', { fmt: (v) => ['a', 'e', 'i', 'o', 'u'][Math.min(4, Math.round(v * 4))] }); NUM(q + 'beweg', 'Bewegung', 0, 1, 0.2, '%'); NUM(q + 'reso', 'Resonanz', 0, 1, 0.5, '%'); NUM(q + 'stimme', 'Stimme', 0, 1, 0.3, '%');
 }
+// (29.10.2026) the Sporenwerk – the arpeggiator (arp/sporenwerk.js)
+BOOL('arp.on', 'Sporenwerk', false);
+SEL('arp.quelle', 'Quelle', [['spiel', 'Gespielt'], ['schleife', 'Schleife'], ['beide', 'Beides']], 'spiel', { chips: 1, small: 1 });
+SEL('arp.schl', 'Schleife', [['0', 'Fokus'], ['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5'], ['6', '6'], ['7', '7'], ['8', '8']], '0', { chips: 1, small: 1 });
+BOOL('arp.schlStill', 'Schleife selbst still', true);
+SEL('arp.form', 'Wuchsform', ARP_FORMS_P, 'auf');
+SEL('arp.rate', 'Raster', [['1', '1/4'], ['0.5', '1/8'], ['0.25', '1/16'], ['0.125', '1/32']], '0.25', { chips: 1, small: 1 });
+SEL('arp.takt', 'Takt', [['g', 'gerade'], ['t', 'triolisch'], ['p', 'punktiert']], 'g', { chips: 1, small: 1 });
+NUM('arp.okt', 'Oktaven', 1, 4, 1, '', { step: 1, fmt: (v) => Math.round(v) + (Math.round(v) === 1 ? ' Oktave' : ' Oktaven') });
+SEL('arp.oktw', 'Oktaven gehen', [['auf', 'aufwärts'], ['ab', 'abwärts'], ['pendel', 'pendelnd'], ['zufall', 'springend']], 'auf', { chips: 1, small: 1 });
+NUM('arp.gate', 'Länge', 0.05, 1.5, 0.6, '%');
+NUM('arp.swing', 'Swing', 0, 0.6, 0, '%');
+NUM('arp.schritte', 'Ring: Schritte', 1, 16, 8, '', { step: 1 });
+NUM('arp.treffer', 'Ring: Treffer', 0, 16, 8, '', { step: 1 });
+NUM('arp.dreh', 'Ring: Drehung', 0, 15, 0, '', { step: 1 });
+NUM('arp.chance', 'Chance', 0, 1, 1, '%');
+NUM('arp.ratsche', 'Ratschen', 0, 1, 0, '%');
+NUM('arp.akzent', 'Akzent', 0, 1, 0.3, '%'); NUM('arp.akzN', 'Akzent alle', 2, 8, 4, '', { step: 1, fmt: (v) => Math.round(v) + ' Schritte' });
+NUM('arp.welle', 'Höhe-Welle', 0, 1, 0, '%');
+SEL('arp.stimmen', 'Stimmen', [['0', 'keine'], ['terz', '+ Terz'], ['quinte', '+ Quinte'], ['akkord', 'Dreiklang'], ['oktave', '+ Oktave']], '0', { chips: 1, small: 1 });
+NUM('arp.wander', 'Leiter-Wanderung', -3, 3, 0, '', { step: 1, fmt: (v) => (Math.round(v) ? (v > 0 ? '+' : '−') + Math.abs(Math.round(v)) + ' Stufe je Runde' : 'aus') });
+NUM('arp.wlang', 'Wanderung über', 1, 8, 4, '', { step: 1, fmt: (v) => Math.round(v) + ' Runden' });
+NUM('arp.mutation', 'Mutation', 0, 1, 0, '%');
+BOOL('arp.halten', 'Halten', false);
 NUM('mov.vib', 'Vibrato', 0, 60, 4, 'ct');
 NUM('mov.vibRate', 'Vibrato-Tempo', 0.1, 9, 4.5, 'Hz', { curve: 'exp' });
 NUM('mov.drift', 'Taumeln', 0, 80, 6, 'ct');
@@ -3106,7 +3145,7 @@ SEL('midi.tch', 'Touché-Spielweise', [['finger', 'Finger'], ['atem', 'Atem'], [
 
 const GROUP = {
   v: 'Spielweise', t: 'Stimmung', neb: 'Nebel', kor: 'Körner', hau: 'Hauch', glo: 'Glocke', mem: 'Membran', sai: 'Saite', sch: 'Schale', gng: "Gong", klb: "Kalimba", obt: "Obertöne", stm: "Stimme", swm: "Schwarm", tie: "Tiefe", trp: "Tropfen", nrd: 'Nordlicht', sht: 'Schimmer', ond: 'Ätherwelle', wal: 'Walgesang', stp: 'Endlostreppe', atr: 'Attraktor', tnl: 'Tunnel', wkg: 'Westküste', bnt: 'Schaltkreis', kas: 'Kassette', bit: 'Achtbit', gbs: 'Gleitbass', hht: 'Zischel', vox: 'Silbe', spu: 'Spieluhr', kto: 'Koto', hlm: 'Halm', rnk: 'Ranke', elm: 'Elmsfeuer', hng: 'Handpan', gml: 'Gamelan', sit: 'Sitar', tbl: 'Tabla', did: 'Didgeridoo', mtr: 'Maultrommel', jrg: 'Jahresring', hrz: 'Harz', shn: 'Sehne', zpf: 'Zapfen', glt: 'Glut', mdr: 'Moder', boe: 'Böe', amo: 'Amöbe', gsp: 'Gespinst', rhz: 'Rhizom', khl: 'Kehlchen',
-  drv: 'Verzerrung', rng: 'Ringmodulator', flt: 'Filter', pha: 'Phaser', cho: 'Schweben', dly: 'Echo', rev: 'Hall', fx: 'Effekt', fx2: 'Effekt 2', mov: 'Bewegung', mst: 'Summe',
+  drv: 'Verzerrung', rng: 'Ringmodulator', flt: 'Filter', pha: 'Phaser', cho: 'Schweben', dly: 'Echo', rev: 'Hall', fx: 'Effekt', fx2: 'Effekt 2', arp: 'Sporenwerk', mov: 'Bewegung', mst: 'Summe',
   seq: 'Puls', bor: 'Bordun', rec: 'Aufnahme', hx: 'Hexenring', dev: 'Gerät', midi: 'MIDI', l0: 'Spur 1', l1: 'Spur 2', l2: 'Spur 3', l3: 'Spur 4',
 };
 // the mixer's parts as the panel names them ("Kanal" is the MIDI channel's word here)
@@ -4714,6 +4753,7 @@ function applyAll(firstIR) {
   A.drvKey = null;
   updDrive(); updRing(); updFilter(); updPhaser(); updChorus(); updDelay(); updReverbMix(); updMove(); updMaster();
   updMix(!!firstIR); fxUpd();   // (the effect returns: a preset's choice and Anteil)
+  if (typeof arpOn === 'function' && !!P['arp.on'] !== !!ARP.tm) arpOn(P['arp.on']);   // (the Sporenwerk: on or off as the preset has it)
   regenIR(!!firstIR);
   updBordun();
 }
@@ -5009,10 +5049,11 @@ const FX_TYPES = {
   wolke: { proc: 'myzel-wolke', name: 'Wolke', i: 'Körner des eben Gespielten kommen im Takt zurück – oktaviert, rückwärts, weit verstreut', keys: { dichte: 'dichte', zeit: 'zeit', hoehe: 'hoehe', rueck: 'rueck', streu: 'streu', nach: 'nach' } },
   spektral: { proc: 'myzel-spek', name: 'Spektral-Nebel', i: 'Der Klang zerfließt in eine stehende Fläche – „Halten“ friert sie ein', keys: { zeit: 'szeit', hell: 'shell', halten: 'halten' } },
   oktav: { proc: 'myzel-oktav', name: 'Oktav-Echo', i: 'Ein Echo im Takt, das sich mit jeder Wiederholung hochschraubt (oder hinab)', keys: { zeit: 'ozeit', nach: 'onach', schritt: 'schritt', hell: 'ohell' } },
+  harmo: { proc: 'myzel-harmo', name: 'Harmonizer', i: 'Bis zu drei Stimmen über oder unter dem Klang – in der Tonart (es hört, welcher Ton kommt) oder in Halbtönen; der Formant bleibt, eine Stimme klingt nicht nach Micky Maus', keys: { v1: 'hv1', v2: 'hv2', v3: 'hv3', modus: 'hmod', form: 'hform', breite: 'hbreit', schimmer: 'hschim' } },
   vokal: { proc: 'myzel-vokal', name: 'Vokal-Filter', i: 'Der Klang spricht: drei Formanten gleiten durch a, e, i, o, u', keys: { vokal: 'vokal', bewegung: 'beweg', resonanz: 'reso', stimme: 'stimme' } },
 };
 // T.keys: the processor's knob → the parameter's name after the return's prefix (r + '.')
-const fxSet = (T, r) => { const o = {}; for (const k in T.keys) o[k] = +P[r + '.' + T.keys[k]]; return o; };
+const fxSet = (T, r) => { const o = {}; for (const k in T.keys) { const v = P[r + '.' + T.keys[k]]; o[k] = v === 'ton' ? 1 : v === 'halb' ? 0 : +v; } return o; };   // (the Harmonizer's „Stimmen in“: Tonart 1, Halbtöne 0)
 const fxFreqs = () => [...new Set((N.notes || []).map((n) => +n.f.toFixed(2)))].slice(0, 12);
 const fxBeat = () => 60 / Math.max(20, P['seq.bpm'] || 90);
 const fxType = (r) => FX_TYPES[P[r + '.typ']] || FX_TYPES.netz;
@@ -5075,7 +5116,7 @@ function fxInsUpd(st, inst) {
 // through and cost next to nothing), the Begrenzer always
 // (29.10.2026: NV 16 of each fed by noise, two runs on this machine after the processors were made faster, the higher
 // + 15 %; Resonanz-Netz per Art – Saiten, Glocken, Holzkörper; Wolke at full density, the Begrenzer pressed)
-const FX_COST = { netz: [1.37, 1.58, 0.85], wolke: 4.52, spektral: 6.29, oktav: 1.05, vokal: 1.32, trans: 0.47, sat: 1.41, lim: 1.23 };
+const FX_COST = { netz: [1.37, 1.58, 0.85], wolke: 4.52, spektral: 6.29, oktav: 1.05, vokal: 1.32, harmo: 7.5, trans: 0.47, sat: 1.41, lim: 1.23 };
 function fxLoad() {
   if (!A.fxR) return 0;
   const cost = (typ, r) => { const c = FX_COST[typ]; return Array.isArray(c) ? c[Math.round(+P[r + '.art']) || 0] || c[0] : c || 0; };
@@ -14970,9 +15011,146 @@ function myzelDsp() {
       return true;
     }
   }
+  // ---- Harmonizer (owner, 29.10.2026: „Harmonizer als Audio-Effekt“): up to three voices above or below what comes in –
+  // in the key (Tonart: steps of the scale, from the pitch it hears) or in semitones. A phase vocoder (STFT 2048, hop 512
+  // – 4× overlap, Hann² summing to 1.5): one analysis of both sides at once (L real, R imaginary), every voice's spectrum
+  // shifted from it and summed into one spectrum per side, one synthesis back – three voices cost what one does.
+  //   the shift: each bin's true frequency from its phase advance, moved to the bin r·k, its phase run on at r·ω; phases
+  //   locked to their peak (identity phase locking, Laroche–Dolson) – the partials of a sound keep their shape, no
+  //   „phasiness“
+  //   formant: the spectral envelope (a third-octave smoothing of the log magnitude) kept where it was – a voice moved
+  //   up does not turn into a chipmunk (form 0 … 1 how much)
+  //   the key: the input's pitch from the autocorrelation (the analysis spectrum's power, transformed back), its nearest
+  //   scale degree, the voice that many degrees on; while it hears no clear pitch, a voice keeps its last interval
+  //   schimmer: each voice a few cents off (–, +, –) – the voices beat a little, as a choir does; breite: their places
+  //   (left, right, middle). Wet only: a return or an Einschub mixes it with the dry sound. ----
+  const HM_N = 2048, HM_H = 512, HM_B = HM_N / 2 + 1;
+  const HM_TAB = (() => {
+    const N = HM_N, rev = new Uint32Array(N), cs = new Float64Array(N / 2), sn = new Float64Array(N / 2), win = new Float64Array(N);
+    for (let i = 1, j = 0; i < N; i++) { let b = N >> 1; for (; j & b; b >>= 1) j ^= b; j ^= b; rev[i] = j; }
+    for (let j = 0; j < N / 2; j++) { cs[j] = Math.cos(2 * Math.PI * j / N); sn[j] = Math.sin(2 * Math.PI * j / N); }
+    for (let i = 0; i < N; i++) win[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / N);
+    return { rev, cs, sn, win };
+  })();
+  function hmFft(re, im, inv) {
+    const n = re.length, rv = HM_TAB.rev, cs = HM_TAB.cs, sn = HM_TAB.sn, sg = inv ? 1 : -1;
+    for (let i = 1; i < n; i++) { const j = rv[i]; if (i < j) { let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; } }
+    for (let L = 2; L <= n; L <<= 1) { const h = L >> 1, st = n / L; for (let i = 0; i < n; i += L) for (let j = 0, q = 0; j < h; j++, q += st) { const u = i + j, v = u + h, cr = cs[q], ci = sg * sn[q], tr = re[v] * cr - im[v] * ci, ti = re[v] * ci + im[v] * cr; re[v] = re[u] - tr; im[v] = im[u] - ti; re[u] += tr; im[u] += ti; } }
+  }
+  const hmWrap = (x) => x - 2 * Math.PI * Math.round(x / (2 * Math.PI));
+  class Harmo extends FxBase {
+    defaults() { return { v1: 2, v2: 4, v3: 0, modus: 0, form: 0.6, breite: 0.6, schimmer: 0.2 }; }
+    constructor(o) {
+      super(o);
+      const N = HM_N, B = HM_B;
+      this.inL = new Float32Array(N); this.inR = new Float32Array(N); this.ip = 0; this.cnt = 0;
+      this.outL = new Float64Array(N + HM_H); this.outR = new Float64Array(N + HM_H);
+      this.re = new Float64Array(N); this.im = new Float64Array(N);
+      // per side: magnitude, phase now and before (analysis), true frequency (radians per hop), the envelope
+      this.S = [0, 1].map(() => ({ mag: new Float64Array(B), ph: new Float64Array(B), ph0: new Float64Array(B), om: new Float64Array(B), env: new Float64Array(B), lg: new Float64Array(B + 1) }));
+      // per voice and side: the synthesis phases, and the ratio it glides to
+      this.V = [0, 1, 2].map(() => ({ r: 1, rT: 1, on: 0, ps: [new Float64Array(B), new Float64Array(B)] }));
+      this.yL = [new Float64Array(B), new Float64Array(B)]; this.yR = [new Float64Array(B), new Float64Array(B)];
+      this.peak = new Int32Array(B); this.f0 = 0; this.pc = new Float64Array(0); this.tune();
+    }
+    // the scale's pitch classes (cents within the octave, from the notes the page sends), sorted
+    tune() { const pc = this.freqs.map((f) => ((1200 * Math.log2(f / 440)) % 1200 + 1200) % 1200).sort((a, b) => a - b); this.pc = Float64Array.from(pc.filter((c, i) => i === 0 || c - pc[i - 1] > 30)); }
+    // a voice's ratio: semitones, or steps of the scale from the pitch heard (the input's own deviation kept)
+    ratio(k) {
+      const p = this.p, st = Math.round(p['v' + (k + 1)]);
+      if (!st) return 0;
+      if (!(p.modus > 0.5) || this.pc.length < 2) return Math.pow(2, st / 12);   // (Halbtöne)
+      if (!this.f0) return -1;   // (no pitch heard: keep the last)
+      const c = 1200 * Math.log2(this.f0 / 440), oc = Math.floor(c / 1200), w = c - 1200 * oc, P = this.pc, n = P.length;
+      let bi = 0, bd = 1e9; for (let i = 0; i < n; i++) for (const o of [-1200, 0, 1200]) { const d = Math.abs(w - (P[i] + o)); if (d < bd) { bd = d; bi = i + (o < 0 ? -n : o > 0 ? n : 0); } }
+      const deg = (x) => { const q = Math.floor(x / n), i = x - q * n; return 1200 * (oc + q) + P[i]; };
+      return Math.pow(2, (deg(bi + st) - deg(bi)) / 1200);
+    }
+    frame() {
+      const N = HM_N, H = HM_H, B = HM_B, M = N - 1, re = this.re, im = this.im, w = HM_TAB.win, p = this.p, iL = this.inL, iR = this.inR, ip = this.ip;
+      for (let i = 0; i < N; i++) { const j = (ip + i) & M; re[i] = iL[j] * w[i]; im[i] = iR[j] * w[i]; }
+      hmFft(re, im, false);
+      // the two sides parted, their magnitudes, phases and true frequencies; the power for the pitch
+      const om0 = 2 * Math.PI * H / N;
+      for (let k = 0; k < B; k++) {
+        const n = (N - k) & M, zr = re[k], zi = im[k], nr = re[n], ni = im[n];
+        const sides = [[0.5 * (zr + nr), 0.5 * (zi - ni)], [0.5 * (zi + ni), 0.5 * (nr - zr)]];
+        for (let s = 0; s < 2; s++) {
+          const S = this.S[s], a = sides[s][0], b = sides[s][1], ph = Math.atan2(b, a);
+          S.mag[k] = Math.sqrt(a * a + b * b); S.om[k] = om0 * k + hmWrap(ph - S.ph0[k] - om0 * k); S.ph0[k] = ph; S.ph[k] = ph;
+        }
+      }
+      this.pitch();
+      // the envelope (formant): log magnitude smoothed over a third of an octave (at least 3 bins)
+      for (const S of this.S) { S.lg[0] = 0; for (let k = 0; k < B; k++) S.lg[k + 1] = S.lg[k] + Math.log(S.mag[k] + 1e-9); for (let k = 0; k < B; k++) { const h = Math.max(1, Math.round(k * 0.116)), a = Math.max(0, k - h), b = Math.min(B, k + h + 1); S.env[k] = (S.lg[b] - S.lg[a]) / (b - a); } }
+      // the voices: their ratios (gliding over two hops), placed and slightly apart
+      const cents = [-1, 1, -0.5].map((x) => x * 14 * p.schimmer), pans = [-p.breite, p.breite, 0];
+      let nv = 0;
+      for (let k = 0; k < 3; k++) { const V = this.V[k], r = this.ratio(k); if (r === 0) { V.on = 0; continue; } if (r > 0) V.rT = r * Math.pow(2, cents[k] / 1200); if (!V.on) { V.r = V.rT; V.ps[0].set(this.S[0].ph); V.ps[1].set(this.S[1].ph); } V.on = 1; V.r += 0.5 * (V.rT - V.r); nv++; }
+      for (let s = 0; s < 2; s++) { this.yL[s].fill(0); this.yR[s].fill(0); }
+      if (nv) {
+        const g = 1 / Math.sqrt(nv), fo = p.form, pk = this.peak;
+        for (let s = 0; s < 2; s++) {
+          const S = this.S[s], mag = S.mag, out = s === 0 ? this.yL : this.yR;
+          // the peaks (over two neighbours each side) and each bin's region: up to half way to the next peak
+          const L = []; for (let k = 2; k < B - 2; k++) if (mag[k] > mag[k - 1] && mag[k] >= mag[k + 1] && mag[k] > mag[k - 2] && mag[k] >= mag[k + 2] && mag[k] > 1e-7) L.push(k);
+          if (!L.length) continue;
+          for (let k = 0, j = 0; k < B; k++) { while (j < L.length - 1 && k > (L[j] + L[j + 1]) / 2) j++; pk[k] = L[j]; }
+          for (let v = 0; v < 3; v++) {
+            const V = this.V[v]; if (!V.on) continue;
+            const r = V.r, ps = V.ps[s], pan = pans[v], gs = g * Math.SQRT2 * (s === 0 ? Math.cos((pan + 1) * Math.PI / 4) : Math.sin((pan + 1) * Math.PI / 4));
+            // every region moves as a whole to where its peak's frequency goes (its lobe keeps its shape); the peak's
+            // phase runs on at r times its frequency, every bin keeps its phase to the peak's
+            for (const q of L) ps[q] = hmWrap(ps[q] + S.om[q] * r);
+            for (let k = 1; k < B - 1; k++) {
+              const q = pk[k], t = k + Math.round(q * r - q); if (t < 1 || t >= B - 1) continue;
+              const phs = ps[q] + (S.ph[k] - S.ph[q]);
+              let m = mag[k] * gs; if (fo > 0) m *= Math.exp(fo * (S.env[t] - S.env[k]));   // (formant: the envelope where the bin lands, not where it came from)
+              out[0][t] += m * Math.cos(phs); out[1][t] += m * Math.sin(phs);
+            }
+          }
+        }
+      }
+      // back as one: Y = L + i·R over the whole circle
+      const [lr, li] = this.yL, [rr, ri] = this.yR;
+      lr[0] = lr[B - 1] = rr[0] = rr[B - 1] = 0; li[0] = li[B - 1] = ri[0] = ri[B - 1] = 0;
+      for (let k = 0; k < B; k++) { re[k] = lr[k] - ri[k]; im[k] = li[k] + rr[k]; }
+      for (let k = 1; k < N / 2; k++) { re[N - k] = lr[k] + ri[k]; im[N - k] = rr[k] - li[k]; }
+      hmFft(re, im, true);
+      const oL = this.outL, oR = this.outR, kk = 1 / (1.5 * N);
+      for (let i = 0; i < N; i++) { oL[i] += re[i] * kk * w[i]; oR[i] += im[i] * kk * w[i]; }
+    }
+    // the pitch heard: the autocorrelation of both sides' power (one more transform), its first strong peak 60 … 1400 Hz
+    pitch() {
+      const N = HM_N, B = HM_B, re = this.re, im = this.im;
+      for (let k = 0; k < B; k++) { const a = this.S[0].mag[k], b = this.S[1].mag[k]; re[k] = a * a + b * b; im[k] = 0; }
+      for (let k = 1; k < N / 2; k++) { re[N - k] = re[k]; im[N - k] = 0; }
+      hmFft(re, im, true);
+      const r0 = re[0]; if (!(r0 > 1e-6)) { this.f0 = 0; return; }
+      const t0 = Math.floor(SR / 1400), t1 = Math.min(N / 2 - 2, Math.ceil(SR / 60));
+      let best = 0, bt = 0; for (let t = t0; t <= t1; t++) { const v = re[t] / r0; if (v > best) { best = v; bt = t; } }
+      // the first peak within 0.9 of the best (an octave error to the long side avoided)
+      let tt = bt; for (let t = t0 + 1; t < bt; t++) { const v = re[t] / r0; if (v > 0.9 * best && v >= re[t - 1] / r0 && v >= re[t + 1] / r0) { tt = t; break; } }
+      if (best < 0.45) { this.f0 = 0; return; }
+      const a = re[tt - 1], b = re[tt], c = re[tt + 1], d = a - 2 * b + c, off = d ? 0.5 * (a - c) / d : 0;
+      this.f0 = SR / (tt + off);
+    }
+    run(iL, iR, oL, oR, n) {
+      const N = HM_N, H = HM_H;
+      for (let i = 0; i < n; i++) {
+        this.inL[this.ip] = iL ? iL[i] : 0; this.inR[this.ip] = iR ? iR[i] : 0; this.ip = (this.ip + 1) & (N - 1);
+        oL[i] = this.outL[this.cnt]; oR[i] = this.outR[this.cnt];
+        if (++this.cnt === H) {
+          this.cnt = 0;
+          this.outL.copyWithin(0, H); this.outR.copyWithin(0, H); this.outL.fill(0, N); this.outR.fill(0, N);
+          this.frame();
+        }
+      }
+    }
+  }
   // an empty voice: the per-node price of the contract (SPEC §8 step 1 gate, ≈ 0.06 + 0.03 per param)
   class Null extends MyzelProc { render(L, R, a, b) { for (let i = a; i < b; i++) L[i] = 0; } }
-  for (const [k, C] of [['myzel-blow', Blow], ['myzel-scan', Scan], ['myzel-bow', Bow], ['myzel-rot', Rot], ['myzel-aeol', Aeol], ['myzel-gendy', Gendy], ['myzel-web', Web], ['myzel-string', Strg], ['myzel-syrinx', Syrinx], ['myzel-scrape', Scrape], ['myzel-ember', Ember], ['myzel-null', Null], ['myzel-ring', Ring], ['myzel-ring-in', RingIn], ['myzel-wsend', WSend], ['myzel-tfx', Tfx], ['myzel-hng', Hng], ['myzel-gml', Gml], ['myzel-sit', Sit], ['myzel-tbl', Tbl], ['myzel-did', Did], ['myzel-mtr', Mtr], ['myzel-nrd', Nrd], ['myzel-sht', Sht], ['myzel-ond', Ond], ['myzel-wal', Wal], ['myzel-stp', Stp], ['myzel-atr', Atr], ['myzel-tnl', Tnl], ['myzel-wkg', Wkg], ['myzel-bnt', Bnt], ['myzel-kas', Kas], ['myzel-bit', Bit], ['myzel-gbs', Gbs], ['myzel-hht', Hht], ['myzel-vox', Vox], ['myzel-spu', Spu], ['myzel-kto', Kto], ['myzel-sat', Sat], ['myzel-lim', Lim], ['myzel-netz', Netz], ['myzel-wolke', Wolke], ['myzel-spek', Spektral], ['myzel-oktav', Oktav], ['myzel-vokal', Vokal], ['myzel-trans', Trans]]) registerProcessor(k, C);
+  for (const [k, C] of [['myzel-blow', Blow], ['myzel-scan', Scan], ['myzel-bow', Bow], ['myzel-rot', Rot], ['myzel-aeol', Aeol], ['myzel-gendy', Gendy], ['myzel-web', Web], ['myzel-string', Strg], ['myzel-syrinx', Syrinx], ['myzel-scrape', Scrape], ['myzel-ember', Ember], ['myzel-null', Null], ['myzel-ring', Ring], ['myzel-ring-in', RingIn], ['myzel-wsend', WSend], ['myzel-tfx', Tfx], ['myzel-hng', Hng], ['myzel-gml', Gml], ['myzel-sit', Sit], ['myzel-tbl', Tbl], ['myzel-did', Did], ['myzel-mtr', Mtr], ['myzel-nrd', Nrd], ['myzel-sht', Sht], ['myzel-ond', Ond], ['myzel-wal', Wal], ['myzel-stp', Stp], ['myzel-atr', Atr], ['myzel-tnl', Tnl], ['myzel-wkg', Wkg], ['myzel-bnt', Bnt], ['myzel-kas', Kas], ['myzel-bit', Bit], ['myzel-gbs', Gbs], ['myzel-hht', Hht], ['myzel-vox', Vox], ['myzel-spu', Spu], ['myzel-kto', Kto], ['myzel-sat', Sat], ['myzel-lim', Lim], ['myzel-netz', Netz], ['myzel-wolke', Wolke], ['myzel-spek', Spektral], ['myzel-oktav', Oktav], ['myzel-vokal', Vokal], ['myzel-trans', Trans], ['myzel-harmo', Harmo]]) registerProcessor(k, C);
   return { SIN, NOISE, Reso, Biquad, Allpass1, OnePole, DcBlock, FracDelay, PRNG };   // (for later processors; unused here)
 }
 // end myzelDsp
@@ -16298,15 +16476,16 @@ function onDown(e) {
   const pt = e.pt || stagePoint(e), n = e.note || noteAt(pt.x), now = e.at > A.ctx.currentTime ? e.at : A.ctx.currentTime;   // (a key: at its moment – midiAt)
   const tt = { id: e.pointerId, t0: now, x: pt.x, y: pt.y, px: pt.px, py: pt.py, col: n.idx, f: n.f, name: n.name, layers: layers(), voices: [], rollNext: null, hue: VIS.hueAt(pt.x), vel: e.vel, bend: e.bend || false, vn: e.vn, mb: e.mb || 0, mpe: e.mpe, seq: ++MOD.seq, stk: modStroke(e.stkT), ptype: e.pointerType || null };
   const y0 = (tt.my = modY(tt, tt));   // the newest note: Höhe's full share from its first moment
-  for (const ly of tt.layers) {
+  const arp = typeof arpTake === 'function' && arpTake(tt);   // (the Sporenwerk: the note joins its pool and does not sound itself – arp/sporenwerk.js)
+  if (!arp) for (const ly of tt.layers) {
     if (ENGINES[ly.eng].sustain) {
       const f = lyF(ly, n.f, n.idx);   // mb: an MPE note's own bend in semitones
       const v = playNote(ly.eng, now, tt.mb ? f * Math.pow(2, tt.mb / 12) : f, y0, noteVel(tt) * ly.lvl, { pan: touchPan(pt.x), bend: tt.bend, bus: ly.bus });
       if (v) tt.voices.push({ v, ly });
     }
   }
-  triggerPerc(tt, now, false);
-  if (P['v.roll'] !== 'off' && tt.layers.some((ly) => !ENGINES[ly.eng].sustain)) tt.rollNext = now + rollInterval();
+  if (!arp) triggerPerc(tt, now, false);
+  if (!arp && P['v.roll'] !== 'off' && tt.layers.some((ly) => !ENGINES[ly.eng].sustain)) tt.rollNext = now + rollInterval();
   touches.set(e.pointerId, tt);
   if (GK.on) gkNote(tt, true, e);
   modTouch();
@@ -16347,7 +16526,7 @@ function moveTouch(tt, pt) {
   if (n.idx !== tt.col) {
     tt.col = n.idx;
     tt.hue = VIS.hueAt(pt.x);
-    if (P['v.strum'] && tt.rollNext == null) triggerPerc(tt, A.ctx.currentTime, false);
+    if (P['v.strum'] && tt.rollNext == null && !tt.arp) triggerPerc(tt, A.ctx.currentTime, false);
   }
 }
 function onUp(e) {
@@ -21265,7 +21444,7 @@ function tfxArpStep() {
 }
 function tfxArpTick() {
   const R = TFX.arp, v = R.v; if (!v || !A.ctx) return;
-  const held = [...touches.values()].filter((tt) => tt.layers && tt.layers.length).sort((a, b) => a.f - b.f);
+  const held = [...touches.values()].filter((tt) => tt.layers && tt.layers.length && !tt.arp).sort((a, b) => a.f - b.f);   // (a note the Sporenwerk plays is its – arp/sporenwerk.js)
   if (!held.length) { R.next = 0; return; }
   const now = A.ctx.currentTime, S = tfxArpStep(), oct = 1 + Math.round(2 * v.her);
   const seq = []; for (let o = 0; o < oct; o++) for (const tt of held) seq.push([tt, o]);
@@ -23391,7 +23570,8 @@ function onParamChanged(id) {
     case 'cho': updChorus(); break;
     case 'dly': updDelay(); break;
     case 'rev': if (id === 'rev.size' || id === 'rev.damp' || id === 'rev.typ' || id === 'rev.dist' || id === 'rev.len') regenIR(); else updReverbMix(); break;
-    case 'fx': case 'fx2': fxUpd(pre); break;
+    case 'arp': if (id === 'arp.on') arpOn(P['arp.on']); else if (P['arp.on']) arpStart(); if (!P['arp.on'] || P['arp.quelle'] === 'spiel') arpLoopQuiet(); break;   // (the Sporenwerk – arp/sporenwerk.js)
+    case 'fx': case 'fx2': fxUpd(pre); if (id.endsWith('.hmod')) for (const v of ['hv1', 'hv2', 'hv3']) for (const fn of CTL[pre + '.' + v] || []) fn(P[pre + '.' + v], null); break;   // (the Harmonizer's voices named anew: steps or semitones)
     case 'mov': updMove(); break;
     case 'mst': updMaster(); break;
     case 'bor': updBordun(); break;
@@ -28508,6 +28688,365 @@ function refreshEngineUI() {
   if (dot) { dot.hidden = !fb; dot.title = fb ? 'spielt als ' + ENG_NAME[kqFb(a) || kqFb(b)] : ''; }
   $('#engChip').setAttribute('aria-label', 'Klangquelle: ' + ENG_NAME[a] + (two ? ', dazu ' + ENG_NAME[b] : '') + (fb ? ' (vereinfacht)' : '') + '. Einstellungen öffnen; lange drücken öffnet die Bibliothek');
   for (const k in engSecs) if (engSecs[k].richNote) engSecs[k].richNote.hidden = !Q.rich;
+}
+/* =====================================================================
+   Sporenwerk – the arpeggiator (owner, 29.10.2026: „bau einen ausgefuchsten Arpeggiator, ganz im Myzel-Style, sehr
+   speziell und ungewöhnlich … eine richtige Trickkiste“)
+   ===================================================================== */
+// A MIDI effect between what is played and the sound: while it is on, the notes held (the field, a keyboard, a MIDI
+// controller – and/or a Schleife's notes, arp.quelle) do not sound themselves; the Sporenwerk plays them one after
+// another on the beat grid (the Taktgeber's – the Puls's tempo, or a loop's), each step through every layer of the
+// note (Klang and Ebene 2) as the field would, and what it plays reaches the Humus as played (it can be harvested).
+//   Wuchsform (arp.form): the order – auf, ab, pendel, wie gespielt, Zufall, and the Myzel's own: Hyphe (a walk to a
+//   neighbour, now and then branching into two), Spirale (outside in: lowest, highest, second lowest …), Sporenflug
+//   (climbing octave by octave, thinning out the higher it gets), Pilzring (the whole chord as a quick strum, its lead
+//   turning round), Wachsen (1, 1 2, 1 2 3 … – the pattern grows a note each round)
+//   Raster: 1/4 … 1/32, straight, triplets or dotted; Swing; Länge (gate, over 1 legato)
+//   Pilzring of steps (arp.schritte/treffer/dreh): a Euclidean ring – where it rests, the step is silent
+//   Chance, Ratschen (a step struck 2–4 times inside itself, falling away – spores raining), Akzent (every Nth step),
+//   Höhe-Welle (the sound's Höhe swells over the steps), Stimmen (scale tones added to each step: third, fifth, triad,
+//   octave), Leiter-Wanderung (each round the whole pattern a few steps up or down the scale, back after arp.wlang
+//   rounds), Mutation (the pattern grows: now and then two places swap, the ring turns, a step drops out – slowly, so
+//   it stays recognisable), Halten (the chord stands until a new one comes from an empty hand)
+const ARP = { still: null, tm: 0, next: 0, k: 0, round: 0, last: -1, dir: 1, i: -1, ev: [], perm: null, permN: 0, latch: [], held: [], rot: 0, drop: new Set(), hy: -1, grow: 1, gi: 0, seq: 0 };
+const ARP_FORMS = ARP_FORMS_P;
+const ARP_FORM_I = {
+  auf: 'Von unten nach oben, Oktave für Oktave', ab: 'Von oben nach unten', pendel: 'Hinauf und wieder hinab, ohne die Enden doppelt',
+  gespielt: 'In der Reihenfolge, in der du die Töne gegriffen hast', zufall: 'Jeder Schritt ein anderer Ton, nie zweimal derselbe hintereinander',
+  hyphe: 'Ein Pilzfaden: Schritt für Schritt zum Nachbarton, mal hinauf, mal hinab – und manchmal verzweigt er sich in zwei Töne',
+  spirale: 'Von außen nach innen: der tiefste, der höchste, der zweittiefste, der zweithöchste …', sporen: 'Sporen steigen auf: Oktave um Oktave nach oben – je höher, desto seltener',
+  pilzring: 'Der ganze Akkord als schneller Anschlag, rundherum: jedes Mal führt ein anderer Ton', wachsen: 'Das Muster wächst: 1 · 1 2 · 1 2 3 … und beginnt dann von vorn',
+};
+// the step's length in beats (a quarter is a beat)
+const arpStepB = () => +P['arp.rate'] * (P['arp.takt'] === 't' ? 2 / 3 : P['arp.takt'] === 'p' ? 1.5 : 1);
+// the Euclidean ring: does step k sound?
+function arpRing(k) {
+  const n = Math.max(1, Math.round(P['arp.schritte'])), h = clamp(Math.round(P['arp.treffer']), 0, n), r = Math.round(P['arp.dreh']) + ARP.rot, i = (((k - r) % n) + n) % n;
+  if (ARP.drop.has(i)) return false;
+  return h >= n || Math.floor((i * h) / n) !== Math.floor(((i - 1) * h) / n);   // (Bresenham: h hits spread as evenly as n steps allow)
+}
+// a note of the pool: its pitch, its place in the scale, the layers it plays and how it was struck
+function arpNote(tt) { return { f: tt.f, idx: tt.col, layers: tt.layers, x: tt.x, y: tt.my != null ? tt.my : tt.y, vel: tt.vel != null ? tt.vel : P['v.vel'], seq: tt.arpSeq || 0, key: 'tt' + tt.id }; }
+// the notes it plays from now: what is held (and latched), the Schleife's (arp/schleifen.js), or both
+function arpPool(t) {
+  let out = [];
+  if (P['arp.quelle'] !== 'schleife') {
+    const live = [...touches.values()].filter((tt) => tt.arp).map(arpNote);
+    if (P['arp.halten'] && live.length) ARP.latch = live.map((n) => Object.assign({}, n));
+    out = live.length ? live : P['arp.halten'] ? ARP.latch : [];
+  }
+  if (P['arp.quelle'] !== 'spiel' && typeof arpLoopPool === 'function') out = out.concat(arpLoopPool(t));
+  const seen = new Set(); out = out.filter((n) => { const k = Math.round(1200 * Math.log2(n.f)); if (seen.has(k)) return false; seen.add(k); return true; });
+  return out;
+}
+// a scale step away from a note (semitones in the free scale), its own tuning kept
+function arpDeg(n, d) {
+  if (!d) return n.f;
+  if (N.free) return n.f * Math.pow(2, d / 12);
+  return n.f * degNote(n.idx + d).f / degNote(n.idx).f;
+}
+// the order of a step: which of the ladder (notes × octaves) – and sometimes two (Hyphe's branch)
+function arpPick(lad, sorted) {
+  const n = lad.length, form = P['arp.form'], R = Math.random;
+  if (!n) return [];
+  if (n === 1) return [0];
+  const step = (i) => ((i % n) + n) % n;
+  switch (form) {
+    case 'ab': ARP.i = step(ARP.i - 1); return [ARP.i];
+    case 'pendel': { if (ARP.i + ARP.dir >= n || ARP.i + ARP.dir < 0) ARP.dir = -ARP.dir; ARP.i = clamp(ARP.i + ARP.dir, 0, n - 1); return [ARP.i]; }
+    case 'zufall': { let i; do i = Math.floor(R() * n); while (i === ARP.i); ARP.i = i; return [i]; }
+    case 'hyphe': {
+      if (ARP.hy < 0 || ARP.hy >= n) ARP.hy = Math.floor(R() * n);
+      const d = R() < 0.5 ? -1 : 1, nx = ARP.hy + d >= n || ARP.hy + d < 0 ? ARP.hy - d : ARP.hy + d;
+      const br = R() < 0.18 + 0.3 * P['arp.mutation'] ? [step(ARP.hy - d)] : [];   // (it branches: the other neighbour too)
+      ARP.hy = nx; return [nx].concat(br.filter((x) => x !== nx));
+    }
+    case 'spirale': { ARP.i = (ARP.i + 1) % n; const j = ARP.i, lo = j >> 1; return [j % 2 ? n - 1 - lo : lo]; }
+    case 'sporen': {
+      // up the ladder, skipping more the higher it is; at the top it falls back to the ground
+      let i = ARP.i + 1; while (i < n && R() < 0.75 * (i / n) * (0.4 + 0.6 * P['arp.mutation'] + 0.3)) i++;
+      if (i >= n) i = 0; ARP.i = i; return [i];
+    }
+    case 'pilzring': { ARP.i = step(ARP.i + 1); const out = []; for (let k = 0; k < Math.min(n, 6); k++) out.push(step(ARP.i + k)); return out; }
+    case 'wachsen': {
+      if (ARP.gi >= ARP.grow) { ARP.gi = 0; ARP.grow = ARP.grow >= n ? 1 : ARP.grow + 1; }
+      return [step(ARP.gi++)];
+    }
+    case 'gespielt': default: ARP.i = step(ARP.i + 1); return [ARP.i];
+  }
+}
+// the ladder: the pool through its octaves (arp.okt, how arp.oktw goes), in the order the form reads it
+function arpLadder(pool) {
+  const byF = pool.slice().sort((a, b) => a.f - b.f), base = P['arp.form'] === 'gespielt' ? pool.slice().sort((a, b) => a.seq - b.seq) : byF;
+  const oct = Math.max(1, Math.round(P['arp.okt'])), w = P['arp.oktw'], lad = [];
+  const os = w === 'ab' ? Array.from({ length: oct }, (_, o) => -o) : Array.from({ length: oct }, (_, o) => o);
+  for (const o of os) for (const n of base) lad.push({ n, o });
+  if (w === 'ab') lad.sort((a, b) => b.n.f * Math.pow(2, b.o) - a.n.f * Math.pow(2, a.o));
+  if (w === 'pendel' && lad.length > 2) { const back = lad.slice(1, -1).reverse(); lad.push(...back); }
+  if (w === 'zufall') for (const L of lad) L.o = Math.floor(Math.random() * oct);
+  // Mutation: the order as it grew – a kept permutation, now and then two places swapped
+  if (P['arp.mutation'] > 0 && P['arp.form'] !== 'zufall') {
+    if (!ARP.perm || ARP.permN !== lad.length) { ARP.perm = lad.map((_, i) => i); ARP.permN = lad.length; }
+    return ARP.perm.map((i) => lad[i]).filter(Boolean);
+  }
+  return lad;
+}
+// once a round: the Mutation's slow growth
+function arpMutate() {
+  const m = P['arp.mutation'], R = Math.random;
+  if (!(m > 0)) { ARP.rot = 0; ARP.drop.clear(); ARP.perm = null; return; }
+  if (ARP.perm && ARP.perm.length > 1 && R() < 0.6 * m) { const a = Math.floor(R() * ARP.perm.length), b = (a + 1 + Math.floor(R() * (ARP.perm.length - 1))) % ARP.perm.length; [ARP.perm[a], ARP.perm[b]] = [ARP.perm[b], ARP.perm[a]]; }
+  if (R() < 0.35 * m) ARP.rot = (ARP.rot + (R() < 0.5 ? 1 : -1)) | 0;
+  const n = Math.max(1, Math.round(P['arp.schritte']));
+  if (R() < 0.4 * m) { const i = Math.floor(R() * n); if (ARP.drop.has(i)) ARP.drop.delete(i); else if (ARP.drop.size < n / 3) ARP.drop.add(i); }
+}
+// the scale tones a step adds
+const ARP_ST = { 0: [], terz: [2], quinte: [4], akkord: [2, 4], oktave: [7] };
+function arpTick() {
+  if (!A.ctx || !A.started || !P['arp.on']) { arpStop(); return; }
+  if (typeof arpLoopQuiet === 'function') arpLoopQuiet();
+  const now = A.ctx.currentTime, sb = arpStepB(), ahead = 0.12;
+  const pool = arpPool(now);
+  if (!pool.length) { ARP.next = 0; ARP.i = -1; ARP.hy = -1; ARP.grow = 1; ARP.gi = 0; return; }
+  // the next grid step after now (a first note waits for no bar: the next step of the grid)
+  if (!ARP.next || ARP.next < now - 0.05) { const b = tgBeat(now + 0.008); ARP.k = Math.ceil(b / sb - 1e-6); ARP.next = tgTime(ARP.k * sb); }
+  const lad = arpLadder(pool), n = Math.max(1, Math.round(P['arp.schritte'])), wl = Math.max(1, Math.round(P['arp.wlang']));
+  while (ARP.next < now + ahead) {
+    const k = ARP.k, t0 = ARP.next, tn = tgTime((k + 1) * sb), dur = tn - t0;
+    const sw = k % 2 ? P['arp.swing'] * 0.5 * dur : 0, t = t0 + sw;
+    if (k % n === 0 && k !== ARP.last) { ARP.round++; arpMutate(); }
+    ARP.last = k;
+    const on = arpRing(k) && Math.random() < P['arp.chance'] + 1e-9;
+    if (on) {
+      const pick = arpPick(lad), shift = Math.round(P['arp.wander']) * (ARP.round % wl);   // (Leiter-Wanderung: a step further each round, home after wl)
+      const acc = P['arp.akzent'] > 0 && k % Math.max(2, Math.round(P['arp.akzN'])) === 0, gate = Math.max(0.02, dur * P['arp.gate']);
+      const wave = P['arp.welle'] > 0 ? 0.5 * P['arp.welle'] * Math.sin(2 * Math.PI * k / Math.max(4, 2 * n)) : 0;
+      const rat = P['arp.ratsche'] > 0 && Math.random() < P['arp.ratsche'] ? 2 + Math.floor(Math.random() * 3) : 1;
+      const strum = P['arp.form'] === 'pilzring' ? Math.min(0.03, dur / 8) : 0;
+      pick.forEach((li, j) => {
+        const L = lad[li]; if (!L) return;
+        const nt = L.n, degs = [0].concat(ARP_ST[P['arp.stimmen']] || []);
+        for (const d of degs) {
+          const f = arpDeg(nt, shift + d) * Math.pow(2, L.o), vel = clamp(nt.vel * (acc ? 1 + 0.6 * P['arp.akzent'] : 1 - 0.25 * P['arp.akzent']) * (d ? 0.7 : 1), 0.05, 1), y = clamp(nt.y + wave, 0, 1);
+          for (let r = 0; r < rat; r++) {
+            const tr = t + j * strum + r * dur / rat, g = rat > 1 ? Math.min(gate, dur / rat * 0.8) : gate, vr = vel * Math.pow(0.72, r);
+            for (const ly of nt.layers) hit(ly.eng, tr, lyF(ly, f, nt.idx), y, vr * ly.lvl, { pan: touchPan(nt.x), bus: ly.bus, gate: g });
+          }
+          ARP.ev.push({ t, f, nf: nt.f, o: L.o, li, vel, rat, acc, d, k, n: lad.length, dur });
+        }
+      });
+    } else ARP.ev.push({ t, rest: true, k, n: lad.length, dur });
+    if (ARP.ev.length > 64) ARP.ev.splice(0, ARP.ev.length - 64);
+    ARP.k++; ARP.next = tgTime(ARP.k * sb);
+  }
+}
+function arpStart() { if (!ARP.tm) { ARP.tm = setInterval(arpTick, 25); arpTick(); } }
+function arpStop() { if (ARP.tm) { clearInterval(ARP.tm); ARP.tm = 0; } ARP.next = 0; if (typeof arpLoopQuiet === 'function' && ARP.still) arpLoopQuiet(); }
+// on or off: the notes that are held now go over to the other side (they start or stop sounding themselves)
+function arpOn(on) {
+  if (on) arpStart(); else { arpStop(); ARP.latch = []; }
+  for (const tt of touches.values()) {
+    if (on && !tt.arp) { tt.arp = true; for (const { v } of tt.voices) if (v.alive && v.release) v.release(); tt.voices = []; }
+    else if (!on && tt.arp) tt.arp = false;
+  }
+}
+// a new note held while the Sporenwerk runs: it joins the pool instead of sounding; from an empty hand the latched
+// chord gives way to the new one
+function arpTake(tt) {
+  if (!P['arp.on'] || P['arp.quelle'] === 'schleife') return false;
+  if (![...touches.values()].some((x) => x.arp)) ARP.latch = [];
+  tt.arp = true; tt.arpSeq = ++ARP.seq;
+  arpStart();
+  return true;
+}
+// ---- Schleifen arpen (owner, 29.10.2026: „zusätzlich kann man Schleifen arpen“): the Sporenwerk takes the notes that
+// sound in a Schleife now as its chord – the loop's own record (S.wn: what was played into it, in the key it follows
+// now), each note counted as sounding while it is held, a struck one for a beat after its onset (half a second in a free
+// loop): the chord changes as the loop goes round. arp.schl: the Fokus loop or a place of the Leiste; arp.schlStill: the
+// loop itself goes quiet while the Sporenwerk plays it (its level, not its record – off again, it is back) ----
+function arpLoopOf() {
+  const k = P['arp.schl'], live = typeof hxLoopsLive === 'function' ? hxLoopsLive() : [];
+  if (k === '0') return live.find((L) => L.id === HX.fokus) || live.find((L) => L.state === 'spielt' && L.sch.some((id) => hxWCan(HX.sch.get(id)))) || null;
+  const id = HX.slot[+k - 1]; return live.find((L) => L.id === id) || null;   // (the Leiste's place k)
+}
+function arpLoopPool(t) {
+  const L = arpLoopOf(); if (!L || L.state !== 'spielt' || !HX.node) return [];
+  const f = hxF(t), k = hxPassK(L, f), a = hxPassF(L, k), b = hxPassF(L, k + 1), key = hxWKeyNow(), out = [];
+  for (const id of L.sch) {
+    const S = HX.sch.get(id); if (!hxWCan(S)) continue;
+    const W = hxWNotesT(L, S) || S.wn, pos = ((f - a) / Math.max(1, b - a)) * W.len, win = W.u === 'b' ? 1 : 0.5;
+    for (const x of W.n) {
+      const end = x.t + Math.max(x.d != null ? x.d : 0, win);
+      if (!(pos >= x.t - 1e-6 && pos < end) && !(x.held && pos < end)) continue;
+      const fr = hxWF(L, W, x, key), d = hxDeg(fr), per = N.free ? 12 : Math.max(1, Math.round((N.notes.length - 1) / Math.max(1, P['t.range'])));
+      out.push({ f: fr, idx: N.free ? Math.round(12 * Math.log2(fr / N.base)) : d.oct * per + d.deg, layers: [{ eng: hxWEng(L, x), ratio: 1, deg: 0, lvl: 1, bus: stripIn(x.src === 'eb2' ? 'eb2' : 'fin') }], x: d.x != null ? d.x : 0.5, y: x.y0 != null ? x.y0 : 0.5, vel: x.vel != null ? x.vel : 0.7, seq: x.t, key: 'L' + L.id + ':' + x.t });
+    }
+  }
+  return out;
+}
+// the loop goes quiet while the Sporenwerk plays it – and comes back after (its gain through the processor, gliding)
+function arpLoopQuiet() {
+  const want = P['arp.on'] && P['arp.quelle'] !== 'spiel' && P['arp.schlStill'] ? arpLoopOf() : null;
+  if (ARP.still && (!want || ARP.still.L !== want)) { const X = ARP.still.L; if (X.state !== 'weg') hxGain(X.id, X.d.gain, null, 0.08); ARP.still = null; }
+  if (want && !ARP.still) { hxGain(want.id, 0, null, 0.08); ARP.still = { L: want }; }
+}
+/* ---------- Sporenwerk – its panel: a living picture and the Trickkiste ----------
+   The picture (SPW): a Pilzring of steps round the edge – a spore where the ring strikes, a hollow where it rests, a
+   withered one where Mutation took it out; inside, the notes it plays on a spiral (the angle their pitch class, the
+   radius their octave), each in its colour; every step a hypha grows from the ring to its note and bursts into spores
+   there – Ratschen a little shower, an accent a bloom, Stimmen a branch to the added tones; the trail of the last steps
+   fades into the soil, and with Mutation fine threads keep sprouting from the ring. Drawn while the panel shows. */
+const SPW = { cv: null, w: 0, h: 0, dpr: 1, t: 0, hy: [], dust: [], spr: [], sprouts: [], wave: 0, glow: {} };
+ICON.arp = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.6" stroke-dasharray="1.6 3.1"/><path d="M12 12 7.5 7.8M12 12l5 -2.6M12 12l1.6 5.2"/><circle cx="7.5" cy="7.8" r="1.5" fill="currentColor"/><circle cx="17" cy="9.4" r="1.5" fill="currentColor"/><circle cx="13.6" cy="17.2" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>';
+PANELS.splice(PANELS.findIndex((p) => p.key === 'mix') + 1, 0, { key: 'arp', title: 'Sporenwerk', icon: ICON.arp, build: buildSporenwerk, frame: spwFrame, open: () => { for (const e of ARP.ev) e.drawn = true; spwFit(); } });
+// a pitch's colour: its place in the octave round the colour wheel, in the field's muted, warm light
+const spwHue = (f) => ((Math.log2(f / 261.63) % 1) + 1) % 1;
+const spwCol = (f, a, l = 66) => 'hsla(' + Math.round(spwHue(f) * 360 + 20) + ',72%,' + l + '%,' + a.toFixed(3) + ')';
+function buildSporenwerk() {
+  SPW.cv = h('canvas', { class: 'spw-cv', role: 'img', 'aria-label': 'Sporenwerk: der Ring der Schritte und die Töne, die er spielt' });
+  const on = ctl('arp.on', { label: 'Sporenwerk an' });
+  SPW.form = h('p', { class: 'spw-form' });
+  SPW.read = h('p', { class: 'spw-read', 'aria-live': 'polite' });
+  const forms = h('div', { class: 'chips spw-forms', role: 'radiogroup', 'aria-label': 'Wuchsform' },
+    ...ARP_FORMS.map(([k, t]) => { const b = h('button', { type: 'button', class: 'chip', role: 'radio', 'data-v': k, title: ARP_FORM_I[k], onclick: () => setParam('arp.form', k) }, t); return b; }));
+  bindCtl('arp.form', (v) => { for (const b of forms.children) { const o = b.dataset.v === v; b.setAttribute('aria-checked', String(o)); b.tabIndex = o ? 0 : -1; } SPW.form.textContent = ARP_FORM_I[v] || ''; });
+  forms.addEventListener('keydown', (e) => { const d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0; if (!d) return; e.preventDefault(); const i = ARP_FORMS.findIndex((x) => x[0] === P['arp.form']), n = ARP_FORMS[(i + d + ARP_FORMS.length) % ARP_FORMS.length][0]; setParam('arp.form', n); forms.querySelector('[data-v="' + n + '"]').focus(); });
+  // the dice: a new Trickkiste in one stroke – Wuchsform, ring, Ratschen, Stimmen, Wanderung, as the Myzel would grow it
+  const dice = h('button', { type: 'button', class: 'btn ghost spw-dice', title: 'Würfeln: eine neue Trickkiste – Wuchsform, Ring, Ratschen, Stimmen, Wanderung', onclick: spwDice }, '⚄ Würfeln');
+  const box = h('div', { class: 'spw' },
+    h('div', { class: 'spw-head' }, on, dice),
+    h('div', { class: 'spw-stage' }, SPW.cv, SPW.read),
+    section('Wuchsform', 'Wie der Faden durch die Töne wächst', forms, SPW.form),
+    section('Rhythmus', 'Raster, Ring und Swing', grid(ctl('arp.rate'), ctl('arp.takt')), grid(ctl('arp.gate'), ctl('arp.swing')),
+      grid(ctl('arp.schritte'), ctl('arp.treffer'), ctl('arp.dreh')), h('p', { class: 'note' }, 'Der Ring: so viele Schritte, so viele davon klingen, gleichmäßig verteilt (euklidisch) – die Drehung verschiebt, wo er anfängt.')),
+    section('Trickkiste', 'Was die Sporen unterwegs treiben', grid(ctl('arp.chance'), ctl('arp.ratsche'), ctl('arp.mutation')), grid(ctl('arp.akzent'), ctl('arp.akzN'), ctl('arp.welle')),
+      ctl('arp.stimmen'), grid(ctl('arp.wander'), ctl('arp.wlang')),
+      h('p', { class: 'note' }, 'Ratschen: ein Schritt zwei- bis viermal in sich, leiser werdend. Mutation: das Muster wächst langsam weiter – Plätze tauschen, der Ring dreht sich, ein Schritt welkt. Leiter-Wanderung: jede Runde wandert alles in der Tonart weiter und kehrt dann heim.')),
+    section('Oktaven', '', grid(ctl('arp.okt'), ctl('arp.oktw'))),
+    section('Quelle', 'Was das Sporenwerk spielt', ctl('arp.quelle'), ctl('arp.schl'), ctl('arp.schlStill'), ctl('arp.halten'),
+      h('p', { class: 'note' }, 'Gespielt: die Töne, die du hältst (Feld, Keyboard, MIDI) – sie klingen dann nicht selbst. Schleife: die Töne, die gerade in einer Schleife klingen. Halten: der Akkord bleibt stehen, bis du aus leerer Hand neu greifst.')));
+  if (window.ResizeObserver) new ResizeObserver(() => spwFit()).observe(SPW.cv);
+  return box;
+}
+function spwDice() {
+  const R = Math.random, pick = (a) => a[Math.floor(R() * a.length)];
+  const n = pick([5, 7, 8, 9, 11, 12, 13, 16]);
+  for (const [id, v] of [['arp.form', pick(ARP_FORMS)[0]], ['arp.rate', pick(['0.5', '0.25', '0.25', '0.125'])], ['arp.takt', pick(['g', 'g', 't', 'p'])], ['arp.schritte', n], ['arp.treffer', Math.max(2, Math.round(n * (0.45 + 0.5 * R())))],
+    ['arp.dreh', Math.floor(R() * n)], ['arp.ratsche', pick([0, 0, 0.15, 0.3])], ['arp.stimmen', pick(['0', '0', 'terz', 'quinte', 'akkord'])], ['arp.wander', pick([0, 0, 1, -1, 2])], ['arp.okt', pick([1, 2, 2, 3])], ['arp.oktw', pick(['auf', 'pendel', 'zufall'])],
+    ['arp.mutation', pick([0, 0.2, 0.4])], ['arp.welle', pick([0, 0.3, 0.6])], ['arp.chance', pick([1, 1, 0.85, 0.7])]]) setParam(id, v);
+  toast('Sporenwerk: ' + ARP_FORMS.find((x) => x[0] === P['arp.form'])[1] + ' – neu gewürfelt.', 3500, UNDO_P());
+}
+// (Rückgängig for the dice: the Sporenwerk's knobs as they were)
+function UNDO_P() { const was = Object.fromEntries(Object.keys(PD).filter((id) => id.startsWith('arp.') && id !== 'arp.on').map((id) => [id, P[id]])); return { label: 'Rückgängig', fn: () => { for (const id in was) setParam(id, was[id]); } }; }
+function spwFit() {
+  const cv = SPW.cv; if (!cv) return;
+  const w = cv.clientWidth, hh = cv.clientHeight; if (!w || !hh) return;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(hh * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(hh * dpr); }
+  SPW.w = w; SPW.h = hh; SPW.dpr = dpr;
+  if (!SPW.dust.length) for (let i = 0; i < 70; i++) SPW.dust.push({ x: Math.random(), y: Math.random(), s: 0.4 + Math.random() * 1.4, v: 0.004 + Math.random() * 0.012, p: Math.random() * 6.28 });
+}
+// a note's place inside the ring: the pool's notes evenly round (lowest at the top, clockwise up), each octave the
+// Sporenwerk adds a ring further out
+function spwNodePos(i, n, o, R) {
+  const a = -Math.PI / 2 + 2 * Math.PI * (i + 0.5 * (o % 2) / Math.max(1, n)) / Math.max(1, n), r = R * (0.3 + 0.17 * clamp(o, 0, 3.5));
+  return [Math.cos(a) * r, Math.sin(a) * r];
+}
+// the field's note nearest a pitch (its index in N.notes)
+const noteXInv = (f) => { let bi = 0, bd = 1e9; N.notes.forEach((n, i) => { const d = Math.abs(Math.log2(n.f / f)); if (d < bd) { bd = d; bi = i; } }); return bi; };
+const spwIdx = (pool, f) => { let bi = 0, bd = 1e9; pool.forEach((p, i) => { const d = Math.abs(Math.log2(p.f / f)); if (d < bd) { bd = d; bi = i; } }); return bi; };
+function spwFrame(dt) {
+  const cv = SPW.cv; if (!cv || !SPW.w) { spwFit(); return; }
+  const c = cv.getContext('2d'), w = SPW.w, hh = SPW.h, dpr = SPW.dpr, now = A.ctx ? A.ctx.currentTime : 0, run = P['arp.on'];
+  dt = Math.min(0.1, dt || 0.016); SPW.t += dt;
+  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  // the soil: dark, a breath of warm light where the ring stands
+  const cx = w / 2, cy = hh / 2, R = Math.min(w, hh) * 0.42;
+  const bg = c.createRadialGradient(cx, cy, R * 0.1, cx, cy, Math.max(w, hh) * 0.75);
+  bg.addColorStop(0, run ? '#1d1712' : '#16120f'); bg.addColorStop(1, '#0d0a08'); c.fillStyle = bg; c.fillRect(0, 0, w, hh);
+  // drifting dust, slow
+  c.globalCompositeOperation = 'lighter';
+  for (const d of SPW.dust) { d.y -= d.v * dt * (run ? 1.6 : 0.6); d.x += 0.004 * Math.sin(SPW.t * 0.3 + d.p) * dt; if (d.y < -0.02) { d.y = 1.02; d.x = Math.random(); } c.fillStyle = 'rgba(255,217,168,' + (0.05 + 0.08 * Math.sin(SPW.t + d.p) ** 2).toFixed(3) + ')'; c.beginPath(); c.arc(d.x * w, d.y * hh, d.s, 0, 6.2832); c.fill(); }
+  // what was played since the last frame: a hypha grows to each note
+  const pool = run ? arpPool(now).sort((p, q) => p.f - q.f) : [];
+  for (const e of ARP.ev) {
+    if (e.drawn || e.t > now + 0.02) continue;
+    e.drawn = true;
+    const n = Math.max(1, Math.round(P['arp.schritte'])), si = (((e.k - Math.round(P['arp.dreh']) - ARP.rot) % n) + n) % n, sa = -Math.PI / 2 + 2 * Math.PI * si / n;
+    SPW.glow[si] = 1;
+    if (e.rest) continue;
+    const [nx, ny] = spwNodePos(spwIdx(pool, e.nf || e.f), pool.length, Math.max(0, e.o) + (e.d ? 0.5 : 0), R), sx = Math.cos(sa) * R, sy = Math.sin(sa) * R;
+    SPW.beat = 1;
+    SPW.hy.push({ sx, sy, nx, ny, f: e.f, t0: SPW.t, life: 2.4 + 1.6 * e.vel, acc: e.acc, d: e.d, bend: (Math.random() - 0.5) * 0.9 });
+    const m = e.rat > 1 ? 6 * e.rat : e.acc ? 14 : 8;
+    for (let i = 0; i < m; i++) { const a = Math.random() * 6.2832, s = (e.rat > 1 ? 30 : 18) + Math.random() * (e.acc ? 46 : 26); SPW.spr.push({ x: nx, y: ny, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 8, f: e.f, life: 0.5 + Math.random() * 0.7, t: 0, s: 0.8 + Math.random() * (e.acc ? 2.2 : 1.4) }); }
+  }
+  if (SPW.hy.length > 40) SPW.hy.splice(0, SPW.hy.length - 40);
+  if (SPW.spr.length > 500) SPW.spr.splice(0, SPW.spr.length - 500);
+  c.save(); c.translate(cx, cy);
+  // octave rings, faint
+  c.globalCompositeOperation = 'source-over';
+  for (let o = 0; o < 5; o++) { c.strokeStyle = 'rgba(240,230,216,' + (0.035 - o * 0.004).toFixed(3) + ')'; c.lineWidth = 1; c.beginPath(); c.arc(0, 0, R * (0.2 + 0.15 * o), 0, 6.2832); c.stroke(); }
+  // the hyphae: from the ring's step to the note, growing in 0.12 s, then fading into the soil
+  c.globalCompositeOperation = 'lighter';
+  SPW.hy = SPW.hy.filter((H) => SPW.t - H.t0 < H.life);
+  for (const H of SPW.hy) {
+    const age = SPW.t - H.t0, grow = Math.min(1, age / 0.12), fade = 1 - age / H.life, mx = (H.sx + H.nx) / 2 + H.bend * (H.ny - H.sy) * 0.4, my = (H.sy + H.ny) / 2 - H.bend * (H.nx - H.sx) * 0.4;
+    const ex = H.sx + (H.nx - H.sx) * grow, ey = H.sy + (H.ny - H.sy) * grow;
+    c.strokeStyle = spwCol(H.f, 0.08 * fade, 60); c.lineWidth = 5; c.beginPath(); c.moveTo(H.sx, H.sy); c.quadraticCurveTo(mx * grow + H.sx * (1 - grow), my * grow + H.sy * (1 - grow), ex, ey); c.stroke();
+    c.strokeStyle = spwCol(H.f, (H.d ? 0.45 : 0.75) * fade, H.acc ? 80 : 70); c.lineWidth = H.acc ? 1.8 : 1.1; c.stroke();
+  }
+  // the heart: a small Fruchtkörper that swells with every step
+  SPW.beat = (SPW.beat || 0) * Math.pow(0.004, dt);
+  { const s = 1 + 0.35 * SPW.beat, g = c.createRadialGradient(0, 0, 0, 0, 0, 26 * s); g.addColorStop(0, 'rgba(255,214,160,' + (0.25 + 0.4 * SPW.beat).toFixed(3) + ')'); g.addColorStop(1, 'rgba(255,214,160,0)'); c.fillStyle = g; c.beginPath(); c.arc(0, 0, 26 * s, 0, 6.2832); c.fill();
+    c.globalCompositeOperation = 'source-over'; c.fillStyle = 'rgba(240,230,216,.55)'; c.fillRect(-1.2, 0, 2.4, 9 * s); c.fillStyle = run ? '#e9a35e' : 'rgba(168,153,138,.5)'; c.beginPath(); c.ellipse(0, 0, 9 * s, 5.5 * s, 0, Math.PI, 0); c.fill(); c.globalCompositeOperation = 'lighter'; }
+  // the notes of the pool: glowing nodes, breathing, their names beside them
+  const oct = Math.max(1, Math.round(P['arp.okt']));
+  pool.forEach((nt, i) => { for (let o = 1; o < oct; o++) { const [x, y] = spwNodePos(i, pool.length, o, R); c.fillStyle = spwCol(nt.f, 0.35, 70); c.beginPath(); c.arc(x, y, 1.6, 0, 6.2832); c.fill(); } });
+  pool.forEach((nt, i) => {
+    const [x, y] = spwNodePos(i, pool.length, 0, R), br = 0.6 + 0.4 * Math.sin(SPW.t * 2 + i);
+    const g = c.createRadialGradient(x, y, 0, x, y, 16); g.addColorStop(0, spwCol(nt.f, 0.5 * br, 72)); g.addColorStop(1, spwCol(nt.f, 0, 60));
+    c.fillStyle = g; c.beginPath(); c.arc(x, y, 16, 0, 6.2832); c.fill();
+    c.fillStyle = '#fff6ea'; c.beginPath(); c.arc(x, y, 2.4, 0, 6.2832); c.fill();
+    const nm = N.free ? '' : (hxDeg(nt.f) && N.notes[clamp(Math.round(noteXInv(nt.f)), 0, N.notes.length - 1)] || {}).name || '';
+    if (nm) { c.globalCompositeOperation = 'source-over'; c.font = '500 10px ' + COL.fontNum; c.fillStyle = 'rgba(240,230,216,.6)'; c.textAlign = 'center'; c.fillText(nm, x, y - 10); c.globalCompositeOperation = 'lighter'; }
+  });
+  // spores bursting
+  SPW.spr = SPW.spr.filter((s) => (s.t += dt) < s.life);
+  for (const s of SPW.spr) { s.x += s.vx * dt; s.y += s.vy * dt; s.vx *= 0.96; s.vy = s.vy * 0.96 - 4 * dt; const a = 1 - s.t / s.life; c.fillStyle = spwCol(s.f, 0.85 * a, 78); c.beginPath(); c.arc(s.x, s.y, s.s * (0.6 + 0.4 * a), 0, 6.2832); c.fill(); }
+  // the Pilzring: its steps
+  const n = Math.max(1, Math.round(P['arp.schritte'])), sb = arpStepB(), cur = run && A.ctx ? Math.floor(tgBeat(now) / sb + 1e-6) : -1;
+  for (let i = 0; i < n; i++) {
+    const a = -Math.PI / 2 + 2 * Math.PI * i / n, x = Math.cos(a) * R, y = Math.sin(a) * R, k = i + Math.round(P['arp.dreh']) + ARP.rot;
+    const hit = arpRing(k), dropped = ARP.drop.has(i), gl = (SPW.glow[i] || 0);
+    SPW.glow[i] = gl * Math.pow(0.02, dt);
+    const isCur = cur >= 0 && (((cur - Math.round(P['arp.dreh']) - ARP.rot) % n) + n) % n === i;
+    if (gl > 0.02 || isCur) { const g = c.createRadialGradient(x, y, 0, x, y, 22); g.addColorStop(0, 'rgba(255,200,130,' + (0.35 * Math.max(gl, isCur ? 0.4 : 0)).toFixed(3) + ')'); g.addColorStop(1, 'rgba(255,200,130,0)'); c.fillStyle = g; c.beginPath(); c.arc(x, y, 22, 0, 6.2832); c.fill(); }
+    c.globalCompositeOperation = 'source-over';
+    if (dropped) { c.setLineDash([2, 2]); c.strokeStyle = 'rgba(168,153,138,.5)'; c.lineWidth = 1; c.beginPath(); c.arc(x, y, 4.5, 0, 6.2832); c.stroke(); c.setLineDash([]); }
+    else if (hit) {
+      // a little cap on its stem, leaning outwards
+      c.save(); c.translate(x, y); c.rotate(a + Math.PI / 2);
+      c.strokeStyle = 'rgba(240,230,216,.35)'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(0, 0); c.lineTo(0, 5); c.stroke();
+      c.fillStyle = isCur ? '#ffd29a' : 'rgba(255,179,92,' + (0.55 + 0.45 * gl).toFixed(3) + ')'; c.beginPath(); c.ellipse(0, -1, 6 + 2 * gl, 3.6 + gl, 0, Math.PI, 0); c.fill();
+      c.fillStyle = 'rgba(255,246,234,.8)'; c.beginPath(); c.arc(-2, -2.6, 0.8, 0, 6.2832); c.arc(2.2, -2.2, 0.6, 0, 6.2832); c.fill();
+      c.restore();
+    } else { c.strokeStyle = 'rgba(240,230,216,.25)'; c.lineWidth = 1; c.beginPath(); c.arc(x, y, 3.5, 0, 6.2832); c.stroke(); }
+    c.globalCompositeOperation = 'lighter';
+  }
+  // Mutation: fine threads sprouting from the ring, slowly
+  const mu = P['arp.mutation'];
+  if (mu > 0 && Math.random() < dt * 3 * mu) { const a = Math.random() * 6.2832; SPW.sprouts.push({ a, t: 0, len: 10 + Math.random() * 26, life: 2 + Math.random() * 2, b: (Math.random() - 0.5) * 1.2 }); }
+  SPW.sprouts = SPW.sprouts.filter((s) => (s.t += dt) < s.life);
+  for (const s of SPW.sprouts) {
+    const g = Math.min(1, s.t / 0.8), f = 1 - s.t / s.life, x0 = Math.cos(s.a) * R, y0 = Math.sin(s.a) * R, x1 = Math.cos(s.a + s.b * 0.08 * g) * (R + s.len * g), y1 = Math.sin(s.a + s.b * 0.08 * g) * (R + s.len * g);
+    c.strokeStyle = 'rgba(134,240,208,' + (0.35 * f).toFixed(3) + ')'; c.lineWidth = 0.8; c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke();
+  }
+  c.restore();
+  c.globalCompositeOperation = 'source-over';
+  // the readout: what it does, in words
+  const txt = !run ? 'Aus – schalte das Sporenwerk an und halte Töne' : !pool.length ? 'Wartet auf Töne – halte einen Akkord' + (P['arp.quelle'] !== 'spiel' ? ' oder lass eine Schleife spielen' : '') : pool.length + (pool.length === 1 ? ' Ton' : ' Töne') + ' · ' + ARP_FORMS.find((x) => x[0] === P['arp.form'])[1] + ' · ' + PD['arp.rate'].opts.find((o) => o[0] === P['arp.rate'])[1] + (P['arp.takt'] === 't' ? 'T' : P['arp.takt'] === 'p' ? '.' : '') + ' · Runde ' + ARP.round;
+  if (SPW.read.textContent !== txt) SPW.read.textContent = txt;
 }
 /* ---------- Klangquellen: the row at every place a source is chosen, and the library ---------- */
 // Every place a source is chosen – the field, the second layer, the four Puls lanes, their copies in the mixer's

@@ -71,6 +71,7 @@ if 'const HXR = ' in s: extra += ['HXR', 'MIX'] if "'MIX'" not in str(extra) els
 if 'function hxmPvLv(' in s: extra += ['hxmPvLv']
 if 'function cbOpen(' in s: extra += ['CB', 'cbOpen', 'cbClose', 'cbLogical', 'cbData', 'cbCalStart', 'cbCtls', 'CB_MODELS', 'MAP', 'MIDI', 'mtOf']
 if 'function gdRecover(' in s: extra += ['GD', 'gdRecover', 'budgetApply', 'hxTauBack', 'hxGeraet', 'lmEv', 'lmUPoll', 'lmUlog', 'HX_PHONE']
+if 'function arpTick(' in s: extra += ['ARP', 'arpPool', 'arpTick', 'arpOn', 'arpLoopPool', 'arpLoopOf', 'arpRing', 'SPW', 'onDown', 'onUp', 'touches', 'noteAt', 'openPanel', 'MIX']
 if 'function fxLoad(' in s: extra += ['fxLoad', 'FX_COST', 'voiceLoad', 'MIX']
 import re as _re
 def _defined(n):

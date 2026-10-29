@@ -11,10 +11,11 @@ const FX_TYPES = {
   wolke: { proc: 'myzel-wolke', name: 'Wolke', i: 'Körner des eben Gespielten kommen im Takt zurück – oktaviert, rückwärts, weit verstreut', keys: { dichte: 'dichte', zeit: 'zeit', hoehe: 'hoehe', rueck: 'rueck', streu: 'streu', nach: 'nach' } },
   spektral: { proc: 'myzel-spek', name: 'Spektral-Nebel', i: 'Der Klang zerfließt in eine stehende Fläche – „Halten“ friert sie ein', keys: { zeit: 'szeit', hell: 'shell', halten: 'halten' } },
   oktav: { proc: 'myzel-oktav', name: 'Oktav-Echo', i: 'Ein Echo im Takt, das sich mit jeder Wiederholung hochschraubt (oder hinab)', keys: { zeit: 'ozeit', nach: 'onach', schritt: 'schritt', hell: 'ohell' } },
+  harmo: { proc: 'myzel-harmo', name: 'Harmonizer', i: 'Bis zu drei Stimmen über oder unter dem Klang – in der Tonart (es hört, welcher Ton kommt) oder in Halbtönen; der Formant bleibt, eine Stimme klingt nicht nach Micky Maus', keys: { v1: 'hv1', v2: 'hv2', v3: 'hv3', modus: 'hmod', form: 'hform', breite: 'hbreit', schimmer: 'hschim' } },
   vokal: { proc: 'myzel-vokal', name: 'Vokal-Filter', i: 'Der Klang spricht: drei Formanten gleiten durch a, e, i, o, u', keys: { vokal: 'vokal', bewegung: 'beweg', resonanz: 'reso', stimme: 'stimme' } },
 };
 // T.keys: the processor's knob → the parameter's name after the return's prefix (r + '.')
-const fxSet = (T, r) => { const o = {}; for (const k in T.keys) o[k] = +P[r + '.' + T.keys[k]]; return o; };
+const fxSet = (T, r) => { const o = {}; for (const k in T.keys) { const v = P[r + '.' + T.keys[k]]; o[k] = v === 'ton' ? 1 : v === 'halb' ? 0 : +v; } return o; };   // (the Harmonizer's „Stimmen in“: Tonart 1, Halbtöne 0)
 const fxFreqs = () => [...new Set((N.notes || []).map((n) => +n.f.toFixed(2)))].slice(0, 12);
 const fxBeat = () => 60 / Math.max(20, P['seq.bpm'] || 90);
 const fxType = (r) => FX_TYPES[P[r + '.typ']] || FX_TYPES.netz;
@@ -77,7 +78,7 @@ function fxInsUpd(st, inst) {
 // through and cost next to nothing), the Begrenzer always
 // (29.10.2026: NV 16 of each fed by noise, two runs on this machine after the processors were made faster, the higher
 // + 15 %; Resonanz-Netz per Art – Saiten, Glocken, Holzkörper; Wolke at full density, the Begrenzer pressed)
-const FX_COST = { netz: [1.37, 1.58, 0.85], wolke: 4.52, spektral: 6.29, oktav: 1.05, vokal: 1.32, trans: 0.47, sat: 1.41, lim: 1.23 };
+const FX_COST = { netz: [1.37, 1.58, 0.85], wolke: 4.52, spektral: 6.29, oktav: 1.05, vokal: 1.32, harmo: 7.5, trans: 0.47, sat: 1.41, lim: 1.23 };
 function fxLoad() {
   if (!A.fxR) return 0;
   const cost = (typ, r) => { const c = FX_COST[typ]; return Array.isArray(c) ? c[Math.round(+P[r + '.art']) || 0] || c[0] : c || 0; };
