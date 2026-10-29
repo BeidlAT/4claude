@@ -179,25 +179,26 @@ function hxWAnker(L) {
 
 // ---- the card's choices, each a history step: Wiedergabe, Eigensinn, Folgen, Klang, Stufe, Neuer Wurf ----
 function hxWSet(L, what, v) {
-  const lk = L.key, snap = (X) => ({ live: !!X.live, wahl: !!(X.wwhy && X.wwhy.wahl), eig: X.eig || 'treu', ton: X.ton || 'diatonisch', klang: X.klang || 'eigen', stufe: X.stufe || null, seeds: X.sch.map((id) => { const S = HX.sch.get(id); return S ? [S.key, S.wseed] : null; }).filter(Boolean) });
+  const lk = L.key, snap = (X) => ({ live: !!X.live, wahl: !!(X.wwhy && X.wwhy.wahl), abdr: !!(X.wwhy && X.wwhy.abdr), eig: X.eig || 'treu', ton: X.ton || 'diatonisch', klang: X.klang || 'eigen', stufe: X.stufe || null, seeds: X.sch.map((id) => { const S = HX.sch.get(id); return S ? [S.key, S.wseed] : null; }).filter(Boolean) });
   const was = snap(L);
   const put = (X, s) => {
-    X.wwhy = Object.assign(X.wwhy || {}, { wahl: s.wahl }); X.ton = s.ton; X.klang = s.klang; X.stufe = s.stufe; X.live = !!s.live;   // (step 4: Live)
+    X.wwhy = Object.assign(X.wwhy || {}, { wahl: s.wahl, abdr: s.abdr }); X.ton = s.ton; X.klang = s.klang; X.stufe = s.stufe; X.live = !!s.live;   // (step 4: Live)
     for (const [sk, sd] of s.seeds) { const S = hxSchByKey(sk); if (S && S.wseed !== sd) { S.wseed = sd; S.anc = null; } }
     if (X.eig !== s.eig) { if (!hxEigSet(X, s.eig)) hxSay(hxName(X) + ': Eigensinn nach drei Runden'); }
     hxWUpdate(X); hxSaveMeta(X.id); hxCardDirty(); hxRailDirty();
   };
   const to = Object.assign({}, was);
-  if (what === 'wahl') { to.wahl = !!v; to.live = false; }
+  if (what === 'wahl') { to.wahl = !!v; to.live = false; if (v) to.abdr = false; }
+  else if (what === 'abdr') to.abdr = !!v;   // (an Abdruck by hand – hxAbdr; choosing to grow, another sound or a way to follow ends it)
   else if (what === 'live') to.live = !!v;   // (step 4: „Wiedergabe: Live“ – real voices play its notes)
-  else if (what === 'eig') to.eig = v;
-  else if (what === 'ton') to.ton = v;
-  else if (what === 'klang') to.klang = v;
+  else if (what === 'eig') { to.eig = v; if (v !== 'treu') to.abdr = false; }
+  else if (what === 'ton') { to.ton = v; if (v !== 'fest') to.abdr = false; }
+  else if (what === 'klang') { to.klang = v; if (v !== 'eigen') to.abdr = false; }
   else if (what === 'stufe') to.stufe = v;
   else if (what === 'wurf') { to.seeds = was.seeds.map(([k]) => [k, ((Math.random() * 2147483646) | 0) + 1]); to.wahl = to.wahl || !hxWAktiv(L); }
   if (what === 'klang' && v !== 'eigen' && !L.P) L.P = Object.assign({}, P);
   put(L, to);
-  const W = { live: ['Wiedergabe', to.live ? 'Live' : to.wahl ? 'Wuchs' : 'Abdruck'], wahl: ['Wiedergabe', to.wahl ? 'Wuchs' : 'Abdruck'], eig: ['Eigensinn', HX_EIGW[to.eig]], ton: ['Folgen', to.ton], klang: ['Klang', to.klang === 'eigen' ? 'eigener' : to.klang === 'feld' ? 'Spielfeld' : ENG_NAME[to.klang]], stufe: ['Stufe', to.stufe || 'wie eingestellt'], wurf: ['Neuer Wurf', ''] }[what];
+  const W = { live: ['Wiedergabe', to.live ? 'Live' : to.wahl ? 'Wuchs' : 'Abdruck'], wahl: ['Wiedergabe', to.wahl ? 'Wuchs' : 'Abdruck'], abdr: ['Wiedergabe', to.abdr ? 'Abdruck' : 'folgt wieder'], eig: ['Eigensinn', HX_EIGW[to.eig]], ton: ['Folgen', to.ton], klang: ['Klang', to.klang === 'eigen' ? 'eigener' : to.klang === 'feld' ? 'Spielfeld' : ENG_NAME[to.klang]], stufe: ['Stufe', to.stufe || 'wie eingestellt'], wurf: ['Neuer Wurf', ''] }[what];
   hxHist({ kind: 'wuchs', label: W[0] + (W[1] ? ' ' + W[1] : '') + ' (' + hxName(L) + ')', undo() { const X = hxByKey(lk); if (X) put(X, was); }, redo() { const X = hxByKey(lk); if (X) put(X, to); } });
   hxSay(hxName(L) + ': ' + W[0] + (W[1] ? ' ' + W[1] : ''));
 }
@@ -209,6 +210,7 @@ function hxAbdruck(L) {
   if (w.tempo) { hxHint(hxName(L) + ' folgt dem neuen Tempo und wächst deshalb – als Abdruck klingt sie nur im Tempo der Aufnahme.'); return false; }
   if (w.ausl) { hxHint(hxName(L) + ' spielt die Auslese – ↶ nimmt sie zurück, dann ist sie wieder ein Abdruck.'); return false; }
   const n0 = HX.hist.length;
+  if (!hxAbdr(L)) hxWSet(L, 'abdr', true);   // (first: its own sound and key over „… folgen dem Preset“ – then what is left is its own)
   if ((L.klang || 'eigen') !== 'eigen') hxWSet(L, 'klang', 'eigen');
   if (hxWTonOff(L)) hxWSet(L, 'ton', 'fest');
   if ((L.eigWant || L.eig || 'treu') !== 'treu') hxWSet(L, 'eig', 'treu');
