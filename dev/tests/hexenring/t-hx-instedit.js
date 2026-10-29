@@ -4,7 +4,8 @@
 const G = require('./hx-g'), H = require('./hx-h');
 const { ok } = H;
 (async () => {
-  const { page, errors } = await G.open({ w: 1440, h: 900 });
+  // (the underrun guard's timer held back: on a loaded test machine it pauses Wuchs – then there is no grown pass to freeze)
+  const { page, errors } = await G.open({ w: 1440, h: 900, init: () => { const si = window.setInterval; window.setInterval = function (f, ms, ...a) { if (typeof f === 'function' && /hxWGuard/.test(String(f))) return 0; return si.call(this, f, ms, ...a); }; } });
   const r = await page.evaluate(async () => {
     const M = window.__M, A = M.A, sl = window.__sleep, o = {};
     await window.__reset(); window.__grid(110); await sl(300);
@@ -19,6 +20,7 @@ const { ok } = H;
     const db = (x) => 20 * Math.log10(Math.max(1e-9, x));
     const done = async () => { await M.HX.rxQ; await sl(100); };
     M.setParam('ui.instrument', 'preset');
+    M.setParam('cho.rate', M.P['cho.rate'] * 1.01);   // (29.10.2026: a loop follows the preset's instrument once the field's sound has changed since it was made – hxKlangOf)
     // (it plays with the preset's instrument once the Werk-Rahmen has rendered its pass – Erstarren keeps that one)
     const wre = () => L.sch.some((id) => { const S = M.HX.sch.get(id); return S && S.wRe && Object.keys(S.wRe).length > 1; });
     for (let i = 0; i < 300 && !wre(); i++) await sl(100);

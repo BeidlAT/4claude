@@ -78,7 +78,8 @@ async function wtools(page) {
 }
 
 (async () => {
-  const { page, errors } = await G.open({});
+  // (the underrun guard's own timer held back: on a loaded test machine it pauses Wuchs for half a minute – the part „guard“ calls it itself)
+  const { page, errors } = await G.open({ init: () => { const si = window.setInterval; window.setInterval = function (f, ms, ...a) { if (typeof f === 'function' && /hxWGuard/.test(String(f))) return 0; return si.call(this, f, ms, ...a); }; } });
   await page.evaluate(() => window.__M.setParam('hx.folgen', 'diatonisch'));   // (following the key is tested here – since 27.10.2026 a choice, not the default)
   const ev = (fn, a) => page.evaluate(fn, a);
   await wtools(page);
@@ -122,6 +123,7 @@ async function wtools(page) {
     r = await ev(async ({ ENGS, QL }) => {
       const M = window.__M, A = M.A, out = {};
       M.setParam('hx.stufe', QL);
+      const buzz0 = M.P['klb.buzz']; M.setParam('klb.buzz', 0.3);   // (Kalimba: its only throw is the Schnarren – 0 by default since 29.10.2026, every seed then alike)
       const mk = await window.__mk({ eng: 'glo', degs: [0, 2, 4, 1], params: { 'rhz.reiz': 1 } });
       const L = window.__L(mk.key), S = window.__S(mk.key);
       if (!S.wseed) S.wseed = 4242;
@@ -149,7 +151,7 @@ async function wtools(page) {
         const db = (x) => +(20 * Math.log10(x / (pk || 1) + 1e-30)).toFixed(1);
         out[eng] = { pk: +pk.toFixed(4), same: db(dd), first: db(d), other: db(dc), n: [a.n, b.n], ms: Math.round(a.ms) };
       }
-      L.klang = 'eigen'; M.setParam('hx.stufe', '3');
+      L.klang = 'eigen'; M.setParam('hx.stufe', '3'); M.setParam('klb.buzz', buzz0);
       await window.__reset();
       return out;
     }, { ENGS, QL });
