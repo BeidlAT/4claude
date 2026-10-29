@@ -2,6 +2,14 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-29l",
+      "punkte": [
+        "Ansehen und Bearbeiten → Ganze Ernte: Anfang und Ende haben je „+ dazu“ und „− weg“, mit wählbarem Raster: Takt, 1/2, 1/4, 1/8, 1/16, 1/32, 1/64 – auch triolisch.",
+        "Neu: „◀ Ton“ und „Ton ▶“ – der Anfang rastet am nächsten Anschlag davor oder danach ein (bei freien Schleifen auch das Ende).",
+        "Verschieben geht jetzt im selben Raster, bis 1/64 – so holst du auch einen Auftakt herein. Im Takt bleibt die Länge in ganzen Schlägen."
+      ]
+    },
+    {
       "id": "2026-10-29k",
       "punkte": [
         "Schleifen: „Abdruck“ wirkt jetzt immer – auch wenn „Schleifen spielen mit dem Instrument des Presets“ eingestellt ist. Danach lässt sich der Klang auch wieder verwandeln.",

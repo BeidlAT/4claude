@@ -41,7 +41,7 @@ const { ok } = H;
     o.D = { w0: S.cut.w0 === w0, w1: S.cut.w1 === w1, beats: L.d.beats };
     // E. the editor's row
     M.hxEdOpen(L); await sl(800);
-    o.E = { row: !!document.querySelector('.hx-ed-hum canvas'), btns: document.querySelectorAll('.hx-ed-humft .btn').length };
+    o.E = { row: !!document.querySelector('.hx-ed-hum canvas'), btns: document.querySelectorAll('.hx-ed-htools .btn').length };
     // F. the memory counts it
     o.F = M.hxMemUsed() > Hm.n * 8;
     // H. (owner) Abdruck after another sound and the key followed: marked, and the Wuchs is gone
