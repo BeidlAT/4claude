@@ -2,6 +2,13 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-29d",
+      "punkte": [
+        "Mischpult, „Sättigung“: bei hohen Tönen und viel Sättigung keine Spiegelfrequenzen mehr (gemessen von −33 auf −70 dB) – die Kurve klingt sonst wie bisher.",
+        "Die Sättigung verzögert den Kanal dabei nur um eine halbe Millisekunde; auf 0 geht der Klang unverändert durch."
+      ]
+    },
+    {
       "id": "2026-10-29c",
       "punkte": [
         "Touché „Eis“: kein Knacken mehr, wo der eingefrorene Moment von vorn beginnt, und hochgesetzt nicht mehr rau; „Eis“ und „Körner“ hochgesetzt ohne Spiegelfrequenzen.",
