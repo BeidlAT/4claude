@@ -94,7 +94,19 @@ function hxRegionEdit(L, a, b, op, v) {
   // one edit after another (a quick second click works on the first one's result)
   if (op === 'swap' || op === 'paste') hxPvEdit(L, a, b, null, (ch, n) => hxRxMove(ch, Math.round(a * n), Math.round(b * n), [Math.round(v.a2 * n), Math.round(v.b2 * n)], op));   // (Direkt – direkt.js)
   else if (op === 'take' && (!HXE.pv || HXE.pv.key !== L.key)) hxEdTouch(L);   // (a take was played to the loop itself: no Vorhören starts – it would mute the loop mid-play, out of time)
-  else hxPvEdit(L, a, b, op === 'take' ? (ch, q0) => hxRxAdd(ch, q0, v.wet || v.dry) : (ch, q0, q1) => hxRxOp(ch, q0, q1, op, v, u, seed));
+  else hxPvEdit(L, a, b, op === 'take' ? (ch, q0) => hxRxAdd(ch, q0, v.wet || v.dry) : (ch, q0, q1) => hxRxOp(ch, q0, q1, op, v, u, seed), null, HX_RW_PV.has(op) ? { op, v, u, seed } : null);
+  // (29.10.2026) what the stretch becomes is worked out in Workers (abschnitt-werk.js), then written in – the page goes
+  // on meanwhile; ↶ or ↷ before it is done write it at once (hxRxFlush), here, to the same bit
+  if (hxRwOk(op)) {
+    const job = (pre) => { if (L.state !== 'weg') hxRegionWrite(L, a, b, op, v, u, seed, pre); };
+    (HX.rxP || (HX.rxP = [])).push(job);
+    HX.rxQ = (HX.rxQ || Promise.resolve()).then(async () => {
+      if (HX.rxP[0] !== job) return;
+      let pre = null; try { pre = await hxRegionPrep(L, a, b, op, v, u, seed); } catch (e) { pre = null; }
+      if (HX.rxP[0] === job) { HX.rxP.shift(); hxRxRun(job, pre); }
+    });
+    return true;
+  }
   if (!HXE.pv || HXE.pv.key !== L.key) return hxRegionWrite(L, a, b, op, v, u, seed);
   const job = () => { if (L.state !== 'weg') hxRegionWrite(L, a, b, op, v, u, seed); };
   (HX.rxP || (HX.rxP = [])).push(job);
@@ -103,7 +115,11 @@ function hxRegionEdit(L, a, b, op, v) {
 }
 // what is still to be written, at once – before ↶ or ↷ (they must find the edit in the history)
 const HX_RX_WHOLE = new Set(['pitch', 'erde', 'licht', 'wurzel', 'krone', 'gain']);
-function hxRxFlush() { while (HX.rxP && HX.rxP.length) HX.rxP.shift()(); }
+function hxRxFlush() { while (HX.rxP && HX.rxP.length && !HX.rxRun) hxRxRun(HX.rxP.shift()); }
+// (29.10.2026) a job written now: any other change of the loop meanwhile (hxGeo – every step's „before“) writes what is
+// still waiting first, so it finds the audio as the edits left it; not from inside a job (its own step)
+function hxRxWait() { if (HX.rxP && HX.rxP.length && !HX.rxRun) hxRxFlush(); }
+function hxRxRun(job, pre) { HX.rxRun = true; try { job(pre); } finally { HX.rxRun = false; } }
 async function hxRxFreeze(L, then) {
   if (HX.rxFrz) return;
   HX.rxFrz = true;
@@ -112,7 +128,24 @@ async function hxRxFreeze(L, then) {
   toast('Zuerst festgehalten (Erstarren): so, wie sie gerade klang – dann bearbeitet. ↶ nimmt beides einzeln zurück.', 4500);
   hxEdRender(); then();
 }
-function hxRegionWrite(L, a, b, op, v, u, seed) {
+// every Schicht's stretch (dry and baked) worked out in the Workers: Map S.key → { aud, bak } as [chunk list read,
+// r0, r1, [left, right]] – hxRegionWrite takes a result only if the Schicht's audio is still the one it was made from
+function hxRegionPrep(L, a, b, op, v, u, seed) {
+  const sch = hxBandReady(L), m = new Map(), all = []; if (!sch) return Promise.resolve(m);
+  for (const S of sch) {
+    const [r0, r1] = a <= 0 && b >= 1 && HX_RX_WHOLE.has(op) ? [0, S.n] : hxRxFrames(S, a, b); if (r1 - r0 < 64) continue;
+    const e = {}; m.set(S.key, e);
+    for (const [k, ch] of [['aud', S.aud], ['bak', S.bak]]) if (ch) all.push(hxRw(ch, r0, r1, op, v, u, seed).then((res) => { e[k] = [ch, r0, r1, res]; }));
+  }
+  return Promise.all(all).then(() => m);
+}
+// a stretch's result written into a copy of the chunk list (as hxRxApply writes it)
+function hxRwPut(ch, r0, res) {
+  const dst = hxRxCopy(ch), [l, r] = res;
+  for (let i = 0; i < l.length; i++) hxRxSet(dst, r0 + i, l[i], r[i]);
+  return dst;
+}
+function hxRegionWrite(L, a, b, op, v, u, seed, pre) {
   const sch = hxBandReady(L); if (!sch) return false;
   if (sch.some((S) => !hxMemOk(2 * S.n))) return false;
   const before = hxGeo(L), fl0 = hxBandFl(L), sw = hxSwapAt(L);
@@ -125,7 +158,8 @@ function hxRegionWrite(L, a, b, op, v, u, seed) {
     // (28.10.2026, Direkt: Einspielen goes into its one Schicht – dry, and baked as it was heard; Tauschen and Einsetzen
     // move the frames of the stretch marked – direkt.js)
     if (op === 'take' && S.key !== v.key) continue;
-    const ed = (ch, bk) => (op === 'take' ? hxRxApply(ch, r0, r1, hxRxAdd(ch, r0, bk && v.wet ? v.wet : v.dry)) : op === 'swap' || op === 'paste' ? hxRxMove(ch, r0, r1, hxRxFrames(S, v.a2, v.b2), op) : hxRxApply(ch, r0, r1, hxRxOp(ch, r0, r1, op, v, u, seed)));
+    const pw = (ch, bk) => { const e = pre && pre.get(S.key), x = e && e[bk ? 'bak' : 'aud']; return x && x[0] === ch && x[1] === r0 && x[2] === r1 ? x[3] : null; };
+    const ed = (ch, bk) => (op === 'take' ? hxRxApply(ch, r0, r1, hxRxAdd(ch, r0, bk && v.wet ? v.wet : v.dry)) : op === 'swap' || op === 'paste' ? hxRxMove(ch, r0, r1, hxRxFrames(S, v.a2, v.b2), op) : pw(ch, bk) ? hxRwPut(ch, r0, pw(ch, bk)) : hxRxApply(ch, r0, r1, hxRxOp(ch, r0, r1, op, v, u, seed)));
     const aud = ed(S.aud, false), bak = S.bak ? ed(S.bak, true) : null, X = S.X || Math.round(0.01 * SR), g = { pre: S.pre, len: S.len, X, zo: S.zo || 0 };
     const c = Object.assign({}, S.cut, { pre: S.pre, len: S.len, n: S.n, aus: S.aus ? Object.assign({}, S.aus) : null, stale: true });
     done.push([S.key, S.aud, aud, S.bak, bak]);
@@ -149,6 +183,7 @@ function hxRxName(L, a, b) {
 // it was kept while the loop played backwards and plays forwards now), one step (↶ gives the edits back). Not after
 // „Verdoppeln“ or a Schicht that is not the same any more (merged, newly recorded) – those keep what they have.
 function hxRxRestore(L) {
+  hxRxWait();   // (a stretch's edit still in the Workers: written first – abschnitt.js)
   const R = L.rx0; if (!R) return false;
   if ((L.dbl || 1) !== R.dbl) { L.rx0 = null; return false; }
   const sch = hxBandReady(L); if (!sch) return false;

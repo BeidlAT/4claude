@@ -24,6 +24,7 @@ function hxAccMake(A, ratio, fb) {
 }
 // its feedback, on and off (Festhalten keeps the tape as it is), its tape cleared
 function hxAccSet(B, what, v) {
+  hxRxWait();   // (a stretch's edit still in the Workers: written first – abschnitt.js)
   const R = B && B.acc; if (!R) return;
   const A = hxByKey(R.src);
   if (what === 'fb') R.fb = v;

@@ -2,6 +2,14 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-29",
+      "punkte": [
+        "Schleifen-Editor, „Tonhöhe“ und „Verstimmen“: Die Lautstärke flattert nicht mehr – beim Hochsetzen um eine Quinte oder Oktave zitterte der Ton vorher hörbar (bis etwa 6 dB).",
+        "Tonhöhe, Länge und Gesamtlautstärke bleiben genau wie bisher.",
+        "Schleifen-Editor: Tonhöhe, Verwandeln, Färben und Band rechnen jetzt im Hintergrund – die Seite bleibt bedienbar, statt bei einer ganzen Schleife mehrere Sekunden stillzustehen. Der Klang ist bitgenau derselbe."
+      ]
+    },
+    {
       "id": "2026-10-28o",
       "punkte": [
         "„Schleifen spielen mit dem Instrument des Presets“: Abschnitte lassen sich jetzt bearbeiten – die Schleife wird einmal erstarrt und bleibt dann so, wie sie klang.",
