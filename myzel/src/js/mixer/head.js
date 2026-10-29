@@ -67,12 +67,12 @@ function mxBuildReg() {
     const d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
     if (!d) return;
     e.preventDefault();
-    const i = MX_LAYERS.findIndex((x) => x[0] === MX.layer), n = MX_LAYERS[(i + d + 4) % 4][0];
+    const i = MX_LAYERS.findIndex((x) => x[0] === MX.layer), n = MX_LAYERS[(i + d + MX_LAYERS.length) % MX_LAYERS.length][0];
     mxSetLayer(n); MX.regBtns.find((b) => b.dataset.l === n).focus();
   });
   // the compact one: a plain button, "2· Echo", a tap moves on to the next layer (announced)
   const C = MX.regC = { t: h('span') };
-  C.el = h('button', { type: 'button', class: 'mx-regc', hidden: true, onclick: () => { const i = MX_LAYERS.findIndex((x) => x[0] === MX.layer); mxSetLayer(MX_LAYERS[(i + 1) % 4][0], true); } },
+  C.el = h('button', { type: 'button', class: 'mx-regc', hidden: true, onclick: () => { const i = MX_LAYERS.findIndex((x) => x[0] === MX.layer); mxSetLayer(MX_LAYERS[(i + 1) % MX_LAYERS.length][0], true); } },
     h('span', null, h('small', { 'aria-hidden': 'true' }, '2'), h('i', { 'aria-hidden': 'true' }), C.t));
 }
 // which of the two shows (none in the Geflecht or under a detail): the chips when nothing in the head is squeezed

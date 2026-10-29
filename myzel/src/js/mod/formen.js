@@ -33,7 +33,7 @@ for (const k in MODT) midiTarget('mod.' + k, MODT[k].label, null, { group: MOD_G
 // Gestik's axes never write the patch: a parameter with a counterpart in Formen becomes that one, anything else that
 // would change the preset (parameters, the engine macros, steps of octave, tuning and tempo, the mixer's scenes) is
 // refused. Gestik's events (Wenden, Ruhe, Schütteln) are deliberate presses, like a pad.
-const MOD_EQ = { 'flt.freq': 'mod.flt', 'rng.freq': 'mod.rng', 'dly.wow': 'mod.wow', 'dly.mix': 'mod.dly', 'rev.mix': 'mod.rev', 'cho.mix': 'mod.cho', 'bor.cut': 'mod.bor',
+const MOD_EQ = { 'flt.freq': 'mod.flt', 'rng.freq': 'mod.rng', 'dly.wow': 'mod.wow', 'dly.mix': 'mod.dly', 'rev.mix': 'mod.rev', 'fx.mix': 'mod.fx', 'fx2.mix': 'mod.fx2', 'cho.mix': 'mod.cho', 'bor.cut': 'mod.bor',
   'kor.dens': 'mod.korD', 'kor.scat': 'mod.korS', 'trp.rain': 'mod.trp', 'gsp.kopplung': 'mod.gspK', 'rhz.reiz': 'mod.rhzR', morph: 'mod.morph', expr: 'expr' };
 const MOD_WRITES = new Set(['macro.a', 'macro.b', 'oct.up', 'oct.down', 'deg.up', 'deg.down', 'root.up', 'root.down', 'scale.up', 'scale.down', 'tap', 'scene.a', 'scene.b', 'scene.ab']);
 function gkTarget(key) {

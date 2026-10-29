@@ -1674,6 +1674,11 @@ body.mlearn #stage::after { content: ""; position: absolute; inset: 0; backgroun
 .mxd-pmp { grid-column: 1 / -1; }
 .mxd-pmp .mxd-cvb { height: 64px; }
 .mxd-pmp .mxd-kr { justify-content: flex-start; gap: 4px; }
+.mxd-ins .mxd-kr { justify-content: flex-end; }
+.mxd-insc { display: flex; flex-wrap: wrap; align-content: center; gap: 4px; margin: 6px 0 2px; }
+.mxd-insc button { position: relative; min-height: 26px; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line); background: var(--bark-2); color: var(--dim); font: 600 11px/1 var(--font-ui); }
+.mxd-insc button::after { content: ""; position: absolute; inset: -5px -2px; }
+.mxd-insc button[aria-checked="true"] { color: var(--hypha); border-color: rgba(159, 227, 176, .55); background: rgba(159, 227, 176, .1); }
 .mxd-src { display: grid; gap: 0; min-width: 0; margin-left: auto; justify-items: center; }
 .mxd-src .mxd-lab { font-size: 10.5px; }
 .mx[data-cover=""] .mxd-src .mxd-lab em { display: none; }
@@ -1684,6 +1689,7 @@ body.mlearn #stage::after { content: ""; position: absolute; inset: 0; backgroun
 .mx[data-cover=""] :is(.mxd-sat, .mxd-wid, .mxd-gr) .mxd-cvb { height: 76px; }
 .mx[data-cover=""] .mxd-cards.two .mxd-cvb { height: 84px; }
 .mx[data-cover=""] .mxd-pmp { grid-column: auto; }
+.mx[data-cover=""] .mxd-ins { grid-column: span 2; }
 .mx[data-cover=""] .mxd-pmp .mxd-cvb { height: 56px; margin: 6px 0 4px; }
 .mx[data-cover=""] .mxd-pmp .mxd-kr { gap: 2px; justify-content: space-between; }
 .mx[data-cover=""] .mxd-pmp .mxd-src { margin-left: 0; }
@@ -2420,6 +2426,8 @@ const RAUM_BY = Object.fromEntries(RAUM_LISTE.map((r) => [r.id, r]));
    Parameters — one schema drives UI, presets, storage and audio
    ===================================================================== */
 const PD = {};
+// (29.10.2026) the mixer's effect returns (mixer/effekt.js): key, name, colour, the effect each starts with
+const FX_RETS = [['fx', 'Effekt', '#9fe3b0', 'netz'], ['fx2', 'Effekt 2', '#f2a8d8', 'wolke']];
 const def = (id, o) => (PD[id] = Object.assign({ id }, o));
 const NUM = (id, label, min, max, d, unit = '', o = {}) => def(id, Object.assign({ kind: 'num', label, min, max, d, unit, curve: 'lin' }, o));
 const SEL = (id, label, opts, d, o = {}) => def(id, Object.assign({ kind: 'sel', label, opts, d }, o));
@@ -2887,18 +2895,22 @@ NUM('rev.mix', 'Anteil', 0, 1, 0.45, '%');
 SEL('rev.typ', 'Raum', RAUM_LISTE.map((r) => [r.id, r.name + (r.t ? ' · ' + String(r.t).replace('.', ',') + ' s' : ''), RAUM_ART[r.art]]), 'nebel');
 NUM('rev.dist', 'Abstand', 0, 1, 0.5, '%');
 NUM('rev.len', 'Länge', 0.5, 1.5, 1, '', { fmt: (v) => '×' + dec(v.toFixed(2)) });
-// (29.10.2026) the return „Effekt“ (mixer/effekt.js, dsp/effekte.js): which one, how much, and each one's knobs
-SEL('fx.typ', 'Effekt', [['netz', 'Resonanz-Netz'], ['wolke', 'Wolke'], ['spektral', 'Spektral-Nebel'], ['oktav', 'Oktav-Echo'], ['vokal', 'Vokal-Filter']], 'netz');
-NUM('fx.mix', 'Anteil', 0, 1, 0, '%');
-SEL('fx.art', 'Art', [['0', 'Saiten'], ['1', 'Glocken'], ['2', 'Holzkörper']], '0', { chips: 1, small: 1 });
-NUM('fx.klang', 'Nachklang', 0, 1, 0.5, '%'); NUM('fx.hell', 'Helligkeit', 0, 1, 0.6, '%'); NUM('fx.breite', 'Breite', 0, 1, 0.7, '%');
-SEL('fx.ton', 'Lage', [['-1', 'Oktave tiefer'], ['0', 'Wie gespielt'], ['1', 'Oktave höher']], '0', { chips: 1, small: 1 });
-NUM('fx.dichte', 'Dichte', 0, 1, 0.4, '%'); NUM('fx.zeit', 'Zeit', 0, 1, 0.5, '', { fmt: (v) => ['⅛', '¼', '½', '1', '2'][Math.round(v * 4)] + ' Schlag' });
-NUM('fx.hoehe', 'Tonsprünge', 0, 1, 0.3, '%'); NUM('fx.rueck', 'Rückwärts', 0, 1, 0.2, '%'); NUM('fx.streu', 'Streuung', 0, 1, 0.5, '%'); NUM('fx.nach', 'Rückkopplung', 0, 1, 0.3, '%');
-NUM('fx.szeit', 'Zerfließen', 0, 1, 0.5, '%'); NUM('fx.shell', 'Helligkeit', 0, 1, 0.5, '%'); BOOL('fx.halten', 'Halten', false);
-NUM('fx.ozeit', 'Zeit', 0, 1, 0.6, '', { fmt: (v) => ['¼', '½', '¾', '1', '1½', '2'][Math.round(v * 5)] + ' Schlag' }); NUM('fx.onach', 'Wiederholungen', 0, 1, 0.5, '%');
-SEL('fx.schritt', 'Schritt', [['0', 'Oktave ab'], ['1', 'Quarte'], ['2', 'Quinte'], ['3', 'Oktave'], ['4', 'Duodezime']], '3', { chips: 1, small: 1 }); NUM('fx.ohell', 'Helligkeit', 0, 1, 0.6, '%');
-NUM('fx.vokal', 'Vokal', 0, 1, 0, '', { fmt: (v) => ['a', 'e', 'i', 'o', 'u'][Math.min(4, Math.round(v * 4))] }); NUM('fx.beweg', 'Bewegung', 0, 1, 0.2, '%'); NUM('fx.reso', 'Resonanz', 0, 1, 0.5, '%'); NUM('fx.stimme', 'Stimme', 0, 1, 0.3, '%');
+// (29.10.2026) the returns „Effekt“ and „Effekt 2“ (mixer/effekt.js, dsp/effekte.js): which one, how much, and each one's
+// knobs – the same set for both (FX_RETS: key, name, colour, the effect it starts with)
+for (const [r, , , typ] of FX_RETS) {
+  const q = r + '.';
+  SEL(q + 'typ', 'Effekt', [['netz', 'Resonanz-Netz'], ['wolke', 'Wolke'], ['spektral', 'Spektral-Nebel'], ['oktav', 'Oktav-Echo'], ['vokal', 'Vokal-Filter']], typ);
+  NUM(q + 'mix', 'Anteil', 0, 1, 0, '%');
+  SEL(q + 'art', 'Art', [['0', 'Saiten'], ['1', 'Glocken'], ['2', 'Holzkörper']], '0', { chips: 1, small: 1 });
+  NUM(q + 'klang', 'Nachklang', 0, 1, 0.5, '%'); NUM(q + 'hell', 'Helligkeit', 0, 1, 0.6, '%'); NUM(q + 'breite', 'Breite', 0, 1, 0.7, '%');
+  SEL(q + 'ton', 'Lage', [['-1', 'Oktave tiefer'], ['0', 'Wie gespielt'], ['1', 'Oktave höher']], '0', { chips: 1, small: 1 });
+  NUM(q + 'dichte', 'Dichte', 0, 1, 0.4, '%'); NUM(q + 'zeit', 'Zeit', 0, 1, 0.5, '', { fmt: (v) => ['⅛', '¼', '½', '1', '2'][Math.round(v * 4)] + ' Schlag' });
+  NUM(q + 'hoehe', 'Tonsprünge', 0, 1, 0.3, '%'); NUM(q + 'rueck', 'Rückwärts', 0, 1, 0.2, '%'); NUM(q + 'streu', 'Streuung', 0, 1, 0.5, '%'); NUM(q + 'nach', 'Rückkopplung', 0, 1, 0.3, '%');
+  NUM(q + 'szeit', 'Zerfließen', 0, 1, 0.5, '%'); NUM(q + 'shell', 'Helligkeit', 0, 1, 0.5, '%'); BOOL(q + 'halten', 'Halten', false);
+  NUM(q + 'ozeit', 'Zeit', 0, 1, 0.6, '', { fmt: (v) => ['¼', '½', '¾', '1', '1½', '2'][Math.round(v * 5)] + ' Schlag' }); NUM(q + 'onach', 'Wiederholungen', 0, 1, 0.5, '%');
+  SEL(q + 'schritt', 'Schritt', [['0', 'Oktave ab'], ['1', 'Quarte'], ['2', 'Quinte'], ['3', 'Oktave'], ['4', 'Duodezime']], '3', { chips: 1, small: 1 }); NUM(q + 'ohell', 'Helligkeit', 0, 1, 0.6, '%');
+  NUM(q + 'vokal', 'Vokal', 0, 1, 0, '', { fmt: (v) => ['a', 'e', 'i', 'o', 'u'][Math.min(4, Math.round(v * 4))] }); NUM(q + 'beweg', 'Bewegung', 0, 1, 0.2, '%'); NUM(q + 'reso', 'Resonanz', 0, 1, 0.5, '%'); NUM(q + 'stimme', 'Stimme', 0, 1, 0.3, '%');
+}
 NUM('mov.vib', 'Vibrato', 0, 60, 4, 'ct');
 NUM('mov.vibRate', 'Vibrato-Tempo', 0.1, 9, 4.5, 'Hz', { curve: 'exp' });
 NUM('mov.drift', 'Taumeln', 0, 80, 6, 'ct');
@@ -2947,7 +2959,7 @@ const STRIPS = [
   { k: 'gsp', name: 'Gespinst', info: 'Netz der Saiten' },
   { k: 'dly', name: 'Echo', info: 'Rückweg', ret: true },
   { k: 'rev', name: 'Hall', info: 'Rückweg', ret: true },
-  { k: 'fx', name: 'Effekt', info: 'Rückweg', ret: true },   // (29.10.2026: the Effektseite – mixer/effekt.js)
+  ...FX_RETS.map(([k, name]) => ({ k, name, info: 'Rückweg', ret: true })),   // (29.10.2026: the Effektseite – mixer/effekt.js)
 ];
 const FADER_OFF = -59.95;
 const fmtFader = (v) => (v <= FADER_OFF ? '−∞ dB' : (v > 0.05 ? '+' : v < -0.05 ? '−' : '') + dec(Math.abs(v).toFixed(1)) + ' dB');
@@ -2963,7 +2975,10 @@ for (const st of STRIPS) {
   if (!st.ret) {
     SEL(p + 'route', 'Weg', [['fx', 'Durch die Effektkette'], ['dir', 'Direkt in die Summe']], 'fx', { chips: 1, small: 1 });
     NUM(p + 'dly', 'Echo', 0, 2, 1, '%', { step: 0.01 });
-    NUM(p + 'fx', 'Effekt', 0, 2, 1, '%', { step: 0.01 });
+    for (const [r, name] of FX_RETS) NUM(p + r, name, 0, 2, 1, '%', { step: 0.01 });
+    // (29.10.2026) the Einschub: one of the two effects inside the channel itself (its settings, an instance of its own), and how much
+    SEL(p + 'ins', 'Einschub', [['0', 'Keiner'], ...FX_RETS.map(([r, name]) => [r, name])], '0', { chips: 1, small: 1 });
+    NUM(p + 'insmix', 'Einschub-Anteil', 0, 1, 0.5, '%', { step: 0.01 });
   }
   if (st.k !== 'rev') NUM(p + 'rev', 'Hall', 0, 2, 1, '%', { step: 0.01 });
   NUM(p + 'lc', 'Tiefenschnitt', 20, 1000, 20, 'Hz', { curve: 'exp', fmt: fmtHzOff(LC_OFF) });
@@ -3081,7 +3096,7 @@ SEL('midi.tch', 'Touché-Spielweise', [['finger', 'Finger'], ['atem', 'Atem'], [
 
 const GROUP = {
   v: 'Spielweise', t: 'Stimmung', neb: 'Nebel', kor: 'Körner', hau: 'Hauch', glo: 'Glocke', mem: 'Membran', sai: 'Saite', sch: 'Schale', gng: "Gong", klb: "Kalimba", obt: "Obertöne", stm: "Stimme", swm: "Schwarm", tie: "Tiefe", trp: "Tropfen", nrd: 'Nordlicht', sht: 'Schimmer', ond: 'Ätherwelle', wal: 'Walgesang', stp: 'Endlostreppe', atr: 'Attraktor', tnl: 'Tunnel', wkg: 'Westküste', bnt: 'Schaltkreis', kas: 'Kassette', bit: 'Achtbit', gbs: 'Gleitbass', hht: 'Zischel', vox: 'Silbe', spu: 'Spieluhr', kto: 'Koto', hlm: 'Halm', rnk: 'Ranke', elm: 'Elmsfeuer', hng: 'Handpan', gml: 'Gamelan', sit: 'Sitar', tbl: 'Tabla', did: 'Didgeridoo', mtr: 'Maultrommel', jrg: 'Jahresring', hrz: 'Harz', shn: 'Sehne', zpf: 'Zapfen', glt: 'Glut', mdr: 'Moder', boe: 'Böe', amo: 'Amöbe', gsp: 'Gespinst', rhz: 'Rhizom', khl: 'Kehlchen',
-  drv: 'Verzerrung', rng: 'Ringmodulator', flt: 'Filter', pha: 'Phaser', cho: 'Schweben', dly: 'Echo', rev: 'Hall', fx: 'Effekt', mov: 'Bewegung', mst: 'Summe',
+  drv: 'Verzerrung', rng: 'Ringmodulator', flt: 'Filter', pha: 'Phaser', cho: 'Schweben', dly: 'Echo', rev: 'Hall', fx: 'Effekt', fx2: 'Effekt 2', mov: 'Bewegung', mst: 'Summe',
   seq: 'Puls', bor: 'Bordun', rec: 'Aufnahme', hx: 'Hexenring', dev: 'Gerät', midi: 'MIDI', l0: 'Spur 1', l1: 'Spur 2', l2: 'Spur 3', l3: 'Spur 4',
 };
 // the mixer's parts as the panel names them ("Kanal" is the MIDI channel's word here)
@@ -4416,12 +4431,12 @@ function initAudio() {
   A.revSend.connect(A.revIn);
   A.revIn.connect(A.revPre);
   A.revRet.connect(MIX.s.rev.in);
-  // the return „Effekt“ (mixer/effekt.js): its processor comes when it is first wanted
-  A.fxSend = G(0); A.fxIn = G(1); A.fxRet = G(1); A.fx = null;
-  A.fxSend.connect(A.fxIn); A.fxRet.connect(MIX.s.fx.in);
+  // the returns „Effekt“ and „Effekt 2“ (mixer/effekt.js): a processor comes when one is first wanted
+  A.fxR = {};
+  for (const [r] of FX_RETS) { const S = A.fxR[r] = { r, send: G(0), in: G(1), ret: G(1), cur: null }; S.send.connect(S.in); S.ret.connect(MIX.s[r].in); }
   // what the insert chain sends to echo and hall; a copy of the chain takes over when channels send different amounts
   A.send = {};
-  for (const [k, target] of [['dly', A.dlySend], ['rev', A.revSend], ['fx', A.fxSend]]) {
+  for (const [k, target] of [['dly', A.dlySend], ['rev', A.revSend], ...FX_RETS.map(([r]) => [r, A.fxR[r].send])]) {
     const fromFx = G(1); A.insertOut.connect(fromFx).connect(target);
     A.send[k] = { target, fromFx, fromCopy: null, copy: null, mode: 'fx' };
   }
@@ -4688,7 +4703,7 @@ function applyAll(firstIR) {
   if (!A.ctx) return;
   A.drvKey = null;
   updDrive(); updRing(); updFilter(); updPhaser(); updChorus(); updDelay(); updReverbMix(); updMove(); updMaster();
-  updMix(!!firstIR);
+  updMix(!!firstIR); fxUpd();   // (the effect returns: a preset's choice and Anteil)
   regenIR(!!firstIR);
   updBordun();
 }
@@ -4717,7 +4732,7 @@ function buildStrips() {
     st.pt.connect(st.byp);
     st.byp.connect(st.mBy).connect(st.duck).connect(st.dry);
     st.wet.connect(st.mBy); st.mWet.connect(st.duck);
-    if (!st.ret) { st.eS = G(1); st.duck.connect(st.eS); st.fS = G(1); st.duck.connect(st.fS); }
+    if (!st.ret) { st.eS = G(1); st.duck.connect(st.eS); st.fS = {}; for (const [r] of FX_RETS) { st.fS[r] = G(1); st.duck.connect(st.fS[r]); } }
     if (d.k !== 'rev') { st.hS = G(1); st.duck.connect(st.hS); }
     MIX.s[d.k] = st; MIX.list.push(st); if (!st.ret) MIX.src.push(st);
   }
@@ -4749,7 +4764,7 @@ function mixParam(st, key) {
   if (!A.ctx) return;
   if (key === 'mute' || key === 'solo') { updSolo(); updSends(); return; }
   updStrip(st);
-  if (key === 'route' || key === 'dly' || key === 'rev' || key === 'fx') updSends();
+  if (key === 'route' || key === 'dly' || key === 'rev' || st.fS && st.fS[key]) updSends();
 }
 // Solo: a soloed channel silences the other channels (dry and sends); echo and hall stay open so it keeps its space.
 // A soloed return plays only the effect: the channels go on feeding it, but their dry sound is muted.
@@ -4772,7 +4787,7 @@ function gates(st, set) {
   gspGate(st, set);
   if (st.eS) set(st.eS.gain, on ? mp(p + 'dly') : 0);
   if (st.hS) set(st.hS.gain, on ? (st.k === 'dly' ? 0.3 : 1) * mp(p + 'rev') : 0);
-  if (st.fS) set(st.fS.gain, on ? mp(p + 'fx') : 0);
+  if (st.fS) for (const r in st.fS) set(st.fS[r].gain, on ? mp(p + r) : 0);
 }
 // dry path: through the insert chain or straight into the sum; a move fades the channel out and back in
 function wireStrip(st) {
@@ -4799,8 +4814,8 @@ function wireStrip(st) {
 // own signal.
 function updSends(inst) {
   if (!A.send || !MIX.src.length) return;
-  for (const fx of ['dly', 'rev', 'fx']) {
-    const S = A.send[fx], node = (st) => (fx === 'dly' ? st.eS : fx === 'rev' ? st.hS : st.fS);
+  for (const fx of ['dly', 'rev', ...FX_RETS.map((x) => x[0])]) {
+    const S = A.send[fx], node = (st) => (fx === 'dly' ? st.eS : fx === 'rev' ? st.hS : st.fS[fx]);
     const viaFx = (st) => st.k !== 'hxr' && P['x' + st.k + '.route'] !== 'dir';   // (Hexenring: its sends take its own signal)
     const copy = MIX.src.some((st) => viaFx(st) && (mp('x' + st.k + '.' + fx) !== 1 || st.dryOff));
     if (copy && !S.copy) {
@@ -4827,7 +4842,7 @@ function sendTo(st, fx, node, want) {
   setTimeout(() => { if (st.to[fx] !== cur) { try { node.disconnect(cur); } catch (e) {} } }, 90);
 }
 // ---- processing block: 24 dB/oct low cut, shelving EQ with a sweepable mid, 12 dB/oct high cut, saturation
-const procNeeded = (p) => !LC_OFF(mp(p + 'lc')) || !HC_OFF(mp(p + 'hc')) || mp(p + 'lo') !== 0 || mp(p + 'mid') !== 0 || mp(p + 'hi') !== 0 || P[p + 'sat'] > 0 || P[p + 'att'] !== 0 || P[p + 'aus'] !== 0;
+const procNeeded = (p) => !LC_OFF(mp(p + 'lc')) || !HC_OFF(mp(p + 'hc')) || mp(p + 'lo') !== 0 || mp(p + 'mid') !== 0 || mp(p + 'hi') !== 0 || P[p + 'sat'] > 0 || P[p + 'att'] !== 0 || P[p + 'aus'] !== 0 || (P[p + 'ins'] || '0') !== '0';
 function mkWidth() {
   const w = { sp: A.ctx.createChannelSplitter(2), mg: A.ctx.createChannelMerger(2), LL: G(1), RR: G(1), LR: G(0), RL: G(0) };
   w.sp.connect(w.LL, 0); w.sp.connect(w.LR, 0); w.sp.connect(w.RL, 1); w.sp.connect(w.RR, 1);
@@ -4863,7 +4878,7 @@ function matUpd(st, inst) {
     st.matT = setTimeout(() => { if (!st.matOn) { try { st.byp.disconnect(st.mat.sp); st.wet.disconnect(st.mat.sp); } catch (e) {} } }, 120);
   }
 }
-function makeProc() {
+function makeProc(src) {
   const x = {};
   x.lc1 = BQ('highpass', 0, -5.33); x.lc2 = BQ('highpass', 0, 2.32);   // Butterworth pair (Q 0.54 and 1.31, in dB)
   x.lo = BQ('lowshelf', 150); x.mid = BQ('peaking', 1000, 0.9); x.hi = BQ('highshelf', 6000);
@@ -4877,6 +4892,9 @@ function makeProc() {
   // (29.10.2026) the Transienten-Former after it (myzel-trans – dsp/effekte.js): Anschlag and Ausklang; without AudioWorklet none
   x.out = x.sat;
   if (A.ctx.__dspOK) { try { x.tr = new AudioWorkletNode(A.ctx, 'myzel-trans', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit' }); x.sat.connect(x.tr); x.out = x.tr; } catch (e) { x.tr = null; } }
+  // (29.10.2026) and the Einschub (a channel's, not a return's): one of the effect returns' effects inside the channel –
+  // its processor between dry and wet, made when chosen (fxInsUpd, mixer/effekt.js)
+  if (src && A.ctx.__dspOK) { const I = x.ins = { r: null, cur: null, from: x.out, dry: G(1), wet: G(0) }, end = G(1); x.out.connect(I.dry).connect(end); I.wet.connect(end); x.out = end; }
   return x;
 }
 // Saturation: half dry, half tanh, matched at −14 dBFS peaks – loud parts are rounded off, quiet ones lifted a little
@@ -4892,7 +4910,7 @@ function satSet(x, a) {
 }
 function procUpd(st, inst) {
   const p = 'x' + st.k + '.', on = procNeeded(p);
-  if (on && !st.proc) st.proc = makeProc();
+  if (on && !st.proc) st.proc = makeProc(!st.ret);
   const x = st.proc;
   if (x) {
     const set = inst || !st.procOn ? setNow : (q, v) => setP(q, v, 0.02);
@@ -4901,6 +4919,7 @@ function procUpd(st, inst) {
     set(x.lo.gain, mp(p + 'lo')); set(x.mid.gain, mp(p + 'mid')); set(x.mid.frequency, mp(p + 'midf')); set(x.hi.gain, mp(p + 'hi'));
     satSet(x, P[p + 'sat']);
     if (x.tr) x.tr.port.postMessage({ a: P[p + 'att'], s: P[p + 'aus'] });
+    fxInsUpd(st, inst || !st.procOn);
   }
   if (on === st.procOn) return;
   st.procOn = on;
@@ -4971,34 +4990,75 @@ function setMonDim(on) { A.dim = !!on; updMonitor(); }
    kreativer werden“): a third return beside echo and hall – every channel sends into it (x…fx, its share; fx.mix the
    master), and it plays the effect chosen (fx.typ – dsp/effekte.js): Resonanz-Netz, Wolke, Spektral-Nebel, Oktav-Echo,
    Vokal-Filter. Its processor is made the first time it is wanted (Anteil above 0) and replaced with a crossfade when
-   another is chosen; the scale and the Puls's beat go to it as they change. Without AudioWorklet it stays silent. ---------- */
+   another is chosen; the scale and the Puls's beat go to it as they change. Without AudioWorklet it stays silent.
+   (owner, 29.10.2026: „ja alle 3 offenen Punkte erledigen“) Two of them: „Effekt“ and „Effekt 2“ (FX_RETS, params.js),
+   each with its own choice and knobs; and a channel can take either into itself as its Einschub (x…ins, x…insmix –
+   mixer/processing.js): a processor of its own with that return's settings, mixed with the channel's sound. ---------- */
 const FX_TYPES = {
-  netz: { proc: 'myzel-netz', name: 'Resonanz-Netz', i: 'Saiten, Glocken oder ein Holzkörper, auf die Tonleiter gestimmt, schwingen mit allem mit, was hineinklingt', keys: { art: 'fx.art', klang: 'fx.klang', hell: 'fx.hell', breite: 'fx.breite', ton: 'fx.ton' } },
-  wolke: { proc: 'myzel-wolke', name: 'Wolke', i: 'Körner des eben Gespielten kommen im Takt zurück – oktaviert, rückwärts, weit verstreut', keys: { dichte: 'fx.dichte', zeit: 'fx.zeit', hoehe: 'fx.hoehe', rueck: 'fx.rueck', streu: 'fx.streu', nach: 'fx.nach' } },
-  spektral: { proc: 'myzel-spek', name: 'Spektral-Nebel', i: 'Der Klang zerfließt in eine stehende Fläche – „Halten“ friert sie ein', keys: { zeit: 'fx.szeit', hell: 'fx.shell', halten: 'fx.halten' } },
-  oktav: { proc: 'myzel-oktav', name: 'Oktav-Echo', i: 'Ein Echo im Takt, das sich mit jeder Wiederholung hochschraubt (oder hinab)', keys: { zeit: 'fx.ozeit', nach: 'fx.onach', schritt: 'fx.schritt', hell: 'fx.ohell' } },
-  vokal: { proc: 'myzel-vokal', name: 'Vokal-Filter', i: 'Der Klang spricht: drei Formanten gleiten durch a, e, i, o, u', keys: { vokal: 'fx.vokal', bewegung: 'fx.beweg', resonanz: 'fx.reso', stimme: 'fx.stimme' } },
+  netz: { proc: 'myzel-netz', name: 'Resonanz-Netz', i: 'Saiten, Glocken oder ein Holzkörper, auf die Tonleiter gestimmt, schwingen mit allem mit, was hineinklingt', keys: { art: 'art', klang: 'klang', hell: 'hell', breite: 'breite', ton: 'ton' } },
+  wolke: { proc: 'myzel-wolke', name: 'Wolke', i: 'Körner des eben Gespielten kommen im Takt zurück – oktaviert, rückwärts, weit verstreut', keys: { dichte: 'dichte', zeit: 'zeit', hoehe: 'hoehe', rueck: 'rueck', streu: 'streu', nach: 'nach' } },
+  spektral: { proc: 'myzel-spek', name: 'Spektral-Nebel', i: 'Der Klang zerfließt in eine stehende Fläche – „Halten“ friert sie ein', keys: { zeit: 'szeit', hell: 'shell', halten: 'halten' } },
+  oktav: { proc: 'myzel-oktav', name: 'Oktav-Echo', i: 'Ein Echo im Takt, das sich mit jeder Wiederholung hochschraubt (oder hinab)', keys: { zeit: 'ozeit', nach: 'onach', schritt: 'schritt', hell: 'ohell' } },
+  vokal: { proc: 'myzel-vokal', name: 'Vokal-Filter', i: 'Der Klang spricht: drei Formanten gleiten durch a, e, i, o, u', keys: { vokal: 'vokal', bewegung: 'beweg', resonanz: 'reso', stimme: 'stimme' } },
 };
-const fxSet = (T) => { const o = {}; for (const k in T.keys) o[k] = +P[T.keys[k]]; return o; };
+// T.keys: the processor's knob → the parameter's name after the return's prefix (r + '.')
+const fxSet = (T, r) => { const o = {}; for (const k in T.keys) o[k] = +P[r + '.' + T.keys[k]]; return o; };
 const fxFreqs = () => [...new Set((N.notes || []).map((n) => +n.f.toFixed(2)))].slice(0, 12);
 const fxBeat = () => 60 / Math.max(20, P['seq.bpm'] || 90);
-function fxUpd() {
-  if (!A.ctx || !A.fxSend) return;
-  setP(A.fxSend.gain, P['fx.mix']);
-  const T = FX_TYPES[P['fx.typ']] || FX_TYPES.netz;
-  if (A.fx && A.fx.typ === P['fx.typ']) { A.fx.node.port.postMessage({ set: fxSet(T) }); return; }
-  if (!(P['fx.mix'] > 0) || !A.ctx.__dspOK) return;
-  let node; try { node = new AudioWorkletNode(A.ctx, T.proc, { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit', processorOptions: { set: fxSet(T), beat: fxBeat(), freqs: fxFreqs() } }); } catch (e) { return; }
-  const t = A.ctx.currentTime + 0.01, g = G(0), old = A.fx;
-  A.fxIn.connect(node).connect(g).connect(A.fxRet);
-  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(1, t + 0.2);
-  if (old) { holdParam(old.g.gain, t); old.g.gain.linearRampToValueAtTime(0, t + 0.2); setTimeout(() => { try { A.fxIn.disconnect(old.node); old.node.disconnect(); old.g.disconnect(); old.node.port.postMessage({ kill: 1 }); } catch (e) {} }, 500); }
-  A.fx = { typ: P['fx.typ'], node, g };
+const fxType = (r) => FX_TYPES[P[r + '.typ']] || FX_TYPES.netz;
+// a processor of the return r's effect (null without AudioWorklet)
+function fxNode(r) {
+  if (!A.ctx.__dspOK) return null;
+  const T = fxType(r);
+  try { return new AudioWorkletNode(A.ctx, T.proc, { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit', processorOptions: { set: fxSet(T, r), beat: fxBeat(), freqs: fxFreqs() } }); } catch (e) { return null; }
 }
-// the scale and the beat, as they change (notes.js, the Puls)
-function fxTune() { if (A.fx) A.fx.node.port.postMessage({ freqs: fxFreqs(), beat: fxBeat() }); }
+// a slot (a return's, or a channel's Einschub) moves to a new processor: the new one fades in, the old one out and goes
+function fxSwap(S, from, to, typ) {
+  const node = fxNode(S.r);
+  if (!node) return;
+  const t = A.ctx.currentTime + 0.01, g = G(0), old = S.cur;
+  from.connect(node).connect(g).connect(to);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(1, t + 0.2);
+  if (old) fxDrop(from, old, t);
+  S.cur = { typ, node, g };
+}
+function fxDrop(from, old, t) {
+  holdParam(old.g.gain, t); old.g.gain.linearRampToValueAtTime(0, t + 0.2);
+  setTimeout(() => { try { from.disconnect(old.node); old.node.disconnect(); old.g.disconnect(); old.node.port.postMessage({ kill: 1 }); } catch (e) {} }, 500);
+}
+// the return r (all of them without r): its master, its processor, and the Einschübe that play its effect
+function fxUpd(r, force) {
+  if (!A.ctx || !A.fxR) return;
+  if (!r) { for (const [k] of FX_RETS) fxUpd(k); return; }
+  const S = A.fxR[r];
+  setP(S.send.gain, P[r + '.mix']);
+  const typ = P[r + '.typ'];
+  if (S.cur && S.cur.typ === typ) S.cur.node.port.postMessage({ set: fxSet(fxType(r), r) });
+  else if ((P[r + '.mix'] > 0 || force || MOD.t[r].cs) && A.ctx.__dspOK) fxSwap(S, S.in, S.ret, typ);
+  for (const st of MIX.src) if (st.proc && st.proc.ins && st.proc.ins.r === r) fxInsUpd(st);
+}
+// the scale and the beat, as they change (notes.js, the Puls) – to the returns and the Einschübe
+function fxTune() {
+  const m = { freqs: fxFreqs(), beat: fxBeat() };
+  for (const S of Object.values(A.fxR || {})) if (S.cur) S.cur.node.port.postMessage(m);
+  for (const st of MIX.src) if (st.proc && st.proc.ins && st.proc.ins.cur) st.proc.ins.cur.node.port.postMessage(m);
+}
 // what its details say: the effect's own sentence
-const fxText = () => (FX_TYPES[P['fx.typ']] || FX_TYPES.netz).i;
+const fxText = (r = 'fx') => fxType(r).i;
+// A channel's Einschub (makeProc's x.ins: the slot between its Transienten-Former and its output): which return's
+// effect it plays and how much of it – equal power, so the middle is as loud as either end. „Keiner“ fades the
+// processor out and lets it go.
+function fxInsUpd(st, inst) {
+  const x = st.proc, I = x && x.ins;
+  if (!I) return;
+  const p = 'x' + st.k + '.', r = P[p + 'ins'], on = r !== '0' && !!A.fxR[r], m = on ? mp(p + 'insmix') : 0;
+  const set = inst ? setNow : (q, v) => setP(q, v, 0.02);
+  set(I.dry.gain, Math.cos(m * Math.PI / 2)); set(I.wet.gain, Math.sin(m * Math.PI / 2));
+  if (!on) { if (I.cur) { fxDrop(I.from, I.cur, A.ctx.currentTime + 0.01); I.cur = null; } I.r = null; return; }
+  const typ = P[r + '.typ'];
+  if (I.r === r && I.cur && I.cur.typ === typ) { I.cur.node.port.postMessage({ set: fxSet(fxType(r), r) }); return; }
+  I.r = r; fxSwap(I, I.from, I.wet, typ);
+}
 /* ---------- metering ---------- */
 // Each strip is tapped after fader, width, balance and "Pumpen", before mute (a muted channel still shows what it would do).
 // The taps exist only while a meter is on screen.
@@ -5204,7 +5264,7 @@ function idleEnter() {
   if (IDLE.echo) off(A.dlyRet, IDLE.keeper.gain);
   off(A.dlySend, A.dlyIn);   // and its input: the loop running on pulls nothing before it (the chain, the strips)
   off(A.revSend, A.revIn); off(MIX.s.dly.hS, A.revIn);
-  if (A.fxSend) off(A.fxSend, A.fxIn);   // (the return „Effekt“: its input from nothing – its tail rings out)   // the hall's input: from the feed (IDLE.hall: from nothing)
+  for (const S of Object.values(A.fxR || {})) off(S.send, S.in);   // (the returns „Effekt“: their input from nothing – their tails ring out)   // the hall's input: from the feed (IDLE.hall: from nothing)
   if (!IDLE.hall) { IDLE.feed.connect(A.revIn); cut.push([IDLE.feed, A.revIn, 'feed']); } else off(A.revRet, IDLE.keeper.gain);
   if (HX.node && HX.ctx === A.ctx) {   // the processor (no Schleife): its way closed, its Gespielt ring records zeros
     off(A.hxIn0, HX.node, 0, 0);
@@ -20381,6 +20441,8 @@ const MODT = {
   wow: { label: 'Leiern (Echo)', lo: 0, u: (v) => v * 0.004 },
   dly: { label: 'Echo-Anteil', u: mixRel('dly.mix') },
   rev: { label: 'Hall-Anteil', u: mixRel('rev.mix') },
+  fx: { label: 'Effekt-Anteil', u: mixRel('fx.mix') },   // (29.10.2026: the effect returns – mixer/effekt.js)
+  fx2: { label: 'Effekt-2-Anteil', u: mixRel('fx2.mix') },
   cho: { label: 'Schweben-Anteil', u: mixRel('cho.mix') },
   bor: { label: 'Bordun öffnen', u: (v) => v * 2400 },
   korD: { label: 'Körner-Dichte', js: 1 },
@@ -20412,7 +20474,7 @@ const FA = { t0: null, b0: 0, bpm: 84, d: 0, ph: 0, pon: false, lanes: new Map()
 // parameters with a counterpart in Formen: written down as they change (a knob, a slider), played back as that
 // counterpart's deflection – [target, scale ('log': in octaves), units of the target per unit]
 const FAE_PAR = { 'flt.freq': ['flt', 'log', 0.5], 'rng.freq': ['rng', 'log', 0.5], 'bor.cut': ['bor', 'log', 0.5], 'kor.dens': ['korD', 'log', 1 / 1.5],
-  'kor.scat': ['korS', 'lin', 2], 'trp.rain': ['trp', 'lin', 1 / 0.65], 'dly.mix': ['dly', 'lin', 1], 'rev.mix': ['rev', 'lin', 1], 'cho.mix': ['cho', 'lin', 1] };
+  'kor.scat': ['korS', 'lin', 2], 'trp.rain': ['trp', 'lin', 1 / 0.65], 'dly.mix': ['dly', 'lin', 1], 'rev.mix': ['rev', 'lin', 1], 'fx.mix': ['fx', 'lin', 1], 'fx2.mix': ['fx2', 'lin', 1], 'cho.mix': ['cho', 'lin', 1] };
 // Körner-Dichte: ×0.35 … ×2.8 of the patch's grains per second
 const modKorD = (t) => Math.pow(2, 1.5 * modVal('korD', t));
 // one source's value at audio time t: a live one is constant; one set ahead runs linearly from point to point (0 before
@@ -20602,7 +20664,7 @@ function modParam(T, now) {
 }
 // The node a target moves: a ConstantSource whose value adds to the params it reaches – the insert chain's filter and
 // phaser detune and auto-pan position (every copy of the chain too, see modChain), the ring oscillator's detune, the
-// Bordun's filter detune, the echo's and hall's input level, the chorus's wet and dry gains; Leiern drives a gain of
+// Bordun's filter detune, the echo's, hall's and effect returns' input level, the chorus's wet and dry gains; Leiern drives a gain of
 // its own on the echo's wow and flutter LFOs into the delay times.
 function modNode(T) {
   const c = A.ctx;
@@ -20613,6 +20675,7 @@ function modNode(T) {
   if (T.k === 'rng') cs.connect(A.rngOsc.detune);
   else if (T.k === 'dly') cs.connect(A.dlySend.gain);
   else if (T.k === 'rev') cs.connect(A.revSend.gain);
+  else if (T.k === 'fx' || T.k === 'fx2') { cs.connect(A.fxR[T.k].send.gain); fxUpd(T.k, true); }   // (its processor, even while the patch's Anteil is 0)
   else if (T.k === 'bor') { if (A.bor) cs.connect(A.bor.filt.detune); }
   else if (T.k === 'wow') {
     const w = G(0), f = G(0), s = G(0.15);   // flutter: 0.0006 for every 0.004 of wow, as updDelay
@@ -20677,7 +20740,7 @@ function mxoApply() {
   let solo = false, sends = false, mst = false, puls = false;
   for (const id of all) {
     const m = /^x(\w+)\.(\w+)$/.exec(id);
-    if (m) { strips.add(m[1]); if (m[2] === 'mute') solo = true; else if (m[2] === 'dly' || m[2] === 'rev') sends = true; }
+    if (m) { strips.add(m[1]); if (m[2] === 'mute') solo = true; else if (m[2] === 'dly' || m[2] === 'rev' || m[2] === 'fx' || m[2] === 'fx2') sends = true; }
     else if (id.startsWith('mst.')) mst = true;
     else if (id === 'mix.pulsVol' || id === 'mix.pulsMute') puls = true;
   }
@@ -20821,7 +20884,7 @@ for (const k in MODT) midiTarget('mod.' + k, MODT[k].label, null, { group: MOD_G
 // Gestik's axes never write the patch: a parameter with a counterpart in Formen becomes that one, anything else that
 // would change the preset (parameters, the engine macros, steps of octave, tuning and tempo, the mixer's scenes) is
 // refused. Gestik's events (Wenden, Ruhe, Schütteln) are deliberate presses, like a pad.
-const MOD_EQ = { 'flt.freq': 'mod.flt', 'rng.freq': 'mod.rng', 'dly.wow': 'mod.wow', 'dly.mix': 'mod.dly', 'rev.mix': 'mod.rev', 'cho.mix': 'mod.cho', 'bor.cut': 'mod.bor',
+const MOD_EQ = { 'flt.freq': 'mod.flt', 'rng.freq': 'mod.rng', 'dly.wow': 'mod.wow', 'dly.mix': 'mod.dly', 'rev.mix': 'mod.rev', 'fx.mix': 'mod.fx', 'fx2.mix': 'mod.fx2', 'cho.mix': 'mod.cho', 'bor.cut': 'mod.bor',
   'kor.dens': 'mod.korD', 'kor.scat': 'mod.korS', 'trp.rain': 'mod.trp', 'gsp.kopplung': 'mod.gspK', 'rhz.reiz': 'mod.rhzR', morph: 'mod.morph', expr: 'expr' };
 const MOD_WRITES = new Set(['macro.a', 'macro.b', 'oct.up', 'oct.down', 'deg.up', 'deg.down', 'root.up', 'root.down', 'scale.up', 'scale.down', 'tap', 'scene.a', 'scene.b', 'scene.ab']);
 function gkTarget(key) {
@@ -23255,7 +23318,7 @@ function onParamChanged(id) {
     case 'cho': updChorus(); break;
     case 'dly': updDelay(); break;
     case 'rev': if (id === 'rev.size' || id === 'rev.damp' || id === 'rev.typ' || id === 'rev.dist' || id === 'rev.len') regenIR(); else updReverbMix(); break;
-    case 'fx': fxUpd(); break;
+    case 'fx': case 'fx2': fxUpd(pre); break;
     case 'mov': updMove(); break;
     case 'mst': updMaster(); break;
     case 'bor': updBordun(); break;
@@ -23394,7 +23457,8 @@ const MXC = [], MXK = {};
 const MX_GROUPS = [['spiel', 'spiel'], ['puls', 'puls'], ['grund', 'grund'], ['rueck', 'rückwege'], ['sum', 'summe']];
 const MX_DORM = [118, 106, 97];
 function mxChannels() {
-  const own = { fin: ['spiel', '#f0e6d8'], eb2: ['spiel', '#c9dc82'], rgn: ['spiel', RG_COL], hxr: ['spiel', '#e9a35e'], bor: ['grund', '#5a7cff'], gsp: ['grund', '#b9a46e'], dly: ['rueck', '#6cc9ef'], rev: ['rueck', '#d6cbff'], fx: ['rueck', '#9fe3b0'] };
+  const own = { fin: ['spiel', '#f0e6d8'], eb2: ['spiel', '#c9dc82'], rgn: ['spiel', RG_COL], hxr: ['spiel', '#e9a35e'], bor: ['grund', '#5a7cff'], gsp: ['grund', '#b9a46e'], dly: ['rueck', '#6cc9ef'], rev: ['rueck', '#d6cbff'] };
+  for (const [r, , col] of FX_RETS) own[r] = ['rueck', col];
   for (const st of STRIPS) {
     if (st.k === 'bor') MXC.push({ k: 'puls', name: 'Puls', g: 'puls', kind: 'puls', col: '#f2cf86' });
     const lane = st.lane != null;
@@ -23407,8 +23471,8 @@ const mxVolId = (k) => (k === 'sum' ? 'mst.vol' : k === 'puls' ? 'mix.pulsVol' :
 const mxMuteId = (k) => (k === 'puls' ? 'mix.pulsMute' : k === 'sum' ? null : 'x' + k + '.mute');
 const mxSoloId = (k) => (k === 'puls' || k === 'sum' ? null : 'x' + k + '.solo');
 // what the second knob of every strip controls, chosen in the head: [suffix, chip label, printed name, colour]
-const MX_LAYERS = [['dly', 'Echo', 'Echo', '#6cc9ef'], ['rev', 'Hall', 'Hall', '#d6cbff'], ['fx', 'Effekt', 'Effekt', '#9fe3b0'], ['duck', 'Pumpen', 'Pumpen', '#ff8f9e'], ['wid', 'Breite', 'Breite', '#f0e6d8']];
-const MX_LAYER_ARIA = { dly: 'Echo-Send', rev: 'Hall-Send', fx: 'Effekt-Send', duck: 'Pumpen', wid: 'Stereobreite' };
+const MX_LAYERS = [['dly', 'Echo', 'Echo', '#6cc9ef'], ['rev', 'Hall', 'Hall', '#d6cbff'], ...FX_RETS.map(([r, name, col]) => [r, name, name, col]), ['duck', 'Pumpen', 'Pumpen', '#ff8f9e'], ['wid', 'Breite', 'Breite', '#f0e6d8']];
+const MX_LAYER_ARIA = { dly: 'Echo-Send', rev: 'Hall-Send', fx: 'Effekt-Send', fx2: 'Effekt-2-Send', duck: 'Pumpen', wid: 'Stereobreite' };
 const MX_BOR = { 1: '1:1', 1.5: '3:2', 1.3333: '4:3', 2: '2:1', 1.75: '7:4', 1.2: '6:5' };
 
 /* ---------- helpers ---------- */
@@ -23663,7 +23727,7 @@ function mxHits(dt) {
 /* ---------- knobs: gill fans ---------- */
 const MX_KA0 = -0.75 * Math.PI, MX_KA1 = 0.75 * Math.PI;
 const mxBip = (id) => /\.pan$/.test(id) || id === 'mst.low' || id === 'mst.high';
-const mxMark = (id) => (/^x\w+\.(wid|dly|rev)$/.test(id) || id === 'mst.wid' ? 0.5 : null);
+const mxMark = (id) => (/^x\w+\.(wid|dly|rev|fx2?)$/.test(id) || id === 'mst.wid' ? 0.5 : null);
 function mxKnobTxt(id, v) {
   const key = id.slice(id.indexOf('.') + 1);
   if (id === 'mix.duckRel') return Math.round(v * 60 / Math.max(30, P['seq.bpm']) * 1000) + ' ms';
@@ -23954,12 +24018,13 @@ function mxSrcText(k) {
   if (k === 'gsp') return !gspInUse() ? 'aus' : DSP.state === 'kein' || A.workletBroken.has('gsp') ? 'kein Netz' : (P['gsp.saiten'] === 'zwei' ? 'zwei Oktaven' : 'eine Oktave');   // (the web's own channel)
   // the app writes a dotted value as "1/8 ·", which reads like a dangling separator here: "1/8." as in a score
   if (k === 'dly') return P['dly.sync'] ? fmt(PD['dly.div'], P['dly.div']).replace(' ·', '.') : fmt(PD['dly.ms'], P['dly.ms']);
-  if (k === 'rev') return fmt(PD['rev.size'], P['rev.size']);
+  if (k === 'rev') return P['rev.typ'] !== 'nebel' && RAUM_BY[P['rev.typ']] ? RAUM_BY[P['rev.typ']].name : fmt(PD['rev.size'], P['rev.size']);   // (a room: its name)
+  if (c.kind === 'ret') return fxType(k).name;   // (an effect return: the effect it plays)
   if (k === 'puls') return mxPulsOff() ? 'alle aus' : SEQ.on ? (SEQ.ext ? 'EXT ' + dec(SEQ.ext.bpm.toFixed(1)) : TG.hxOn ? dec(TG.hx.toFixed(1)) : Math.round(P['seq.bpm'])) + ' BPM' : 'steht';
   return (A.monoChk ? 'mono' : 'stereo') + (A.dim ? ' · ' + MX_MINUS + '20 dB' : '');
 }
 const mxPulsOff = () => !P['l0.on'] && !P['l1.on'] && !P['l2.on'] && !P['l3.on'];
-const MX_SRC_IDS = ['v.eng', 'v.layer', 'bor.on', 'bor.wave', 'bor.int', 'gsp.saiten', 'dly.sync', 'dly.div', 'dly.ms', 'rev.size', 'seq.bpm', 'l0.on', 'l0.eng', 'l1.on', 'l1.eng', 'l2.on', 'l2.eng', 'l3.on', 'l3.eng'];
+const MX_SRC_IDS = ['v.eng', 'v.layer', 'bor.on', 'bor.wave', 'bor.int', 'gsp.saiten', 'dly.sync', 'dly.div', 'dly.ms', 'rev.size', 'rev.typ', ...FX_RETS.map((x) => x[0] + '.typ'), 'seq.bpm', 'l0.on', 'l0.eng', 'l1.on', 'l1.eng', 'l2.on', 'l2.eng', 'l3.on', 'l3.eng'];
 // A channel whose source plays nothing (Ebene 2, a lane or the Bordun switched off; the Puls group with all four
 // lanes off) is an empty mushroom in the Pult and a hollow spore in the Geflecht – one rule, kept in S.srcoff.
 function mxSrcAll() {
@@ -24051,7 +24116,7 @@ function mxStrip(c) {
     S.k1 = mxKnob({ ch: k, id: 'x' + k + '.pan', name: 'Balance', label: 'Balance', cls: 'k1', ghost: () => mxGhostN('x' + k + '.pan') });
     bindCtl('x' + k + '.pan', () => mxKnobRender(S.k1));
     S.k2 = mxKnob({ ch: k, cls: 'k2', off: () => c.kind === 'lane' && MX.layer === 'duck' && Number(P['mix.duckSrc']) === c.lane, offTxt: 'Takt', offAria: 'gibt den Takt fürs Pumpen' });
-    const cand = c.kind === 'ret' ? [k + '.mix', 'x' + k + '.duck', 'x' + k + '.wid'].concat(k === 'dly' || k === 'fx' ? ['x' + k + '.rev'] : []) : ['dly', 'rev', 'fx', 'duck', 'wid'].map((s) => 'x' + k + '.' + s);
+    const cand = c.kind === 'ret' ? [k + '.mix', 'x' + k + '.duck', 'x' + k + '.wid'].concat(k !== 'rev' ? ['x' + k + '.rev'] : []) : ['dly', 'rev', ...FX_RETS.map((x) => x[0]), 'duck', 'wid'].map((s) => 'x' + k + '.' + s);
     for (const id of cand) bindCtl(id, () => { if (S.k2.id === id) mxKnobRender(S.k2); });
     mxK2Bind(S);
     S.mb = h('button', { type: 'button', class: 'mx-m', 'aria-pressed': 'false', 'aria-label': c.name + ' stumm', 'data-pid': mid, onclick: () => setParam(mid, !P[mid]) }, h('span', null, 'M'));
@@ -24135,7 +24200,7 @@ function mxMonSync() {
 // master) while the layer is a send
 function mxK2Bind(S) {
   const c = S.c, l = MX.layer, L = MX_LAYERS.find((x) => x[0] === l);
-  if (c.kind === 'ret' && (l === 'dly' || l === 'rev' || l === 'fx')) S.k2.set(c.k + '.mix', 'Anteil', 'Anteil (wie viel alle Kanäle hineinschicken)', c.col);
+  if (c.kind === 'ret' && l !== 'duck' && l !== 'wid') S.k2.set(c.k + '.mix', 'Anteil', 'Anteil (wie viel alle Kanäle hineinschicken)', c.col);
   else S.k2.set('x' + c.k + '.' + l, L[2], MX_LAYER_ARIA[l], L[3]);
 }
 function mxSetLayer(l, say) {
@@ -24144,7 +24209,7 @@ function mxSetLayer(l, say) {
   store.set('myzel.mixlayer', l);
   if (MX.root) MX.root.dataset.layer = l;
   for (const b of MX.regBtns || []) { const on = b.dataset.l === l; b.setAttribute('aria-checked', String(on)); b.tabIndex = on ? 0 : -1; }
-  const C = MX.regC, L = MX_LAYERS.find((x) => x[0] === l), N = MX_LAYERS[(MX_LAYERS.indexOf(L) + 1) % 4];
+  const C = MX.regC, L = MX_LAYERS.find((x) => x[0] === l), N = MX_LAYERS[(MX_LAYERS.indexOf(L) + 1) % MX_LAYERS.length];
   if (C) {
     C.el.style.setProperty('--lc', L[3]); C.t.textContent = L[1];
     C.el.setAttribute('aria-label', 'Zweiter Regler jedes Kanals: ' + L[1] + ' – tippen wechselt zu ' + N[1]);
@@ -24555,7 +24620,7 @@ function mxSends(c) {
   if (!cc || (cc.kind !== 'src' && cc.kind !== 'lane') || MX.ch[k].dorm || MX.ch[k].srcoff) return;
   const fresh = MX.hov === k ? 1 : clamp(1 - (performance.now() - (MX.sendT || 0) - 1400) / 900, 0, 1);
   const g = MX.ch[k].g, ry = P['x' + k + '.route'] === 'dir' ? MX.yD : MX.yK, bot = MX.rowH - 3;
-  for (const fx of ['dly', 'rev', 'fx']) {
+  for (const fx of ['dly', 'rev', ...FX_RETS.map((x) => x[0])]) {
     const amt = P['x' + k + '.' + fx] * P[fx + '.mix'];
     if (amt < 0.01 || MX.ch[fx].dorm) continue;
     const t = MX.ch[fx].g, a = Math.min(1, amt), dip = fx === 'dly' ? bot - 6 : bot, key = k + ':' + g.cx + ':' + t.cx;
@@ -24814,12 +24879,12 @@ function mxBuildReg() {
     const d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
     if (!d) return;
     e.preventDefault();
-    const i = MX_LAYERS.findIndex((x) => x[0] === MX.layer), n = MX_LAYERS[(i + d + 4) % 4][0];
+    const i = MX_LAYERS.findIndex((x) => x[0] === MX.layer), n = MX_LAYERS[(i + d + MX_LAYERS.length) % MX_LAYERS.length][0];
     mxSetLayer(n); MX.regBtns.find((b) => b.dataset.l === n).focus();
   });
   // the compact one: a plain button, "2· Echo", a tap moves on to the next layer (announced)
   const C = MX.regC = { t: h('span') };
-  C.el = h('button', { type: 'button', class: 'mx-regc', hidden: true, onclick: () => { const i = MX_LAYERS.findIndex((x) => x[0] === MX.layer); mxSetLayer(MX_LAYERS[(i + 1) % 4][0], true); } },
+  C.el = h('button', { type: 'button', class: 'mx-regc', hidden: true, onclick: () => { const i = MX_LAYERS.findIndex((x) => x[0] === MX.layer); mxSetLayer(MX_LAYERS[(i + 1) % MX_LAYERS.length][0], true); } },
     h('span', null, h('small', { 'aria-hidden': 'true' }, '2'), h('i', { 'aria-hidden': 'true' }), C.t));
 }
 // which of the two shows (none in the Geflecht or under a detail): the chips when nothing in the head is squeezed
@@ -25605,7 +25670,8 @@ function mxwClose() { if (MXW.fold) MXW.fold.remove(); const sh = $('#sheet'); i
 // fader (the stems' law), its small lean left or right the balance; the light column under it is what really comes
 // out (RMS body, peak filament, held peak). Below the soil line the hyphae carry the signal on: through the "kette"
 // knot or straight past it into the Summe's root – the fruiting body (spectrum by origin, stereo image) – while send
-// threads run underground to Echo (rings) and Hall (cloud), as thick as the send times the level.
+// threads run underground to Echo (rings), Hall (cloud) and the effect returns (sprouting stars), as thick as the send times
+// the level.
 // The whole column is the handle: the first pixels decide the axis and then it stays (up/down = level, sideways =
 // balance), relative as everywhere, hold still for fine. At −48 dB the fader rests on the soil; holding there sinks it
 // in (= aus) – a muted channel instead stays where it is and goes dormant. Tap selects, a second tap opens the
@@ -25614,6 +25680,7 @@ MXV.views.geflecht = { label: 'Geflecht', build: mxgBuild, open: mxgOpen, close:
 const MXG = { cols: [], kn: [], seen: new Set(), w: 0, h: 0, dirty: true, geo: true, hov: null, pd: null, tapK: null, tapT: 0, menuK: null, numT: 0, ariaT: 0, rip: [], focus: null, rootTip: false };
 const MXG_DET = -48;      // the soil's edge: a fader dragged down rests here, holding sinks it in
 const MXG_STEP = 3;       // the flow paths are kept as points this far apart
+const MXG_SND = ['dly', 'rev', ...FX_RETS.map((x) => x[0])];   // the returns a channel sends into (its send threads, in this order)
 const mxgHasPan = (C) => C.c.kind !== 'sum' && C.c.kind !== 'puls';
 const mxgCol = (k) => MXG.cols[MXK[k].i];
 const mxgName = (k) => (k === 'sum' ? 'Summe' : MXK[k].name);
@@ -25651,7 +25718,7 @@ function mxgBuild(host) {
   const tags = h('div', { class: 'mxg-tags', 'aria-hidden': 'true' });
   for (const c of MXC) {
     const d = PD[mxVolId(c.k)];
-    const C = { c, k: c.k, i: c.i, cx: 0, cw: 0, pr: 0, x: 0, y: 0, r: 5, pan: 0, off: false, fx: true, aria: '', flow: null, fn: 0, al: [], sid: ['x' + c.k + '.dly', 'x' + c.k + '.rev'], pid: 'x' + c.k + '.pan' };
+    const C = { c, k: c.k, i: c.i, cx: 0, cw: 0, pr: 0, x: 0, y: 0, r: 5, pan: 0, off: false, fx: true, aria: '', flow: null, fn: 0, al: [], sid: MXG_SND.map((r) => 'x' + c.k + '.' + r), pid: 'x' + c.k + '.pan' };
     for (let j = 0; j <= 20; j++) C.al.push(mxRgba(c.rgb, j / 20));
     C.el = h('div', { class: 'mxg-sp', role: 'slider', tabindex: '0', 'data-pid': mxVolId(c.k), 'aria-orientation': 'vertical', 'aria-valuemin': String(d.min), 'aria-valuemax': String(d.max), style: '--c:' + c.col,
       'aria-label': mxgName(c.k) + (mxgHasPan(C) ? ' – hoch und runter der Pegel, links und rechts die Balance' : ' – Pegel'), 'aria-keyshortcuts': MX_VOLKEYS + ' Enter M S' });
@@ -25720,7 +25787,7 @@ function mxgAimKnobs(k) {
     K.key = ''; K.set(id, name, label, col);
   };
   if (c.kind === 'src' || c.kind === 'lane') { aim(K1, 'x' + k + '.pan', 'Balance', 'Balance', c.col); aim(K2, 'x' + k + '.dly', 'Echo', 'Echo-Send', '#6cc9ef'); aim(K3, 'x' + k + '.rev', 'Hall', 'Hall-Send', '#d6cbff'); }
-  else if (c.kind === 'ret') { aim(K1, 'x' + k + '.pan', 'Balance', 'Balance', c.col); aim(K2, k + '.mix', 'Anteil', 'Anteil – wie viel alle Kanäle hineinschicken', c.col); aim(K3, k === 'dly' ? 'xdly.rev' : null, 'Hall', 'in den Hall', '#d6cbff'); }
+  else if (c.kind === 'ret') { aim(K1, 'x' + k + '.pan', 'Balance', 'Balance', c.col); aim(K2, k + '.mix', 'Anteil', 'Anteil – wie viel alle Kanäle hineinschicken', c.col); aim(K3, k !== 'rev' ? 'x' + k + '.rev' : null, 'Hall', 'in den Hall', '#d6cbff'); }
   else if (k === 'sum') { aim(K1, 'mst.comp', 'Verdichtung', 'Verdichtung', '#ff8f9e'); aim(K2, 'mst.wid', 'Breite', 'Breite', c.col); aim(K3, null); }
   else { aim(K1, null); aim(K2, null); aim(K3, null); }
 }
@@ -25783,7 +25850,7 @@ function mxgLayout() {
     C.cw = sum ? sumU * u : u;
     C.cx = sum ? gl + n * u + C.cw / 2 : gl + (C.i + 0.5) * u;
     C.pr = mxgHasPan(C) ? Math.max(3, C.cw / 2 - (wide ? 15 : 7)) : 0;
-    const row = G.rows === 2 && !sum ? C.i % 2 : 0;
+    const row = G.rows === 2 ? (sum ? 1 - (n - 1) % 2 : C.i % 2) : 0;   // (the Summe in the row its neighbour leaves free)
     C.tag.style.transform = 'translate(' + C.cx.toFixed(1) + 'px,' + (G.tagY + row * G.tagH) + 'px) translateX(-50%)';
     C.tag.style.maxWidth = Math.floor(G.rows === 2 ? 2 * u - 4 : C.cw - 4) + 'px';
   }
@@ -25797,19 +25864,23 @@ function mxgLayout() {
   G.dyy = G.ky + (short ? 8 : wide ? 22 : 15);
   const E = G.cols[MXK.dly.i], H = G.cols[MXK.rev.i];
   G.ex = E.cx; G.ey = G.tagEnd + (short ? 6 : wide ? 16 : 10); G.hx = H.cx; G.hy = G.ey + (wide || short ? 0 : 12);
+  // every return's node: under its column, staggered like Echo and Hall where the columns are narrow
+  G.nd = {}; MXG_SND.forEach((r, j) => { G.nd[r] = [G.cols[MXK[r].i].cx, j % 2 ? G.hy : G.ey]; });
   // underground ways that only depend on the layout: the chain's trunk, the send threads, echo into hall
   G.trunk = new Path2D(); G.trunkP = [];
   mxgBz(G.trunk, G.trunkP, G.kx, G.ky, G.kx + (G.rootX - G.kx) * 0.35, G.ky + 2, G.rootX - G.rootR - (wide ? 30 : 16), G.rootY - 2, G.rootX, G.rootY);
   for (const C of G.cols) {
     C.snd = null;
     if (C.c.kind !== 'src' && C.c.kind !== 'lane') continue;
-    C.snd = [[G.ex, G.ey, 0.07], [G.hx, G.hy, 0.1]].map(([nx, ny, s]) => {
+    C.snd = MXG_SND.map((r, j) => [...G.nd[r], [0.07, 0.1, 0.085, 0.115][j] || 0.1]).map(([nx, ny, s]) => {
       const p = new Path2D(), y0 = G.tagEnd, sag = 4 + Math.abs(nx - C.cx) * s;
       mxgBz(p, null, C.cx, y0, C.cx + (nx - C.cx) * 0.25, y0 + sag, nx - (nx - C.cx) * 0.15, ny + sag * 0.5, nx, ny);
       return p;
     });
   }
-  G.eh = new Path2D(); mxgBz(G.eh, null, G.ex, G.ey, G.ex + 6, G.ey + 14, G.hx - 6, G.hy + 14, G.hx, G.hy);
+  // a return's way into the hall (Echo, and the effects – their „Hall“): from its node over to the cloud
+  G.toH = {};
+  for (const r of MXG_SND) if (r !== 'rev') { const [x, y] = G.nd[r], p = G.toH[r] = new Path2D(), s = x < G.hx ? 1 : -1; mxgBz(p, null, x, y, x + 6 * s, y + 14, G.hx - 6 * s, G.hy + 14, G.hx, G.hy); }
   G.bar.el.dataset.wide = wide && !short ? '1' : '';
   for (const K of G.kn) { const sz = Math.round(K.cv.clientWidth); if (sz && sz !== K.size) { K.size = sz; K.key = ''; mxKnobRender(K); } }
   // the corner readouts keep clear of the root
@@ -25874,7 +25945,7 @@ function mxgGeo() {
     } else {
       mxgBz(C.stem, pts, C.x, C.y, C.x, C.y + dy * 0.5, C.cx, sy - dy * 0.3, C.cx, sy);
       if (kind === 'ret') {
-        const ny = k === 'dly' ? G.ey : G.hy;
+        const ny = G.nd[k][1];
         mxgBz(C.hy, pts, C.cx, sy, C.cx, sy + 6, C.cx, ny - 6, C.cx, ny);
         mxgBz(C.hy, pts, C.cx, ny, C.cx + 6, ny + 16, G.rootX - G.rootR * 0.9, G.rootY - G.rootR - 4, G.rootX, G.rootY);
       } else if (C.fx) {
@@ -26084,18 +26155,21 @@ function mxgSoil(c, t) {
   for (const C of G.cols) {
     if (!C.snd || MX.ch[C.k].dorm) continue;
     const lv = MX.ch[C.k].lv.lvl, foc = C.k === sel || C.k === hov;
-    for (let j = 0; j < 2; j++) {
-      const fx = j ? 'rev' : 'dly', amt = P[C.sid[j]] * P[j ? 'rev.mix' : 'dly.mix'];
+    for (let j = 0; j < MXG_SND.length; j++) {
+      const fx = MXG_SND[j], amt = P[C.sid[j]] * P[fx + '.mix'];
       if (amt < 0.01 || MX.ch[fx].dorm) continue;
       const a = Math.min(1, amt);
-      c.setLineDash(j ? [4, 4] : [1.5, 4]); c.lineDashOffset = REDUCED ? 0 : -t * (10 + 24 * lv);
+      c.setLineDash(MXG_DASH[j] || MXG_DASH[0]); c.lineDashOffset = REDUCED ? 0 : -t * (10 + 24 * lv);
       c.strokeStyle = mxgA(C.al, foc ? 0.32 + 0.5 * a : 0.05 + 0.1 * a);
       c.lineWidth = 0.5 + 2.4 * Math.min(1, amt * (0.25 + 0.75 * lv)) * (foc ? 1 : 0.7);
       c.stroke(C.snd[j]);
     }
   }
-  const eh = P['xdly.rev'] * 0.3;
-  if (eh > 0.005 && !MX.ch.dly.dorm) { c.setLineDash([3, 4]); c.lineDashOffset = REDUCED ? 0 : -t * 14; c.strokeStyle = mxgA(G.cols[MXK.dly.i].al, 0.12 + 0.5 * Math.min(1, eh)); c.lineWidth = 0.6 + 1.6 * Math.min(1, eh); c.stroke(G.eh); }
+  // the returns into the hall: Echo at 0,3 of its knob, an effect at all of it (while anything is sent into it)
+  for (const r in G.toH) {
+    const eh = r === 'dly' ? P['xdly.rev'] * 0.3 : P[r + '.mix'] > 0 ? P['x' + r + '.rev'] : 0;
+    if (eh > 0.005 && !MX.ch[r].dorm && !MX.ch.rev.dorm) { c.setLineDash([3, 4]); c.lineDashOffset = REDUCED ? 0 : -t * 14; c.strokeStyle = mxgA(G.cols[MXK[r].i].al, 0.12 + 0.5 * Math.min(1, eh)); c.lineWidth = 0.6 + 1.6 * Math.min(1, eh); c.stroke(G.toH[r]); }
+  }
   c.setLineDash([]); c.lineDashOffset = 0;
   // the knot: five beads for Verzerrung, Ring, Filter, Phaser, Schweben – lit while they work
   const ks = (G.wide ? 14 : 10) + (G.wide ? 20 : 13) * chain;
@@ -26127,8 +26201,22 @@ function mxgSoil(c, t) {
     c.drawImage(spr, x - s * 1.8, y - s * 1.8, s * 3.6, s * 3.6);
     c.fillStyle = HC.c.c1; c.fillRect(x - 0.6, y - 0.6, 1.2, 1.2);
   }
+  // the effect returns: a sprouting star each – rays that grow with its level and turn slowly, a bright seed
+  FX_RETS.forEach(([r], j) => {
+    const X = MX.ch[r], XC = G.cols[MXK[r].i], lv = X.lv.lvl, [x, y] = G.nd[r], n = j ? 5 : 6, rot = REDUCED ? 0 : t * (j ? -0.25 : 0.2);
+    c.globalAlpha = X.dorm ? 0.12 : 0.25 + 0.6 * lv; c.drawImage(mxGlow(XC.c.col), x - 20 * sc, y - 20 * sc, 40 * sc, 40 * sc);
+    c.strokeStyle = XC.c.col; c.lineWidth = 1;
+    for (let i = 0; i < n; i++) {
+      const a = rot + i * MX_TAU / n, L = (4 + (6 + 5 * Math.sin(i * 1.7 + t * 1.3 * !REDUCED)) * (0.35 + 0.65 * lv)) * sc;
+      c.globalAlpha = X.dorm ? 0.16 : 0.3 + 0.6 * lv;
+      c.beginPath(); c.moveTo(x + Math.cos(a) * 2.5, y + Math.sin(a) * 2.5); c.lineTo(x + Math.cos(a) * (2.5 + L), y + Math.sin(a) * (2.5 + L)); c.stroke();
+      c.fillStyle = XC.c.col; c.beginPath(); c.arc(x + Math.cos(a) * (2.5 + L), y + Math.sin(a) * (2.5 + L), 1.1, 0, MX_TAU); c.fill();
+    }
+    c.globalAlpha = 1; c.fillStyle = XC.c.col; c.beginPath(); c.arc(x, y, 2, 0, MX_TAU); c.fill();
+  });
   c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
 }
+const MXG_DASH = [[1.5, 4], [4, 4], [6, 3, 1, 3], [2, 2, 2, 5]];   // a send thread's dash, per return (MXG_SND)
 // the root: a dark hollow where the hyphae end; the fruiting body glows in it (its canvas lies on top)
 function mxgRoot(c) {
   const G = MXG, x = G.rootX, y = G.rootY, R = G.rootR, L = MX.ch.sum.lv;
@@ -27088,7 +27176,7 @@ function mxeHandles(E) {
   }
 }
 
-/* ---------- Formen: Sättigung, Breite, Pumpen ---------- */
+/* ---------- Formen: Sättigung, Breite, Pumpen, Anschlag, Einschub ---------- */
 // The saturation as satSet builds it, seen from the input of the shaper (after the fader): half dry, half tanh(g·x)/g,
 // levelled to meet the dry line at 0,2 (−14 dBFS) – quiet parts lifted a little, loud ones rounded off.
 function mxSatY(a, x) {
@@ -27135,8 +27223,21 @@ function mxdBuildFormen() {
   F.chips = mxdDuckChips();
   const pmp = mxdCard('mxd-pmp', 'Pumpen', F.pmpT, h('div', { class: 'mxd-cvb' }, F.pmpCv),
     h('div', { class: 'mxd-kr' }, F.pmpK.box, F.relK.box, h('div', { class: 'mxd-src' }, h('span', { class: 'mxd-lab', title: 'Pumpen im Takt von – gilt für alle Kanäle' }, 'Takt', h('em', null, ' · gilt für alle Kanäle')), F.chips)));
+  // (29.10.2026) the Einschub: one of the effect returns' effects inside this channel (mixer/effekt.js fxInsUpd)
+  F.insK = mxdKnob(); F.insT = h('small');
+  F.insB = [['0', 'Keiner'], ...FX_RETS.map(([r, name]) => [r, name])].map(([v, t]) => h('button', { type: 'button', role: 'radio', 'aria-checked': 'false', 'data-v': v, onclick: () => { const id = 'x' + MXD.k + '.ins'; if (PD[id]) setParam(id, v); } }, t));
+  F.insC = h('div', { class: 'mxd-insc', role: 'radiogroup', 'aria-label': 'Einschub: welcher Effekt in diesem Kanal spielt' }, ...F.insB);
+  F.insC.addEventListener('keydown', (e) => {
+    const d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0, id = 'x' + MXD.k + '.ins';
+    if (!d || !PD[id]) return;
+    e.preventDefault();
+    const n = (F.insB.findIndex((b) => b.dataset.v === P[id]) + d + F.insB.length) % F.insB.length;
+    setParam(id, F.insB[n].dataset.v); F.insB[n].focus();
+  });
+  F.ins = mxdCard('mxd-ins', 'Einschub', F.insT, F.insC, h('div', { class: 'mxd-kr' }, F.insK.box));
+  for (const [r] of FX_RETS) mxdWatch(r + '.typ');
   mxdWatch('mix.duckSrc', 'mix.duckRel', 'seq.bpm');
-  return h('section', { class: 'mxd-sec mxd-fo', 'aria-label': 'Formen' }, mxdSh('Formen', 'Sättigung · Anschlag · Breite · Pumpen'), h('div', { class: 'mxd-cards' }, sat, tra, wid, pmp));
+  return h('section', { class: 'mxd-sec mxd-fo', 'aria-label': 'Formen' }, mxdSh('Formen', 'Sättigung · Breite · Pumpen · Anschlag · Einschub'), h('div', { class: 'mxd-cards' }, sat, wid, pmp, tra, F.ins));
 }
 const mxdIsTakt = (k) => MXK[k] && MXK[k].kind === 'lane' && Number(P['mix.duckSrc']) === MXK[k].lane;
 function mxdFormenAim(k) {
@@ -27147,6 +27248,8 @@ function mxdFormenAim(k) {
   mxdAim(F.widK, k, 'x' + k + '.wid', 'Breite', 'Stereobreite', c.col);
   mxdAim(F.pmpK, k, 'x' + k + '.duck', 'Tiefe', 'Pumpen', '#ff8f9e');
   mxdAim(F.relK, k, 'mix.duckRel', 'Rückkehr', 'Pumpen: Rückkehr, für alle Kanäle', '#ff8f9e');
+  F.ins.hidden = !PD['x' + k + '.ins'];   // (a return has none)
+  if (!F.ins.hidden) { mxdAim(F.insK, k, 'x' + k + '.insmix', 'Anteil', 'Einschub: wie viel vom Effekt', '#9fe3b0'); mxdWatch('x' + k + '.ins'); }
   F.pump.b.fill(0);
 }
 function mxdFormenText(k) {
@@ -27156,6 +27259,11 @@ function mxdFormenText(k) {
   F.satT.textContent = !(a > 0) ? 'aus' : x > 0.003 ? 'Spitze ' + (g < 0 ? MX_MINUS : '+') + dec(Math.abs(g).toFixed(1)) + ' dB' : 'still';
   F.widT.textContent = w < 0.005 ? 'Mono' : w > 1.005 ? 'breiter' : w < 0.995 ? 'schmaler' : 'unverändert';
   F.pmpT.textContent = mxdIsTakt(k) ? 'gibt den Takt' : d > 0 ? 'von Spur ' + (src + 1) : 'aus';
+  if (!F.ins.hidden) {
+    const r = P['x' + k + '.ins'], t = r !== '0' && FX_RETS.some((x) => x[0] === r) ? fxType(r).name : 'aus';
+    if (F.insT.textContent !== t) F.insT.textContent = t;
+    for (const b of F.insB) { const on = b.dataset.v === r; b.setAttribute('aria-checked', String(on)); b.tabIndex = on ? 0 : -1; }
+  }
 }
 function mxdSatDraw(F, k, w, hh) {
   const a = P['x' + k + '.sat'], cc = MXK[k], cx = w / 2, cy = hh / 2, s = Math.min(w / 2 - 6, hh / 2 - 6) / 1.25, dpr = mxDpr();
@@ -27265,7 +27373,7 @@ function mxdBuildWege() {
   W.sb = h('button', { type: 'button', class: 'mx-s mxd-ms', 'aria-pressed': 'false', title: 'Solo – halten oder Alt-Klick: nur dieser Kanal' }, h('span', null, 'S'));
   mxSoloBtn(W.sb, () => MXD.k);
   mPid(W.mb, () => mxMuteId(MXD.k)); mPid(W.sb, () => mxSoloId(MXD.k));
-  W.slots = [0, 1].map(() => {
+  W.slots = [0, 1, 2, 3].map(() => {   // (echo, hall, the effect returns – a return: its Anteil and its way into the hall)
     const S = { K: mxdKnob('snd'), t1: h('span'), t2: h('b'), bar: h('i') };
     S.el = h('div', { class: 'mxd-snd' }, S.K.box, h('div', { class: 'mxd-sx' }, S.t1, h('span', { class: 'mxd-eff', 'aria-hidden': 'true' }, S.bar), S.t2));
     return S;
@@ -27283,34 +27391,36 @@ function mxdBuildWege() {
   W.ret = h('p', { class: 'mxd-note' });
   W.grpV = h('b');
   W.grp = h('button', { type: 'button', class: 'mxd-grp', title: 'Die Spur läuft über den Regler „Puls gesamt“', onclick: () => openDetail('puls') }, h('i', { class: 'mx-dot4', 'aria-hidden': 'true' }, h('b'), h('b'), h('b'), h('b')), h('span', null, 'Puls'), W.grpV, h('em', { 'aria-hidden': 'true' }, '›'));
-  for (const id of ['dly.mix', 'rev.mix', 'mix.pulsVol', 'mix.pulsMute', 'drv.mix', 'rng.mix', 'pha.mix', 'cho.mix']) mxdWatch(id);
+  for (const id of ['dly.mix', 'rev.mix', ...FX_RETS.map((x) => x[0] + '.mix'), 'mix.pulsVol', 'mix.pulsMute', 'drv.mix', 'rng.mix', 'pha.mix', 'cho.mix']) mxdWatch(id);
   return h('section', { class: 'mxd-sec mxd-wg', 'aria-label': 'Wege' }, mxdSh('Wege', 'Pegel · Balance · Sends · Weg'),
     W.fd.box,
     // balance left, M / S right under the value box; a lane's group link between them
     h('div', { class: 'mxd-wrow' }, h('div', { class: 'mxd-balw' }, W.bal.box), W.grp, h('div', { class: 'mxd-msw' }, W.mb, W.sb)),
-    h('div', { class: 'mxd-snds' }, W.slots[0].el, W.slots[1].el),
+    h('div', { class: 'mxd-snds' }, ...W.slots.map((S) => S.el)),
     W.route, W.ret);
 }
 function mxdWegeAim(k) {
   const W = MXD.wg, c = MXK[k];
   W.fd.set(k);
   mxdAim(W.bal, k, 'x' + k + '.pan', 'Balance', 'Balance', c.col);
-  mxdWatch('x' + k + '.mute', 'x' + k + '.solo', 'x' + k + '.route', 'x' + k + '.dly', 'x' + k + '.rev');
-  const [s0, s1] = W.slots;
+  mxdWatch('x' + k + '.mute', 'x' + k + '.solo', 'x' + k + '.route', 'x' + k + '.dly', 'x' + k + '.rev', ...FX_RETS.map(([r]) => 'x' + k + '.' + r));
+  const [s0, s1, ...sx] = W.slots;
   if (c.kind === 'ret') {
     mxdAim(s0.K, k, k + '.mix', 'Anteil', 'Anteil – wie viel alle Kanäle hineinschicken', c.col);
-    if (k === 'dly') mxdAim(s1.K, k, 'xdly.rev', 'Hall', 'in den Hall', '#d6cbff');
+    if (k !== 'rev') mxdAim(s1.K, k, 'x' + k + '.rev', 'Hall', 'in den Hall', '#d6cbff');
   } else {
     mxdAim(s0.K, k, 'x' + k + '.dly', 'Echo', 'Echo-Send', '#6cc9ef');
     mxdAim(s1.K, k, 'x' + k + '.rev', 'Hall', 'Hall-Send', '#d6cbff');
+    FX_RETS.forEach(([r, name, col], i) => mxdAim(sx[i].K, k, 'x' + k + '.' + r, name, name + '-Send', col));
   }
   s1.el.hidden = k === 'rev';
+  for (const S of sx) S.el.hidden = c.kind === 'ret';
   W.route.hidden = c.kind === 'ret'; W.ret.hidden = c.kind !== 'ret'; W.grp.hidden = c.kind !== 'lane';
   W.mb.setAttribute('aria-label', c.name + ' stumm'); W.sb.setAttribute('aria-label', c.name + ' solo');
 }
 // the texts of the Wege: what a send really is ("140 % von 35 % Echo-Anteil = 49 %"), which way the channel takes
 function mxdWegeText(k) {
-  const W = MXD.wg, c = MXK[k], silent = MX.ch[k].dorm, [s0, s1] = W.slots;
+  const W = MXD.wg, c = MXK[k], silent = MX.ch[k].dorm, [s0, s1, ...sx] = W.slots;
   W.mb.setAttribute('aria-pressed', String(!!P['x' + k + '.mute'])); W.sb.setAttribute('aria-pressed', String(!!P['x' + k + '.solo']));
   const send = (S, v, mix, what, scale) => {
     const eff = v * mix * (scale || 1);
@@ -27322,17 +27432,18 @@ function mxdWegeText(k) {
   if (c.kind === 'ret') {
     const mix = P[k + '.mix'];
     s0.t1.textContent = 'gilt für alle Sends'; s0.t2.textContent = mxPct(mix); s0.bar.style.transform = 'scaleX(' + mix.toFixed(3) + ')'; s0.el.classList.remove('zero');
-    if (k === 'dly') {
-      // the echo feeds the hall directly, past the hall's own Anteil: 100 % = 0,3
-      const v = P['xdly.rev'];
-      s1.t1.textContent = 'Echo → Hall, am Hall-Anteil vorbei'; s1.t2.textContent = silent ? 'still' : '= ' + mxPct(v * 0.3);
-      s1.bar.style.transform = 'scaleX(' + clamp(v * 0.3, 0, 1).toFixed(3) + ')'; s1.el.classList.toggle('zero', v < 0.005 || silent);
+    if (k !== 'rev') {
+      // a return feeds the hall directly, past the hall's own Anteil (the echo: 100 % = 0,3)
+      const v = P['x' + k + '.rev'], g = k === 'dly' ? 0.3 : 1;
+      s1.t1.textContent = c.name + ' → Hall, am Hall-Anteil vorbei'; s1.t2.textContent = silent ? 'still' : '= ' + mxPct(v * g);
+      s1.bar.style.transform = 'scaleX(' + clamp(v * g, 0, 1).toFixed(3) + ')'; s1.el.classList.toggle('zero', v < 0.005 || silent);
     }
-    W.ret.textContent = k === 'dly' ? 'Rückweg: das Echo kommt hinter der Effektkette zurück und geht direkt in die Summe.' : 'Rückweg: der Hall geht direkt in die Summe. Das Echo speist ihn zusätzlich.';
+    W.ret.textContent = k === 'dly' ? 'Rückweg: das Echo kommt hinter der Effektkette zurück und geht direkt in die Summe.' : k === 'rev' ? 'Rückweg: der Hall geht direkt in die Summe. Echo und Effekte speisen ihn zusätzlich.' : 'Rückweg: ' + fxType(k).name + ' – geht direkt in die Summe und, wenn du willst, in den Hall.';
   } else {
     // a non-breaking hyphen: "Echo-" never stands alone at a line's end
     send(s0, P['x' + k + '.dly'], P['dly.mix'], 'Echo‑Anteil');
     send(s1, P['x' + k + '.rev'], P['rev.mix'], 'Hall‑Anteil');
+    FX_RETS.forEach(([r, name], i) => send(sx[i], P['x' + k + '.' + r], P[r + '.mix'], name.replace(' ', '\u00a0') + '‑Anteil'));
     const r = P['x' + k + '.route'];
     W.rFx.setAttribute('aria-checked', String(r !== 'dir')); W.rDir.setAttribute('aria-checked', String(r === 'dir'));
     W.rFx.tabIndex = r !== 'dir' ? 0 : -1; W.rDir.tabIndex = r === 'dir' ? 0 : -1;
@@ -27389,8 +27500,8 @@ function mxdQuelle(k) {
   else if (k === 'gsp') kids = [grid(C('gsp.halo'), C('gsp.kopplung'), C('gsp.nachklang'), C('gsp.steg')), C('gsp.saiten'), h('p', { class: 'note' }, 'Das Netz der Saiten, in das alles spielt, was Gespinst klingt – Finger, Ebene 2, Spuren, Regen.')];
   else if (k === 'rgn') { const q = rgQuelle(); MXD.qu[k] = q; return q; }
   else if (k === 'hxr') kids = [h('p', { class: 'note' }, 'Die Schleifen des Hexenrings – ihre Effektkette ist eingebrannt, Echo und Hall kommen hier dazu.')];   // Hexenring
-  else if (k === 'fx') { const txt = h('p', { class: 'note' }), grids = {}, mk = (t) => (grids[t] = grid(...Object.values(FX_TYPES[t].keys).map((id) => C(id)))), upd = () => { for (const t in grids) grids[t].hidden = t !== P['fx.typ']; txt.textContent = fxText(); };
-    kids = [C('fx.typ', 'Effekt'), txt, grid(C('fx.mix', 'Anteil (Send-Meister)')), ...Object.keys(FX_TYPES).map(mk)]; bindCtl('fx.typ', upd); upd(); }
+  else if (FX_RETS.some((x) => x[0] === k)) { const txt = h('p', { class: 'note' }), grids = {}, mk = (t) => (grids[t] = grid(...Object.values(FX_TYPES[t].keys).map((id) => C(k + '.' + id)))), upd = () => { for (const t in grids) grids[t].hidden = t !== P[k + '.typ']; txt.textContent = fxText(k); };
+    kids = [C(k + '.typ', 'Effekt'), txt, grid(C(k + '.mix', 'Anteil (Send-Meister)')), ...Object.keys(FX_TYPES).map(mk)]; bindCtl(k + '.typ', upd); upd(); }
   else if (k === 'dly') kids = [grid(C('dly.mix', 'Anteil (Send-Meister)'), C('dly.fb'), C('dly.pp'), C('dly.tone'), C('dly.wow')), C('dly.sync'), C('dly.div'), C('dly.ms')];
   else { const txt = h('p', { class: 'note mxd-raum' }), nb = grid(C('rev.size'), C('rev.damp')), rm = grid(C('rev.dist'), C('rev.len')), upd = () => { const neb = P['rev.typ'] === 'nebel'; nb.hidden = !neb; rm.hidden = neb; txt.textContent = raumText(); }; bindCtl('rev.typ', upd); upd();
     kids = [C('rev.typ', 'Raum'), txt, grid(C('rev.mix', 'Anteil (Send-Meister)'), C('rev.pre')), nb, rm]; }
@@ -27756,7 +27867,7 @@ function mxdOpen(k, first) {
     const q = mxdQuelle(k);
     if (q.parentNode !== MXD.quSec) { const old = MXD.quSec.querySelector('.mxd-qbody'); if (old) old.remove(); MXD.quSec.append(q); }
     if (q.sync) q.sync();
-    MXD.quSub.textContent = { fin: 'was die Spielfläche spielt', eb2: 'der zweite Klang auf jedem Finger', rgn: 'der Sporenregen aus deinen Tönen', bor: 'der liegende Grundton', dly: 'das Bandecho', rev: 'der erzeugte Raum' }[k] || 'Rhythmus und Ton der Spur';
+    MXD.quSub.textContent = { fin: 'was die Spielfläche spielt', eb2: 'der zweite Klang auf jedem Finger', rgn: 'der Sporenregen aus deinen Tönen', bor: 'der liegende Grundton', dly: 'das Bandecho', rev: 'der erzeugte Raum', fx: 'der Effekt-Rückweg', fx2: 'der zweite Effekt-Rückweg' }[k] || 'Rhythmus und Ton der Spur';
   } else if (page === 'puls') { MXD.pu.fd.set('puls'); mxdAim(MXD.pu.rel, 'puls', 'mix.duckRel', 'Rückkehr', 'Pumpen: Rückkehr, für alle Kanäle', '#ff8f9e'); }
   else mxdSumAim();
   MXD.dirty = true;

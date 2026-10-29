@@ -1,4 +1,4 @@
-/* ---------- Formen: Sättigung, Breite, Pumpen ---------- */
+/* ---------- Formen: Sättigung, Breite, Pumpen, Anschlag, Einschub ---------- */
 // The saturation as satSet builds it, seen from the input of the shaper (after the fader): half dry, half tanh(g·x)/g,
 // levelled to meet the dry line at 0,2 (−14 dBFS) – quiet parts lifted a little, loud ones rounded off.
 function mxSatY(a, x) {
@@ -45,8 +45,21 @@ function mxdBuildFormen() {
   F.chips = mxdDuckChips();
   const pmp = mxdCard('mxd-pmp', 'Pumpen', F.pmpT, h('div', { class: 'mxd-cvb' }, F.pmpCv),
     h('div', { class: 'mxd-kr' }, F.pmpK.box, F.relK.box, h('div', { class: 'mxd-src' }, h('span', { class: 'mxd-lab', title: 'Pumpen im Takt von – gilt für alle Kanäle' }, 'Takt', h('em', null, ' · gilt für alle Kanäle')), F.chips)));
+  // (29.10.2026) the Einschub: one of the effect returns' effects inside this channel (mixer/effekt.js fxInsUpd)
+  F.insK = mxdKnob(); F.insT = h('small');
+  F.insB = [['0', 'Keiner'], ...FX_RETS.map(([r, name]) => [r, name])].map(([v, t]) => h('button', { type: 'button', role: 'radio', 'aria-checked': 'false', 'data-v': v, onclick: () => { const id = 'x' + MXD.k + '.ins'; if (PD[id]) setParam(id, v); } }, t));
+  F.insC = h('div', { class: 'mxd-insc', role: 'radiogroup', 'aria-label': 'Einschub: welcher Effekt in diesem Kanal spielt' }, ...F.insB);
+  F.insC.addEventListener('keydown', (e) => {
+    const d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0, id = 'x' + MXD.k + '.ins';
+    if (!d || !PD[id]) return;
+    e.preventDefault();
+    const n = (F.insB.findIndex((b) => b.dataset.v === P[id]) + d + F.insB.length) % F.insB.length;
+    setParam(id, F.insB[n].dataset.v); F.insB[n].focus();
+  });
+  F.ins = mxdCard('mxd-ins', 'Einschub', F.insT, F.insC, h('div', { class: 'mxd-kr' }, F.insK.box));
+  for (const [r] of FX_RETS) mxdWatch(r + '.typ');
   mxdWatch('mix.duckSrc', 'mix.duckRel', 'seq.bpm');
-  return h('section', { class: 'mxd-sec mxd-fo', 'aria-label': 'Formen' }, mxdSh('Formen', 'Sättigung · Anschlag · Breite · Pumpen'), h('div', { class: 'mxd-cards' }, sat, tra, wid, pmp));
+  return h('section', { class: 'mxd-sec mxd-fo', 'aria-label': 'Formen' }, mxdSh('Formen', 'Sättigung · Breite · Pumpen · Anschlag · Einschub'), h('div', { class: 'mxd-cards' }, sat, wid, pmp, tra, F.ins));
 }
 const mxdIsTakt = (k) => MXK[k] && MXK[k].kind === 'lane' && Number(P['mix.duckSrc']) === MXK[k].lane;
 function mxdFormenAim(k) {
@@ -57,6 +70,8 @@ function mxdFormenAim(k) {
   mxdAim(F.widK, k, 'x' + k + '.wid', 'Breite', 'Stereobreite', c.col);
   mxdAim(F.pmpK, k, 'x' + k + '.duck', 'Tiefe', 'Pumpen', '#ff8f9e');
   mxdAim(F.relK, k, 'mix.duckRel', 'Rückkehr', 'Pumpen: Rückkehr, für alle Kanäle', '#ff8f9e');
+  F.ins.hidden = !PD['x' + k + '.ins'];   // (a return has none)
+  if (!F.ins.hidden) { mxdAim(F.insK, k, 'x' + k + '.insmix', 'Anteil', 'Einschub: wie viel vom Effekt', '#9fe3b0'); mxdWatch('x' + k + '.ins'); }
   F.pump.b.fill(0);
 }
 function mxdFormenText(k) {
@@ -66,6 +81,11 @@ function mxdFormenText(k) {
   F.satT.textContent = !(a > 0) ? 'aus' : x > 0.003 ? 'Spitze ' + (g < 0 ? MX_MINUS : '+') + dec(Math.abs(g).toFixed(1)) + ' dB' : 'still';
   F.widT.textContent = w < 0.005 ? 'Mono' : w > 1.005 ? 'breiter' : w < 0.995 ? 'schmaler' : 'unverändert';
   F.pmpT.textContent = mxdIsTakt(k) ? 'gibt den Takt' : d > 0 ? 'von Spur ' + (src + 1) : 'aus';
+  if (!F.ins.hidden) {
+    const r = P['x' + k + '.ins'], t = r !== '0' && FX_RETS.some((x) => x[0] === r) ? fxType(r).name : 'aus';
+    if (F.insT.textContent !== t) F.insT.textContent = t;
+    for (const b of F.insB) { const on = b.dataset.v === r; b.setAttribute('aria-checked', String(on)); b.tabIndex = on ? 0 : -1; }
+  }
 }
 function mxdSatDraw(F, k, w, hh) {
   const a = P['x' + k + '.sat'], cc = MXK[k], cx = w / 2, cy = hh / 2, s = Math.min(w / 2 - 6, hh / 2 - 6) / 1.25, dpr = mxDpr();

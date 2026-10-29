@@ -2,6 +2,15 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-29i",
+      "punkte": [
+        "Mixer: Ein zweiter Effekt-Rückweg „Effekt 2“ – zwei Effekte gleichzeitig, jeder mit eigener Wahl und eigenen Reglern (er beginnt mit der Wolke).",
+        "Neu unter Formen: „Einschub“ – ein Kanal nimmt Effekt oder Effekt 2 direkt in sich auf, mit eigenem Anteil, statt ihn nur hinzuschicken.",
+        "Gestik, Controller und Fährte können jetzt auch den Anteil der beiden Effekte bewegen.",
+        "Im Geflecht laufen Fäden in beide Effekte, ihre Knoten keimen wie Sterne; die Wege zeigen alle vier Sends, die Rückwege nennen ihren Effekt bzw. Raum."
+      ]
+    },
+    {
       "id": "2026-10-29h",
       "punkte": [
         "Mixer: Jeder Kanal hat jetzt „Anschlag“ und „Ausklang“ (unter Formen): Anschläge knackiger oder weicher machen, den Nachklang verlängern oder kürzen – ohne Kompressor-Pumpen.",

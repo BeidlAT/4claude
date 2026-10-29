@@ -67,7 +67,7 @@ function mxdOpen(k, first) {
     const q = mxdQuelle(k);
     if (q.parentNode !== MXD.quSec) { const old = MXD.quSec.querySelector('.mxd-qbody'); if (old) old.remove(); MXD.quSec.append(q); }
     if (q.sync) q.sync();
-    MXD.quSub.textContent = { fin: 'was die Spielfläche spielt', eb2: 'der zweite Klang auf jedem Finger', rgn: 'der Sporenregen aus deinen Tönen', bor: 'der liegende Grundton', dly: 'das Bandecho', rev: 'der erzeugte Raum' }[k] || 'Rhythmus und Ton der Spur';
+    MXD.quSub.textContent = { fin: 'was die Spielfläche spielt', eb2: 'der zweite Klang auf jedem Finger', rgn: 'der Sporenregen aus deinen Tönen', bor: 'der liegende Grundton', dly: 'das Bandecho', rev: 'der erzeugte Raum', fx: 'der Effekt-Rückweg', fx2: 'der zweite Effekt-Rückweg' }[k] || 'Rhythmus und Ton der Spur';
   } else if (page === 'puls') { MXD.pu.fd.set('puls'); mxdAim(MXD.pu.rel, 'puls', 'mix.duckRel', 'Rückkehr', 'Pumpen: Rückkehr, für alle Kanäle', '#ff8f9e'); }
   else mxdSumAim();
   MXD.dirty = true;

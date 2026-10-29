@@ -126,7 +126,7 @@ function idleEnter() {
   if (IDLE.echo) off(A.dlyRet, IDLE.keeper.gain);
   off(A.dlySend, A.dlyIn);   // and its input: the loop running on pulls nothing before it (the chain, the strips)
   off(A.revSend, A.revIn); off(MIX.s.dly.hS, A.revIn);
-  if (A.fxSend) off(A.fxSend, A.fxIn);   // (the return „Effekt“: its input from nothing – its tail rings out)   // the hall's input: from the feed (IDLE.hall: from nothing)
+  for (const S of Object.values(A.fxR || {})) off(S.send, S.in);   // (the returns „Effekt“: their input from nothing – their tails ring out)   // the hall's input: from the feed (IDLE.hall: from nothing)
   if (!IDLE.hall) { IDLE.feed.connect(A.revIn); cut.push([IDLE.feed, A.revIn, 'feed']); } else off(A.revRet, IDLE.keeper.gain);
   if (HX.node && HX.ctx === A.ctx) {   // the processor (no Schleife): its way closed, its Gespielt ring records zeros
     off(A.hxIn0, HX.node, 0, 0);

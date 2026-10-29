@@ -6,7 +6,8 @@
 // fader (the stems' law), its small lean left or right the balance; the light column under it is what really comes
 // out (RMS body, peak filament, held peak). Below the soil line the hyphae carry the signal on: through the "kette"
 // knot or straight past it into the Summe's root – the fruiting body (spectrum by origin, stereo image) – while send
-// threads run underground to Echo (rings) and Hall (cloud), as thick as the send times the level.
+// threads run underground to Echo (rings), Hall (cloud) and the effect returns (sprouting stars), as thick as the send times
+// the level.
 // The whole column is the handle: the first pixels decide the axis and then it stays (up/down = level, sideways =
 // balance), relative as everywhere, hold still for fine. At −48 dB the fader rests on the soil; holding there sinks it
 // in (= aus) – a muted channel instead stays where it is and goes dormant. Tap selects, a second tap opens the
@@ -15,6 +16,7 @@ MXV.views.geflecht = { label: 'Geflecht', build: mxgBuild, open: mxgOpen, close:
 const MXG = { cols: [], kn: [], seen: new Set(), w: 0, h: 0, dirty: true, geo: true, hov: null, pd: null, tapK: null, tapT: 0, menuK: null, numT: 0, ariaT: 0, rip: [], focus: null, rootTip: false };
 const MXG_DET = -48;      // the soil's edge: a fader dragged down rests here, holding sinks it in
 const MXG_STEP = 3;       // the flow paths are kept as points this far apart
+const MXG_SND = ['dly', 'rev', ...FX_RETS.map((x) => x[0])];   // the returns a channel sends into (its send threads, in this order)
 const mxgHasPan = (C) => C.c.kind !== 'sum' && C.c.kind !== 'puls';
 const mxgCol = (k) => MXG.cols[MXK[k].i];
 const mxgName = (k) => (k === 'sum' ? 'Summe' : MXK[k].name);
@@ -52,7 +54,7 @@ function mxgBuild(host) {
   const tags = h('div', { class: 'mxg-tags', 'aria-hidden': 'true' });
   for (const c of MXC) {
     const d = PD[mxVolId(c.k)];
-    const C = { c, k: c.k, i: c.i, cx: 0, cw: 0, pr: 0, x: 0, y: 0, r: 5, pan: 0, off: false, fx: true, aria: '', flow: null, fn: 0, al: [], sid: ['x' + c.k + '.dly', 'x' + c.k + '.rev'], pid: 'x' + c.k + '.pan' };
+    const C = { c, k: c.k, i: c.i, cx: 0, cw: 0, pr: 0, x: 0, y: 0, r: 5, pan: 0, off: false, fx: true, aria: '', flow: null, fn: 0, al: [], sid: MXG_SND.map((r) => 'x' + c.k + '.' + r), pid: 'x' + c.k + '.pan' };
     for (let j = 0; j <= 20; j++) C.al.push(mxRgba(c.rgb, j / 20));
     C.el = h('div', { class: 'mxg-sp', role: 'slider', tabindex: '0', 'data-pid': mxVolId(c.k), 'aria-orientation': 'vertical', 'aria-valuemin': String(d.min), 'aria-valuemax': String(d.max), style: '--c:' + c.col,
       'aria-label': mxgName(c.k) + (mxgHasPan(C) ? ' – hoch und runter der Pegel, links und rechts die Balance' : ' – Pegel'), 'aria-keyshortcuts': MX_VOLKEYS + ' Enter M S' });
@@ -121,7 +123,7 @@ function mxgAimKnobs(k) {
     K.key = ''; K.set(id, name, label, col);
   };
   if (c.kind === 'src' || c.kind === 'lane') { aim(K1, 'x' + k + '.pan', 'Balance', 'Balance', c.col); aim(K2, 'x' + k + '.dly', 'Echo', 'Echo-Send', '#6cc9ef'); aim(K3, 'x' + k + '.rev', 'Hall', 'Hall-Send', '#d6cbff'); }
-  else if (c.kind === 'ret') { aim(K1, 'x' + k + '.pan', 'Balance', 'Balance', c.col); aim(K2, k + '.mix', 'Anteil', 'Anteil – wie viel alle Kanäle hineinschicken', c.col); aim(K3, k === 'dly' ? 'xdly.rev' : null, 'Hall', 'in den Hall', '#d6cbff'); }
+  else if (c.kind === 'ret') { aim(K1, 'x' + k + '.pan', 'Balance', 'Balance', c.col); aim(K2, k + '.mix', 'Anteil', 'Anteil – wie viel alle Kanäle hineinschicken', c.col); aim(K3, k !== 'rev' ? 'x' + k + '.rev' : null, 'Hall', 'in den Hall', '#d6cbff'); }
   else if (k === 'sum') { aim(K1, 'mst.comp', 'Verdichtung', 'Verdichtung', '#ff8f9e'); aim(K2, 'mst.wid', 'Breite', 'Breite', c.col); aim(K3, null); }
   else { aim(K1, null); aim(K2, null); aim(K3, null); }
 }
@@ -184,7 +186,7 @@ function mxgLayout() {
     C.cw = sum ? sumU * u : u;
     C.cx = sum ? gl + n * u + C.cw / 2 : gl + (C.i + 0.5) * u;
     C.pr = mxgHasPan(C) ? Math.max(3, C.cw / 2 - (wide ? 15 : 7)) : 0;
-    const row = G.rows === 2 && !sum ? C.i % 2 : 0;
+    const row = G.rows === 2 ? (sum ? 1 - (n - 1) % 2 : C.i % 2) : 0;   // (the Summe in the row its neighbour leaves free)
     C.tag.style.transform = 'translate(' + C.cx.toFixed(1) + 'px,' + (G.tagY + row * G.tagH) + 'px) translateX(-50%)';
     C.tag.style.maxWidth = Math.floor(G.rows === 2 ? 2 * u - 4 : C.cw - 4) + 'px';
   }
@@ -198,19 +200,23 @@ function mxgLayout() {
   G.dyy = G.ky + (short ? 8 : wide ? 22 : 15);
   const E = G.cols[MXK.dly.i], H = G.cols[MXK.rev.i];
   G.ex = E.cx; G.ey = G.tagEnd + (short ? 6 : wide ? 16 : 10); G.hx = H.cx; G.hy = G.ey + (wide || short ? 0 : 12);
+  // every return's node: under its column, staggered like Echo and Hall where the columns are narrow
+  G.nd = {}; MXG_SND.forEach((r, j) => { G.nd[r] = [G.cols[MXK[r].i].cx, j % 2 ? G.hy : G.ey]; });
   // underground ways that only depend on the layout: the chain's trunk, the send threads, echo into hall
   G.trunk = new Path2D(); G.trunkP = [];
   mxgBz(G.trunk, G.trunkP, G.kx, G.ky, G.kx + (G.rootX - G.kx) * 0.35, G.ky + 2, G.rootX - G.rootR - (wide ? 30 : 16), G.rootY - 2, G.rootX, G.rootY);
   for (const C of G.cols) {
     C.snd = null;
     if (C.c.kind !== 'src' && C.c.kind !== 'lane') continue;
-    C.snd = [[G.ex, G.ey, 0.07], [G.hx, G.hy, 0.1]].map(([nx, ny, s]) => {
+    C.snd = MXG_SND.map((r, j) => [...G.nd[r], [0.07, 0.1, 0.085, 0.115][j] || 0.1]).map(([nx, ny, s]) => {
       const p = new Path2D(), y0 = G.tagEnd, sag = 4 + Math.abs(nx - C.cx) * s;
       mxgBz(p, null, C.cx, y0, C.cx + (nx - C.cx) * 0.25, y0 + sag, nx - (nx - C.cx) * 0.15, ny + sag * 0.5, nx, ny);
       return p;
     });
   }
-  G.eh = new Path2D(); mxgBz(G.eh, null, G.ex, G.ey, G.ex + 6, G.ey + 14, G.hx - 6, G.hy + 14, G.hx, G.hy);
+  // a return's way into the hall (Echo, and the effects – their „Hall“): from its node over to the cloud
+  G.toH = {};
+  for (const r of MXG_SND) if (r !== 'rev') { const [x, y] = G.nd[r], p = G.toH[r] = new Path2D(), s = x < G.hx ? 1 : -1; mxgBz(p, null, x, y, x + 6 * s, y + 14, G.hx - 6 * s, G.hy + 14, G.hx, G.hy); }
   G.bar.el.dataset.wide = wide && !short ? '1' : '';
   for (const K of G.kn) { const sz = Math.round(K.cv.clientWidth); if (sz && sz !== K.size) { K.size = sz; K.key = ''; mxKnobRender(K); } }
   // the corner readouts keep clear of the root
@@ -275,7 +281,7 @@ function mxgGeo() {
     } else {
       mxgBz(C.stem, pts, C.x, C.y, C.x, C.y + dy * 0.5, C.cx, sy - dy * 0.3, C.cx, sy);
       if (kind === 'ret') {
-        const ny = k === 'dly' ? G.ey : G.hy;
+        const ny = G.nd[k][1];
         mxgBz(C.hy, pts, C.cx, sy, C.cx, sy + 6, C.cx, ny - 6, C.cx, ny);
         mxgBz(C.hy, pts, C.cx, ny, C.cx + 6, ny + 16, G.rootX - G.rootR * 0.9, G.rootY - G.rootR - 4, G.rootX, G.rootY);
       } else if (C.fx) {

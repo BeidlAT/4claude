@@ -1,5 +1,5 @@
 // ---- processing block: 24 dB/oct low cut, shelving EQ with a sweepable mid, 12 dB/oct high cut, saturation
-const procNeeded = (p) => !LC_OFF(mp(p + 'lc')) || !HC_OFF(mp(p + 'hc')) || mp(p + 'lo') !== 0 || mp(p + 'mid') !== 0 || mp(p + 'hi') !== 0 || P[p + 'sat'] > 0 || P[p + 'att'] !== 0 || P[p + 'aus'] !== 0;
+const procNeeded = (p) => !LC_OFF(mp(p + 'lc')) || !HC_OFF(mp(p + 'hc')) || mp(p + 'lo') !== 0 || mp(p + 'mid') !== 0 || mp(p + 'hi') !== 0 || P[p + 'sat'] > 0 || P[p + 'att'] !== 0 || P[p + 'aus'] !== 0 || (P[p + 'ins'] || '0') !== '0';
 function mkWidth() {
   const w = { sp: A.ctx.createChannelSplitter(2), mg: A.ctx.createChannelMerger(2), LL: G(1), RR: G(1), LR: G(0), RL: G(0) };
   w.sp.connect(w.LL, 0); w.sp.connect(w.LR, 0); w.sp.connect(w.RL, 1); w.sp.connect(w.RR, 1);
@@ -35,7 +35,7 @@ function matUpd(st, inst) {
     st.matT = setTimeout(() => { if (!st.matOn) { try { st.byp.disconnect(st.mat.sp); st.wet.disconnect(st.mat.sp); } catch (e) {} } }, 120);
   }
 }
-function makeProc() {
+function makeProc(src) {
   const x = {};
   x.lc1 = BQ('highpass', 0, -5.33); x.lc2 = BQ('highpass', 0, 2.32);   // Butterworth pair (Q 0.54 and 1.31, in dB)
   x.lo = BQ('lowshelf', 150); x.mid = BQ('peaking', 1000, 0.9); x.hi = BQ('highshelf', 6000);
@@ -49,6 +49,9 @@ function makeProc() {
   // (29.10.2026) the Transienten-Former after it (myzel-trans – dsp/effekte.js): Anschlag and Ausklang; without AudioWorklet none
   x.out = x.sat;
   if (A.ctx.__dspOK) { try { x.tr = new AudioWorkletNode(A.ctx, 'myzel-trans', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit' }); x.sat.connect(x.tr); x.out = x.tr; } catch (e) { x.tr = null; } }
+  // (29.10.2026) and the Einschub (a channel's, not a return's): one of the effect returns' effects inside the channel –
+  // its processor between dry and wet, made when chosen (fxInsUpd, mixer/effekt.js)
+  if (src && A.ctx.__dspOK) { const I = x.ins = { r: null, cur: null, from: x.out, dry: G(1), wet: G(0) }, end = G(1); x.out.connect(I.dry).connect(end); I.wet.connect(end); x.out = end; }
   return x;
 }
 // Saturation: half dry, half tanh, matched at −14 dBFS peaks – loud parts are rounded off, quiet ones lifted a little
@@ -64,7 +67,7 @@ function satSet(x, a) {
 }
 function procUpd(st, inst) {
   const p = 'x' + st.k + '.', on = procNeeded(p);
-  if (on && !st.proc) st.proc = makeProc();
+  if (on && !st.proc) st.proc = makeProc(!st.ret);
   const x = st.proc;
   if (x) {
     const set = inst || !st.procOn ? setNow : (q, v) => setP(q, v, 0.02);
@@ -73,6 +76,7 @@ function procUpd(st, inst) {
     set(x.lo.gain, mp(p + 'lo')); set(x.mid.gain, mp(p + 'mid')); set(x.mid.frequency, mp(p + 'midf')); set(x.hi.gain, mp(p + 'hi'));
     satSet(x, P[p + 'sat']);
     if (x.tr) x.tr.port.postMessage({ a: P[p + 'att'], s: P[p + 'aus'] });
+    fxInsUpd(st, inst || !st.procOn);
   }
   if (on === st.procOn) return;
   st.procOn = on;

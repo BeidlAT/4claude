@@ -176,18 +176,21 @@ function mxgSoil(c, t) {
   for (const C of G.cols) {
     if (!C.snd || MX.ch[C.k].dorm) continue;
     const lv = MX.ch[C.k].lv.lvl, foc = C.k === sel || C.k === hov;
-    for (let j = 0; j < 2; j++) {
-      const fx = j ? 'rev' : 'dly', amt = P[C.sid[j]] * P[j ? 'rev.mix' : 'dly.mix'];
+    for (let j = 0; j < MXG_SND.length; j++) {
+      const fx = MXG_SND[j], amt = P[C.sid[j]] * P[fx + '.mix'];
       if (amt < 0.01 || MX.ch[fx].dorm) continue;
       const a = Math.min(1, amt);
-      c.setLineDash(j ? [4, 4] : [1.5, 4]); c.lineDashOffset = REDUCED ? 0 : -t * (10 + 24 * lv);
+      c.setLineDash(MXG_DASH[j] || MXG_DASH[0]); c.lineDashOffset = REDUCED ? 0 : -t * (10 + 24 * lv);
       c.strokeStyle = mxgA(C.al, foc ? 0.32 + 0.5 * a : 0.05 + 0.1 * a);
       c.lineWidth = 0.5 + 2.4 * Math.min(1, amt * (0.25 + 0.75 * lv)) * (foc ? 1 : 0.7);
       c.stroke(C.snd[j]);
     }
   }
-  const eh = P['xdly.rev'] * 0.3;
-  if (eh > 0.005 && !MX.ch.dly.dorm) { c.setLineDash([3, 4]); c.lineDashOffset = REDUCED ? 0 : -t * 14; c.strokeStyle = mxgA(G.cols[MXK.dly.i].al, 0.12 + 0.5 * Math.min(1, eh)); c.lineWidth = 0.6 + 1.6 * Math.min(1, eh); c.stroke(G.eh); }
+  // the returns into the hall: Echo at 0,3 of its knob, an effect at all of it (while anything is sent into it)
+  for (const r in G.toH) {
+    const eh = r === 'dly' ? P['xdly.rev'] * 0.3 : P[r + '.mix'] > 0 ? P['x' + r + '.rev'] : 0;
+    if (eh > 0.005 && !MX.ch[r].dorm && !MX.ch.rev.dorm) { c.setLineDash([3, 4]); c.lineDashOffset = REDUCED ? 0 : -t * 14; c.strokeStyle = mxgA(G.cols[MXK[r].i].al, 0.12 + 0.5 * Math.min(1, eh)); c.lineWidth = 0.6 + 1.6 * Math.min(1, eh); c.stroke(G.toH[r]); }
+  }
   c.setLineDash([]); c.lineDashOffset = 0;
   // the knot: five beads for Verzerrung, Ring, Filter, Phaser, Schweben – lit while they work
   const ks = (G.wide ? 14 : 10) + (G.wide ? 20 : 13) * chain;
@@ -219,8 +222,22 @@ function mxgSoil(c, t) {
     c.drawImage(spr, x - s * 1.8, y - s * 1.8, s * 3.6, s * 3.6);
     c.fillStyle = HC.c.c1; c.fillRect(x - 0.6, y - 0.6, 1.2, 1.2);
   }
+  // the effect returns: a sprouting star each – rays that grow with its level and turn slowly, a bright seed
+  FX_RETS.forEach(([r], j) => {
+    const X = MX.ch[r], XC = G.cols[MXK[r].i], lv = X.lv.lvl, [x, y] = G.nd[r], n = j ? 5 : 6, rot = REDUCED ? 0 : t * (j ? -0.25 : 0.2);
+    c.globalAlpha = X.dorm ? 0.12 : 0.25 + 0.6 * lv; c.drawImage(mxGlow(XC.c.col), x - 20 * sc, y - 20 * sc, 40 * sc, 40 * sc);
+    c.strokeStyle = XC.c.col; c.lineWidth = 1;
+    for (let i = 0; i < n; i++) {
+      const a = rot + i * MX_TAU / n, L = (4 + (6 + 5 * Math.sin(i * 1.7 + t * 1.3 * !REDUCED)) * (0.35 + 0.65 * lv)) * sc;
+      c.globalAlpha = X.dorm ? 0.16 : 0.3 + 0.6 * lv;
+      c.beginPath(); c.moveTo(x + Math.cos(a) * 2.5, y + Math.sin(a) * 2.5); c.lineTo(x + Math.cos(a) * (2.5 + L), y + Math.sin(a) * (2.5 + L)); c.stroke();
+      c.fillStyle = XC.c.col; c.beginPath(); c.arc(x + Math.cos(a) * (2.5 + L), y + Math.sin(a) * (2.5 + L), 1.1, 0, MX_TAU); c.fill();
+    }
+    c.globalAlpha = 1; c.fillStyle = XC.c.col; c.beginPath(); c.arc(x, y, 2, 0, MX_TAU); c.fill();
+  });
   c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
 }
+const MXG_DASH = [[1.5, 4], [4, 4], [6, 3, 1, 3], [2, 2, 2, 5]];   // a send thread's dash, per return (MXG_SND)
 // the root: a dark hollow where the hyphae end; the fruiting body glows in it (its canvas lies on top)
 function mxgRoot(c) {
   const G = MXG, x = G.rootX, y = G.rootY, R = G.rootR, L = MX.ch.sum.lv;

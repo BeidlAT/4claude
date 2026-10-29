@@ -7,7 +7,7 @@ function mxdBuildWege() {
   W.sb = h('button', { type: 'button', class: 'mx-s mxd-ms', 'aria-pressed': 'false', title: 'Solo – halten oder Alt-Klick: nur dieser Kanal' }, h('span', null, 'S'));
   mxSoloBtn(W.sb, () => MXD.k);
   mPid(W.mb, () => mxMuteId(MXD.k)); mPid(W.sb, () => mxSoloId(MXD.k));
-  W.slots = [0, 1].map(() => {
+  W.slots = [0, 1, 2, 3].map(() => {   // (echo, hall, the effect returns – a return: its Anteil and its way into the hall)
     const S = { K: mxdKnob('snd'), t1: h('span'), t2: h('b'), bar: h('i') };
     S.el = h('div', { class: 'mxd-snd' }, S.K.box, h('div', { class: 'mxd-sx' }, S.t1, h('span', { class: 'mxd-eff', 'aria-hidden': 'true' }, S.bar), S.t2));
     return S;
@@ -25,34 +25,36 @@ function mxdBuildWege() {
   W.ret = h('p', { class: 'mxd-note' });
   W.grpV = h('b');
   W.grp = h('button', { type: 'button', class: 'mxd-grp', title: 'Die Spur läuft über den Regler „Puls gesamt“', onclick: () => openDetail('puls') }, h('i', { class: 'mx-dot4', 'aria-hidden': 'true' }, h('b'), h('b'), h('b'), h('b')), h('span', null, 'Puls'), W.grpV, h('em', { 'aria-hidden': 'true' }, '›'));
-  for (const id of ['dly.mix', 'rev.mix', 'mix.pulsVol', 'mix.pulsMute', 'drv.mix', 'rng.mix', 'pha.mix', 'cho.mix']) mxdWatch(id);
+  for (const id of ['dly.mix', 'rev.mix', ...FX_RETS.map((x) => x[0] + '.mix'), 'mix.pulsVol', 'mix.pulsMute', 'drv.mix', 'rng.mix', 'pha.mix', 'cho.mix']) mxdWatch(id);
   return h('section', { class: 'mxd-sec mxd-wg', 'aria-label': 'Wege' }, mxdSh('Wege', 'Pegel · Balance · Sends · Weg'),
     W.fd.box,
     // balance left, M / S right under the value box; a lane's group link between them
     h('div', { class: 'mxd-wrow' }, h('div', { class: 'mxd-balw' }, W.bal.box), W.grp, h('div', { class: 'mxd-msw' }, W.mb, W.sb)),
-    h('div', { class: 'mxd-snds' }, W.slots[0].el, W.slots[1].el),
+    h('div', { class: 'mxd-snds' }, ...W.slots.map((S) => S.el)),
     W.route, W.ret);
 }
 function mxdWegeAim(k) {
   const W = MXD.wg, c = MXK[k];
   W.fd.set(k);
   mxdAim(W.bal, k, 'x' + k + '.pan', 'Balance', 'Balance', c.col);
-  mxdWatch('x' + k + '.mute', 'x' + k + '.solo', 'x' + k + '.route', 'x' + k + '.dly', 'x' + k + '.rev');
-  const [s0, s1] = W.slots;
+  mxdWatch('x' + k + '.mute', 'x' + k + '.solo', 'x' + k + '.route', 'x' + k + '.dly', 'x' + k + '.rev', ...FX_RETS.map(([r]) => 'x' + k + '.' + r));
+  const [s0, s1, ...sx] = W.slots;
   if (c.kind === 'ret') {
     mxdAim(s0.K, k, k + '.mix', 'Anteil', 'Anteil – wie viel alle Kanäle hineinschicken', c.col);
-    if (k === 'dly') mxdAim(s1.K, k, 'xdly.rev', 'Hall', 'in den Hall', '#d6cbff');
+    if (k !== 'rev') mxdAim(s1.K, k, 'x' + k + '.rev', 'Hall', 'in den Hall', '#d6cbff');
   } else {
     mxdAim(s0.K, k, 'x' + k + '.dly', 'Echo', 'Echo-Send', '#6cc9ef');
     mxdAim(s1.K, k, 'x' + k + '.rev', 'Hall', 'Hall-Send', '#d6cbff');
+    FX_RETS.forEach(([r, name, col], i) => mxdAim(sx[i].K, k, 'x' + k + '.' + r, name, name + '-Send', col));
   }
   s1.el.hidden = k === 'rev';
+  for (const S of sx) S.el.hidden = c.kind === 'ret';
   W.route.hidden = c.kind === 'ret'; W.ret.hidden = c.kind !== 'ret'; W.grp.hidden = c.kind !== 'lane';
   W.mb.setAttribute('aria-label', c.name + ' stumm'); W.sb.setAttribute('aria-label', c.name + ' solo');
 }
 // the texts of the Wege: what a send really is ("140 % von 35 % Echo-Anteil = 49 %"), which way the channel takes
 function mxdWegeText(k) {
-  const W = MXD.wg, c = MXK[k], silent = MX.ch[k].dorm, [s0, s1] = W.slots;
+  const W = MXD.wg, c = MXK[k], silent = MX.ch[k].dorm, [s0, s1, ...sx] = W.slots;
   W.mb.setAttribute('aria-pressed', String(!!P['x' + k + '.mute'])); W.sb.setAttribute('aria-pressed', String(!!P['x' + k + '.solo']));
   const send = (S, v, mix, what, scale) => {
     const eff = v * mix * (scale || 1);
@@ -64,17 +66,18 @@ function mxdWegeText(k) {
   if (c.kind === 'ret') {
     const mix = P[k + '.mix'];
     s0.t1.textContent = 'gilt für alle Sends'; s0.t2.textContent = mxPct(mix); s0.bar.style.transform = 'scaleX(' + mix.toFixed(3) + ')'; s0.el.classList.remove('zero');
-    if (k === 'dly') {
-      // the echo feeds the hall directly, past the hall's own Anteil: 100 % = 0,3
-      const v = P['xdly.rev'];
-      s1.t1.textContent = 'Echo → Hall, am Hall-Anteil vorbei'; s1.t2.textContent = silent ? 'still' : '= ' + mxPct(v * 0.3);
-      s1.bar.style.transform = 'scaleX(' + clamp(v * 0.3, 0, 1).toFixed(3) + ')'; s1.el.classList.toggle('zero', v < 0.005 || silent);
+    if (k !== 'rev') {
+      // a return feeds the hall directly, past the hall's own Anteil (the echo: 100 % = 0,3)
+      const v = P['x' + k + '.rev'], g = k === 'dly' ? 0.3 : 1;
+      s1.t1.textContent = c.name + ' → Hall, am Hall-Anteil vorbei'; s1.t2.textContent = silent ? 'still' : '= ' + mxPct(v * g);
+      s1.bar.style.transform = 'scaleX(' + clamp(v * g, 0, 1).toFixed(3) + ')'; s1.el.classList.toggle('zero', v < 0.005 || silent);
     }
-    W.ret.textContent = k === 'dly' ? 'Rückweg: das Echo kommt hinter der Effektkette zurück und geht direkt in die Summe.' : 'Rückweg: der Hall geht direkt in die Summe. Das Echo speist ihn zusätzlich.';
+    W.ret.textContent = k === 'dly' ? 'Rückweg: das Echo kommt hinter der Effektkette zurück und geht direkt in die Summe.' : k === 'rev' ? 'Rückweg: der Hall geht direkt in die Summe. Echo und Effekte speisen ihn zusätzlich.' : 'Rückweg: ' + fxType(k).name + ' – geht direkt in die Summe und, wenn du willst, in den Hall.';
   } else {
     // a non-breaking hyphen: "Echo-" never stands alone at a line's end
     send(s0, P['x' + k + '.dly'], P['dly.mix'], 'Echo‑Anteil');
     send(s1, P['x' + k + '.rev'], P['rev.mix'], 'Hall‑Anteil');
+    FX_RETS.forEach(([r, name], i) => send(sx[i], P['x' + k + '.' + r], P[r + '.mix'], name.replace(' ', '\u00a0') + '‑Anteil'));
     const r = P['x' + k + '.route'];
     W.rFx.setAttribute('aria-checked', String(r !== 'dir')); W.rDir.setAttribute('aria-checked', String(r === 'dir'));
     W.rFx.tabIndex = r !== 'dir' ? 0 : -1; W.rDir.tabIndex = r === 'dir' ? 0 : -1;
@@ -131,8 +134,8 @@ function mxdQuelle(k) {
   else if (k === 'gsp') kids = [grid(C('gsp.halo'), C('gsp.kopplung'), C('gsp.nachklang'), C('gsp.steg')), C('gsp.saiten'), h('p', { class: 'note' }, 'Das Netz der Saiten, in das alles spielt, was Gespinst klingt – Finger, Ebene 2, Spuren, Regen.')];
   else if (k === 'rgn') { const q = rgQuelle(); MXD.qu[k] = q; return q; }
   else if (k === 'hxr') kids = [h('p', { class: 'note' }, 'Die Schleifen des Hexenrings – ihre Effektkette ist eingebrannt, Echo und Hall kommen hier dazu.')];   // Hexenring
-  else if (k === 'fx') { const txt = h('p', { class: 'note' }), grids = {}, mk = (t) => (grids[t] = grid(...Object.values(FX_TYPES[t].keys).map((id) => C(id)))), upd = () => { for (const t in grids) grids[t].hidden = t !== P['fx.typ']; txt.textContent = fxText(); };
-    kids = [C('fx.typ', 'Effekt'), txt, grid(C('fx.mix', 'Anteil (Send-Meister)')), ...Object.keys(FX_TYPES).map(mk)]; bindCtl('fx.typ', upd); upd(); }
+  else if (FX_RETS.some((x) => x[0] === k)) { const txt = h('p', { class: 'note' }), grids = {}, mk = (t) => (grids[t] = grid(...Object.values(FX_TYPES[t].keys).map((id) => C(k + '.' + id)))), upd = () => { for (const t in grids) grids[t].hidden = t !== P[k + '.typ']; txt.textContent = fxText(k); };
+    kids = [C(k + '.typ', 'Effekt'), txt, grid(C(k + '.mix', 'Anteil (Send-Meister)')), ...Object.keys(FX_TYPES).map(mk)]; bindCtl(k + '.typ', upd); upd(); }
   else if (k === 'dly') kids = [grid(C('dly.mix', 'Anteil (Send-Meister)'), C('dly.fb'), C('dly.pp'), C('dly.tone'), C('dly.wow')), C('dly.sync'), C('dly.div'), C('dly.ms')];
   else { const txt = h('p', { class: 'note mxd-raum' }), nb = grid(C('rev.size'), C('rev.damp')), rm = grid(C('rev.dist'), C('rev.len')), upd = () => { const neb = P['rev.typ'] === 'nebel'; nb.hidden = !neb; rm.hidden = neb; txt.textContent = raumText(); }; bindCtl('rev.typ', upd); upd();
     kids = [C('rev.typ', 'Raum'), txt, grid(C('rev.mix', 'Anteil (Send-Meister)'), C('rev.pre')), nb, rm]; }
