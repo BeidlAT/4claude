@@ -142,7 +142,8 @@ function initAudio() {
   // stereo width of the sum: switched in only while it is not 100 %
   A.mwBy = G(1); A.mwWet = G(0);
   A.masterIn = G(1); A.masterSum.connect(A.masterIn);   // Hexenring: the master's input – the strip „Hexenring“ joins here, behind the „Alles“ tap
-  A.masterIn.connect(A.lowSh).connect(A.highSh).connect(A.mwBy).connect(A.masterVol).connect(A.cmpVca).connect(A.clipPre).connect(A.clip).connect(A.out);
+  A.clipG = G(1); A.lim = null;
+  A.masterIn.connect(A.lowSh).connect(A.highSh).connect(A.mwBy).connect(A.masterVol).connect(A.cmpVca).connect(A.clipPre).connect(A.clip).connect(A.clipG).connect(A.out);
   A.mwWet.connect(A.masterVol);
   A.masterVol.connect(A.cmpDet);
   // monitoring only (what you hear, not what is recorded): dim and mono check
@@ -164,6 +165,20 @@ function initAudio() {
   applyAll(true);
   A.started = true;
   dspMaybe();   // a worklet engine is selected (restored patch): its module now, before the first note
+  if (!(typeof OfflineAudioContext !== 'undefined' && ctx instanceof OfflineAudioContext)) ensureDSP(ctx, true).then((ok) => { if (ok && A.ctx === ctx) masterLim(); });
   if (typeof hxwPreboot === 'function') setTimeout(hxwPreboot, 2500);   // Hexenring (28.10.2026): the Werk-Rahmen in the first quiet moment, not mid-performance – werk.js
 }
-
+// (owner, 29.10.2026: „den sauberen Begrenzer zuerst“) the sum's ceiling becomes the Begrenzer (myzel-lim, dsp/begrenzer.js)
+// as soon as the module is there – the clipper hands over in 30 ms and stays only where AudioWorklet is missing. Below the
+// ceiling the sum passes unchanged, 2.1 ms later (graphLatency counts it).
+function masterLim() {
+  const ctx = A.ctx; if (A.lim || !ctx || !ctx.__dspOK) return;
+  let n; try { n = new AudioWorkletNode(ctx, 'myzel-lim', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit' }); } catch (e) { return; }
+  const t = ctx.currentTime + 0.02, lg = G(0);
+  A.cmpVca.connect(n).connect(lg).connect(A.out);
+  lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(1, t + 0.03);
+  A.clipG.gain.setValueAtTime(1, t); A.clipG.gain.linearRampToValueAtTime(0, t + 0.03);
+  A.lim = n; A.limG = lg; A.limLat = (Math.max(16, Math.round(0.002 * SR)) + 6) / SR;
+  n.port.onmessage = (e) => { if (e.data && e.data.red != null) A.limRed = e.data.red; };
+  setTimeout(() => { if (A.lim === n) { try { A.cmpVca.disconnect(A.clipPre); } catch (e) {} } }, 200);
+}

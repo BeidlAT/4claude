@@ -2,6 +2,13 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-29f",
+      "punkte": [
+        "Die Summe endet jetzt in einem sauberen Begrenzer statt in einer weichen Verzerrung: Wird es zu laut, regelt er kurz leiser, statt die Welle zu verbiegen – auch viele Schleifen zusammen klingen nicht mehr verzerrt.",
+        "Unter der Grenze bleibt der Klang unverändert; er kommt 2 ms später an (für den Blick voraus)."
+      ]
+    },
+    {
       "id": "2026-10-29e",
       "punkte": [
         "Chrome und iPad: Körner, die schneller als ihr Material gelesen werden (hohe Töne, Oktavsprünge), klingen jetzt ohne Spiegelfrequenzen – sie lesen eine dafür gefilterte Kopie.",
