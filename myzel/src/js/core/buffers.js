@@ -573,13 +573,30 @@ function genTexture(kind, sr, F) {
 }
 const IR4_GAIN = Math.SQRT2;   // a true-stereo IR sums two uncorrelated paths per side at half gain: −3 dB to make up
 const DSPW = { w: null, seq: 0, wait: new Map(), broken: false };
-const DSP_FN = { ir: (...a) => genIR(...a), tex: (...a) => genTexture(...a), ks: (...a) => [genKS(...a)] };
+// (29.10.2026, owner: „iPad wird immer wichtig bleiben, ebenso Chrome“) a grain read faster than its material folds in
+// Chrome and Safari (their buffer sources interpolate linearly, no low pass): the material low-passed below the new
+// Nyquist, once per octave of speed, for the grains to read (Körner – grains/mic.js). An 8th-order Butterworth run
+// forwards and backwards (no shift in time: a grain finds its place), at 0.45·SR/r.
+function genLP(L, R, r) {
+  const q = [0.51, 0.6, 0.9, 2.56], w = 2 * Math.PI * 0.45 / r, cs = Math.cos(w), sn = Math.sin(w), out = [];
+  for (const x of [L, R]) {
+    const y = Float32Array.from(x);
+    for (let pass = 0; pass < 2; pass++) for (let k = 0; k < 4; k++) {
+      const al = sn / (2 * q[k]), a0 = 1 + al, b0 = (1 - cs) / 2 / a0, b1 = (1 - cs) / a0, a1 = -2 * cs / a0, a2 = (1 - al) / a0, n = y.length;
+      let z1 = 0, z2 = 0;
+      for (let j = 0; j < n; j++) { const i = pass ? n - 1 - j : j, v = y[i], o = b0 * v + z1; z1 = b1 * v - a1 * o + z2; z2 = b0 * v - a2 * o; y[i] = o; }
+    }
+    out.push(y);
+  }
+  return out;
+}
+const DSP_FN = { ir: (...a) => genIR(...a), tex: (...a) => genTexture(...a), ks: (...a) => [genKS(...a)], lp: (...a) => genLP(...a) };
 function dspJob(type, args) {
   const run = () => DSP_FN[type](...args);
   if (!DSPW.broken && !DSPW.w) {
     try {
-      const src = [genIR, genTexture, genKS].map((f) => f.toString()).join('\n') +
-        '\nvar F={ir:genIR,tex:genTexture,ks:function(){return [genKS.apply(null,arguments)];}};' +
+      const src = [genIR, genTexture, genKS, genLP].map((f) => f.toString()).join('\n') +
+        '\nvar F={ir:genIR,tex:genTexture,ks:function(){return [genKS.apply(null,arguments)];},lp:genLP};' +
         'onmessage=function(e){var d=e.data;var r=F[d.type].apply(null,d.args);postMessage({id:d.id,r:r},r.map(function(a){return a.buffer;}));};';
       DSPW.w = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
       DSPW.w.onmessage = (e) => { const j = DSPW.wait.get(e.data.id); if (j) { DSPW.wait.delete(e.data.id); j.resolve(e.data.r); } };

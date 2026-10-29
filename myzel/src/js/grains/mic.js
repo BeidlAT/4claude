@@ -67,6 +67,22 @@ function micSource() {
   return MIC.cache;
 }
 
+// the material low-passed for a speed of up to 2^j (genLP, in the worker; until it is there the grain reads the material
+// itself), kept with the source: its copy and the copy reversed
+function korMip(k, j, rev) {
+  const S = k.src || k; if (!S.buf) return null;
+  const M = S.mip || (S.mip = []), e = M[j];
+  if (e === undefined) {
+    M[j] = null;
+    const b = S.buf, c0 = b.getChannelData(0), c1 = b.getChannelData(Math.min(1, b.numberOfChannels - 1));
+    const put = (r) => { if (!r || !A.ctx) return; const m = A.ctx.createBuffer(2, b.length, b.sampleRate); m.getChannelData(0).set(r[0]); m.getChannelData(1).set(r[1]); M[j] = { buf: m, rev: reversed(m) }; };
+    // (the Werk-Rahmen renders exactly: the copy at once, so every render of a seed reads the same – live, in the worker)
+    if (HXW.on) put(genLP(c0, c1, Math.pow(2, j)));
+    else dspJob('lp', [c0.slice(), c1.slice(), Math.pow(2, j)]).then(put).catch(() => {});
+  }
+  const f = M[j];
+  return f ? (rev ? f.rev : f.buf) : null;
+}
 const HANN = (() => { const n = 64, c = new Float32Array(n); for (let i = 0; i < n; i++) c[i] = Math.sin(Math.PI * i / (n - 1)) ** 2; return c; })();
 // Q.grainMax counts grains already scheduled ahead, too; Q.overlap is the most grains sounding at once per finger
 function spawnGrain(v, when) {
@@ -77,6 +93,7 @@ function spawnGrain(v, when) {
   let rate = (k.f / k.ref) * Math.pow(2, (gauss() * P['kor.pjit'] + (v.bend ? (v.bend.node ? v.bend.cents : A.bendCents || 0) : 0)) / 1200);
   if (Math.random() < P['kor.oct']) rate *= pick([0.5, 2]);
   rate = clamp(rate, 0.0625, 16);
+  const mip = rate > 1.02 ? korMip(k, Math.min(4, Math.ceil(Math.log2(rate) - 1e-9)), useRev) : null;   // (29.10.2026: faster – its low-passed copy, once made)
   const dur = buf.duration;
   const size = Math.min(P['kor.size'] * rand(0.8, 1.2), (dur / rate) * 0.9);
   const span = size * rate;
@@ -84,7 +101,7 @@ function spawnGrain(v, when) {
   let pos = k.y * dur + (Math.random() * 2 - 1) * scat * dur * 0.5;
   if (useRev) pos = dur - pos;
   pos = clamp(pos, 0, Math.max(0, dur - span - 0.001));
-  const src = A.ctx.createBufferSource(); src.buffer = buf; src.playbackRate.value = rate;
+  const src = A.ctx.createBufferSource(); src.buffer = mip || buf; src.playbackRate.value = rate;
   const g = A.ctx.createGain(); g.gain.value = 0;
   const overlap = Math.max(1, P['kor.dens'] * Q.korDens * (MOD.t.korD.s.size ? modKorD(when) : 1) * P['kor.size']);
   const amp = 0.9 / Math.sqrt(Math.min(overlap, Q.overlap));

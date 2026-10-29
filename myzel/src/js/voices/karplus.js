@@ -57,7 +57,8 @@ function ksBuffer(f, bright, decaySec, damp, pos) {
   if (hit) { KS_CACHE.delete(key); KS_CACHE.set(key, hit); return { buf: hit, rate: 1 }; }
   const tail = key.slice(key.indexOf('|'));
   let near = null, nd = Math.log(4);   // up to two octaves away
-  for (const [k, b] of KS_CACHE) if (k.endsWith(tail)) { const d = Math.abs(Math.log(f / b._f)); if (d < nd) { nd = d; near = b; } }
+  // (29.10.2026) a higher string read slower before a lower one read faster: a buffer read faster folds in Chrome and Safari
+  for (const [k, b] of KS_CACHE) if (k.endsWith(tail)) { const d = Math.abs(Math.log(f / b._f)) + (b._f < f ? 0.75 : 0); if (d < nd) { nd = d; near = b; } }
   if (near && !HXW.on) {   // (Hexenring: the Werk-Rahmen renders the exact string at once)
     if (!ksBuffer.wait.has(key)) {
       ksBuffer.wait.add(key);
