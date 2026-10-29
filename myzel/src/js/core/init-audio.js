@@ -97,12 +97,12 @@ function initAudio() {
   A.revSend.connect(A.revIn);
   A.revIn.connect(A.revPre);
   A.revRet.connect(MIX.s.rev.in);
-  // the return „Effekt“ (mixer/effekt.js): its processor comes when it is first wanted
-  A.fxSend = G(0); A.fxIn = G(1); A.fxRet = G(1); A.fx = null;
-  A.fxSend.connect(A.fxIn); A.fxRet.connect(MIX.s.fx.in);
+  // the returns „Effekt“ and „Effekt 2“ (mixer/effekt.js): a processor comes when one is first wanted
+  A.fxR = {};
+  for (const [r] of FX_RETS) { const S = A.fxR[r] = { r, send: G(0), in: G(1), ret: G(1), cur: null }; S.send.connect(S.in); S.ret.connect(MIX.s[r].in); }
   // what the insert chain sends to echo and hall; a copy of the chain takes over when channels send different amounts
   A.send = {};
-  for (const [k, target] of [['dly', A.dlySend], ['rev', A.revSend], ['fx', A.fxSend]]) {
+  for (const [k, target] of [['dly', A.dlySend], ['rev', A.revSend], ...FX_RETS.map(([r]) => [r, A.fxR[r].send])]) {
     const fromFx = G(1); A.insertOut.connect(fromFx).connect(target);
     A.send[k] = { target, fromFx, fromCopy: null, copy: null, mode: 'fx' };
   }

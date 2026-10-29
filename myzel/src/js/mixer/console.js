@@ -29,12 +29,13 @@ function mxSrcText(k) {
   if (k === 'gsp') return !gspInUse() ? 'aus' : DSP.state === 'kein' || A.workletBroken.has('gsp') ? 'kein Netz' : (P['gsp.saiten'] === 'zwei' ? 'zwei Oktaven' : 'eine Oktave');   // (the web's own channel)
   // the app writes a dotted value as "1/8 ·", which reads like a dangling separator here: "1/8." as in a score
   if (k === 'dly') return P['dly.sync'] ? fmt(PD['dly.div'], P['dly.div']).replace(' ·', '.') : fmt(PD['dly.ms'], P['dly.ms']);
-  if (k === 'rev') return fmt(PD['rev.size'], P['rev.size']);
+  if (k === 'rev') return P['rev.typ'] !== 'nebel' && RAUM_BY[P['rev.typ']] ? RAUM_BY[P['rev.typ']].name : fmt(PD['rev.size'], P['rev.size']);   // (a room: its name)
+  if (c.kind === 'ret') return fxType(k).name;   // (an effect return: the effect it plays)
   if (k === 'puls') return mxPulsOff() ? 'alle aus' : SEQ.on ? (SEQ.ext ? 'EXT ' + dec(SEQ.ext.bpm.toFixed(1)) : TG.hxOn ? dec(TG.hx.toFixed(1)) : Math.round(P['seq.bpm'])) + ' BPM' : 'steht';
   return (A.monoChk ? 'mono' : 'stereo') + (A.dim ? ' · ' + MX_MINUS + '20 dB' : '');
 }
 const mxPulsOff = () => !P['l0.on'] && !P['l1.on'] && !P['l2.on'] && !P['l3.on'];
-const MX_SRC_IDS = ['v.eng', 'v.layer', 'bor.on', 'bor.wave', 'bor.int', 'gsp.saiten', 'dly.sync', 'dly.div', 'dly.ms', 'rev.size', 'seq.bpm', 'l0.on', 'l0.eng', 'l1.on', 'l1.eng', 'l2.on', 'l2.eng', 'l3.on', 'l3.eng'];
+const MX_SRC_IDS = ['v.eng', 'v.layer', 'bor.on', 'bor.wave', 'bor.int', 'gsp.saiten', 'dly.sync', 'dly.div', 'dly.ms', 'rev.size', 'rev.typ', ...FX_RETS.map((x) => x[0] + '.typ'), 'seq.bpm', 'l0.on', 'l0.eng', 'l1.on', 'l1.eng', 'l2.on', 'l2.eng', 'l3.on', 'l3.eng'];
 // A channel whose source plays nothing (Ebene 2, a lane or the Bordun switched off; the Puls group with all four
 // lanes off) is an empty mushroom in the Pult and a hollow spore in the Geflecht – one rule, kept in S.srcoff.
 function mxSrcAll() {
@@ -126,7 +127,7 @@ function mxStrip(c) {
     S.k1 = mxKnob({ ch: k, id: 'x' + k + '.pan', name: 'Balance', label: 'Balance', cls: 'k1', ghost: () => mxGhostN('x' + k + '.pan') });
     bindCtl('x' + k + '.pan', () => mxKnobRender(S.k1));
     S.k2 = mxKnob({ ch: k, cls: 'k2', off: () => c.kind === 'lane' && MX.layer === 'duck' && Number(P['mix.duckSrc']) === c.lane, offTxt: 'Takt', offAria: 'gibt den Takt fürs Pumpen' });
-    const cand = c.kind === 'ret' ? [k + '.mix', 'x' + k + '.duck', 'x' + k + '.wid'].concat(k === 'dly' || k === 'fx' ? ['x' + k + '.rev'] : []) : ['dly', 'rev', 'fx', 'duck', 'wid'].map((s) => 'x' + k + '.' + s);
+    const cand = c.kind === 'ret' ? [k + '.mix', 'x' + k + '.duck', 'x' + k + '.wid'].concat(k !== 'rev' ? ['x' + k + '.rev'] : []) : ['dly', 'rev', ...FX_RETS.map((x) => x[0]), 'duck', 'wid'].map((s) => 'x' + k + '.' + s);
     for (const id of cand) bindCtl(id, () => { if (S.k2.id === id) mxKnobRender(S.k2); });
     mxK2Bind(S);
     S.mb = h('button', { type: 'button', class: 'mx-m', 'aria-pressed': 'false', 'aria-label': c.name + ' stumm', 'data-pid': mid, onclick: () => setParam(mid, !P[mid]) }, h('span', null, 'M'));
@@ -210,7 +211,7 @@ function mxMonSync() {
 // master) while the layer is a send
 function mxK2Bind(S) {
   const c = S.c, l = MX.layer, L = MX_LAYERS.find((x) => x[0] === l);
-  if (c.kind === 'ret' && (l === 'dly' || l === 'rev' || l === 'fx')) S.k2.set(c.k + '.mix', 'Anteil', 'Anteil (wie viel alle Kanäle hineinschicken)', c.col);
+  if (c.kind === 'ret' && l !== 'duck' && l !== 'wid') S.k2.set(c.k + '.mix', 'Anteil', 'Anteil (wie viel alle Kanäle hineinschicken)', c.col);
   else S.k2.set('x' + c.k + '.' + l, L[2], MX_LAYER_ARIA[l], L[3]);
 }
 function mxSetLayer(l, say) {
@@ -219,7 +220,7 @@ function mxSetLayer(l, say) {
   store.set('myzel.mixlayer', l);
   if (MX.root) MX.root.dataset.layer = l;
   for (const b of MX.regBtns || []) { const on = b.dataset.l === l; b.setAttribute('aria-checked', String(on)); b.tabIndex = on ? 0 : -1; }
-  const C = MX.regC, L = MX_LAYERS.find((x) => x[0] === l), N = MX_LAYERS[(MX_LAYERS.indexOf(L) + 1) % 4];
+  const C = MX.regC, L = MX_LAYERS.find((x) => x[0] === l), N = MX_LAYERS[(MX_LAYERS.indexOf(L) + 1) % MX_LAYERS.length];
   if (C) {
     C.el.style.setProperty('--lc', L[3]); C.t.textContent = L[1];
     C.el.setAttribute('aria-label', 'Zweiter Regler jedes Kanals: ' + L[1] + ' – tippen wechselt zu ' + N[1]);

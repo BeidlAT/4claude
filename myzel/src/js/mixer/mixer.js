@@ -29,7 +29,8 @@ const MXC = [], MXK = {};
 const MX_GROUPS = [['spiel', 'spiel'], ['puls', 'puls'], ['grund', 'grund'], ['rueck', 'rückwege'], ['sum', 'summe']];
 const MX_DORM = [118, 106, 97];
 function mxChannels() {
-  const own = { fin: ['spiel', '#f0e6d8'], eb2: ['spiel', '#c9dc82'], rgn: ['spiel', RG_COL], hxr: ['spiel', '#e9a35e'], bor: ['grund', '#5a7cff'], gsp: ['grund', '#b9a46e'], dly: ['rueck', '#6cc9ef'], rev: ['rueck', '#d6cbff'], fx: ['rueck', '#9fe3b0'] };
+  const own = { fin: ['spiel', '#f0e6d8'], eb2: ['spiel', '#c9dc82'], rgn: ['spiel', RG_COL], hxr: ['spiel', '#e9a35e'], bor: ['grund', '#5a7cff'], gsp: ['grund', '#b9a46e'], dly: ['rueck', '#6cc9ef'], rev: ['rueck', '#d6cbff'] };
+  for (const [r, , col] of FX_RETS) own[r] = ['rueck', col];
   for (const st of STRIPS) {
     if (st.k === 'bor') MXC.push({ k: 'puls', name: 'Puls', g: 'puls', kind: 'puls', col: '#f2cf86' });
     const lane = st.lane != null;
@@ -42,8 +43,8 @@ const mxVolId = (k) => (k === 'sum' ? 'mst.vol' : k === 'puls' ? 'mix.pulsVol' :
 const mxMuteId = (k) => (k === 'puls' ? 'mix.pulsMute' : k === 'sum' ? null : 'x' + k + '.mute');
 const mxSoloId = (k) => (k === 'puls' || k === 'sum' ? null : 'x' + k + '.solo');
 // what the second knob of every strip controls, chosen in the head: [suffix, chip label, printed name, colour]
-const MX_LAYERS = [['dly', 'Echo', 'Echo', '#6cc9ef'], ['rev', 'Hall', 'Hall', '#d6cbff'], ['fx', 'Effekt', 'Effekt', '#9fe3b0'], ['duck', 'Pumpen', 'Pumpen', '#ff8f9e'], ['wid', 'Breite', 'Breite', '#f0e6d8']];
-const MX_LAYER_ARIA = { dly: 'Echo-Send', rev: 'Hall-Send', fx: 'Effekt-Send', duck: 'Pumpen', wid: 'Stereobreite' };
+const MX_LAYERS = [['dly', 'Echo', 'Echo', '#6cc9ef'], ['rev', 'Hall', 'Hall', '#d6cbff'], ...FX_RETS.map(([r, name, col]) => [r, name, name, col]), ['duck', 'Pumpen', 'Pumpen', '#ff8f9e'], ['wid', 'Breite', 'Breite', '#f0e6d8']];
+const MX_LAYER_ARIA = { dly: 'Echo-Send', rev: 'Hall-Send', fx: 'Effekt-Send', fx2: 'Effekt-2-Send', duck: 'Pumpen', wid: 'Stereobreite' };
 const MX_BOR = { 1: '1:1', 1.5: '3:2', 1.3333: '4:3', 2: '2:1', 1.75: '7:4', 1.2: '6:5' };
 
 /* ---------- helpers ---------- */

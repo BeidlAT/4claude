@@ -117,6 +117,11 @@
 .mxd-pmp { grid-column: 1 / -1; }
 .mxd-pmp .mxd-cvb { height: 64px; }
 .mxd-pmp .mxd-kr { justify-content: flex-start; gap: 4px; }
+.mxd-ins .mxd-kr { justify-content: flex-end; }
+.mxd-insc { display: flex; flex-wrap: wrap; align-content: center; gap: 4px; margin: 6px 0 2px; }
+.mxd-insc button { position: relative; min-height: 26px; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line); background: var(--bark-2); color: var(--dim); font: 600 11px/1 var(--font-ui); }
+.mxd-insc button::after { content: ""; position: absolute; inset: -5px -2px; }
+.mxd-insc button[aria-checked="true"] { color: var(--hypha); border-color: rgba(159, 227, 176, .55); background: rgba(159, 227, 176, .1); }
 .mxd-src { display: grid; gap: 0; min-width: 0; margin-left: auto; justify-items: center; }
 .mxd-src .mxd-lab { font-size: 10.5px; }
 .mx[data-cover=""] .mxd-src .mxd-lab em { display: none; }
@@ -127,6 +132,7 @@
 .mx[data-cover=""] :is(.mxd-sat, .mxd-wid, .mxd-gr) .mxd-cvb { height: 76px; }
 .mx[data-cover=""] .mxd-cards.two .mxd-cvb { height: 84px; }
 .mx[data-cover=""] .mxd-pmp { grid-column: auto; }
+.mx[data-cover=""] .mxd-ins { grid-column: span 2; }
 .mx[data-cover=""] .mxd-pmp .mxd-cvb { height: 56px; margin: 6px 0 4px; }
 .mx[data-cover=""] .mxd-pmp .mxd-kr { gap: 2px; justify-content: space-between; }
 .mx[data-cover=""] .mxd-pmp .mxd-src { margin-left: 0; }

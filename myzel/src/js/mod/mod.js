@@ -23,6 +23,8 @@ const MODT = {
   wow: { label: 'Leiern (Echo)', lo: 0, u: (v) => v * 0.004 },
   dly: { label: 'Echo-Anteil', u: mixRel('dly.mix') },
   rev: { label: 'Hall-Anteil', u: mixRel('rev.mix') },
+  fx: { label: 'Effekt-Anteil', u: mixRel('fx.mix') },   // (29.10.2026: the effect returns – mixer/effekt.js)
+  fx2: { label: 'Effekt-2-Anteil', u: mixRel('fx2.mix') },
   cho: { label: 'Schweben-Anteil', u: mixRel('cho.mix') },
   bor: { label: 'Bordun öffnen', u: (v) => v * 2400 },
   korD: { label: 'Körner-Dichte', js: 1 },
@@ -54,7 +56,7 @@ const FA = { t0: null, b0: 0, bpm: 84, d: 0, ph: 0, pon: false, lanes: new Map()
 // parameters with a counterpart in Formen: written down as they change (a knob, a slider), played back as that
 // counterpart's deflection – [target, scale ('log': in octaves), units of the target per unit]
 const FAE_PAR = { 'flt.freq': ['flt', 'log', 0.5], 'rng.freq': ['rng', 'log', 0.5], 'bor.cut': ['bor', 'log', 0.5], 'kor.dens': ['korD', 'log', 1 / 1.5],
-  'kor.scat': ['korS', 'lin', 2], 'trp.rain': ['trp', 'lin', 1 / 0.65], 'dly.mix': ['dly', 'lin', 1], 'rev.mix': ['rev', 'lin', 1], 'cho.mix': ['cho', 'lin', 1] };
+  'kor.scat': ['korS', 'lin', 2], 'trp.rain': ['trp', 'lin', 1 / 0.65], 'dly.mix': ['dly', 'lin', 1], 'rev.mix': ['rev', 'lin', 1], 'fx.mix': ['fx', 'lin', 1], 'fx2.mix': ['fx2', 'lin', 1], 'cho.mix': ['cho', 'lin', 1] };
 // Körner-Dichte: ×0.35 … ×2.8 of the patch's grains per second
 const modKorD = (t) => Math.pow(2, 1.5 * modVal('korD', t));
 // one source's value at audio time t: a live one is constant; one set ahead runs linearly from point to point (0 before
@@ -244,7 +246,7 @@ function modParam(T, now) {
 }
 // The node a target moves: a ConstantSource whose value adds to the params it reaches – the insert chain's filter and
 // phaser detune and auto-pan position (every copy of the chain too, see modChain), the ring oscillator's detune, the
-// Bordun's filter detune, the echo's and hall's input level, the chorus's wet and dry gains; Leiern drives a gain of
+// Bordun's filter detune, the echo's, hall's and effect returns' input level, the chorus's wet and dry gains; Leiern drives a gain of
 // its own on the echo's wow and flutter LFOs into the delay times.
 function modNode(T) {
   const c = A.ctx;
@@ -255,6 +257,7 @@ function modNode(T) {
   if (T.k === 'rng') cs.connect(A.rngOsc.detune);
   else if (T.k === 'dly') cs.connect(A.dlySend.gain);
   else if (T.k === 'rev') cs.connect(A.revSend.gain);
+  else if (T.k === 'fx' || T.k === 'fx2') { cs.connect(A.fxR[T.k].send.gain); fxUpd(T.k, true); }   // (its processor, even while the patch's Anteil is 0)
   else if (T.k === 'bor') { if (A.bor) cs.connect(A.bor.filt.detune); }
   else if (T.k === 'wow') {
     const w = G(0), f = G(0), s = G(0.15);   // flutter: 0.0006 for every 0.004 of wow, as updDelay
@@ -299,8 +302,8 @@ function modMorph() {
 // The mixer's sound reads its parameters through mp(): the patch's value – or, while the A/B-Morph deflects (MOD.mx
 // −1 … 1), a blend from there toward scene A (−) or B (+) on each parameter's own scale, switches flipping at half way.
 // Levels, balance, width, sends, EQ, Pumpen depth, mutes, the Puls group and the Summe follow; saturation (a new curve
-// per step), routing (it rewires) and the Pumpen source stay as the patch has them.
-const mxoOk = (id) => !/\.(sat|route|solo)$/.test(id) && id !== 'mix.duckSrc';
+// per step), routing and the Einschub (they rewire), and the Pumpen source stay as the patch has them.
+const mxoOk = (id) => !/\.(sat|route|solo|ins)$/.test(id) && id !== 'mix.duckSrc';   // (ins: the Einschub rewires too)
 function mp(id) {
   const d = MOD.mx;
   if (!d) return P[id];
@@ -319,7 +322,7 @@ function mxoApply() {
   let solo = false, sends = false, mst = false, puls = false;
   for (const id of all) {
     const m = /^x(\w+)\.(\w+)$/.exec(id);
-    if (m) { strips.add(m[1]); if (m[2] === 'mute') solo = true; else if (m[2] === 'dly' || m[2] === 'rev') sends = true; }
+    if (m) { strips.add(m[1]); if (m[2] === 'mute') solo = true; else if (m[2] === 'dly' || m[2] === 'rev' || m[2] === 'fx' || m[2] === 'fx2') sends = true; }
     else if (id.startsWith('mst.')) mst = true;
     else if (id === 'mix.pulsVol' || id === 'mix.pulsMute') puls = true;
   }

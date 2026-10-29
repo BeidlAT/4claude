@@ -24,7 +24,16 @@ deinem Ermessen“. Grundlage: `effekte-konzept.md` (26.10.).
   Oktav-Echo (Ping-Pong, Tonhöhe im Rücklauf, Tiefpass vor dem Hochsetzen), Vokal-Filter (3 Formanten, SVF).
   Pegel mit Kalimba auf den Eingang abgeglichen.
 
+- **Transienten-Former** je Kanal (`myzel-trans`, nach der Sättigung): Anschlag/Ausklang ±18 dB, auf 0 bitgleich (PR #101).
+- **Zweiter Rückweg „Effekt 2“** (Besitzer, 29.10.: „ja alle 3 offenen Punkte erledigen“): `FX_RETS` (params.js) trägt
+  beide Rückwege – je eigene Wahl und Regler (`fx2.*`, beginnt mit Wolke), Send je Kanal `x…fx2`, eigene Farbe.
+- **Einschub je Kanal** (`x…ins`: Keiner / Effekt / Effekt 2, `x…insmix` Anteil, gleiche Leistung): ein eigener
+  Prozessor mit den Einstellungen des gewählten Rückwegs, hinter dem Transienten-Former (processing.js `x.ins`,
+  effekt.js `fxInsUpd`); „Keiner“ blendet ihn aus und gibt ihn frei. Formen-Karte „Einschub“.
+- **Formen** kennen „Effekt-Anteil“ und „Effekt-2-Anteil“ (mod.js `fx`, `fx2`; Gestik und Fährte über `fx.mix`);
+  eine Auslenkung baut den Prozessor auch, wenn der Anteil im Patch 0 ist.
+- **Geflecht**: Send-Fäden in beide Effekte (eigene Strichmuster), ihre Knoten als keimende Sterne, ihr Weg in den
+  Hall; Wege-Ansicht zeigt alle vier Sends; Konsole: Rückweg-Untertitel nennen Effekt bzw. Raum.
+
 ## Offen
-- Transienten-Former als Einschub je Kanal (Anschlag/Ausklang).
-- Zweiter Effekt-Rückweg / Einschub-Plätze, falls gewünscht.
-- Formen (mod.js) kennen den Effekt-Send noch nicht; Geflecht-Ansicht zeichnet seine Fäden nicht.
+- Nichts aus diesem Plan. Mögliche Erweiterung: weitere Effektarten in `FX_TYPES`.

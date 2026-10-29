@@ -120,7 +120,7 @@ function applyAll(firstIR) {
   if (!A.ctx) return;
   A.drvKey = null;
   updDrive(); updRing(); updFilter(); updPhaser(); updChorus(); updDelay(); updReverbMix(); updMove(); updMaster();
-  updMix(!!firstIR);
+  updMix(!!firstIR); fxUpd();   // (the effect returns: a preset's choice and Anteil)
   regenIR(!!firstIR);
   updBordun();
 }
