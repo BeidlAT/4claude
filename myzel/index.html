@@ -384,6 +384,8 @@ body.ww-saen-an :is([data-ww], [data-wa], [data-pid]):hover { outline: 2px solid
 .pcard.kb:hover, .pcard.kb:focus-visible { border-color: color-mix(in srgb, var(--a) 45%, var(--line)); transform: translateY(-1px); box-shadow: 0 10px 26px rgba(0, 0, 0, .38), 0 0 0 1px color-mix(in srgb, var(--a) 16%, transparent); }
 .pcard.kb[aria-current="true"] { border-color: var(--a); box-shadow: 0 0 0 1px var(--a), 0 0 26px color-mix(in srgb, var(--a) 26%, transparent); }
 .pcard.kb[aria-current="true"] .kb-nr::after { content: ' · spielt'; color: var(--a); }
+.pcard.kb[data-geaendert="true"] { border-color: color-mix(in srgb, var(--a) 70%, transparent); border-style: dashed; box-shadow: 0 0 0 1px color-mix(in srgb, var(--a) 35%, transparent); }
+.pcard.kb[data-geaendert="true"] .kb-nr::after { content: ' · geändert'; color: var(--a); }
 .kb-mini { width: 36px; height: 23px; border-radius: 5px; flex: none; box-shadow: 0 0 0 1px rgba(240, 230, 216, .08); }
 .pleer { margin-top: 8px; }
 @media (min-width: 1100px) { .sheet[data-panel="presets"] { width: min(740px, 52vw); } }
@@ -396,6 +398,7 @@ body.ww-saen-an :is([data-ww], [data-wa], [data-pid]):hover { outline: 2px solid
 .pcard small { font-size: 12px; color: var(--dim); line-height: 1.35; }
 .pcard .tags { font: 400 10px/1.2 var(--font-num); color: var(--lumen); letter-spacing: .02em; }
 .pcard[aria-current="true"] { border-color: var(--spore); box-shadow: inset 0 0 0 1px var(--spore); }
+.pcard:not(.kb)[data-geaendert="true"] { border-color: var(--spore); border-style: dashed; }
 .urow { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); }
 .urow span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -23455,7 +23458,7 @@ function loadValues(vals, keepUnset) {
   clearTimeout(saveTimer); saveTimer = setTimeout(saveState, 400);
 }
 function saveState() {
-  store.set('myzel.patch.v1', JSON.stringify({ values: patchValues(), preset: UI.preset || null }));
+  store.set('myzel.patch.v1', JSON.stringify({ values: patchValues(), preset: UI.preset || null, base: UI.presetBase || null }));
   const r = {}, dv = {}; for (const id in PD) { if (PD[id].rec) r[id] = P[id]; if (PD[id].dev) dv[id] = P[id]; }
   store.set('myzel.rec.v1', JSON.stringify(r));
   store.set('myzel.dev.v1', JSON.stringify(dv));
@@ -23467,8 +23470,8 @@ function restoreState() {
     // (owner, 26.10.2026: „leer starten“) the sound begins as Leere Erde – unless „Beim Öffnen mit Leerer Erde
     // beginnen“ is off: then the last one, as before
     const s = JSON.parse(store.get('myzel.patch.v1') || 'null');
-    if (P['ui.leer']) { const v = PRESET_LEER.v; for (const id of PATCH_IDS) P[id] = id in v ? sanitize(PD[id], v[id]) : PD[id].d; UI.preset = 'leer'; }
-    else if (s && s.values) { const v = engKeysIn(s.values); for (const id of PATCH_IDS) if (id in v) P[id] = sanitize(PD[id], v[id]); UI.preset = s.preset || null; }
+    if (P['ui.leer']) { const v = PRESET_LEER.v; for (const id of PATCH_IDS) P[id] = id in v ? sanitize(PD[id], v[id]) : PD[id].d; UI.preset = UI.presetBase = 'leer'; }
+    else if (s && s.values) { const v = engKeysIn(s.values); for (const id of PATCH_IDS) if (id in v) P[id] = sanitize(PD[id], v[id]); UI.preset = s.preset || null; UI.presetBase = s.base || UI.preset; }
     const r = JSON.parse(store.get('myzel.rec.v1') || 'null');
     if (r) for (const id in r) if (PD[id] && PD[id].rec) P[id] = sanitize(PD[id], r[id]);
     if (!store.get('myzel.ws.v2')) { store.set('myzel.ws.v2', '1'); if (P['hx.ws.durchg'] === '1') P['hx.ws.durchg'] = 'auto'; }   // (once, 28.10.2026: the Werkstatt's creations „gehen viel zu schnell“ – at least 10 s each now)
@@ -30620,13 +30623,13 @@ function setUserPresets(a) { return store.set('myzel.user.v1', JSON.stringify(a)
 
 /* ---------- undo for preset loads, mutation and dice ---------- */
 const HIST = [];
-function remember() { HIST.push({ v: patchValues(), preset: UI.preset, rzK: GK.p.rzK }); if (HIST.length > 30) HIST.shift(); updUndo(); }
+function remember() { HIST.push({ v: patchValues(), preset: UI.preset, base: UI.presetBase, rzK: GK.p.rzK }); if (HIST.length > 30) HIST.shift(); updUndo(); }
 function undo() {
   const prev = HIST.pop();
   if (!prev) return;
   UI.loading = true; loadValues(prev.v, false); UI.loading = false;
   if (prev.fae !== undefined) faeImport(prev.fae, 'undo');
-  UI.preset = prev.preset; markPresetCards(); updUndo();
+  UI.preset = prev.preset; UI.presetBase = prev.base !== undefined ? prev.base : prev.preset; markPresetCards(); updUndo();
   if (prev.rzK !== undefined) rzPreset({ key: prev.rzK });   // the Gestik recipe it had
   if (prev.gk) gkOwnSet(prev.gk);   // and the player's own Gestik settings a user preset had replaced
   toast('Vorheriger Klang wiederhergestellt.');
@@ -30643,7 +30646,7 @@ function loadPreset(p, own) {
   const keep = P['ui.tonart'] === 'preset' && hxLoopsLive().some((L) => !L.bew) && (String(p.v['t.root'] ?? PD['t.root'].d) !== String(P['t.root']) || (p.v['t.scale'] ?? PD['t.scale'].d) !== P['t.scale']);
   const vals = keep ? Object.assign({}, p.v, { 't.root': P['t.root'], 't.scale': P['t.scale'] }) : p.v;
   UI.loading = true; loadValues(vals, false); UI.loading = false;
-  UI.preset = p.key || null;
+  UI.preset = UI.presetBase = p.key || null;
   rzPreset(p);   // its Gestik recipe (none: the player's own settings) – before a user preset's own Gestik settings
   presetExtraLoad(p);
   hxUprEnter(p, !!own);   // (an own preset brings its Leiste)
@@ -30658,7 +30661,9 @@ function loadPreset(p, own) {
 // order is the program numbers a device sends.
 const PRESET_LEER = { key: 'leer', name: 'Leere Erde', tags: 'Neutral · Anfang', desc: 'Alles auf Anfang: ein schlichter Klang, trocken – kein Hall, kein Echo, kein Puls. Zum Selberbauen.', fmt: 2, fae: null,
   v: { 'rev.mix': 0, 'dly.mix': 0, 'cho.mix': 0, 'drv.mix': 0, 'flt.freq': 18000, 'flt.lfoDepth': 0, 'v.layer': 'off', 'bor.on': false, 'l0.on': false, 'l1.on': false, 'l2.on': false, 'l3.on': false, 'mst.comp': 0 } };
-function markPresetCards() { for (const c of presetCards) c.setAttribute('aria-current', String(c.dataset.key === UI.preset)); }
+// (owner, 29.10.2026: „die Markierung, welches Preset man ausgewählt hat, verschwindet gerne“) the preset loaded last stays
+// marked: as it is (aria-current), or – once anything of the sound moved (a fader, the tempo, a controller) – „geändert“
+function markPresetCards() { for (const c of presetCards) { const k = c.dataset.key; c.setAttribute('aria-current', String(k === UI.preset)); c.dataset.geaendert = String(!UI.preset && !!UI.presetBase && k === UI.presetBase); } }
 function markPresetDirty() { if (UI.preset && !UI.loading) { UI.preset = null; markPresetCards(); } }
 function buildPresets() {
   const box = h('div');
@@ -30782,7 +30787,7 @@ function mutate(amount) {
   }
   if (LIVE_SRC.has(vals['kor.src']) && vals['kor.src'] !== P['kor.src']) vals['kor.src'] = P['kor.src'];
   UI.loading = true; loadValues(safeify(vals), true); UI.loading = false;
-  UI.preset = null; markPresetCards();
+  UI.preset = null; markPresetCards();   // (mutated: still from the preset it came from – „geändert“)
   toast('Klang mutiert.', 4500, UNDO);
 }
 // A fresh random patch: every value drawn from the middle of its range, then made safe.
@@ -30818,7 +30823,7 @@ function dice() {
     r(p + 'vol', 0.35, 0.85); r(p + 'prob', 0.55, 1); r(p + 'pan', 0.2, 0.8);
   }
   UI.loading = true; loadValues(safeify(vals), true); UI.loading = false;
-  UI.preset = null; markPresetCards();
+  UI.preset = UI.presetBase = null; markPresetCards();   // (thrown anew: from no preset)
   toast('Neuer Klang gewürfelt.', 4500, UNDO);
 }
 
@@ -44294,7 +44299,7 @@ function boot() {
   // the start screen is modal until sound is on
   for (const id of ['bar', 'main', 'quick', 'tabs']) document.getElementById(id).inert = true;
   try { $('#btnStart').focus({ preventScroll: true }); } catch (e) {}
-  if (UI.preset) markPresetCards();
+  if (UI.preset || UI.presetBase) markPresetCards();
   restoreTakes();
   // installable web app (outside claude.ai): offer installing, and a reload after an update was stored offline
   window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; if (installBtn) installBtn.hidden = false; });

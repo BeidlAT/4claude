@@ -244,7 +244,7 @@ function loadValues(vals, keepUnset) {
   clearTimeout(saveTimer); saveTimer = setTimeout(saveState, 400);
 }
 function saveState() {
-  store.set('myzel.patch.v1', JSON.stringify({ values: patchValues(), preset: UI.preset || null }));
+  store.set('myzel.patch.v1', JSON.stringify({ values: patchValues(), preset: UI.preset || null, base: UI.presetBase || null }));
   const r = {}, dv = {}; for (const id in PD) { if (PD[id].rec) r[id] = P[id]; if (PD[id].dev) dv[id] = P[id]; }
   store.set('myzel.rec.v1', JSON.stringify(r));
   store.set('myzel.dev.v1', JSON.stringify(dv));
@@ -256,8 +256,8 @@ function restoreState() {
     // (owner, 26.10.2026: „leer starten“) the sound begins as Leere Erde – unless „Beim Öffnen mit Leerer Erde
     // beginnen“ is off: then the last one, as before
     const s = JSON.parse(store.get('myzel.patch.v1') || 'null');
-    if (P['ui.leer']) { const v = PRESET_LEER.v; for (const id of PATCH_IDS) P[id] = id in v ? sanitize(PD[id], v[id]) : PD[id].d; UI.preset = 'leer'; }
-    else if (s && s.values) { const v = engKeysIn(s.values); for (const id of PATCH_IDS) if (id in v) P[id] = sanitize(PD[id], v[id]); UI.preset = s.preset || null; }
+    if (P['ui.leer']) { const v = PRESET_LEER.v; for (const id of PATCH_IDS) P[id] = id in v ? sanitize(PD[id], v[id]) : PD[id].d; UI.preset = UI.presetBase = 'leer'; }
+    else if (s && s.values) { const v = engKeysIn(s.values); for (const id of PATCH_IDS) if (id in v) P[id] = sanitize(PD[id], v[id]); UI.preset = s.preset || null; UI.presetBase = s.base || UI.preset; }
     const r = JSON.parse(store.get('myzel.rec.v1') || 'null');
     if (r) for (const id in r) if (PD[id] && PD[id].rec) P[id] = sanitize(PD[id], r[id]);
     if (!store.get('myzel.ws.v2')) { store.set('myzel.ws.v2', '1'); if (P['hx.ws.durchg'] === '1') P['hx.ws.durchg'] = 'auto'; }   // (once, 28.10.2026: the Werkstatt's creations „gehen viel zu schnell“ – at least 10 s each now)

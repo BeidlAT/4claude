@@ -57,7 +57,7 @@ function boot() {
   // the start screen is modal until sound is on
   for (const id of ['bar', 'main', 'quick', 'tabs']) document.getElementById(id).inert = true;
   try { $('#btnStart').focus({ preventScroll: true }); } catch (e) {}
-  if (UI.preset) markPresetCards();
+  if (UI.preset || UI.presetBase) markPresetCards();
   restoreTakes();
   // installable web app (outside claude.ai): offer installing, and a reload after an update was stored offline
   window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; if (installBtn) installBtn.hidden = false; });

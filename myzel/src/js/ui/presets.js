@@ -323,13 +323,13 @@ function setUserPresets(a) { return store.set('myzel.user.v1', JSON.stringify(a)
 
 /* ---------- undo for preset loads, mutation and dice ---------- */
 const HIST = [];
-function remember() { HIST.push({ v: patchValues(), preset: UI.preset, rzK: GK.p.rzK }); if (HIST.length > 30) HIST.shift(); updUndo(); }
+function remember() { HIST.push({ v: patchValues(), preset: UI.preset, base: UI.presetBase, rzK: GK.p.rzK }); if (HIST.length > 30) HIST.shift(); updUndo(); }
 function undo() {
   const prev = HIST.pop();
   if (!prev) return;
   UI.loading = true; loadValues(prev.v, false); UI.loading = false;
   if (prev.fae !== undefined) faeImport(prev.fae, 'undo');
-  UI.preset = prev.preset; markPresetCards(); updUndo();
+  UI.preset = prev.preset; UI.presetBase = prev.base !== undefined ? prev.base : prev.preset; markPresetCards(); updUndo();
   if (prev.rzK !== undefined) rzPreset({ key: prev.rzK });   // the Gestik recipe it had
   if (prev.gk) gkOwnSet(prev.gk);   // and the player's own Gestik settings a user preset had replaced
   toast('Vorheriger Klang wiederhergestellt.');
@@ -346,7 +346,7 @@ function loadPreset(p, own) {
   const keep = P['ui.tonart'] === 'preset' && hxLoopsLive().some((L) => !L.bew) && (String(p.v['t.root'] ?? PD['t.root'].d) !== String(P['t.root']) || (p.v['t.scale'] ?? PD['t.scale'].d) !== P['t.scale']);
   const vals = keep ? Object.assign({}, p.v, { 't.root': P['t.root'], 't.scale': P['t.scale'] }) : p.v;
   UI.loading = true; loadValues(vals, false); UI.loading = false;
-  UI.preset = p.key || null;
+  UI.preset = UI.presetBase = p.key || null;
   rzPreset(p);   // its Gestik recipe (none: the player's own settings) – before a user preset's own Gestik settings
   presetExtraLoad(p);
   hxUprEnter(p, !!own);   // (an own preset brings its Leiste)
@@ -361,7 +361,9 @@ function loadPreset(p, own) {
 // order is the program numbers a device sends.
 const PRESET_LEER = { key: 'leer', name: 'Leere Erde', tags: 'Neutral · Anfang', desc: 'Alles auf Anfang: ein schlichter Klang, trocken – kein Hall, kein Echo, kein Puls. Zum Selberbauen.', fmt: 2, fae: null,
   v: { 'rev.mix': 0, 'dly.mix': 0, 'cho.mix': 0, 'drv.mix': 0, 'flt.freq': 18000, 'flt.lfoDepth': 0, 'v.layer': 'off', 'bor.on': false, 'l0.on': false, 'l1.on': false, 'l2.on': false, 'l3.on': false, 'mst.comp': 0 } };
-function markPresetCards() { for (const c of presetCards) c.setAttribute('aria-current', String(c.dataset.key === UI.preset)); }
+// (owner, 29.10.2026: „die Markierung, welches Preset man ausgewählt hat, verschwindet gerne“) the preset loaded last stays
+// marked: as it is (aria-current), or – once anything of the sound moved (a fader, the tempo, a controller) – „geändert“
+function markPresetCards() { for (const c of presetCards) { const k = c.dataset.key; c.setAttribute('aria-current', String(k === UI.preset)); c.dataset.geaendert = String(!UI.preset && !!UI.presetBase && k === UI.presetBase); } }
 function markPresetDirty() { if (UI.preset && !UI.loading) { UI.preset = null; markPresetCards(); } }
 function buildPresets() {
   const box = h('div');
@@ -485,7 +487,7 @@ function mutate(amount) {
   }
   if (LIVE_SRC.has(vals['kor.src']) && vals['kor.src'] !== P['kor.src']) vals['kor.src'] = P['kor.src'];
   UI.loading = true; loadValues(safeify(vals), true); UI.loading = false;
-  UI.preset = null; markPresetCards();
+  UI.preset = null; markPresetCards();   // (mutated: still from the preset it came from – „geändert“)
   toast('Klang mutiert.', 4500, UNDO);
 }
 // A fresh random patch: every value drawn from the middle of its range, then made safe.
@@ -521,7 +523,7 @@ function dice() {
     r(p + 'vol', 0.35, 0.85); r(p + 'prob', 0.55, 1); r(p + 'pan', 0.2, 0.8);
   }
   UI.loading = true; loadValues(safeify(vals), true); UI.loading = false;
-  UI.preset = null; markPresetCards();
+  UI.preset = UI.presetBase = null; markPresetCards();   // (thrown anew: from no preset)
   toast('Neuer Klang gewürfelt.', 4500, UNDO);
 }
 
