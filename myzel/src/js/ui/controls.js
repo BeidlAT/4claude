@@ -115,7 +115,7 @@ function setParam(id, v, src) {
   if (!d) return;
   v = sanitize(d, v);
   const changed = P[id] !== v, was = P[id];
-  P[id] = v;
+  P[id] = v; if (changed) HX.phH = null;   // (Hexenring: the field's sound signature anew – hxWPHashC)
   for (const fn of CTL[id] || []) fn(v, src);
   if (changed) { if (FAE_PAR[id]) faeP(id, was, v); onParamChanged(id); clearTimeout(saveTimer); saveTimer = setTimeout(saveState, 400); }
   if (id === 'kor.src') korSourcePicked();
@@ -233,6 +233,7 @@ function loadValues(vals, keepUnset) {
     const v = vals && Object.prototype.hasOwnProperty.call(vals, id) ? sanitize(d, vals[id]) : keepUnset ? P[id] : d.d;
     P[id] = v;
   }
+  HX.phH = null;
   for (const id of PATCH_IDS) for (const fn of CTL[id] || []) fn(P[id], null);
   hxMvSync(was);
   buildNotes(); drawBg(); refreshEngineUI(); updLaneTabs(); updInactive(); renderBarInfo();

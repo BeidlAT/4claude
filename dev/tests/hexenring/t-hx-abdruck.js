@@ -1,6 +1,7 @@
 // (owner, 29.10.2026: „wenn ich auf Abdruck klicke kommt zwar eine Rückmeldung …, aber es bleibt auf Wuchs (gelbe
 // Markierung); dadurch lässt sich auch kein Klang verwandeln“)
-//  1 „Instrument des Presets“ (ui.instrument preset): a new loop with notes grows (it plays the preset's instrument);
+//  1 „Instrument des Presets“ (ui.instrument preset): a new loop plays as played until the field's sound changes, then
+//    it grows (it plays the preset's instrument);
 //    Abdruck makes it an Abdruck – its own sound and key over the general rule – ↶/↷ take that back and forth, a key
 //    change leaves it, Wuchs chosen for it ends it
 //  2 „Schleifen folgen dem Preset“ (ui.tonart schleifen, the default): after a key change the loop grows in the new key;
@@ -26,12 +27,16 @@ const { ok } = H;
   // ---------- 1 ----------
   ok(await rec('preset'), 'a loop recorded (Instrument des Presets)');
   const s = { neu: await st() };
+  // (owner, 29.10.2026: „Silbenregen … klingt verzerrt und nicht wie gespielt“) while the field sounds as when it was made, a
+  // new loop plays its recording; a change of the sound makes it take the field's
+  await page.evaluate(() => window.__M.setParam('klb.decay', window.__M.P['klb.decay'] * 0.8)); await page.waitForTimeout(900); s.feld = await st();
   await page.evaluate(() => window.__M.hxAbdruck(window.__L)); await page.waitForTimeout(300); s.abdr = await st();
   await page.evaluate(() => window.__M.hxUndoStep()); await page.waitForTimeout(300); s.undo = await st();
   await page.evaluate(() => window.__M.hxRedoStep()); await page.waitForTimeout(300); s.redo = await st();
   await page.evaluate(() => window.__M.setParam('t.root', String((+window.__M.P['t.root'] + 2) % 12))); await page.waitForTimeout(600); s.key = await st();
   await page.evaluate(() => window.__M.hxWSet(window.__L, 'wahl', true)); await page.waitForTimeout(300); s.wuchs = await st();
-  ok(s.neu && !s.abdr, `with the preset's instrument a new loop grows (${s.neu}); Abdruck makes it an Abdruck (Wuchs ${s.abdr})`);
+  ok(!s.neu && s.feld, `with the preset's instrument a new loop plays as played (Wuchs ${s.neu}) until the field's sound changes (${s.feld})`);
+  ok(!s.abdr, `Abdruck makes it an Abdruck (Wuchs ${s.abdr})`);
   ok(s.undo && !s.redo, `↶ takes the Abdruck back (Wuchs ${s.undo}), ↷ brings it again (Wuchs ${s.redo})`);
   ok(!s.key && s.wuchs, `a key change leaves the Abdruck (Wuchs ${s.key}); Wuchs chosen for it grows it again (${s.wuchs})`);
   // ---------- 2 ----------
