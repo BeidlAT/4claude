@@ -2,6 +2,17 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-29c",
+      "punkte": [
+        "Touché „Eis“: kein Knacken mehr, wo der eingefrorene Moment von vorn beginnt, und hochgesetzt nicht mehr rau; „Eis“ und „Körner“ hochgesetzt ohne Spiegelfrequenzen.",
+        "Vorhören einer Auswahl: kein Knacks mehr an der Stelle, wo sie von vorn beginnt.",
+        "Moder (Abrieb): die zerbröselten Höhen in ihrer vollen Stärke – sie waren etwa 6 dB zu leise.",
+        "Schimmer „Raum“ und Walgesang „Tiefe“ knistern beim Drehen nicht mehr; der Bordun wechselt die Wellenform weich.",
+        "Schleifen-Editor: Tonhöhe bei rauschigen Klängen ruhiger, Krone ohne Wummern am Ende, Abschnitt-Ränder ohne kurzen Lautstärke-Buckel.",
+        "Kalimba: „Schnarren“ steht von Haus aus auf 0 (die Presets mit Schnarren behalten es)."
+      ]
+    },
+    {
       "id": "2026-10-29b",
       "punkte": [
         "Saite und Gespinst: Jeder Ton klingt jetzt gleich hell und gleich lang nach – vorher waren einzelne Töne einer Tonleiter zufällig dumpfer und kürzer als ihre Nachbarn.",
