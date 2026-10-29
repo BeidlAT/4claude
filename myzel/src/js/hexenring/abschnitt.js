@@ -36,13 +36,32 @@ const hxRxCopy = (ch) => ch.map((c) => [c[0].slice(), c[1].slice()]);
 function hxRxSet(ch, f, l, r) { const c = ch[Math.floor(f / HX_CH)]; if (!c) return; const j = f % HX_CH; c[0][j] = l; c[1][j] = r; }
 // the stretch processed: out(i) for i in [0, N) – then written in with its edges crossfaded to the audio around it
 function hxRxApply(ch, r0, r1, out) {
-  const N = r1 - r0, dst = hxRxCopy(ch), get = hxRxGet(ch), X = Math.min(HX_RX, Math.floor(N / 4));
+  const N = r1 - r0, dst = hxRxCopy(ch), get = hxRxGet(ch), X = Math.min(HX_RX, Math.floor(N / 4)), rho = hxRxRho(out, get, r0, N, X);
   for (let i = 0; i < N; i++) {
-    const o = out(i), w = X ? Math.min(1, Math.min(i, N - 1 - i) / X) : 1, e = Math.sin(0.5 * Math.PI * w), q = Math.cos(0.5 * Math.PI * w), v = get(r0 + i);
+    const o = out(i), v = get(r0 + i), [e, q] = hxRxXf(i, N, X, rho);
     hxRxSet(dst, r0 + i, o[0] * e + v[0] * q, o[1] * e + v[1] * q);
   }
   return dst;
 }
+// (29.10.2026) the edge's crossfade by how alike the two sides are there (ρ, their correlation over the fade): unrelated
+// ones blend by power (sin/cos), the same sound – a few dB softer, a colour, some cents – by amplitude; sin/cos on
+// alike sides rose up to +3 dB for the 5 ms
+function hxRxRho(out, get, r0, N, X) {
+  const r = [0, 0]; if (!X) return r;
+  for (let s = 0; s < 2; s++) {
+    let ab = 0, aa = 0, bb = 0;
+    for (let k = 0; k < X; k++) { const i = s ? N - 1 - k : k, o = out(i), v = get(r0 + i); ab += o[0] * v[0] + o[1] * v[1]; aa += o[0] * o[0] + o[1] * o[1]; bb += v[0] * v[0] + v[1] * v[1]; }
+    r[s] = aa > 1e-12 && bb > 1e-12 ? Math.max(0, Math.min(1, ab / Math.sqrt(aa * bb))) : 0;
+  }
+  return r;
+}
+function hxRxXf(i, N, X, rho) {
+  if (!X || (i >= X && N - 1 - i >= X)) return HX_RX1;
+  const end = i >= X, w = Math.min(1, Math.min(i, N - 1 - i) / X), p = rho[end ? 1 : 0], s = Math.sin(0.5 * Math.PI * w), c = Math.cos(0.5 * Math.PI * w);
+  HX_RX2[0] = (1 - p) * s + p * w; HX_RX2[1] = (1 - p) * c + p * (1 - w);
+  return HX_RX2;
+}
+const HX_RX1 = [1, 0], HX_RX2 = [0, 0];
 // the operations: what the stretch plays, frame by frame
 function hxRxOp(ch, r0, r1, op, v, u, seed) {
   const N = r1 - r0, get = hxRxGet(ch);

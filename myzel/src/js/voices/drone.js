@@ -29,7 +29,7 @@ function startBordun() {
     const og = G(lvl), p = PAN(pn);
     o.connect(og).connect(p).connect(filt);
     o.start(t);
-    oscs.push({ o, which, og, p, u });
+    oscs.push({ o, which, og, p, u, lvl, dt });
   });
   g.gain.setTargetAtTime(P['bor.lvl'] * 0.5, t, 1.2);
   A.bor = { g, filt, lfo, lg, oscs, wave: P['bor.wave'], rich: Q.rich };
@@ -40,10 +40,21 @@ function startBordun() {
 function retuneBordun() {
   const b = A.bor; if (!b) return;
   const [f1, f2] = borFreqs();
-  for (const x of b.oscs) {
-    glideTo(x.o.frequency, x.which ? f2 : f1, 0.6);
-    if (b.wave !== P['bor.wave']) { if (A.waves[P['bor.wave']]) x.o.setPeriodicWave(A.waves[P['bor.wave']]); else x.o.type = P['bor.wave']; }
+  // (29.10.2026) another wave while it sounds: each oscillator crossfades (50 ms) to a new one of the new wave – switching
+  // the wave in place clicked
+  if (b.wave !== P['bor.wave']) {
+    const t = A.ctx.currentTime, X = 0.05, old = b.oscs;
+    b.oscs = old.map((x) => {
+      const o = OSC(P['bor.wave'], x.o.frequency.value), og = G(0);
+      o.detune.value = x.dt; A.pitchMod.connect(o.detune); if (x.u) x.u.connect(o.detune);
+      o.connect(og).connect(x.p); o.start(t);
+      og.gain.setValueAtTime(0, t); og.gain.linearRampToValueAtTime(x.lvl, t + X);
+      holdParam(x.og.gain, t); x.og.gain.linearRampToValueAtTime(0, t + X); x.o.stop(t + X + 0.03);
+      return { o, which: x.which, og, p: x.p, u: x.u, lvl: x.lvl, dt: x.dt };
+    });
+    setTimeout(() => { for (const x of old) { try { A.pitchMod.disconnect(x.o.detune); if (x.u) x.u.disconnect(x.o.detune); x.o.disconnect(); x.og.disconnect(); } catch (e) {} } }, 300);
   }
+  for (const x of b.oscs) glideTo(x.o.frequency, x.which ? f2 : f1, 0.6);
   b.wave = P['bor.wave'];
   setP(b.filt.frequency, P['bor.cut'], 0.1);
   setP(b.lg.gain, P['bor.breath'] * 1500, 0.2);

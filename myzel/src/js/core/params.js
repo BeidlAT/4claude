@@ -173,7 +173,7 @@ NUM('klb.over', 'Obertöne', 0, 1, 0.5, '%');
 NUM('klb.ratio', 'Oberton-Verhältnis', 3, 9, 5.9, '×', { step: 0.01 });
 NUM('klb.thumb', 'Daumen (Klopfen)', 0, 1, 0.45, '%');
 NUM('klb.body', 'Holzkasten', 0, 1, 0.5, '%');
-NUM('klb.buzz', 'Schnarren', 0, 1, 0.15, '%');
+NUM('klb.buzz', 'Schnarren', 0, 1, 0, '%');   // (29.10.2026, owner heard the rattle as distortion: the plain tine by default – the Presets that rattle keep it)
 // Obertöne
 NUM('obt.top', 'Obertonbereich', 6, 32, 16, '', { step: 1, fmt: (v) => Math.max(2, Math.round(v / 4)) + '.–' + v + '.' });
 NUM('obt.focus', 'Schärfe', 0, 1, 0.5, '%');

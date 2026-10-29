@@ -14,7 +14,7 @@
       this.rng = new PRNG(this.po.seed || 43);
       this.fm = new Biquad(); this.fT = -1;
       this.ap = [0.0123, 0.0177, 0.0251, 0.0311].map((t) => ({ d: new Float32Array(Math.round(t * SR)), i: 0 }));
-      this.ec = new Float32Array(1 << Math.ceil(Math.log2(0.6 * SR))); this.ecW = 0; this.lp = 0; this.lp2 = 0;
+      this.ec = new Float32Array(1 << Math.ceil(Math.log2(0.6 * SR))); this.ecW = 0; this.eF = -1; this.lp = 0; this.lp2 = 0;
       this.ph = 0; this.cp = 0; this.u = 0; this.uN = 1; this.from = 0; this.to = 0; this.env = 0; this.uEnv = 0; this.ys = this.y; this.wob = 0;
       this.vel = 0.75; this.burst = false; this.gate = 0; this.next = 0;
     }
@@ -47,7 +47,8 @@
       if (this.burst) { this.gate -= n; if (this.gate <= 0) this.off = true; }
       const tf = 1 - Math.exp(-2 * Math.PI * Math.min(0.4 * SR, (2400 - 1500 * p.tiefe) * (0.45 + 1.4 * this.ys)) / SR), og = R ? WAL_OUT * 0.57 : WAL_OUT, wet = 0.15 + 0.5 * p.tiefe, EM = this.ec.length - 1, eD = Math.round((0.28 + 0.2 * p.tiefe) * SR);
       const att = 1 - Math.exp(-1 / (0.18 * SR)), rel = 1 - Math.exp(-1 / (0.35 * SR)), envT = this.off ? 0 : 1;
-      let ph = this.ph, cp = this.cp, env = this.env, uEnv = this.uEnv, lp = this.lp, lp2 = this.lp2, wob = this.wob, ecW = this.ecW;
+      let ph = this.ph, cp = this.cp, env = this.env, uEnv = this.uEnv, lp = this.lp, lp2 = this.lp2, wob = this.wob, ecW = this.ecW, eF = this.eF < 0 ? eD : this.eF;
+      const eG = 1 - Math.exp(-1 / (0.08 * SR));
       for (let i = a; i < b; i++) {
         env += (envT - env) * (envT > env ? att : rel);
         // the unit's arc (a smooth step from → to; a hump rises and falls between), its own swell
@@ -70,10 +71,15 @@
         // under water: the top taken, smeared, the sea's echo
         lp += tf * (x - lp); lp2 += tf * (lp - lp2);
         let v = lp2; for (let k = 0; k < 4; k++) v = this.apT(this.ap[k], v);
-        const e = this.ec[(ecW - eD) & EM]; this.ec[ecW & EM] = v * 0.6 + e * 0.45; ecW++;
+        // (29.10.2026) a turn of Tiefe while it sings: the echo's time glides there (80 ms, read between samples) – a jump of
+        // whole samples every block clicked; at rest it sits on the whole sample, exactly as before
+        let e;
+        if (eF === eD) e = this.ec[(ecW - eD) & EM];
+        else { eF += (eD - eF) * eG; if (Math.abs(eD - eF) < 1e-3) eF = eD; const at = ecW - eF, j = Math.floor(at), fr = at - j, x0 = this.ec[j & EM]; e = x0 + fr * (this.ec[(j + 1) & EM] - x0); }
+        this.ec[ecW & EM] = v * 0.6 + e * 0.45; ecW++;
         const o = lp2 * (1 - 0.5 * wet) + (v + e) * wet;
         L[i] = o * og; if (R) R[i] = (lp2 * (1 - 0.5 * wet) + (v * 0.7 + e * 1.2) * wet) * og;
       }
-      this.ph = ph; this.cp = cp; this.env = env; this.uEnv = uEnv; this.lp = lp; this.lp2 = lp2; this.wob = wob; this.ecW = ecW;
+      this.ph = ph; this.cp = cp; this.env = env; this.uEnv = uEnv; this.lp = lp; this.lp2 = lp2; this.wob = wob; this.ecW = ecW; this.eF = eF;
     }
   }

@@ -15,7 +15,7 @@
       this.rng = new PRNG(this.po.seed || 37);
       const mx = Math.ceil(0.08 * 1.7 * SR) + 8;
       this.dl = SHT_D.map(() => ({ b: new Float32Array(1 << Math.ceil(Math.log2(mx))), w: 0, z: 0 }));
-      this.len = new Int32Array(4); this.gfb = new Float64Array(4);   // (the room's lengths and gains, kept: two arrays and two closures a block were 0.2 MB/s of garbage per voice)
+      this.len = new Int32Array(4); this.gfb = new Float64Array(4); this.lf = new Float64Array(4); this.lfOn = false;   // (the room's lengths and gains, kept: two arrays and two closures a block were 0.2 MB/s of garbage per voice)
       this.ps = new Float32Array(1 << 14); this.psW = 0; this.psD = 0; this.psD2 = 0;
       this.p1 = this.rng.next(); this.p2 = this.rng.next(); this.p3 = 0; this.lp1 = 0; this.lp2 = 0; this.env = 0; this.vel = 0.75; this.burst = false; this.gate = 0; this.ys = this.y;
       this.dcU = new DcBlock(12); this.dcL = new DcBlock(12); this.dcR = new DcBlock(12);   // (no DC may circle in the room)
@@ -24,13 +24,19 @@
     reset() { for (const d of this.dl) { d.b.fill(0); d.z = 0; } this.ps.fill(0); this.env = 0; }
     start(m) { this.vel = m.vel != null ? m.vel : 0.75; this.burst = !!m.burst; this.gate = m.burst ? Math.round((m.gate || 0.22) * SR) : 0; if (!this.wasOn) { this.ys = this.y; this.wasOn = true; } }
     stop() { this.off = true; }
+    // a line read at its gliding length (between samples, linear), the length a step on (no closure per sample: no garbage)
+    rdLine(k, lg) { const lf = this.lf, t = this.len[k]; lf[k] += (t - lf[k]) * lg; if (Math.abs(t - lf[k]) < 1e-3) lf[k] = t; const D = this.dl[k], m = D.b.length - 1, at = D.w - lf[k], j = Math.floor(at), fr = at - j, x0 = D.b[j & m]; return x0 + fr * (D.b[(j + 1) & m] - x0); }
     render(L, R, a, b) {
       const n = b - a, p = this.p, f = this.f;
       this.ys += (this.y - this.ys) * (1 - Math.exp(-n / (0.05 * SR)));
       if (this.burst) { this.gate -= n; if (this.gate <= 0) this.off = true; }
       const sh = Math.min(1, this.ys * (0.3 + 1.0 * p.schimmer)), size = 0.6 + p.raum, t60 = this.off ? Math.min(2.2, 1.5 + 9 * p.raum) : 1.5 + 9 * p.raum;   // (let go, the halo rings out within ≈ 2 s – the voice ends with it)
-      const len = this.len, gfb = this.gfb;
+      const len = this.len, gfb = this.gfb, lf = this.lf;
       for (let k = 0; k < 4; k++) { len[k] = Math.round(SHT_D[k] * size * SR); gfb[k] = Math.pow(0.001, len[k] / (t60 * SR)); }
+      // (29.10.2026) a turn of Raum while it sounds: the lines' lengths glide there (80 ms, read between samples) – a jump
+      // of whole samples every block clicked; at rest they sit on the whole sample, exactly as before
+      if (!this.lfOn) { for (let k = 0; k < 4; k++) lf[k] = len[k]; this.lfOn = true; }
+      const lg = 1 - Math.exp(-1 / (0.08 * SR)), glide = lf[0] !== len[0] || lf[1] !== len[1] || lf[2] !== len[2] || lf[3] !== len[3];
       const damp = 1 - Math.exp(-2 * Math.PI * (2500 + 7000 * p.farbe) / SR), cut = 1 - Math.exp(-2 * Math.PI * Math.min(0.4 * SR, f * (2 + 10 * p.farbe) * (0.4 + 2.6 * this.ys * this.ys)) / SR);   // (Höhe opens the surface too: dark below, glassy above)
       const dt1 = f * 1.0035 / SR, dt2 = f * 0.9965 / SR, dt3 = f * 0.5 / SR, att = 1 - Math.exp(-1 / ((this.burst ? 0.01 : 0.25) * SR)), rel = 1 - Math.exp(-1 / (0.5 * SR));
       const W = 2048, PM = this.ps.length - 1, q = p.quinte, wet = 0.25 + 0.65 * sh, fbs = 0.24 * sh;
@@ -43,7 +49,11 @@
         let s = (2 * p1 - 1 - blep(p1, dt1)) + (2 * p2 - 1 - blep(p2, dt2)) + 0.6 * Math.sin(2 * Math.PI * p3);
         lp1 += cut * (s - lp1); lp2 += cut * (lp1 - lp2); s = lp2 * 0.35 * (1.5 - 0.6 * this.ys) * env * this.vel;   // (the darker surface below loses its top: its level held)
         // the room: four lines, Hadamard
-        const o0 = dl[0].b[(dl[0].w - len[0]) & (dl[0].b.length - 1)], o1 = dl[1].b[(dl[1].w - len[1]) & (dl[1].b.length - 1)], o2 = dl[2].b[(dl[2].w - len[2]) & (dl[2].b.length - 1)], o3 = dl[3].b[(dl[3].w - len[3]) & (dl[3].b.length - 1)];
+        let o0, o1, o2, o3;
+        if (!glide) { o0 = dl[0].b[(dl[0].w - len[0]) & (dl[0].b.length - 1)]; o1 = dl[1].b[(dl[1].w - len[1]) & (dl[1].b.length - 1)]; o2 = dl[2].b[(dl[2].w - len[2]) & (dl[2].b.length - 1)]; o3 = dl[3].b[(dl[3].w - len[3]) & (dl[3].b.length - 1)]; }
+        else {
+          o0 = this.rdLine(0, lg); o1 = this.rdLine(1, lg); o2 = this.rdLine(2, lg); o3 = this.rdLine(3, lg);
+        }
         // the shimmer: the room's sum an octave (and a fifth) up, back into it
         const sum = o0 + o1 + o2 + o3; ps[psW & PM] = sum; psW++;
         let up = 0;

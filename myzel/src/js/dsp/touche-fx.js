@@ -26,9 +26,14 @@
       this.rnd = new PRNG(0x5eed1);
       // grains (koerner, eis): a pool of 96
       const G = 96; this.gn = G; this.gOn = new Uint8Array(G); this.gPos = new Float64Array(G); this.gRate = new Float32Array(G); this.gLen = new Float32Array(G); this.gT = new Float32Array(G); this.gL = new Float32Array(G); this.gR = new Float32Array(G); this.gSrc = new Uint8Array(G);
-      this.gNext = 0; this.gAmp = 0;
+      this.gNext = 0; this.gAmp = 0; this.gCls = new Int8Array(G);
+      // (29.10.2026) a grain read faster than the tape (an octave or two up) is read from a copy low-passed below its new
+      // Nyquist – else what lies above folds down, inharmonic: Körner keeps four such rings beside the ring (its rates
+      // ×1.5, ×2, ×3, ×4), Eis four short ones (¼ … 1 octave up) and its frozen moment in each; made when the Spielweise
+      // is first chosen (from the ring's history), then written on with every block
+      this.kr = null; this.er = null; this.fC = null;
       // eis: the frozen moment
-      this.fN = Math.round(0.6 * SR); this.fL = new Float32Array(this.fN); this.fR = new Float32Array(this.fN); this.frozen = false; this.fLvl = 0; this.fLow = 0; this.fOff = 0; this.lpL = 0; this.lpR = 0;
+      this.fN = Math.round(0.6 * SR); this.fX = Math.round(0.03 * SR); this.fL = new Float32Array(this.fN); this.fR = new Float32Array(this.fN); this.frozen = false; this.fLvl = 0; this.fLow = 0; this.fOff = 0; this.lpL = 0; this.lpR = 0;
       this.ap = [0.0071, 0.0113, 0.0167, 0.0229, 0.0083, 0.0127, 0.0151, 0.0241].map((t) => ({ d: new Float32Array(Math.round(t * SR)), i: 0 }));   // (eis: two diffusers, L and R)
       // oberton: the 4× oversampler (a 64-tap windowed sinc at the 4× rate, polyphase) and its state
       this.os = this.osDesign(); this.uL = new Float32Array(16); this.uR = new Float32Array(16); this.dL = new Float32Array(64); this.dR = new Float32Array(64); this.ui = 0; this.di = 0; this.dcL = new DcBlock(12); this.dcR = new DcBlock(12); this.obMix = 0;
@@ -43,7 +48,38 @@
       if (po.beat) this.beat = po.beat; if (po.freqs) this.freqs = po.freqs.slice(0, 6);
       this.port.onmessage = (e) => { const m = e.data || {}; if (m.kill) { this.alive = false; return; } if (m.mode != null && m.mode !== this.mode) this.setMode(m.mode); if (m.c) for (let i = 0; i < 4; i++) this.ct[i] = Math.max(0, Math.min(1, +m.c[i] || 0)); if (m.beat) this.beat = Math.max(0.05, Math.min(4, +m.beat)); if (m.freqs && m.freqs.length) this.freqs = m.freqs.slice(0, 6); };
     }
-    setMode(m) { this.mode = m; this.gOn.fill(0); this.frozen = false; this.fLvl = 0; this.st.on = false; this.st.mix = 0; this.obMix = 0; this.rsLvl = 0; for (const r of this.rs) { r.b.fill(0); r.z = r.ap = r.apx = 0; } this.idle = false; this.idleN = 0; }
+    // an 8th-order Butterworth low pass at 0.45·SR/r (four biquads, direct form II transposed), its state per channel
+    lpMake(r) { const q = [0.51, 0.6, 0.9, 2.56], w = 2 * Math.PI * 0.45 / r, cs = Math.cos(w), sn = Math.sin(w), c = new Float64Array(20);
+      for (let k = 0; k < 4; k++) { const al = sn / (2 * q[k]), a0 = 1 + al; c[5 * k] = (1 - cs) / 2 / a0; c[5 * k + 1] = (1 - cs) / a0; c[5 * k + 2] = (1 - cs) / 2 / a0; c[5 * k + 3] = -2 * cs / a0; c[5 * k + 4] = (1 - al) / a0; }
+      return { r, c, z: new Float64Array(16) }; }
+    // the rings at rates rs, length 1 << bits, from the ring's history (unfiltered there – it is in the past, read by
+    // few grains; the next blocks are filtered)
+    lpRings(rs, bits) { const n = 1 << bits, m = n - 1, M = this.M, w = this.w;
+      return rs.map((r) => { const o = this.lpMake(r); o.n = n; o.m = m; o.L = new Float32Array(n); o.R = new Float32Array(n); for (let k = 0; k < n; k++) { o.L[(w - n + k) & m] = this.bL[(w - n + k) & M]; o.R[(w - n + k) & m] = this.bR[(w - n + k) & M]; } return o; }); }
+    lpRun(F, iL, iR, n, w0) {
+      for (const o of F) {
+        const c = o.c, z = o.z, m = o.m;
+        for (let ch = 0; ch < 2; ch++) {
+          const src = ch ? iR || iL : iL, dst = ch ? o.R : o.L, zo = ch * 8;
+          let z0 = z[zo], z1 = z[zo + 1], z2 = z[zo + 2], z3 = z[zo + 3], z4 = z[zo + 4], z5 = z[zo + 5], z6 = z[zo + 6], z7 = z[zo + 7];
+          for (let i = 0; i < n; i++) {
+            let x = src ? src[i] : 0, y;
+            y = c[0] * x + z0; z0 = c[1] * x - c[3] * y + z1; z1 = c[2] * x - c[4] * y; x = y;
+            y = c[5] * x + z2; z2 = c[6] * x - c[8] * y + z3; z3 = c[7] * x - c[9] * y; x = y;
+            y = c[10] * x + z4; z4 = c[11] * x - c[13] * y + z5; z5 = c[12] * x - c[14] * y; x = y;
+            y = c[15] * x + z6; z6 = c[16] * x - c[18] * y + z7; z7 = c[17] * x - c[19] * y;
+            dst[(w0 + i) & m] = y;
+          }
+          z[zo] = flush(z0); z[zo + 1] = flush(z1); z[zo + 2] = flush(z2); z[zo + 3] = flush(z3); z[zo + 4] = flush(z4); z[zo + 5] = flush(z5); z[zo + 6] = flush(z6); z[zo + 7] = flush(z7);
+        }
+      }
+    }
+    // the ring a grain at rate r reads: the least filtered one that is enough (-1: the ring itself)
+    lpCls(F, r) { r = Math.abs(r); if (r <= 1.0001 || !F) return -1; for (let k = 0; k < F.length; k++) if (r <= F[k].r * 1.0001) return k; return F.length - 1; }
+    setMode(m) {
+      if (m === 'koerner' && !this.kr) this.kr = this.lpRings([Math.pow(2, 7 / 12), 2, Math.pow(2, 19 / 12), 4], 19);
+      if (m === 'eis' && !this.er) { this.er = this.lpRings([Math.pow(2, 0.25), Math.pow(2, 0.5), Math.pow(2, 0.75), 2.03], 16); this.fC = this.er.map(() => [new Float32Array(this.fN), new Float32Array(this.fN)]); }
+      this.mode = m; this.gOn.fill(0); this.frozen = false; this.fLvl = 0; this.st.on = false; this.st.mix = 0; this.obMix = 0; this.rsLvl = 0; for (const r of this.rs) { r.b.fill(0); r.z = r.ap = r.apx = 0; } this.idle = false; this.idleN = 0; }
     // 4× windowed-sinc low pass (cut-off at 0.45 of the original Nyquist), as 4 phases of 16
     osDesign() {
       const T = 64, h = new Float32Array(T), fc = 0.45 / 4; let s = 0;
@@ -53,10 +89,11 @@
     }
     // Hermite read of the ring at an absolute position
     rd(b, p) { const M = this.M, i = Math.floor(p), f = p - i, x0 = b[(i - 1) & M], x1 = b[i & M], x2 = b[(i + 1) & M], x3 = b[(i + 2) & M], c = (x2 - x0) * 0.5, v = x1 - x2, w = c + v, a = w + v + (x3 - x1) * 0.5, bn = w + a; return ((a * f - bn) * f + c) * f + x1; }
+    rdR(b, M, p) { const i = Math.floor(p), f = p - i, x0 = b[(i - 1) & M], x1 = b[i & M], x2 = b[(i + 1) & M], x3 = b[(i + 2) & M], c = (x2 - x0) * 0.5, v = x1 - x2, w = c + v, a = w + v + (x3 - x1) * 0.5, bn = w + a; return ((a * f - bn) * f + c) * f + x1; }
     rdF(b, p) { const n = this.fN, i = Math.floor(p), f = p - i, at = (k) => b[((k % n) + n) % n], x0 = at(i - 1), x1 = at(i), x2 = at(i + 1), x3 = at(i + 2), c = (x2 - x0) * 0.5, v = x1 - x2, w = c + v, a = w + v + (x3 - x1) * 0.5, bn = w + a; return ((a * f - bn) * f + c) * f + x1; }
     apT(A, v) { const d = A.d, z = d[A.i], o = z - 0.62 * v; d[A.i] = v + 0.62 * o; A.i = A.i + 1 === d.length ? 0 : A.i + 1; return o; }
     grain(pos, rate, len, pan, src) {
-      const G = this.gn; for (let k = 0; k < G; k++) if (!this.gOn[k]) { this.gOn[k] = 1; this.gPos[k] = pos; this.gRate[k] = rate; this.gLen[k] = Math.max(64, len); this.gT[k] = 0; const a = (pan + 1) * Math.PI / 4; this.gL[k] = Math.cos(a); this.gR[k] = Math.sin(a); this.gSrc[k] = src; return; }
+      const G = this.gn; for (let k = 0; k < G; k++) if (!this.gOn[k]) { this.gOn[k] = 1; this.gCls[k] = this.lpCls(src ? this.er : this.kr, rate); this.gPos[k] = pos; this.gRate[k] = rate; this.gLen[k] = Math.max(64, len); this.gT[k] = 0; const a = (pan + 1) * Math.PI / 4; this.gL[k] = Math.cos(a); this.gR[k] = Math.sin(a); this.gSrc[k] = src; return; }
     }
     process(inputs, outputs) {
       if (!this.alive) return false;
@@ -66,6 +103,8 @@
       // the input into the ring
       for (let i = 0; i < n; i++) { const x = iL ? iL[i] : 0, y = iR ? iR[i] : x; bL[(this.w + i) & M] = x; bR[(this.w + i) & M] = y; }
       const w0 = this.w; this.w += n;
+      if (this.kr) this.lpRun(this.kr, iL, iR, n, w0);
+      if (this.er) this.lpRun(this.er, iL, iR, n, w0);
       const c = this.c, ct = this.ct, a = this.a;
       let busy = false;
       // the controls glide (per block: their value at its end – 12 ms smoothing, 128 frames are 2.7 ms)
@@ -88,7 +127,19 @@
       const c = this.c, weg = c[0], her = c[1], li = c[2], re = c[3], p = Math.max(weg, her, li, re), R = this.rnd, eis = md === 'eis';
       // eis: a press freezes (above 6 %), released below 2 % for a quarter second it lets the next press freeze anew
       if (eis) {
-        if (!this.frozen && p > 0.06) { const s0 = w0 + n - this.fN; for (let k = 0; k < this.fN; k++) { this.fL[k] = this.bL[(s0 + k) & this.M]; this.fR[k] = this.bR[(s0 + k) & this.M]; } this.frozen = true; this.fOff = 0; }
+        if (!this.frozen && p > 0.06) {
+          // (29.10.2026) the moment as a seamless circle: its last 30 ms crossfade (equal power) into the 30 ms heard just
+          // before its start, so a grain reading past the end – long grains transposed up need more than 0.6 s – runs on
+          // into the start without a splice
+          const fN = this.fN, X = this.fX, s0 = w0 + n - fN - X, M = this.M;
+          const cap = (dL, dR, bL, bR, M) => {
+            for (let k = 0; k < fN; k++) { dL[k] = bL[(s0 + X + k) & M]; dR[k] = bR[(s0 + X + k) & M]; }
+            for (let k = 0; k < X; k++) { const u = (k + 0.5) / X, e = Math.sin(0.5 * Math.PI * u), q = Math.cos(0.5 * Math.PI * u), j = fN - X + k; dL[j] = dL[j] * q + bL[(s0 + k) & M] * e; dR[j] = dR[j] * q + bR[(s0 + k) & M] * e; }
+          };
+          cap(this.fL, this.fR, this.bL, this.bR, M);
+          if (this.er) this.er.forEach((o, q) => cap(this.fC[q][0], this.fC[q][1], o.L, o.R, o.m));
+          this.frozen = true; this.fOff = 0;
+        }
         if (this.frozen && p < 0.02) { this.fOff += n; if (this.fOff > 0.25 * SR && this.fLvl < 1e-4) this.frozen = false; } else this.fOff = 0;
       }
       // spawning: koerner from pressure on, eis while frozen
@@ -97,8 +148,10 @@
         const dens = eis ? 18 + 22 * weg : 6 + 74 * Math.pow(weg, 1.2) + 10 * p, gap = SR / dens;
         while (this.gNext < n) {
           if (eis) {
-            const len = (0.16 + 0.34 * weg) * SR, semi = 12 * (re - li), sp = 1 + weg * 0.012 * (R.next() * 2 - 1), low = R.next() < her * 0.5;
-            const rate = Math.pow(2, semi / 12) * sp * (low ? 0.5 : 1), room = this.fN - len * Math.abs(rate) - 8;
+            // (29.10.2026, owner: „nur 3 klingt sauber“) a grain never reads more than the moment holds: transposed up, it is
+            // shorter (else it ran past the end and began the moment again inside itself – rough, a stutter at the octave)
+            const semi = 12 * (re - li), sp = 1 + weg * 0.012 * (R.next() * 2 - 1), low = R.next() < her * 0.5;
+            const rate = Math.pow(2, semi / 12) * sp * (low ? 0.5 : 1), len = Math.min((0.16 + 0.34 * weg) * SR, (this.fN - 64) / Math.abs(rate)), room = this.fN - len * Math.abs(rate) - 8;
             this.grain(4 + R.next() * Math.max(1, room), rate, len, (R.next() * 2 - 1) * (0.35 + 0.5 * weg), low ? 2 : 1);
           } else {
             const len = (0.035 + 0.17 * (1 - 0.6 * weg) + 0.12 * re) * SR;
@@ -115,7 +168,7 @@
       // the grains' sum, normalised by how many overlap (≈ density × length)
       const G = this.gn, gOn = this.gOn, gPos = this.gPos, gRate = this.gRate, gLen = this.gLen, gT = this.gT, gLv = this.gL, gRv = this.gR;
       let act = 0; for (let k = 0; k < G; k++) if (gOn[k]) act++;
-      const ovl = eis ? (18 + 22 * weg) * (0.16 + 0.34 * weg) : (6 + 74 * Math.pow(weg, 1.2)) * (0.035 + 0.17 * (1 - 0.6 * weg) + 0.12 * re), norm = 1 / Math.sqrt(Math.max(1, ovl * 0.5));
+      const ovl = eis ? (18 + 22 * weg) * Math.min(0.16 + 0.34 * weg, (this.fN - 64) / (SR * Math.pow(2, Math.max(0, re - li)))) : (6 + 74 * Math.pow(weg, 1.2)) * (0.035 + 0.17 * (1 - 0.6 * weg) + 0.12 * re), norm = 1 / Math.sqrt(Math.max(1, ovl * 0.5));
       // levels: koerner – the cloud rises with the pressure, the dry sound gives way a little; eis – the frozen layer is
       // the pressure (glides 120 ms, so a release lets it fade), the dry stays
       const lvT = eis ? (this.frozen ? Math.pow(p, 0.7) : 0) : Math.min(1, p * 1.4);
@@ -128,7 +181,7 @@
         if (any) for (let k = 0; k < G; k++) {
           if (!gOn[k]) continue;
           const t = gT[k], L = gLen[k], wv = 0.5 - 0.5 * Math.cos(2 * Math.PI * t / L), p2 = gPos[k] + t * gRate[k];
-          let x, y; if (this.gSrc[k]) { x = this.rdF(this.fL, p2); y = this.rdF(this.fR, p2); if (this.gSrc[k] === 2) { x *= 0.5 + her; y *= 0.5 + her; } } else { x = this.rd(this.bL, p2); y = this.rd(this.bR, p2); }
+          let x, y; const q = this.gCls[k]; if (this.gSrc[k]) { const fl = q < 0 ? this.fL : this.fC[q][0], fr = q < 0 ? this.fR : this.fC[q][1]; x = this.rdF(fl, p2); y = this.rdF(fr, p2); if (this.gSrc[k] === 2) { x *= 0.5 + her; y *= 0.5 + her; } } else if (q < 0) { x = this.rd(this.bL, p2); y = this.rd(this.bR, p2); } else { const o = this.kr[q]; x = this.rdR(o.L, o.m, p2); y = this.rdR(o.R, o.m, p2); }
           const m = 0.5 * (x + y) * 0.7071;   // (half its own stereo, half the mono at its place)
           sL += wv * (0.5 * x + m * gLv[k]); sR += wv * (0.5 * y + m * gRv[k]);
           if ((gT[k] = t + 1) >= L) gOn[k] = 0;

@@ -16,6 +16,10 @@ function hxModerPass(L, R, age, rate, seed, sr) {
   // 300 Hz a low shelf warms, up to +4 dB
   const x = 1 - Math.exp(-rate * age), fc = 12000 * Math.pow(300 / 12000, x), p = Math.max(0.05, 0.35 - 0.3 * x), boost = 1 + 0.585 * x, kc = (1 - 0.3 * x) / Math.sqrt(p);
   const out = [new Float32Array(n), new Float32Array(n)], re = new Float64Array(N), im = new Float64Array(N), wsum = new Float64Array(n);
+  // (29.10.2026) a bin with a random phase adds to its neighbours' frames by power, not by amplitude: after the division by
+  // Σw² (right for what keeps its phase) it stood at mean(w²)/Σw² = ¼ of its energy (−6 dB) – its amplitude × √(Σw²/mean(w²))
+  // = 2 gives it back; intact and crumbled blend by power too (they are unrelated)
+  const HXMD_RND = Math.sqrt(N / H);   // (Hann: Σw² = (N/H)·⅜, mean(w²) = ⅜)
   const frames = Math.ceil(n / H);
   for (let c = 0; c < 2; c++) {
     const X = c ? R : L, O = out[c];
@@ -28,8 +32,8 @@ function hxModerPass(L, R, age, rate, seed, sr) {
         if (hz > fc) {
           const sh = Math.min(1, Math.log2(hz / fc) * 2), band = Math.floor(3 * Math.log2(hz / fc)), keep = hash(f, band, 1) < p;   // (the same grain decision for both sides: the crackle stands where it falls)
           const mag = keep ? Math.hypot(re[b], im[b]) * kc : 0, ph = 2 * Math.PI * hash(f, b, 9 + c);
-          const ir = re[b] * (1 - sh), ii = im[b] * (1 - sh);
-          re[b] = (ir + sh * mag * Math.cos(ph)) * g; im[b] = (ii + sh * mag * Math.sin(ph)) * g;
+          const ci = Math.cos(0.5 * Math.PI * sh), cr = Math.sin(0.5 * Math.PI * sh) * HXMD_RND, ir = re[b] * ci, ii = im[b] * ci;
+          re[b] = (ir + cr * mag * Math.cos(ph)) * g; im[b] = (ii + cr * mag * Math.sin(ph)) * g;
         } else { re[b] *= g; im[b] *= g; }
         re[N - b] = re[b]; im[N - b] = -im[b];
       }
