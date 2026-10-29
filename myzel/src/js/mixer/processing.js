@@ -1,5 +1,5 @@
 // ---- processing block: 24 dB/oct low cut, shelving EQ with a sweepable mid, 12 dB/oct high cut, saturation
-const procNeeded = (p) => !LC_OFF(mp(p + 'lc')) || !HC_OFF(mp(p + 'hc')) || mp(p + 'lo') !== 0 || mp(p + 'mid') !== 0 || mp(p + 'hi') !== 0 || P[p + 'sat'] > 0;
+const procNeeded = (p) => !LC_OFF(mp(p + 'lc')) || !HC_OFF(mp(p + 'hc')) || mp(p + 'lo') !== 0 || mp(p + 'mid') !== 0 || mp(p + 'hi') !== 0 || P[p + 'sat'] > 0 || P[p + 'att'] !== 0 || P[p + 'aus'] !== 0;
 function mkWidth() {
   const w = { sp: A.ctx.createChannelSplitter(2), mg: A.ctx.createChannelMerger(2), LL: G(1), RR: G(1), LR: G(0), RL: G(0) };
   w.sp.connect(w.LL, 0); w.sp.connect(w.LR, 0); w.sp.connect(w.RL, 1); w.sp.connect(w.RR, 1);
@@ -46,6 +46,9 @@ function makeProc() {
   if (A.ctx.__dspOK) { try { x.sat = new AudioWorkletNode(A.ctx, 'myzel-sat', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit' }); x.satW = true; } catch (e) { x.satW = false; } }
   if (!x.satW) { x.sat = A.ctx.createWaveShaper(); x.sat.oversample = 'none'; }
   x.lc1.connect(x.lc2).connect(x.lo).connect(x.mid).connect(x.hi).connect(x.hc).connect(x.satPre).connect(x.sat);
+  // (29.10.2026) the Transienten-Former after it (myzel-trans – dsp/effekte.js): Anschlag and Ausklang; without AudioWorklet none
+  x.out = x.sat;
+  if (A.ctx.__dspOK) { try { x.tr = new AudioWorkletNode(A.ctx, 'myzel-trans', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit' }); x.sat.connect(x.tr); x.out = x.tr; } catch (e) { x.tr = null; } }
   return x;
 }
 // Saturation: half dry, half tanh, matched at −14 dBFS peaks – loud parts are rounded off, quiet ones lifted a little
@@ -69,13 +72,14 @@ function procUpd(st, inst) {
     set(x.lc1.frequency, lc); set(x.lc2.frequency, lc); set(x.hc.frequency, hc);
     set(x.lo.gain, mp(p + 'lo')); set(x.mid.gain, mp(p + 'mid')); set(x.mid.frequency, mp(p + 'midf')); set(x.hi.gain, mp(p + 'hi'));
     satSet(x, P[p + 'sat']);
+    if (x.tr) x.tr.port.postMessage({ a: P[p + 'att'], s: P[p + 'aus'] });
   }
   if (on === st.procOn) return;
   st.procOn = on;
   clearTimeout(st.procT);
   const set = inst ? setNow : (q, v) => setP(q, v, 0.006);
   if (on) {
-    st.pt.connect(x.lc1); x.sat.connect(st.wet);
+    st.pt.connect(x.lc1); x.out.connect(st.wet);
     set(st.byp.gain, 0); set(st.wet.gain, 1);
   } else {
     set(st.byp.gain, 1); set(st.wet.gain, 0);

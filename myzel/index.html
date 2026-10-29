@@ -2973,6 +2973,8 @@ for (const st of STRIPS) {
   NUM(p + 'midf', 'Mittenfrequenz', 150, 8000, 1000, 'Hz', { curve: 'exp' });
   NUM(p + 'hi', 'Höhen', -15, 15, 0, 'dB', { step: 0.1 });
   NUM(p + 'sat', 'Sättigung', 0, 1, 0, '%', { step: 0.01 });
+  NUM(p + 'att', 'Anschlag', -1, 1, 0, '', { step: 0.01, fmt: (v) => (Math.abs(v) < 0.005 ? '0' : (v > 0 ? '+' : '−') + Math.round(Math.abs(v) * 100) + ' %') });   // (29.10.2026: the Transienten-Former)
+  NUM(p + 'aus', 'Ausklang', -1, 1, 0, '', { step: 0.01, fmt: (v) => (Math.abs(v) < 0.005 ? '0' : (v > 0 ? '+' : '−') + Math.round(Math.abs(v) * 100) + ' %') });
   NUM(p + 'wid', 'Breite', 0, 2, 1, '%', { step: 0.01, fmt: fmtWidth });
   NUM(p + 'duck', 'Pumpen', 0, 1, 0, '%', { step: 0.01 });
 }
@@ -4825,7 +4827,7 @@ function sendTo(st, fx, node, want) {
   setTimeout(() => { if (st.to[fx] !== cur) { try { node.disconnect(cur); } catch (e) {} } }, 90);
 }
 // ---- processing block: 24 dB/oct low cut, shelving EQ with a sweepable mid, 12 dB/oct high cut, saturation
-const procNeeded = (p) => !LC_OFF(mp(p + 'lc')) || !HC_OFF(mp(p + 'hc')) || mp(p + 'lo') !== 0 || mp(p + 'mid') !== 0 || mp(p + 'hi') !== 0 || P[p + 'sat'] > 0;
+const procNeeded = (p) => !LC_OFF(mp(p + 'lc')) || !HC_OFF(mp(p + 'hc')) || mp(p + 'lo') !== 0 || mp(p + 'mid') !== 0 || mp(p + 'hi') !== 0 || P[p + 'sat'] > 0 || P[p + 'att'] !== 0 || P[p + 'aus'] !== 0;
 function mkWidth() {
   const w = { sp: A.ctx.createChannelSplitter(2), mg: A.ctx.createChannelMerger(2), LL: G(1), RR: G(1), LR: G(0), RL: G(0) };
   w.sp.connect(w.LL, 0); w.sp.connect(w.LR, 0); w.sp.connect(w.RL, 1); w.sp.connect(w.RR, 1);
@@ -4872,6 +4874,9 @@ function makeProc() {
   if (A.ctx.__dspOK) { try { x.sat = new AudioWorkletNode(A.ctx, 'myzel-sat', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit' }); x.satW = true; } catch (e) { x.satW = false; } }
   if (!x.satW) { x.sat = A.ctx.createWaveShaper(); x.sat.oversample = 'none'; }
   x.lc1.connect(x.lc2).connect(x.lo).connect(x.mid).connect(x.hi).connect(x.hc).connect(x.satPre).connect(x.sat);
+  // (29.10.2026) the Transienten-Former after it (myzel-trans – dsp/effekte.js): Anschlag and Ausklang; without AudioWorklet none
+  x.out = x.sat;
+  if (A.ctx.__dspOK) { try { x.tr = new AudioWorkletNode(A.ctx, 'myzel-trans', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit' }); x.sat.connect(x.tr); x.out = x.tr; } catch (e) { x.tr = null; } }
   return x;
 }
 // Saturation: half dry, half tanh, matched at −14 dBFS peaks – loud parts are rounded off, quiet ones lifted a little
@@ -4895,13 +4900,14 @@ function procUpd(st, inst) {
     set(x.lc1.frequency, lc); set(x.lc2.frequency, lc); set(x.hc.frequency, hc);
     set(x.lo.gain, mp(p + 'lo')); set(x.mid.gain, mp(p + 'mid')); set(x.mid.frequency, mp(p + 'midf')); set(x.hi.gain, mp(p + 'hi'));
     satSet(x, P[p + 'sat']);
+    if (x.tr) x.tr.port.postMessage({ a: P[p + 'att'], s: P[p + 'aus'] });
   }
   if (on === st.procOn) return;
   st.procOn = on;
   clearTimeout(st.procT);
   const set = inst ? setNow : (q, v) => setP(q, v, 0.006);
   if (on) {
-    st.pt.connect(x.lc1); x.sat.connect(st.wet);
+    st.pt.connect(x.lc1); x.out.connect(st.wet);
     set(st.byp.gain, 0); set(st.wet.gain, 1);
   } else {
     set(st.byp.gain, 1); set(st.wet.gain, 0);
@@ -14804,9 +14810,37 @@ function myzelDsp() {
       for (const a of this.s) for (const S of a) { S.lo = flush(S.lo); S.bp = flush(S.bp); }
     }
   }
+
+  // ---- Transienten-Former (a channel's insert, after its Sättigung – mixer/processing.js): two followers of the level (a
+  // fast one, 0.5/20 ms, and a slow one, 15/150 ms – both sides at once); where the fast is above the slow a note begins,
+  // where it is below it dies away. anschlag (−1 … 1): the beginnings louder or softer, ausklang (−1 … 1): the dying away
+  // longer or shorter – up to ±18 dB, the gain smoothed over 1 ms. Both at 0: the input itself, sample for sample. ----
+  class Trans extends AudioWorkletProcessor {
+    constructor() {
+      super();
+      this.a = 0; this.s = 0; this.f = 0; this.sl = 0; this.g = 1;
+      const c = (t) => 1 - Math.exp(-1 / (t * SR)); this.fa = c(0.0005); this.fr = c(0.02); this.sa = c(0.015); this.sr = c(0.15); this.gs = c(0.001);
+      this.port.onmessage = (e) => { const m = e.data || {}; if (m.a != null) this.a = Math.max(-1, Math.min(1, +m.a || 0)); if (m.s != null) this.s = Math.max(-1, Math.min(1, +m.s || 0)); };
+    }
+    process(inputs, outputs) {
+      const I = inputs[0], O = outputs[0], n = O[0].length, iL = I && I[0], iR = I && (I[1] || I[0]), oL = O[0], oR = O[1] || null;
+      if (this.a === 0 && this.s === 0 && Math.abs(this.g - 1) < 1e-4) { this.g = 1; for (let i = 0; i < n; i++) { oL[i] = iL ? iL[i] : 0; if (oR) oR[i] = iR ? iR[i] : 0; } return true; }
+      let f = this.f, s = this.sl, g = this.g;
+      for (let i = 0; i < n; i++) {
+        const xl = iL ? iL[i] : 0, xr = iR ? iR[i] : 0, x = Math.max(Math.abs(xl), Math.abs(xr));
+        f += (x > f ? this.fa : this.fr) * (x - f); s += (x > s ? this.sa : this.sr) * (x - s);
+        const d = s > 1e-6 && f > 1e-6 ? 20 * Math.log10(f / s) : 0;
+        let gdb = d > 0 ? this.a * 1.5 * d : this.s * 1.5 * -d; gdb = Math.max(-18, Math.min(18, gdb));
+        g += this.gs * (Math.pow(10, gdb / 20) - g);
+        oL[i] = xl * g; if (oR) oR[i] = xr * g;
+      }
+      this.f = flush(f); this.sl = flush(s); this.g = g;
+      return true;
+    }
+  }
   // an empty voice: the per-node price of the contract (SPEC §8 step 1 gate, ≈ 0.06 + 0.03 per param)
   class Null extends MyzelProc { render(L, R, a, b) { for (let i = a; i < b; i++) L[i] = 0; } }
-  for (const [k, C] of [['myzel-blow', Blow], ['myzel-scan', Scan], ['myzel-bow', Bow], ['myzel-rot', Rot], ['myzel-aeol', Aeol], ['myzel-gendy', Gendy], ['myzel-web', Web], ['myzel-string', Strg], ['myzel-syrinx', Syrinx], ['myzel-scrape', Scrape], ['myzel-ember', Ember], ['myzel-null', Null], ['myzel-ring', Ring], ['myzel-ring-in', RingIn], ['myzel-wsend', WSend], ['myzel-tfx', Tfx], ['myzel-hng', Hng], ['myzel-gml', Gml], ['myzel-sit', Sit], ['myzel-tbl', Tbl], ['myzel-did', Did], ['myzel-mtr', Mtr], ['myzel-nrd', Nrd], ['myzel-sht', Sht], ['myzel-ond', Ond], ['myzel-wal', Wal], ['myzel-stp', Stp], ['myzel-atr', Atr], ['myzel-tnl', Tnl], ['myzel-wkg', Wkg], ['myzel-bnt', Bnt], ['myzel-kas', Kas], ['myzel-bit', Bit], ['myzel-gbs', Gbs], ['myzel-hht', Hht], ['myzel-vox', Vox], ['myzel-spu', Spu], ['myzel-kto', Kto], ['myzel-sat', Sat], ['myzel-lim', Lim], ['myzel-netz', Netz], ['myzel-wolke', Wolke], ['myzel-spek', Spektral], ['myzel-oktav', Oktav], ['myzel-vokal', Vokal]]) registerProcessor(k, C);
+  for (const [k, C] of [['myzel-blow', Blow], ['myzel-scan', Scan], ['myzel-bow', Bow], ['myzel-rot', Rot], ['myzel-aeol', Aeol], ['myzel-gendy', Gendy], ['myzel-web', Web], ['myzel-string', Strg], ['myzel-syrinx', Syrinx], ['myzel-scrape', Scrape], ['myzel-ember', Ember], ['myzel-null', Null], ['myzel-ring', Ring], ['myzel-ring-in', RingIn], ['myzel-wsend', WSend], ['myzel-tfx', Tfx], ['myzel-hng', Hng], ['myzel-gml', Gml], ['myzel-sit', Sit], ['myzel-tbl', Tbl], ['myzel-did', Did], ['myzel-mtr', Mtr], ['myzel-nrd', Nrd], ['myzel-sht', Sht], ['myzel-ond', Ond], ['myzel-wal', Wal], ['myzel-stp', Stp], ['myzel-atr', Atr], ['myzel-tnl', Tnl], ['myzel-wkg', Wkg], ['myzel-bnt', Bnt], ['myzel-kas', Kas], ['myzel-bit', Bit], ['myzel-gbs', Gbs], ['myzel-hht', Hht], ['myzel-vox', Vox], ['myzel-spu', Spu], ['myzel-kto', Kto], ['myzel-sat', Sat], ['myzel-lim', Lim], ['myzel-netz', Netz], ['myzel-wolke', Wolke], ['myzel-spek', Spektral], ['myzel-oktav', Oktav], ['myzel-vokal', Vokal], ['myzel-trans', Trans]]) registerProcessor(k, C);
   return { SIN, NOISE, Reso, Biquad, Allpass1, OnePole, DcBlock, FracDelay, PRNG };   // (for later processors; unused here)
 }
 // end myzelDsp
@@ -27095,17 +27129,21 @@ function mxdBuildFormen() {
   F.satK = mxdKnob(); F.widK = mxdKnob(); F.pmpK = mxdKnob('', { off: () => mxdIsTakt(MXD.k), offTxt: 'Takt', offAria: 'gibt den Takt fürs Pumpen' }); F.relK = mxdKnob();
   F.satT = h('small'); F.widT = h('small'); F.pmpT = h('small');
   const sat = mxdCard('mxd-sat', 'Sättigung', F.satT, h('div', { class: 'mxd-cvb' }, F.satCv), h('div', { class: 'mxd-kr' }, F.satK.box));
+  F.attK = mxdKnob(); F.ausK = mxdKnob();
+  const tra = mxdCard('mxd-tra', 'Anschlag', h('small', null, 'Anfang und Ausklang der Töne'), h('div', { class: 'mxd-kr' }, F.attK.box, F.ausK.box));
   const wid = mxdCard('mxd-wid', 'Breite', F.widT, h('div', { class: 'mxd-cvb' }, F.widCv), h('div', { class: 'mxd-kr' }, F.widK.box));
   F.chips = mxdDuckChips();
   const pmp = mxdCard('mxd-pmp', 'Pumpen', F.pmpT, h('div', { class: 'mxd-cvb' }, F.pmpCv),
     h('div', { class: 'mxd-kr' }, F.pmpK.box, F.relK.box, h('div', { class: 'mxd-src' }, h('span', { class: 'mxd-lab', title: 'Pumpen im Takt von – gilt für alle Kanäle' }, 'Takt', h('em', null, ' · gilt für alle Kanäle')), F.chips)));
   mxdWatch('mix.duckSrc', 'mix.duckRel', 'seq.bpm');
-  return h('section', { class: 'mxd-sec mxd-fo', 'aria-label': 'Formen' }, mxdSh('Formen', 'Sättigung · Breite · Pumpen'), h('div', { class: 'mxd-cards' }, sat, wid, pmp));
+  return h('section', { class: 'mxd-sec mxd-fo', 'aria-label': 'Formen' }, mxdSh('Formen', 'Sättigung · Anschlag · Breite · Pumpen'), h('div', { class: 'mxd-cards' }, sat, tra, wid, pmp));
 }
 const mxdIsTakt = (k) => MXK[k] && MXK[k].kind === 'lane' && Number(P['mix.duckSrc']) === MXK[k].lane;
 function mxdFormenAim(k) {
   const F = MXD.fo, c = MXK[k];
   mxdAim(F.satK, k, 'x' + k + '.sat', 'Menge', 'Sättigung', '#ffb35c');
+  mxdAim(F.attK, k, 'x' + k + '.att', 'Anschlag', 'Anschlag: Tonanfänge lauter oder leiser', '#ffd27a');
+  mxdAim(F.ausK, k, 'x' + k + '.aus', 'Ausklang', 'Ausklang: länger oder kürzer', '#ffd27a');
   mxdAim(F.widK, k, 'x' + k + '.wid', 'Breite', 'Stereobreite', c.col);
   mxdAim(F.pmpK, k, 'x' + k + '.duck', 'Tiefe', 'Pumpen', '#ff8f9e');
   mxdAim(F.relK, k, 'mix.duckRel', 'Rückkehr', 'Pumpen: Rückkehr, für alle Kanäle', '#ff8f9e');

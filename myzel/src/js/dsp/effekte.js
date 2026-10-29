@@ -244,3 +244,31 @@
       for (const a of this.s) for (const S of a) { S.lo = flush(S.lo); S.bp = flush(S.bp); }
     }
   }
+
+  // ---- Transienten-Former (a channel's insert, after its Sättigung – mixer/processing.js): two followers of the level (a
+  // fast one, 0.5/20 ms, and a slow one, 15/150 ms – both sides at once); where the fast is above the slow a note begins,
+  // where it is below it dies away. anschlag (−1 … 1): the beginnings louder or softer, ausklang (−1 … 1): the dying away
+  // longer or shorter – up to ±18 dB, the gain smoothed over 1 ms. Both at 0: the input itself, sample for sample. ----
+  class Trans extends AudioWorkletProcessor {
+    constructor() {
+      super();
+      this.a = 0; this.s = 0; this.f = 0; this.sl = 0; this.g = 1;
+      const c = (t) => 1 - Math.exp(-1 / (t * SR)); this.fa = c(0.0005); this.fr = c(0.02); this.sa = c(0.015); this.sr = c(0.15); this.gs = c(0.001);
+      this.port.onmessage = (e) => { const m = e.data || {}; if (m.a != null) this.a = Math.max(-1, Math.min(1, +m.a || 0)); if (m.s != null) this.s = Math.max(-1, Math.min(1, +m.s || 0)); };
+    }
+    process(inputs, outputs) {
+      const I = inputs[0], O = outputs[0], n = O[0].length, iL = I && I[0], iR = I && (I[1] || I[0]), oL = O[0], oR = O[1] || null;
+      if (this.a === 0 && this.s === 0 && Math.abs(this.g - 1) < 1e-4) { this.g = 1; for (let i = 0; i < n; i++) { oL[i] = iL ? iL[i] : 0; if (oR) oR[i] = iR ? iR[i] : 0; } return true; }
+      let f = this.f, s = this.sl, g = this.g;
+      for (let i = 0; i < n; i++) {
+        const xl = iL ? iL[i] : 0, xr = iR ? iR[i] : 0, x = Math.max(Math.abs(xl), Math.abs(xr));
+        f += (x > f ? this.fa : this.fr) * (x - f); s += (x > s ? this.sa : this.sr) * (x - s);
+        const d = s > 1e-6 && f > 1e-6 ? 20 * Math.log10(f / s) : 0;
+        let gdb = d > 0 ? this.a * 1.5 * d : this.s * 1.5 * -d; gdb = Math.max(-18, Math.min(18, gdb));
+        g += this.gs * (Math.pow(10, gdb / 20) - g);
+        oL[i] = xl * g; if (oR) oR[i] = xr * g;
+      }
+      this.f = flush(f); this.sl = flush(s); this.g = g;
+      return true;
+    }
+  }
