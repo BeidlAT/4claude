@@ -5063,8 +5063,9 @@ function fxInsUpd(st, inst) {
 // see FX_COST's note) – counted in voiceLoad() beside the voices, so the budget knows them: the returns' effects and the
 // Einschübe while they exist, a channel's Sättigung and Transienten-Former while they work (at 0 they pass the sound
 // through and cost next to nothing), the Begrenzer always
-// (provisional: the first measurement, before the processors were made faster – replaced by the second)
-const FX_COST = { netz: [1.02, 1.07, 0.5], wolke: 5.69, spektral: 8.77, oktav: 0.9, vokal: 1, trans: 0.36, sat: 2.2, lim: 2.12 };
+// (29.10.2026: NV 16 of each fed by noise, two runs on this machine after the processors were made faster, the higher
+// + 15 %; Resonanz-Netz per Art – Saiten, Glocken, Holzkörper; Wolke at full density, the Begrenzer pressed)
+const FX_COST = { netz: [1.37, 1.58, 0.85], wolke: 4.52, spektral: 6.29, oktav: 1.05, vokal: 1.32, trans: 0.47, sat: 1.41, lim: 1.23 };
 function fxLoad() {
   if (!A.fxR) return 0;
   const cost = (typ, r) => { const c = FX_COST[typ]; return Array.isArray(c) ? c[Math.round(+P[r + '.art']) || 0] || c[0] : c || 0; };
