@@ -162,7 +162,10 @@ function hxWSig(L, S, key) {
   return [Math.round((lenF * (L.sp || 1)) / 8), hxTonOf(L), keyS, engs, hxWQ(L), S.anc ? S.anc.seed + ':' + (S.anc.br != null ? S.anc.br : '') + (S.anc.vn ? ':v' + S.anc.vn.length + ':' + Math.round(S.anc.vn.reduce((a, x) => a + x.t * 97 + x.f, 0)) : '') : S.wseed, L.folgt ? 1 : 0, hxKlangOf(L) === 'eigen' ? 'e' : hxWPHash(),
     hxNtOn(L) ? JSON.stringify(L.nt) : '', L.revW ? 'r' : '', S.wn.n.length + ':' + Math.round(S.wn.len * 1000)].join('|');   // (step 2b: the notes' tools, mirrored, a record trimmed, doubled or the Auslese's)   // (a pass's length within 8 frames is the same: a fractional tempo alternates ±1 frame)
 }
-function hxWPHash() { let h = 7; for (const id in P) if (PD[id] && !PD[id].rec && !PD[id].dev && !id.startsWith('x') && !/^(rev|dly|mst|seq|l\d|rec|hx|mix)\./.test(id)) { const v = String(P[id]); for (let i = 0; i < v.length; i++) h = (Math.imul(h, 31) + v.charCodeAt(i)) | 0; } return h; }
+// the signature of the field's sound, kept until a parameter changes (setParam, loadValues reset it)
+function hxWPHashC() { return HX.phH != null ? HX.phH : (HX.phH = hxWPHash()); }
+const hxWPIn = (id) => !!PD[id] && !PD[id].rec && !PD[id].dev && !id.startsWith('x') && !/^(rev|dly|mst|seq|l\d|rec|hx|mix)\./.test(id);   // (a parameter of the field's sound)
+function hxWPHash() { let h = 7; for (const id in P) if (hxWPIn(id)) { const v = String(P[id]); for (let i = 0; i < v.length; i++) h = (Math.imul(h, 31) + v.charCodeAt(i)) | 0; } return h; }
 
 // a version whose tail was still sounding at the render's end (12 s, or a living pass's estimate) ends with a 30-ms fade
 function hxWFadeEnd(aud, n, len) {
@@ -214,8 +217,15 @@ const hxWKeyEq = (a, b) => !!a && !!b && a.root === b.root && !!a.free === !!b.f
 // own one the field's (the preset's) too, as ui.tonart does it for the key
 // (an accompaniment keeps the sources it was made for; an erstarrt loop plays as it sounded – its edits stay; a loop
 // without notes – the microphone's – has nothing the preset's instrument could play)
-const hxKlangOf = (L) => { const k = L.klang || 'eigen'; return k === 'eigen' && P['ui.instrument'] === 'preset' && !(L.mi && L.mi.from) && !(L.wwhy && L.wwhy.erst) && L.sch.some((id) => hxWCan(HX.sch.get(id))) ? 'feld' : k; };
-const hxTonOf = (L) => { const t = L.ton || 'diatonisch'; return t === 'fest' && P['ui.tonart'] === 'schleifen' ? 'diatonisch' : t; };
+// (owner, 29.10.2026: „Abdruck … bleibt aber auf Wuchs“) a loop set to Abdruck by hand (wwhy.abdr) keeps its own sound and
+// key against both: the one loop's choice over the general rule, until Wuchs, a sound or a way to follow is chosen for it
+const hxAbdr = (L) => !!(L.wwhy && L.wwhy.abdr);
+// (owner, 29.10.2026: „Silbenregen … die Aufnahme klingt verzerrt und nicht wie gespielt“) – and while the field still
+// sounds as it did when the loop was made (wwhy.ph: the sound's signature then, hxLoopNew), there is nothing to take:
+// the loop plays what was played, the Touché's hand and every note as it sounded; a preset or a knob that changes the
+// sound makes it follow
+const hxKlangOf = (L) => { const k = L.klang || 'eigen'; return k === 'eigen' && P['ui.instrument'] === 'preset' && !(L.mi && L.mi.from) && !(L.wwhy && L.wwhy.erst) && !hxAbdr(L) && !(L.wwhy && L.wwhy.ph != null && L.wwhy.ph === hxWPHashC()) && L.sch.some((id) => hxWCan(HX.sch.get(id))) ? 'feld' : k; };
+const hxTonOf = (L) => { const t = L.ton || 'diatonisch'; return t === 'fest' && P['ui.tonart'] === 'schleifen' && !hxAbdr(L) && !(L.wwhy && L.wwhy.erst) ? 'diatonisch' : t; };   // (erstarrt: it plays as it sounded – in its key too)
 const hxWTonOff = (L) => { const t = hxTonOf(L); if (t === 'fest') return false; const k = hxWKeyNow(); return L.sch.some((id) => { const S = HX.sch.get(id); return hxWCan(S) && (t === 'transponieren' ? S.wn.key.root !== k.root : !hxWKeyEq(S.wn.key, k)); }); };
 const hxWLebt = (L) => hxEigN(L) >= 1 && !L.revW && !L.live && hxWAktiv(L) && !(L.treuBis != null && tgBeat(hxNowT()) < L.treuBis) && !(HX.wGuard.pause > performance.now()) && !L.wRefused;
 // the reconciler: what every Schicht of a loop should play now – the Abdruck, the anchor, or a Treu render made for

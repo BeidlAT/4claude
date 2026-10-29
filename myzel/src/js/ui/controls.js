@@ -115,7 +115,7 @@ function setParam(id, v, src) {
   if (!d) return;
   v = sanitize(d, v);
   const changed = P[id] !== v, was = P[id];
-  P[id] = v;
+  P[id] = v; if (changed) HX.phH = null;   // (Hexenring: the field's sound signature anew – hxWPHashC)
   for (const fn of CTL[id] || []) fn(v, src);
   if (changed) { if (FAE_PAR[id]) faeP(id, was, v); onParamChanged(id); clearTimeout(saveTimer); saveTimer = setTimeout(saveState, 400); }
   if (id === 'kor.src') korSourcePicked();
@@ -137,7 +137,8 @@ function updInactive() {
 function onParamChanged(id) {
   if ((id === 't.root' || id === 't.scale') && hxWTonHold(id)) return;   // Hexenring: (step 2a) the field and the loops change key on the announced bar line
   const pre = id.slice(0, id.indexOf('.'));
-  if (HX.wFeld && A.ctx && (ENGINES[pre] || id === 'v.eng' || id === 'v.layer')) HX.wKlang = performance.now() + 400;   // Hexenring: (step 2a) loops that sound as the field: anew, once the knob rests
+  if (HX.wFeld && A.ctx && (ENGINES[pre] || id === 'v.eng' || id === 'v.layer')) HX.wKlang = performance.now() + 400;
+  else if (A.ctx && P['ui.instrument'] === 'preset' && hxWPIn(id) && hxLoopsLive().length) { HX.wFeld = true; HX.wKlang = performance.now() + 400; }   // (29.10.2026: a loop made in the field's sound follows it once that changes – hxKlangOf)   // Hexenring: (step 2a) loops that sound as the field: anew, once the knob rests
   if (id === 'v.eng' || id === 'v.layer') { refreshEngineUI(); }
   if (id === 'ui.instrument' && A.ctx) for (const L of hxLoopsLive()) hxWUpdate(L);   // Hexenring: (28.10.2026) the loops take the preset's instrument, or their own again, from their next seam
   if (KQ_PIDS.includes(id) && !UI.loading) kqUsed(P[id]);
@@ -233,6 +234,7 @@ function loadValues(vals, keepUnset) {
     const v = vals && Object.prototype.hasOwnProperty.call(vals, id) ? sanitize(d, vals[id]) : keepUnset ? P[id] : d.d;
     P[id] = v;
   }
+  HX.phH = null;
   for (const id of PATCH_IDS) for (const fn of CTL[id] || []) fn(P[id], null);
   hxMvSync(was);
   buildNotes(); drawBg(); refreshEngineUI(); updLaneTabs(); updInactive(); renderBarInfo();
@@ -244,7 +246,7 @@ function loadValues(vals, keepUnset) {
   clearTimeout(saveTimer); saveTimer = setTimeout(saveState, 400);
 }
 function saveState() {
-  store.set('myzel.patch.v1', JSON.stringify({ values: patchValues(), preset: UI.preset || null }));
+  store.set('myzel.patch.v1', JSON.stringify({ values: patchValues(), preset: UI.preset || null, base: UI.presetBase || null }));
   const r = {}, dv = {}; for (const id in PD) { if (PD[id].rec) r[id] = P[id]; if (PD[id].dev) dv[id] = P[id]; }
   store.set('myzel.rec.v1', JSON.stringify(r));
   store.set('myzel.dev.v1', JSON.stringify(dv));
@@ -256,8 +258,8 @@ function restoreState() {
     // (owner, 26.10.2026: „leer starten“) the sound begins as Leere Erde – unless „Beim Öffnen mit Leerer Erde
     // beginnen“ is off: then the last one, as before
     const s = JSON.parse(store.get('myzel.patch.v1') || 'null');
-    if (P['ui.leer']) { const v = PRESET_LEER.v; for (const id of PATCH_IDS) P[id] = id in v ? sanitize(PD[id], v[id]) : PD[id].d; UI.preset = 'leer'; }
-    else if (s && s.values) { const v = engKeysIn(s.values); for (const id of PATCH_IDS) if (id in v) P[id] = sanitize(PD[id], v[id]); UI.preset = s.preset || null; }
+    if (P['ui.leer']) { const v = PRESET_LEER.v; for (const id of PATCH_IDS) P[id] = id in v ? sanitize(PD[id], v[id]) : PD[id].d; UI.preset = UI.presetBase = 'leer'; }
+    else if (s && s.values) { const v = engKeysIn(s.values); for (const id of PATCH_IDS) if (id in v) P[id] = sanitize(PD[id], v[id]); UI.preset = s.preset || null; UI.presetBase = s.base || UI.preset; }
     const r = JSON.parse(store.get('myzel.rec.v1') || 'null');
     if (r) for (const id in r) if (PD[id] && PD[id].rec) P[id] = sanitize(PD[id], r[id]);
     if (!store.get('myzel.ws.v2')) { store.set('myzel.ws.v2', '1'); if (P['hx.ws.durchg'] === '1') P['hx.ws.durchg'] = 'auto'; }   // (once, 28.10.2026: the Werkstatt's creations „gehen viel zu schnell“ – at least 10 s each now)
