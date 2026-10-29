@@ -94,7 +94,7 @@ function hxRegionEdit(L, a, b, op, v) {
   // one edit after another (a quick second click works on the first one's result)
   if (op === 'swap' || op === 'paste') hxPvEdit(L, a, b, null, (ch, n) => hxRxMove(ch, Math.round(a * n), Math.round(b * n), [Math.round(v.a2 * n), Math.round(v.b2 * n)], op));   // (Direkt – direkt.js)
   else if (op === 'take' && (!HXE.pv || HXE.pv.key !== L.key)) hxEdTouch(L);   // (a take was played to the loop itself: no Vorhören starts – it would mute the loop mid-play, out of time)
-  else hxPvEdit(L, a, b, op === 'take' ? (ch, q0) => hxRxAdd(ch, q0, v.wet || v.dry) : (ch, q0, q1) => hxRxOp(ch, q0, q1, op, v, u, seed), null, hxRwOk(op) ? { op, v, u, seed } : null);
+  else hxPvEdit(L, a, b, op === 'take' ? (ch, q0) => hxRxAdd(ch, q0, v.wet || v.dry) : (ch, q0, q1) => hxRxOp(ch, q0, q1, op, v, u, seed), null, HX_RW_PV.has(op) ? { op, v, u, seed } : null);
   // (29.10.2026) what the stretch becomes is worked out in Workers (abschnitt-werk.js), then written in – the page goes
   // on meanwhile; ↶ or ↷ before it is done write it at once (hxRxFlush), here, to the same bit
   if (hxRwOk(op)) {
@@ -103,7 +103,7 @@ function hxRegionEdit(L, a, b, op, v) {
     HX.rxQ = (HX.rxQ || Promise.resolve()).then(async () => {
       if (HX.rxP[0] !== job) return;
       let pre = null; try { pre = await hxRegionPrep(L, a, b, op, v, u, seed); } catch (e) { pre = null; }
-      if (HX.rxP[0] === job) { HX.rxP.shift(); job(pre); }
+      if (HX.rxP[0] === job) { HX.rxP.shift(); hxRxRun(job, pre); }
     });
     return true;
   }
@@ -115,7 +115,10 @@ function hxRegionEdit(L, a, b, op, v) {
 }
 // what is still to be written, at once – before ↶ or ↷ (they must find the edit in the history)
 const HX_RX_WHOLE = new Set(['pitch', 'erde', 'licht', 'wurzel', 'krone', 'gain']);
-function hxRxFlush() { while (HX.rxP && HX.rxP.length) HX.rxP.shift()(); }
+function hxRxFlush() { while (HX.rxP && HX.rxP.length && !HX.rxRun) hxRxRun(HX.rxP.shift()); }
+// (29.10.2026) a job written now: any other change of the loop meanwhile (hxGeo – every step's „before“) writes what is
+// still waiting first, so it finds the audio as the edits left it; not from inside a job (its own step)
+function hxRxRun(job, pre) { HX.rxRun = true; try { job(pre); } finally { HX.rxRun = false; } }
 async function hxRxFreeze(L, then) {
   if (HX.rxFrz) return;
   HX.rxFrz = true;

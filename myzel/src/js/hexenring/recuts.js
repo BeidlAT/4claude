@@ -49,7 +49,7 @@ function hxGeomMirror(L, f, k, beats, Lf) {
   else { L.d.L = Lf; L.d.ph0 = f - (k + 1) * Lf; }
 }
 // what a loop is now (geometry, tempo, its Schichten) – a re-cut's undo goes back to it
-function hxGeo(L) { return { d: Object.assign({}, L.d), bpb: L.bpb, bpm: TG.hx, hxOn: TG.hxOn, o: TG.o, sch: L.sch.map((id) => hxSnapS(HX.sch.get(id))).filter(Boolean), nudge: L.nudge || 0 }; }
+function hxGeo(L) { if (HX.rxP && HX.rxP.length && !HX.rxRun) hxRxFlush(); return { d: Object.assign({}, L.d), bpb: L.bpb, bpm: TG.hx, hxOn: TG.hxOn, o: TG.o, sch: L.sch.map((id) => hxSnapS(HX.sch.get(id))).filter(Boolean), nudge: L.nudge || 0 }; }
 function hxGeoBack(L, g, o = {}) {
   const same = g.d.beats === L.d.beats && g.d.L === L.d.L && Math.abs(g.bpm - TG.hx) < 1e-9 && Math.abs(g.o - TG.o) < 1e-9 && g.nudge === (L.nudge || 0);
   const sw = o.now && same ? hxSwapAt(L) : hxNextSeam(L);   // (the undo of a change heard at once: at once too)

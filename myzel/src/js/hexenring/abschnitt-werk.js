@@ -56,3 +56,5 @@ function hxRw(ch, r0, r1, op, v, u, seed) {
 }
 // the ops that go there (Einspielen, Tauschen and Einsetzen are quick and stay here)
 const hxRwOk = (op) => op !== 'take' && op !== 'swap' && op !== 'paste';
+// the Vorhören's quick version (one pass's stretch): only the heavy ones there – the others are heard at once, as before
+const HX_RW_PV = new Set(['pitch', 'wurzel', 'krone', 'nebel', 'sporen', 'band']);
