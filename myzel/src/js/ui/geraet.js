@@ -145,8 +145,10 @@ function kcBuild() {
 const msTxt = (sec) => dec((sec * 1000).toFixed(sec < 0.0095 ? 1 : 0)) + ' ms';
 function graphLatency() {
   // the oversampled drive is the only part of the playing path with a delay (measured in Chromium: 2x 128, 4x 192 frames)
-  if (!A.drvShaper) return 0;
-  return A.drvShaper.oversample === '4x' ? 192 / SR : A.drvShaper.oversample === '2x' ? 128 / SR : 0;
+  // (29.10.2026) and the sum's Begrenzer: 2.1 ms ahead of its peaks
+  const lim = A.lim ? A.limLat || 0 : 0;
+  if (!A.drvShaper) return lim;
+  return lim + (A.drvShaper.oversample === '4x' ? 192 / SR : A.drvShaper.oversample === '2x' ? 128 / SR : 0);
 }
 function updDevUI() {
   const nm = $('#midiDot');

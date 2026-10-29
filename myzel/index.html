@@ -4039,7 +4039,8 @@ function initAudio() {
   // stereo width of the sum: switched in only while it is not 100 %
   A.mwBy = G(1); A.mwWet = G(0);
   A.masterIn = G(1); A.masterSum.connect(A.masterIn);   // Hexenring: the master's input – the strip „Hexenring“ joins here, behind the „Alles“ tap
-  A.masterIn.connect(A.lowSh).connect(A.highSh).connect(A.mwBy).connect(A.masterVol).connect(A.cmpVca).connect(A.clipPre).connect(A.clip).connect(A.out);
+  A.clipG = G(1); A.lim = null;
+  A.masterIn.connect(A.lowSh).connect(A.highSh).connect(A.mwBy).connect(A.masterVol).connect(A.cmpVca).connect(A.clipPre).connect(A.clip).connect(A.clipG).connect(A.out);
   A.mwWet.connect(A.masterVol);
   A.masterVol.connect(A.cmpDet);
   // monitoring only (what you hear, not what is recorded): dim and mono check
@@ -4061,9 +4062,23 @@ function initAudio() {
   applyAll(true);
   A.started = true;
   dspMaybe();   // a worklet engine is selected (restored patch): its module now, before the first note
+  if (!(typeof OfflineAudioContext !== 'undefined' && ctx instanceof OfflineAudioContext)) ensureDSP(ctx, true).then((ok) => { if (ok && A.ctx === ctx) masterLim(); });
   if (typeof hxwPreboot === 'function') setTimeout(hxwPreboot, 2500);   // Hexenring (28.10.2026): the Werk-Rahmen in the first quiet moment, not mid-performance – werk.js
 }
-
+// (owner, 29.10.2026: „den sauberen Begrenzer zuerst“) the sum's ceiling becomes the Begrenzer (myzel-lim, dsp/begrenzer.js)
+// as soon as the module is there – the clipper hands over in 30 ms and stays only where AudioWorklet is missing. Below the
+// ceiling the sum passes unchanged, 2.1 ms later (graphLatency counts it).
+function masterLim() {
+  const ctx = A.ctx; if (A.lim || !ctx || !ctx.__dspOK) return;
+  let n; try { n = new AudioWorkletNode(ctx, 'myzel-lim', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit' }); } catch (e) { return; }
+  const t = ctx.currentTime + 0.02, lg = G(0);
+  A.cmpVca.connect(n).connect(lg).connect(A.out);
+  lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(1, t + 0.03);
+  A.clipG.gain.setValueAtTime(1, t); A.clipG.gain.linearRampToValueAtTime(0, t + 0.03);
+  A.lim = n; A.limG = lg; A.limLat = (Math.max(16, Math.round(0.002 * SR)) + 6) / SR;
+  n.port.onmessage = (e) => { if (e.data && e.data.red != null) A.limRed = e.data.red; };
+  setTimeout(() => { if (A.lim === n) { try { A.cmpVca.disconnect(A.clipPre); } catch (e) {} } }, 200);
+}
 /* ---------- insert chain ---------- */
 // the Vokal's formants at rest (Hz: the centre of the vowel space, between a, e, o) and how far its directions move them
 // (cents at ±1: F1 300 … 750 Hz for i/u … a, F2 800 … 2300 Hz for u … i, F3 a little with F2); the wet path's level
@@ -14006,9 +14021,87 @@ function myzelDsp() {
       return true;
     }
   }
+  // ---- Begrenzer: myzel-lim – the sum's ceiling (owner, 29.10.2026: „den sauberen Begrenzer … zuerst“). It replaces
+  // the soft clipper at the end of the master (dev/klang/effekte-konzept.md §3.4): a peak that would go over the
+  // ceiling is met by turning the whole sum down for a moment, never by bending its wave. Its peaks are found between
+  // the samples too (4× oversampled, a 48-tap windowed sinc), 2 ms ahead (the sum runs 2.1 ms late for that); the gain
+  // holds the lowest it needs over those 2 ms and glides there (a box of the same length – no step, no click), and comes
+  // back with a release that waits longer after longer pressure (50 … 400 ms). Below the ceiling it changes nothing:
+  // the sum passes exactly, only later. Ceiling −0.3 dBTP. It reports its reduction (‹red›, dB) a few times a second. ----
+  const LIM_OS = 4, LIM_TP = 12, LIM_FIR = (() => {
+    // 4 phases × 12 taps of a Kaiser-windowed sinc (β 8) at the fractions ¼, ½, ¾ (phase 0 is the sample itself)
+    const I0 = (x) => { let s = 1, t = 1; for (let k = 1; k < 40; k++) { t *= (x / (2 * k)) * (x / (2 * k)); s += t; } return s; };
+    const h = new Float64Array(LIM_OS * LIM_TP);
+    for (let p = 1; p < LIM_OS; p++) {
+      let s = 0;
+      for (let j = 0; j < LIM_TP; j++) { const x = j - LIM_TP / 2 + 1 - p / LIM_OS, u = x / (LIM_TP / 2), v = (Math.sin(Math.PI * x) / (Math.PI * x)) * (Math.abs(u) < 1 ? I0(8 * Math.sqrt(1 - u * u)) / I0(8) : 0); h[p * LIM_TP + j] = v; s += v; }
+      for (let j = 0; j < LIM_TP; j++) h[p * LIM_TP + j] /= s;
+    }
+    return h;
+  })();
+  class Lim extends AudioWorkletProcessor {
+    constructor(o) {
+      super();
+      const po = (o && o.processorOptions) || {};
+      this.ceil = Math.pow(10, (po.ceil != null ? po.ceil : -0.3) / 20);
+      const L = (this.L = Math.max(16, Math.round((po.ahead || 0.002) * sampleRate)));
+      this.N = L + LIM_TP + 2; this.dl = [new Float32Array(this.N), new Float32Array(this.N)]; this.w = 0;
+      // the gain wanted per sample, its running minimum over L + 1 (a monotone deque) and the box of L over that
+      this.gq = new Float64Array(L + 2); this.qi = new Int32Array(L + 2); this.qh = 0; this.qt = 0; this.t = 0;
+      this.box = new Float64Array(L); this.bs = L; this.bi = 0; this.box.fill(1);
+      this.g = 1; this.hold = 0; this.red = 0; this.redN = 0;
+      this.port.onmessage = (e) => { const m = e.data || {}; if (m.ceil != null) this.ceil = Math.pow(10, m.ceil / 20); };
+    }
+    // the true peak at sample P of channel c: the sample and the three points between it and the next (the sinc's taps
+    // reach P − 5 … P + 6 – P lies 6 behind the newest)
+    tp(c, P) {
+      const d = this.dl[c], N = this.N; let m = Math.abs(d[P]);
+      for (let p = 1; p < LIM_OS; p++) {
+        let s = 0; const o = p * LIM_TP;
+        for (let j = 0; j < LIM_TP; j++) s += LIM_FIR[o + j] * d[(P - LIM_TP / 2 + 1 + j + N) % N];
+        const a = Math.abs(s); if (a > m) m = a;
+      }
+      return m;
+    }
+    process(inputs, outputs) {
+      const I = inputs[0], O = outputs[0], n = O[0].length, iL = I && I[0], iR = I && (I[1] || I[0]), oL = O[0], oR = O[1] || null;
+      const L = this.L, N = this.N, gq = this.gq, qi = this.qi, Q = L + 2, ceil = this.ceil, box = this.box;
+      const relFast = 1 - Math.exp(-1 / (0.05 * sampleRate)), relSlow = 1 - Math.exp(-1 / (0.4 * sampleRate));
+      let red = this.red;
+      for (let i = 0; i < n; i++) {
+        const w = this.w; this.dl[0][w] = iL ? iL[i] : 0; this.dl[1][w] = iR ? iR[i] : 0;
+        // the gain this sample needs (its true peak, both sides), into the running minimum (window L + 1)
+        const P = (w - LIM_TP / 2 + N) % N, pk = Math.max(this.tp(0, P), this.tp(1, P)), need = pk > ceil ? ceil / pk : 1, t = this.t++;
+        while (this.qt > this.qh && gq[(this.qt - 1) % Q] >= need) this.qt--;
+        gq[this.qt % Q] = need; qi[this.qt % Q] = t; this.qt++;
+        while (qi[this.qh % Q] <= t - L - 1) this.qh++;
+        const mn = gq[this.qh % Q];
+        // the box over the minimum: the gain is down to it when that peak leaves the delay
+        this.bs += mn - box[this.bi]; box[this.bi] = mn; this.bi = (this.bi + 1) % L;
+        const gb = this.bs / L;
+        // release: back up slowly, the slower the longer it held
+        let g = this.g;
+        if (gb < g) { g = gb; this.hold = Math.min(1, this.hold + 1 / (0.5 * sampleRate)); }
+        else { const r = relFast + (relSlow - relFast) * this.hold; g += (gb - g) * r; this.hold = Math.max(0, this.hold - 1 / (2 * sampleRate)); }
+        if (g > 1) g = 1;
+        this.g = g;
+        // out: the sample L before P (the delay is L + 6)
+        const r0 = (P - L + N) % N;
+        let a = this.dl[0][r0] * g, b = this.dl[1][r0] * g;
+        if (a > ceil) a = ceil; else if (a < -ceil) a = -ceil;   // (a last guard – the box keeps it from ever acting)
+        if (b > ceil) b = ceil; else if (b < -ceil) b = -ceil;
+        oL[i] = a; if (oR) oR[i] = b;
+        if (g < red) red = g;
+        this.w = (w + 1) % N;
+      }
+      this.red = red;
+      if (++this.redN >= 32) { this.port.postMessage({ red: 20 * Math.log10(Math.max(1e-6, this.red)) }); this.red = 1; this.redN = 0; }
+      return true;
+    }
+  }
   // an empty voice: the per-node price of the contract (SPEC §8 step 1 gate, ≈ 0.06 + 0.03 per param)
   class Null extends MyzelProc { render(L, R, a, b) { for (let i = a; i < b; i++) L[i] = 0; } }
-  for (const [k, C] of [['myzel-blow', Blow], ['myzel-scan', Scan], ['myzel-bow', Bow], ['myzel-rot', Rot], ['myzel-aeol', Aeol], ['myzel-gendy', Gendy], ['myzel-web', Web], ['myzel-string', Strg], ['myzel-syrinx', Syrinx], ['myzel-scrape', Scrape], ['myzel-ember', Ember], ['myzel-null', Null], ['myzel-ring', Ring], ['myzel-ring-in', RingIn], ['myzel-wsend', WSend], ['myzel-tfx', Tfx], ['myzel-hng', Hng], ['myzel-gml', Gml], ['myzel-sit', Sit], ['myzel-tbl', Tbl], ['myzel-did', Did], ['myzel-mtr', Mtr], ['myzel-nrd', Nrd], ['myzel-sht', Sht], ['myzel-ond', Ond], ['myzel-wal', Wal], ['myzel-stp', Stp], ['myzel-atr', Atr], ['myzel-tnl', Tnl], ['myzel-wkg', Wkg], ['myzel-bnt', Bnt], ['myzel-kas', Kas], ['myzel-bit', Bit], ['myzel-gbs', Gbs], ['myzel-hht', Hht], ['myzel-vox', Vox], ['myzel-spu', Spu], ['myzel-kto', Kto], ['myzel-sat', Sat]]) registerProcessor(k, C);
+  for (const [k, C] of [['myzel-blow', Blow], ['myzel-scan', Scan], ['myzel-bow', Bow], ['myzel-rot', Rot], ['myzel-aeol', Aeol], ['myzel-gendy', Gendy], ['myzel-web', Web], ['myzel-string', Strg], ['myzel-syrinx', Syrinx], ['myzel-scrape', Scrape], ['myzel-ember', Ember], ['myzel-null', Null], ['myzel-ring', Ring], ['myzel-ring-in', RingIn], ['myzel-wsend', WSend], ['myzel-tfx', Tfx], ['myzel-hng', Hng], ['myzel-gml', Gml], ['myzel-sit', Sit], ['myzel-tbl', Tbl], ['myzel-did', Did], ['myzel-mtr', Mtr], ['myzel-nrd', Nrd], ['myzel-sht', Sht], ['myzel-ond', Ond], ['myzel-wal', Wal], ['myzel-stp', Stp], ['myzel-atr', Atr], ['myzel-tnl', Tnl], ['myzel-wkg', Wkg], ['myzel-bnt', Bnt], ['myzel-kas', Kas], ['myzel-bit', Bit], ['myzel-gbs', Gbs], ['myzel-hht', Hht], ['myzel-vox', Vox], ['myzel-spu', Spu], ['myzel-kto', Kto], ['myzel-sat', Sat], ['myzel-lim', Lim]]) registerProcessor(k, C);
   return { SIN, NOISE, Reso, Biquad, Allpass1, OnePole, DcBlock, FracDelay, PRNG };   // (for later processors; unused here)
 }
 // end myzelDsp
@@ -29954,8 +30047,10 @@ function kcBuild() {
 const msTxt = (sec) => dec((sec * 1000).toFixed(sec < 0.0095 ? 1 : 0)) + ' ms';
 function graphLatency() {
   // the oversampled drive is the only part of the playing path with a delay (measured in Chromium: 2x 128, 4x 192 frames)
-  if (!A.drvShaper) return 0;
-  return A.drvShaper.oversample === '4x' ? 192 / SR : A.drvShaper.oversample === '2x' ? 128 / SR : 0;
+  // (29.10.2026) and the sum's Begrenzer: 2.1 ms ahead of its peaks
+  const lim = A.lim ? A.limLat || 0 : 0;
+  if (!A.drvShaper) return lim;
+  return lim + (A.drvShaper.oversample === '4x' ? 192 / SR : A.drvShaper.oversample === '2x' ? 128 / SR : 0);
 }
 function updDevUI() {
   const nm = $('#midiDot');
