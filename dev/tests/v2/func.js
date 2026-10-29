@@ -82,20 +82,23 @@ const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) process
     for (const eng of ['neb', 'kor', 'hau', 'glo', 'mem', 'sai', 'sch']) {
       const res = await page.evaluate(async (eng) => {
         const M = window.__M; M.setParam('v.eng', eng);
-        let maxLoad = 0, maxN = 0;
+        let maxLoad = 0, maxN = 0, over = 0;
         for (let k = 0; k < 60; k++) {
           const n = 36 + ((k * 7) % 48);
           window.__send([0x90, n, 40 + (k % 80)]);
           if (k % 3 === 2) window.__send([0x80, 36 + (((k - 1) * 7) % 48), 0]);
           if (eng === 'kor') M.grainTick(M.A.ctx.currentTime + 0.12);
           maxLoad = Math.max(maxLoad, M.voiceLoad()); maxN = Math.max(maxN, M.A.voices.size);
+          // (29.10.2026) against the budget in force at that moment: the guard (Leistung) may lower it mid-flood when the
+          // test machine underruns – a load reached before that step is no fault
+          const b = M.getBudget(); if (M.voiceLoad() > b[0] + 1e-9 || M.A.voices.size > b[1]) over++;
           await new Promise((r) => setTimeout(r, 12));
         }
         window.__send([0xb0, 123, 0]);
         const [B, MX] = M.getBudget();
-        return { maxLoad: +maxLoad.toFixed(2), maxN, B, MX, grains: M.A.grains };
+        return { maxLoad: +maxLoad.toFixed(2), maxN, B, MX, grains: M.A.grains, over, sc: M.A.budgetScale || 1 };
       }, eng);
-      ok(res.maxLoad <= res.B + 1e-9 && res.maxN <= res.MX, `q${q} ${eng}: load ${res.maxLoad}/${res.B}, voices ${res.maxN}/${res.MX}`);
+      ok(!res.over, `q${q} ${eng}: load ${res.maxLoad}/${res.B}, voices ${res.maxN}/${res.MX}${res.sc < 1 ? ' (the guard lowered the budget to ×' + res.sc.toFixed(2) + ' meanwhile)' : ''}`);
     }
   }
   const cal = await page.evaluate(() => ({ unit: window.__M.CAL.unit, b: window.__M.getBudget(), rich: window.__M.getQ().rich, revCh: window.__M.A.revWant }));
