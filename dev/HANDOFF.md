@@ -1,6 +1,6 @@
 # Übergabe: Myzel (Stand 22.10.2026 – Klangquellen, Ruhe und der Hexenring fertig, Schlussprüfung grün)
 
-**→ Zuerst `dev/STAND-2026-10-28.md` lesen** (Stand, Arbeitsweise, alles Offene, 28.10.2026 – oben der Nachtrag der dritten Sitzung, PR #89–#92, mit der Reihenfolge für die nächste).
+**→ Zuerst `dev/STAND-2026-10-29.md` lesen** (Stand 29.10., PR #94–#102), danach `dev/STAND-2026-10-28.md` (Stand, Arbeitsweise, alles Offene, 28.10.2026 – oben der Nachtrag der dritten Sitzung, PR #89–#92, mit der Reihenfolge für die nächste).
 
 ## Nächste Sitzung – zuerst lesen (Stand 26.10.2026, nachts)
 

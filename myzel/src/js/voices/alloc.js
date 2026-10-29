@@ -35,7 +35,7 @@ function vShed() {
   }
   return n;
 }
-function voiceLoad() { let c = (A.gsp && A.gsp.active ? A.gsp.cost : 0) + hxLoad(); for (const v of A.voices) c += v.cost; return c; }   // (Gespinst's web counts while it rings; Hexenring: its processor and Schichten)
+function voiceLoad() { let c = (A.gsp && A.gsp.active ? A.gsp.cost : 0) + hxLoad() + fxLoad(); for (const v of A.voices) c += v.cost; return c; }   // (Gespinst's web counts while it rings; Hexenring: its processor and Schichten; the mixer's effects – effekt.js)
 function playNote(eng, t, f, y, vel, o = {}) {
   if (!A.ctx || !ENGINES[eng]) return null;
   const as = ENGINES[eng].needs ? wkPlays(eng) : eng;   // a worklet engine without its module: its stand-in

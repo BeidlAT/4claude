@@ -100,6 +100,7 @@ const { ok } = H;
     M.hxTaumelnSet(L, false);   // (a preset may bring its own drift: a loop that taumelt follows it – on purpose)
     M.hxTempo(M.tgBpm(ctx.currentTime));   // (the loop gives the tempo: a preset leaves it – SPEC §2)
     if (M.hxWSet) M.hxWSet(L, 'ton', 'fest');   // (step 2a: a loop with notes follows a preset's key – SPEC §10.4 –; fest: the chain alone is tested here)
+    M.setParam('ui.tonart', 'preset');   // (owner, 27.10.2026: by default the loops follow the preset's key – „fest“ then grows them anew in it; here the preset fits itself to the loops)
     const p0 = await pass(), p3 = await pass(() => M.loadPreset(M.PRESETS[3]));
     out.preset = same(p0, p3);
     return out;

@@ -10,14 +10,20 @@
     const h = new Float64Array(SAT_T); let s = 0;
     for (let i = 0; i < SAT_T; i++) { const n = i - (SAT_T - 1) / 2, u = (2 * i) / (SAT_T - 1) - 1, sinc = n === 0 ? 1 : Math.sin(Math.PI * n / 2) / (Math.PI * n / 2); h[i] = 0.5 * sinc * I0(8 * Math.sqrt(Math.max(0, 1 - u * u))) / I0(8); s += h[i]; }
     for (let i = 0; i < SAT_T; i++) h[i] /= s;
+    for (let i = 0; i < SAT_T; i++) if ((i - (SAT_T - 1) / 2) % 2 === 0 && i !== (SAT_T - 1) / 2) h[i] = 0;   // (a half-band: every second tap is 0 – exactly, not ±1e-17)
     return h;
   })();
+  // (29.10.2026, measured: 2.2 units each) the filters without the zero taps and without a modulo per tap: the histories
+  // are kept twice over (a write lands at w and w + T), so a window is read in one run
+  const SAT_E = Array.from(SAT_H.filter((v, i) => i % 2 === 0)), SAT_C = SAT_H[(SAT_T - 1) / 2], SAT_O = [];
+  for (let i = 0; i < SAT_T; i++) if (SAT_H[i] !== 0) SAT_O.push(i);
+  const SAT_OH = SAT_O.map((i) => SAT_H[i]);
   class Sat extends AudioWorkletProcessor {
     constructor() {
       super();
       this.a = 0; this.aT = 0; this.mix = 0;
       // per channel: the 1× input history (upsampling), the 2× output history (downsampling), the ADAA state
-      this.ch = [0, 1].map(() => ({ xi: new Float64Array(SAT_T), xw: 0, yi: new Float64Array(SAT_T), yw: 0, x1: 0, F1: 0 }));
+      this.ch = [0, 1].map(() => ({ xi: new Float64Array(2 * SAT_T), xw: 0, yi: new Float64Array(2 * SAT_T), yw: 0, x1: 0, F1: 0 }));
       this.port.onmessage = (e) => { const m = e.data || {}; if (m.a != null) this.aT = Math.max(0, Math.min(1, +m.a || 0)); };
     }
     // the curve at a: y = (1 − m)·x + c·tanh(g·x)/g, its antiderivative F = (1 − m)·x²/2 + c·ln cosh(g·x)/g²
@@ -37,19 +43,24 @@
       const on = a > 1e-4 || this.aT > 0, mg = 1 - Math.exp(-1 / (0.01 * sampleRate));
       if (!on && this.mix < 1e-6) { this.mix = 0; for (let c = 0; c < O.length; c++) { const x = I && I[c] ? I[c] : I && I[0] ? I[0] : null; if (x) O[c].set(x); else O[c].fill(0); } this.a = a; return true; }
       if (a !== this.a || this.g == null) { this.setA(a); for (const C of this.ch) C.F1 = this.F(C.x1); }
-      const h = SAT_H, T = SAT_T;
+      const T = SAT_T, E = SAT_E, nE = E.length, hc = SAT_C, Oi = SAT_O, Oh = SAT_OH, nO = Oi.length, cX = (T - 1) / 2;
       for (let c = 0; c < O.length && c < 2; c++) {
         const x = I && I[c] ? I[c] : I && I[0] ? I[0] : null, o = O[c], C = this.ch[c];
         let mix = this.mix;
         for (let i = 0; i < n; i++) {
           const v = x ? x[i] : 0;
-          C.xi[C.xw] = v; C.xw = (C.xw + 1) % T;
-          // two samples at 2×: the zero-stuffed input through the half-band (its even and odd taps), ×2 for the stuffing
-          let u0 = 0, u1 = 0;
-          for (let k = 0, j = (C.xw - 1 + T) % T; 2 * k < T; k++, j = (j - 1 + T) % T) { u0 += h[2 * k] * C.xi[j]; if (2 * k + 1 < T) u1 += h[2 * k + 1] * C.xi[j]; }
-          C.yi[C.yw] = this.adaa(C, 2 * u0); C.yw = (C.yw + 1) % T; C.yi[C.yw] = this.adaa(C, 2 * u1); C.yw = (C.yw + 1) % T;
-          // one sample back at 1×
-          let y = 0; for (let k = 0, j = (C.yw - 1 + T) % T; k < T; k++, j = (j - 1 + T) % T) y += h[k] * C.yi[j];
+          const xi = C.xi, yi = C.yi;
+          xi[C.xw] = xi[C.xw + T] = v; C.xw = C.xw + 1 === T ? 0 : C.xw + 1;
+          // two samples at 2×: the zero-stuffed input through the half-band (its even taps; of the odd ones only the
+          // centre is not 0), ×2 for the stuffing – xi[b + T − 1 − k] is the k-th newest
+          const b0 = C.xw + T - 1;
+          let u0 = 0; for (let k = 0; k < nE; k++) u0 += E[k] * xi[b0 - k];
+          const u1 = hc * xi[b0 - (cX - 1) / 2];
+          yi[C.yw] = yi[C.yw + T] = this.adaa(C, 2 * u0); C.yw = C.yw + 1 === T ? 0 : C.yw + 1;
+          yi[C.yw] = yi[C.yw + T] = this.adaa(C, 2 * u1); C.yw = C.yw + 1 === T ? 0 : C.yw + 1;
+          // one sample back at 1× (the taps that are not 0)
+          const b1 = C.yw + T - 1;
+          let y = 0; for (let k = 0; k < nO; k++) y += Oh[k] * yi[b1 - Oi[k]];
           mix += ((on ? 1 : 0) - mix) * mg;
           o[i] = mix >= 1 - 1e-9 ? y : v + (y - v) * mix;
         }
