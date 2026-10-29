@@ -20720,8 +20720,8 @@ function modMorph() {
 // The mixer's sound reads its parameters through mp(): the patch's value – or, while the A/B-Morph deflects (MOD.mx
 // −1 … 1), a blend from there toward scene A (−) or B (+) on each parameter's own scale, switches flipping at half way.
 // Levels, balance, width, sends, EQ, Pumpen depth, mutes, the Puls group and the Summe follow; saturation (a new curve
-// per step), routing (it rewires) and the Pumpen source stay as the patch has them.
-const mxoOk = (id) => !/\.(sat|route|solo)$/.test(id) && id !== 'mix.duckSrc';
+// per step), routing and the Einschub (they rewire), and the Pumpen source stay as the patch has them.
+const mxoOk = (id) => !/\.(sat|route|solo|ins)$/.test(id) && id !== 'mix.duckSrc';   // (ins: the Einschub rewires too)
 function mp(id) {
   const d = MOD.mx;
   if (!d) return P[id];
