@@ -555,6 +555,8 @@ for (const st of STRIPS) {
   NUM(p + 'midf', 'Mittenfrequenz', 150, 8000, 1000, 'Hz', { curve: 'exp' });
   NUM(p + 'hi', 'Höhen', -15, 15, 0, 'dB', { step: 0.1 });
   NUM(p + 'sat', 'Sättigung', 0, 1, 0, '%', { step: 0.01 });
+  NUM(p + 'att', 'Anschlag', -1, 1, 0, '', { step: 0.01, fmt: (v) => (Math.abs(v) < 0.005 ? '0' : (v > 0 ? '+' : '−') + Math.round(Math.abs(v) * 100) + ' %') });   // (29.10.2026: the Transienten-Former)
+  NUM(p + 'aus', 'Ausklang', -1, 1, 0, '', { step: 0.01, fmt: (v) => (Math.abs(v) < 0.005 ? '0' : (v > 0 ? '+' : '−') + Math.round(Math.abs(v) * 100) + ' %') });
   NUM(p + 'wid', 'Breite', 0, 2, 1, '%', { step: 0.01, fmt: fmtWidth });
   NUM(p + 'duck', 'Pumpen', 0, 1, 0, '%', { step: 0.01 });
 }

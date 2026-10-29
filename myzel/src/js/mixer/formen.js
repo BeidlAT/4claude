@@ -39,17 +39,21 @@ function mxdBuildFormen() {
   F.satK = mxdKnob(); F.widK = mxdKnob(); F.pmpK = mxdKnob('', { off: () => mxdIsTakt(MXD.k), offTxt: 'Takt', offAria: 'gibt den Takt fürs Pumpen' }); F.relK = mxdKnob();
   F.satT = h('small'); F.widT = h('small'); F.pmpT = h('small');
   const sat = mxdCard('mxd-sat', 'Sättigung', F.satT, h('div', { class: 'mxd-cvb' }, F.satCv), h('div', { class: 'mxd-kr' }, F.satK.box));
+  F.attK = mxdKnob(); F.ausK = mxdKnob();
+  const tra = mxdCard('mxd-tra', 'Anschlag', h('small', null, 'Anfang und Ausklang der Töne'), h('div', { class: 'mxd-kr' }, F.attK.box, F.ausK.box));
   const wid = mxdCard('mxd-wid', 'Breite', F.widT, h('div', { class: 'mxd-cvb' }, F.widCv), h('div', { class: 'mxd-kr' }, F.widK.box));
   F.chips = mxdDuckChips();
   const pmp = mxdCard('mxd-pmp', 'Pumpen', F.pmpT, h('div', { class: 'mxd-cvb' }, F.pmpCv),
     h('div', { class: 'mxd-kr' }, F.pmpK.box, F.relK.box, h('div', { class: 'mxd-src' }, h('span', { class: 'mxd-lab', title: 'Pumpen im Takt von – gilt für alle Kanäle' }, 'Takt', h('em', null, ' · gilt für alle Kanäle')), F.chips)));
   mxdWatch('mix.duckSrc', 'mix.duckRel', 'seq.bpm');
-  return h('section', { class: 'mxd-sec mxd-fo', 'aria-label': 'Formen' }, mxdSh('Formen', 'Sättigung · Breite · Pumpen'), h('div', { class: 'mxd-cards' }, sat, wid, pmp));
+  return h('section', { class: 'mxd-sec mxd-fo', 'aria-label': 'Formen' }, mxdSh('Formen', 'Sättigung · Anschlag · Breite · Pumpen'), h('div', { class: 'mxd-cards' }, sat, tra, wid, pmp));
 }
 const mxdIsTakt = (k) => MXK[k] && MXK[k].kind === 'lane' && Number(P['mix.duckSrc']) === MXK[k].lane;
 function mxdFormenAim(k) {
   const F = MXD.fo, c = MXK[k];
   mxdAim(F.satK, k, 'x' + k + '.sat', 'Menge', 'Sättigung', '#ffb35c');
+  mxdAim(F.attK, k, 'x' + k + '.att', 'Anschlag', 'Anschlag: Tonanfänge lauter oder leiser', '#ffd27a');
+  mxdAim(F.ausK, k, 'x' + k + '.aus', 'Ausklang', 'Ausklang: länger oder kürzer', '#ffd27a');
   mxdAim(F.widK, k, 'x' + k + '.wid', 'Breite', 'Stereobreite', c.col);
   mxdAim(F.pmpK, k, 'x' + k + '.duck', 'Tiefe', 'Pumpen', '#ff8f9e');
   mxdAim(F.relK, k, 'mix.duckRel', 'Rückkehr', 'Pumpen: Rückkehr, für alle Kanäle', '#ff8f9e');
