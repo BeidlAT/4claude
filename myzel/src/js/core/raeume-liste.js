@@ -2,33 +2,34 @@
    ausgefallene Sachen“) – the choice „Raum“ (rev.typ): Nebel is the hall as it always was; the real rooms are measured
    ones (OpenAIR, University of York, CC BY 4.0 – myzel/raeume/<id>.flac, made by dev/tools/raeume.py, loaded the first
    time one is chosen); the computed ones come from their geometry (genRoom), the special ones are designed (genSpecial).
-   art: nebel | echt | gerechnet | besonders. ---------- */
+   art: nebel | echt | gerechnet | besonders; t: a real room's reverberation at 500 Hz (s, measured – in its name, since
+   some are small and dry: a cave, a forest). ---------- */
 const RAUM_LISTE = [
   { id: 'nebel', name: 'Nebel', art: 'nebel', i: 'Der bisherige Hall: ein weicher Nebel ohne Wände – Nachhallzeit und Dämpfung frei' },
   // measured (ort: where; the app names it under the choice)
-  { id: 'kathedrale', name: 'Kathedrale', art: 'echt', ort: 'York Minster, England' },
-  { id: 'steinkuppel', name: 'Steinkuppel', art: 'echt', ort: 'Hamilton Mausoleum, Schottland – einer der längsten Nachhalle der Welt' },
-  { id: 'kirchenschiff', name: 'Kirchenschiff', art: 'echt', ort: "St Margaret's Church, York" },
-  { id: 'kirche', name: 'Dorfkirche', art: 'echt', ort: "St Patrick's Church, Patrington" },
-  { id: 'kapelle', name: 'Kapelle', art: 'echt', ort: 'Lady Chapel, St Albans Cathedral' },
-  { id: 'konzertsaal', name: 'Konzertsaal', art: 'echt', ort: 'Usina del Arte, Buenos Aires' },
-  { id: 'saal', name: 'Kleiner Saal', art: 'echt', ort: 'Jack Lyons Concert Hall, York' },
-  { id: 'marmorhalle', name: 'Marmorhalle', art: 'echt', ort: 'Elveden Hall, Suffolk' },
-  { id: 'ratssaal', name: 'Ratssaal', art: 'echt', ort: 'York Guildhall, Council Chamber' },
-  { id: 'kammer', name: 'Kammer', art: 'echt', ort: 'Elveden Hall, Suffolk (Rauchzimmer)' },
-  { id: 'treppenhaus', name: 'Treppenhaus', art: 'echt', ort: 'University of York' },
-  { id: 'reaktorhalle', name: 'Reaktorhalle', art: 'echt', ort: 'R1, Stockholm – der erste Forschungsreaktor Schwedens' },
-  { id: 'steinkammer', name: 'Steinkammer', art: 'echt', ort: 'Maeshowe, Orkney – Grabkammer, 5000 Jahre alt' },
-  { id: 'ganggrab', name: 'Ganggrab', art: 'echt', ort: 'Newgrange, Irland' },
-  { id: 'verlies', name: 'Verlies', art: 'echt', ort: 'Falkland Palace, Flaschenverlies' },
-  { id: 'kalkofen', name: 'Kalkofen', art: 'echt', ort: 'Hoffmann-Kalkofen, Langcliffe' },
-  { id: 'tunnel', name: 'Tunnel', art: 'echt', ort: 'Innocent Railway Tunnel, Edinburgh' },
-  { id: 'stollen', name: 'Stollen', art: 'echt', ort: 'Gill Heads Mine, Yorkshire' },
-  { id: 'hoehle', name: 'Höhle', art: 'echt', ort: 'Creswell Crags, England' },
-  { id: 'schlucht', name: 'Schlucht', art: 'echt', ort: "Troller's Gill, Yorkshire Dales" },
-  { id: 'sommerwald', name: 'Sommerwald', art: 'echt', ort: 'Koli-Nationalpark, Finnland' },
-  { id: 'winterwald', name: 'Winterwald', art: 'echt', ort: 'Koli-Nationalpark, Finnland – im Schnee' },
-  { id: 'klangskulptur', name: 'Klangskulptur', art: 'echt', ort: 'Tvísöngur, Seyðisfjörður, Island' },
+  { id: 'kathedrale', t: 7.7, name: 'Kathedrale', art: 'echt', ort: 'York Minster, England' },
+  { id: 'steinkuppel', t: 12.4, name: 'Steinkuppel', art: 'echt', ort: 'Hamilton Mausoleum, Schottland – einer der längsten Nachhalle der Welt' },
+  { id: 'kirchenschiff', t: 1.5, name: 'Kirchenschiff', art: 'echt', ort: "St Margaret's Church, York" },
+  { id: 'kirche', t: 1.9, name: 'Dorfkirche', art: 'echt', ort: "St Patrick's Church, Patrington" },
+  { id: 'kapelle', t: 2.5, name: 'Kapelle', art: 'echt', ort: 'Lady Chapel, St Albans Cathedral' },
+  { id: 'konzertsaal', t: 2.0, name: 'Konzertsaal', art: 'echt', ort: 'Usina del Arte, Buenos Aires' },
+  { id: 'saal', t: 1.8, name: 'Kleiner Saal', art: 'echt', ort: 'Jack Lyons Concert Hall, York' },
+  { id: 'marmorhalle', t: 4.2, name: 'Marmorhalle', art: 'echt', ort: 'Elveden Hall, Suffolk' },
+  { id: 'ratssaal', t: 0.9, name: 'Ratssaal', art: 'echt', ort: 'York Guildhall, Council Chamber' },
+  { id: 'kammer', t: 0.8, name: 'Kammer', art: 'echt', ort: 'Elveden Hall, Suffolk (Rauchzimmer)' },
+  { id: 'treppenhaus', t: 1.2, name: 'Treppenhaus', art: 'echt', ort: 'University of York' },
+  { id: 'reaktorhalle', t: 5.2, name: 'Reaktorhalle', art: 'echt', ort: 'R1, Stockholm – der erste Forschungsreaktor Schwedens' },
+  { id: 'steinkammer', t: 0.55, name: 'Steinkammer', art: 'echt', ort: 'Maeshowe, Orkney – Grabkammer, 5000 Jahre alt' },
+  { id: 'ganggrab', t: 0.23, name: 'Ganggrab', art: 'echt', ort: 'Newgrange, Irland' },
+  { id: 'verlies', t: 1.6, name: 'Verlies', art: 'echt', ort: 'Falkland Palace, Flaschenverlies' },
+  { id: 'kalkofen', t: 0.8, name: 'Kalkofen', art: 'echt', ort: 'Hoffmann-Kalkofen, Langcliffe' },
+  { id: 'tunnel', t: 2.6, name: 'Tunnel', art: 'echt', ort: 'Innocent Railway Tunnel, Edinburgh' },
+  { id: 'stollen', t: 0.4, name: 'Stollen', art: 'echt', ort: 'Gill Heads Mine, Yorkshire' },
+  { id: 'hoehle', t: 0.7, name: 'Höhle', art: 'echt', ort: 'Creswell Crags, England' },
+  { id: 'schlucht', t: 0.7, name: 'Schlucht', art: 'echt', ort: "Troller's Gill, Yorkshire Dales" },
+  { id: 'sommerwald', t: 1.1, name: 'Sommerwald', art: 'echt', ort: 'Koli-Nationalpark, Finnland' },
+  { id: 'winterwald', t: 0.5, name: 'Winterwald', art: 'echt', ort: 'Koli-Nationalpark, Finnland – im Schnee' },
+  { id: 'klangskulptur', t: 1.9, name: 'Klangskulptur', art: 'echt', ort: 'Tvísöngur, Seyðisfjörður, Island' },
   // computed from geometry (genRoom: box W × D × H m, surfaces x-, x+, y-, y+, floor, ceiling; T: its reverberation per
   // octave as rooms of that kind have it; src and mic at their places – Abstand moves them)
   { id: 'r-holzsaal', name: 'Holzsaal', art: 'gerechnet', o: { dim: [30, 20, 12], mat: ['holz', 'holz', 'holz', 'holz', 'holzboden', 'holz'], T: [1.9, 1.8, 1.7, 1.6, 1.5, 1.3, 1.0], scat: 0.5 } },

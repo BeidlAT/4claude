@@ -253,7 +253,7 @@ function mxSends(c) {
   if (!cc || (cc.kind !== 'src' && cc.kind !== 'lane') || MX.ch[k].dorm || MX.ch[k].srcoff) return;
   const fresh = MX.hov === k ? 1 : clamp(1 - (performance.now() - (MX.sendT || 0) - 1400) / 900, 0, 1);
   const g = MX.ch[k].g, ry = P['x' + k + '.route'] === 'dir' ? MX.yD : MX.yK, bot = MX.rowH - 3;
-  for (const fx of ['dly', 'rev']) {
+  for (const fx of ['dly', 'rev', 'fx']) {
     const amt = P['x' + k + '.' + fx] * P[fx + '.mix'];
     if (amt < 0.01 || MX.ch[fx].dorm) continue;
     const t = MX.ch[fx].g, a = Math.min(1, amt), dip = fx === 'dly' ? bot - 6 : bot, key = k + ':' + g.cx + ':' + t.cx;

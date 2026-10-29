@@ -97,9 +97,12 @@ function initAudio() {
   A.revSend.connect(A.revIn);
   A.revIn.connect(A.revPre);
   A.revRet.connect(MIX.s.rev.in);
+  // the return „Effekt“ (mixer/effekt.js): its processor comes when it is first wanted
+  A.fxSend = G(0); A.fxIn = G(1); A.fxRet = G(1); A.fx = null;
+  A.fxSend.connect(A.fxIn); A.fxRet.connect(MIX.s.fx.in);
   // what the insert chain sends to echo and hall; a copy of the chain takes over when channels send different amounts
   A.send = {};
-  for (const [k, target] of [['dly', A.dlySend], ['rev', A.revSend]]) {
+  for (const [k, target] of [['dly', A.dlySend], ['rev', A.revSend], ['fx', A.fxSend]]) {
     const fromFx = G(1); A.insertOut.connect(fromFx).connect(target);
     A.send[k] = { target, fromFx, fromCopy: null, copy: null, mode: 'fx' };
   }
@@ -165,7 +168,7 @@ function initAudio() {
   applyAll(true);
   A.started = true;
   dspMaybe();   // a worklet engine is selected (restored patch): its module now, before the first note
-  if (!(typeof OfflineAudioContext !== 'undefined' && ctx instanceof OfflineAudioContext)) ensureDSP(ctx, true).then((ok) => { if (ok && A.ctx === ctx) masterLim(); });
+  if (!(typeof OfflineAudioContext !== 'undefined' && ctx instanceof OfflineAudioContext)) ensureDSP(ctx, true).then((ok) => { if (ok && A.ctx === ctx) { masterLim(); fxUpd(); } });
   if (typeof hxwPreboot === 'function') setTimeout(hxwPreboot, 2500);   // Hexenring (28.10.2026): the Werk-Rahmen in the first quiet moment, not mid-performance – werk.js
 }
 // (owner, 29.10.2026: „den sauberen Begrenzer zuerst“) the sum's ceiling becomes the Begrenzer (myzel-lim, dsp/begrenzer.js)

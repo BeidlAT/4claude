@@ -169,11 +169,12 @@ function onParamChanged(id) {
     case 'cho': updChorus(); break;
     case 'dly': updDelay(); break;
     case 'rev': if (id === 'rev.size' || id === 'rev.damp' || id === 'rev.typ' || id === 'rev.dist' || id === 'rev.len') regenIR(); else updReverbMix(); break;
+    case 'fx': fxUpd(); break;
     case 'mov': updMove(); break;
     case 'mst': updMaster(); break;
     case 'bor': updBordun(); break;
     case 'mix': if (id === 'mix.pulsVol' || id === 'mix.pulsMute') for (const st of MIX.list) if (st.lane != null) updStrip(st); break;
-    case 'seq': if (id === 'seq.bpm') { TG.hxOn = false; seqRetempo(); updDelay(); hxWTempo(); } break;   // (Hexenring: the slider takes the tempo back from a Schleife; step 2a: loops with notes follow it)
+    case 'seq': if (id === 'seq.bpm') { TG.hxOn = false; seqRetempo(); updDelay(); hxWTempo(); fxTune(); } break;   // (Hexenring: the slider takes the tempo back from a Schleife; step 2a: loops with notes follow it)
     case 'neb':
       if (id === 'neb.cut' || id === 'neb.ymod' || id === 'neb.res') for (const t of touches.values()) for (const { v } of t.voices) if (v.alive && v.eng === 'neb') { v.setY(modY(t)); setP(v.filt.Q, P['neb.res']); }
       break;

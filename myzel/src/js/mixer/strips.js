@@ -22,7 +22,7 @@ function buildStrips() {
     st.pt.connect(st.byp);
     st.byp.connect(st.mBy).connect(st.duck).connect(st.dry);
     st.wet.connect(st.mBy); st.mWet.connect(st.duck);
-    if (!st.ret) { st.eS = G(1); st.duck.connect(st.eS); }
+    if (!st.ret) { st.eS = G(1); st.duck.connect(st.eS); st.fS = G(1); st.duck.connect(st.fS); }
     if (d.k !== 'rev') { st.hS = G(1); st.duck.connect(st.hS); }
     MIX.s[d.k] = st; MIX.list.push(st); if (!st.ret) MIX.src.push(st);
   }
@@ -54,7 +54,7 @@ function mixParam(st, key) {
   if (!A.ctx) return;
   if (key === 'mute' || key === 'solo') { updSolo(); updSends(); return; }
   updStrip(st);
-  if (key === 'route' || key === 'dly' || key === 'rev') updSends();
+  if (key === 'route' || key === 'dly' || key === 'rev' || key === 'fx') updSends();
 }
 // Solo: a soloed channel silences the other channels (dry and sends); echo and hall stay open so it keeps its space.
 // A soloed return plays only the effect: the channels go on feeding it, but their dry sound is muted.
@@ -77,6 +77,7 @@ function gates(st, set) {
   gspGate(st, set);
   if (st.eS) set(st.eS.gain, on ? mp(p + 'dly') : 0);
   if (st.hS) set(st.hS.gain, on ? (st.k === 'dly' ? 0.3 : 1) * mp(p + 'rev') : 0);
+  if (st.fS) set(st.fS.gain, on ? mp(p + 'fx') : 0);
 }
 // dry path: through the insert chain or straight into the sum; a move fades the channel out and back in
 function wireStrip(st) {
@@ -103,8 +104,8 @@ function wireStrip(st) {
 // own signal.
 function updSends(inst) {
   if (!A.send || !MIX.src.length) return;
-  for (const fx of ['dly', 'rev']) {
-    const S = A.send[fx], node = (st) => (fx === 'dly' ? st.eS : st.hS);
+  for (const fx of ['dly', 'rev', 'fx']) {
+    const S = A.send[fx], node = (st) => (fx === 'dly' ? st.eS : fx === 'rev' ? st.hS : st.fS);
     const viaFx = (st) => st.k !== 'hxr' && P['x' + st.k + '.route'] !== 'dir';   // (Hexenring: its sends take its own signal)
     const copy = MIX.src.some((st) => viaFx(st) && (mp('x' + st.k + '.' + fx) !== 1 || st.dryOff));
     if (copy && !S.copy) {

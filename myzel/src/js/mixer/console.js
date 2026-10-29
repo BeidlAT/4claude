@@ -126,7 +126,7 @@ function mxStrip(c) {
     S.k1 = mxKnob({ ch: k, id: 'x' + k + '.pan', name: 'Balance', label: 'Balance', cls: 'k1', ghost: () => mxGhostN('x' + k + '.pan') });
     bindCtl('x' + k + '.pan', () => mxKnobRender(S.k1));
     S.k2 = mxKnob({ ch: k, cls: 'k2', off: () => c.kind === 'lane' && MX.layer === 'duck' && Number(P['mix.duckSrc']) === c.lane, offTxt: 'Takt', offAria: 'gibt den Takt fürs Pumpen' });
-    const cand = c.kind === 'ret' ? [k + '.mix', 'x' + k + '.duck', 'x' + k + '.wid'].concat(k === 'dly' ? ['x' + k + '.rev'] : []) : ['dly', 'rev', 'duck', 'wid'].map((s) => 'x' + k + '.' + s);
+    const cand = c.kind === 'ret' ? [k + '.mix', 'x' + k + '.duck', 'x' + k + '.wid'].concat(k === 'dly' || k === 'fx' ? ['x' + k + '.rev'] : []) : ['dly', 'rev', 'fx', 'duck', 'wid'].map((s) => 'x' + k + '.' + s);
     for (const id of cand) bindCtl(id, () => { if (S.k2.id === id) mxKnobRender(S.k2); });
     mxK2Bind(S);
     S.mb = h('button', { type: 'button', class: 'mx-m', 'aria-pressed': 'false', 'aria-label': c.name + ' stumm', 'data-pid': mid, onclick: () => setParam(mid, !P[mid]) }, h('span', null, 'M'));
@@ -210,7 +210,7 @@ function mxMonSync() {
 // master) while the layer is a send
 function mxK2Bind(S) {
   const c = S.c, l = MX.layer, L = MX_LAYERS.find((x) => x[0] === l);
-  if (c.kind === 'ret' && (l === 'dly' || l === 'rev')) S.k2.set(c.k + '.mix', 'Anteil', 'Anteil (wie viel alle Kanäle hineinschicken)', c.col);
+  if (c.kind === 'ret' && (l === 'dly' || l === 'rev' || l === 'fx')) S.k2.set(c.k + '.mix', 'Anteil', 'Anteil (wie viel alle Kanäle hineinschicken)', c.col);
   else S.k2.set('x' + c.k + '.' + l, L[2], MX_LAYER_ARIA[l], L[3]);
 }
 function mxSetLayer(l, say) {

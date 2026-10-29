@@ -466,9 +466,21 @@ NUM('rev.pre', 'Vorverzögerung', 0, 0.25, 0.03, 's');
 NUM('rev.mix', 'Anteil', 0, 1, 0.45, '%');
 // (29.10.2026) the room the hall is (raeume-liste.js): Nebel as ever, real, computed and special rooms; Abstand and Länge
 // shape those (Nachhallzeit and Dämpfung are Nebel's)
-SEL('rev.typ', 'Raum', RAUM_LISTE.map((r) => [r.id, r.name, RAUM_ART[r.art]]), 'nebel');
+SEL('rev.typ', 'Raum', RAUM_LISTE.map((r) => [r.id, r.name + (r.t ? ' · ' + String(r.t).replace('.', ',') + ' s' : ''), RAUM_ART[r.art]]), 'nebel');
 NUM('rev.dist', 'Abstand', 0, 1, 0.5, '%');
 NUM('rev.len', 'Länge', 0.5, 1.5, 1, '', { fmt: (v) => '×' + dec(v.toFixed(2)) });
+// (29.10.2026) the return „Effekt“ (mixer/effekt.js, dsp/effekte.js): which one, how much, and each one's knobs
+SEL('fx.typ', 'Effekt', [['netz', 'Resonanz-Netz'], ['wolke', 'Wolke'], ['spektral', 'Spektral-Nebel'], ['oktav', 'Oktav-Echo'], ['vokal', 'Vokal-Filter']], 'netz');
+NUM('fx.mix', 'Anteil', 0, 1, 0, '%');
+SEL('fx.art', 'Art', [['0', 'Saiten'], ['1', 'Glocken'], ['2', 'Holzkörper']], '0', { chips: 1, small: 1 });
+NUM('fx.klang', 'Nachklang', 0, 1, 0.5, '%'); NUM('fx.hell', 'Helligkeit', 0, 1, 0.6, '%'); NUM('fx.breite', 'Breite', 0, 1, 0.7, '%');
+SEL('fx.ton', 'Lage', [['-1', 'Oktave tiefer'], ['0', 'Wie gespielt'], ['1', 'Oktave höher']], '0', { chips: 1, small: 1 });
+NUM('fx.dichte', 'Dichte', 0, 1, 0.4, '%'); NUM('fx.zeit', 'Zeit', 0, 1, 0.5, '', { fmt: (v) => ['⅛', '¼', '½', '1', '2'][Math.round(v * 4)] + ' Schlag' });
+NUM('fx.hoehe', 'Tonsprünge', 0, 1, 0.3, '%'); NUM('fx.rueck', 'Rückwärts', 0, 1, 0.2, '%'); NUM('fx.streu', 'Streuung', 0, 1, 0.5, '%'); NUM('fx.nach', 'Rückkopplung', 0, 1, 0.3, '%');
+NUM('fx.szeit', 'Zerfließen', 0, 1, 0.5, '%'); NUM('fx.shell', 'Helligkeit', 0, 1, 0.5, '%'); BOOL('fx.halten', 'Halten', false);
+NUM('fx.ozeit', 'Zeit', 0, 1, 0.6, '', { fmt: (v) => ['¼', '½', '¾', '1', '1½', '2'][Math.round(v * 5)] + ' Schlag' }); NUM('fx.onach', 'Wiederholungen', 0, 1, 0.5, '%');
+SEL('fx.schritt', 'Schritt', [['0', 'Oktave ab'], ['1', 'Quarte'], ['2', 'Quinte'], ['3', 'Oktave'], ['4', 'Duodezime']], '3', { chips: 1, small: 1 }); NUM('fx.ohell', 'Helligkeit', 0, 1, 0.6, '%');
+NUM('fx.vokal', 'Vokal', 0, 1, 0, '', { fmt: (v) => ['a', 'e', 'i', 'o', 'u'][Math.min(4, Math.round(v * 4))] }); NUM('fx.beweg', 'Bewegung', 0, 1, 0.2, '%'); NUM('fx.reso', 'Resonanz', 0, 1, 0.5, '%'); NUM('fx.stimme', 'Stimme', 0, 1, 0.3, '%');
 NUM('mov.vib', 'Vibrato', 0, 60, 4, 'ct');
 NUM('mov.vibRate', 'Vibrato-Tempo', 0.1, 9, 4.5, 'Hz', { curve: 'exp' });
 NUM('mov.drift', 'Taumeln', 0, 80, 6, 'ct');
@@ -517,6 +529,7 @@ const STRIPS = [
   { k: 'gsp', name: 'Gespinst', info: 'Netz der Saiten' },
   { k: 'dly', name: 'Echo', info: 'Rückweg', ret: true },
   { k: 'rev', name: 'Hall', info: 'Rückweg', ret: true },
+  { k: 'fx', name: 'Effekt', info: 'Rückweg', ret: true },   // (29.10.2026: the Effektseite – mixer/effekt.js)
 ];
 const FADER_OFF = -59.95;
 const fmtFader = (v) => (v <= FADER_OFF ? '−∞ dB' : (v > 0.05 ? '+' : v < -0.05 ? '−' : '') + dec(Math.abs(v).toFixed(1)) + ' dB');
@@ -532,6 +545,7 @@ for (const st of STRIPS) {
   if (!st.ret) {
     SEL(p + 'route', 'Weg', [['fx', 'Durch die Effektkette'], ['dir', 'Direkt in die Summe']], 'fx', { chips: 1, small: 1 });
     NUM(p + 'dly', 'Echo', 0, 2, 1, '%', { step: 0.01 });
+    NUM(p + 'fx', 'Effekt', 0, 2, 1, '%', { step: 0.01 });
   }
   if (st.k !== 'rev') NUM(p + 'rev', 'Hall', 0, 2, 1, '%', { step: 0.01 });
   NUM(p + 'lc', 'Tiefenschnitt', 20, 1000, 20, 'Hz', { curve: 'exp', fmt: fmtHzOff(LC_OFF) });
@@ -647,7 +661,7 @@ SEL('midi.tch', 'Touché-Spielweise', [['finger', 'Finger'], ['atem', 'Atem'], [
 
 const GROUP = {
   v: 'Spielweise', t: 'Stimmung', neb: 'Nebel', kor: 'Körner', hau: 'Hauch', glo: 'Glocke', mem: 'Membran', sai: 'Saite', sch: 'Schale', gng: "Gong", klb: "Kalimba", obt: "Obertöne", stm: "Stimme", swm: "Schwarm", tie: "Tiefe", trp: "Tropfen", nrd: 'Nordlicht', sht: 'Schimmer', ond: 'Ätherwelle', wal: 'Walgesang', stp: 'Endlostreppe', atr: 'Attraktor', tnl: 'Tunnel', wkg: 'Westküste', bnt: 'Schaltkreis', kas: 'Kassette', bit: 'Achtbit', gbs: 'Gleitbass', hht: 'Zischel', vox: 'Silbe', spu: 'Spieluhr', kto: 'Koto', hlm: 'Halm', rnk: 'Ranke', elm: 'Elmsfeuer', hng: 'Handpan', gml: 'Gamelan', sit: 'Sitar', tbl: 'Tabla', did: 'Didgeridoo', mtr: 'Maultrommel', jrg: 'Jahresring', hrz: 'Harz', shn: 'Sehne', zpf: 'Zapfen', glt: 'Glut', mdr: 'Moder', boe: 'Böe', amo: 'Amöbe', gsp: 'Gespinst', rhz: 'Rhizom', khl: 'Kehlchen',
-  drv: 'Verzerrung', rng: 'Ringmodulator', flt: 'Filter', pha: 'Phaser', cho: 'Schweben', dly: 'Echo', rev: 'Hall', mov: 'Bewegung', mst: 'Summe',
+  drv: 'Verzerrung', rng: 'Ringmodulator', flt: 'Filter', pha: 'Phaser', cho: 'Schweben', dly: 'Echo', rev: 'Hall', fx: 'Effekt', mov: 'Bewegung', mst: 'Summe',
   seq: 'Puls', bor: 'Bordun', rec: 'Aufnahme', hx: 'Hexenring', dev: 'Gerät', midi: 'MIDI', l0: 'Spur 1', l1: 'Spur 2', l2: 'Spur 3', l3: 'Spur 4',
 };
 // the mixer's parts as the panel names them ("Kanal" is the MIDI channel's word here)
