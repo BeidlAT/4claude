@@ -5,6 +5,7 @@
 const VERSION = '__VERSION__';
 const CACHE = 'myzel-' + VERSION;
 const ASSETS = __ASSETS__;
+const ROOMS = 'raeume-1';   // (not „myzel-…“: activate keeps it)
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -47,6 +48,12 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
   if (req.mode === 'navigate') {
     event.respondWith(caches.match('./', { cacheName: CACHE }).then((hit) => hit || fetch(req)));
+    return;
+  }
+  // the hall's rooms (raeume/): not in the app's cache – kept in a cache of their own the first time one loads, across
+  // versions (a new version that changes a room renames the file)
+  if (url.pathname.includes('/raeume/')) {
+    event.respondWith(caches.open(ROOMS).then((c) => c.match(req).then((hit) => hit || fetch(req).then((r) => { if (r.ok) c.put(req, r.clone()); return r; }))));
     return;
   }
   event.respondWith(caches.match(req, { cacheName: CACHE, ignoreSearch: true }).then((hit) => hit || fetch(req)));

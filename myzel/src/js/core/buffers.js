@@ -590,13 +590,13 @@ function genLP(L, R, r) {
   }
   return out;
 }
-const DSP_FN = { ir: (...a) => genIR(...a), tex: (...a) => genTexture(...a), ks: (...a) => [genKS(...a)], lp: (...a) => genLP(...a) };
+const DSP_FN = { ir: (...a) => genIR(...a), tex: (...a) => genTexture(...a), ks: (...a) => [genKS(...a)], lp: (...a) => genLP(...a), room: (o, sr) => { const r = genRoom(o, sr); return [r.L, r.R]; }, special: (k, o, sr) => { const r = genSpecial(k, o, sr); return [r.L, r.R]; }, shape: (L, R, sr, o) => { const r = genShape(L, R, sr, o); return [r.L, r.R]; } };
 function dspJob(type, args) {
   const run = () => DSP_FN[type](...args);
   if (!DSPW.broken && !DSPW.w) {
     try {
-      const src = [genIR, genTexture, genKS, genLP].map((f) => f.toString()).join('\n') +
-        '\nvar F={ir:genIR,tex:genTexture,ks:function(){return [genKS.apply(null,arguments)];},lp:genLP};' +
+      const src = [genIR, genTexture, genKS, genLP, genRoom, genSpecial, genShape].map((f) => f.toString()).join('\n') +
+        '\nvar F={ir:genIR,tex:genTexture,ks:function(){return [genKS.apply(null,arguments)];},lp:genLP,room:function(o,sr){var r=genRoom(o,sr);return [r.L,r.R];},special:function(k,o,sr){var r=genSpecial(k,o,sr);return [r.L,r.R];},shape:function(L,R,sr,o){var r=genShape(L,R,sr,o);return [r.L,r.R];}};' +
         'onmessage=function(e){var d=e.data;var r=F[d.type].apply(null,d.args);postMessage({id:d.id,r:r},r.map(function(a){return a.buffer;}));};';
       DSPW.w = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
       DSPW.w.onmessage = (e) => { const j = DSPW.wait.get(e.data.id); if (j) { DSPW.wait.delete(e.data.id); j.resolve(e.data.r); } };

@@ -81,14 +81,16 @@ function regenIR(now) {
     // level 3: four channels = "true stereo" (each side also reverberates into the other)
     const nch = Q.rich ? 4 : 2;
     A.revWant = nch;
-    dspJob('ir', [P['rev.size'], P['rev.damp'], SR, nch]).then((ch) => {
-      if (job !== A.irJob || !A.ctx) return;   // a newer request superseded this one
+    // (29.10.2026) a room (raum-app.js) – or Nebel, the hall's own; a room that cannot load keeps the hall as it was
+    const want = RAUM_BY[P['rev.typ']] && RAUM_BY[P['rev.typ']].art !== 'nebel';
+    (want ? raumIR().catch((e) => { if (!RAUMA.warned.has(P['rev.typ'])) { RAUMA.warned.add(P['rev.typ']); toast('Der Raum „' + RAUM_BY[P['rev.typ']].name + '“ ließ sich nicht laden – der Hall bleibt, wie er war.', 4500); } return 'keep'; }) : dspJob('ir', [P['rev.size'], P['rev.damp'], SR, nch])).then((ch) => {
+      if (job !== A.irJob || !A.ctx || ch === 'keep' || !ch) return;   // a newer request superseded this one
       const conv = A.ctx.createConvolver();
       conv.buffer = toBuffer(ch);
       const g = G(0);
       A.revPre.connect(conv).connect(g).connect(A.revRet);
       const t = A.ctx.currentTime;
-      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(nch === 4 ? IR4_GAIN : 1, t + 0.25);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(ch.length === 4 ? IR4_GAIN : 1, t + 0.25);
       const old = A.revActive;
       if (old) {
         holdParam(old.g.gain, t); old.g.gain.linearRampToValueAtTime(0, t + 0.25);

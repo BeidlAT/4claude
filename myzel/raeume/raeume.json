@@ -1,0 +1,191 @@
+{
+ "quelle": "OpenAIR – Open Acoustic Impulse Response Library, University of York (www.openair.hosted.york.ac.uk)",
+ "lizenz": "CC BY 4.0 (creativecommons.org/licenses/by/4.0)",
+ "bearbeitet": "zu Stereo (ORTF aus B-Format), 48 kHz, gekürzt und ausgeblendet, normiert",
+ "raeume": [
+  {
+   "id": "kathedrale",
+   "name": "Kathedrale",
+   "ort": "York Minster, England",
+   "datei": "york_minster__stereo__minster1_000_ortf_48k.wav",
+   "sekunden": 5.81,
+   "kb": 699
+  },
+  {
+   "id": "steinkuppel",
+   "name": "Steinkuppel",
+   "ort": "Hamilton Mausoleum, Schottland",
+   "datei": "hamilton_mausoleum__stereo__hm2_000_ortf_48k.wav",
+   "sekunden": 9.09,
+   "kb": 896
+  },
+  {
+   "id": "konzertsaal",
+   "name": "Konzertsaal",
+   "ort": "Usina del Arte, Buenos Aires",
+   "datei": "usina_del_arte_symphony_hall__stereo__usina_main_s1_p3.wav",
+   "sekunden": 1.4,
+   "kb": 212
+  },
+  {
+   "id": "kirche",
+   "name": "Dorfkirche",
+   "ort": "St Patrick's Church, Patrington",
+   "datei": "st_patricks_church_patrington__stereo__ortf_s1r1.wav",
+   "sekunden": 1.81,
+   "kb": 246
+  },
+  {
+   "id": "kapelle",
+   "name": "Kapelle",
+   "ort": "Lady Chapel, St Albans Cathedral",
+   "datei": "lady_chapel_st_albans_cathedral__stereo__stalbans_a_ortf.wav",
+   "sekunden": 2.57,
+   "kb": 282
+  },
+  {
+   "id": "kirchenschiff",
+   "name": "Kirchenschiff",
+   "ort": "St Margaret's Church, York",
+   "datei": "st_margarets_church_national_centre_early_music__b-format__r8_1st_configuration.wav",
+   "sekunden": 2.06,
+   "kb": 246
+  },
+  {
+   "id": "marmorhalle",
+   "name": "Marmorhalle",
+   "ort": "Elveden Hall, Suffolk",
+   "datei": "elveden_hall_suffolk_england__stereo__1a_marble_hall.wav",
+   "sekunden": 3.36,
+   "kb": 540
+  },
+  {
+   "id": "kammer",
+   "name": "Kammer",
+   "ort": "Elveden Hall, Suffolk (Rauchzimmer)",
+   "datei": "elveden_hall_suffolk_england__stereo__18a_smoking_room.wav",
+   "sekunden": 0.85,
+   "kb": 165
+  },
+  {
+   "id": "ratssaal",
+   "name": "Ratssaal",
+   "ort": "York Guildhall, Council Chamber",
+   "datei": "york_guildhall_council_chamber__b-format__councilchamber_s1_r3_ir_1_96000.wav",
+   "sekunden": 0.98,
+   "kb": 142
+  },
+  {
+   "id": "saal",
+   "name": "Kleiner Saal",
+   "ort": "Jack Lyons Concert Hall, York",
+   "datei": "jack_lyons_concert_hall_university_york__b-format__rir_jack_lyons_lp1_96k.wav",
+   "sekunden": 1.59,
+   "kb": 244
+  },
+  {
+   "id": "steinkammer",
+   "name": "Steinkammer",
+   "ort": "Maeshowe, Orkney (Grabkammer)",
+   "datei": "maes_howe__stereo__mh3_000_ortf_48k.wav",
+   "sekunden": 0.72,
+   "kb": 94
+  },
+  {
+   "id": "ganggrab",
+   "name": "Ganggrab",
+   "ort": "Newgrange, Irland",
+   "datei": "newgrange__b-format__newgrange_s1r1_2.wav",
+   "sekunden": 0.26,
+   "kb": 49
+  },
+  {
+   "id": "verlies",
+   "name": "Verlies",
+   "ort": "Falkland Palace, Flaschenverlies",
+   "datei": "falkland_palace_bottle_dungeon__b-format__bottledungeon1_sf_edited.wav",
+   "sekunden": 2.06,
+   "kb": 234
+  },
+  {
+   "id": "hoehle",
+   "name": "Höhle",
+   "ort": "Creswell Crags, England",
+   "datei": "creswell_crags__b-format__1_s_mainlevel_r_mainlevel.wav",
+   "sekunden": 0.78,
+   "kb": 111
+  },
+  {
+   "id": "schlucht",
+   "name": "Schlucht",
+   "ort": "Troller's Gill, Yorkshire Dales",
+   "datei": "trollers_gill__b-format__dales_site1_4way_bformat.wav",
+   "sekunden": 0.54,
+   "kb": 81
+  },
+  {
+   "id": "tunnel",
+   "name": "Tunnel",
+   "ort": "Innocent Railway Tunnel, Edinburgh",
+   "datei": "innocent_railway_tunnel__b-format__tunnel_entrance_d_4way_bformat.wav",
+   "sekunden": 1.64,
+   "kb": 226
+  },
+  {
+   "id": "stollen",
+   "name": "Stollen",
+   "ort": "Gill Heads Mine, Yorkshire",
+   "datei": "gill_heads_mine__b-format__mine_site1_1way_bformat.wav",
+   "sekunden": 0.63,
+   "kb": 90
+  },
+  {
+   "id": "kalkofen",
+   "name": "Kalkofen",
+   "ort": "Hoffmann-Kalkofen, Langcliffe",
+   "datei": "hoffmann_lime_kiln_langcliffeuk__b-format__ir_p1.wav",
+   "sekunden": 0.9,
+   "kb": 138
+  },
+  {
+   "id": "sommerwald",
+   "name": "Sommerwald",
+   "ort": "Koli-Nationalpark, Finnland (Sommer)",
+   "datei": "koli_national_park_summer__b-format__koli_summer_site2_4way_bformat.wav",
+   "sekunden": 1.05,
+   "kb": 142
+  },
+  {
+   "id": "winterwald",
+   "name": "Winterwald",
+   "ort": "Koli-Nationalpark, Finnland (Winter, Schnee)",
+   "datei": "koli_national_park_winter__b-format__koli_snow_site3_4way_bformat.wav",
+   "sekunden": 1.56,
+   "kb": 195
+  },
+  {
+   "id": "reaktorhalle",
+   "name": "Reaktorhalle",
+   "ort": "R1-Reaktorhalle, Stockholm",
+   "datei": "r1_nuclear_reactor_hall__stereo__r1_ortf-48k.wav",
+   "sekunden": 5.63,
+   "kb": 633
+  },
+  {
+   "id": "treppenhaus",
+   "name": "Treppenhaus",
+   "ort": "Treppenhaus, University of York",
+   "datei": "stairway_university_york__stereo__stairwell_ortf.wav",
+   "sekunden": 1.28,
+   "kb": 165
+  },
+  {
+   "id": "klangskulptur",
+   "name": "Klangskulptur",
+   "ort": "Tvísöngur, Seyðisfjörður (Island)",
+   "datei": "tvisongur_sound_sculpture_iceland_model__stereo__source4domedoreceiver1domefabinaural.wav",
+   "sekunden": 1.99,
+   "kb": 321
+  }
+ ]
+}

@@ -83,6 +83,10 @@ shutil.copy(os.path.join(APP, 'tap-worklet.js'), out)
 shutil.copy(os.path.join(HERE, 'manifest.webmanifest'), out)
 for d in ('fonts', 'icons'):
     shutil.copytree(os.path.join(HERE, d), os.path.join(out, d))
+# the hall's real rooms (dev/tools/raeume.py): served beside the app, not precached – each loads the first time it is
+# chosen and is kept then (sw.js, its own cache across versions)
+if os.path.isdir(os.path.join(APP, 'raeume')):
+    shutil.copytree(os.path.join(APP, 'raeume'), os.path.join(out, 'raeume'))
 
 # 3. service worker: precache list + a version derived from the content of every file (index.html still holding its
 #    placeholder; the version is stamped into it afterwards)
@@ -90,12 +94,14 @@ assets = []
 for root, _, files in os.walk(out):
     for f in sorted(files):
         rel = os.path.relpath(os.path.join(root, f), out).replace(os.sep, '/')
-        if not rel.endswith('.txt'):
+        if not rel.endswith('.txt') and not rel.startswith('raeume/'):
             assets.append(rel)
 assets.sort()
 h = hashlib.sha256()
 for rel in assets:
     h.update(rel.encode()); h.update(open(os.path.join(out, rel), 'rb').read())
+for root, _, files in os.walk(os.path.join(out, 'raeume')):   # (a changed room is a new version too – its cache keeps the old one otherwise)
+    for f in sorted(files): h.update(f.encode()); h.update(open(os.path.join(root, f), 'rb').read())
 version = h.hexdigest()[:12]
 sw = open(os.path.join(HERE, 'sw.js'), encoding='utf-8').read()
 sw = sw.replace("'__VERSION__'", json.dumps(version)).replace('__ASSETS__', json.dumps(['./'] + assets, indent=2))

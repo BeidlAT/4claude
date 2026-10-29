@@ -91,7 +91,9 @@ function ctl0(id, opts = {}) {
       });
       return h('div', { class: 'ctl wide', 'data-pid': pid }, lab, box);
     }
-    const s = h('select', { id: did, 'aria-label': name }, d.opts.map(([val, text]) => h('option', { value: val }, text)));
+    // (options with a third field are grouped: optgroups in their order)
+    const grp = [], og = {}; for (const [val, text, g] of d.opts) { const o = h('option', { value: val }, text); if (!g) { grp.push(o); continue; } if (!og[g]) { og[g] = h('optgroup', { label: g }); grp.push(og[g]); } og[g].append(o); }
+    const s = h('select', { id: did, 'aria-label': name }, grp);
     s.addEventListener('change', () => setParam(id, s.value));
     bindCtl(id, (v) => { s.value = v; });
     return h('div', { class: 'ctl' + (opts.wide ? ' wide' : ''), 'data-pid': pid }, h('label', { for: did }, opts.label || d.label), s);
@@ -166,12 +168,13 @@ function onParamChanged(id) {
     case 'pha': updPhaser(); break;
     case 'cho': updChorus(); break;
     case 'dly': updDelay(); break;
-    case 'rev': if (id === 'rev.size' || id === 'rev.damp') regenIR(); else updReverbMix(); break;
+    case 'rev': if (id === 'rev.size' || id === 'rev.damp' || id === 'rev.typ' || id === 'rev.dist' || id === 'rev.len') regenIR(); else updReverbMix(); break;
+    case 'fx': fxUpd(); break;
     case 'mov': updMove(); break;
     case 'mst': updMaster(); break;
     case 'bor': updBordun(); break;
     case 'mix': if (id === 'mix.pulsVol' || id === 'mix.pulsMute') for (const st of MIX.list) if (st.lane != null) updStrip(st); break;
-    case 'seq': if (id === 'seq.bpm') { TG.hxOn = false; seqRetempo(); updDelay(); hxWTempo(); } break;   // (Hexenring: the slider takes the tempo back from a Schleife; step 2a: loops with notes follow it)
+    case 'seq': if (id === 'seq.bpm') { TG.hxOn = false; seqRetempo(); updDelay(); hxWTempo(); fxTune(); } break;   // (Hexenring: the slider takes the tempo back from a Schleife; step 2a: loops with notes follow it)
     case 'neb':
       if (id === 'neb.cut' || id === 'neb.ymod' || id === 'neb.res') for (const t of touches.values()) for (const { v } of t.voices) if (v.alive && v.eng === 'neb') { v.setY(modY(t)); setP(v.filt.Q, P['neb.res']); }
       break;

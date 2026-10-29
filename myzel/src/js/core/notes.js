@@ -46,6 +46,8 @@ function buildNotes() {
   }
   N.notes = notes;
   hxWKeyBuilt();   // Hexenring: (step 2a) the field's key applied – loops that follow, if it changed outside an announcement
+  if (typeof fxTune === 'function') fxTune();
+  if (P['rev.typ'] === 's-glocke' && A.ctx && N.notes.length && Math.abs((A.bellRoot || 0) - N.notes[0].f) > 0.01) { A.bellRoot = N.notes[0].f; regenIR(); }   // (the bell's chamber rings in the key – raum-app.js)
 }
 function noteAt(x) {
   if (N.free) {

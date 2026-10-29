@@ -2,6 +2,16 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-29g",
+      "punkte": [
+        "Hall: Unter „Raum“ gibt es jetzt 23 echte, gemessene Räume (Kathedrale, Steinkuppel, Kirchen, Säle, Steinkammer, Höhle, Tunnel, Wald …) – jeder lädt beim ersten Wählen und bleibt dann auch offline da.",
+        "Dazu gerechnete Räume (Holzsaal, Silo, Glashaus …) und besondere: Myzelgeflecht, Federhall, Platte, Unter Wasser, Eiskristall, Spiegelkabinett, Sternenstaub, Glockenkammer in deiner Tonart, Unendlich und mehr.",
+        "Für jeden Raum: Abstand (nah bis fern) und Länge des Nachhalls. „Nebel“ ist der Hall wie bisher.",
+        "Mixer: Neuer Rückweg „Effekt“ – jeder Kanal schickt hinein: Resonanz-Netz (Saiten, Glocken oder Holzkörper in der Tonart), Wolke (Körner im Takt), Spektral-Nebel, Oktav-Echo, Vokal-Filter.",
+        "Die echten Räume stammen aus der OpenAIR-Sammlung der University of York (CC BY 4.0)."
+      ]
+    },
+    {
       "id": "2026-10-29f",
       "punkte": [
         "Die Summe endet jetzt in einem sauberen Begrenzer statt in einer weichen Verzerrung: Wird es zu laut, regelt er kurz leiser, statt die Welle zu verbiegen – auch viele Schleifen zusammen klingen nicht mehr verzerrt.",
