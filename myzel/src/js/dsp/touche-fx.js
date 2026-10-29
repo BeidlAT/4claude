@@ -148,8 +148,10 @@
         const dens = eis ? 18 + 22 * weg : 6 + 74 * Math.pow(weg, 1.2) + 10 * p, gap = SR / dens;
         while (this.gNext < n) {
           if (eis) {
-            const len = (0.16 + 0.34 * weg) * SR, semi = 12 * (re - li), sp = 1 + weg * 0.012 * (R.next() * 2 - 1), low = R.next() < her * 0.5;
-            const rate = Math.pow(2, semi / 12) * sp * (low ? 0.5 : 1), room = this.fN - len * Math.abs(rate) - 8;
+            // (29.10.2026, owner: „nur 3 klingt sauber“) a grain never reads more than the moment holds: transposed up, it is
+            // shorter (else it ran past the end and began the moment again inside itself – rough, a stutter at the octave)
+            const semi = 12 * (re - li), sp = 1 + weg * 0.012 * (R.next() * 2 - 1), low = R.next() < her * 0.5;
+            const rate = Math.pow(2, semi / 12) * sp * (low ? 0.5 : 1), len = Math.min((0.16 + 0.34 * weg) * SR, (this.fN - 64) / Math.abs(rate)), room = this.fN - len * Math.abs(rate) - 8;
             this.grain(4 + R.next() * Math.max(1, room), rate, len, (R.next() * 2 - 1) * (0.35 + 0.5 * weg), low ? 2 : 1);
           } else {
             const len = (0.035 + 0.17 * (1 - 0.6 * weg) + 0.12 * re) * SR;
@@ -166,7 +168,7 @@
       // the grains' sum, normalised by how many overlap (≈ density × length)
       const G = this.gn, gOn = this.gOn, gPos = this.gPos, gRate = this.gRate, gLen = this.gLen, gT = this.gT, gLv = this.gL, gRv = this.gR;
       let act = 0; for (let k = 0; k < G; k++) if (gOn[k]) act++;
-      const ovl = eis ? (18 + 22 * weg) * (0.16 + 0.34 * weg) : (6 + 74 * Math.pow(weg, 1.2)) * (0.035 + 0.17 * (1 - 0.6 * weg) + 0.12 * re), norm = 1 / Math.sqrt(Math.max(1, ovl * 0.5));
+      const ovl = eis ? (18 + 22 * weg) * Math.min(0.16 + 0.34 * weg, (this.fN - 64) / (SR * Math.pow(2, Math.max(0, re - li)))) : (6 + 74 * Math.pow(weg, 1.2)) * (0.035 + 0.17 * (1 - 0.6 * weg) + 0.12 * re), norm = 1 / Math.sqrt(Math.max(1, ovl * 0.5));
       // levels: koerner – the cloud rises with the pressure, the dry sound gives way a little; eis – the frozen layer is
       // the pressure (glides 120 ms, so a release lets it fade), the dry stays
       const lvT = eis ? (this.frozen ? Math.pow(p, 0.7) : 0) : Math.min(1, p * 1.4);
