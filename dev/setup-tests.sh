@@ -19,5 +19,5 @@ for d in midi-tests/orig motion-tests/orig; do cp "$R/myzel/tap-worklet.js" "$T/
 # v2/live2.js loads a 180 s file
 command -v ffmpeg >/dev/null && [ ! -f "$T/v2/src2/lang180.wav" ] && \
   ffmpeg -v error -f lavfi -i "sine=frequency=220:duration=180" -ac 2 "$T/v2/src2/lang180.wav" || true
-cd "$T/v2" && (curl -s -o /dev/null http://127.0.0.1:8790/ || (nohup python3 -m http.server 8790 >/dev/null 2>&1 &))
+cd "$T/v2" && (curl -s -o /dev/null http://127.0.0.1:8790/ || (setsid nohup python3 -m http.server 8790 >/dev/null 2>&1 < /dev/null &))
 echo "tests ready in $T"
