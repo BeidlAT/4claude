@@ -40,7 +40,11 @@ function makeProc() {
   x.lc1 = BQ('highpass', 0, -5.33); x.lc2 = BQ('highpass', 0, 2.32);   // Butterworth pair (Q 0.54 and 1.31, in dB)
   x.lo = BQ('lowshelf', 150); x.mid = BQ('peaking', 1000, 0.9); x.hi = BQ('highshelf', 6000);
   x.hc = BQ('lowpass', SR / 2, -3);
-  x.satPre = G(1); x.sat = A.ctx.createWaveShaper(); x.sat.oversample = 'none';
+  // (29.10.2026) the saturation in its own processor (myzel-sat, dsp/saettigung.js): the same curve, 2× oversampled and read
+  // through its antiderivative – no folding, 0.5 ms; the WaveShaper only where AudioWorklet is missing (it folds up there)
+  x.satPre = G(1);
+  if (A.ctx.__dspOK) { try { x.sat = new AudioWorkletNode(A.ctx, 'myzel-sat', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit' }); x.satW = true; } catch (e) { x.satW = false; } }
+  if (!x.satW) { x.sat = A.ctx.createWaveShaper(); x.sat.oversample = 'none'; }
   x.lc1.connect(x.lc2).connect(x.lo).connect(x.mid).connect(x.hi).connect(x.hc).connect(x.satPre).connect(x.sat);
   return x;
 }
@@ -49,6 +53,7 @@ function satSet(x, a) {
   const key = a.toFixed(3);
   if (x.satKey === key) return;
   x.satKey = key;
+  if (x.satW) { x.sat.port.postMessage({ a: Math.max(0, a) }); return; }
   if (a <= 0) { x.sat.curve = null; x.satPre.gain.value = 1; return; }
   const g = 1 + 9 * a, ref = 0.2, mk = ref / (Math.tanh(g * ref) / g), m = a / 2;
   x.satPre.gain.value = 0.25;   // the shaper reads ±4, so hot channels round off instead of clipping at ±1
