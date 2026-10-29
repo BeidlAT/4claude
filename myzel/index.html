@@ -961,6 +961,13 @@ body.mlearn #stage::after { content: ""; position: absolute; inset: 0; backgroun
 .hx-ed-humcv { display: block; width: 100%; height: 64px; border-radius: 8px; }
 .hx-ed-humft { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; margin-top: 6px; }
 .hx-ed-humft .btn { min-height: 30px; padding: 3px 10px; font-size: 12px; }
+.hx-ed-htools { display: grid; gap: 6px; margin-top: 8px; }
+.hx-ed-hrow { display: grid; grid-template-columns: 92px minmax(0, 1fr); align-items: center; gap: 8px; }
+.hx-ed-hl { font: 600 12px/1.2 var(--font-ui); color: var(--dim); }
+.hx-ed-hrow .btn { min-height: 30px; padding: 3px 10px; font-size: 12px; }
+.hx-ed-steps .chip { min-height: 28px; padding: 2px 9px; font: 600 12px/1 var(--font-num); }
+.hx-ed-steps .chip[aria-pressed="true"] { background: var(--spore); border-color: var(--spore); color: var(--ink); }
+.hx-ed-steps .chip:disabled { opacity: .4; }
 .hx-ed-srow .chip, .hx-ed-row .chip { min-height: 30px; padding: 3px 10px; font-size: 12px; }
 .hx-ed .chip[aria-pressed="true"] { background: var(--spore); border-color: var(--spore); color: var(--ink); }
 .hx-ed-row { display: grid; grid-template-columns: 80px 1fr; align-items: center; gap: 4px 10px; }
@@ -36544,17 +36551,53 @@ function hxEdHumRow(L) {
   const tk = hxTakt(L), one = L.sch.length === 1;
   const info = h('span', { class: 'hx-ms' }, 'Die ganze Ernte: ' + sec(hxHumView(H).n) + ' ab dem ersten Ton' + (tk ? ' · Ausschnitt ' + hxLenText(L) : ' · Ausschnitt ' + sec(S.cut.len)) + (one ? '' : ' – den Ausschnitt verschiebst du bei einer Schicht (Schichten zusammenlegen)'));
   const btn = (t, fn, tip) => { const b = h('button', { type: 'button', class: 'btn ghost', title: tip }, t); b.addEventListener('click', fn); b.disabled = !one; return b; };
-  const beatF = tk ? S.cut.len / L.d.beats : 0, barF = tk ? beatF * (L.bpb || 4) : 0;
-  const shift = (d) => () => hxHumApply(L, S.cut.w0 + d, S.cut.w1 + d, d < 0 ? 'Ausschnitt früher' : 'Ausschnitt später');
-  const tools = tk ? h('div', { class: 'chips' },
-    btn('◀ Takt', shift(-barF), 'Der Ausschnitt einen Takt früher (gleiche Länge, sofort)'), btn('Takt ▶', shift(barF), 'Der Ausschnitt einen Takt später'),
-    btn('◀ Schlag', shift(-beatF), 'Einen Schlag früher'), btn('Schlag ▶', shift(beatF), 'Einen Schlag später'),
-    btn('Anfang −1 Takt', () => hxHumApply(L, S.cut.w0 - barF, S.cut.w1, 'Ausschnitt einen Takt länger (vorn)'), 'Vorn einen Takt dazu'), btn('Ende +1 Takt', () => hxHumApply(L, S.cut.w0, S.cut.w1 + barF, 'Ausschnitt einen Takt länger (hinten)'), 'Hinten einen Takt dazu'),
-    btn('wie geerntet', () => hxHumReset(L), 'Der Ausschnitt wie beim Ernten'))
-    : h('div', { class: 'chips' }, btn('◀ 1 s', shift(-SR), 'Eine Sekunde früher'), btn('1 s ▶', shift(SR), 'Eine Sekunde später'), btn('wie geerntet', () => hxHumReset(L), 'Der Ausschnitt wie beim Ernten'));
+  const beatF = tk ? S.cut.len / L.d.beats : 0, c = () => S.cut;   // (read at the click: one click after another adds up)
+  // (owner, 29.10.2026: „jeweils eine Auswahl, was vorne oder hinten dazukommt oder wegkommt … auch 1/32 oder gar 1/64 …
+  // triolisches Raster würde wohl auch Sinn machen … zusätzlich nächsten Ton einrasten“) the step: a Takt loop's in note
+  // values (a beat is a quarter), straight or as triplets (⅔); a free loop's in seconds. Anfang and Ende each take it away
+  // or add it; a Takt loop's length stays whole beats – a finer step moves the window (Verschieben), a pickup comes in
+  // that way. „Ton“: the edge to the nearest attack before or after it (the audio's own onsets, any source)
+  const st = hxHumStep(tk), stF = tk ? st.b * beatF : st.s * SR, whole = !tk || Math.abs(st.b - Math.round(st.b)) < 1e-9, nm = st.t;
+  const why = tk && !whole ? 'Im Takt bleibt die Länge in ganzen Schlägen – feiner geht es mit „Verschieben“' : '';
+  const edge = (lab, dz, wg, tip) => { const a = btn(lab === 'Anfang' ? '+ ' + nm + ' dazu' : '− ' + nm + ' weg', lab === 'Anfang' ? dz : wg, why || tip[0]), b = btn(lab === 'Anfang' ? '− ' + nm + ' weg' : '+ ' + nm + ' dazu', lab === 'Anfang' ? wg : dz, why || tip[1]); if (why) a.disabled = b.disabled = true; return [a, b]; };
+  const ton = (which, dir) => () => { const { w0, w1 } = c(), f = hxHumTon(L, which === 'a' ? w0 : w1, dir); if (f == null) { toast('Dort ist kein Anschlag in der Nähe.'); return; } if (which === 'a') hxHumApply(L, f, tk ? f + (w1 - w0) : w1, 'Anfang an den Ton'); else hxHumApply(L, w0, f, 'Ende an den Ton'); };
+  const row = (lab, ...kids) => h('div', { class: 'hx-ed-hrow' }, h('span', { class: 'hx-ed-hl' }, lab), h('div', { class: 'chips' }, ...kids));
+  const steps = h('div', { class: 'chips hx-ed-steps', role: 'radiogroup', 'aria-label': 'Raster für Anfang, Ende und Verschieben' },
+    ...(tk ? HX_STEPS_T : HX_STEPS_F).map(([k, t]) => { const b = h('button', { type: 'button', class: 'chip', role: 'radio', 'aria-checked': String(k === st.k), onclick: () => { HXEH.step[tk ? 't' : 'f'] = k; hxHumStepSave(); hxEdRender(); } }, t); return b; }),
+    tk ? h('button', { type: 'button', class: 'chip', 'aria-pressed': String(!!HXEH.tri), title: 'Triolisch: jeder Schritt ⅔ so lang (drei in der Zeit von zwei)', disabled: st.k === 'takt', onclick: () => { HXEH.tri = !HXEH.tri; hxHumStepSave(); hxEdRender(); } }, 'Triole') : null);
+  const tools = h('div', { class: 'hx-ed-htools' },
+    row('Raster', steps),
+    row('Anfang', ...edge('Anfang', () => hxHumApply(L, c().w0 - stF, c().w1, 'Anfang: ' + nm + ' dazu'), () => hxHumApply(L, c().w0 + stF, c().w1, 'Anfang: ' + nm + ' weg'), ['Vorn ' + nm + ' dazu – die Schleife beginnt früher', 'Vorn ' + nm + ' weg – die Schleife beginnt später']),
+      btn('◀ Ton', ton('a', -1), tk ? 'Der Ausschnitt so, dass er am Anschlag davor beginnt (gleiche Länge)' : 'Der Anfang an den Anschlag davor'), btn('Ton ▶', ton('a', 1), tk ? 'Der Ausschnitt so, dass er am Anschlag danach beginnt (gleiche Länge)' : 'Der Anfang an den Anschlag danach')),
+    row('Ende', ...edge('Ende', () => hxHumApply(L, c().w0, c().w1 + stF, 'Ende: ' + nm + ' dazu'), () => hxHumApply(L, c().w0, c().w1 - stF, 'Ende: ' + nm + ' weg'), ['Hinten ' + nm + ' weg – die Schleife endet früher', 'Hinten ' + nm + ' dazu – die Schleife endet später']),
+      tk ? null : btn('◀ Ton', ton('b', -1), 'Das Ende an den Anschlag davor (die Schleife endet kurz vor ihm)'), tk ? null : btn('Ton ▶', ton('b', 1), 'Das Ende an den Anschlag danach')),
+    row('Verschieben', btn('◀ ' + nm, () => hxHumApply(L, c().w0 - stF, c().w1 - stF, 'Ausschnitt ' + nm + ' früher'), 'Der Ausschnitt ' + nm + ' früher – gleiche Länge, sofort'), btn(nm + ' ▶', () => hxHumApply(L, c().w0 + stF, c().w1 + stF, 'Ausschnitt ' + nm + ' später'), 'Der Ausschnitt ' + nm + ' später'),
+      btn('wie geerntet', () => hxHumReset(L), 'Der Ausschnitt wie beim Ernten')));
   const box = h('div', { class: 'hx-ed-humbox', title: 'Die ganze Ernte – alles, was der Humus beim Ernten hielt. Hell: was die Schleife spielt. Ziehen verschiebt den Ausschnitt, die Ränder ziehen ändert seine Länge (auf ganze Schläge, mit Umschalt auf ganze Takte; eine freie Schleife auf 10 ms). Gehört wird es ab der nächsten Naht – oder sofort, wenn die Länge bleibt. ↶ nimmt es zurück.' }, cv);
   if (one) hxHumDrag(box, L);
-  return h('div', { class: 'hx-ed-sec hx-ed-hum' }, h('div', { class: 'hx-ed-st' }, 'Ganze Ernte'), box, h('div', { class: 'hx-ed-humft' }, info, tools));
+  return h('div', { class: 'hx-ed-sec hx-ed-hum' }, h('div', { class: 'hx-ed-st' }, 'Ganze Ernte'), box, h('div', { class: 'hx-ed-humft' }, info), tools);
+}
+// the steps (k, its word, beats – a quarter is a beat; a free loop's in seconds) and the one chosen, kept for the device
+const HX_STEPS_T = [['takt', 'Takt'], ['2', '1/2'], ['1', '1/4'], ['0.5', '1/8'], ['0.25', '1/16'], ['0.125', '1/32'], ['0.0625', '1/64']];
+const HX_STEPS_F = [['1', '1 s'], ['0.1', '0,1 s'], ['0.01', '10 ms'], ['0.001', '1 ms']];
+HXEH.step = { t: 'takt', f: '0.1' }; HXEH.tri = false;
+try { const o = JSON.parse(store.get('myzel.hxStep') || 'null'); if (o) { Object.assign(HXEH.step, o.step || {}); HXEH.tri = !!o.tri; } } catch (e) {}
+function hxHumStepSave() { store.set('myzel.hxStep', JSON.stringify({ step: HXEH.step, tri: HXEH.tri })); }
+function hxHumStep(tk) {
+  if (!tk) { const k = HX_STEPS_F.some((x) => x[0] === HXEH.step.f) ? HXEH.step.f : '0.1', t = HX_STEPS_F.find((x) => x[0] === k)[1]; return { k, s: +k, t }; }
+  const L = hxEdL(), bpb = (L && L.bpb) || 4, k = HX_STEPS_T.some((x) => x[0] === HXEH.step.t) ? HXEH.step.t : 'takt', base = HX_STEPS_T.find((x) => x[0] === k)[1];
+  if (k === 'takt') return { k, b: bpb, t: 'Takt' };
+  return HXEH.tri ? { k, b: (+k * 2) / 3, t: base + 'T' } : { k, b: +k, t: base };
+}
+// the attack nearest an edge (frames, absolute) – before it (dir −1) or after it (+1), within 4 s, a few ms ahead of the
+// attack so the seam's crossfade leaves it whole; null when none
+function hxHumTon(L, at, dir) {
+  const H = L && L.hum; if (!H) return null;
+  const span = Math.round(4 * SR), a = Math.max(H.f0, at - span), b = Math.min(H.f0 + H.n, at + span);
+  if (b - a < SR / 10) return null;
+  const x = hxMono(H.aud, a - H.f0, b - a), ons = hxOnsetsAt(x).map((f) => a + f - Math.round(0.004 * SR)), gap = Math.round(0.02 * SR);
+  const cand = dir < 0 ? ons.filter((f) => f < at - gap) : ons.filter((f) => f > at + gap);
+  return cand.length ? (dir < 0 ? cand[cand.length - 1] : cand[0]) : null;
 }
 // the strip's view: from the first sound in the Ernte (a second before it) to its end – the silence before is left out
 function hxHumView(H) {
