@@ -31,6 +31,8 @@
 // source, inj as HX_FEED) – the Hof's price per voice, against the engine's VCOST of a played voice
 // (final pass) 'rhzo1' Rhizom's voices each striking a net of its own (rhzNet, as a loop nourishing Rhizom) – with
 // rhz-pings.js OWN=1 the pings they ring – rhz-fit.js fits RHZ_COST over both
+// (29.10.2026) 'fxnetzS1' / 'fxnetzG1' / 'fxnetzK1' (Resonanz-Netz: Saiten, Glocken, Holzkörper), 'fxwolke1', 'fxspek1',
+// 'fxoktav1', 'fxvokal1', 'fxtrans1', 'fxsat1', 'fxlim1': NV of the mixer's processors fed by noise – FX_COST = fx… − hxz
 process.env.SEED_BLOBS = '';
 const { chromium, openInst } = require('../../v2/lib');
 const ROUNDS = +process.argv[2] || 6, DUR = +process.env.DUR || 4, NV = +process.env.NV || 24, NW = +process.env.NW || 1, NH = +process.env.NH || 8;
@@ -53,6 +55,16 @@ const XP = JSON.parse(process.env.PARAMS || '{}');
         for (let k = 0; k < NV; k++) {
           const c = M.makeChain(); M.updDrive(c); M.updRing(c); M.updFilter(c); M.updPhaser(c); M.updChorus(c);
           const sr = ctx.createBufferSource(); sr.buffer = nb; sr.loop = true; sr.connect(c.in); sr.start(); c.out.connect(ctx.destination);
+        }
+        const t0 = performance.now(); await ctx.startRendering(); return performance.now() - t0;
+      }
+      if (eng.startsWith('fx')) {   // (29.10.2026) the mixer's own processors, NV of them, each fed by a noise source – against 'hxz1' (the sources alone): FX_COST
+        const kind = eng.slice(2), SR = 48000, nb = ctx.createBuffer(2, SR, SR), FX = { netzS: ['myzel-netz', { art: 0 }], netzG: ['myzel-netz', { art: 1 }], netzK: ['myzel-netz', { art: 2 }], wolke: ['myzel-wolke', { dichte: 1 }], spek: ['myzel-spek', {}], oktav: ['myzel-oktav', { onach: 1 }], vokal: ['myzel-vokal', { beweg: 1 }], trans: ['myzel-trans', null], sat: ['myzel-sat', null], lim: ['myzel-lim', null] }[kind];
+        for (let c = 0; c < 2; c++) { const d = nb.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * 0.3; }
+        for (let k = 0; k < NV; k++) {
+          const nd = new AudioWorkletNode(ctx, FX[0], { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit', processorOptions: FX[1] ? { set: FX[1], beat: 0.5, freqs: [220, 247, 294, 330, 392] } : {} });
+          if (kind === 'trans') nd.port.postMessage({ a: 0.6, s: -0.4 }); else if (kind === 'sat') nd.port.postMessage({ a: 0.5 });
+          const sr = ctx.createBufferSource(); sr.buffer = nb; sr.loop = true; sr.connect(nd).connect(ctx.destination); sr.start();
         }
         const t0 = performance.now(); await ctx.startRendering(); return performance.now() - t0;
       }
@@ -164,7 +176,7 @@ const XP = JSON.parse(process.env.PARAMS || '{}');
     for (const eq of ENGS) out[eq] = +((best[eq] - (eq === 'web3' ? best.base3 : best.base)) / unit * (eq.startsWith('web') ? NV / NW : /^hx[qnci]/.test(eq) ? NV / Math.min(NV, NH) : 1)).toFixed(3);
     const tab = (k, q) => (q === '3' ? M.VCOST3 : M.VCOST1)[k];
     // the scale: table / measured, over the held native engines measured here
-    const refs = ENGS.filter((eq) => !/^(hlm|rnk|null|web|elm|jrg|hrz|glt|boe|amo|shn|zpf|mdr|gsp|khl|rhz|hx|fglt|fshn)/.test(eq)), sc = refs.map((eq) => tab(eq.slice(0, -1), eq.slice(-1)) / out[eq]);
+    const refs = ENGS.filter((eq) => !/^(hlm|rnk|null|web|elm|jrg|hrz|glt|boe|amo|shn|zpf|mdr|gsp|khl|rhz|hx|fglt|fshn|fx)/.test(eq)), sc = refs.map((eq) => tab(eq.slice(0, -1), eq.slice(-1)) / out[eq]);
     const med = sc.slice().sort((a, b) => a - b), mid = med.length >> 1;   // the median: one disturbed reference moves it least
     out.scale = +(med.length % 2 ? med[mid] : (med[mid - 1] + med[mid]) / 2).toFixed(3); out.scaleEach = Object.fromEntries(refs.map((eq, i) => [eq, +sc[i].toFixed(2)]));
     M.P['dev.q'] = '1';
