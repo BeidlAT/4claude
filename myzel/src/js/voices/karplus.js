@@ -13,15 +13,16 @@ function genKS(f, bright, decaySec, damp, pos, sr) {
   for (let i = 0; i < exLen; i++) { lp += a * ((Math.random() * 2 - 1) - lp); ex[i] = lp; }
   const pd = Math.max(1, Math.round(pos * exLen));
   for (let i = exLen - 1; i >= pd; i--) ex[i] -= ex[i - pd];
+  // the fraction of the delay in a first-order Thiran allpass (flat), plus a fixed two-tap of weight W – the old linear
+  // read's mean loss, now the same for every note
+  const W = 0.2, Lw = L - W, D = Math.floor(Lw - 0.5), d = Lw - D, ca = (1 - d) / (1 + d);
+  let xa = 0, ya = 0, t1 = 0, u1 = 0;
   for (let n = 0; n < len; n++) {
     let v = n < exLen ? ex[n] : 0;
-    const idx = n - L;
-    if (idx >= 1) {
-      const i0 = Math.floor(idx), fr = idx - i0;
-      const d0 = y[i0] * (1 - fr) + y[i0 + 1 < n ? i0 + 1 : i0] * fr;
-      const d1 = y[i0 - 1] * (1 - fr) + y[i0] * fr;
-      v += g * ((1 - s) * d0 + s * d1);
-    }
+    const xi = n - D >= 0 ? y[n - D] : 0;
+    ya = ca * xi + xa - ca * ya; xa = xi;
+    const u = (1 - W) * ya + W * t1; t1 = ya;
+    v += g * ((1 - s) * u + s * u1); u1 = u;
     y[n] = v;
   }
   let peak = 0;
