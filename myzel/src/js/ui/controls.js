@@ -170,7 +170,8 @@ function onParamChanged(id) {
     case 'cho': updChorus(); break;
     case 'dly': updDelay(); break;
     case 'rev': if (id === 'rev.size' || id === 'rev.damp' || id === 'rev.typ' || id === 'rev.dist' || id === 'rev.len') regenIR(); else updReverbMix(); break;
-    case 'fx': case 'fx2': fxUpd(pre); break;
+    case 'arp': if (id === 'arp.on') arpOn(P['arp.on']); else if (P['arp.on']) arpStart(); if (!P['arp.on'] || P['arp.quelle'] === 'spiel') arpLoopQuiet(); break;   // (the Sporenwerk – arp/sporenwerk.js)
+    case 'fx': case 'fx2': fxUpd(pre); if (id.endsWith('.hmod')) for (const v of ['hv1', 'hv2', 'hv3']) for (const fn of CTL[pre + '.' + v] || []) fn(P[pre + '.' + v], null); break;   // (the Harmonizer's voices named anew: steps or semitones)
     case 'mov': updMove(); break;
     case 'mst': updMaster(); break;
     case 'bor': updBordun(); break;

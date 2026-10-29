@@ -2,6 +2,16 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-29m",
+      "punkte": [
+        "Neu: das Sporenwerk – ein Arpeggiator im eigenen Reiter. Halte Töne, und es spielt sie im Takt: zehn Wuchsformen von Aufwärts bis Hyphe, Spirale, Sporenflug, Pilzring und Wachsen.",
+        "Seine Trickkiste: euklidischer Ring, Ratschen, Chance, Akzente, Höhe-Welle, Stimmen in der Tonart, Leiter-Wanderung, Mutation, Halten – und „Würfeln“ für eine ganz neue Mischung.",
+        "Schleifen arpen: Das Sporenwerk nimmt die Töne, die gerade in einer Schleife klingen, als Akkord – die Schleife selbst darf dabei schweigen.",
+        "Ein lebendes Bild: der Pilzring der Schritte, Hyphen wachsen zu jedem Ton, Sporen sprühen bei Ratschen und Akzenten.",
+        "Neuer Effekt: Harmonizer – bis zu drei Stimmen in der Tonart oder in Halbtönen, mit gehaltenem Formant; in „Effekt“, „Effekt 2“ und als Einschub."
+      ]
+    },
+    {
       "id": "2026-10-29l",
       "punkte": [
         "Ansehen und Bearbeiten → Ganze Ernte: Anfang und Ende haben je „+ dazu“ und „− weg“, mit wählbarem Raster: Takt, 1/2, 1/4, 1/8, 1/16, 1/32, 1/64 – auch triolisch.",

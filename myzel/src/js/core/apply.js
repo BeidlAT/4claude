@@ -121,6 +121,7 @@ function applyAll(firstIR) {
   A.drvKey = null;
   updDrive(); updRing(); updFilter(); updPhaser(); updChorus(); updDelay(); updReverbMix(); updMove(); updMaster();
   updMix(!!firstIR); fxUpd();   // (the effect returns: a preset's choice and Anteil)
+  if (typeof arpOn === 'function' && !!P['arp.on'] !== !!ARP.tm) arpOn(P['arp.on']);   // (the Sporenwerk: on or off as the preset has it)
   regenIR(!!firstIR);
   updBordun();
 }

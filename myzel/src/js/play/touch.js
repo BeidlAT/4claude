@@ -46,15 +46,16 @@ function onDown(e) {
   const pt = e.pt || stagePoint(e), n = e.note || noteAt(pt.x), now = e.at > A.ctx.currentTime ? e.at : A.ctx.currentTime;   // (a key: at its moment – midiAt)
   const tt = { id: e.pointerId, t0: now, x: pt.x, y: pt.y, px: pt.px, py: pt.py, col: n.idx, f: n.f, name: n.name, layers: layers(), voices: [], rollNext: null, hue: VIS.hueAt(pt.x), vel: e.vel, bend: e.bend || false, vn: e.vn, mb: e.mb || 0, mpe: e.mpe, seq: ++MOD.seq, stk: modStroke(e.stkT), ptype: e.pointerType || null };
   const y0 = (tt.my = modY(tt, tt));   // the newest note: Höhe's full share from its first moment
-  for (const ly of tt.layers) {
+  const arp = typeof arpTake === 'function' && arpTake(tt);   // (the Sporenwerk: the note joins its pool and does not sound itself – arp/sporenwerk.js)
+  if (!arp) for (const ly of tt.layers) {
     if (ENGINES[ly.eng].sustain) {
       const f = lyF(ly, n.f, n.idx);   // mb: an MPE note's own bend in semitones
       const v = playNote(ly.eng, now, tt.mb ? f * Math.pow(2, tt.mb / 12) : f, y0, noteVel(tt) * ly.lvl, { pan: touchPan(pt.x), bend: tt.bend, bus: ly.bus });
       if (v) tt.voices.push({ v, ly });
     }
   }
-  triggerPerc(tt, now, false);
-  if (P['v.roll'] !== 'off' && tt.layers.some((ly) => !ENGINES[ly.eng].sustain)) tt.rollNext = now + rollInterval();
+  if (!arp) triggerPerc(tt, now, false);
+  if (!arp && P['v.roll'] !== 'off' && tt.layers.some((ly) => !ENGINES[ly.eng].sustain)) tt.rollNext = now + rollInterval();
   touches.set(e.pointerId, tt);
   if (GK.on) gkNote(tt, true, e);
   modTouch();
@@ -95,7 +96,7 @@ function moveTouch(tt, pt) {
   if (n.idx !== tt.col) {
     tt.col = n.idx;
     tt.hue = VIS.hueAt(pt.x);
-    if (P['v.strum'] && tt.rollNext == null) triggerPerc(tt, A.ctx.currentTime, false);
+    if (P['v.strum'] && tt.rollNext == null && !tt.arp) triggerPerc(tt, A.ctx.currentTime, false);
   }
 }
 function onUp(e) {

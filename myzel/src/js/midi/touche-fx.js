@@ -120,7 +120,7 @@ function tfxArpStep() {
 }
 function tfxArpTick() {
   const R = TFX.arp, v = R.v; if (!v || !A.ctx) return;
-  const held = [...touches.values()].filter((tt) => tt.layers && tt.layers.length).sort((a, b) => a.f - b.f);
+  const held = [...touches.values()].filter((tt) => tt.layers && tt.layers.length && !tt.arp).sort((a, b) => a.f - b.f);   // (a note the Sporenwerk plays is its – arp/sporenwerk.js)
   if (!held.length) { R.next = 0; return; }
   const now = A.ctx.currentTime, S = tfxArpStep(), oct = 1 + Math.round(2 * v.her);
   const seq = []; for (let o = 0; o < oct; o++) for (const tt of held) seq.push([tt, o]);

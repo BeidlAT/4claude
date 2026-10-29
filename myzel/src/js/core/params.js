@@ -3,6 +3,7 @@
    ===================================================================== */
 const PD = {};
 // (29.10.2026) the mixer's effect returns (mixer/effekt.js): key, name, colour, the effect each starts with
+const ARP_FORMS_P = [['auf', 'Aufwärts'], ['ab', 'Abwärts'], ['pendel', 'Pendel'], ['gespielt', 'Wie gespielt'], ['zufall', 'Zufall'], ['hyphe', 'Hyphe'], ['spirale', 'Spirale'], ['sporen', 'Sporenflug'], ['pilzring', 'Pilzring'], ['wachsen', 'Wachsen']];   // (the Sporenwerk's Wuchsformen – arp/sporenwerk.js)
 const FX_RETS = [['fx', 'Effekt', '#9fe3b0', 'netz'], ['fx2', 'Effekt 2', '#f2a8d8', 'wolke']];
 const def = (id, o) => (PD[id] = Object.assign({ id }, o));
 const NUM = (id, label, min, max, d, unit = '', o = {}) => def(id, Object.assign({ kind: 'num', label, min, max, d, unit, curve: 'lin' }, o));
@@ -475,7 +476,7 @@ NUM('rev.len', 'Länge', 0.5, 1.5, 1, '', { fmt: (v) => '×' + dec(v.toFixed(2))
 // knobs – the same set for both (FX_RETS: key, name, colour, the effect it starts with)
 for (const [r, , , typ] of FX_RETS) {
   const q = r + '.';
-  SEL(q + 'typ', 'Effekt', [['netz', 'Resonanz-Netz'], ['wolke', 'Wolke'], ['spektral', 'Spektral-Nebel'], ['oktav', 'Oktav-Echo'], ['vokal', 'Vokal-Filter']], typ);
+  SEL(q + 'typ', 'Effekt', [['netz', 'Resonanz-Netz'], ['wolke', 'Wolke'], ['spektral', 'Spektral-Nebel'], ['oktav', 'Oktav-Echo'], ['vokal', 'Vokal-Filter'], ['harmo', 'Harmonizer']], typ);
   NUM(q + 'mix', 'Anteil', 0, 1, 0, '%');
   SEL(q + 'art', 'Art', [['0', 'Saiten'], ['1', 'Glocken'], ['2', 'Holzkörper']], '0', { chips: 1, small: 1 });
   NUM(q + 'klang', 'Nachklang', 0, 1, 0.5, '%'); NUM(q + 'hell', 'Helligkeit', 0, 1, 0.6, '%'); NUM(q + 'breite', 'Breite', 0, 1, 0.7, '%');
@@ -485,8 +486,37 @@ for (const [r, , , typ] of FX_RETS) {
   NUM(q + 'szeit', 'Zerfließen', 0, 1, 0.5, '%'); NUM(q + 'shell', 'Helligkeit', 0, 1, 0.5, '%'); BOOL(q + 'halten', 'Halten', false);
   NUM(q + 'ozeit', 'Zeit', 0, 1, 0.6, '', { fmt: (v) => ['¼', '½', '¾', '1', '1½', '2'][Math.round(v * 5)] + ' Schlag' }); NUM(q + 'onach', 'Wiederholungen', 0, 1, 0.5, '%');
   SEL(q + 'schritt', 'Schritt', [['0', 'Oktave ab'], ['1', 'Quarte'], ['2', 'Quinte'], ['3', 'Oktave'], ['4', 'Duodezime']], '3', { chips: 1, small: 1 }); NUM(q + 'ohell', 'Helligkeit', 0, 1, 0.6, '%');
+  // (29.10.2026) the Harmonizer: three voices – steps of the key (Tonart) or semitones; 0 is off
+  const hmName = (v) => { v = Math.round(v); if (!v) return 'aus'; if (P[q + 'hmod'] !== 'ton') return (v > 0 ? '+' : '−') + Math.abs(v) + ' HT'; const a = Math.abs(v), o = Math.floor(a / 7), w = ['Prime', 'Sekunde', 'Terz', 'Quarte', 'Quinte', 'Sexte', 'Septime'][a % 7]; return (v > 0 ? '↑ ' : '↓ ') + (a % 7 === 0 ? (o === 1 ? 'Oktave' : o + ' Oktaven') : (o ? o + ' Okt. + ' : '') + w); };
+  SEL(q + 'hmod', 'Stimmen in', [['ton', 'der Tonart'], ['halb', 'Halbtönen']], 'ton', { chips: 1, small: 1 });
+  NUM(q + 'hv1', 'Stimme 1', -12, 12, 2, '', { step: 1, fmt: hmName }); NUM(q + 'hv2', 'Stimme 2', -12, 12, 4, '', { step: 1, fmt: hmName }); NUM(q + 'hv3', 'Stimme 3', -12, 12, 0, '', { step: 1, fmt: hmName });
+  NUM(q + 'hform', 'Formant halten', 0, 1, 0.6, '%'); NUM(q + 'hbreit', 'Breite', 0, 1, 0.6, '%'); NUM(q + 'hschim', 'Schimmer', 0, 1, 0.2, '%');
   NUM(q + 'vokal', 'Vokal', 0, 1, 0, '', { fmt: (v) => ['a', 'e', 'i', 'o', 'u'][Math.min(4, Math.round(v * 4))] }); NUM(q + 'beweg', 'Bewegung', 0, 1, 0.2, '%'); NUM(q + 'reso', 'Resonanz', 0, 1, 0.5, '%'); NUM(q + 'stimme', 'Stimme', 0, 1, 0.3, '%');
 }
+// (29.10.2026) the Sporenwerk – the arpeggiator (arp/sporenwerk.js)
+BOOL('arp.on', 'Sporenwerk', false);
+SEL('arp.quelle', 'Quelle', [['spiel', 'Gespielt'], ['schleife', 'Schleife'], ['beide', 'Beides']], 'spiel', { chips: 1, small: 1 });
+SEL('arp.schl', 'Schleife', [['0', 'Fokus'], ['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5'], ['6', '6'], ['7', '7'], ['8', '8']], '0', { chips: 1, small: 1 });
+BOOL('arp.schlStill', 'Schleife selbst still', true);
+SEL('arp.form', 'Wuchsform', ARP_FORMS_P, 'auf');
+SEL('arp.rate', 'Raster', [['1', '1/4'], ['0.5', '1/8'], ['0.25', '1/16'], ['0.125', '1/32']], '0.25', { chips: 1, small: 1 });
+SEL('arp.takt', 'Takt', [['g', 'gerade'], ['t', 'triolisch'], ['p', 'punktiert']], 'g', { chips: 1, small: 1 });
+NUM('arp.okt', 'Oktaven', 1, 4, 1, '', { step: 1, fmt: (v) => Math.round(v) + (Math.round(v) === 1 ? ' Oktave' : ' Oktaven') });
+SEL('arp.oktw', 'Oktaven gehen', [['auf', 'aufwärts'], ['ab', 'abwärts'], ['pendel', 'pendelnd'], ['zufall', 'springend']], 'auf', { chips: 1, small: 1 });
+NUM('arp.gate', 'Länge', 0.05, 1.5, 0.6, '%');
+NUM('arp.swing', 'Swing', 0, 0.6, 0, '%');
+NUM('arp.schritte', 'Ring: Schritte', 1, 16, 8, '', { step: 1 });
+NUM('arp.treffer', 'Ring: Treffer', 0, 16, 8, '', { step: 1 });
+NUM('arp.dreh', 'Ring: Drehung', 0, 15, 0, '', { step: 1 });
+NUM('arp.chance', 'Chance', 0, 1, 1, '%');
+NUM('arp.ratsche', 'Ratschen', 0, 1, 0, '%');
+NUM('arp.akzent', 'Akzent', 0, 1, 0.3, '%'); NUM('arp.akzN', 'Akzent alle', 2, 8, 4, '', { step: 1, fmt: (v) => Math.round(v) + ' Schritte' });
+NUM('arp.welle', 'Höhe-Welle', 0, 1, 0, '%');
+SEL('arp.stimmen', 'Stimmen', [['0', 'keine'], ['terz', '+ Terz'], ['quinte', '+ Quinte'], ['akkord', 'Dreiklang'], ['oktave', '+ Oktave']], '0', { chips: 1, small: 1 });
+NUM('arp.wander', 'Leiter-Wanderung', -3, 3, 0, '', { step: 1, fmt: (v) => (Math.round(v) ? (v > 0 ? '+' : '−') + Math.abs(Math.round(v)) + ' Stufe je Runde' : 'aus') });
+NUM('arp.wlang', 'Wanderung über', 1, 8, 4, '', { step: 1, fmt: (v) => Math.round(v) + ' Runden' });
+NUM('arp.mutation', 'Mutation', 0, 1, 0, '%');
+BOOL('arp.halten', 'Halten', false);
 NUM('mov.vib', 'Vibrato', 0, 60, 4, 'ct');
 NUM('mov.vibRate', 'Vibrato-Tempo', 0.1, 9, 4.5, 'Hz', { curve: 'exp' });
 NUM('mov.drift', 'Taumeln', 0, 80, 6, 'ct');
@@ -672,7 +702,7 @@ SEL('midi.tch', 'Touché-Spielweise', [['finger', 'Finger'], ['atem', 'Atem'], [
 
 const GROUP = {
   v: 'Spielweise', t: 'Stimmung', neb: 'Nebel', kor: 'Körner', hau: 'Hauch', glo: 'Glocke', mem: 'Membran', sai: 'Saite', sch: 'Schale', gng: "Gong", klb: "Kalimba", obt: "Obertöne", stm: "Stimme", swm: "Schwarm", tie: "Tiefe", trp: "Tropfen", nrd: 'Nordlicht', sht: 'Schimmer', ond: 'Ätherwelle', wal: 'Walgesang', stp: 'Endlostreppe', atr: 'Attraktor', tnl: 'Tunnel', wkg: 'Westküste', bnt: 'Schaltkreis', kas: 'Kassette', bit: 'Achtbit', gbs: 'Gleitbass', hht: 'Zischel', vox: 'Silbe', spu: 'Spieluhr', kto: 'Koto', hlm: 'Halm', rnk: 'Ranke', elm: 'Elmsfeuer', hng: 'Handpan', gml: 'Gamelan', sit: 'Sitar', tbl: 'Tabla', did: 'Didgeridoo', mtr: 'Maultrommel', jrg: 'Jahresring', hrz: 'Harz', shn: 'Sehne', zpf: 'Zapfen', glt: 'Glut', mdr: 'Moder', boe: 'Böe', amo: 'Amöbe', gsp: 'Gespinst', rhz: 'Rhizom', khl: 'Kehlchen',
-  drv: 'Verzerrung', rng: 'Ringmodulator', flt: 'Filter', pha: 'Phaser', cho: 'Schweben', dly: 'Echo', rev: 'Hall', fx: 'Effekt', fx2: 'Effekt 2', mov: 'Bewegung', mst: 'Summe',
+  drv: 'Verzerrung', rng: 'Ringmodulator', flt: 'Filter', pha: 'Phaser', cho: 'Schweben', dly: 'Echo', rev: 'Hall', fx: 'Effekt', fx2: 'Effekt 2', arp: 'Sporenwerk', mov: 'Bewegung', mst: 'Summe',
   seq: 'Puls', bor: 'Bordun', rec: 'Aufnahme', hx: 'Hexenring', dev: 'Gerät', midi: 'MIDI', l0: 'Spur 1', l1: 'Spur 2', l2: 'Spur 3', l3: 'Spur 4',
 };
 // the mixer's parts as the panel names them ("Kanal" is the MIDI channel's word here)
