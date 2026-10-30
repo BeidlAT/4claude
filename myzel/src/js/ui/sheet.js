@@ -34,6 +34,7 @@ function buildUI() {
   }, true);
   $('#startFingerLine').textContent = 'Mehrere gleichzeitig; Wischen schlägt ' + listDe(famPlay().strike) + ' an';
   $('#btnPuls').addEventListener('click', () => { if (!A.started) return; SEQ.on ? seqStop() : seqStart(); });
+  $('#btnStopAll').addEventListener('click', panic);   // (owner, 30.10.2026: „ein globaler Stopp-Knopf … alles beenden“ – the Puls starts on its own button)
   $('#btnFreeze').addEventListener('click', () => { if (A.started) setFreeze(!A.frozen); });
   $('#btnHold').addEventListener('click', () => holdSet(!HOLD.on));
   // Halten from the computer keyboard: Enter, where it would press nothing else (the field, the page)

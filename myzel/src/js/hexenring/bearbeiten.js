@@ -63,13 +63,24 @@ function hxEdOpen(L) {
   HXE.ed.querySelector('.hx-ed-x').focus({ preventScroll: true });
   hxSay(hxName(L) + ': bearbeiten');
 }
-function hxEdClose() { if (!HXE.ed || HXE.ed.hidden) return; hxPvStop(); HXE.ed.hidden = true; HXE.key = null; HXE.drag = null; HXE.rw = null; HXE.zv = null; }   // (the rendered pass freed – a long loop's is large)
+function hxEdClose() { if (!HXE.ed || HXE.ed.hidden) return; hxPvStop(); HXE.ed.hidden = true; if (HXE.grip) HXE.grip.hidden = true; HXE.key = null; HXE.drag = null; HXE.rw = null; HXE.zv = null; }   // (the rendered pass freed – a long loop's is large)
 function hxEdBuild() {
   const ed = HXE.ed = h('section', { class: 'hx-ed', role: 'dialog', 'aria-label': 'Schleife bearbeiten', hidden: true });
   ed.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); hxEdClose(); } });
   document.body.append(ed);
   window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !ed.hidden && !HXE.menu && !(MX.open && MX.detailK)) { e.preventDefault(); e.stopPropagation(); hxEdClose(); } }, true);   // (wherever the focus is)
   window.addEventListener('resize', () => { if (!ed.hidden) { hxEdPlace(); HXE.wsig = ''; } });
+  // (owner, 26.10.2026: „die Leiste nach rechts verschiebbar“; again 30.10.2026: „Das Fenster soll breiter ziehbar sein“)
+  // its width, dragged at the right edge – it may then reach over an open panel (double click: as the field again)
+  HXE.w = +store.get('myzel.edW') || 0;
+  const g = HXE.grip = h('div', { class: 'hx-ed-grip', role: 'separator', 'aria-orientation': 'vertical', 'aria-label': 'Breite des Bearbeiten-Fensters', title: 'Ziehen: breiter oder schmaler · Doppelklick: so breit wie das Feld', hidden: true });
+  let x0 = 0, w0 = 0;
+  g.addEventListener('pointerdown', (e) => { if (e.button > 0) return; e.preventDefault(); x0 = e.clientX; w0 = ed.getBoundingClientRect().width; try { g.setPointerCapture(e.pointerId); } catch (x) {} g.classList.add('on'); });
+  g.addEventListener('pointermove', (e) => { if (!g.classList.contains('on')) return; HXE.w = Math.max(360, w0 + e.clientX - x0); hxEdPlace(); HXE.wsig = ''; });
+  const end = () => { if (!g.classList.contains('on')) return; g.classList.remove('on'); store.set('myzel.edW', String(Math.round(HXE.w || 0))); };
+  g.addEventListener('pointerup', end); g.addEventListener('pointercancel', end);
+  g.addEventListener('dblclick', () => { HXE.w = 0; store.set('myzel.edW', '0'); hxEdPlace(); HXE.wsig = ''; });
+  document.body.append(g);
   hxBlitzOn(ed);
 }
 // over the field (its column), never over the rail: you still play and the rings still answer
@@ -77,14 +88,17 @@ function hxEdPlace() {
   const st = typeof stage !== 'undefined' && stage.getBoundingClientRect(), ed = HXE.ed; if (!st || !ed) return;
   const m = st.width < 700 ? 6 : 14;
   ed.style.left = Math.round(st.left + m) + 'px'; ed.style.top = Math.round(st.top + m) + 'px';
-  ed.style.width = Math.round(st.width - 2 * m) + 'px'; ed.style.maxHeight = Math.round(st.height - 2 * m) + 'px';
+  const wd = HXE.w ? Math.min(HXE.w, window.innerWidth - st.left - m - 8) : st.width - 2 * m;
+  ed.style.width = Math.round(wd) + 'px'; ed.style.maxHeight = Math.round(st.height - 2 * m) + 'px';
+  if (HXE.grip) { const g = HXE.grip; g.hidden = ed.hidden; g.style.left = Math.round(st.left + m + wd - 5) + 'px'; g.style.top = Math.round(st.top + m + 14) + 'px'; g.style.height = Math.max(40, Math.round(Math.min(ed.getBoundingClientRect().height || st.height, st.height - 2 * m) - 28)) + 'px'; }
 }
 // what the editor shows depends on: rebuilt when it changes (a frame compares it), the playhead drawn every frame
-// (the ↶ ↷ buttons follow the history: it is part of what is shown, not of what is rendered)
-const hxEdSig = (L) => hxEdRSig(L) + '|' + HX.hist.length + ':' + HX.redo.length + ':' + HX.pend.length + ':' + !!L.prev;
+// (the ↶ ↷ buttons follow the history, the state its words and colour: part of what is shown, not of what is rendered –
+// 30.10.2026: Stopp halts the loop, ▶ right after plays the same pass without rendering it again)
+const hxEdSig = (L) => hxEdRSig(L) + '|' + L.state + '|' + HX.hist.length + ':' + HX.redo.length + ':' + HX.pend.length + ':' + !!L.prev;
 function hxEdRSig(L) {
   const sch = L.sch.map((id) => HX.sch.get(id)).filter(Boolean);
-  return [L.key, L.hum ? 1 : L.humBusy ? 2 : 0, L.state, L.d.beats, L.d.L, L.bpb, L.sp || 1, !!L.rev, JSON.stringify(L.trim || 0), L.dbl || 1, HX.fokus === L.id, HX.solo ? HX.solo.id : 0, JSON.stringify(L.nt || 0), JSON.stringify(L.slc || 0), L.vb, JSON.stringify(L.ab || 0), L.notes.length,   // (26.10.2026: Lücken – its chips lit only after another change)
+  return [L.key, L.hum ? 1 : L.humBusy ? 2 : 0, L.d.beats, L.d.L, L.bpb, L.sp || 1, !!L.rev, JSON.stringify(L.trim || 0), L.dbl || 1, HX.fokus === L.id, HX.solo ? HX.solo.id : 0, JSON.stringify(L.nt || 0), JSON.stringify(L.slc || 0), L.vb, JSON.stringify(L.ab || 0), L.notes.length,   // (26.10.2026: Lücken – its chips lit only after another change)
    
     sch.map((S) => S.key + ':' + (S.ver || 0) + ':' + S.pre + ':' + S.len + ':' + S.gain + ':' + !!S.mute + ':' + !!S.aud + ':' + (S.play || 'ab') + ':' + (S.wu ? S.wu.sig || 1 : 0) + ':' + !!S.baked).join(','), hxLoopsLive().map((X) => X.slot).join('')].join('|');
 }
@@ -114,7 +128,7 @@ function hxEdRender() {
   hxEdWaveDrag(wbox);
   // (owner, 26.10.2026) the transport: Vorhören from any place, the stretch repeating, the clock, the zoom
   const zoomed = !!HXE.zv;
-  HXE.pvBtn = btn(HXE.pv ? '■ Stopp' : '▶ Abspielen', hxPvToggle, 'Vorhören (Leertaste): die Schleife so, wie sie mit allen Änderungen klingt – sofort, ab der Marke. Die laufende Schleife schweigt solange, die anderen spielen weiter. Ein Klick in die Wellenform spielt ab dort.', 'primary hx-pv-play');
+  HXE.pvBtn = btn(HXE.pv ? '■ Stopp' : '▶ Abspielen', hxPvToggle, 'Vorhören (Leertaste): die Schleife so, wie sie mit allen Änderungen klingt – sofort, ab der Marke. Die laufende Schleife schweigt solange, die anderen spielen weiter; ■ Stopp hält auch die Schleife an. Ein Klick in die Wellenform spielt ab dort.', 'primary hx-pv-play');
   const tp = h('div', { class: 'hx-ed-tp' }, HXE.pvBtn,
     btn('⏮', () => hxPvJump(HXE.sel ? HXE.sel.a : 0), HXE.sel ? 'An den Anfang der Auswahl' : 'An den Anfang', 'ghost'),
     HXE.sel ? chip('Auswahl wiederholen', HXE.pvRep !== false, () => { HXE.pvRep = HXE.pvRep === false; hxEdRender(); }, 'Beim Vorhören nur die Auswahl, immer wieder') : null,
@@ -202,7 +216,11 @@ function hxEdRender() {
       h('p', { class: 'note' }, whole ? 'Jeder Klick ist ein Schritt und sofort zu hören – das Vorhören startet von selbst. ↶ nimmt ihn zurück. Für einen Teil: in der Wellenform oben ziehen.' : 'Jeder Klick ist ein Schritt und sofort zu hören – das Vorhören startet von selbst und wiederholt die Auswahl. ↶ nimmt ihn zurück. Die Auswahl bleibt, du kannst weiter darauf arbeiten oder einen anderen Teil wählen.'));
   }
   const hum = hxEdHumRow(L);   // (26.10.2026: the whole Ernte, the loop's window in it)
+  // (30.10.2026) rebuilt while the waveform or ▶/■ has the focus (Stopp halts the loop – a new state): it stays there, so
+  // Space plays again
+  const fa = document.activeElement, fk = fa && ed.contains(fa) ? (fa.classList.contains('hx-ed-wave') ? wbox : fa.classList.contains('hx-pv-play') ? HXE.pvBtn : null) : null;
   ed.replaceChildren(head, tp, wbox, HXE.waitEl, selRow, ...(hum ? [hum] : []), ...(part ? [part] : []), h('div', { class: 'hx-ed-sec' }, h('div', { class: 'hx-ed-st' }, sch.length === 1 ? 'Schicht' : sch.length + ' Schichten'), ...schRows), h('div', { class: 'hx-ed-sec' }, h('div', { class: 'hx-ed-st' }, HXE.sel ? 'Ganze Schleife' : 'Bearbeiten'), ...tools), foot);
+  if (fk) fk.focus({ preventScroll: true });
   HXE.wsig = '';
   requestAnimationFrame(() => { hxEdWave(true); for (const c of ed.querySelectorAll('.hx-ed-mini')) hxEdMini(c); hxHumDraw(); });
 }
@@ -221,10 +239,17 @@ function hxEdWaveDrag(box) {
   box.addEventListener('pointerdown', (e) => {
     const L = hxEdL(); if (!L || e.button > 0) return;
     e.preventDefault(); try { box.setPointerCapture(e.pointerId); } catch (x) {} box.focus({ preventScroll: true });
+    const r = HXE.cv.getBoundingClientRect();
+    if (HXE.zv && e.clientY > r.bottom - 14) {   // (owner, 26.10.2026; again 30.10.2026: the bar under a zoomed view – dragged to the end of the take; a press beside its thumb centres it there)
+      const [v0, v1] = HXE.zv, s = v1 - v0, u = px(e);
+      if (u < v0 || u > v1) hxEdPan((u - (v0 + v1) / 2) / s);
+      HXE.drag = { id: e.pointerId, bar: true, cx: e.clientX, v0: HXE.zv[0] }; HXE.wsig = ''; return;
+    }
     HXE.drag = { id: e.pointerId, x0: at(e), cx: e.clientX, moved: false };
   });
   box.addEventListener('pointermove', (e) => {
     const D = HXE.drag, L = hxEdL(); if (!D || e.pointerId !== D.id || !L) return;
+    if (D.bar) { if (!HXE.zv) return; const r = HXE.cv.getBoundingClientRect(), s = HXE.zv[1] - HXE.zv[0], n0 = clamp(D.v0 + (e.clientX - D.cx) / Math.max(1, r.width * hxEdWf(L)), 0, 1 - s); HXE.zv = [n0, n0 + s]; HXE.wsig = ''; return; }
     const x = at(e); if (Math.abs(e.clientX - D.cx) > 4) D.moved = true; if (!D.moved) return;
     const u = hxEdStep(L) / (e.altKey ? 4 : 1), a = Math.floor(Math.min(D.x0, x) / u + 1e-9) * u, b = Math.min(1, Math.ceil(Math.max(D.x0, x) / u - 1e-9) * u);   // (Alt: a sixteenth of a beat)
     HXE.sel = { a, b: Math.max(b, a + u) }; HXE.wsig = '';
@@ -232,6 +257,7 @@ function hxEdWaveDrag(box) {
   // a click: it plays from there (owner, 26.10.2026) – inside the selection the selection stays, outside it goes
   const up = (e) => {
     const D = HXE.drag; if (!D || e.pointerId !== D.id) return; HXE.drag = null;
+    if (D.bar) return;
     if (D.moved) { hxEdRender(); return; }
     const had = !!HXE.sel; if (HXE.sel && (D.x0 < HXE.sel.a || D.x0 >= HXE.sel.b)) HXE.sel = null;
     hxPvPlay(D.x0); HXE.wsig = '';
@@ -319,7 +345,7 @@ const hxEdWf = (L) => (L ? Math.min(1, 1 / (L.sp || 1)) : 1);
 function hxEdWave(force) {
   const L = hxEdL(), cv = HXE.cv; if (!L || !cv || !cv.isConnected) return;
   const w = cv.clientWidth, hh = cv.clientHeight; if (!w || !hh) return;
-  const ws = HXE.rsig + '|' + (HXE.rw ? HXE.rw.sig : '') + '|' + w + 'x' + hh + '|' + JSON.stringify(HXE.sel || 0) + '|' + JSON.stringify(HXE.zv || 0) + '|' + JSON.stringify(HXE.mark || 0) + '|' + (HX.take ? HX.take.st + HX.take.a : '');
+  const ws = HXE.rsig + '|' + L.state + '|' + (HXE.rw ? HXE.rw.sig : '') + '|' + w + 'x' + hh + '|' + JSON.stringify(HXE.sel || 0) + '|' + JSON.stringify(HXE.zv || 0) + '|' + JSON.stringify(HXE.mark || 0) + '|' + (HX.take ? HX.take.st + HX.take.a : '');
   if (force || ws !== HXE.wsig || !HXE.bg) {   // the still layer: grid, waveform, notes, the selection
     HXE.wsig = ws;
     const raw = hxEdPeaks(L, HXE_W), rd = HXE.rw && HXE.rw.sig === HXE.rsig && !HXE.rw.none ? HXE.rw : null, W = HXE_W;
@@ -357,7 +383,7 @@ function hxEdWave(force) {
     const bar = (n, D0) => { const x = X(n.ph), y = 16 + (1 - (n.r != null ? n.r : 0.5)) * (hh - 30), len = Math.max(3, ((n.d || 0.1) / D0 / vs) * ww); if (x + len >= 0 && x <= ww) c.fillRect(x, y - 1.5, len, 3); };
     if (mk) { c.fillStyle = 'rgba(134,240,208,.22)'; for (const n of mk.was) bar(n, 1); c.fillStyle = 'rgba(134,240,208,.9)'; for (const n of mk.now) bar(n, 1); }
     else { c.fillStyle = 'rgba(134,240,208,.85)'; for (const n of L.notes) bar(n, D); }
-    if (HXE.zv) { c.fillStyle = 'rgba(240,230,216,.10)'; c.fillRect(0, hh - 4, ww, 4); c.fillStyle = 'rgba(240,230,216,.55)'; c.fillRect(v0 * ww, hh - 4, Math.max(3, vs * ww), 4); }   // (where the view is in the whole)
+    if (HXE.zv) { c.fillStyle = 'rgba(240,230,216,.12)'; c.fillRect(0, hh - 8, ww, 8); c.fillStyle = 'rgba(240,230,216,.6)'; c.beginPath(); const bw = Math.max(10, vs * ww), bx = Math.min(v0 * ww, ww - bw); if (c.roundRect) c.roundRect(bx, hh - 7, bw, 6, 3); else c.rect(bx, hh - 7, bw, 6); c.fill(); }   // (where the view is in the whole – drag it)
   }
   const c = mxFit(cv, w, hh, 0, Math.min(2, devicePixelRatio || 1));
   c.clearRect(0, 0, w, hh); c.drawImage(HXE.bg, 0, 0, w, hh);

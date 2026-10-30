@@ -6,7 +6,7 @@
 //   2. heard at once: the notes' tools, a stretch, rückwärts swap mid-pass; Weglassen changes the level within the pass
 //   3. the processor's mid-pass changes are crossfaded – a sine stays smooth (no click) through a slice change and a swap
 //   4. the transport: ▶ plays the rendered pass (the loop itself silent meanwhile), a click jumps there, a selection
-//      repeats, Space toggles, ■ gives the loop back; an edit while it plays takes over at the same place; the zoom
+//      repeats, Space toggles, ■ halts the loop too (owner, 30.10.2026); an edit while it plays takes over at the same place; the zoom
 //                                                                    node t-hx-vorhoeren.js   (screenshots out/pv-*.png)
 const G = require('./hx-g'), H = require('./hx-h');
 const { ok } = H;
@@ -142,14 +142,14 @@ const { ok } = H;
   });
   await page.screenshot({ path: 'out/pv-play.png' });
   await page.focus('.hx-ed-wave'); await page.keyboard.press('Space'); await page.waitForTimeout(150);
-  const tp3 = await page.evaluate(async () => { const M = window.__M, L = M.hxLoopsLive()[0]; return { pv: !!M.HXE.pv, mute: !!L.pvMute, at: +M.hxPvPos().toFixed(3), rec: !!M.HX.rec }; });
+  const tp3 = await page.evaluate(async () => { const M = window.__M, L = M.hxLoopsLive()[0]; return { pv: !!M.HXE.pv, mute: !!L.pvMute, st: L.state, at: +M.hxPvPos().toFixed(3), rec: !!M.HX.rec }; });
   await page.keyboard.press('Space'); await page.waitForTimeout(400);
   const tp4 = await page.evaluate(async () => { const M = window.__M; return { pv: !!M.HXE.pv }; });
   ok(tp.o.play.pv && tp.o.play.mute && tp.o.play.rms > 0.005 && tp.o.play.adv > 0.02 && /Stopp/.test(tp.o.play.btn) && /Takt \d · Schlag \d · 0:0\d,\d \/ 0:08,\d/.test(tp.o.play.lt), `▶ plays the rendered pass, the loop itself silent meanwhile; the clock runs (${JSON.stringify(tp.o.play)})`);
   ok(Math.abs(tp2.at - 0.75) < 0.03, `a click into the waveform plays from there (${tp2.at})`);
   ok(tp2.rep.min >= 0.25 - 0.005 && tp2.rep.max <= 0.5 + 0.005 && tp2.rep.wrapped, `a selection repeats while it plays (${JSON.stringify(tp2.rep)})`);
   ok(tp2.swap.swapped && tp2.swap.cont, `an edit while it plays: the new pass takes over at the same place (${JSON.stringify(tp2.swap)})`);
-  ok(!tp3.pv && !tp3.mute && !tp3.rec && tp4.pv, `Space in the editor stops (the loop sounds again, nothing recorded) and plays again (${JSON.stringify(tp3)}, ${JSON.stringify(tp4)})`);
+  ok(!tp3.pv && !tp3.mute && tp3.st === 'angehalten' && !tp3.rec && tp4.pv, `Space in the editor stops (the loop halts too – owner, 30.10.2026 –, nothing recorded) and plays again (${JSON.stringify(tp3)}, ${JSON.stringify(tp4)})`);
   // 5. the zoom
   const cvb = await (await page.$('.hx-ed-cv')).boundingBox();
   await page.mouse.move(cvb.x + cvb.width * 0.5, cvb.y + 40);
