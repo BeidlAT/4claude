@@ -225,6 +225,8 @@ const { ok } = H;
     if (M.mxSetView) { M.mxSetView('geflecht'); await window.__sleep(300); }
     out.gef = M.MXG.vis ? M.MXG.vis.filter((C) => /^eb|fin/.test(C.k)).map((C) => C.k).join(' ') : '(not laid out)';
     out.gefHid = M.MXG.cols.filter((C) => C.hid).map((C) => C.k).join(' ');
+    // (review 30.10.2026) the chain's knot: a number, between the four Puls lanes (l1's right edge = l2's left)
+    { const G = M.MXG, c1 = G.cols.find((C) => C.k === 'l1'), c2 = G.cols.find((C) => C.k === 'l2'); out.knot = [G.kx, G.ky, G.dyy].every(Number.isFinite) && Math.abs(G.kx - (c1.cx + c2.cx) / 2) < 0.5; out.knotAt = [G.kx, G.ky, G.dyy, c1.cx, c2.cx].map((x) => +(+x).toFixed(1)).join(' '); }
     if (M.mxSetView) { M.mxSetView('pult'); await window.__sleep(200); }
     M.setParam('e8.eng', 'neb'); await window.__sleep(100);
     out.pult8 = [...document.querySelectorAll('.mx-st')].filter((x) => x.offsetParent !== null && /^eb/.test(x.dataset.k)).map((x) => x.dataset.k).join(' ');
@@ -236,6 +238,7 @@ const { ok } = H;
   ok(r.rowsAdd === '1,2,3' && r.det, `„+ Ebene“ opens the next row (${r.rowsAdd}); „Einstellen“ shows its ranges`);
   ok(/−12 HT/.test(r.sum) && /C3–C4/.test(r.sum) && r.mute === true, `the row says what it plays (its sound in its row): „${r.sum}“; its M is the strip's mute`);
   ok(r.pult === 'fin eb2 eb3' && r.pult8 === 'eb2 eb3 eb8' && r.gef === 'fin eb2 eb3' && r.gefHid === 'eb4 eb5 eb6 eb7 eb8', `the mixer shows Ebenen 3–8 once used: Pult ${r.pult} → ${r.pult8}; Geflecht ${r.gef} (hidden ${r.gefHid})`);
+  ok(r.knot, `the Geflecht's chain knot stands between the Puls lanes, every coordinate a number (kx ky dyy · l1 l2: ${r.knotAt})`);
 
   // ---------- 9 · MIDI note-off and the pedal end every layer ----------
   r = await ev(async () => {

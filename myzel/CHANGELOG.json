@@ -2,6 +2,13 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-30h",
+      "punkte": [
+        "Mixer-Geflecht: Stamm, Kettenknoten und die Beschriftung „Kette“ werden wieder gezeichnet (seit dem letzten Update fehlten sie).",
+        "Der Kettenknoten steht wieder mittig zwischen den vier Puls-Spuren."
+      ]
+    },
+    {
       "id": "2026-10-30g",
       "punkte": [
         "Ebenen: Klingt eine angeschlagene Ebene aus, nimmt sie die gehaltene Ebene derselben Note nicht mehr mit – gehaltene Akkorde reißen nicht ab. Arpeggio, Touché-Arp und „Anreißen“ achten auf den Tonbereich jeder Ebene, die Vorschau von Ebene 2 auf ihre Feinstimmung.",
