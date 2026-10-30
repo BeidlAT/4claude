@@ -143,7 +143,7 @@ function idleEnter() {
 function hxGates(on) {
   if (IDLE.hxOff === on) lmEv(on ? 'tor-auf' : 'tor-zu');
   IDLE.hxOff = !on;
-  const deep = P['xhxr.route'] === 'dir' && !HX.out1;
+  const deep = !HX.out1;   // (30.10.2026: the strip goes straight to the master – „Kette“ is the loops' own way, out 1)
   for (const g of [HX.g0, HX.g1]) if (g && HX.ctx === A.ctx) g.gain.value = on || !deep ? 1 : 0;
   if (HX.gM && HX.gM.context === A.ctx) HX.gM.gain.value = on ? 1 : 0;
 }

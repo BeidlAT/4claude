@@ -100,7 +100,7 @@ async function hxRebakeRun() {
 }
 // „folgt der Effektkette“ for a loop: its Schichten go dry through the live chain from the next seam on – or back to
 // their baked versions (baked now if they were not)
-function hxFolgt(L, on) {
+function hxFolgt(L, on, quiet) {
   L.folgt = !!on;
   const f = hxNextSeam(L).f;
   for (const id of L.sch) {
@@ -108,7 +108,7 @@ function hxFolgt(L, on) {
     if (on && S.baked) hxSchPlay(S, false, f);
     else if (!on && !S.baked) { if (S.bak) hxSchPlay(S, true, f); else hxAfterFill(S); }
   }
-  hxSay(hxName(L) + (on ? ' folgt der Effektkette' : ': Effektkette eingebrannt')); hxSaveMeta(L.id); hxCardDirty();
+  if (!quiet) hxSay(hxName(L) + (on ? ' folgt der Effektkette' : ': Effektkette eingebrannt')); hxSaveMeta(L.id); hxCardDirty(); hxRailDirty();
 }
 
 // ---- Taumeln (SPEC §9, per loop, default on): the shared drift bends every live voice; the processor hears it (input

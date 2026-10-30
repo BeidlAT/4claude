@@ -197,7 +197,13 @@ function hxMask(keys) {
 }
 // the strip „Hexenring“: straight to the master (its chain is burnt in) – or, set to the chain, through a copy of it
 // (the same settings and modulators) that ends at the master as well, never in A.masterSum where „Alles“ listens
-function hxRoute() { return P['xhxr.route'] !== 'dir' ? hxChain('fx').in : hxGateM(); }
+// (owner, 30.10.2026: „das Aufgenommene klingt erst gleich, wenn ich von Kette auf Direkt schalte“) the strip's „Kette“
+// sent the baked audio through a copy of the chain once more – the effects twice. Now the strip always goes straight to
+// the master; „Kette“ means: every Schleife follows the live chain (its dry audio through the chain's copy, out 1 –
+// hxFolgt), „Direkt“: each as set (burnt in by default) – and each Schleife has the switch of its own (hexenring/mixer.js)
+function hxRoute() { return hxGateM(); }
+// the strip's way set: every Schleife takes it (a new one takes it when it is made – ernten.js hxLoopMake)
+function hxRouteAll(route) { const on = route !== 'dir'; for (const L of hxLoopsLive()) if (!L.bew && !!L.folgt !== on) hxFolgt(L, on, true); if (MX.root) hxStripSync(); }
 // the Hexenring's way into the master's input, straight or through the chain's copy: a gate at 1 (Ruhe: at 0 while the
 // graph sleeps, so the master rests while what is before it runs on – hxGates)
 function hxGateM() { if (!HX.gM || HX.gM.context !== A.ctx) { HX.gM = G(1); HX.gM.connect(A.masterIn); } return HX.gM; }

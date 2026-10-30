@@ -30,7 +30,9 @@ Begründungen stehen in `dev/STAND-2026-10-29.md` (Abschnitte „Danach (30.10.)
 
 ## Für die nächste Sitzung zu tun (ohne weitere Rückfrage)
 ## Erledigt am 30.10. (zur Orientierung)
-#121 Punkt 7 Schalter im Bearbeiten-Fenster (`hexenring/klangebene.js`: Klangfarbe-Ebene `L.rx` über Abdruck und Wuchs-
+#122 Punkt 9: Strip-Weg „Kette“ doppelte die Effekte (eingebranntes Audio durch die Kettenkopie) – jetzt „Kette“ = alle
+Schleifen folgen (hxRouteAll → hxFolgt, out 1), Strip immer direkt (hxRoute = hxGateM); Weg-Schalter „K“ je Schleife im
+Hexenring-Mixer; neue Schleifen übernehmen den Strip-Weg. · #121 Punkt 7 Schalter im Bearbeiten-Fenster (`hexenring/klangebene.js`: Klangfarbe-Ebene `L.rx` über Abdruck und Wuchs-
 Version, Basis `S.rxB` gespeichert als ~r/~q; Zeit/Noten/Trimmen als Schalter) · Punkt 8 F1–F10 Presets (mit Touché
 Strg+F1–F10), Touché-Schalter per Program Change (`tchIn`). Nach Band-Werkzeugen, die neues Audio schreiben (rückwärts,
 Verdoppeln, Abschnitt-Schritte) gilt das aktuelle Audio als neue Basis – die Klangfarbe ist dann fest im Band; ↶ oder

@@ -160,7 +160,7 @@ function onParamChanged(id) {
   if (pre === 'rec') return;
   if (PD[id].dev) { onDeviceChanged(id); return; }
   if (PD[id].live) { if (A.ctx && pre[0] === 'x' && MIX.s[pre.slice(1)]) mixParam(MIX.s[pre.slice(1)], 'solo'); if (A.ctx && /^e\d\.solo$/.test(id)) { updSolo(); updSends(); } ebUI(); return; }   // (an Ebene's solo – the Klang page)
-  if (pre === 'xhxr') { if (A.ctx) mixParam(MIX.s.hxr, id.slice(5)); return; }   // Hexenring: its strip is not the patch's
+  if (pre === 'xhxr') { if (A.ctx) mixParam(MIX.s.hxr, id.slice(5)); if (id === 'xhxr.route' && A.ctx && HX.node) hxRouteAll(P[id]); return; }   // Hexenring: its strip is not the patch's; its way: every Schleife's (node.js)
   if (pre === 'hx') { hxParam(id); return; }
   markPresetDirty();
   if (!A.ctx) return;
