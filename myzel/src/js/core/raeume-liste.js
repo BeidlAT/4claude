@@ -34,6 +34,9 @@ const RAUM_LISTE = [
   // octave as rooms of that kind have it; src and mic at their places – Abstand moves them)
   { id: 'r-holzsaal', name: 'Holzsaal', art: 'gerechnet', o: { dim: [30, 20, 12], mat: ['holz', 'holz', 'holz', 'holz', 'holzboden', 'holz'], T: [1.9, 1.8, 1.7, 1.6, 1.5, 1.3, 1.0], scat: 0.5 } },
   { id: 'r-steinhalle', name: 'Steinhalle', art: 'gerechnet', o: { dim: [36, 18, 16], mat: ['stein', 'stein', 'stein', 'stein', 'stein', 'stein'], T: [4.2, 4.3, 4.1, 3.8, 3.2, 2.4, 1.5], scat: 0.4 } },
+  // (Handpan-Pilot, 26.10.2026, owner: „passt so“ – its stone dome, ≈ 4.5 s: shorter than the measured Steinkuppel,
+  // rounder than the Steinhalle; the lows longer, the highs as stone and air leave them)
+  { id: 'r-steinkuppel', name: 'Kleine Steinkuppel', art: 'gerechnet', o: { dim: [22, 20, 15], mat: ['stein', 'stein', 'stein', 'stein', 'stein', 'stein'], T: [5.8, 5.5, 4.8, 4.5, 4.0, 3.3, 2.2], scat: 0.4 } },
   { id: 'r-glashaus', name: 'Glashaus', art: 'gerechnet', o: { dim: [20, 10, 7], mat: ['glas', 'glas', 'glas', 'glas', 'erde', 'glas'], T: [1.2, 1.4, 1.7, 2.0, 2.1, 1.9, 1.5], scat: 0.15 } },
   { id: 'r-holzhuette', name: 'Holzhütte', art: 'gerechnet', o: { dim: [5, 4, 2.6], mat: ['holz', 'holz', 'holz', 'holz', 'holzboden', 'holz'], T: [0.5, 0.45, 0.4, 0.38, 0.35, 0.32, 0.28], scat: 0.35 } },
   { id: 'r-fliesenbad', name: 'Gekacheltes Bad', art: 'gerechnet', o: { dim: [4, 3, 2.6], mat: ['fliese', 'fliese', 'fliese', 'fliese', 'fliese', 'putz'], T: [1.4, 1.5, 1.6, 1.6, 1.5, 1.3, 1.0], scat: 0.1 } },

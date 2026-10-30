@@ -206,10 +206,14 @@ const PRESETS = [
     'rev.size': 5, 'rev.damp': 0.4, 'rev.mix': 0.4, 'dly.div': '0.75', 'dly.fb': 0.35, 'dly.mix': 0.22, 'seq.bpm': 70,
     'l0.on': false, 'l1.on': false, 'l2.on': true, 'l2.eng': 'kto', 'l2.steps': 9, 'l2.puls': 4, 'l2.div': '0.5', 'l2.walk': 0.6, 'l2.vol': 0.35, 'l2.bright': 0.45,
     'l3.on': true, 'l3.eng': 'hng', 'l3.steps': 13, 'l3.puls': 3, 'l3.div': '1', 'l3.oct': -1, 'l3.vol': 0.35, 'l3.bright': 0.2 } },
-  { key: 'handpankreis', name: 'Handpan-Kreis', tags: 'Welt · Meditation', desc: 'Ein Stahlfeld unter der Hand, ein zweites spielt Kreise im Akebono, warmer Raum.', v: {
+  { key: 'handpankreis', name: 'Handpan-Kreis', tags: 'Welt · Meditation', desc: 'Ein Stahlfeld unter der Hand, ein zweites spielt Kreise im Akebono, unter einer Steinkuppel.', v: {
     'v.eng': 'hng', 't.root': '2', 't.scale': 'akebono', 't.oct': 3, 't.range': 2,
     'hng.glanz': 0.5, 'hng.nachklang': 0.7, 'hng.koerper': 0.65, 'hng.schweben': 0.55,
-    'drv.mix': 0, 'rev.size': 6, 'rev.damp': 0.5, 'rev.mix': 0.45, 'cho.mix': 0.15, 'dly.div': '0.75', 'dly.fb': 0.3, 'dly.mix': 0.18, 'seq.bpm': 76,   // (owner, 26.10.2026: „nur Handpan-Kreis ohne Röhre“ – PR #52, lost in the reset of 27.10.; again 30.10.)
+    // (Handpan-Pilot, 26.10.2026, owner: „passt so“; again 30.10.) a stone dome; the steel without the app's default
+    // motion (no vibrato, drift, phaser, circling, chorus, filter wave – a handpan has none)
+    'rev.typ': 'r-steinkuppel', 'rev.dist': 0.25, 'rev.size': 4.5, 'rev.damp': 0.45, 'rev.pre': 0.018, 'rev.mix': 0.42,
+    'cho.mix': 0, 'pha.mix': 0, 'flt.lfoDepth': 0, 'mov.vib': 0, 'mov.drift': 0, 'mov.pan': 0,
+    'drv.mix': 0, 'dly.div': '0.75', 'dly.fb': 0.3, 'dly.mix': 0.18, 'seq.bpm': 76,   // (owner, 26.10.2026: „nur Handpan-Kreis ohne Röhre“ – PR #52, lost in the reset of 27.10.; again 30.10.)
     'l0.on': false, 'l1.on': true, 'l1.eng': 'hng', 'l1.steps': 11, 'l1.puls': 4, 'l1.div': '0.5', 'l1.walk': 0.7, 'l1.vol': 0.4, 'l1.bright': 0.35, 'l2.on': false, 'l3.on': false } },
   // Sphäre
   { key: 'nordlichtfeld', name: 'Nordlichtfeld', tags: 'Ambient · Spektral', desc: 'Lichtvorhänge wandern über 48 Teiltöne, ein Glockenschimmer fällt hinein.', v: {
