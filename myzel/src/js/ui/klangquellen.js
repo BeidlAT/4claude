@@ -62,12 +62,10 @@ function kqTarget(key) {
   let T;
   if (key === 'v.eng') T = { where: 'Spielfläche', dat: 'die Spielfläche', ch: 'Klang', opts: all, allow: ok, busy: () => touches.size > 0,
     probe: () => { const nt = mid(); return { f: lyF(layers()[0], nt.f, nt.idx), y: 0.5, vel: P['v.vel'], bus: stripIn('fin') }; } };
-  else if (key === 'v.layer') T = { where: 'zweite Ebene', dat: 'die zweite Ebene', ch: 'Ebene 2', opts: () => PD['v.layer'].opts, allow: ok, busy: () => touches.size > 0,
-    probe: () => { const nt = mid(); return { f: lyF({ ratio: Math.pow(2, P['v.layerInt'] / 12 + P['e2.fine'] / 1200), deg: P['v.layerDeg'] }, nt.f, nt.idx), y: 0.5, vel: P['v.vel'] * Math.max(0.35, P['v.layerLvl']), bus: stripIn('eb2') }; } };
-  else if (/^e\d\.eng$/.test(key)) {   // (Ebenen 3–8, 30.10.2026: as Ebene 2 – the note in the middle at its interval)
-    const e = EB.find((x) => x.eng === key), w = 'Ebene ' + e.n;
-    T = { where: w, dat: w, ch: w, opts: () => PD[key].opts, allow: ok, busy: () => touches.size > 0,
-      probe: () => { const nt = mid(), fine = P[e.pre + 'fine']; return { f: lyF({ ratio: Math.pow(2, P[e.int] / 12 + fine / 1200), deg: P[e.deg] }, nt.f, nt.idx), y: 0.5, vel: P['v.vel'] * Math.max(0.35, P[e.lvl]), bus: stripIn(e.k) }; } };
+  else if (key === 'v.layer' || /^e\d\.eng$/.test(key)) {   // (Ebenen 2–8, 30.10.2026: the note in the middle at the layer's own pitch – touch.js ebRatio)
+    const e = EB.find((x) => x.eng === key), w = 'Ebene ' + e.n, two = e.n === 2;
+    T = { where: two ? 'zweite Ebene' : w, dat: two ? 'die zweite Ebene' : w, ch: w, opts: () => PD[key].opts, allow: ok, busy: () => touches.size > 0,
+      probe: () => { const nt = mid(); return { f: lyF({ ratio: ebRatio(e), deg: P[e.deg] }, nt.f, nt.idx), y: 0.5, vel: P['v.vel'] * Math.max(0.35, P[e.lvl]), bus: stripIn(e.k) }; } };
   } else if (/^l\d\.eng$/.test(key)) {
     const i = +key[1], p = 'l' + i + '.';
     T = { where: 'Spur ' + (i + 1), dat: 'Spur ' + (i + 1), ch: 'Spur ' + (i + 1), lane: i, opts: all, allow: ok, busy: () => SEQ.on && !!P[p + 'on'],

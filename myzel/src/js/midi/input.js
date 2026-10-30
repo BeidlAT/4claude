@@ -249,7 +249,7 @@ function mpeBend(cs, force) {
     tt.mb = semis;
     if (!force && t - (tt.mbT || 0) < 8) { tt.mbDue = MIDI.mbDue = true; continue; }
     tt.mbT = t; tt.mbDue = false;
-    for (const { v, ly } of tt.voices) if (v.alive && !v.released && v.setF) v.setF(lyF(ly, tt.f, tt.col) * k, 0);
+    for (const { v, ly, r: fr } of tt.voices) if (v.alive && !v.released && v.setF) v.setF(lyF(ly, tt.f, tt.col) * (fr || 1) * k, 0);   // (r: a Fächer voice's interval)
   }
 }
 function midiFrame() {

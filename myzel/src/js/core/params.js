@@ -114,6 +114,8 @@ const EB = [];
 for (let n = 1; n <= EB_N; n++) EB.push(n === 1 ? { n, k: 'fin', eng: 'v.eng', lvl: 'e1.lvl', oct: 'v.oct', deg: 'v.deg', pre: 'e1.' }
   : n === 2 ? { n, k: 'eb2', eng: 'v.layer', lvl: 'v.layerLvl', int: 'v.layerInt', deg: 'v.layerDeg', pre: 'e2.' }
   : { n, k: 'eb' + n, eng: 'e' + n + '.eng', lvl: 'e' + n + '.lvl', int: 'e' + n + '.int', deg: 'e' + n + '.deg', pre: 'e' + n + '.' });
+// (review 30.10.2026) its param keys made once: layers() runs at every strike (Anreißen, Wirbel, each arp step)
+for (const e of EB) { const p = e.pre; Object.assign(e, { mute: 'x' + e.k + '.mute', solo: p + 'solo', fine: p + 'fine', lo: p + 'lo', hi: p + 'hi', rand: p + 'rand', vlo: p + 'vlo', vhi: p + 'vhi', vrand: p + 'vrand' }); }
 const EB_K = EB.map((e) => e.k), EB_OF = Object.fromEntries(EB.map((e) => [e.k, e])), EB_ENG = new Set(EB.map((e) => e.eng));
 // the sources the finger plays now (every layer with a sound – for what a source needs loaded or warmed)
 const ebEngs = () => EB.map((e) => P[e.eng]).filter((k) => k && k !== 'off');

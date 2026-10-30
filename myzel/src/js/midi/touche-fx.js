@@ -120,7 +120,7 @@ function tfxArpStep() {
 }
 function tfxArpTick() {
   const R = TFX.arp, v = R.v; if (!v || !A.ctx) return;
-  const held = [...touches.values()].filter((tt) => tt.layers && tt.layers.length && !tt.arp).sort((a, b) => a.f - b.f);   // (a note the Sporenwerk plays is its – arp/sporenwerk.js)
+  const held = [...touches.values()].filter((tt) => tt.layers && !tt.arp).sort((a, b) => a.f - b.f);   // (a note the Sporenwerk plays is its – arp/sporenwerk.js)
   if (!held.length) { R.next = 0; return; }
   const now = A.ctx.currentTime, S = tfxArpStep(), oct = 1 + Math.round(2 * v.her);
   const seq = []; for (let o = 0; o < oct; o++) for (const tt of held) seq.push([tt, o]);
@@ -134,9 +134,11 @@ function tfxArpTick() {
     else if (s < -0.25) { R.dir = -1; i = R.i = (R.i - 1 + n) % n; }
     else { if (n > 1 && (R.i + R.dir >= n || R.i + R.dir < 0)) R.dir = -R.dir; i = R.i = Math.max(0, Math.min(n - 1, R.i + R.dir)); }
     const [tt, o] = seq[i], nt = stepAt(t), dur = Math.max(0.03, (nt - t) * (0.85 - 0.55 * v.her)), vel = 0.3 + 0.65 * Math.pow(R.p, 0.8);
-    for (const ly of o ? layers(tt.f * Math.pow(2, o), tt.vel) : tt.layers) {   // (an octave up: the layers of that pitch – their Tonbereich)
-      const f = lyF(ly, tt.f, tt.col) * Math.pow(2, o) * (tt.mb ? Math.pow(2, tt.mb / 12) : 1);
-      hit(ly.eng, t, f, tt.my != null ? tt.my : tt.y, vel * ly.lvl, { pan: touchPan(tt.x), bus: ly.bus, amp: ly.amp, gate: dur });
+    // (each step a strike: the layers of the pitch it plays and its own velocity, stolen together – as the Sporenwerk)
+    const m = Math.pow(2, o), grp = {};
+    for (const ly of layers(tt.f * m, vel)) {
+      const f = lyF(ly, tt.f, tt.col) * m * (tt.mb ? Math.pow(2, tt.mb / 12) : 1);
+      hit(ly.eng, t, f, tt.my != null ? tt.my : tt.y, vel * ly.lvl, { pan: touchPan(tt.x), bus: ly.bus, amp: ly.amp, gate: dur, grp });
     }
     R.next = nt;
   }
@@ -154,7 +156,7 @@ function tfxFan(v) {
   const now = A.ctx.currentTime;
   if (!v) { for (const tt of TFX.fans) tfxFanEnd(tt, now); return; }
   for (const tt of touches.values()) {
-    if (!tt.layers || !tt.layers.length) continue;
+    if (!tt.layers || !tt.layers.length || tt.arp) continue;   // (a note the Sporenwerk plays does not sound itself – nor its fan)
     const F = tt.fan || (tt.fan = {});
     TFX.fans.add(tt);
     for (const [k, ratio, pan] of TFX_FAN) {
@@ -162,8 +164,10 @@ function tfxFan(v) {
       let C = F[k];
       const det = k === 'du' ? Math.pow(2, (6 + 12 * v.weg) / 1200) : k === 'dd' ? Math.pow(2, -(6 + 12 * v.weg) / 1200) : 1;
       const strike = (C2) => tt.layers.forEach((ly, j) => {
-        const f = lyF(ly, tt.f, tt.col) * ratio * det * (tt.mb ? Math.pow(2, tt.mb / 12) : 1), y = tt.my != null ? tt.my : tt.y, vel = noteVel(tt) * ly.lvl, o = { pan: clamp(touchPan(tt.x) + pan, -1, 1), bend: tt.fb || tt.bend, bus: C2.g[j], amp: ly.amp };
-        if (ENGINES[ly.eng] && ENGINES[ly.eng].sustain) { if (!C2.sus[j]) { const vv = playNote(ly.eng, now, f, y, vel, o); if (vv) { C2.sus[j] = vv; tt.voices.push({ v: vv, ly, fan: k }); } } }
+        const sus = ENGINES[ly.eng] && ENGINES[ly.eng].sustain, amp = sus ? ly.amp : ebZone(EB[ly.n - 1], tt.f, tt.vel);   // (a struck one strikes anew: its Tonbereich at the pitch the note has now)
+        if (amp < 1e-3) return;
+        const r = ratio * det, f = lyF(ly, tt.f, tt.col) * r * (tt.mb ? Math.pow(2, tt.mb / 12) : 1), y = tt.my != null ? tt.my : tt.y, vel = noteVel(tt) * ly.lvl, o = { pan: clamp(touchPan(tt.x) + pan, -1, 1), bend: tt.fb || tt.bend, bus: C2.g[j], amp };
+        if (sus) { if (!C2.sus[j]) { const vv = playNote(ly.eng, now, f, y, vel, o); if (vv) { C2.sus[j] = vv; tt.voices.push({ v: vv, ly, fan: k, r }); } } }   // (r: its interval – a glide keeps it, touch.js moveTouch)
         else hit(ly.eng, now, f, y, vel * Math.max(0.35, lv), o);
       });
       if (!C && lv > 0.02) { C = F[k] = { g: tt.layers.map((ly) => { const g = G(0); g.connect(ly.bus); return g; }), sus: [], lv: 0 }; strike(C); }

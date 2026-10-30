@@ -46,5 +46,8 @@ Begründungen stehen in `dev/STAND-2026-10-29.md` (Abschnitte „Danach (30.10.)
 #111/#112 Kompostgarten, Kalimba-Schnarren, Jahresring-Laub · #113 Kurzwellenritual, Puls-Spuren-Hinweis, Ebenen-Recherche ·
 #114 Kappung vor der Effektkette, Harmonizer auf der Effekte-Seite · #115 8 Ebenen, Design, Bearbeiten-Fenster, globaler
 Stopp, Interface-Keyboard, „Vorige Skala“, Ernte-Leiste, Sporenwerk-Fix · Code-Review von #115 (9 Funde, alle behoben:
-Stehlen nach Ebenen, Vorhören-Stopp, Tonbereich bei neuen Anschlägen, Geflecht-Knoten, Interface-Erkennung, Fader `b.fad`). Aus `dev/OFFEN-2026-10-27.md` damit erledigt:
+Stehlen nach Ebenen, Vorhören-Stopp, Tonbereich bei neuen Anschlägen, Geflecht-Knoten, Interface-Erkennung, Fader `b.fad`). · #118 Geflecht-Knoten (in #117 verschluckt) · Max-Review
+von #117 (14 Funde behoben: Interface-Erkennung als Marke minus Controller `MIDI_CTRL`, Fader aus dem Gerätebild
+`cbCcTravels`, Ebenen bei jedem Anschlag in `triggerPerc`, Stopp/Stille mit `over`, Vorhören-Rücknahme am Ring, Karten über
+`hxmState`, `layers()`-Schlüssel vorberechnet). Aus `dev/OFFEN-2026-10-27.md` damit erledigt:
 1, 2, 5, 7, 8 (iPad Hintergrund), 13; 3/4 (Handpan) vom Besitzer zurückgestellt; 9/10/11/12 von ihm als geklärt bestätigt.

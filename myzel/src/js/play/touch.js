@@ -8,27 +8,30 @@ const touches = new Map();
 // and a muted layer (its strip's M) or one outside a layer solo plays no voice at all: nothing heard, nothing counted,
 // nothing in the Humus. Without f (warming the strings, the library's probe) every layer that has a sound.
 function layers(f, vel) {
-  const out = [], solo = f != null && EB.some((e) => P[e.pre + 'solo']);
+  const out = [], solo = f != null && EB.some((e) => P[e.solo]);
   for (const e of EB) {
     const eng = P[e.eng];
     if (e.n > 1 && !ENGINES[eng]) continue;
     let amp = 1;
     if (f != null) {
-      if (P['x' + e.k + '.mute'] || (solo && !P[e.pre + 'solo'])) continue;
+      if (P[e.mute] || (solo && !P[e.solo])) continue;
       amp = ebZone(e, f, vel); if (amp < 1e-3) continue;
     }
-    const r = e.n === 1 ? Math.pow(2, P['v.oct']) : Math.pow(2, P[e.int] / 12), fine = P[e.pre + 'fine'];
-    out.push({ eng, ratio: fine ? r * Math.pow(2, fine / 1200) : r, deg: P[e.deg], lvl: P[e.lvl], bus: stripIn(e.k), amp, n: e.n });
+    out.push({ eng, ratio: ebRatio(e), deg: P[e.deg], lvl: P[e.lvl], bus: stripIn(e.k), amp, n: e.n });
   }
   return out;
 }
+// some layer plays a struck sound (only then a gliding finger strikes again – no layers built for nothing)
+const ebStruck = () => EB.some((e) => { const E = ENGINES[P[e.eng]]; return E && !E.sustain; });
+// a layer's pitch ratio: Ebene 1 its octave, the others their interval – each with its Feinstimmung
+function ebRatio(e) { const r = e.n === 1 ? Math.pow(2, P['v.oct']) : Math.pow(2, P[e.int] / 12), fine = P[e.fine]; return fine ? r * Math.pow(2, fine / 1200) : r; }
 // a layer's gain for a note: 1 inside its Tonbereich (a key counts from half a semitone below to half above) and its
 // Anschlags-Bereich, falling to 0 over the soft edge outside them (a quarter sine: two layers fading across the same
 // edge keep the power), 0 beyond; a hard edge (0) gates
 function ebZone(e, f, vel) {
-  const p = e.pre, z = (x, lo, hi, w) => { const d = x < lo ? lo - x : x > hi ? x - hi : 0; return d <= 0 ? 1 : w > 0 && d < w ? Math.sin(Math.PI / 2 * (1 - d / w)) : 0; };
+  const z = (x, lo, hi, w) => { const d = x < lo ? lo - x : x > hi ? x - hi : 0; return d <= 0 ? 1 : w > 0 && d < w ? Math.sin(Math.PI / 2 * (1 - d / w)) : 0; };
   const key = 69 + 12 * Math.log2(Math.max(1e-6, f) / P['t.a4']);
-  return z(key, P[p + 'lo'] - 0.5, P[p + 'hi'] + 0.5, P[p + 'rand']) * z(vel != null ? vel : P['v.vel'], P[p + 'vlo'] - 1e-6, P[p + 'vhi'] + 1e-6, P[p + 'vrand']);
+  return z(key, P[e.lo] - 0.5, P[e.hi] + 0.5, P[e.rand]) * z(vel != null ? vel : P['v.vel'], P[e.vlo] - 1e-6, P[e.vhi] + 1e-6, P[e.vrand]);
 }
 // the pitch a layer plays for a note of the field: moved by whole steps of the scale (semitones in the free scale),
 // then by its octave or interval
@@ -41,11 +44,12 @@ function touchVel() { return P['v.vel'] * (1 - P['v.human'] * 0.3 * Math.random(
 // a keyboard brings its own dynamics and timing: no humanizing for MIDI notes
 const noteVel = (tt) => (tt.vel != null ? tt.vel : touchVel());
 function touchPan(x) { return clamp((x * 2 - 1) * P['v.width'] * 0.8 + rand(-0.15, 0.15) * P['v.width'], -1, 1); }
-// lys: the layers struck (default the note's own, tt.layers)
+// lys: the layers struck – by default those of the pitch the note has now (review 30.10.2026: a finger glides, Anreißen
+// and the Wirbel strike again – each layer's Tonbereich, mute and solo for that pitch, not the one it landed on)
 function triggerPerc(tt, t, isRoll, grp, lys) {
   let any = false;
   grp = grp || {};   // (the layers of one strike are stolen together – alloc.js steal)
-  for (const ly of lys || tt.layers) {
+  for (const ly of lys || layers(tt.f, tt.vel)) {
     if (ENGINES[ly.eng].sustain) continue;
     const jit = tt.vel != null ? 0 : P['v.human'] * 0.01 * Math.random();
     const f = lyF(ly, tt.f, tt.col);
@@ -79,7 +83,7 @@ function onDown(e) {
       if (v) tt.voices.push({ v, ly });
     }
   }
-  if (!arp) triggerPerc(tt, now, false, tt);
+  if (!arp) triggerPerc(tt, now, false, tt, tt.layers);
   if (!arp && P['v.roll'] !== 'off' && tt.layers.some((ly) => !ENGINES[ly.eng].sustain)) tt.rollNext = now + rollInterval();
   touches.set(e.pointerId, tt);
   if (GK.on) gkNote(tt, true, e);
@@ -113,16 +117,20 @@ function moveTouch(tt, pt) {
   const x = tt.fh || GK.on ? fhX(tt, pt) : pt.x, n = noteAt(x);
   tt.x = x; tt.y = pt.y; tt.px = pt.px; tt.py = pt.py; tt.f = n.f; tt.name = n.name;
   const y = (tt.my = modY(tt));
-  for (const { v, ly } of tt.voices) {
+  for (const { v, ly, r } of tt.voices) {
     if (!v.alive) continue;
-    if (v.setF) v.setF(lyF(ly, n.f, n.idx), P['v.glide']);
+    if (v.setF) v.setF(lyF(ly, n.f, n.idx) * (r || 1), P['v.glide']);   // (r: a Fächer voice keeps its interval)
     if (v.setY) v.setY(y);
   }
   if (n.idx !== tt.col) {
     tt.col = n.idx;
     tt.hue = VIS.hueAt(pt.x);
-    // (a new strike: the layers of the new pitch – their Tonbereich, mute and solo – not those the finger landed with)
-    if (P['v.strum'] && tt.rollNext == null && !tt.arp) triggerPerc(tt, A.ctx.currentTime, false, null, layers(n.f, tt.vel));
+    // (a new strike: the layers of the new pitch – triggerPerc –; a Wirbel starts once the finger reaches a struck layer)
+    if (tt.rollNext == null && !tt.arp && ebStruck()) {
+      const lys = layers(n.f, tt.vel), now = A.ctx.currentTime;
+      if (P['v.strum']) triggerPerc(tt, now, false, null, lys);
+      if (P['v.roll'] !== 'off' && lys.some((ly) => !ENGINES[ly.eng].sustain)) tt.rollNext = now + rollInterval();
+    }
   }
 }
 function onUp(e) {

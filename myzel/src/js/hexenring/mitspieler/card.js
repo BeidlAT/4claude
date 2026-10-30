@@ -17,7 +17,7 @@ function hxCardMit(L, chip, row, btn) {
   const mi = hxMi(L), r = hxRoleOf(L), sch = L.sch.map((id) => HX.sch.get(id)).filter(Boolean), notes = sch.some(hxWCan);
   const out = [];
   if (mi.sugg) out.push(h('div', { class: 'hx-row' }, h('span', { class: 'lab' }, 'Vorschlag'), h('div', { class: 'chips small' }, h('span', { class: 'hx-ms' }, 'Begleitung (' + (HX_ROLEW[mi.sugg] || mi.sugg) + '), stumm'),
-    chip('Einschalten', false, () => { if (L.state === 'angehalten') hxReenter([L]); else { hxPvEnd(L); hxState(L.id, 'spielt', null, { X: 0.02 }); } hxSuggTake(L); }, 'Vorschlag einschalten'), chip('Verwerfen', false, () => hxDrop(L), 'Vorschlag verwerfen'))));
+    chip('Einschalten', false, () => { if (L.state === 'angehalten') hxReenter([L]); else hxmState(L, 'spielt'); hxSuggTake(L); }, 'Vorschlag einschalten'), chip('Verwerfen', false, () => hxDrop(L), 'Vorschlag verwerfen'))));
   out.push(row('Rolle', chip('auto' + (r && !mi.rolle ? ': ' + HX_ROLEW[r.role] + (r.conf < 0.25 ? '?' : '') : ''), !mi.rolle, () => { mi.rolle = null; mi.rc = null; hxSaveMeta(L.id); hxCardDirty(); }, 'Rolle automatisch'),
     ...HX_ROLES.map((k) => chip(HX_ROLEW[k], mi.rolle === k, () => { mi.rolle = k; hxSaveMeta(L.id); hxCardDirty(); hxSay(hxName(L) + ': Rolle ' + HX_ROLEW[k]); }, 'Rolle ' + HX_ROLEW[k]))));
   const sw = hxStance(L);

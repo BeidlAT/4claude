@@ -180,7 +180,7 @@ function hxRingTap(slot, e) {
   if (L.state === 'spielt' && ((L.gg != null && L.gg !== 1) || L.gdv || (HXG.plan && HXG.plan.items.some((x) => x.key === L.key)))) { hxGdNein(L); return 'gd'; }   // (Etappe 3: a tap takes the Gärtner's change back – at once)
   if (L.state === 'angehalten') { hxReenter([L]); return 'an'; }
   const to = L.state === 'spielt' ? 'stumm' : 'spielt';
-  if (to === 'spielt') hxPvEnd(L);
+  hxPvEnd(L, to);
   if (!hxTakt(L) && !hxGrid()) { hxState(L.id, to, null, { X: 0.04 }); hxSay(hxName(L) + (to === 'stumm' ? ' stumm' : ' spielt')); return to; }
   const B = hxBarOf(T, HX_RGRACE), X = 0.02;
   if (B.now) { hxState(L.id, to, null, { X }); hxSay(hxName(L) + (to === 'stumm' ? ' stumm' : ' spielt')); return to; }
@@ -214,7 +214,7 @@ function hxStille() {
   HX.slp = null; HX.wake = null;
   for (const p of HX.pend.slice()) { if (p.kind === 'weiter' || p.kind === 'state') { hxPendDrop(p); } }
   let n = 0;
-  for (const L of hxLoopsLive()) if (L.state === 'spielt' || L.state === 'stumm') { hxState(L.id, 'angehalten'); n++; L.pendTo = null; }
+  for (const L of hxLoopsLive()) if (L.state === 'spielt' || L.state === 'stumm') { hxState(L.id, 'angehalten', null, { over: true }); n++; L.pendTo = null; }   // (over: a start still to come – ▶ Weiter, a Lichtung – is off too)
   if (n) HX.ruht = true;
   HX.pend = HX.pend.filter((p) => p.kind !== 'weiter' && p.kind !== 'state');
   hxRailDirty(); hxSaveAll();

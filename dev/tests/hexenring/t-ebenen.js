@@ -162,6 +162,33 @@ const { ok } = H;
   });
   ok(r.held === 1 && r.struck === 1 && r.took && r.heldLeft === 1 && r.struckLeft === 0, `a fading struck layer goes alone: the held layer of the same note stays (held ${r.heldLeft}/${r.held}, struck ${r.struckLeft}/${r.struck})`);
 
+  // (review 30.10.2026) a gliding finger strikes anew – Anreißen, the Wirbel – with the layers of the pitch it reaches
+  r = await ev(async () => {
+    const M = window.__M, A = M.A, P = M.P, sl = window.__sleep;
+    M.panic(); await sl(300);
+    const was = M.EB.map((e) => P[e.eng]), keep = ['v.strum', 'v.roll', 'e2.lo', 'e2.hi'].map((k) => [k, P[k]]);
+    M.EB.slice(2).forEach((e) => M.setParam(e.eng, 'off'));
+    M.setParam('v.eng', 'neb'); M.setParam('v.layer', 'glo');
+    const key = (x) => Math.round(69 + 12 * Math.log2(M.noteAt(x).f / P['t.a4'])), k0 = key(0.3), k1 = key(0.8);
+    const eb2 = M.stripIn('eb2'), n2 = () => [...A.voices].filter((v) => v.bus === eb2).length;
+    const run = async (lo, strum, roll, ms) => {
+      M.panic(); await sl(250);
+      M.setParam('e2.lo', lo); M.setParam('e2.hi', lo); M.setParam('v.strum', strum); M.setParam('v.roll', roll);
+      M.onDown({ pointerId: 'g', pt: window.__pt(0.3, 0.5) }); await sl(30);
+      const a = n2(); M.moveTouch(M.touches.get('g'), window.__pt(0.8, 0.5)); await sl(ms);
+      const b = n2(); M.onUp({ pointerId: 'g' }); return [a, b - a];
+    };
+    const o = { k0, k1 };
+    o.strumOut = await run(k0, true, 'off', 40);   // Ebene 2 only where it lands: the strike at the new key leaves it out
+    o.strumIn = await run(k1, true, 'off', 40);    // … only where it glides to: the new key strikes it
+    o.rollOut = await run(k0, false, '16', 700);   // Wirbel landing on Ebene 2's key, gliding off: no more Ebene 2
+    o.rollIn = await run(k1, false, '16', 700);    // Wirbel gliding onto it: it starts there
+    M.panic(); M.EB.forEach((e, i) => M.setParam(e.eng, was[i])); keep.forEach(([k, v]) => M.setParam(k, v)); await sl(300);
+    return o;
+  });
+  ok(r.k0 !== r.k1 && r.strumOut[0] === 1 && r.strumOut[1] === 0 && r.strumIn[0] === 0 && r.strumIn[1] === 1, `Anreißen strikes the layers of the key the finger reaches: Ebene 2 off its range ${JSON.stringify(r.strumOut)}, on it ${JSON.stringify(r.strumIn)} (keys ${r.k0} → ${r.k1})`);
+  ok(r.rollOut[1] === 0 && r.rollIn[0] === 0 && r.rollIn[1] >= 3, `the Wirbel too: gliding off Ebene 2's range it rolls no more Ebene 2 (+${r.rollOut[1]}), gliding onto it it starts rolling there (+${r.rollIn[1]})`);
+
   // ---------- 5 · Hexenring: the Gespielt taps ----------
   r = await ev(async () => {
     const M = window.__M, A = M.A;
