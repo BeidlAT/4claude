@@ -2,6 +2,13 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-30c",
+      "punkte": [
+        "Kompostgarten: auch die Verzerrung ist jetzt aus – der Holzstab klingt klar, ohne Zischen bei harten Anschlägen.",
+        "Hörtipp: Klingt dir ein Preset kratzig, stell unter Effekte → Verzerrung den „Anteil“ auf 0 – in den meisten Presets läuft dort eine leichte Röhre mit."
+      ]
+    },
+    {
       "id": "2026-10-30b",
       "punkte": [
         "Kompostgarten: kein Zischen mehr zu jedem Anschlag – das Laub-Rascheln ist aus, der Verzerrer steht wieder auf seinem Grundwert.",
