@@ -2185,6 +2185,157 @@ body.mlearn #stage::after { content: ""; position: absolute; inset: 0; backgroun
 @media (pointer: coarse) { .kq-step, .kq-fav, .kq-hear { min-height: 44px; } }
 @media (prefers-reduced-motion: no-preference) { .kq-lib:not([hidden]) { animation: kqIn .18s ease-out; } @keyframes kqIn { from { opacity: 0; translate: 0 12px; } } }
 @media (prefers-reduced-motion: reduce) { .kq-g.loading { animation: none; opacity: .55; } }
+/* ---------- the panels' common language (owner, 30.10.2026: „mach Myzel zu einem Gesamtkunstwerk“ – dev/klang/design-konzept.md)
+   Every section of a panel is a card on the loam: a faint border, a glow from above, its title in the display face like
+   the mixer's group names. --ac is a section's own colour (the Effekte page's modules, Puls's lanes, the Aufnahme's red):
+   its sliders, chips and switches take it. ---------- */
+#sheetBody .sec {
+  --ac: var(--spore); position: relative; margin: 10px 0 0; padding: 12px 14px 12px; border: 1px solid rgba(240, 230, 216, .075); border-radius: 16px;
+  background: radial-gradient(130% 70px at 50% 0, color-mix(in srgb, var(--ac) 5%, transparent), transparent 100%), linear-gradient(180deg, rgba(240, 230, 216, .022), rgba(0, 0, 0, .06));
+}
+#sheetBody .sec:last-child { border-bottom: 1px solid rgba(240, 230, 216, .075); }
+#sheetBody > div > .sec:first-child { margin-top: 6px; }
+#sheetBody .sec .sec { margin: 8px 0 0; padding: 8px 0 0; border: 0; border-top: 1px dashed rgba(240, 230, 216, .08); border-radius: 0; background: none; }
+#sheetBody .sec-h { align-items: center; margin: 0 0 10px; min-height: 22px; }
+#sheetBody .sec-h h3 { display: flex; align-items: center; gap: 8px; font: 400 13.5px/1.15 var(--font-display); letter-spacing: 0; word-spacing: -.32em; text-transform: lowercase; color: var(--hypha); }
+#sheetBody .sec-h h3::before { content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--ac); box-shadow: 0 0 8px var(--ac); }
+#sheetBody .sec-h h3:has(.kq-g)::before, #sheetBody .sec.fold .sec-h h3::before, #sheetBody .modul .sec-h h3::before { display: none; }
+#sheetBody .sec-h h3 .kq-g { color: var(--ac); }
+#sheetBody .sec-h p { font-size: 11.5px; line-height: 1.3; }
+#sheetBody .sec.fold { padding-top: 6px; padding-bottom: 6px; }
+#sheetBody .sec.fold .sec-h { margin: 0; }
+#sheetBody .sec.fold .fold-b { margin: -2px 0; }
+#sheetBody .sec.fold .fold-body { padding-bottom: 6px; }
+#sheetBody .sec.fold .fold-b svg { color: var(--ac); }
+#sheetBody .note { font-size: 12.5px; line-height: 1.45; }
+/* the controls inside: the slider a thread that glows in the card's colour, the thumb a spore on it */
+#sheetBody .grid { gap: 8px 18px; }
+.ctl label, .ctl .lab { color: rgba(240, 230, 216, .88); }
+#sheetBody .sec .val { color: color-mix(in srgb, var(--ac) 62%, var(--hypha)); }
+input[type=range]::-webkit-slider-runnable-track {
+  height: 5px; border-radius: 3px; box-shadow: inset 0 1px 2px rgba(0, 0, 0, .6);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--ac, var(--spore)) 35%, transparent), var(--ac, var(--spore))) 0 0 / var(--p) 100% no-repeat, rgba(240, 230, 216, .085);
+}
+input[type=range]::-webkit-slider-thumb {
+  width: 20px; height: 20px; margin-top: -7.5px; border: 2px solid var(--ac, var(--spore));
+  background: radial-gradient(circle, var(--hypha) 0 2.6px, #1c1511 3.2px);
+  box-shadow: 0 0 0 3px rgba(17, 13, 11, .55), 0 0 12px color-mix(in srgb, var(--ac, var(--spore)) 50%, transparent);
+  transition: box-shadow .15s, transform .15s;
+}
+input[type=range]::-moz-range-track { height: 5px; border-radius: 3px; background: rgba(240, 230, 216, .085); box-shadow: inset 0 1px 2px rgba(0, 0, 0, .6); }
+input[type=range]::-moz-range-progress { height: 5px; border-radius: 3px; background: linear-gradient(90deg, color-mix(in srgb, var(--ac, var(--spore)) 35%, transparent), var(--ac, var(--spore))); }
+input[type=range]::-moz-range-thumb {
+  box-sizing: border-box; width: 20px; height: 20px; border: 2px solid var(--ac, var(--spore));
+  background: radial-gradient(circle, var(--hypha) 0 2.6px, #1c1511 3.2px);
+  box-shadow: 0 0 0 3px rgba(17, 13, 11, .55), 0 0 12px color-mix(in srgb, var(--ac, var(--spore)) 50%, transparent);
+}
+input[type=range]:hover::-webkit-slider-thumb, input[type=range]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px rgba(17, 13, 11, .55), 0 0 18px color-mix(in srgb, var(--ac, var(--spore)) 75%, transparent); }
+input[type=range]:hover::-moz-range-thumb, input[type=range]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px rgba(17, 13, 11, .55), 0 0 18px color-mix(in srgb, var(--ac, var(--spore)) 75%, transparent); }
+input[type=range].dragging::-webkit-slider-thumb, input[type=range]:active::-webkit-slider-thumb { background: radial-gradient(circle, var(--ink) 0 2.6px, var(--ac, var(--spore)) 3.2px); transform: scale(1.08); }
+input[type=range].dragging::-moz-range-thumb, input[type=range]:active::-moz-range-thumb { background: radial-gradient(circle, var(--ink) 0 2.6px, var(--ac, var(--spore)) 3.2px); }
+#sheetBody .sec .chip[aria-checked="true"] { background: var(--ac); border-color: var(--ac); color: var(--ink); box-shadow: 0 0 14px -4px var(--ac); }
+#sheetBody .sec .chip:not([aria-checked="true"]):not([aria-pressed="true"]):hover { border-color: color-mix(in srgb, var(--ac) 45%, var(--line)); color: var(--hypha); }
+#sheetBody .sec .sw[aria-checked="true"] .knob { background: var(--ac); box-shadow: 0 0 12px -3px var(--ac); }
+#sheetBody .sec select { background-color: rgba(17, 13, 11, .5); border-color: rgba(240, 230, 216, .1); }
+#sheetBody .sec select:hover { border-color: color-mix(in srgb, var(--ac) 40%, var(--line)); }
+.sheet-head { border-bottom: 0; background: linear-gradient(var(--line), var(--line)) 0 100% / 100% 1px no-repeat, linear-gradient(90deg, transparent, color-mix(in srgb, var(--spore) 30%, transparent) 30%, transparent 75%) 0 100% / 100% 1px no-repeat; }
+
+/* ---------- the Effekte page (ui/modul.js) ---------- */
+/* a module card: its glyph in a ring that glows with its share, its name, what it is, the share as a badge */
+#sheetBody .modul { padding-top: 10px; transition: border-color .25s; border-color: color-mix(in srgb, var(--ac) 14%, rgba(240, 230, 216, .06)); }
+#sheetBody .modul::before { content: ""; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none; border: 1px solid var(--ac); opacity: calc(var(--a, 0) * .38); transition: opacity .25s; }
+#sheetBody .modul::after { content: ""; position: absolute; left: 18%; right: 18%; top: -1px; height: 1px; pointer-events: none; background: linear-gradient(90deg, transparent, var(--ac), transparent); opacity: calc(var(--a, 0) * .9); }
+.modul .sec-h { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; grid-template-areas: "i t b" "i s b"; column-gap: 10px; row-gap: 1px; align-items: center; }
+.modul .sec-h h3 { grid-area: t; align-self: end; }
+.modul .sec-h p { grid-area: s; text-align: left; align-self: start; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.mod-ico {
+  grid-area: i; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; color: var(--ac);
+  border: 1px solid color-mix(in srgb, var(--ac) 45%, transparent); background: radial-gradient(circle, color-mix(in srgb, var(--ac) 16%, transparent), transparent 70%), #120d0a;
+  box-shadow: 0 0 calc(var(--a, 0) * 16px) calc(var(--a, 0) * -2px) var(--ac);
+}
+.mod-ico svg { width: 18px; height: 18px; }
+.mod-amt {
+  grid-area: b; padding: 3px 9px; border-radius: 999px; font: 500 10.5px/1.2 var(--font-num); font-variant-numeric: tabular-nums; white-space: nowrap;
+  color: var(--ac); border: 1px solid color-mix(in srgb, var(--ac) 40%, transparent); background: color-mix(in srgb, var(--ac) 9%, transparent);
+}
+.modul.ruht .mod-amt { color: var(--dim); border-style: dashed; border-color: rgba(168, 152, 138, .35); background: none; }
+.modul.ruht .mod-ico { color: color-mix(in srgb, var(--ac) 55%, var(--dim)); border-style: dashed; }
+/* its picture: a dark window like a Klangwelt's, the line glows; a word on what it shows, bottom right */
+.mod-vis {
+  position: relative; height: 62px; margin: 0 0 10px; border-radius: 11px; overflow: hidden;
+  background: radial-gradient(120% 120% at 50% 130%, color-mix(in srgb, var(--ac) 10%, transparent), transparent 62%), #0b0806;
+  box-shadow: inset 0 0 0 1px rgba(240, 230, 216, .055), inset 0 10px 22px rgba(0, 0, 0, .55);
+}
+.mod-cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; transition: opacity .25s; }
+.modul.ruht .mod-cv { opacity: .42; filter: saturate(.5); }
+.mod-cap { position: absolute; right: 8px; top: 6px; font: 400 9.5px/1 var(--font-num); letter-spacing: .02em; color: rgba(240, 230, 216, .55); text-shadow: 0 1px 4px #000; pointer-events: none; }
+.mod-cap:empty { display: none; }
+.modul.hit { animation: modHit .9s ease-out; }
+@keyframes modHit { 0% { box-shadow: 0 0 0 2px var(--ac), 0 0 30px -4px var(--ac); } 100% { box-shadow: 0 0 0 0 transparent; } }
+/* the groups between the cards, as the mixer names its groups */
+.mod-grp { display: flex; align-items: center; gap: 8px; margin: 18px 2px 0; font: 400 11px/1 var(--font-display); color: rgba(168, 152, 138, .85); letter-spacing: .04em; white-space: nowrap; }
+.mod-grp small { font: 400 10.5px/1 var(--font-ui); color: rgba(168, 152, 138, .6); letter-spacing: 0; }
+.mod-grp::before { content: ""; width: 10px; height: 1px; background: rgba(240, 230, 216, .18); }
+.mod-grp::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(240, 230, 216, .16), transparent); }
+.fxf + .mod-grp { margin-top: 12px; }
+
+/* the Faden: the signal path as nodes on a hypha */
+.fxf { position: relative; margin: 8px 0 0; padding: 10px 6px 6px; border-radius: 16px; background: radial-gradient(90% 100% at 50% 0, rgba(255, 179, 92, .05), transparent 70%), #0e0a08; box-shadow: inset 0 0 0 1px rgba(240, 230, 216, .06), inset 0 12px 28px rgba(0, 0, 0, .5); }
+.fxf-w { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; }
+.fxf-th { fill: none; stroke: rgba(240, 230, 216, .22); stroke-width: 1.2; stroke-linecap: round; }
+.fxf-th.send { stroke-dasharray: 2 3; }
+.fxf-a, .fxf-b { position: relative; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); align-items: start; }
+.fxf-b { margin-top: 12px; }
+.fxf-pod { grid-column: 1 / 6; position: relative; display: flex; justify-content: space-around; margin: 0 8px 0 2px; padding: 4px 2px 2px; border-radius: 14px; border: 1px dashed rgba(240, 230, 216, .13); }
+.fxf-pod em { position: absolute; left: 10px; top: -6px; padding: 0 5px; font: 400 9px/1 var(--font-display); font-style: normal; letter-spacing: .04em; color: rgba(168, 152, 138, .7); background: #0e0a08; }
+.fxf-n { --a: 0; position: relative; display: grid; justify-items: center; gap: 4px; min-width: 0; padding: 2px 0 4px; border: 0; border-radius: 10px; background: none; color: var(--hypha); }
+.fxf-o {
+  width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: var(--ac);
+  border: 1px solid color-mix(in srgb, var(--ac) 55%, transparent);
+  background: radial-gradient(circle, color-mix(in srgb, var(--ac) 22%, transparent), transparent 72%), #140f0c;
+  box-shadow: 0 0 calc(var(--a) * 18px) calc(var(--a) * -1px) color-mix(in srgb, var(--ac) 80%, transparent);
+  transition: box-shadow .25s, transform .15s, border-color .2s;
+}
+.fxf-o svg { width: 18px; height: 18px; }
+.fxf-n span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 10px/1.1 var(--font-ui); color: rgba(240, 230, 216, .78); }
+.fxf-n.ruht .fxf-o { border-style: dashed; color: color-mix(in srgb, var(--ac) 45%, var(--dim)); background: #120d0a; }
+.fxf-n.ruht span { color: var(--dim); }
+.fxf-n:hover .fxf-o { transform: scale(1.07); border-color: var(--ac); }
+.fxf-n[aria-current] .fxf-o { border-color: var(--ac); box-shadow: 0 0 0 3px #0e0a08, 0 0 0 4px color-mix(in srgb, var(--ac) 70%, transparent), 0 0 calc(var(--a) * 18px) color-mix(in srgb, var(--ac) 80%, transparent); }
+.fxf-n[aria-current] span { color: var(--ac); }
+.fxf-n:focus-visible { outline: 2px solid var(--lumen); outline-offset: 0; }
+/* the small thread: held at the top of the panel once the big one has scrolled away */
+.fxf-mini { position: sticky; top: -4px; z-index: 4; height: 0; margin: 0 calc(-1 * var(--gut)); pointer-events: none; }
+.fxf-mi {
+  display: flex; align-items: center; gap: 5px; height: 42px; padding: 0 var(--gut); background: var(--bark); border-bottom: 1px solid rgba(240, 230, 216, .07); box-shadow: 0 10px 18px -8px rgba(0, 0, 0, .7);
+  opacity: 0; transform: translateY(-6px); transition: opacity .18s, transform .18s;
+}
+.fxf-mini.on .fxf-mi { opacity: 1; transform: none; pointer-events: auto; }
+.fxf-mi .fxf-cur { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 400 12px/1 var(--font-display); letter-spacing: .03em; text-transform: lowercase; }
+.fxf-mi .fxf-n { flex: none; padding: 0; }
+.fxf-mi .fxf-o { width: 24px; height: 24px; }
+.fxf-mi .fxf-o svg { width: 13px; height: 13px; }
+.fxf-mi .fxf-n[aria-current] .fxf-o { box-shadow: 0 0 0 2px var(--bark), 0 0 0 3px color-mix(in srgb, var(--ac) 70%, transparent); }
+.fxf-gap { flex: none; width: 1px; height: 18px; margin: 0 3px; background: rgba(240, 230, 216, .18); }
+@media (pointer: coarse) { .fxf-mi .fxf-o { width: 30px; height: 30px; } .fxf-mi { height: 46px; gap: 3px; } }
+
+/* ---------- the other panels: their sections take a colour of their own ---------- */
+#sheetBody [data-ac="rec"] { --ac: var(--rec); }
+#sheetBody [data-ac="lumen"] { --ac: var(--lumen); }
+#sheetBody [data-ac="lilac"] { --ac: var(--lilac); }
+#sheetBody [data-ac="rose"] { --ac: var(--rose); }
+#sheetBody [data-ac="bor"] { --ac: #7f98ff; }
+#sheetBody [data-ac="hypha"] { --ac: #e8dccb; }
+#sheetBody [data-ac="eb2"] { --ac: #c9dc82; }   /* (the mixer's Ebene 2) */
+#sheetBody .pnl-dev .sec { --ac: var(--lumen); }   /* Gerät: the technical side, in the colour of „Zuweisen“ */
+#sheetBody .pnl-rec .hx-sec { --ac: #e9a35e; }   /* the Hexenring as its strip in the mixer */
+/* the Puls's sticky lane head reaches the card's edges, not the panel's */
+#sheetBody .sec .lanehead { margin: 0 -14px 10px; padding: 8px 14px; background: color-mix(in srgb, var(--bark) 94%, var(--ac)); border-bottom-color: rgba(240, 230, 216, .07); }
+
+@media (prefers-reduced-motion: reduce) {
+  .modul.hit { animation: none; }
+  .fxf-o, .fxf-mi, #sheetBody .modul::before, .mod-cv, input[type=range]::-webkit-slider-thumb { transition: none; }
+}
 </style>
 <!-- Klangquellen-Glyphen: one stroke motif per source (24 × 24, currentColor; the <svg> that uses one sets the stroke) -->
 <svg class="kq-sprite" aria-hidden="true" focusable="false" style="position:absolute;width:0;height:0;overflow:hidden"><defs>
@@ -23559,6 +23710,8 @@ function ctl0(id, opts = {}) {
 function section(title, sub, ...kids) {
   return h('div', { class: 'sec' }, h('div', { class: 'sec-h' }, h('h3', null, title), sub ? h('p', null, sub) : null), ...kids);
 }
+// a section in a colour of its own (css/modul.css: [data-ac])
+const tinted = (ac, sec) => { sec.dataset.ac = ac; return sec; };
 const grid = (...kids) => h('div', { class: 'grid' }, ...kids);
 const ctls = (ids, o) => ids.map((id) => ctl(id, o));
 
@@ -23726,13 +23879,429 @@ const sheet = $('#sheet'), sheetBody = $('#sheetBody'), sheetTitle = $('#sheetTi
 // build: the panel's content; optional open/close: called when it shows or hides; frame(dt, ts): every frame while open
 const PANELS = [
   { key: 'klang', title: 'Klang', icon: ICON.klang, build: buildKlang, frame: klangFrame },
-  { key: 'fx', title: 'Effekte', icon: ICON.fx, build: buildFx },
+  { key: 'fx', title: 'Effekte', icon: ICON.fx, build: buildFx, open: () => fxmOpen() },
   { key: 'puls', title: 'Puls', icon: ICON.puls, build: buildPuls, frame: (dt, ts) => { drawRings(); if (typeof pulsMixFrame === 'function') pulsMixFrame(dt, ts); },
     open: () => { if (typeof pulsMixOpen === 'function') pulsMixOpen(); }, close: () => { if (typeof pulsMixClose === 'function') pulsMixClose(); } },
   { key: 'rec', title: 'Aufnahme', icon: ICON.rec, build: buildRec, open: () => { renderTakes(); renderBarInfo(); hxCardRender(); }, frame: () => hxCardFrame() },   // (Hexenring: its card)
   { key: 'presets', title: 'Presets', icon: ICON.presets, build: buildPresets, frame: () => kbFrame() },   // (the Klangwelten's pictures move)
   { key: 'dev', title: 'Gerät', icon: ICON.dev, build: buildDev, open: updDevUI, frame: devFrame },
 ];
+/* =====================================================================
+   UI: the Effekte page as a chain of modules (owner, 30.10.2026: „Die Effekt-Seite … sieht sehr basic aus, im Vergleich
+   zum Mixer oder Arp ziemlich mau … mach Myzel zu einem Gesamtkunstwerk“) – dev/klang/design-konzept.md.
+   Each effect is a module card (its colour, glyph, a small picture of what it does, its share as a badge); above them
+   the Faden: the signal path as a thread of nodes, tap one to go there. The pictures are drawn only when a knob of
+   theirs moved and the card is in view – nothing runs per frame.
+   ===================================================================== */
+// k: the params' prefix; t: the card's title; s: the node's short name; c: its colour (the returns' as in the mixer);
+// row: a = in series, b = in parallel (sends), s = the Summe
+const FXM_DEF = [
+  { k: 'drv', t: 'Verzerrung', s: 'Verzerrung', c: '#ff8a5b', row: 'a' },
+  { k: 'rng', t: 'Ringmodulator', s: 'Ring', c: '#ff8f9e', row: 'a' },
+  { k: 'flt', t: 'Filter', s: 'Filter', c: '#ffb35c', row: 'a' },
+  { k: 'pha', t: 'Phaser', s: 'Phaser', c: '#c4a8ff', row: 'a' },
+  { k: 'cho', t: 'Schweben', s: 'Schweben', c: '#86f0d0', row: 'a' },
+  { k: 'mov', t: 'Bewegung', s: 'Kreisen', c: '#e8d27a', row: 'a' },
+  { k: 'dly', t: 'Echo', s: 'Echo', c: '#6cc9ef', row: 'b' },
+  { k: 'rev', t: 'Hall', s: 'Hall', c: '#d6cbff', row: 'b' },
+  ...FX_RETS.map(([r, name, c]) => ({ k: r, t: name, s: name, c, row: 'b' })),
+  { k: 'mst', t: 'Summe', s: 'Summe', c: '#f0e6d8', row: 's' },
+];
+const FXM = { m: {}, raf: 0, io: null, ro: null, strip: null, mini: null, cur: null };
+const fxmSvg = (d, extra = '') => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + extra + '</svg>';
+// each module's glyph: what it does to a wave, in one stroke
+const FXM_ICO = {
+  drv: fxmSvg('<path d="M2.5 13.5c1.6-6 3.4-7.5 5-7.5h2.4c1.5 0 2 2.8 2.6 6 .6 3.2 1.1 6 2.6 6h2.4c1.6 0 3.4-1.5 5-7.5"/>'),
+  rng: fxmSvg('<circle cx="9" cy="12" r="5.5"/><circle cx="15" cy="12" r="5.5"/>'),
+  flt: fxmSvg('<path d="M2.5 9.5h9c2.5 0 3.4-2.6 4.4-2.6 1.2 0 1.8 4.4 5.6 12.6"/>'),
+  pha: fxmSvg('<path d="M2.5 8c2 0 2.6 9 4.4 9S9.4 8 11.4 8s2.4 9 4.2 9 2.4-9 4.4-9h1.5"/>'),
+  cho: fxmSvg('<path d="M2.5 12c2.5-6 5-6 7.5 0s5 6 7.5 0c1.2-2.9 2.4-4.4 4-4.5"/><path d="M2.5 15c2.5-6 5-6 7.5 0s5 6 7.5 0" opacity=".5"/>'),
+  mov: fxmSvg('<ellipse cx="12" cy="12" rx="9" ry="4.5"/><circle cx="18.6" cy="9" r="1.8" fill="currentColor" stroke="none"/>'),
+  dly: fxmSvg('<path d="M4 6v12"/><path d="M9.5 8v8" opacity=".75"/><path d="M14.5 9.5v5" opacity=".5"/><path d="M19 11v2" opacity=".3"/>'),
+  rev: fxmSvg('<path d="M4 19V11a8 8 0 0 1 16 0v8"/><path d="M8 19v-7a4 4 0 0 1 8 0v7" opacity=".55"/>'),
+  fx: fxmSvg('<circle cx="8" cy="9" r="2.6"/><circle cx="15.5" cy="7.5" r="1.8"/><circle cx="14" cy="15" r="3.2"/><circle cx="6.5" cy="16.5" r="1.3"/>'),
+  fx2: fxmSvg('<circle cx="16" cy="9" r="2.6"/><circle cx="8.5" cy="7.5" r="1.8"/><circle cx="10" cy="15" r="3.2"/><circle cx="17.5" cy="16.5" r="1.3"/>'),
+  mst: fxmSvg('<path d="M3 6c5 0 6 6 9 6M3 18c5 0 6-6 9-6h9"/><path d="M18 9l3 3-3 3"/>'),
+};
+// how strongly a module acts (0…1) – its node's glow, the card's light – and what its badge says
+function fxmAmt(k) {
+  const n = (id) => clamp(toNorm(PD[id], P[id]), 0, 1);
+  switch (k) {
+    case 'flt': { const t = P['flt.type'], f = n('flt.freq'); return Math.max(t === 'lowpass' ? Math.pow(1 - f, 0.7) : t === 'highpass' ? Math.pow(f, 0.7) : 1, Math.min(1, P['flt.lfoDepth'] / 2) * 0.6); }
+    case 'mov': return Math.max(P['mov.pan'], P['mov.vib'] / 30, P['mov.drift'] / 40) > 0 ? clamp(Math.max(P['mov.pan'], P['mov.vib'] / 30, P['mov.drift'] / 40), 0.15, 1) : 0;
+    case 'mst': return 1;
+    default: return P[k + '.mix'] > 0 ? clamp(0.18 + P[k + '.mix'] * 0.82, 0, 1) : 0;
+  }
+}
+function fxmBadge(k) {
+  if (k === 'flt') return { t: fmt(PD['flt.freq'], P['flt.freq']), on: true };
+  if (k === 'mov') return { t: 'Kreisen ' + fmt(PD['mov.pan'], P['mov.pan']), on: fxmAmt('mov') > 0 };
+  if (k === 'mst') return { t: fmt(PD['mst.vol'], P['mst.vol']), on: true };
+  const v = P[k + '.mix'];
+  return { t: v > 0 ? fmt(PD[k + '.mix'], v) : 'aus', on: v > 0 };
+}
+// a module card: section() with its glyph, badge and picture; kids as section()'s
+function modul(k, sub, ...kids) {
+  const D = FXM_DEF.find((d) => d.k === k);
+  const cv = h('canvas', { class: 'mod-cv', 'aria-hidden': 'true' }), cap = h('span', { class: 'mod-cap', 'aria-hidden': 'true' });
+  const s = section(D.t, sub, h('div', { class: 'mod-vis' }, cv, cap), ...kids);
+  s.classList.add('modul'); s.dataset.fx = k; s.style.setProperty('--ac', D.c); s.id = 'fxm-' + k;
+  const head = s.firstChild, badge = h('span', { class: 'mod-amt' });
+  head.prepend(h('span', { class: 'mod-ico', html: FXM_ICO[k] }));
+  head.append(badge);
+  const M = FXM.m[k] = { k, D, s, cv, cap, badge, seen: false, dirty: true, w: 0, hgt: 0, nodes: [] };
+  for (const box of [FXM.strip, FXM.mini]) if (box) M.nodes.push(...box.querySelectorAll('.fxf-n[data-fx="' + k + '"]'));   // (the Faden is built first)
+  const ids = Object.keys(PD).filter((id) => id.startsWith(k + '.'));
+  if (k === 'dly') ids.push('seq.bpm');
+  for (const id of ids) bindCtl(id, () => fxmDirty(M));
+  return s;
+}
+function fxmDirty(M) {
+  M.dirty = true;
+  if (!FXM.raf) FXM.raf = requestAnimationFrame(fxmFlush);
+}
+function fxmFlush() {
+  FXM.raf = 0;
+  for (const k in FXM.m) {
+    const M = FXM.m[k];
+    if (!M.dirty) continue;
+    fxmState(M);
+    if (M.seen) { M.dirty = false; fxmDraw(M); }
+  }
+}
+// the light of a module: its badge, its card, its nodes in the Faden
+function fxmState(M) {
+  const a = fxmAmt(M.k), b = fxmBadge(M.k);
+  if (M.a !== a) {
+    M.a = a; M.s.style.setProperty('--a', a.toFixed(3));
+    M.s.classList.toggle('ruht', !b.on);
+    for (const n of M.nodes) { n.style.setProperty('--a', a.toFixed(3)); n.classList.toggle('ruht', !b.on); }
+  }
+  if (M.badge.textContent !== b.t) { M.badge.textContent = b.t; for (const n of M.nodes) if (n.dataset.lab) n.setAttribute('aria-label', n.dataset.lab + ' – ' + b.t); }
+}
+
+/* ---------- the pictures ---------- */
+function fxmDraw(M) {
+  const r = M.cv.getBoundingClientRect();
+  if (!r.width) { M.dirty = true; return; }
+  const dpr = Math.min(2, window.devicePixelRatio || 1), W = Math.round(r.width * dpr), H = Math.round(r.height * dpr);
+  if (M.cv.width !== W || M.cv.height !== H) { M.cv.width = W; M.cv.height = H; }
+  const c = M.cv.getContext('2d');
+  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  c.clearRect(0, 0, r.width, r.height);
+  const col = M.D.c, k = M.k;
+  let cap = '';
+  try { cap = (FXM_PIC[k] || FXM_PIC[k.replace(/\d+$/, '')] || FXM_PIC.fx)(c, r.width, r.height, col, k) || ''; } catch (e) { cap = ''; }
+  if (M.cap.textContent !== cap) M.cap.textContent = cap;
+}
+const fxmA = (col, a) => { const n = parseInt(col.slice(1), 16); return 'rgba(' + (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')'; };
+// a line through y(x) for x in 0…W, glowing in the module's colour; fill: down to the base line yb
+function fxmLine(c, W, f, col, o = {}) {
+  c.beginPath();
+  for (let x = 0; x <= W; x += 1.5) { const y = f(x); if (x === 0) c.moveTo(x, y); else c.lineTo(x, y); }
+  if (o.fill != null) {
+    c.save(); c.lineTo(W, o.fill); c.lineTo(0, o.fill); c.closePath();
+    const g = c.createLinearGradient(0, 0, 0, o.fill); g.addColorStop(0, fxmA(col, o.fa || 0.22)); g.addColorStop(1, fxmA(col, 0));
+    c.fillStyle = g; c.fill(); c.restore();
+    c.beginPath(); for (let x = 0; x <= W; x += 1.5) { const y = f(x); if (x === 0) c.moveTo(x, y); else c.lineTo(x, y); }
+  }
+  c.lineWidth = o.w || 1.6; c.strokeStyle = o.dim ? fxmA(col, o.dim) : col;
+  if (!o.dim) { c.shadowColor = fxmA(col, 0.55); c.shadowBlur = 6; }
+  c.stroke(); c.shadowBlur = 0;
+}
+function fxmBase(c, W, y, a = 0.07) { c.fillStyle = 'rgba(240,230,216,' + a + ')'; c.fillRect(0, Math.round(y), W, 1); }
+// the frequency axis (20 Hz … 20 kHz, log) with faint decades
+const fxmFx = (W, f) => (Math.log(f / 20) / Math.log(1000)) * W;
+const fxmXf = (W, x) => 20 * Math.pow(1000, x / W);
+function fxmDecades(c, W, H) { c.fillStyle = 'rgba(240,230,216,0.05)'; for (const f of [100, 1000, 10000]) c.fillRect(Math.round(fxmFx(W, f)), 0, 1, H); }
+// a biquad's response as Web Audio computes it (its spec's formulas; Q of low- and highpass in dB) – complex [re, im]
+const FXM_FS = 48000;
+function fxmBq(type, f0, Q, f, gain = 0) {
+  const w0 = 2 * Math.PI * clamp(f0, 1, FXM_FS / 2 - 1) / FXM_FS, cw = Math.cos(w0), sw = Math.sin(w0);
+  let b0, b1, b2, a0, a1, a2;
+  if (type === 'lowpass' || type === 'highpass') {
+    const al = sw / (2 * Math.pow(10, Q / 20));
+    if (type === 'lowpass') { b0 = (1 - cw) / 2; b1 = 1 - cw; b2 = b0; } else { b0 = (1 + cw) / 2; b1 = -(1 + cw); b2 = b0; }
+    a0 = 1 + al; a1 = -2 * cw; a2 = 1 - al;
+  } else if (type === 'lowshelf' || type === 'highshelf') {
+    const A = Math.pow(10, gain / 40), al = sw / 2 * Math.SQRT2, s = 2 * Math.sqrt(A) * al, lo = type === 'lowshelf' ? 1 : -1;
+    b0 = A * ((A + 1) - lo * (A - 1) * cw + s); b1 = lo * 2 * A * ((A - 1) - lo * (A + 1) * cw); b2 = A * ((A + 1) - lo * (A - 1) * cw - s);
+    a0 = (A + 1) + lo * (A - 1) * cw + s; a1 = -lo * 2 * ((A - 1) + lo * (A + 1) * cw); a2 = (A + 1) + lo * (A - 1) * cw - s;
+  } else {
+    const al = sw / (2 * Q);
+    if (type === 'bandpass') { b0 = al; b1 = 0; b2 = -al; } else if (type === 'notch') { b0 = 1; b1 = -2 * cw; b2 = 1; } else { b0 = 1 - al; b1 = -2 * cw; b2 = 1 + al; }
+    a0 = 1 + al; a1 = -2 * cw; a2 = 1 - al;
+  }
+  const w = 2 * Math.PI * f / FXM_FS, c1 = Math.cos(w), s1 = Math.sin(w), c2 = Math.cos(2 * w), s2 = Math.sin(2 * w);
+  const nr = b0 + b1 * c1 + b2 * c2, ni = -(b1 * s1 + b2 * s2), dr = a0 + a1 * c1 + a2 * c2, di = -(a1 * s1 + a2 * s2), dd = dr * dr + di * di;
+  return [(nr * dr + ni * di) / dd, (ni * dr - nr * di) / dd];
+}
+const fxmDb = (z) => 10 * Math.log10(Math.max(1e-12, z[0] * z[0] + z[1] * z[1]));
+// a fixed scatter (the same each time it is drawn)
+const fxmRnd = (i) => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+const FXM_PIC = {
+  // the wave through the shaper (driveCurve's shapes, blended by the share)
+  drv(c, W, H, col) {
+    const type = P['drv.type'], amt = P['drv.amt'], mix = P['drv.mix'], cy = H / 2, A = H * 0.36;
+    let shape;
+    if (type === 'fold') { const g = 1 + amt * 7; shape = (x) => Math.sin(x * g * Math.PI / 2) * 0.5; }
+    else if (type === 'crush') { const steps = Math.pow(2, 16 - amt * 14) / 2; shape = (x) => Math.round(x * steps) / steps; }
+    else { const k = 1 + amt * 30, nrm = 0.25 / Math.tanh(k * 0.25); shape = (x) => Math.tanh(k * x) * nrm; }
+    const inp = (x) => 0.5 * Math.sin(x / W * Math.PI * 4);
+    let pk = 1e-6; for (let x = 0; x <= W; x += 2) pk = Math.max(pk, Math.abs((1 - mix) * inp(x) + mix * shape(inp(x))));
+    fxmBase(c, W, cy);
+    fxmLine(c, W, (x) => cy - inp(x) / 0.5 * A, col, { dim: 0.22, w: 1 });
+    fxmLine(c, W, (x) => cy - ((1 - mix) * inp(x) + mix * shape(inp(x))) / pk * A, col);
+    return { tube: 'Röhre', fold: 'Falter', crush: 'Bitbrecher' }[type] + ' · ' + Math.round(amt * 100) + ' %';
+  },
+  // a slow wave times the carrier: the sidebands' beating
+  rng(c, W, H, col) {
+    const f = P['rng.freq'], mix = P['rng.mix'], cy = H / 2, A = H * 0.36;
+    const cyc = clamp(Math.log2(f / 0.5) * 4.2, 0.6, 70);
+    const inp = (x) => Math.sin(x / W * Math.PI * 3);
+    fxmBase(c, W, cy);
+    fxmLine(c, W, (x) => cy - inp(x) * A, col, { dim: 0.22, w: 1 });
+    fxmLine(c, W, (x) => cy - inp(x) * ((1 - mix) + mix * Math.sin(x / W * Math.PI * 2 * cyc)) * A, col, { w: cyc > 30 ? 1.1 : 1.5 });
+    return fmt(PD['rng.freq'], f) + (f < 20 ? ' · Zittern' : '');
+  },
+  // the response, and the band the slow wave sweeps it through
+  flt(c, W, H, col) {
+    const t = P['flt.type'], f0 = P['flt.freq'], q = P['flt.q'], d = P['flt.lfoDepth'];
+    const y = (db) => H * 0.46 - db * H / 64;
+    fxmDecades(c, W, H); fxmBase(c, W, y(0));
+    const lo = f0 * Math.pow(2, -d), hi = f0 * Math.pow(2, d);
+    if (d > 0.01) {
+      const x0 = fxmFx(W, lo), x1 = fxmFx(W, hi), g = c.createLinearGradient(x0, 0, x1, 0);
+      g.addColorStop(0, fxmA(col, 0)); g.addColorStop(0.5, fxmA(col, 0.13)); g.addColorStop(1, fxmA(col, 0));
+      c.fillStyle = g; c.fillRect(x0, 0, x1 - x0, H);
+      for (const fe of [lo, hi]) fxmLine(c, W, (x) => clamp(y(fxmDb(fxmBq(t, fe, q, fxmXf(W, x)))), 2, H + 2), col, { dim: 0.28, w: 1 });
+    }
+    fxmLine(c, W, (x) => clamp(y(fxmDb(fxmBq(t, f0, q, fxmXf(W, x)))), 2, H + 2), col, { fill: H });
+    return { lowpass: 'Tiefpass', bandpass: 'Bandpass', highpass: 'Hochpass', notch: 'Kerbe' }[t] + (d > 0.01 ? ' · Welle ' + dec(P['flt.lfoRate'] < 1 ? P['flt.lfoRate'].toFixed(2) : P['flt.lfoRate'].toFixed(1)) + ' Hz' : '');
+  },
+  // six allpasses (chain.js) beside the dry signal: the notches, at the sweep's middle and its two ends
+  pha(c, W, H, col) {
+    const mix = P['pha.mix'], q = 0.5 + P['pha.fb'] * 10, oct = P['pha.depth'] * 2, F = [180, 360, 720, 1440, 2600, 4200];
+    const resp = (sh, f) => {
+      let re = 1, im = 0;
+      for (const fa of F) { const z = fxmBq('allpass', fa * sh, q, f); const r2 = re * z[0] - im * z[1]; im = re * z[1] + im * z[0]; re = r2; }
+      return fxmDb([(1 - mix * 0.5) + mix * 0.5 * re, mix * 0.5 * im]);
+    };
+    let lo = -3; for (let x = 0; x <= W; x += 6) lo = Math.min(lo, resp(1, fxmXf(W, x)));
+    const top = 12, y = (db) => top + (-db) / Math.min(40, -lo) * (H - top - 6);
+    fxmDecades(c, W, H); fxmBase(c, W, y(0));
+    if (oct > 0.01) for (const sh of [Math.pow(2, -oct), Math.pow(2, oct)]) fxmLine(c, W, (x) => clamp(y(resp(sh, fxmXf(W, x))), 2, H + 2), col, { dim: 0.25, w: 1 });
+    fxmLine(c, W, (x) => clamp(y(resp(1, fxmXf(W, x))), 2, H + 2), col, { fill: H, fa: 0.16 });
+    return dec(P['pha.rate'] < 1 ? P['pha.rate'].toFixed(2) : P['pha.rate'].toFixed(1)) + ' Hz';
+  },
+  // two voices a little apart: their beating, as deep as the depth, as fast as the tempo
+  cho(c, W, H, col) {
+    const mix = P['cho.mix'], dep = P['cho.depth'], beats = clamp(1 + Math.log2(P['cho.rate'] / 0.03) * 0.9, 1, 9), cy = H / 2, A = H * 0.38;
+    fxmBase(c, W, cy);
+    const env = (x) => 1 - dep * mix * 0.85 * (0.5 - 0.5 * Math.cos(x / W * Math.PI * 2 * beats));
+    fxmLine(c, W, (x) => cy - env(x) * A, col, { dim: 0.3, w: 1 });
+    fxmLine(c, W, (x) => cy + env(x) * A, col, { dim: 0.3, w: 1 });
+    fxmLine(c, W, (x) => cy - env(x) * A * Math.sin(x / W * Math.PI * 2 * 9), col, { w: 1.2 });
+    return dec(P['cho.rate'] < 1 ? P['cho.rate'].toFixed(2) : P['cho.rate'].toFixed(1)) + ' Hz';
+  },
+  // the pitch trembling (Vibrato, Taumeln) on the left; on the right the voices circling between left and right
+  mov(c, W, H, col) {
+    const cy = H / 2, w1 = W * 0.62, vib = Math.sqrt(P['mov.vib'] / 60), dr = Math.sqrt(P['mov.drift'] / 80), cyc = clamp(P['mov.vibRate'] * 2.2, 1, 22), dc = clamp(P['mov.driftRate'] * 3, 0.4, 6);
+    c.save(); c.beginPath(); c.rect(0, 0, w1, H); c.clip();
+    fxmBase(c, w1, cy);
+    fxmLine(c, w1, (x) => cy - (Math.sin(x / w1 * Math.PI * 2 * cyc) * vib * 0.6 + Math.sin(x / w1 * Math.PI * 2 * dc + 1.3) * dr * 0.8) * H * 0.42, col);
+    c.restore();
+    const ox = w1 + (W - w1) / 2, rx = (W - w1) * 0.36, ry = H * 0.22, pan = P['mov.pan'];
+    c.strokeStyle = 'rgba(240,230,216,0.12)'; c.lineWidth = 1; c.beginPath(); c.ellipse(ox, cy, rx, ry, 0, 0, Math.PI * 2); c.stroke();
+    c.fillStyle = 'rgba(240,230,216,0.4)'; c.font = '500 8px ' + (COL.fontNum || 'monospace'); c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('L', ox - rx - 7, cy + 8); c.fillText('R', ox + rx + 7, cy + 8);
+    if (pan > 0.005) {
+      c.strokeStyle = col; c.lineWidth = 1.6; c.shadowColor = fxmA(col, 0.55); c.shadowBlur = 6;
+      c.beginPath(); c.ellipse(ox, cy, rx * pan, ry * Math.max(0.25, pan), 0, Math.PI * 1.05, Math.PI * 1.95); c.stroke(); c.shadowBlur = 0;
+      c.fillStyle = col; c.beginPath(); c.arc(ox + Math.cos(Math.PI * 1.95) * rx * pan, cy + Math.sin(Math.PI * 1.95) * ry * Math.max(0.25, pan), 2.6, 0, Math.PI * 2); c.fill();
+    } else { c.fillStyle = col; c.beginPath(); c.arc(ox, cy, 2.4, 0, Math.PI * 2); c.fill(); }
+    return 'Vibrato ' + fmt(PD['mov.vib'], P['mov.vib']);
+  },
+  // the taps: up the left, down the right (Ping-Pong), each as loud as the feedback leaves it
+  dly(c, W, H, col) {
+    let t; try { t = dlyTime(); } catch (e) { t = P['dly.ms'] / 1000; }
+    const fb = P['dly.fb'], pp = P['dly.pp'], mix = P['dly.mix'], cy = H / 2, A = H * 0.4;
+    let nt = 1; for (let a = 1; a > 0.05 && nt < 14; nt++) a *= Math.max(0.01, fb);
+    const win = t * (Math.max(4, nt) + 0.6), bw = 2.4 + (1 - toNorm(PD['dly.tone'], P['dly.tone'])) * 3;
+    fxmBase(c, W, cy);
+    c.fillStyle = 'rgba(240,230,216,0.75)'; c.fillRect(6, cy - A, 2, A * 2);
+    let a = 1;
+    for (let n = 1; n <= Math.max(4, nt); n++) {
+      if (n > 1) a *= fb;
+      const v = Math.min(1, a);
+      if (v < 0.03) break;
+      const x = 7 + n * t / win * (W - 14) + Math.sin(n * 2.1) * P['dly.wow'] * 3;
+      const l = n % 2 ? 1 : 1 - pp, r = n % 2 ? 1 - pp : 1;
+      c.fillStyle = col; c.shadowColor = fxmA(col, 0.7); c.shadowBlur = 6; c.globalAlpha = 0.5 + 0.5 * v;
+      c.fillRect(x - bw / 2, cy - v * l * A, bw, v * l * A); c.fillRect(x - bw / 2, cy, bw, v * r * A);
+    }
+    c.globalAlpha = 1; c.shadowBlur = 0;
+    return Math.round(t * 1000) + ' ms' + (P['dly.sync'] ? ' · ' + (PD['dly.div'].opts.find((o) => o[0] === P['dly.div']) || ['', ''])[1] : '') + (fb >= 1 ? ' · schwillt an' : '');
+  },
+  // the room's decay after the pre-delay, as a cloud of spores thinning out; damping darkens the tail
+  rev(c, W, H, col) {
+    const R = (typeof RAUM_LISTE !== 'undefined' && RAUM_LISTE.find((x) => x.id === P['rev.typ'])) || null;
+    const T = R && R.t ? R.t * P['rev.len'] : P['rev.size'], pre = P['rev.pre'], win = clamp(T * 1.08 + pre, 0.6, 18), damp = P['rev.damp'];
+    const x0 = 6 + pre / win * (W - 12), env = (x) => (x < x0 ? 0 : Math.max(0, 1 - ((x - x0) / (W - 12) * win) / T));
+    const yb = H - 4, A = H - 10;
+    const g = c.createLinearGradient(x0, 0, W, 0); g.addColorStop(0, fxmA(col, 0.32)); g.addColorStop(1, damp > 0.5 ? 'rgba(120,96,80,0.06)' : fxmA(col, 0.08));
+    c.fillStyle = 'rgba(240,230,216,0.75)'; c.fillRect(5, yb - A, 2, A);
+    c.beginPath(); c.moveTo(x0, yb); for (let x = x0; x <= W; x += 2) c.lineTo(x, yb - env(x) * A); c.lineTo(W, yb); c.closePath(); c.fillStyle = g; c.fill();
+    fxmLine(c, W, (x) => (x < x0 ? yb : yb - env(x) * A), col, { w: 1.2 });
+    for (let i = 0; i < 150; i++) {
+      const x = x0 + fxmRnd(i) * (W - x0), e = env(x), yy = yb - fxmRnd(i + 500) * e * A;
+      if (fxmRnd(i + 900) > e * 1.4 + 0.08) continue;
+      c.fillStyle = fxmA(col, 0.25 + 0.6 * e * (1 - damp * (x - x0) / W)); c.fillRect(x, yy, 1.4, 1.4);
+    }
+    return (R ? R.name : 'Nebel') + ' · ' + dec(T.toFixed(1)) + ' s';
+  },
+  // the returns' effects, each its own way
+  fx(c, W, H, col, r) {
+    const p = (k) => P[r + '.' + k], typ = p('typ'), cy = H / 2;
+    fxmBase(c, W, cy, 0.05);
+    if (typ === 'netz') {   // strings, bells, wood: resonances on the scale, ringing as long as the Nachklang
+      const n = 13, br = p('hell');
+      for (let i = 0; i < n; i++) {
+        const x = 8 + i / (n - 1) * (W - 16), hh = (0.3 + 0.7 * fxmRnd(i + 3)) * (0.35 + 0.65 * p('klang')) * H * 0.42 * (1 - (1 - br) * i / n);
+        c.fillStyle = fxmA(col, 0.18); c.fillRect(x - 3, cy - hh, 6, hh * 2);
+        c.fillStyle = col; c.fillRect(x - 0.6, cy - hh, 1.2, hh * 2);
+      }
+    } else if (typ === 'wolke') {   // grains scattered over the beats, some backwards, some leaping
+      const n = Math.round(14 + p('dichte') * 70), sp = p('streu');
+      for (let i = 0; i < n; i++) {
+        const x = 6 + fxmRnd(i) * (W - 12), yy = cy + (fxmRnd(i + 77) - 0.5) * H * (0.25 + sp * 0.65), r0 = 1 + fxmRnd(i + 31) * 2.4, back = fxmRnd(i + 13) < p('rueck');
+        c.fillStyle = fxmA(col, 0.25 + 0.6 * fxmRnd(i + 5)); c.beginPath(); c.arc(x, yy, r0, 0, Math.PI * 2); c.fill();
+        if (back) { c.strokeStyle = fxmA(col, 0.35); c.lineWidth = 1; c.beginPath(); c.moveTo(x, yy); c.lineTo(x - 7, yy); c.stroke(); }
+      }
+    } else if (typ === 'spektral') {   // a standing surface of partials
+      const n = 48, hl = p('shell'), hold = p('halten');
+      for (let i = 0; i < n; i++) {
+        const x = 6 + i / (n - 1) * (W - 12), e = Math.exp(-i / n * (4.2 - hl * 3)) * (0.55 + 0.45 * fxmRnd(i + 11));
+        c.fillStyle = fxmA(col, hold ? 0.85 : 0.25 + 0.5 * e); c.fillRect(x, H - 4 - e * (H - 10), 2.4, e * (H - 10));
+      }
+    } else if (typ === 'oktav') {   // an echo climbing (or falling) with each repeat
+      const st = [-12, 5, 7, 12, 19][+p('schritt')] || 12, n = 2 + Math.round(p('onach') * 7), dir = st < 0 ? -1 : 1;
+      for (let i = 0; i < n; i++) {
+        const x = 10 + i / Math.max(1, n - 1) * (W - 24), yy = cy + dir * (0.5 - i / Math.max(1, n - 1)) * H * 0.62, a = Math.pow(0.8, i);
+        c.fillStyle = fxmA(col, 0.3 + 0.6 * a); c.shadowColor = fxmA(col, 0.6); c.shadowBlur = 6;
+        c.beginPath(); c.arc(x, yy, 2 + 2.4 * a, 0, Math.PI * 2); c.fill();
+      }
+      c.shadowBlur = 0;
+    } else if (typ === 'vokal') {   // three formants (a e i o u – ranges after Peterson & Barney, men's)
+      const V = [[730, 1090, 2440], [530, 1840, 2480], [270, 2290, 3010], [570, 840, 2410], [300, 870, 2240]], v = p('vokal') * 4, i0 = Math.min(3, Math.floor(v)), fr = v - i0;
+      const F = V[i0].map((f, j) => f + (V[Math.min(4, i0 + 1)][j] - f) * fr), q = 2 + p('reso') * 10;
+      fxmDecades(c, W, H);
+      fxmLine(c, W, (x) => { const f = fxmXf(W, x); let s = 0; for (const fo of F) s += 1 / (1 + Math.pow((f - fo) / (fo / q), 2)); return H - 4 - Math.min(1, s) * (H - 10); }, col, { fill: H, fa: 0.2 });
+      return ['a', 'e', 'i', 'o', 'u'][Math.min(4, Math.round(p('vokal') * 4))];
+    } else if (typ === 'harmo') {   // the voices above and below the played one
+      fxmLine(c, W, () => cy, col, { dim: 0.45, w: 1.2 });
+      for (const v of ['hv1', 'hv2', 'hv3']) {
+        const n = Math.round(p(v)); if (!n) continue;
+        const yy = cy - clamp(n / (p('hmod') === 'ton' ? 7 : 12), -1, 1) * H * 0.42;   // (an octave reaches the edge)
+        fxmLine(c, W, (x) => yy + Math.sin(x / W * Math.PI * 6 + n) * p('hschim') * 2, col, { w: 1.4 });
+      }
+      return fmt(PD[r + '.hv1'], p('hv1')) + ' · ' + fmt(PD[r + '.hv2'], p('hv2')) + ' · ' + fmt(PD[r + '.hv3'], p('hv3'));
+    }
+    return '';
+  },
+  // the Summe's tone (two shelves at 120 Hz and 6,5 kHz) and its level
+  mst(c, W, H, col) {
+    const W1 = W - H - 10, y = (db) => H / 2 - db * H / 34;
+    c.save(); c.beginPath(); c.rect(0, 0, W1, H); c.clip();
+    fxmDecades(c, W1, H); fxmBase(c, W1, y(0));
+    fxmLine(c, W1, (x) => { const f = fxmXf(W1, x); return y(fxmDb(fxmBq('lowshelf', 120, 0, f, P['mst.low'])) + fxmDb(fxmBq('highshelf', 6500, 0, f, P['mst.high']))); }, col, { fill: H, fa: 0.14 });
+    c.restore();
+    // beside it the Verdichtung: level in → level out, its knee bending lower the more it presses (a picture, not the curve)
+    const x0 = W1 + 6, sz = H - 12, cmp = P['mst.comp'], th = 0.62 - cmp * 0.3, ra = 1 + cmp * 5;
+    c.fillStyle = 'rgba(240,230,216,0.05)'; c.fillRect(W1 + 2, 4, 1, H - 8);
+    c.strokeStyle = 'rgba(240,230,216,0.12)'; c.lineWidth = 1; c.beginPath(); c.moveTo(x0, 6 + sz); c.lineTo(x0 + sz, 6); c.stroke();
+    c.save(); c.translate(x0, 6);
+    fxmLine(c, sz, (x) => { const u = x / sz, o = u < th ? u : th + (u - th) / ra; return sz - o * sz; }, col, { w: 1.4 });
+    c.restore();
+    return '';
+  },
+};
+
+/* ---------- the Faden: the signal path, tap a node to go to its card ---------- */
+function fxmNode(D, mini) {
+  const b = h('button', { type: 'button', class: 'fxf-n', 'data-fx': D.k, style: '--ac:' + D.c, onclick: () => fxmGo(D.k) },
+    h('i', { class: 'fxf-o', html: FXM_ICO[D.k] }), mini ? null : h('span', null, D.s));
+  b.dataset.lab = 'Zu ' + D.t + ' springen';
+  if (mini) b.tabIndex = -1;
+  return b;
+}
+function fxmStrip() {
+  const row = (r, mini) => FXM_DEF.filter((d) => d.row === r).map((d) => fxmNode(d, mini));
+  const wire = document.createElementNS(SVGNS, 'svg'); wire.setAttribute('class', 'fxf-w'); wire.setAttribute('aria-hidden', 'true');
+  const pod = h('div', { class: 'fxf-pod' }, h('em', null, 'parallel'), ...row('b'));
+  const el = h('nav', { class: 'fxf', 'aria-label': 'Signalweg: Verzerrung, Ringmodulator, Filter, Phaser, Schweben und Kreisen in Reihe, dann parallel Echo, Hall, Effekt und Effekt 2 in die Summe. Tippen springt zum Effekt.' },
+    wire, h('div', { class: 'fxf-a' }, ...row('a')), h('div', { class: 'fxf-b' }, pod, ...row('s')));
+  // the same thread, small, held at the top once the big one has scrolled away
+  const mini = h('div', { class: 'fxf-mini', 'aria-hidden': 'true' }, h('div', { class: 'fxf-mi' }, h('b', { class: 'fxf-cur' }), ...row('a', true), h('i', { class: 'fxf-gap' }), ...row('b', true), ...row('s', true)));
+  FXM.strip = el; FXM.mini = mini; FXM.wire = wire; FXM.pod = pod;
+  return [mini, el];
+}
+// the hyphae between the nodes: in series a thread, then one down to the Summe and one into the parallel pod, out of it into the Summe
+function fxmWire() {
+  const el = FXM.strip, svg = FXM.wire;
+  if (!el || !el.offsetWidth) return;
+  const R = el.getBoundingClientRect(), at = (n) => { const r = n.querySelector('.fxf-o').getBoundingClientRect(), l = n.querySelector('span'); return { x: r.left + r.width / 2 - R.left, y: r.top + r.height / 2 - R.top, r: r.width / 2, lb: (l ? l.getBoundingClientRect().bottom : r.bottom) - R.top }; };
+  const A = [...el.querySelectorAll('.fxf-a .fxf-n')].map(at), S = at(el.querySelector('.fxf-b > .fxf-n'));
+  const pr = FXM.pod.getBoundingClientRect(), pod = { l: pr.left - R.left, r: pr.right - R.left, t: pr.top - R.top, b: pr.bottom - R.top };
+  svg.setAttribute('viewBox', '0 0 ' + R.width + ' ' + R.height); svg.setAttribute('width', R.width); svg.setAttribute('height', R.height);
+  let d = '';
+  for (let i = 1; i < A.length; i++) { const p = A[i - 1], q = A[i], mx = (p.x + q.x) / 2, sag = i % 2 ? 2.5 : -2.5; d += 'M' + (p.x + p.r) + ' ' + p.y + 'Q' + mx + ' ' + (p.y + sag) + ' ' + (q.x - q.r) + ' ' + q.y; }
+  const L = A[A.length - 1];
+  const yb = L.lb + 3, dry = 'M' + L.x + ' ' + yb + 'L' + S.x + ' ' + (S.y - S.r);
+  const tx = Math.min(pod.r - 18, L.x - 30), send = 'M' + L.x + ' ' + yb + 'C' + L.x + ' ' + (pod.t - 1) + ' ' + (tx + 20) + ' ' + (pod.t - 4) + ' ' + tx + ' ' + pod.t;
+  const ret = 'M' + pod.r + ' ' + S.y + 'L' + (S.x - S.r) + ' ' + S.y;
+  svg.innerHTML = '<path class="fxf-th" d="' + d + dry + '"/><path class="fxf-th send" d="' + send + '"/><path class="fxf-th" d="' + ret + '"/>';
+}
+function fxmGo(k) {
+  const M = FXM.m[k]; if (!M) return;
+  const top = sheetBody.scrollTop + M.s.getBoundingClientRect().top - sheetBody.getBoundingClientRect().top - 42 - 8;   // (below the small thread, 42 px)
+  sheetBody.scrollTo({ top: Math.max(0, top), behavior: REDUCED ? 'auto' : 'smooth' });
+  M.s.classList.remove('hit'); void M.s.offsetWidth; M.s.classList.add('hit');
+  const f = M.s.querySelector('input, button.chip, select, button.sw'); if (f) setTimeout(() => f.focus({ preventScroll: true }), REDUCED ? 0 : 420);
+}
+// which card is in view (the nodes say it), which pictures may draw, when the small thread shows
+function fxmWatch(box) {
+  if (typeof IntersectionObserver === 'undefined') { for (const k in FXM.m) FXM.m[k].seen = true; return; }
+  FXM.io = new IntersectionObserver((es) => {
+    for (const e of es) {
+      const M = FXM.m[e.target.dataset.fx];
+      if (M) { M.seen = e.isIntersecting; if (M.seen && M.dirty) fxmDirty(M); }
+    }
+    fxmCur();
+  }, { root: sheetBody, rootMargin: '60px 0px 60px 0px' });
+  for (const k in FXM.m) FXM.io.observe(FXM.m[k].s);
+  new IntersectionObserver((es) => { for (const e of es) FXM.mini.classList.toggle('on', !e.isIntersecting && e.boundingClientRect.top < (e.rootBounds ? e.rootBounds.top : 0)); }, { root: sheetBody }).observe(FXM.strip);
+  if (typeof ResizeObserver !== 'undefined') {
+    FXM.ro = new ResizeObserver(() => { fxmWire(); for (const k in FXM.m) fxmDirty(FXM.m[k]); });
+    FXM.ro.observe(FXM.strip);
+  }
+  sheetBody.addEventListener('scroll', () => { if (UI.panel === 'fx' && !FXM.sT) FXM.sT = setTimeout(() => { FXM.sT = 0; fxmCur(); }, 120); }, { passive: true });
+}
+// the card under the top of the view is the current one
+function fxmCur() {
+  if (UI.panel !== 'fx') return;
+  const top = sheetBody.getBoundingClientRect().top + (FXM.mini ? FXM.mini.offsetHeight : 0) + 40;
+  let cur = null;
+  for (const k in FXM.m) { const r = FXM.m[k].s.getBoundingClientRect(); if (r.top <= top + 40 && r.bottom > top) cur = k; }
+  if (!cur) { const first = FXM_DEF.find((d) => FXM.m[d.k] && FXM.m[d.k].seen); cur = first ? first.k : null; }
+  if (FXM.cur === cur) return;
+  FXM.cur = cur;
+  for (const k in FXM.m) for (const n of FXM.m[k].nodes) { if (k === cur) n.setAttribute('aria-current', 'true'); else n.removeAttribute('aria-current'); }
+  const c = FXM.mini && FXM.mini.querySelector('.fxf-cur'); if (c) { c.textContent = cur ? FXM.m[cur].D.t : ''; c.style.color = cur ? FXM.m[cur].D.c : ''; }
+}
+function fxmOpen() { requestAnimationFrame(() => { fxmWire(); for (const k in FXM.m) { FXM.m[k].dirty = true; } fxmFlush(); FXM.cur = null; fxmCur(); }); }
+// a group's heading between the cards, in the mixer's manner
+const fxmGroup = (t, sub) => h('div', { class: 'mod-grp' }, h('span', null, t), sub ? h('small', null, sub) : null);
 /* =====================================================================
    Mixer – the Myzel-Mixer
    ===================================================================== */
@@ -28703,8 +29272,8 @@ function buildKlang() {
     box.append(s);
   }
   wkUiSync();
-  box.append(section('Zweite Ebene', 'Ein zweiter Klang auf jedem Finger', grid(ctl('v.layer', { label: 'Ebene' }), ctl('v.layerLvl'), ctl('v.layerInt'), ctl('v.layerDeg')),
-    h('p', { class: 'note' }, 'Tonstufe verschiebt um Stufen der Skala – so bleibt jeder Ton in der Tonart. Lautstärke, Klangfarbe und Raum jeder Ebene regelst du im Mixer.')));
+  box.append(tinted('eb2', section('Zweite Ebene', 'Ein zweiter Klang auf jedem Finger', grid(ctl('v.layer', { label: 'Ebene' }), ctl('v.layerLvl'), ctl('v.layerInt'), ctl('v.layerDeg')),
+    h('p', { class: 'note' }, 'Tonstufe verschiebt um Stufen der Skala – so bleibt jeder Ton in der Tonart. Lautstärke, Klangfarbe und Raum jeder Ebene regelst du im Mixer.'))));
   box.append(section('Spielweise', null, grid(ctl('v.roll'), ctl('v.strum'), ctl('v.glide'), ctl('v.vel'), ctl('v.human'), ctl('v.width'))));
   box.append(section('Stimmung', null, grid(ctl('t.root'), ctl('t.scale'), ctl('t.oct'), ctl('t.range'), ctl('t.a4'), ctl('t.just'))));
   return box;
@@ -29562,30 +30131,37 @@ function engMissSay() {
 }
 
 function buildFx() {
-  const box = h('div');
-  box.append(h('p', { class: 'note', style: 'margin-top:12px' }, 'Signalweg: Verzerrung → Ringmodulator → Filter → Phaser → Schweben → Kreisen, dann parallel Echo, Hall, Effekt und Effekt 2 in die Summe.'));
-  box.append(section('Verzerrung', 'Sättigung, Wellenfalter, Bitreduktion', grid(ctl('drv.type'), ctl('drv.amt'), ctl('drv.mix'))));
-  box.append(section('Ringmodulator', 'Metallische Seitenbänder', grid(ctl('rng.freq'), ctl('rng.mix'))));
-  box.append(section('Filter', 'Mit langsamer Welle', grid(ctl('flt.type'), ctl('flt.freq'), ctl('flt.q'), ctl('flt.lfoRate'), ctl('flt.lfoDepth'))));
-  box.append(section('Phaser', '6 Allpass-Stufen', grid(ctl('pha.mix'), ctl('pha.rate'), ctl('pha.depth'), ctl('pha.fb'))));
-  box.append(section('Schweben', 'Stereo-Chorus', grid(ctl('cho.mix'), ctl('cho.rate'), ctl('cho.depth'))));
-  box.append(section('Echo', 'Bandecho mit Ping-Pong', grid(ctl('dly.mix'), ctl('dly.fb'), ctl('dly.sync'), ctl('dly.div'), ctl('dly.ms'), ctl('dly.pp'), ctl('dly.tone'), ctl('dly.wow')),
+  // (owner, 30.10.2026: „Die Effekt-Seite … sieht sehr basic aus“) every effect a module card in the order of the signal
+  // path, the Faden on top shows it and jumps (ui/modul.js); the controls are the same as before
+  const box = h('div', { class: 'fxp' });
+  box.append(...fxmStrip());
+  box.append(fxmGroup('färbung', 'in reihe – jede stimme'));
+  box.append(modul('drv', 'Sättigung, Wellenfalter, Bitreduktion', grid(ctl('drv.type'), ctl('drv.amt'), ctl('drv.mix'))));
+  box.append(modul('rng', 'Metallische Seitenbänder', grid(ctl('rng.freq'), ctl('rng.mix'))));
+  box.append(modul('flt', 'Mit langsamer Welle', grid(ctl('flt.type'), ctl('flt.freq'), ctl('flt.q'), ctl('flt.lfoRate'), ctl('flt.lfoDepth'))));
+  box.append(modul('pha', '6 Allpass-Stufen', grid(ctl('pha.mix'), ctl('pha.rate'), ctl('pha.depth'), ctl('pha.fb'))));
+  box.append(modul('cho', 'Stereo-Chorus', grid(ctl('cho.mix'), ctl('cho.rate'), ctl('cho.depth'))));
+  box.append(modul('mov', 'Tonhöhe und Raum aller Stimmen', grid(ctl('mov.vib'), ctl('mov.vibRate'), ctl('mov.drift'), ctl('mov.driftRate'), ctl('mov.pan'), ctl('mov.panRate'))));
+  box.append(fxmGroup('räume', 'parallel – jeder kanal sendet hinein'));
+  box.append(modul('dly', 'Bandecho mit Ping-Pong', grid(ctl('dly.mix'), ctl('dly.fb'), ctl('dly.sync'), ctl('dly.div'), ctl('dly.ms'), ctl('dly.pp'), ctl('dly.tone'), ctl('dly.wow')),
     h('p', { class: 'note' }, 'Ab 100 % Rückkopplung schwillt das Echo von selbst an, die Bandsättigung begrenzt es. „Einfrieren“ (Schneeflocke oben) hält die aktuelle Schleife endlos fest; „Stille“ leert sie.')));
-  box.append(section('Hall', 'Erzeugter Raum', grid(ctl('rev.mix'), ctl('rev.size'), ctl('rev.damp'), ctl('rev.pre'))));
+  box.append(modul('rev', 'Erzeugter Raum', grid(ctl('rev.mix'), ctl('rev.size'), ctl('rev.damp'), ctl('rev.pre'))));
   // (owner, 30.10.2026: „Ich hab gestern einen Harmonizer in Auftrag gegeben. Wo ist der eigentlich zu finden?“) the
   // returns „Effekt“ and „Effekt 2“ – until now only in the mixer's return channels: here too, the same settings
-  for (const [r, name] of FX_RETS) {
+  for (const [r] of FX_RETS) {
     const grids = {}, txt = h('p', { class: 'note' }), upd = () => { const T = FX_TYPES[P[r + '.typ']] || FX_TYPES.netz; for (const t in grids) grids[t].hidden = t !== P[r + '.typ']; txt.textContent = T.i + '.'; };
     for (const t in FX_TYPES) grids[t] = grid(...Object.values(FX_TYPES[t].keys).map((id) => ctl(r + '.' + id)));
     bindCtl(r + '.typ', upd); upd();
-    box.append(section(name, 'Resonanz-Netz, Wolke, Spektral-Nebel, Oktav-Echo, Vokal-Filter oder Harmonizer – jeder Kanal sendet hinein (Mixer)', ctl(r + '.typ'), txt, grid(ctl(r + '.mix')), ...Object.values(grids)));
+    box.append(modul(r, 'Resonanz-Netz, Wolke, Spektral-Nebel, Oktav-Echo, Vokal-Filter oder Harmonizer – jeder Kanal sendet hinein (Mixer)', ctl(r + '.typ'), txt, grid(ctl(r + '.mix')), ...Object.values(grids)));
   }
-  box.append(section('Bewegung', 'Tonhöhe und Raum aller Stimmen', grid(ctl('mov.vib'), ctl('mov.vibRate'), ctl('mov.drift'), ctl('mov.driftRate'), ctl('mov.pan'), ctl('mov.panRate'))));
-  box.append(section('Summe', 'Klangregelung, Kompressor, Sättigung', grid(ctl('mst.low'), ctl('mst.high'), ctl('mst.comp'), ctl('mst.vol')),
+  box.append(fxmGroup('ausgang'));
+  box.append(modul('mst', 'Klangregelung, Kompressor, Sättigung', grid(ctl('mst.low'), ctl('mst.high'), ctl('mst.comp'), ctl('mst.vol')),
     h('p', { class: 'note' }, 'Die Verdichtung ändert die Dynamik, nicht die Lautstärke leiser Passagen. Eine weiche Sättigung am Ende fängt seltene Spitzen ab und hält den Ausgang unter 0 dBFS.')));
+  fxmWatch(box);
   return box;
 }
-let ringCv = null, laneTabs = [], laneGrids = [];
+let ringCv = null, laneTabs = [], laneGrids = [], laneSec = null;
+const LANE_AC = ['var(--spore)', 'var(--lumen)', 'var(--lilac)', 'var(--rose)'];
 function buildPuls() {
   const box = h('div');
   const play = h('button', { type: 'button', class: 'btn primary', id: 'pulsPlay', 'aria-pressed': 'false', 'data-act': 'puls', onclick: () => (SEQ.on ? seqStop() : seqStart()) });
@@ -29604,14 +30180,17 @@ function buildPuls() {
     const g = grid(ctl(p + 'on'), ctl(p + 'eng'), ctl(p + 'steps'), ctl(p + 'puls'), ctl(p + 'rot'), ctl(p + 'div'), ctl(p + 'deg'), ctl(p + 'oct'), ctl(p + 'walk'), ctl(p + 'prob'), ctl(p + 'vol'), ctl(p + 'bright'), ctl(p + 'pan'));
     g.hidden = i !== UI.lane; return g;
   });
-  box.append(section('Spuren', 'Impulse verteilt auf Schritte', h('div', { class: 'lanehead' }, ringCv, lanes), ...laneGrids));
-  box.append(section('Bordun', 'Liegender Grundton unter allem', grid(ctl('bor.on'), ctl('bor.lvl'), ctl('bor.int'), ctl('bor.oct'), ctl('bor.wave'), ctl('bor.cut'), ctl('bor.breath'))));
+  laneSec = section('Spuren', 'Impulse verteilt auf Schritte', h('div', { class: 'lanehead' }, ringCv, lanes), ...laneGrids);
+  laneSec.style.setProperty('--ac', LANE_AC[UI.lane]);   // (30.10.2026: the lane's knobs in its colour)
+  box.append(laneSec);
+  box.append(tinted('bor', section('Bordun', 'Liegender Grundton unter allem', grid(ctl('bor.on'), ctl('bor.lvl'), ctl('bor.int'), ctl('bor.oct'), ctl('bor.wave'), ctl('bor.cut'), ctl('bor.breath')))));
   return box;
 }
 function selectLane(i) {
   UI.lane = i;
   laneTabs.forEach((b, k) => b.setAttribute('aria-pressed', String(k === i)));
   laneGrids.forEach((g, k) => (g.hidden = k !== i));
+  if (laneSec) laneSec.style.setProperty('--ac', LANE_AC[i]);
 }
 function updLaneTabs() {
   laneTabs.forEach((b, i) => {
@@ -29676,8 +30255,8 @@ function buildRec() {
     return h('div', { class: 'mrow' }, h('span', null, ch), h('div', { class: 'mbar' }, bar), pk);
   }));
   barInfoEl = h('p', { class: 'note', style: 'margin-top:8px' });
-  box.append(section('Aufnahme', null, h('div', { class: 'recbig' }, recBig, h('div', null, recTimeEl, recSubEl)), meters,
-    h('div', { class: 'grid', style: 'margin-top:12px' }, ctl('rec.len'), ctl('rec.bars')), barInfoEl));
+  box.append(tinted('rec', section('Aufnahme', null, h('div', { class: 'recbig' }, recBig, h('div', null, recTimeEl, recSubEl)), meters,
+    h('div', { class: 'grid', style: 'margin-top:12px' }, ctl('rec.len'), ctl('rec.bars')), barInfoEl)));
   recInfoEl = h('p', { class: 'note', style: 'margin-top:10px' });
   box.append(section('Qualität', null, grid(ctl('rec.fmt'), ctl('rec.norm'), ctl('rec.arm'), ctl('rec.tail'), ctl('rec.comp')), recInfoEl));
   takesEl = h('div', { class: 'takes' });
@@ -33050,7 +33629,7 @@ function buildUI() {
   }
   for (const p of PANELS) panelEls[p.key] = p.build();
   midiDot = $('#midiDot');
-  for (const k in panelEls) { panelEls[k].hidden = true; sheetBody.append(panelEls[k]); }
+  for (const k in panelEls) { panelEls[k].hidden = true; panelEls[k].classList.add('pnl-' + k); sheetBody.append(panelEls[k]); }   // (pnl-…: the panel's colour – css/modul.css)
   const q = $('#quick');
   q.append(ctl('flt.freq', { prefix: 'q-', label: 'Filter' }), ctl('dly.mix', { prefix: 'q-', label: 'Echo' }), ctl('rev.mix', { prefix: 'q-', label: 'Hall' }),
     h('button', { type: 'button', class: 'iconbtn', id: 'btnPanic2', 'data-act': 'stille', 'aria-label': 'Stille: alles sofort stoppen', title: 'Stille: alles sofort stoppen', html: ICON.hush, onclick: panic }));

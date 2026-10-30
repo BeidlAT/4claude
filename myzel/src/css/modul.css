@@ -1,0 +1,151 @@
+/* ---------- the panels' common language (owner, 30.10.2026: „mach Myzel zu einem Gesamtkunstwerk“ – dev/klang/design-konzept.md)
+   Every section of a panel is a card on the loam: a faint border, a glow from above, its title in the display face like
+   the mixer's group names. --ac is a section's own colour (the Effekte page's modules, Puls's lanes, the Aufnahme's red):
+   its sliders, chips and switches take it. ---------- */
+#sheetBody .sec {
+  --ac: var(--spore); position: relative; margin: 10px 0 0; padding: 12px 14px 12px; border: 1px solid rgba(240, 230, 216, .075); border-radius: 16px;
+  background: radial-gradient(130% 70px at 50% 0, color-mix(in srgb, var(--ac) 5%, transparent), transparent 100%), linear-gradient(180deg, rgba(240, 230, 216, .022), rgba(0, 0, 0, .06));
+}
+#sheetBody .sec:last-child { border-bottom: 1px solid rgba(240, 230, 216, .075); }
+#sheetBody > div > .sec:first-child { margin-top: 6px; }
+#sheetBody .sec .sec { margin: 8px 0 0; padding: 8px 0 0; border: 0; border-top: 1px dashed rgba(240, 230, 216, .08); border-radius: 0; background: none; }
+#sheetBody .sec-h { align-items: center; margin: 0 0 10px; min-height: 22px; }
+#sheetBody .sec-h h3 { display: flex; align-items: center; gap: 8px; font: 400 13.5px/1.15 var(--font-display); letter-spacing: 0; word-spacing: -.32em; text-transform: lowercase; color: var(--hypha); }
+#sheetBody .sec-h h3::before { content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--ac); box-shadow: 0 0 8px var(--ac); }
+#sheetBody .sec-h h3:has(.kq-g)::before, #sheetBody .sec.fold .sec-h h3::before, #sheetBody .modul .sec-h h3::before { display: none; }
+#sheetBody .sec-h h3 .kq-g { color: var(--ac); }
+#sheetBody .sec-h p { font-size: 11.5px; line-height: 1.3; }
+#sheetBody .sec.fold { padding-top: 6px; padding-bottom: 6px; }
+#sheetBody .sec.fold .sec-h { margin: 0; }
+#sheetBody .sec.fold .fold-b { margin: -2px 0; }
+#sheetBody .sec.fold .fold-body { padding-bottom: 6px; }
+#sheetBody .sec.fold .fold-b svg { color: var(--ac); }
+#sheetBody .note { font-size: 12.5px; line-height: 1.45; }
+/* the controls inside: the slider a thread that glows in the card's colour, the thumb a spore on it */
+#sheetBody .grid { gap: 8px 18px; }
+.ctl label, .ctl .lab { color: rgba(240, 230, 216, .88); }
+#sheetBody .sec .val { color: color-mix(in srgb, var(--ac) 62%, var(--hypha)); }
+input[type=range]::-webkit-slider-runnable-track {
+  height: 5px; border-radius: 3px; box-shadow: inset 0 1px 2px rgba(0, 0, 0, .6);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--ac, var(--spore)) 35%, transparent), var(--ac, var(--spore))) 0 0 / var(--p) 100% no-repeat, rgba(240, 230, 216, .085);
+}
+input[type=range]::-webkit-slider-thumb {
+  width: 20px; height: 20px; margin-top: -7.5px; border: 2px solid var(--ac, var(--spore));
+  background: radial-gradient(circle, var(--hypha) 0 2.6px, #1c1511 3.2px);
+  box-shadow: 0 0 0 3px rgba(17, 13, 11, .55), 0 0 12px color-mix(in srgb, var(--ac, var(--spore)) 50%, transparent);
+  transition: box-shadow .15s, transform .15s;
+}
+input[type=range]::-moz-range-track { height: 5px; border-radius: 3px; background: rgba(240, 230, 216, .085); box-shadow: inset 0 1px 2px rgba(0, 0, 0, .6); }
+input[type=range]::-moz-range-progress { height: 5px; border-radius: 3px; background: linear-gradient(90deg, color-mix(in srgb, var(--ac, var(--spore)) 35%, transparent), var(--ac, var(--spore))); }
+input[type=range]::-moz-range-thumb {
+  box-sizing: border-box; width: 20px; height: 20px; border: 2px solid var(--ac, var(--spore));
+  background: radial-gradient(circle, var(--hypha) 0 2.6px, #1c1511 3.2px);
+  box-shadow: 0 0 0 3px rgba(17, 13, 11, .55), 0 0 12px color-mix(in srgb, var(--ac, var(--spore)) 50%, transparent);
+}
+input[type=range]:hover::-webkit-slider-thumb, input[type=range]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px rgba(17, 13, 11, .55), 0 0 18px color-mix(in srgb, var(--ac, var(--spore)) 75%, transparent); }
+input[type=range]:hover::-moz-range-thumb, input[type=range]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px rgba(17, 13, 11, .55), 0 0 18px color-mix(in srgb, var(--ac, var(--spore)) 75%, transparent); }
+input[type=range].dragging::-webkit-slider-thumb, input[type=range]:active::-webkit-slider-thumb { background: radial-gradient(circle, var(--ink) 0 2.6px, var(--ac, var(--spore)) 3.2px); transform: scale(1.08); }
+input[type=range].dragging::-moz-range-thumb, input[type=range]:active::-moz-range-thumb { background: radial-gradient(circle, var(--ink) 0 2.6px, var(--ac, var(--spore)) 3.2px); }
+#sheetBody .sec .chip[aria-checked="true"] { background: var(--ac); border-color: var(--ac); color: var(--ink); box-shadow: 0 0 14px -4px var(--ac); }
+#sheetBody .sec .chip:not([aria-checked="true"]):not([aria-pressed="true"]):hover { border-color: color-mix(in srgb, var(--ac) 45%, var(--line)); color: var(--hypha); }
+#sheetBody .sec .sw[aria-checked="true"] .knob { background: var(--ac); box-shadow: 0 0 12px -3px var(--ac); }
+#sheetBody .sec select { background-color: rgba(17, 13, 11, .5); border-color: rgba(240, 230, 216, .1); }
+#sheetBody .sec select:hover { border-color: color-mix(in srgb, var(--ac) 40%, var(--line)); }
+.sheet-head { border-bottom: 0; background: linear-gradient(var(--line), var(--line)) 0 100% / 100% 1px no-repeat, linear-gradient(90deg, transparent, color-mix(in srgb, var(--spore) 30%, transparent) 30%, transparent 75%) 0 100% / 100% 1px no-repeat; }
+
+/* ---------- the Effekte page (ui/modul.js) ---------- */
+/* a module card: its glyph in a ring that glows with its share, its name, what it is, the share as a badge */
+#sheetBody .modul { padding-top: 10px; transition: border-color .25s; border-color: color-mix(in srgb, var(--ac) 14%, rgba(240, 230, 216, .06)); }
+#sheetBody .modul::before { content: ""; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none; border: 1px solid var(--ac); opacity: calc(var(--a, 0) * .38); transition: opacity .25s; }
+#sheetBody .modul::after { content: ""; position: absolute; left: 18%; right: 18%; top: -1px; height: 1px; pointer-events: none; background: linear-gradient(90deg, transparent, var(--ac), transparent); opacity: calc(var(--a, 0) * .9); }
+.modul .sec-h { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; grid-template-areas: "i t b" "i s b"; column-gap: 10px; row-gap: 1px; align-items: center; }
+.modul .sec-h h3 { grid-area: t; align-self: end; }
+.modul .sec-h p { grid-area: s; text-align: left; align-self: start; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.mod-ico {
+  grid-area: i; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; color: var(--ac);
+  border: 1px solid color-mix(in srgb, var(--ac) 45%, transparent); background: radial-gradient(circle, color-mix(in srgb, var(--ac) 16%, transparent), transparent 70%), #120d0a;
+  box-shadow: 0 0 calc(var(--a, 0) * 16px) calc(var(--a, 0) * -2px) var(--ac);
+}
+.mod-ico svg { width: 18px; height: 18px; }
+.mod-amt {
+  grid-area: b; padding: 3px 9px; border-radius: 999px; font: 500 10.5px/1.2 var(--font-num); font-variant-numeric: tabular-nums; white-space: nowrap;
+  color: var(--ac); border: 1px solid color-mix(in srgb, var(--ac) 40%, transparent); background: color-mix(in srgb, var(--ac) 9%, transparent);
+}
+.modul.ruht .mod-amt { color: var(--dim); border-style: dashed; border-color: rgba(168, 152, 138, .35); background: none; }
+.modul.ruht .mod-ico { color: color-mix(in srgb, var(--ac) 55%, var(--dim)); border-style: dashed; }
+/* its picture: a dark window like a Klangwelt's, the line glows; a word on what it shows, bottom right */
+.mod-vis {
+  position: relative; height: 62px; margin: 0 0 10px; border-radius: 11px; overflow: hidden;
+  background: radial-gradient(120% 120% at 50% 130%, color-mix(in srgb, var(--ac) 10%, transparent), transparent 62%), #0b0806;
+  box-shadow: inset 0 0 0 1px rgba(240, 230, 216, .055), inset 0 10px 22px rgba(0, 0, 0, .55);
+}
+.mod-cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; transition: opacity .25s; }
+.modul.ruht .mod-cv { opacity: .42; filter: saturate(.5); }
+.mod-cap { position: absolute; right: 8px; top: 6px; font: 400 9.5px/1 var(--font-num); letter-spacing: .02em; color: rgba(240, 230, 216, .55); text-shadow: 0 1px 4px #000; pointer-events: none; }
+.mod-cap:empty { display: none; }
+.modul.hit { animation: modHit .9s ease-out; }
+@keyframes modHit { 0% { box-shadow: 0 0 0 2px var(--ac), 0 0 30px -4px var(--ac); } 100% { box-shadow: 0 0 0 0 transparent; } }
+/* the groups between the cards, as the mixer names its groups */
+.mod-grp { display: flex; align-items: center; gap: 8px; margin: 18px 2px 0; font: 400 11px/1 var(--font-display); color: rgba(168, 152, 138, .85); letter-spacing: .04em; white-space: nowrap; }
+.mod-grp small { font: 400 10.5px/1 var(--font-ui); color: rgba(168, 152, 138, .6); letter-spacing: 0; }
+.mod-grp::before { content: ""; width: 10px; height: 1px; background: rgba(240, 230, 216, .18); }
+.mod-grp::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(240, 230, 216, .16), transparent); }
+.fxf + .mod-grp { margin-top: 12px; }
+
+/* the Faden: the signal path as nodes on a hypha */
+.fxf { position: relative; margin: 8px 0 0; padding: 10px 6px 6px; border-radius: 16px; background: radial-gradient(90% 100% at 50% 0, rgba(255, 179, 92, .05), transparent 70%), #0e0a08; box-shadow: inset 0 0 0 1px rgba(240, 230, 216, .06), inset 0 12px 28px rgba(0, 0, 0, .5); }
+.fxf-w { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; }
+.fxf-th { fill: none; stroke: rgba(240, 230, 216, .22); stroke-width: 1.2; stroke-linecap: round; }
+.fxf-th.send { stroke-dasharray: 2 3; }
+.fxf-a, .fxf-b { position: relative; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); align-items: start; }
+.fxf-b { margin-top: 12px; }
+.fxf-pod { grid-column: 1 / 6; position: relative; display: flex; justify-content: space-around; margin: 0 8px 0 2px; padding: 4px 2px 2px; border-radius: 14px; border: 1px dashed rgba(240, 230, 216, .13); }
+.fxf-pod em { position: absolute; left: 10px; top: -6px; padding: 0 5px; font: 400 9px/1 var(--font-display); font-style: normal; letter-spacing: .04em; color: rgba(168, 152, 138, .7); background: #0e0a08; }
+.fxf-n { --a: 0; position: relative; display: grid; justify-items: center; gap: 4px; min-width: 0; padding: 2px 0 4px; border: 0; border-radius: 10px; background: none; color: var(--hypha); }
+.fxf-o {
+  width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: var(--ac);
+  border: 1px solid color-mix(in srgb, var(--ac) 55%, transparent);
+  background: radial-gradient(circle, color-mix(in srgb, var(--ac) 22%, transparent), transparent 72%), #140f0c;
+  box-shadow: 0 0 calc(var(--a) * 18px) calc(var(--a) * -1px) color-mix(in srgb, var(--ac) 80%, transparent);
+  transition: box-shadow .25s, transform .15s, border-color .2s;
+}
+.fxf-o svg { width: 18px; height: 18px; }
+.fxf-n span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 10px/1.1 var(--font-ui); color: rgba(240, 230, 216, .78); }
+.fxf-n.ruht .fxf-o { border-style: dashed; color: color-mix(in srgb, var(--ac) 45%, var(--dim)); background: #120d0a; }
+.fxf-n.ruht span { color: var(--dim); }
+.fxf-n:hover .fxf-o { transform: scale(1.07); border-color: var(--ac); }
+.fxf-n[aria-current] .fxf-o { border-color: var(--ac); box-shadow: 0 0 0 3px #0e0a08, 0 0 0 4px color-mix(in srgb, var(--ac) 70%, transparent), 0 0 calc(var(--a) * 18px) color-mix(in srgb, var(--ac) 80%, transparent); }
+.fxf-n[aria-current] span { color: var(--ac); }
+.fxf-n:focus-visible { outline: 2px solid var(--lumen); outline-offset: 0; }
+/* the small thread: held at the top of the panel once the big one has scrolled away */
+.fxf-mini { position: sticky; top: -4px; z-index: 4; height: 0; margin: 0 calc(-1 * var(--gut)); pointer-events: none; }
+.fxf-mi {
+  display: flex; align-items: center; gap: 5px; height: 42px; padding: 0 var(--gut); background: var(--bark); border-bottom: 1px solid rgba(240, 230, 216, .07); box-shadow: 0 10px 18px -8px rgba(0, 0, 0, .7);
+  opacity: 0; transform: translateY(-6px); transition: opacity .18s, transform .18s;
+}
+.fxf-mini.on .fxf-mi { opacity: 1; transform: none; pointer-events: auto; }
+.fxf-mi .fxf-cur { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 400 12px/1 var(--font-display); letter-spacing: .03em; text-transform: lowercase; }
+.fxf-mi .fxf-n { flex: none; padding: 0; }
+.fxf-mi .fxf-o { width: 24px; height: 24px; }
+.fxf-mi .fxf-o svg { width: 13px; height: 13px; }
+.fxf-mi .fxf-n[aria-current] .fxf-o { box-shadow: 0 0 0 2px var(--bark), 0 0 0 3px color-mix(in srgb, var(--ac) 70%, transparent); }
+.fxf-gap { flex: none; width: 1px; height: 18px; margin: 0 3px; background: rgba(240, 230, 216, .18); }
+@media (pointer: coarse) { .fxf-mi .fxf-o { width: 30px; height: 30px; } .fxf-mi { height: 46px; gap: 3px; } }
+
+/* ---------- the other panels: their sections take a colour of their own ---------- */
+#sheetBody [data-ac="rec"] { --ac: var(--rec); }
+#sheetBody [data-ac="lumen"] { --ac: var(--lumen); }
+#sheetBody [data-ac="lilac"] { --ac: var(--lilac); }
+#sheetBody [data-ac="rose"] { --ac: var(--rose); }
+#sheetBody [data-ac="bor"] { --ac: #7f98ff; }
+#sheetBody [data-ac="hypha"] { --ac: #e8dccb; }
+#sheetBody [data-ac="eb2"] { --ac: #c9dc82; }   /* (the mixer's Ebene 2) */
+#sheetBody .pnl-dev .sec { --ac: var(--lumen); }   /* Gerät: the technical side, in the colour of „Zuweisen“ */
+#sheetBody .pnl-rec .hx-sec { --ac: #e9a35e; }   /* the Hexenring as its strip in the mixer */
+/* the Puls's sticky lane head reaches the card's edges, not the panel's */
+#sheetBody .sec .lanehead { margin: 0 -14px 10px; padding: 8px 14px; background: color-mix(in srgb, var(--bark) 94%, var(--ac)); border-bottom-color: rgba(240, 230, 216, .07); }
+
+@media (prefers-reduced-motion: reduce) {
+  .modul.hit { animation: none; }
+  .fxf-o, .fxf-mi, #sheetBody .modul::before, .mod-cv, input[type=range]::-webkit-slider-thumb { transition: none; }
+}
