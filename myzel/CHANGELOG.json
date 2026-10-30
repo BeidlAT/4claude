@@ -8,7 +8,7 @@
         "Neues Aussehen: Die Effekte-Seite zeigt den Signalweg und jeden Effekt als Karte mit kleinem Bild; Klang, Puls, Aufnahme, Gerät und Presets tragen dieselbe Kartensprache.",
         "Globaler Stopp oben neben dem Puls: hält alles an, was klingt. Im Bearbeiten-Fenster: Breite ziehbar, Zoomleiste ziehbar, Stopp hält auch die Schleife an.",
         "Keyboard am MIDI-Eingang eines Audio-Interfaces (z. B. Steinberg): die Karte fragt, welches Gerät daran hängt.",
-        "„Vorige Skala“ am Schieberegler reagiert gleich, die Ernte-Leiste zeigt bei getrimmten Schleifen den richtigen Ausschnitt."
+        "„Vorige Skala“ am Schieberegler reagiert gleich, die Ernte-Leiste zeigt bei getrimmten Schleifen den richtigen Ausschnitt. Sporenwerk an/aus lässt Schleifen nicht mehr unnötig neu rechnen."
       ]
     },
     {
