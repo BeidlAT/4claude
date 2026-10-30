@@ -260,6 +260,7 @@ function wwFly(x, y) {
 }
 // ---- into the bar (from buildUI) ----
 function wwInit() {
+  if (!store.get('myzel.laub.v1')) { store.set('myzel.laub.v1', '1'); if (P['jrg.laub'] === 0.4) setParam('jrg.laub', 0); }   // (once: the old default's rustle off for who kept it – owner, 30.10.2026)
   if (!store.get('myzel.tonart.v3')) { store.set('myzel.tonart.v2', '1'); store.set('myzel.tonart.v3', '1'); if (P['ui.tonart'] !== 'preset') setParam('ui.tonart', 'preset'); }   // (once: the new default for everyone, also who kept the old one – owner, 29.10.2026)
   const bar = $('#bar'), rec = $('#btnRec');
   WW.tkT = h('span', { class: 'ww-tkt' }); WW.tkK = h('span', { class: 'ww-tkk' });

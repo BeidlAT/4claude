@@ -2,6 +2,14 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-30b",
+      "punkte": [
+        "Kompostgarten: kein Zischen mehr zu jedem Anschlag – das Laub-Rascheln ist aus, der Verzerrer steht wieder auf seinem Grundwert.",
+        "Jahresring: „Laub und Eis“ steht jetzt auf 0 (im Herbst rauschte es sonst zu jedem Ton); wer es mag, dreht den Regler hoch.",
+        "Kalimbatraum (und die anderen Presets mit Kalimba): ohne Schnarren – die Kalimba klingt klar statt verzerrt."
+      ]
+    },
+    {
       "id": "2026-10-30",
       "punkte": [
         "Neu: „Takt sehen“ (im Knopf „Takte“ unten links, bei Klick und Einzählen): Der Bildschirm pulsiert dezent im Takt – die Eins leuchtet orange, die anderen Schläge neutral und leiser.",

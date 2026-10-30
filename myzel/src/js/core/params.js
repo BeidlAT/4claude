@@ -176,7 +176,7 @@ NUM('klb.over', 'Obertöne', 0, 1, 0.5, '%');
 NUM('klb.ratio', 'Oberton-Verhältnis', 3, 9, 5.9, '×', { step: 0.01 });
 NUM('klb.thumb', 'Daumen (Klopfen)', 0, 1, 0.45, '%');
 NUM('klb.body', 'Holzkasten', 0, 1, 0.5, '%');
-NUM('klb.buzz', 'Schnarren', 0, 1, 0, '%');   // (29.10.2026, owner heard the rattle as distortion: the plain tine by default – the Presets that rattle keep it)
+NUM('klb.buzz', 'Schnarren', 0, 1, 0, '%');   // (29.10.2026, owner heard the rattle as distortion: the plain tine by default; 30.10.2026 „Kalimbatraum: verzerrt, rauscht“ – no Preset rattles any more)
 // Obertöne
 NUM('obt.top', 'Obertonbereich', 6, 32, 16, '', { step: 1, fmt: (v) => Math.max(2, Math.round(v / 4)) + '.–' + v + '.' });
 NUM('obt.focus', 'Schärfe', 0, 1, 0.5, '%');
@@ -246,7 +246,7 @@ SEL('jrg.jahreszeit', 'Jahreszeit', [['lauf', 'Läuft'], ['fruehling', 'Frühlin
 NUM('jrg.schnitt', 'Schnitt (frei → Marimba)', 0, 1, 0.5, '%');
 NUM('jrg.holz', 'Holz', 0, 1, 0.5, '', { fmt: (v) => 'Nachklang ' + dec(jrgT60(v).toFixed(1)) + ' s' });
 NUM('jrg.schlaegel', 'Schlägel (hart)', 0, 1, 0.5, '%');
-NUM('jrg.laub', 'Laub und Eis', 0, 1, 0.4, '%');
+NUM('jrg.laub', 'Laub und Eis', 0, 1, 0, '%');   // (owner, 30.10.2026: „ein unschönes Zischen als Begleitton“ – autumn's rustle +17 dB above 8 kHz at 0.4: off by default)
 // Harz (worklet myzel-bow: a bow on banded waveguides; Höhe is the bow's pressure)
 const HRZ_PEAK = 1.2;   // v.out peak per velocity (the standard phrase as loud as Nebel/Glocke/Membran, klang/tests/bench.js)
 const HRZ_RING = { glas: 0.6, schale: 2.5, stab: 1.6, zunge: 0.35, teich: 2 };   // each body's ring × the Dämpfung's (as in the processor)
