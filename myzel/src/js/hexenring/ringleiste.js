@@ -24,6 +24,31 @@ function hxBlitzOn(box) {
   box.addEventListener('click', (e) => { if (e.detail === 0) hxBlitz(e.target.closest && e.target.closest('button')); }, true);
 }
 function hxRailDirty() { HXU.dirty = true; }
+// (owner, 29.10.2026: „es macht nichts wenn es laden muss – dann einen Ladebalken, damit man sich auskennt“) the loading
+// bar: from the first Treu render of a wave (a preset, a knob at rest, a key, a tool) until the last of them is done.
+// The renders of the main realm come one after another: the wave's predicted time is their sum (hxWPredict – the
+// measured cost of its sources); the bar follows that time up to 90 %, then creeps – and never shows less than the share
+// of the Schleifen done. Done: full, „Neuer Klang da“, then it fades.
+const HXLD = { on: false, t0: 0, est: 0, ids: new Map(), endT: 0, drawT: 0 };
+function hxLadeAdd(L, S) {
+  const now = performance.now();
+  if (!HXLD.on) { HXLD.on = true; HXLD.t0 = now; HXLD.est = 0; HXLD.ids.clear(); HXLD.endT = 0; }
+  if (!HXLD.ids.has(S.id)) { const e = Math.max(0.4, hxWPredict(L, S, hxLen(L) + hxWTailEst(S))); HXLD.ids.set(S.id, { L: L.key, e }); HXLD.est += e; }
+}
+function hxLadeFrame() {
+  const el = HXU.lade; if (!el) return;
+  const now = performance.now();
+  if (!HXLD.on) { if (HXLD.endT && now - HXLD.endT > 1600) { el.hidden = true; el.classList.remove('fertig'); HXLD.endT = 0; } return; }
+  if (now - HXLD.drawT < 120) return;
+  HXLD.drawT = now;
+  let n = 0, done = 0; const loops = new Set();
+  for (const [id, o] of HXLD.ids) { n++; const S = HX.sch.get(id), L = hxByKey(o.L); if (!S || !L || L.state === 'weg' || !(S.wBusy || S.wAgain)) done++; else loops.add(L.slot + 1); }
+  if (done >= n) { HXLD.on = false; HXLD.endT = now; el.querySelector('.t').textContent = 'Neuer Klang da'; el.querySelector('i').style.width = '100%'; el.setAttribute('aria-valuenow', '100'); el.classList.add('fertig'); return; }
+  const x = (now - HXLD.t0) / 1000 / Math.max(0.4, HXLD.est), p = Math.max(done / n, x < 1 ? 0.9 * x : 0.9 + 0.09 * (1 - Math.exp(-(x - 1))));
+  el.classList.remove('fertig'); el.hidden = false;
+  el.querySelector('.t').textContent = 'Neuer Klang wird geladen: ' + (loops.size > 1 ? 'Schleifen ' : 'Schleife ') + [...loops].sort((a, b) => a - b).join(', ') + (n > 1 ? ' · ' + done + ' von ' + n + ' fertig' : '');
+  el.querySelector('i').style.width = Math.round(100 * p) + '%'; el.setAttribute('aria-valuenow', String(Math.round(100 * p)));
+}
 // a keyboard press (Enter or Space: a click without a pointer, detail 0) acts on click – the buttons that act at the press
 // act on pointerdown. Chromium also sends a click with detail 0 after a touch tap that changed the layout (UI audit B1,
 // 24.10.2026: Korb harvested and cancelled, the Hauptknopf closed a loop and began a new recording, ↶ undid two steps):
@@ -36,7 +61,7 @@ function hxRailBuild() {
   const rail = $('#hxRail');
   if (!rail || HXU.rail) return;
   HXU.rail = rail; HXU.cv = $('#hxCv'); HXU.cx = HXU.cv.getContext('2d');
-  HXU.korb = $('#hxKorb'); HXU.haupt = $('#hxHaupt'); HXU.mid = $('#hxMid'); HXU.pg = $('#hxPg'); HXU.undo = $('#hxUndo'); HXU.redo = $('#hxRedo'); HXU.fold = $('#hxFold'); HXU.live = $('#hxLive'); HXU.coach = $('#hxCoach'); HXU.msg = $('#hxMsg');
+  HXU.korb = $('#hxKorb'); HXU.haupt = $('#hxHaupt'); HXU.mid = $('#hxMid'); HXU.pg = $('#hxPg'); HXU.undo = $('#hxUndo'); HXU.redo = $('#hxRedo'); HXU.fold = $('#hxFold'); HXU.live = $('#hxLive'); HXU.coach = $('#hxCoach'); HXU.msg = $('#hxMsg'); HXU.lade = $('#hxLade');
   HXU.form = $('#hxForm');   // (step 1d)
   HXU.len = $('#hxLen'); HXU.lenPop = $('#hxLenPop'); hxLenBuild();   // (owner, 25.10.2026: the length of a new loop)
   const ringBox = h('div', { class: 'hx-rings' });
@@ -165,6 +190,7 @@ function hxRingRevert(G) {
 const HXC = { rec: '#ff5b4d', spore: '#ffb35c', lumen: '#86f0d0', hypha: '#f0e6d8', dim: '#a8988a', line: '#3d312a' };
 function hxRailFrame(ts) {
   if (!HXU.rail || HXU.rail.hidden) return;
+  hxLadeFrame();
   const rail = HXU.rail, fold = rail.dataset.fold === '1';
   const lay = !HXU.w || HXU.dirty;
   if (lay) hxRailLayout();

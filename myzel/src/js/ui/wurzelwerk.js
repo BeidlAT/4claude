@@ -260,7 +260,7 @@ function wwFly(x, y) {
 }
 // ---- into the bar (from buildUI) ----
 function wwInit() {
-  if (!store.get('myzel.tonart.v2')) { store.set('myzel.tonart.v2', '1'); if (P['ui.tonart'] !== 'schleifen') setParam('ui.tonart', 'schleifen'); }   // (once: the new default for everyone, also who kept the old one)
+  if (!store.get('myzel.tonart.v3')) { store.set('myzel.tonart.v2', '1'); store.set('myzel.tonart.v3', '1'); if (P['ui.tonart'] !== 'preset') setParam('ui.tonart', 'preset'); }   // (once: the new default for everyone, also who kept the old one – owner, 29.10.2026)
   const bar = $('#bar'), rec = $('#btnRec');
   WW.tkT = h('span', { class: 'ww-tkt' }); WW.tkK = h('span', { class: 'ww-tkk' });
   WW.tk = h('button', { type: 'button', class: 'ww-tk', 'aria-haspopup': 'dialog', 'aria-expanded': 'false', title: 'Tempo und Tonart – tippen: Tempo einstellen', onclick: () => wwPopToggle() }, WW.tkT, h('i', null, '·'), WW.tkK);
