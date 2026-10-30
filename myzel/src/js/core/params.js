@@ -636,6 +636,14 @@ for (const st of STRIPS) {
   NUM(p + 'sat', 'Sättigung', 0, 1, 0, '%', { step: 0.01 });
   NUM(p + 'att', 'Anschlag', -1, 1, 0, '', { step: 0.01, fmt: (v) => (Math.abs(v) < 0.005 ? '0' : (v > 0 ? '+' : '−') + Math.round(Math.abs(v) * 100) + ' %') });   // (29.10.2026: the Transienten-Former)
   NUM(p + 'aus', 'Ausklang', -1, 1, 0, '', { step: 0.01, fmt: (v) => (Math.abs(v) < 0.005 ? '0' : (v > 0 ? '+' : '−') + Math.round(Math.abs(v) * 100) + ' %') });
+  // (30.10.2026) the channel's Verdichter (myzel-komp, dsp/kompressor.js): Ratio 1 = off, the rest its usual knobs
+  NUM(p + 'krat', 'Verdichtung', 1, 20, 1, '', { step: 0.1, curve: 'exp', fmt: (v) => (v < 1.05 ? 'aus' : '1:' + dec(v.toFixed(v < 10 ? 1 : 0))) });
+  NUM(p + 'kthr', 'Schwelle', -60, 0, -18, 'dB', { step: 0.5 });
+  NUM(p + 'katt', 'Anschlagzeit', 0.1, 100, 10, 'ms', { curve: 'exp', fmt: (v) => (v < 1 ? dec(v.toFixed(1)) : Math.round(v)) + ' ms' });
+  NUM(p + 'krel', 'Loslassen', 10, 2000, 150, 'ms', { curve: 'exp', fmt: (v) => (v >= 1000 ? dec((v / 1000).toFixed(1)) + ' s' : Math.round(v) + ' ms') });
+  NUM(p + 'kknee', 'Knie', 0, 24, 6, 'dB', { step: 0.5 });
+  NUM(p + 'kmk', 'Ausgleich', -12, 24, 0, 'dB', { step: 0.5 });
+  NUM(p + 'kmix', 'Anteil', 0, 1, 1, '%', { step: 0.01 });
   NUM(p + 'wid', 'Breite', 0, 2, 1, '%', { step: 0.01, fmt: fmtWidth });
   NUM(p + 'duck', 'Pumpen', 0, 1, 0, '%', { step: 0.01 });
 }
@@ -645,7 +653,7 @@ PD['xhxr.route'].d = 'dir';
 NUM('hx.humus', 'Humus-Länge', 16, 900, MOBILE ? 64 : 300, 's', { step: 1, rec: 1 });   // (owner, 26.10.2026: on the PC 5 min by default, up to 15 – 128 bars even at 40 BPM)
 SEL('hx.modus', 'Hauptknopf', [['neu', 'Neue Schleife'], ['dieselbe', 'Dieselbe Schleife']], 'neu', { chips: 1, small: 1, rec: 1 });
 SEL('hx.start', 'Aufnahme beginnt', [['takt', 'Am Takt'], ['ton', 'Beim ersten Ton'], ['sofort', 'Sofort']], 'takt', { chips: 1, small: 1, rec: 1 });
-SEL('hx.raster', 'Raster', [['frei', 'Frei'], ['takt', 'Takt'], ['halb', '½ Takt'], ['viertel', '¼']], 'frei', { chips: 1, small: 1, rec: 1 });   // (25.10.2026: where a recording by hand begins and ends – grammar.js HX_RASTER)
+SEL('hx.raster', 'Raster', [['frei', 'Frei'], ['takt', 'Takt'], ['halb', '½ Takt'], ['viertel', '¼'], ['achtel', '⅛'], ['triole', 'Triole']], 'frei', { chips: 1, small: 1, rec: 1 });   // (25.10.2026: where a recording by hand begins and ends – grammar.js HX_RASTER)
 SEL('hx.laenge', 'Länge', [['auto', 'Automatisch'], ['wie1', 'Wie Schleife 1'], ['fest', 'Fest']], 'auto', { chips: 1, small: 1, rec: 1 });
 NUM('hx.festT', 'Feste Länge', 1, 128, 4, '', { step: 1, rec: 1, fmt: (v) => v + (v === 1 ? ' Takt' : ' Takte') });
 BOOL('hx.ernte', 'Ganze Ernte behalten', !MOBILE, { rec: 1 });   // (26.10.2026: the whole Humus beside each Schleife – vorrat.js)
@@ -655,6 +663,7 @@ SEL('hx.rail', 'Ringleiste', [['offen', 'Offen'], ['klein', 'Klein']], 'offen', 
 SEL('hx.ein', 'Einzählen', [['aus', 'Aus'], ['sicht', 'Sichtbar'], ['vib', 'Vibration'], ['ton', 'Hörbar']], 'sicht', { chips: 1, small: 1, rec: 1 });
 SEL('hx.klick', 'Klick', [['aus', 'Aus'], ['zaehl', 'Beim Einzählen'], ['ein', 'Auf den Zählzeiten']], 'aus', { chips: 1, small: 1, rec: 1 });
 BOOL('hx.taktbild', 'Takt sehen (Bildschirm pulsiert im Takt)', false, { rec: 1 });   // (owner, 30.10.2026 – taktbild.js)
+BOOL('hx.haushalt', 'Pegelhaushalt (Schleifen machen Platz, wenn der Begrenzer arbeitet)', true, { rec: 1 });   // (30.10.2026 – haushalt.js)
 BOOL('hx.pulsMit', 'Puls mit (Gespielt hört die Spuren)', false, { rec: 1 });
 BOOL('hx.borMit', 'Bordun mit (Gespielt hört den Bordun)', false, { rec: 1 });
 // (step 1d) the form, „eine Runde“, Hinlegen

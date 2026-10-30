@@ -112,7 +112,7 @@ function mxdLayout() {
   for (const K of MXD.kn) { const s = Math.round(K.cv.clientWidth); if (s !== K.size) { K.size = s; K.key = ''; mxKnobRender(K); } }
   for (const E of MXD.eq) if (E.box.offsetParent) mxeLayout(E); else E.w = 0;
   const sz = (cv) => { const r = cv.parentNode.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; };
-  const F = MXD.fo; [F.sw, F.sh] = sz(F.satCv); [F.ww, F.wh] = sz(F.widCv); [F.pw, F.ph] = sz(F.pmpCv);
+  const F = MXD.fo; [F.sw, F.sh] = sz(F.satCv); [F.ww, F.wh] = sz(F.widCv); [F.pw, F.ph] = sz(F.pmpCv); [F.kw, F.kh] = sz(F.kCv);
   const G = MXD.pu; [G.w, G.h] = sz(G.cv);
   const Z = MXD.su; [Z.gw, Z.gh] = sz(Z.grCv); [Z.ww, Z.wh] = sz(Z.widCv);
   for (const R of MXD.rings) { const r = R.cv.getBoundingClientRect(); R.w = Math.round(r.width); R.h = Math.round(r.height); R.key = ''; }
@@ -159,12 +159,16 @@ function mxdFrame(dt, ts) {
     if (W.fd.w) mxdFaderDraw(W.fd);
     mxeDraw(MXD.eqc, t);
     // the cards ~30 times a second each, never two in the same frame
-    const d = st && A.ctx ? duckDepth(st, now) : 0, ta = F.ta || (F.ta = [0, 0.011, 0.022]);
+    const d = st && A.ctx ? duckDepth(st, now) : 0, ta = F.ta || (F.ta = [0, 0.008, 0.016, 0.024]);
     mxTracePush(F.pump, d > 0.001 ? -20 * Math.log10(1 - d) : 0, dt);
+    // (30.10.2026) the Verdichter's reduction, as the Summe's: quick down, ¼ s back
+    const x = st && st.proc; if (x && x.kp) { const r = x.kred || 0; x.kredS = r >= (x.kredS || 0) ? r : x.kredS + (r - x.kredS) * Math.min(1, dt / 0.25); }   // (x.kred: the processor's latest report, the deepest of its last 32 quanta)
+    mxTracePush(F.kgr, mxdKred(k), dt);
     const j = mxdTurn(ta, dt);
     if (j === 0 && F.sw) mxdSatDraw(F, k, F.sw, F.sh);
     else if (j === 1 && F.ww) mxdWidDraw(F.widCv, F.ww, F.wh, k, st && st.m, P['x' + k + '.wid'], P['x' + k + '.pan']);
     else if (j === 2 && F.pw) mxdPumpDraw(F.pmpCv, F.pw, F.ph, F.pump, Number(P['mix.duckSrc']), mxdIsTakt(k) || !P['x' + k + '.duck']);
+    else if (j === 3 && F.kw) mxdPumpDraw(F.kCv, F.kw, F.kh, F.kgr, -1, false, '#ff8f9e');
     if (slow) mxdFormenText(k);
     if (MXK[k].kind === 'lane' && MXD.qring[MXK[k].lane]) mxdRing(MXD.qring[MXK[k].lane]);
   } else if (MXD.page === 'puls') {

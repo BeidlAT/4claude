@@ -267,7 +267,7 @@ function lmText(R) {
 // every gate and level between the Hexenring's processor and the output, each Schleife and Schicht with its route
 function lmHxState() {
   const g = (n) => (n && n.gain ? +n.gain.value.toFixed(3) : '-'), st = MIX.s.hxr, m = new Map((HX.meter || []).map((x) => [x[0], x[1]]));
-  const o = ['ctx=' + (A.ctx ? A.ctx.state : '-'), 'node=' + (HX.node ? (HX.ctx === A.ctx ? 'ok' : 'alt') : 'kein'), 'g0=' + g(HX.g0), 'g1=' + g(HX.g1), 'gM=' + g(HX.gM), 'out1=' + !!HX.out1, 'f1=' + (HXF1.off ? 'ruht' : 'an'), 'idle=' + !!IDLE.on, 'hxOff=' + !!IDLE.hxOff, 'ruht=' + !!HX.ruht,
+  const o = ['ctx=' + (A.ctx ? A.ctx.state : '-'), 'node=' + (HX.node ? (HX.ctx === A.ctx ? 'ok' : 'alt') : 'kein'), 'g0=' + g(HX.g0), 'g1=' + g(HX.g1), 'gM=' + g(HX.gM), 'out1=' + !!HX.out1, 'f1=' + (HXF1.off ? 'ruht' : 'an'), 'idle=' + !!IDLE.on, 'hxOff=' + !!IDLE.hxOff, 'ruht=' + !!HX.ruht, 'haushalt=' + (typeof HXHR !== 'undefined' ? HXHR.db.toFixed(2) + '/' + HXHR.need.toFixed(1) : '-'),
     'route=' + P['xhxr.route'], 'vol=' + P['xhxr.vol'], 'mute=' + P['xhxr.mute'], 'strip=' + (st ? g(st.in) + '/' + g(st.gate || st.mute || null) : '-'), 'pend=' + HX.pend.map((p) => p.kind).join(',')];
   for (const L of hxLoopsLive()) o.push('[' + (L.slot + 1) + ' ' + L.state + (L.pendTo ? '>' + L.pendTo : '') + ' g' + (+L.gain || 0).toFixed(2) + ' m' + (m.has(L.id) ? (+m.get(L.id)).toFixed(3) : '-') + ' ' + L.sch.map((id) => { const S = HX.sch.get(id); return S ? (S.out ? 'o1' : 'o0') + (S.bak ? 'b' : '') + (S.mute ? 'M' : '') + (S.aud ? '' : '?') : 'x'; }).join(',') + ']');
   return o.join(' ');

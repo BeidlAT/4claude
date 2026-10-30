@@ -78,7 +78,7 @@ function fxInsUpd(st, inst) {
 // through and cost next to nothing), the Begrenzer always
 // (29.10.2026: NV 16 of each fed by noise, two runs on this machine after the processors were made faster, the higher
 // + 15 %; Resonanz-Netz per Art – Saiten, Glocken, Holzkörper; Wolke at full density, the Begrenzer pressed)
-const FX_COST = { netz: [1.37, 1.58, 0.85], wolke: 4.52, spektral: 6.29, oktav: 1.05, vokal: 1.32, harmo: 7.5, trans: 0.47, sat: 1.41, lim: 1.23 };
+const FX_COST = { netz: [1.37, 1.58, 0.85], wolke: 4.52, spektral: 6.29, oktav: 1.05, vokal: 1.32, harmo: 7.5, trans: 0.47, sat: 1.41, lim: 1.23, komp: 1.1 };   // (komp 30.10.2026: fxkomp1 1.03 − hxz1 0.09 = 0.94, one run of 4 rounds + 15 %; a log and a pow per sample)
 function fxLoad() {
   if (!A.fxR) return 0;
   const cost = (typ, r) => { const c = FX_COST[typ]; return Array.isArray(c) ? c[Math.round(+P[r + '.art']) || 0] || c[0] : c || 0; };
@@ -89,6 +89,7 @@ function fxLoad() {
     if (!x) continue;
     if (x.satW && P['x' + st.k + '.sat'] > 0) c += FX_COST.sat;
     if (x.tr && (P['x' + st.k + '.att'] || P['x' + st.k + '.aus'])) c += FX_COST.trans;
+    if (x.kp && P['x' + st.k + '.krat'] > 1.05) c += FX_COST.komp;
     if (x.ins && x.ins.cur) c += cost(x.ins.cur.typ, x.ins.r);
   }
   return c;

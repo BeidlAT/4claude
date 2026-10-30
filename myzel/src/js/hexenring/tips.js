@@ -193,6 +193,7 @@ const HX_TIP_P = {
   'hx.festT': 'Die feste Länge neuer Schleifen in Takten.',
   'hx.pulsMit': 'Der Puls wird mit aufgenommen, wenn du eine Schleife übernimmst.',
   'hx.borMit': 'Der Bordun wird mit aufgenommen, wenn du eine Schleife übernimmst.',
+  'hx.haushalt': 'Drücken Schleifen und Spiel die Summe in den Begrenzer, werden die Schleifen langsam etwas leiser (bis 6 dB) und kommen zurück, sobald es ruhiger ist.',
   'hx.autoclose': 'Die Aufnahme schließt sich von selbst, wenn du den Anfang wiederholst.',
   'hx.runde': 'Überspielen endet nach einer Runde von selbst.',
   'hx.rail': 'Die Leiste mit den Schleifen unter dem Spielfeld: groß oder klein.',

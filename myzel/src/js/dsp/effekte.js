@@ -268,14 +268,14 @@
   }
 
   // ---- Transienten-Former (a channel's insert, after its Sättigung – mixer/processing.js): two followers of the level (a
-  // fast one, 0.5/20 ms, and a slow one, 15/150 ms – both sides at once); where the fast is above the slow a note begins,
+  // fast one, 0.5/20 ms, and a slow one, 15/800 ms – both sides at once); where the fast is above the slow a note begins,
   // where it is below it dies away. anschlag (−1 … 1): the beginnings louder or softer, ausklang (−1 … 1): the dying away
   // longer or shorter – up to ±18 dB, the gain smoothed over 1 ms. Both at 0: the input itself, sample for sample. ----
   class Trans extends AudioWorkletProcessor {
     constructor() {
       super();
       this.a = 0; this.s = 0; this.f = 0; this.sl = 0; this.g = 1;
-      const c = (t) => 1 - Math.exp(-1 / (t * SR)); this.fa = c(0.0005); this.fr = c(0.02); this.sa = c(0.015); this.sr = c(0.15); this.gs = c(0.001);
+      const c = (t) => 1 - Math.exp(-1 / (t * SR)); this.fa = c(0.0005); this.fr = c(0.02); this.sa = c(0.015); this.sr = c(0.8); this.gs = c(0.001);   // (30.10.2026: the slow release 0.15 → 0.8 s – with 0.15 it followed a 0.4-s decay itself, Ausklang did nothing; measured: a 0.4-s decay now −4.6 dB at 300 ms, a 1-s one −2.5 dB at 500 ms)
       this.port.onmessage = (e) => { const m = e.data || {}; if (m.a != null) this.a = Math.max(-1, Math.min(1, +m.a || 0)); if (m.s != null) this.s = Math.max(-1, Math.min(1, +m.s || 0)); };
     }
     process(inputs, outputs) {

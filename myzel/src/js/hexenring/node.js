@@ -281,7 +281,7 @@ function hxF1Tick(now) {
   try { c.out.disconnect(stripIn('hxr')); } catch (e) { return; }
   HXF1.off = true; HXF1.n++; lmEv('f1-ruht');
 }
-const hxSrcText = () => { const n = HX.loops.size; return n ? n + (n === 1 ? ' Schleife' : ' Schleifen') : 'aus'; };
+const hxSrcText = () => { const n = HX.loops.size, hr = typeof hxHrText === 'function' ? hxHrText() : ''; return (n ? n + (n === 1 ? ' Schleife' : ' Schleifen') : 'aus') + (hr ? ' · ' + hr : ''); };
 // the mixer shows the strip from the first Schleife on (or once something of it was set)
 function hxStripSync() { if (MX.root) { mxRgnSync(); mxSrcAll(); } }
 

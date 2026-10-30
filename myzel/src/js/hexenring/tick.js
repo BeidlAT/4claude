@@ -107,6 +107,7 @@ function hxTick(horizon) {
   if (R && R.loopKey && R.w1 && now >= R.w1) { HX.rec = null; if (HX.chips && HX.chips.kind === 'mult') HX.chips = null; hxRailDirty(); }   // (an auto-length recording closed at its end)
   hxPunchTick();
   hxAusWatch();
+  hxHrTick();   // (the Pegelhaushalt – haushalt.js)
   hxClickTick(now, horizon); hxVibTick(now);   // (step 1c)
   if (HX.klopf && now > HX.klopf.end) hxKlopfDone();
   for (const L of HX.loops.values()) if (L.notesDue && now > L.notesDue + 0.05) hxNotesRefresh(L);

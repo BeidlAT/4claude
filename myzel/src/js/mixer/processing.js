@@ -1,5 +1,5 @@
 // ---- processing block: 24 dB/oct low cut, shelving EQ with a sweepable mid, 12 dB/oct high cut, saturation
-const procNeeded = (p) => !LC_OFF(mp(p + 'lc')) || !HC_OFF(mp(p + 'hc')) || mp(p + 'lo') !== 0 || mp(p + 'mid') !== 0 || mp(p + 'hi') !== 0 || P[p + 'sat'] > 0 || P[p + 'att'] !== 0 || P[p + 'aus'] !== 0 || (P[p + 'ins'] || '0') !== '0';
+const procNeeded = (p) => !LC_OFF(mp(p + 'lc')) || !HC_OFF(mp(p + 'hc')) || mp(p + 'lo') !== 0 || mp(p + 'mid') !== 0 || mp(p + 'hi') !== 0 || P[p + 'sat'] > 0 || P[p + 'att'] !== 0 || P[p + 'aus'] !== 0 || P[p + 'krat'] > 1.05 || (P[p + 'ins'] || '0') !== '0';
 function mkWidth() {
   const w = { sp: A.ctx.createChannelSplitter(2), mg: A.ctx.createChannelMerger(2), LL: G(1), RR: G(1), LR: G(0), RL: G(0) };
   w.sp.connect(w.LL, 0); w.sp.connect(w.LR, 0); w.sp.connect(w.RL, 1); w.sp.connect(w.RR, 1);
@@ -49,6 +49,9 @@ function makeProc(src) {
   // (29.10.2026) the Transienten-Former after it (myzel-trans – dsp/effekte.js): Anschlag and Ausklang; without AudioWorklet none
   x.out = x.sat;
   if (A.ctx.__dspOK) { try { x.tr = new AudioWorkletNode(A.ctx, 'myzel-trans', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit' }); x.sat.connect(x.tr); x.out = x.tr; } catch (e) { x.tr = null; } }
+  // (30.10.2026) the Verdichter after it (myzel-komp – dsp/kompressor.js): the channel's own compressor; it reports its
+  // reduction (x.kred, dB – the detail's card and the knob's ring show it)
+  if (A.ctx.__dspOK) { try { x.kp = new AudioWorkletNode(A.ctx, 'myzel-komp', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit' }); x.out.connect(x.kp); x.out = x.kp; x.kred = 0; x.kp.port.onmessage = (e) => { if (e.data && e.data.red != null) x.kred = -e.data.red; }; } catch (e) { x.kp = null; } }
   // (29.10.2026) and the Einschub (a channel's, not a return's): one of the effect returns' effects inside the channel –
   // its processor between dry and wet, made when chosen (fxInsUpd, mixer/effekt.js)
   if (src && A.ctx.__dspOK) { const I = x.ins = { r: null, cur: null, from: x.out, dry: G(1), wet: G(0) }, end = G(1); x.out.connect(I.dry).connect(end); I.wet.connect(end); x.out = end; }
@@ -76,6 +79,7 @@ function procUpd(st, inst) {
     set(x.lo.gain, mp(p + 'lo')); set(x.mid.gain, mp(p + 'mid')); set(x.mid.frequency, mp(p + 'midf')); set(x.hi.gain, mp(p + 'hi'));
     satSet(x, P[p + 'sat']);
     if (x.tr) x.tr.port.postMessage({ a: P[p + 'att'], s: P[p + 'aus'] });
+    if (x.kp) x.kp.port.postMessage({ ratio: P[p + 'krat'] < 1.05 ? 1 : P[p + 'krat'], thr: P[p + 'kthr'], att: P[p + 'katt'] / 1000, rel: P[p + 'krel'] / 1000, knee: P[p + 'kknee'], mk: P[p + 'kmk'], mix: P[p + 'kmix'] });
     fxInsUpd(st, inst || !st.procOn);
   }
   if (on === st.procOn) return;

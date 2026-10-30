@@ -2,6 +2,16 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-30j",
+      "punkte": [
+        "Neu im Mixer: ein Verdichter (Kompressor) für jeden Kanal – Verhältnis, Schwelle, Anschlag, Loslassen, Knie, Ausgleich und Anteil (parallel), ohne Verzögerung; die Karte zeigt, wie viel er gerade zurücknimmt. Bei 1:1 ist er aus, bestehende Klänge bleiben unverändert.",
+        "Anschlag-Karte im Mixer: „Ausklang“ wirkt jetzt auch auf natürliche Ausklänge (ein Ton, der eine halbe Sekunde ausklingt, lässt sich kürzen oder verlängern); vorher griff er nur bei sehr kurzen.",
+        "Hexenring: Pegelhaushalt – drücken Schleifen und Spiel die Summe in den Begrenzer, werden die Schleifen langsam etwas leiser (bis 6 dB) und kommen zurück, sobald es ruhiger ist; im normalen Spiel ändert sich nichts (gemessen). Abschaltbar unter Einstellungen.",
+        "Schleifen: Duplizieren im Menü des Rings. „Instrument beim Preset-Wechsel“ rechnet die Schleife nicht mehr neu, wenn der Klang derselbe bleibt. Die Ernte-Leiste verschiebt wieder um Schlag und Ton. „Neue Schleife“ hat das Raster dabei, jetzt auch Achtel und Triole.",
+        "Bearbeiten-Fenster: oben stehen Tonart und Skala der Schleife – beim Ernten und, wenn sie anders ist, die jetzige; der Hinweis sagt, welche Noten-Werkzeuge gerade wirken."
+      ]
+    },
+    {
       "id": "2026-10-30i",
       "punkte": [
         "MIDI: Audio-Interfaces von TASCAM, PreSonus und Steinberg werden wieder alle erkannt (z. B. US-144MKII); nur ihre Controller wie ATOM, FaderPort oder CMC nicht. Schieberegler auf „Vorige Skala“ springen auch bei älteren Zuweisungen beim ersten Berühren nicht mehr, Tasten eines eigenen Geräts nie um viele Schritte.",
