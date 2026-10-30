@@ -2,6 +2,13 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-30m",
+      "punkte": [
+        "Eigene Presets lassen sich überschreiben: in der Liste hat jedes Preset „Überschreiben“ – beim geladenen mit einem Tipp (oder Strg+S), bei anderen mit Nachfrage.",
+        "Das geladene eigene Preset ist in der Liste markiert („geladen“)."
+      ]
+    },
+    {
       "id": "2026-10-30l",
       "punkte": [
         "Hexenring: Der Weg „Kette“ des Kanals schickte das eingebrannte Audio der Schleifen noch einmal durch eine Kopie der Effektkette – die Effekte wirkten doppelt, die Aufnahme klang anders als live. Jetzt heißt „Kette“: alle Schleifen folgen der Live-Kette; „Direkt“: jede wie eingestellt (eingebrannt).",

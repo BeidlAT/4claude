@@ -372,7 +372,7 @@ function loadPreset(p, own) {
   rzPreset(p);   // its Gestik recipe (none: the player's own settings) – before a user preset's own Gestik settings
   presetExtraLoad(p);
   hxUprEnter(p, !!own);   // (an own preset brings its Leiste)
-  markPresetCards();
+  markPresetCards(); renderUserPresets();
   kqUsed(P['v.eng']);
   const miss = engMissSay();
   const ton = keep ? ' Tonart der Schleifen behalten: ' + NOTE_NAMES[+P['t.root']] + ' ' + ((SCALES[P['t.scale']] || {}).n || P['t.scale']) + '.' : '';
@@ -413,18 +413,7 @@ function buildPresets() {
   const file = h('input', { type: 'file', id: 'presetFile', accept: '.json,application/json', hidden: true });
   file.addEventListener('change', () => importPreset(file));
   box.append(section('Eigene Presets', 'Auf diesem Gerät gespeichert',
-    h('div', { class: 'row', style: 'margin-bottom:8px' }, nameIn, h('button', { type: 'button', class: 'btn primary', onclick: () => {
-      const name = nameIn.value.trim() || 'Eigenes ' + (userPresets().length + 1);
-      const was = userPresets().find((p) => p.name === name);
-      const list = userPresets().filter((p) => p.name !== name);
-      list.unshift(Object.assign({ name, v: patchValues() }, presetExtra()));   // format 2: with the Fährte and Gestik's settings
-      if (was && was.kr !== undefined) list[0].kr = was.kr;
-      if (!setUserPresets(list.slice(0, 50))) { toast('Diese Ansicht kann nichts dauerhaft speichern. Nutze „Klang als Datei exportieren“.', 5000); return; }
-      const kr = hxUprSave(name, was && was.kr);   // … and the Leiste as its Kreis (kreise.js)
-      if (kr !== (was && was.kr)) hxUprKr(name, kr);
-      const n = hxLoopsLive().length;
-      nameIn.value = ''; renderUserPresets(); toast('Preset „' + name + '“ gespeichert' + (kr && kr !== 'leer' ? ' – mit ' + n + (n === 1 ? ' Schleife' : ' Schleifen') + ' der Leiste.' : kr === 'leer' ? ' – mit leerer Leiste.' : '.'), 4000);
-    } }, 'Speichern')),
+    h('div', { class: 'row', style: 'margin-bottom:8px' }, nameIn, h('button', { type: 'button', class: 'btn primary', onclick: () => { if (saveUserPreset(nameIn.value.trim() || 'Eigenes ' + (userPresets().length + 1))) nameIn.value = ''; } }, 'Speichern')),
     userListEl,
     h('div', { class: 'row', style: 'margin-top:10px' },
       h('button', { type: 'button', class: 'btn', onclick: exportPreset }, 'Klang als Datei exportieren'),
@@ -445,19 +434,52 @@ function buildPresets() {
   renderUserPresets(); markPresetCards(); updUndo();
   return box;
 }
+// the sound of now as the own preset `name` – new, or over the one of that name (owner, 30.10.2026: „eigene Presets
+// überschreiben – noch einmal speichern bei Änderungen, die einem gefallen“); with the Leiste as its Kreis (kreise.js)
+function saveUserPreset(name, o = {}) {
+  const was = userPresets().find((p) => p.name === name);
+  const list = userPresets().filter((p) => p.name !== name);
+  list.unshift(Object.assign({ name, v: patchValues() }, presetExtra()));   // format 2: with the Fährte and Gestik's settings
+  if (was && was.kr !== undefined) list[0].kr = was.kr;
+  if (!setUserPresets(list.slice(0, 50))) { toast('Diese Ansicht kann nichts dauerhaft speichern. Nutze „Klang als Datei exportieren“.', 5000); return false; }
+  const kr = hxUprSave(name, was && was.kr);
+  if (kr !== (was && was.kr)) hxUprKr(name, kr);
+  if (!UI.upr || UI.upr.name !== name) hxUprSet(name);   // (it is the own preset now – „Überschreiben“ and Strg+S know it)
+  const n = hxLoopsLive().length;
+  renderUserPresets();
+  if (!o.quiet) toast('Preset „' + name + '“ ' + (was ? 'überschrieben' : 'gespeichert') + (kr && kr !== 'leer' ? ' – mit ' + n + (n === 1 ? ' Schleife' : ' Schleifen') + ' der Leiste.' : kr === 'leer' ? ' – mit leerer Leiste.' : '.'), 4000);
+  return true;
+}
+// the own preset loaded now (kreise.js UI.upr – kept across reloads), if it still exists
+const ownPresetNow = () => (UI.upr && userPresets().some((p) => p.name === UI.upr.name) ? UI.upr.name : null);
+// Strg+S: the own preset loaded now saved again, as the sound is now (not while typing)
+window.addEventListener('keydown', (e) => {
+  if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || (e.key !== 's' && e.key !== 'S')) return;
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || '') || (e.target && e.target.isContentEditable)) return;
+  e.preventDefault();
+  const name = ownPresetNow();
+  if (name) saveUserPreset(name); else toast('Kein eigenes Preset geladen – unter „Presets“ einen Namen eingeben und speichern.', 3500);
+});
 function renderUserPresets() {
   if (!userListEl) return;
-  const list = userPresets();
+  const list = userPresets(), cur = ownPresetNow();
   userListEl.replaceChildren();
   if (!list.length) { userListEl.append(h('p', { class: 'note' }, 'Noch keine eigenen Presets. Gib oben einen Namen ein und tippe auf „Speichern“.')); return; }
   for (const p of list) {
+    const isCur = p.name === cur;
     const del = h('button', { type: 'button', class: 'btn ghost danger' }, 'Löschen');
     del.addEventListener('click', () => {
       if (!del.dataset.confirm) { del.dataset.confirm = '1'; del.textContent = 'Wirklich?'; setTimeout(() => { if (del.isConnected) { delete del.dataset.confirm; del.textContent = 'Löschen'; } }, 3000); return; }
       const gone = userPresets().find((x) => x.name === p.name) || p;
       setUserPresets(userPresets().filter((x) => x.name !== p.name)); hxUprGone(gone); renderUserPresets();
     });
-    userListEl.append(h('div', { class: 'urow' }, kbMini(p), h('span', null, p.name), h('button', { type: 'button', class: 'btn', onclick: () => loadPreset(p, true) }, 'Laden'), del));
+    // overwrite: the loaded one with one tap (Strg+S does the same), any other asks once
+    const over = h('button', { type: 'button', class: 'btn' + (isCur ? ' primary' : ''), title: isCur ? 'Dieses Preset ist geladen: den Klang von jetzt darüber speichern (Strg+S)' : 'Den Klang von jetzt über dieses Preset speichern' }, 'Überschreiben');
+    over.addEventListener('click', () => {
+      if (!isCur && !over.dataset.confirm) { over.dataset.confirm = '1'; over.textContent = 'Wirklich?'; setTimeout(() => { if (over.isConnected) { delete over.dataset.confirm; over.textContent = 'Überschreiben'; } }, 3000); return; }
+      saveUserPreset(p.name);
+    });
+    userListEl.append(h('div', { class: 'urow' + (isCur ? ' cur' : ''), 'aria-current': String(isCur) }, kbMini(p), h('span', null, p.name + (isCur ? ' · geladen' : '')), h('button', { type: 'button', class: 'btn', onclick: () => loadPreset(p, true) }, 'Laden'), over, del));
   }
 }
 function exportPreset() {
