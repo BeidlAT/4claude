@@ -14,7 +14,7 @@ const PRESETS = [
     'dly.div': '0.75', 'dly.fb': 0.5, 'dly.pp': 1, 'dly.mix': 0.4, 'rev.size': 8, 'rev.mix': 0.55, 'pha.mix': 0.2, 'seq.bpm': 72,
     'l0.on': false, 'l1.on': false, 'l2.on': true, 'l2.eng': 'glo', 'l2.steps': 7, 'l2.puls': 3, 'l2.div': '0.5', 'l2.walk': 0.6, 'l2.vol': 0.45,
     'l3.on': true, 'l3.eng': 'sch', 'l3.steps': 11, 'l3.puls': 2, 'l3.div': '1', 'l3.vol': 0.4 } },
-  { key: 'pilzregen', name: 'Pilzregen', tags: 'Perkussiv · Polyrhythmus', desc: 'Vier Spuren aus Fellen, Tropfen und Saiten, gegeneinander verschoben.', v: {
+  { key: 'pilzregen', name: 'Pilzregen', tags: 'Perkussiv · Polyrhythmus', desc: 'Vier Puls-Spuren aus Fellen, Tropfen und Saiten, gegeneinander verschoben – startet mit dem Puls.', v: {
     'v.eng': 'mem', 't.root': '4', 't.scale': 'pelog', 't.oct': 2, 't.range': 3,
     'mem.drop': 14, 'mem.dropT': 0.05, 'mem.decay': 0.6, 'mem.mode2': 0.4, 'mem.noise': 0.3, 'mem.tone': 5, 'hau.color': 2, 'hau.q': 4, 'hau.burst': 0.08,
     'drv.type': 'tube', 'drv.amt': 0.3, 'drv.mix': 0.6, 'pha.mix': 0.35, 'pha.rate': 0.2, 'dly.div': '0.75', 'dly.fb': 0.45, 'dly.mix': 0.3, 'rev.size': 4, 'rev.mix': 0.35,
@@ -87,15 +87,26 @@ const PRESETS = [
     'l1.on': true, 'l1.eng': 'klb', 'l1.steps': 12, 'l1.puls': 7, 'l1.div': '0.25', 'l1.deg': 4, 'l1.oct': 1, 'l1.walk': 0.3, 'l1.prob': 0.9, 'l1.vol': 0.45, 'l1.bright': 0.6, 'l1.pan': 0.45,
     'l2.on': true, 'l2.eng': 'tie', 'l2.steps': 16, 'l2.puls': 3, 'l2.div': '0.25', 'l2.deg': 0, 'l2.oct': -1, 'l2.vol': 0.7, 'l2.bright': 0.3,
     'l3.on': true, 'l3.eng': 'trp', 'l3.steps': 11, 'l3.puls': 2, 'l3.div': '0.25', 'l3.deg': 9, 'l3.walk': 0.6, 'l3.vol': 0.3, 'l3.bright': 0.5, 'l3.pan': 0.2 } },
-  { key: 'kurzwelle', name: 'Kurzwellenritual', tags: 'Experimentell · Funk', desc: 'Gekörntes Rauschen fremder Sender über einem Subbass; Insekten, Trommeln und ein leierndes Echo.', v: {
-    'v.eng': 'kor', 'v.layer': 'tie', 'v.layerLvl': 0.45, 'v.layerInt': -12, 't.root': '4', 't.scale': 'phrdom', 't.oct': 3, 't.range': 2,
-    'kor.src': 'funk', 'kor.dens': 30, 'kor.size': 0.18, 'kor.scat': 0.6, 'kor.pjit': 20, 'kor.oct': 0.2, 'kor.rev': 0.3, 'kor.att': 0.3, 'kor.rel': 2,
-    'tie.drive': 0.6, 'swm.chaos': 0.7, 'drv.amt': 0.35, 'drv.mix': 0.4, 'rng.freq': 87, 'rng.mix': 0.2, 'pha.mix': 0.5, 'pha.rate': 0.09,
-    'dly.div': '0.75', 'dly.fb': 0.6, 'dly.wow': 0.6, 'dly.mix': 0.4, 'rev.size': 6, 'rev.mix': 0.45, 'seq.bpm': 78,
-    'l0.on': true, 'l0.eng': 'mem', 'l0.steps': 16, 'l0.puls': 5, 'l0.oct': -1, 'l0.vol': 0.7, 'l0.bright': 0.3,
-    'l1.on': true, 'l1.eng': 'swm', 'l1.steps': 10, 'l1.puls': 3, 'l1.div': '0.5', 'l1.deg': 3, 'l1.vol': 0.35, 'l1.bright': 0.7, 'l1.pan': 0.5,
-    'l2.on': true, 'l2.eng': 'tie', 'l2.steps': 8, 'l2.puls': 1, 'l2.div': '0.5', 'l2.oct': -1, 'l2.vol': 0.6, 'l2.bright': 0.5,
-    'l3.on': false } },
+  // (owner, 30.10.2026: „Kurzwellenritual muss mehr nach einem tatsächlichen Kurzwellenritual klingen – an ein Radio
+  // erinnern, wo man wild durch die Frequenzen schaltet, dabei aber immer noch eine gewisse Harmonie; die Körner klingen
+  // hier nicht schön“) the grains take whole snippets of the dial (0.3 s, each from another station – scattered), all on
+  // the played note (no pitch jitter: the carrier sits on it); a resonant low-pass sweeping slowly is the receiver's
+  // tuning, a slow phaser its fading; under it an Ondes Martenot and a Bordun on the fifth hold the ritual's harmony;
+  // lanes: a slow frame drum, an interval signal on bells, station flashes from the grains, circuit static. No drive, no
+  // ring modulator, no saturated sub (the old version's mush)
+  { key: 'kurzwelle', name: 'Kurzwellenritual', tags: 'Experimentell · Funk', desc: 'Am Senderknopf durch die Nacht: Stationen huschen vorbei, ein Pausenzeichen läutet, über Bordun und Ätherwelle – startet mit dem Puls.', v: {
+    'v.eng': 'kor', 'v.layer': 'ond', 'v.layerLvl': 0.3, 'v.layerInt': -12, 't.root': '4', 't.scale': 'phrdom', 't.oct': 3, 't.range': 2,
+    'kor.src': 'funk', 'kor.dens': 9, 'kor.size': 0.32, 'kor.scat': 0.4, 'kor.pjit': 0, 'kor.oct': 0.15, 'kor.rev': 0.08, 'kor.att': 0.2, 'kor.rel': 1.6,
+    'ond.palme': 0.55, 'ond.metall': 0.1, 'ond.vibrato': 0.4,
+    'bor.on': true, 'bor.lvl': 0.28, 'bor.int': '1.5', 'bor.oct': 2, 'bor.cut': 650, 'bor.breath': 0.5,
+    'bnt.bits': 0.55, 'bnt.sprung': 0.5, 'bnt.stottern': 0.45, 'mem.noise': 0.1,
+    'drv.mix': 0, 'rng.mix': 0, 'flt.type': 'lowpass', 'flt.freq': 2600, 'flt.q': 4, 'flt.lfoRate': 0.09, 'flt.lfoDepth': 1.4,
+    'pha.mix': 0.3, 'pha.rate': 0.06, 'pha.depth': 0.7, 'pha.fb': 0.3,
+    'dly.div': '0.75', 'dly.fb': 0.45, 'dly.wow': 0.5, 'dly.mix': 0.3, 'rev.size': 8, 'rev.mix': 0.45, 'seq.bpm': 78,
+    'l0.on': true, 'l0.eng': 'mem', 'l0.steps': 16, 'l0.puls': 3, 'l0.div': '0.5', 'l0.oct': -1, 'l0.vol': 0.6, 'l0.bright': 0.3,
+    'l1.on': true, 'l1.eng': 'glo', 'l1.steps': 8, 'l1.puls': 5, 'l1.rot': 1, 'l1.div': '0.25', 'l1.deg': 4, 'l1.oct': 1, 'l1.walk': 0.6, 'l1.prob': 0.75, 'l1.vol': 0.32, 'l1.bright': 0.6, 'l1.pan': -0.35,
+    'l2.on': true, 'l2.eng': 'kor', 'l2.steps': 12, 'l2.puls': 5, 'l2.div': '0.25', 'l2.deg': 0, 'l2.walk': 0.5, 'l2.prob': 0.8, 'l2.vol': 0.35, 'l2.bright': 0.65, 'l2.pan': 0.4,
+    'l3.on': true, 'l3.eng': 'bnt', 'l3.steps': 13, 'l3.puls': 3, 'l3.div': '0.25', 'l3.oct': 1, 'l3.prob': 0.6, 'l3.vol': 0.16, 'l3.bright': 0.5, 'l3.pan': 0.1 } },
   { key: 'zikadennacht', name: 'Zikadennacht', tags: 'Ambient · Nacht', desc: 'Ein Zikadenchor aus Körnern über tiefem Bordun, ab und zu fällt ein Tropfen.', v: {
     'v.eng': 'kor', 'v.layer': 'hau', 'v.layerLvl': 0.25, 'v.layerInt': 12, 't.root': '1', 't.scale': 'insen', 't.oct': 3, 't.range': 2,
     'kor.src': 'zikaden', 'kor.dens': 40, 'kor.size': 0.09, 'kor.scat': 0.5, 'kor.pjit': 10, 'kor.att': 1.2, 'kor.rel': 3,
@@ -354,7 +365,10 @@ function loadPreset(p, own) {
   kqUsed(P['v.eng']);
   const miss = engMissSay();
   const ton = keep ? ' Tonart der Schleifen behalten: ' + NOTE_NAMES[+P['t.root']] + ' ' + ((SCALES[P['t.scale']] || {}).n || P['t.scale']) + '.' : '';
-  toast('„' + p.name + '“ geladen.' + ton + rzSay() + (miss ? ' ' + miss : ''), miss || keep ? 8000 : 4500, UNDO);
+  // (owner, 30.10.2026: „Pilzregen … in der Beschreibung stehen vier Spuren, aber es ist nur eine eingestellt“) its Puls
+  // lanes sound only while the Puls runs – said when they are there and it stands
+  const nl = [0, 1, 2, 3].filter((i) => P['l' + i + '.on']).length, pl = nl && !SEQ.on ? ' ▶ startet ' + (nl === 1 ? 'seine Puls-Spur' : 'seine ' + nl + ' Puls-Spuren') + '.' : '';
+  toast('„' + p.name + '“ geladen.' + pl + ton + rzSay() + (miss ? ' ' + miss : ''), miss || keep || pl ? 8000 : 4500, UNDO);
 }
 // (owner, 26.10.2026: „mit einem leeren Preset beginnen können“) Leere Erde: every setting at its plain start, the
 // effects dry, no second layer, no Bordun, no Puls lane, no Fährte – a sound to build from. Apart from PRESETS, whose
