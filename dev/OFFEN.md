@@ -30,7 +30,11 @@ Begründungen stehen in `dev/STAND-2026-10-29.md` (Abschnitte „Danach (30.10.)
 
 ## Für die nächste Sitzung zu tun (ohne weitere Rückfrage)
 ## Erledigt am 30.10. (zur Orientierung)
-(ungemergt, Besitzer: „warte mit GitHub, es kommen noch Kleinigkeiten“) Punkt 10: eigene Presets überschreiben (`saveUserPreset`,
+(ungemergt, Besitzer: „warte mit GitHub, es kommen noch Kleinigkeiten“) Punkt 11: ein Rückweg „Wandel“ statt
+Effekt/Effekt 2 (`FX_RETS` nur `fx`, kurze Texte in `FX_TYPES`), Weg `fx.weg` Direkt / Durch die Kette (`fxKetteIn`,
+Kettenkopie → Summe), neuer Effekt „Flechtwerk“ (`myzel-flecht`, euklidisches Tor-/Filter-/Seiten-Muster auf dem Takt des
+Taktgebers, `fxGrid`; 1,1 Einheiten), Test `v2/t-wandel.js`. Offen fürs Ohr: Flechtwerk-Grundwerte (6 von 16, Tiefe 80 %,
+Filter 50 %) und ob der Wandel in einem Preset „Durch die Kette“ laufen soll. · Punkt 10: eigene Presets überschreiben (`saveUserPreset`,
 „Überschreiben“ je Zeile, Strg+S, geladenes markiert über `UI.upr`), Test `v2/t-presets-own.js` · #122 Punkt 9: Strip-Weg „Kette“ doppelte die Effekte (eingebranntes Audio durch die Kettenkopie) – jetzt „Kette“ = alle
 Schleifen folgen (hxRouteAll → hxFolgt, out 1), Strip immer direkt (hxRoute = hxGateM); Weg-Schalter „K“ je Schleife im
 Hexenring-Mixer; neue Schleifen übernehmen den Strip-Weg. · #121 Punkt 7 Schalter im Bearbeiten-Fenster (`hexenring/klangebene.js`: Klangfarbe-Ebene `L.rx` über Abdruck und Wuchs-

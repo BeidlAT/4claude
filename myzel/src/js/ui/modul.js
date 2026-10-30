@@ -32,7 +32,6 @@ const FXM_ICO = {
   dly: fxmSvg('<path d="M4 6v12"/><path d="M9.5 8v8" opacity=".75"/><path d="M14.5 9.5v5" opacity=".5"/><path d="M19 11v2" opacity=".3"/>'),
   rev: fxmSvg('<path d="M4 19V11a8 8 0 0 1 16 0v8"/><path d="M8 19v-7a4 4 0 0 1 8 0v7" opacity=".55"/>'),
   fx: fxmSvg('<circle cx="8" cy="9" r="2.6"/><circle cx="15.5" cy="7.5" r="1.8"/><circle cx="14" cy="15" r="3.2"/><circle cx="6.5" cy="16.5" r="1.3"/>'),
-  fx2: fxmSvg('<circle cx="16" cy="9" r="2.6"/><circle cx="8.5" cy="7.5" r="1.8"/><circle cx="10" cy="15" r="3.2"/><circle cx="17.5" cy="16.5" r="1.3"/>'),
   mst: fxmSvg('<path d="M3 6c5 0 6 6 9 6M3 18c5 0 6-6 9-6h9"/><path d="M18 9l3 3-3 3"/>'),
 };
 // how strongly a module acts (0…1) – its node's glow, the card's light – and what its badge says

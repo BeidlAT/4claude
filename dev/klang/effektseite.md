@@ -25,15 +25,24 @@ deinem Ermessen“. Grundlage: `effekte-konzept.md` (26.10.).
   Pegel mit Kalimba auf den Eingang abgeglichen.
 
 - **Transienten-Former** je Kanal (`myzel-trans`, nach der Sättigung): Anschlag/Ausklang ±18 dB, auf 0 bitgleich (PR #101).
-- **Zweiter Rückweg „Effekt 2“** (Besitzer, 29.10.: „ja alle 3 offenen Punkte erledigen“): `FX_RETS` (params.js) trägt
-  beide Rückwege – je eigene Wahl und Regler (`fx2.*`, beginnt mit Wolke), Send je Kanal `x…fx2`, eigene Farbe.
-- **Einschub je Kanal** (`x…ins`: Keiner / Effekt / Effekt 2, `x…insmix` Anteil, gleiche Leistung): ein eigener
+- **Ein Rückweg „Wandel“** (Besitzer, 30.10.: „wir brauchen nur einen davon … kurze knackige Bezeichnung“): der zweite
+  Rückweg „Effekt 2“ (29.10.) ist wieder weg, `FX_RETS` trägt nur `fx` mit Namen „Wandel“; die Beschreibungen in
+  `FX_TYPES` sind kurz (≤ 60 Zeichen, nichts wird abgeschnitten). `fx2.*`-Schlüssel alter Patches werden ignoriert.
+- **Weg des Wandels** (`fx.weg`: Direkt / Durch die Kette): „Kette“ hängt den Rückweg an eine Kettenkopie
+  (`fxKetteIn`, makeChain → Summe, in `A.chains`, folgt den Reglern) – Filter, Phaser, Verzerrung, Schweben wirken auf
+  den Effektklang. Wahl in der Konsole (Klangquellen) und auf der Wege-Seite des Rückwegs.
+- **Flechtwerk** (`myzel-flecht`, `dsp/effekte.js` Flecht): euklidisches Muster (`fsteps` 8/12/16, `fschl` Schläge,
+  `fdreh` Drehung) im Raster `fraster` (⅛, 1/16, ⅛-Triole) auf dem Takt des Taktgebers (`fxGrid`: Frame von Schlag 0
+  und Frames je Schlag, bei jedem Retempo/Start neu; ohne Takt frei im Puls-Tempo). Je Schritt: Tor (`ftiefe`, Flanken
+  `fweich` 2–60 ms), Tiefpass-Lauf durchs Muster (`ffilt`, bis 5 Oktaven, SVF 2-polig), Seitenwechsel je Schlag
+  (`fseite`, gleiche Leistung). Kosten 1,1 Einheiten (fxflecht1 1,02 − hxz1 0,075, + 15 %). Test `v2/t-wandel.js`.
+- **Einschub je Kanal** (`x…ins`: Keiner / Wandel, `x…insmix` Anteil, gleiche Leistung): ein eigener
   Prozessor mit den Einstellungen des gewählten Rückwegs, hinter dem Transienten-Former (processing.js `x.ins`,
   effekt.js `fxInsUpd`); „Keiner“ blendet ihn aus und gibt ihn frei. Formen-Karte „Einschub“.
-- **Formen** kennen „Effekt-Anteil“ und „Effekt-2-Anteil“ (mod.js `fx`, `fx2`; Gestik und Fährte über `fx.mix`);
+- **Formen** kennen „Wandel-Anteil“ (mod.js `fx`; Gestik und Fährte über `fx.mix`);
   eine Auslenkung baut den Prozessor auch, wenn der Anteil im Patch 0 ist.
-- **Geflecht**: Send-Fäden in beide Effekte (eigene Strichmuster), ihre Knoten als keimende Sterne, ihr Weg in den
-  Hall; Wege-Ansicht zeigt alle vier Sends; Konsole: Rückweg-Untertitel nennen Effekt bzw. Raum.
+- **Geflecht**: Send-Faden in den Wandel (eigenes Strichmuster), ihre Knoten als keimende Sterne, ihr Weg in den
+  Hall; Wege-Ansicht zeigt alle drei Sends; Konsole: Rückweg-Untertitel nennen Wandel bzw. Raum.
 
 ## Offen
 - Nichts aus diesem Plan. Mögliche Erweiterung: weitere Effektarten in `FX_TYPES`.
