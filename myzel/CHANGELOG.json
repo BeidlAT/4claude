@@ -2,6 +2,15 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-30",
+      "punkte": [
+        "Neu: „Takt sehen“ (im Knopf „Takte“ unten links, bei Klick und Einzählen): Der Bildschirm pulsiert dezent im Takt – die Eins leuchtet orange, die anderen Schläge neutral und leiser.",
+        "Dazu läuft ein Kreis um die Takt-Zahl: eine Runde ist die eingestellte Länge, mit einem Strich an jedem Takt.",
+        "Schleifen wechseln ihren Klang jetzt in kleinen Portionen statt in einem großen Stück – das soll Aussetzer vor allem in Chrome verhindern.",
+        "Spielst du gerade viel, wartet ein sofortiger Klangwechsel der Schleifen kurz, bis es ruhiger ist (höchstens 3 Sekunden)."
+      ]
+    },
+    {
       "id": "2026-10-29n",
       "punkte": [
         "Preset-Wechsel mit „Schleifen spielen mit dem Instrument des Presets“: Der neue Klang setzt in den Schleifen ein, sobald er fertig gerechnet ist – mitten im Durchgang, nicht erst an der nächsten Naht (bei langen Schleifen bis zu einem Durchgang früher).",

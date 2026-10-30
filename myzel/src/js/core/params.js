@@ -614,6 +614,7 @@ BOOL('hx.autoclose', 'Schließt sich, wenn du den Anfang wiederholst', false, { 
 SEL('hx.rail', 'Ringleiste', [['offen', 'Offen'], ['klein', 'Klein']], 'offen', { chips: 1, small: 1, rec: 1 });
 SEL('hx.ein', 'Einzählen', [['aus', 'Aus'], ['sicht', 'Sichtbar'], ['vib', 'Vibration'], ['ton', 'Hörbar']], 'sicht', { chips: 1, small: 1, rec: 1 });
 SEL('hx.klick', 'Klick', [['aus', 'Aus'], ['zaehl', 'Beim Einzählen'], ['ein', 'Auf den Zählzeiten']], 'aus', { chips: 1, small: 1, rec: 1 });
+BOOL('hx.taktbild', 'Takt sehen (Bildschirm pulsiert im Takt)', false, { rec: 1 });   // (owner, 30.10.2026 – taktbild.js)
 BOOL('hx.pulsMit', 'Puls mit (Gespielt hört die Spuren)', false, { rec: 1 });
 BOOL('hx.borMit', 'Bordun mit (Gespielt hört den Bordun)', false, { rec: 1 });
 // (step 1d) the form, „eine Runde“, Hinlegen

@@ -25,6 +25,13 @@
 @media (min-width: 480px) { .hx-haupt { width: 56px; } }   /* (its words „schließen“, „abbrechen“ whole) */
 /* (owner, 25.10.2026) the length of a new loop beside the Hauptknopf: the bars big, „Takte“ under them; its popover */
 .hx-len { width: 46px; color: var(--hypha); }
+/* (owner, 30.10.2026) Takt sehen – the ring around the Länge button: a round is the set length, its bar lines ticked */
+.hx-tbr { position: absolute; left: 50%; top: 18px; width: 30px; height: 30px; margin: -15px 0 0 -15px; overflow: visible; pointer-events: none; opacity: 0; transition: opacity .4s; --tbp: 0; }
+.hx-tbr.an { opacity: 1; }
+.hx-tbr .trk { fill: none; stroke: rgba(240, 230, 216, .10); stroke-width: 2; }
+.hx-tbr line { stroke: rgba(240, 230, 216, .22); stroke-width: 1.4; }
+.hx-tbr .arc { fill: none; stroke: var(--spore); stroke-width: 2.4; stroke-linecap: round; opacity: calc(.55 + .35 * var(--tbp)); }
+.hx-tbr .dot { fill: var(--spore); filter: drop-shadow(0 0 calc(2px + 4px * var(--tbp)) rgba(255, 179, 92, .7)); }
 .hx-len b { position: absolute; left: 0; right: 0; top: 11px; text-align: center; font: 600 15px/1 var(--font-num); color: var(--spore); pointer-events: none; }
 .hx-len[data-l="auto"] b, .hx-len[data-l="wie1"] b { top: 13px; font: 600 11px/1 var(--font-ui); color: var(--hypha); }
 .hx-len .w { font: 500 10px/1.05 var(--font-ui); color: var(--dim); }
@@ -71,6 +78,13 @@
 .hx-eng { min-height: 36px; max-width: 9.5em; padding: 2px 6px; border-radius: 999px; border: 1px solid var(--line); background: var(--bark-2); color: var(--hypha); font: 600 12px/1 var(--font-ui); }
 .hxr[data-fold="1"] .w, .hxr[data-fold="1"] .hx-chips { display: none; }
 .hxr[data-fold="1"] .hxb { padding: 0; }
+/* (owner, 30.10.2026) Takt sehen – the screen's pulse: a glow from the edges on each beat, the one in Sporen-Orange
+   (a faint wash over the whole screen too), the others neutral and fainter; screen blend: it only lightens */
+.hx-tb { position: fixed; inset: 0; z-index: 40; pointer-events: none; mix-blend-mode: screen; }
+.hx-tb i { position: absolute; inset: 0; opacity: 0; will-change: opacity; }
+.hx-tb .eins { background: radial-gradient(ellipse 75% 70% at 50% 50%, rgba(255, 179, 92, .035) 40%, rgba(255, 179, 92, .16) 100%); box-shadow: inset 0 0 90px rgba(255, 179, 92, .22); }
+.hx-tb .zz { background: radial-gradient(ellipse 75% 70% at 50% 50%, transparent 55%, rgba(240, 230, 216, .06) 100%); box-shadow: inset 0 0 70px rgba(240, 230, 216, .08); }
+@media (prefers-reduced-motion: reduce) { .hx-tb { opacity: .5; } }
 /* (25.10.2026, owner: a press often seemed to do nothing) what happened, shown over the rail; every press flashes */
 .hx-msg { position: absolute; left: 50%; bottom: calc(100% + 6px); max-width: min(440px, calc(100% - 16px)); padding: 6px 12px; border-radius: 10px; background: rgba(17, 13, 11, .94); border: 1px solid var(--lumen); color: var(--hypha); font: 500 13px/1.3 var(--font-ui); text-align: center; pointer-events: none; opacity: 0; transform: translate(-50%, 4px); transition: opacity .18s, transform .18s; z-index: 3; box-shadow: 0 4px 18px rgba(0, 0, 0, .45); }
 .hx-msg.an { opacity: 1; transform: translate(-50%, 0); }
