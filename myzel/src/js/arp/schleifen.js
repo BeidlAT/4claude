@@ -18,7 +18,7 @@ function arpLoopPool(t) {
       const end = x.t + Math.max(x.d != null ? x.d : 0, win);
       if (!(pos >= x.t - 1e-6 && pos < end) && !(x.held && pos < end)) continue;
       const fr = hxWF(L, W, x, key), d = hxDeg(fr), per = N.free ? 12 : Math.max(1, Math.round((N.notes.length - 1) / Math.max(1, P['t.range'])));
-      out.push({ f: fr, idx: N.free ? Math.round(12 * Math.log2(fr / N.base)) : d.oct * per + d.deg, layers: [{ eng: hxWEng(L, x), ratio: 1, deg: 0, lvl: 1, bus: stripIn(x.src === 'eb2' ? 'eb2' : 'fin') }], x: d.x != null ? d.x : 0.5, y: x.y0 != null ? x.y0 : 0.5, vel: x.vel != null ? x.vel : 0.7, seq: x.t, key: 'L' + L.id + ':' + x.t });
+      out.push({ f: fr, idx: N.free ? Math.round(12 * Math.log2(fr / N.base)) : d.oct * per + d.deg, layers: [{ eng: hxWEng(L, x), ratio: 1, deg: 0, lvl: 1, bus: stripIn(EB_OF[x.src] ? x.src : 'fin'), amp: x.amp }], x: d.x != null ? d.x : 0.5, y: x.y0 != null ? x.y0 : 0.5, vel: x.vel != null ? x.vel : 0.7, seq: x.t, key: 'L' + L.id + ':' + x.t });
     }
   }
   return out;

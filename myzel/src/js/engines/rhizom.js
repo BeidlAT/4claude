@@ -29,7 +29,7 @@ const RHZ_KN = {
   metall: { r: [1, 2.76, 5.4], a: [1, 0.45, 0.2], d: [1, 0.7, 0.45], tau: 1.8, bp: 5, q: 2, ck: 0.0011, cl: 0.35, lv: 0.69 },
   glas: { r: [1, 2.32, 4.25], a: [1, 0.38, 0.16], d: [1, 0.8, 0.5], tau: 1.4, bp: 7, q: 3, ck: 0.0008, cl: 0.3, lv: 0.87 },
 };
-const rhzInUse = () => [P['v.eng'], P['v.layer'], ...[0, 1, 2, 3].map((i) => P['l' + i + '.on'] && P['l' + i + '.eng']), RG.on && GK.p && GK.p.rgS, GK.p && GK.p.ras && GK.p.rasS].includes('rhz');
+const rhzInUse = () => [...ebEngs(), ...[0, 1, 2, 3].map((i) => P['l' + i + '.on'] && P['l' + i + '.eng']), RG.on && GK.p && GK.p.rgS, GK.p && GK.p.ras && GK.p.rasS].includes('rhz');
 const rhzReiz = (t) => clamp(P['rhz.reiz'] + (MOD.t.rhzR && MOD.t.rhzR.s.size ? 0.6 * modVal('rhzR', t) : 0), 0, 1);   // (Gestik: tilt and Ladung)
 // offline (tests) or a stopped clock: a strike's whole cascade is laid out at once (RHZ.step: tests run the clock themselves)
 const rhzAhead = () => !RHZ.step && ((typeof OfflineAudioContext !== 'undefined' && A.ctx instanceof OfflineAudioContext) || A.ctx.state !== 'running');

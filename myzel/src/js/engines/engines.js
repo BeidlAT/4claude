@@ -1634,7 +1634,7 @@ const ENGINES = {
       lp.connect(v.out);
       v.out.gain.value = vel * GSP_PEAK;
       if (W) {   // the send: post-fader on the voice's own channel (gspSend), so a muted lane feeds nothing
-        const bus = o.bus || stripIn('fin'), sg = v.n(G(vel * vel * (0.3 + 0.7 * clamp(y, 0, 1)) * (bus === stripIn('rgn') ? 0.5 : 1)));
+        const bus = o.bus || stripIn('fin'), sg = v.n(G(vel * vel * (0.3 + 0.7 * clamp(y, 0, 1)) * (bus === stripIn('rgn') ? 0.5 : 1) * (o.amp != null ? o.amp : 1)));   // (amp: an Ebene's soft edge – the web hears what the channel hears)
         lp.connect(sg).connect(gspSend(bus));
         W.active = true;
       }

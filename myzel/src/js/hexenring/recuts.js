@@ -20,6 +20,9 @@ const hxSwapAt = (L) => (hxNowOk(L) ? { f: Math.round(hxF(hxNowT() + 0.06)), now
 function hxSchSwap(S, c, o = {}) {
   const L = HX.loops.get(S.loop); if (!L) return;
   if (!o.aud) { const H = hxHumOf(c); if (H) o = Object.assign({}, o, hxHumSlice(H, c), { hum: true }); }   // (26.10.2026: a window inside a Schleife's whole Ernte – from there, whatever the ring still holds)
+  // (owner, 26.10.2026: „die Zeitleisten passen nicht zusammen“) a window moved in the Ernte: its Ausklang ends where the
+  // next thing played begins (a note, else an onset in the audio) – never the notes that followed carried over the start
+  if (o.hum && c.aus && c.aus.len > 0) { const al = hxAusFrom(c, o.aud); if (al < c.aus.len) { c = Object.assign({}, c, { aus: { off: c.aus.off, len: al } }); o = Object.assign({}, o, { cutAus: true }); } }
   S.ver = (S.ver || 0) + 1;
   // (step 1c: audio from the Humus plays dry – through the live chain until it is baked again; the page's own versions
   // take the baked one where there is one)
@@ -41,6 +44,17 @@ function hxSchSwap(S, c, o = {}) {
   if (o.hum) { hxSaveSch(S); hxAfterFill(S); }   // (as a fill from the ring: stored, its Ausklang rendered, baked)
   if (o.join) Object.assign(S, { join: o.join, X: o.X, rho: o.rho });
   if (!o.aud) hxProbe(S, o.f != null ? hxT(o.f) + 0.012 : 0);
+}
+// how long a cut's Ausklang may ring (frames): to the first note after its window, else the first onset in its audio there
+function hxAusFrom(c, aud) {
+  const w1t = hxT(c.w1), evs = hxEvents(w1t + 0.002, w1t + c.aus.len / SR + 0.01, false).filter((e) => hxSrcIn(e.src, c.in));
+  let al = evs.length ? Math.max(0, Math.round((evs[0].t0 - w1t - 0.005) * SR)) : c.aus.len;
+  if (aud) {   // (a loop without notes – or an onset no note names)
+    const pre = Math.round(0.02 * SR), x = hxMono(aud, c.pre + c.len - pre, Math.min(al, c.aus.len) + pre);
+    const on = x.length > 1024 ? hxFlux(x, 0.003).map((v) => v - pre).filter((v) => v > 0.01 * SR) : [];
+    if (on.length) al = Math.min(al, Math.max(0, on[0] - Math.round(0.005 * SR)));
+  }
+  return al;
 }
 // the page's mirror of a geom that keeps the seam at frame f (the end of pass k): as the processor derives it
 function hxGeomMirror(L, f, k, beats, Lf) {

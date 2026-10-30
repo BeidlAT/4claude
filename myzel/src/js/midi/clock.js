@@ -209,6 +209,11 @@ function midiNote(m) {
 
 function panic() {
   kqHoldEnd(); kqProbeEnd();
+  // (owner, 30.10.2026: „alles beenden“) what plays besides: the editor's Vorhören, a take heard back, the Sporenwerk's
+  // held chord (Halten would play it on after the fingers are gone)
+  if (typeof hxPvStop === 'function') hxPvStop();
+  if (typeof stopPreview === 'function') stopPreview();
+  if (typeof ARP !== 'undefined') { ARP.latch = []; ARP.next = 0; }
   A.jrgAge = 0;
   slpPanic(); rgPanic();
   releaseAllTouches(); midiAllOff();

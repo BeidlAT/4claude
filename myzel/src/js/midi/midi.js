@@ -13,6 +13,13 @@ const MIDI_AUTO = !MOBILE && !!(navigator.userAgentData && navigator.userAgentDa
 // second ports of multi-port controllers (DAW, Mackie, editor, DIN thru …) repeat or remap what the main port sends:
 // off until the user switches them on
 const MIDI_SECONDARY = /\b(DAW|MCU|HUI|Mackie|ALV|Plugin|Software Control|Editor|DIN|Thru|Through)\b|MIDI(IN|OUT) ?[2-9]\b|\b(Port|Anschluss|Puerto|Porto) [2-9]\b|#[2-9]$|daw control/i;
+// (owner, 26.10.2026 and again 30.10.2026 – lost in the reset of 27.10.: „das Edirol PCR-M50 hängt am MIDI-Eingang
+// eines Steinberg-Interfaces und taucht nicht auf“) the MIDI ports of audio interfaces: the instrument hangs on their
+// DIN input, the port carries the interface's name (Windows „Steinberg UR22C-1“, „Yamaha Steinberg USB MIDI“, a Mac
+// „UR22mkII MIDI“ / „… Port1“). Every such port is a real input – never a second port to switch on first – and names no
+// instrument: the player says which one plays through it (geraet.js kcModelSel), the Gerätebild never draws the box
+const MIDI_IFACE = /steinberg|\bUR[-\s]?(\d|RT|C\b|M\b)|focusrite|scarlett|clarett|\bum-?one\b|midisport|\bmio\d*\b|midi ?interface|usb[- ]?midi ?(cable|interface)|\bmotu\b|presonus|audient|komplete audio|\bumc\s?\d|\bum-?\d|\bua-?\d{1,3}\b|rubix|babyface|fireface|tascam|\bssl ?[2+]|\bid(4|14|22|44)\b|\bevo ?(4|8|16)\b|\bvolt ?\d|minifuse|audiofuse|yamaha ag\d/i;
+const midiIface = (n) => MIDI_IFACE.test(n || '');
 // one device seen through two names (Windows "MIDIIN2 (…)", "2- …" for a second unit, " Bluetooth" on a Mac …)
 const devName = (n) => String(n || '').toLowerCase().replace(/^\d+-\s*/, '').replace(/^midi(in|out)\s*\d*\s*\((.*)\)$/, '$2').trim();
 // the name to show where room is short: without the port's function ("nanoKEY Studio KEYBOARD/CTRL" → "nanoKEY Studio")
@@ -42,7 +49,7 @@ function midiSource(key, name, kind, port) {
   let src = MIDI.srcs.get(key);
   if (!src) MIDI.srcs.set(key, (src = { key, dir: 'in', chs: [], mcm: null, mzOn: null, sense: false, lastIn: 0, act: 0, last: null, relVel: false, dup: false }));
   src.name = name || 'MIDI-Gerät'; src.kind = kind; src.port = port || null;
-  src.secondary = MIDI_SECONDARY.test(src.name);
+  src.secondary = MIDI_SECONDARY.test(src.name) && !midiIface(src.name);   // (an interface's „MIDI 2“, „DIN“: a real input)
   const pr = portPref(src);
   src.enabled = pr.on != null ? !!pr.on : !src.secondary;
   return src;

@@ -105,7 +105,7 @@ async function hxBeglRender(Lm, notes, lenB, seed) {
   const k = hxPassK(Lm, Math.round(hxF(hxNowT()))), lenF = hxPassF(Lm, k + 1) - hxPassF(Lm, k), sec = (b) => (b / lenB) * (lenF / SR);
   const p = Object.assign({}, P, { 'mov.drift': 0 }), q = hxWQ(Lm);
   const ns = notes.map((n) => ({ t0: sec(n.t), t1: n.d != null ? sec(n.t + n.d) : null, eng: n.eng, f: n.f, y0: n.y0, vel: n.vel, pan: n.pan || 0, src: 'fin', burst: false, gate: null, hold: n.hold, curves: { y: [], f: [] } }));
-  const m = await hxwCall('wuchs', { sr: SR, dur: lenF / SR + HX_WTAIL, body: lenF / SR, notes: ns, prm: [], P: p, q, seed, chain: null, mask: ['fin', 'eb2', 'rgn', 'gsp'], jrg: { age: A.jrgAge || 0, season: A.season || 0 } });
+  const m = await hxwCall('wuchs', { sr: SR, dur: lenF / SR + HX_WTAIL, body: lenF / SR, notes: ns, prm: [], P: p, q, seed, chain: null, mask: [...EB_K, 'rgn', 'gsp'], jrg: { age: A.jrgAge || 0, season: A.season || 0 } });
   if (!m || m.err || !m.L) return null;
   const n = hxWTrim(m.L, m.R, lenF), [aud] = hxChunks(n);
   for (let i = 0; i < n; i++) { const c = aud[Math.floor(i / HX_CH)], j = i % HX_CH; c[0][j] = m.L[i]; c[1][j] = m.R[i]; }

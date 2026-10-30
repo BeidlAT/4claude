@@ -258,3 +258,6 @@ body:not(.mlearn) :is(.gk-ax, .gk-ev) { cursor: default; }
 .lm-sum { margin: 6px 0 8px; font-size: 13px; }
 details.lm-rep { margin: 0 0 10px; max-width: none; }
 .lm-txt { width: 100%; box-sizing: border-box; min-height: 9em; font: 400 11px/1.4 var(--font-num); color: var(--hypha); background: rgba(0,0,0,0.25); border: 1px solid var(--line); border-radius: 6px; padding: 8px; resize: vertical; }
+/* (owner, 26./30.10.2026) which instrument hangs on an audio interface's MIDI input */
+.kc-mlab { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--dim); }
+.kc-msel { background: var(--loam-2); color: var(--hypha); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font: inherit; max-width: 100%; }

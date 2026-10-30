@@ -2,6 +2,16 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-30f",
+      "punkte": [
+        "Neu: bis zu 8 Ebenen pro Klang (Klang → Ebenen). Jede Ebene hat ihren eigenen Klang, Pegel, Intervall, Feinstimmung, Ton- und Anschlagsbereich und einen eigenen Kanal im Mixer. Bestehende Presets klingen wie bisher.",
+        "Neues Aussehen: Die Effekte-Seite zeigt den Signalweg und jeden Effekt als Karte mit kleinem Bild; Klang, Puls, Aufnahme, Gerät und Presets tragen dieselbe Kartensprache.",
+        "Globaler Stopp oben neben dem Puls: hält alles an, was klingt. Im Bearbeiten-Fenster: Breite ziehbar, Zoomleiste ziehbar, Stopp hält auch die Schleife an.",
+        "Keyboard am MIDI-Eingang eines Audio-Interfaces (z. B. Steinberg): die Karte fragt, welches Gerät daran hängt.",
+        "„Vorige Skala“ am Schieberegler reagiert gleich, die Ernte-Leiste zeigt bei getrimmten Schleifen den richtigen Ausschnitt. Sporenwerk an/aus lässt Schleifen nicht mehr unnötig neu rechnen."
+      ]
+    },
+    {
       "id": "2026-10-30e",
       "punkte": [
         "Verzerrung behoben, die in jedem Preset auftreten konnte: Wurde kräftig oder mehrstimmig gespielt, schnitt die Effektkette alles über der Vollaussteuerung hart ab – auch mit Verzerrung auf 0. Jetzt hat sie 19 dB Luft; darunter klingt alles wie vorher.",

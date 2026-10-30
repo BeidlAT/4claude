@@ -5,7 +5,7 @@
 // when the level (8 or 12 strings) changes; retuned (a 90-ms glide) with the field's scale; {clear} at Stille/Schlafen.
 // (the web's cost: 24 webs against 24 Nebel voices, the voices' method – 1.82–2.15 / 2.51–2.70 measured, the highest + 15 %)
 const GSP_PEAK = 1.5, GSP_COST = [2.47, 3.11];
-const gspInUse = () => [P['v.eng'], P['v.layer'], ...[0, 1, 2, 3].map((i) => P['l' + i + '.on'] && P['l' + i + '.eng']), RG.on && GK.p && GK.p.rgS].includes('gsp');
+const gspInUse = () => [...ebEngs(), ...[0, 1, 2, 3].map((i) => P['l' + i + '.on'] && P['l' + i + '.eng']), RG.on && GK.p && GK.p.rgS].includes('gsp');
 // the strings: the first N degrees of the field's scale from its base octave (Saiten „Zwei Oktaven“: every other one,
 // over two octaves); a free field has no scale – the root's harmonics then
 function gspFreqs() {

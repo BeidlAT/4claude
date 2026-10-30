@@ -9,7 +9,7 @@
 // Gespielt tap follows the strip).
 const TFX_WK = ['koerner', 'eis', 'oberton', 'stottern', 'resonanz'];
 const TFX = { mode: '', ins: new Map(), busy: false, arp: { next: 0, i: 0, dir: 1, tm: 0, last: 0 } };
-const tfxStrips = () => ['fin', 'eb2'].map((k) => MIX.s[k]).filter((st) => st && st.tW);
+const tfxStrips = () => EB_K.map((k) => MIX.s[k]).filter((st) => st && st.tW);   // (every layer's strip – Ebenen, 30.10.2026)
 // the beat (Stottern, Arpeggio): the Puls's tempo, else its setting
 const tfxBeat = () => 60 / (typeof tgBpm === 'function' && A.ctx ? tgBpm(A.ctx.currentTime) : P['seq.bpm'] || 100);
 // what the strings of Resonanz are tuned to: the held notes (up to six, octaves to fill), else the key's root triad
@@ -68,7 +68,7 @@ function tfxSet(w, v) {
   const p = Math.max(v.weg, v.her, v.li, v.re);
   if (mine) {
     for (const st of tfxStrips()) {
-      if (st.k === 'eb2' && P['v.layer'] === 'off') continue;   // (Ebene 2 silent: no insert of its own)
+      if (st.k !== 'fin' && !ENGINES[P[EB_OF[st.k].eng]]) continue;   // (a layer without a sound: no insert of its own)
       let I = TFX.ins.get(st.k);
       if (!I) { I = tfxMake(st, mine); if (!I) continue; TFX.ins.set(st.k, I); }
       if (p > 0) { tfxIn(st, I, true); I.at = performance.now(); }
@@ -136,7 +136,7 @@ function tfxArpTick() {
     const [tt, o] = seq[i], nt = stepAt(t), dur = Math.max(0.03, (nt - t) * (0.85 - 0.55 * v.her)), vel = 0.3 + 0.65 * Math.pow(R.p, 0.8);
     for (const ly of tt.layers) {
       const f = lyF(ly, tt.f, tt.col) * Math.pow(2, o) * (tt.mb ? Math.pow(2, tt.mb / 12) : 1);
-      hit(ly.eng, t, f, tt.my != null ? tt.my : tt.y, vel * ly.lvl, { pan: touchPan(tt.x), bus: ly.bus, gate: dur });
+      hit(ly.eng, t, f, tt.my != null ? tt.my : tt.y, vel * ly.lvl, { pan: touchPan(tt.x), bus: ly.bus, amp: ly.amp, gate: dur });
     }
     R.next = nt;
   }
@@ -162,7 +162,7 @@ function tfxFan(v) {
       let C = F[k];
       const det = k === 'du' ? Math.pow(2, (6 + 12 * v.weg) / 1200) : k === 'dd' ? Math.pow(2, -(6 + 12 * v.weg) / 1200) : 1;
       const strike = (C2) => tt.layers.forEach((ly, j) => {
-        const f = lyF(ly, tt.f, tt.col) * ratio * det * (tt.mb ? Math.pow(2, tt.mb / 12) : 1), y = tt.my != null ? tt.my : tt.y, vel = noteVel(tt) * ly.lvl, o = { pan: clamp(touchPan(tt.x) + pan, -1, 1), bend: tt.fb || tt.bend, bus: C2.g[j] };
+        const f = lyF(ly, tt.f, tt.col) * ratio * det * (tt.mb ? Math.pow(2, tt.mb / 12) : 1), y = tt.my != null ? tt.my : tt.y, vel = noteVel(tt) * ly.lvl, o = { pan: clamp(touchPan(tt.x) + pan, -1, 1), bend: tt.fb || tt.bend, bus: C2.g[j], amp: ly.amp };
         if (ENGINES[ly.eng] && ENGINES[ly.eng].sustain) { if (!C2.sus[j]) { const vv = playNote(ly.eng, now, f, y, vel, o); if (vv) { C2.sus[j] = vv; tt.voices.push({ v: vv, ly, fan: k }); } } }
         else hit(ly.eng, now, f, y, vel * Math.max(0.35, lv), o);
       });

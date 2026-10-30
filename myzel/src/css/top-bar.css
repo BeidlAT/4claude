@@ -30,6 +30,14 @@
   border-radius: 999px; border: 1px solid var(--line); background: var(--bark);
   font: 500 12px/1 var(--font-num); font-variant-numeric: tabular-nums; color: var(--hypha);
 }
+/* (owner, 26.10.2026; again 30.10.2026: „ein globaler Stopp-Knopf … alles beenden“) beside the Puls, which keeps its own start */
+.stopall { flex: none; display: flex; align-items: center; gap: 7px; height: 38px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--bark); font: 500 12px/1 var(--font-num); color: var(--hypha); cursor: pointer; }
+.stopall .sq { width: 9px; height: 9px; border-radius: 2px; background: var(--hypha); flex: none; }
+.stopall:hover { border-color: var(--hypha); }
+.stopall:active { background: var(--hypha); color: var(--ink); }
+.stopall:active .sq { background: var(--ink); }
+@media (max-width: 560px) { .stopall { padding: 0 13px; font-size: 0; gap: 0; } }
+@media (max-width: 480px) { .stopall { display: none; } }   /* (a phone: no room in the bar – „Stille“ in the panel's quick row does the same) */
 .recbtn .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--rec); flex: none; }
 .recbtn[data-state="armed"], .recbtn[data-state="cue"] { border-color: var(--rec); color: var(--rec); }
 .recbtn[data-state="armed"] .dot, .recbtn[data-state="cue"] .dot { animation: blink 1s steps(2) infinite; }

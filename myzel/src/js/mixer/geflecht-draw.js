@@ -28,7 +28,7 @@ function mxgStatic() {
   // the columns: a dotted thread where each light rises, and the Puls group's bracket over its four lanes
   c.setLineDash([1, 5]); c.lineWidth = 1; c.strokeStyle = 'rgba(240,230,216,.05)';
   c.beginPath();
-  for (const C of G.cols) { const x = Math.round(C.cx) + 0.5; c.moveTo(x, G.yTop - 4); c.lineTo(x, sy - 2); }
+  for (const C of G.cols) { if (C.hid) continue; const x = Math.round(C.cx) + 0.5; c.moveTo(x, G.yTop - 4); c.lineTo(x, sy - 2); }
   c.stroke(); c.setLineDash([]);
   // the scale: labels in the gutter, lines across the columns; 0 dB in spore light like the stems
   const marks = G.span > 330 ? [6, 0, -6, -12, -18, -24, -36, -48] : G.span > 230 ? [6, 0, -6, -12, -18, -24, -48] : [6, 0, -6, -12, -24, -48];
@@ -119,6 +119,7 @@ function mxgDraw(dt, t) {
   // signal: spores of light flow down every hypha with the level, Puls hits run as bright pulses
   if (!REDUCED) {
     for (const C of G.cols) {
+      if (C.hid) continue;   // (an Ebene the Pult does not show – mxgLayout)
       if (C.c.kind === 'puls' || !C.fn) continue;
       const S = MX.ch[C.k];
       if (!S.dorm && Math.random() < S.lv.lvl * dt * (G.wide ? 8 : 6)) mxgSpawn(C.i, false);
@@ -154,11 +155,12 @@ function mxgLight(c, k, a) {
 function mxgSoil(c, t) {
   const G = MXG, sy = G.soilY, sel = MX.sel, hov = G.hov;
   let chain = 0;
-  for (const C of G.cols) if (C.fx && !MX.ch[C.k].dorm) chain = Math.max(chain, MX.ch[C.k].lv.lvl);
+  for (const C of G.cols) if (!C.hid && C.fx && !MX.ch[C.k].dorm) chain = Math.max(chain, MX.ch[C.k].lv.lvl);
   c.globalCompositeOperation = 'lighter';
   c.strokeStyle = mxgA(MXG_WARM, 0.05 + 0.1 * chain); c.lineWidth = 4 + 7 * chain; c.stroke(G.trunk);
   c.strokeStyle = mxgA(MXG_WARM, 0.25 + 0.45 * chain); c.lineWidth = 1.1 + 2 * chain; c.stroke(G.trunk);
   for (const C of G.cols) {
+    if (C.hid) continue;   // (an Ebene the Pult does not show – mxgLayout)
     if (C.c.kind === 'puls') continue;
     const S = MX.ch[C.k], L = S.lv, lv = L.lvl;
     if (S.dorm) {
@@ -174,6 +176,7 @@ function mxgSoil(c, t) {
   }
   // send threads: dashed and as thick as send × level; bright only for the chosen (or hovered) channel
   for (const C of G.cols) {
+    if (C.hid) continue;   // (an Ebene the Pult does not show – mxgLayout)
     if (!C.snd || MX.ch[C.k].dorm) continue;
     const lv = MX.ch[C.k].lv.lvl, foc = C.k === sel || C.k === hov;
     for (let j = 0; j < MXG_SND.length; j++) {
@@ -258,6 +261,7 @@ function mxgAir(c, dt, t) {
   const G = MXG, sy = G.soilY, span = G.span, sel = MX.sel, hov = G.hov, pd = G.pd;
   // stems first, then the light, then the spores, so nothing of a neighbour ever covers a spore
   for (const C of G.cols) {
+    if (C.hid) continue;   // (an Ebene the Pult does not show – mxgLayout)
     const S = MX.ch[C.k], L = S.lv;
     if (C.off) continue;
     c.strokeStyle = L.clip ? 'rgba(255,91,77,.85)' : S.dorm ? 'rgba(168,153,138,.28)' : mxgA(C.al, 0.24 + 0.3 * L.lvl + (C.k === sel ? 0.18 : 0));
@@ -271,6 +275,7 @@ function mxgAir(c, dt, t) {
   }
   c.globalCompositeOperation = 'lighter';
   for (const C of G.cols) {
+    if (C.hid) continue;   // (an Ebene the Pult does not show – mxgLayout)
     const S = MX.ch[C.k], L = S.lv, dorm = S.dorm, kind = C.c.kind;
     const src = kind === 'puls' ? G.cols[MXK['l' + L.dom].i] : C, bw = kind === 'sum' ? G.bwS : G.bw, gap = G.gap, x0 = C.cx - bw - gap / 2;
     let top = sy;
@@ -298,7 +303,7 @@ function mxgAir(c, dt, t) {
   c.globalCompositeOperation = 'source-over';
   // a/b while the morph is in use: where A and B put each spore (strong for the chosen one)
   if (MX.ghost) mxgGhosts(c);
-  for (const C of G.cols) mxgSpore(c, C, C.k === sel, C.k === hov || C === G.grab, t);
+  for (const C of G.cols) if (!C.hid) mxgSpore(c, C, C.k === sel, C.k === hov || C === G.grab, t);
   // dust rising from the struck spores
   if (!REDUCED) {
     c.globalCompositeOperation = 'lighter';
@@ -403,6 +408,7 @@ function mxgGhosts(c) {
   const G = MXG, a = MX.snap.a, b = MX.snap.b, sy = G.soilY;
   c.font = G.fGhost; c.textAlign = 'center'; c.textBaseline = 'middle';
   for (const C of G.cols) {
+    if (C.hid) continue;   // (an Ebene the Pult does not show – mxgLayout)
     const vid = mxVolId(C.k), pid = C.pid, hp = mxgHasPan(C);
     if (a[vid] === b[vid] && (!hp || a[pid] === b[pid])) continue;
     const xa = C.cx + (hp ? a[pid] : 0) * C.pr, ya = sy - mxPos(a[vid]) * G.span, xb = C.cx + (hp ? b[pid] : 0) * C.pr, yb = sy - mxPos(b[vid]) * G.span;

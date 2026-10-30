@@ -6,7 +6,22 @@ kann theoretisch 10 Ebenen im Klang haben mit unterschiedlichsten Sounds. Und je
 routen (mit FX, ohne FX). Und dann gibt es noch erweiterte Routings, nach professionellem Vorbild. Recherchiere gerne,
 was möglich ist und für Myzel Sinn machen würde.“
 
-**Noch nichts gebaut** – das hier ist die Grundlage für die Entscheidung mit dem Besitzer.
+**Stufe 1 gebaut (30.10.2026, Besitzer: „bis zu 8 Ebenen … alle Ebenen klingen auf jedem Ton … Presets, die es schon
+gibt, bleiben vorerst so“; Puls-Spuren bleiben eigene Spuren).** Kurz:
+- `EB` (params.js): Ebene 1 = Klangquelle (`v.eng`, `v.oct`, `v.deg`, Kanal `fin`), Ebene 2 = die alte zweite Ebene
+  (`v.layer`, `v.layerLvl`, `v.layerInt`, `v.layerDeg`, Kanal `eb2` – Ids unverändert), Ebenen 3–8 neu (`e<n>.eng/lvl/int/deg`,
+  Kanäle `eb3`–`eb8`, Grundwert aus). Je Ebene zusätzlich `e<n>.fine` (Cent), Tonbereich `e<n>.lo/hi/rand` (MIDI-Noten,
+  weicher Rand in HT), Anschlags-Bereich `e<n>.vlo/vhi/vrand`, `e<n>.solo` (live, nie im Patch). Pan/Mute/Route/Einschub/
+  Sends/Transienten-Former = der Kanalzug der Ebene (`x<k>.*`).
+- `layers(f, vel)` (touch.js) prüft Bereiche, Mute und Solo beim Anschlag; der weiche Rand ist ein eigener Gain der Stimme
+  (`o.amp`, viertel Sinus = gleiche Leistung), nicht der Anschlag; er geht in den Humus (`amp`) und in Wuchs/Werk-Rahmen.
+- Stimmenklau nimmt alle Ebenen eines Anschlags zusammen (`v.grp`), nie die des gerade entstehenden Tons.
+- Gespielt hört alle Ebenen-Kanäle; Sporenwerk, Touché (Fächer, Arpeggio, Einschub), Ausdruck, Schlafen gelten für alle.
+- Klang-Seite: Abschnitt „Ebenen“ (ui/ebenen.js) statt „Zweite Ebene“; Mixer zeigt Ebenen 3–8 erst, wenn sie klingen oder
+  verstellt wurden (Pult und Geflecht).
+- Beweis „Presets unverändert“ und Messungen: Test `dev/tests/hexenring/t-ebenen.js`, Bericht der Sitzung.
+
+Ursprünglich (vor dem Bau) die Grundlage für die Entscheidung mit dem Besitzer:
 
 ## Was Myzel heute hat
 

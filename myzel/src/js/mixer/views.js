@@ -118,6 +118,7 @@ function buildMixer() {
   if (MXV.detail) R.dataset.detailOn = '1';
   MX.vsw = mxBuildViewSwitch();
   for (const id of MX_SRC_IDS) bindCtl(id, () => { if (MX.root) mxSrcAll(); });
+  for (const e of EB.slice(2)) bindCtl(e.eng, () => { if (MX.root) mxRgnSync(); });   // (an Ebene given a sound stands in the Pult)
   for (const id of ['drv.mix', 'rng.mix', 'pha.mix', 'cho.mix']) bindCtl(id, () => { MX.dirtyStatic = true; });
   mxSrcAll();
   mxSetLayer(MX.layer);

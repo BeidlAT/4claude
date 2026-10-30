@@ -140,7 +140,9 @@ function cbOpen(src) {
   if (!CB.raf) CB.raf = requestAnimationFrame(cbFrame);
 }
 function cbClose() { CB.on = false; CB.step = -1; CB.wait = null; if (CB.el) CB.el.hidden = true; if (CB.raf) cancelAnimationFrame(CB.raf); CB.raf = 0; }
-const cbSources = () => [...MIDI.srcs.values()].filter((s) => s.kind !== 'motion' && s.kind !== 'ble' && s.enabled && !s.secondary).concat([...BLE.devs.values()].map((B) => B.src).filter(Boolean));
+// (an interface's MIDI port only once the player said which instrument hangs on it – geraet.js kcModelSel; owner,
+// 30.10.2026: „das Gerätebild des Interfaces streichen“)
+const cbSources = () => [...MIDI.srcs.values()].filter((s) => s.kind !== 'motion' && s.kind !== 'ble' && s.enabled && !s.secondary && !(midiIface(s.name) && !cbModelOf(cbData(s).model))).concat([...BLE.devs.values()].map((B) => B.src).filter(Boolean));
 function cbBuild() {
   CB.el = h('div', { class: 'cb', hidden: true, role: 'dialog', 'aria-label': 'Gerätebild' });
   CB.el.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); if (CB.step >= 0) cbCalStop(); else if (CB.sel) { CB.sel = null; cbRender(); } else cbClose(); } });
@@ -151,7 +153,7 @@ function cbRender() {
   const btn = (t, fn, tip, cls) => { const b = h('button', { type: 'button', class: 'btn' + (cls ? ' ' + cls : ''), title: tip || '' }, t); b.addEventListener('click', fn); return b; };
   const head = h('div', { class: 'cb-h' }, h('h2', null, 'Gerätebild'));
   const srcs = cbSources();
-  if (srcs.length > 1) { const sel = h('select', { class: 'cb-dev', 'aria-label': 'Gerät' }, ...srcs.map((s) => h('option', { value: s.key, selected: s === src ? '' : null }, s.name))); sel.addEventListener('change', () => { CB.src = srcs.find((s) => s.key === sel.value) || null; CB.sel = null; cbRender(); }); head.append(sel); }
+  if (srcs.length > 1) { const sel = h('select', { class: 'cb-dev', 'aria-label': 'Gerät' }, ...srcs.map((s) => { const m = cbModelOf(cbData(s).model); return h('option', { value: s.key, selected: s === src ? '' : null }, s.name + (m && m.id !== 'generic' && !(m.re && m.re.test(s.name)) ? ' · ' + m.name : '')); })); sel.addEventListener('change', () => { CB.src = srcs.find((s) => s.key === sel.value) || null; CB.sel = null; cbRender(); }); head.append(sel); }
   else head.append(h('span', { class: 'cb-dn' }, src ? src.name : 'kein Gerät verbunden'));
   const x = btn('✕', cbClose, 'Schließen (Esc)', 'ghost cb-x'); x.setAttribute('aria-label', 'Schließen'); head.append(h('span', { class: 'cb-sp' }), x);
   if (!src) { el.replaceChildren(head, h('p', { class: 'cb-note' }, 'Schließe einen MIDI-Controller an (USB oder Bluetooth) – dann zeigt Myzel ihn hier mit allen Belegungen.')); return; }

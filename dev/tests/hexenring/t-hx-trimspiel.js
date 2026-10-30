@@ -20,7 +20,7 @@ const { ok } = H;
     const step = async (name) => { await sl(2500); o.steps.push([name, L.state, L.d.beats, await lv(), M.HX.sch.get(L.sch[0]).out]); };
     await step('geerntet');
     M.hxBandTrimTo(L, 0.5, 0.5); await step('getrimmt');
-    const S = M.HX.sch.get(L.sch[0]), W = M.hxHumWin(L, S), beatF = Math.round(S.len / L.d.beats);
+    const S = M.HX.sch.get(L.sch[0]), W = S.cut, beatF = Math.round(S.len / L.d.beats);
     M.hxHumApply(L, W.w0 - beatF, W.w1, 'Anfang −1 Schlag'); await step('17 Schläge');
     // stop it, play it from the Leiste
     M.hxState(L.id, 'angehalten'); await step('angehalten');

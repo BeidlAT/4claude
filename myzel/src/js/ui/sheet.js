@@ -11,7 +11,7 @@ function buildUI() {
   }
   for (const p of PANELS) panelEls[p.key] = p.build();
   midiDot = $('#midiDot');
-  for (const k in panelEls) { panelEls[k].hidden = true; sheetBody.append(panelEls[k]); }
+  for (const k in panelEls) { panelEls[k].hidden = true; panelEls[k].classList.add('pnl-' + k); sheetBody.append(panelEls[k]); }   // (pnl-…: the panel's colour – css/modul.css)
   const q = $('#quick');
   q.append(ctl('flt.freq', { prefix: 'q-', label: 'Filter' }), ctl('dly.mix', { prefix: 'q-', label: 'Echo' }), ctl('rev.mix', { prefix: 'q-', label: 'Hall' }),
     h('button', { type: 'button', class: 'iconbtn', id: 'btnPanic2', 'data-act': 'stille', 'aria-label': 'Stille: alles sofort stoppen', title: 'Stille: alles sofort stoppen', html: ICON.hush, onclick: panic }));
@@ -34,6 +34,7 @@ function buildUI() {
   }, true);
   $('#startFingerLine').textContent = 'Mehrere gleichzeitig; Wischen schlägt ' + listDe(famPlay().strike) + ' an';
   $('#btnPuls').addEventListener('click', () => { if (!A.started) return; SEQ.on ? seqStop() : seqStart(); });
+  $('#btnStopAll').addEventListener('click', panic);   // (owner, 30.10.2026: „ein globaler Stopp-Knopf … alles beenden“ – the Puls starts on its own button)
   $('#btnFreeze').addEventListener('click', () => { if (A.started) setFreeze(!A.frozen); });
   $('#btnHold').addEventListener('click', () => holdSet(!HOLD.on));
   // Halten from the computer keyboard: Enter, where it would press nothing else (the field, the page)

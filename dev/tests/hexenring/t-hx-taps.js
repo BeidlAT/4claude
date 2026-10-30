@@ -20,7 +20,8 @@ const { ok } = H;
     return { route: M.P['xhxr.route'], to: st.dTo === A.masterIn || (!!M.HX.gM && st.dTo === M.HX.gM && M.HX.gM.gain.value === (M.IDLE.hxOff || M.IDLE.on ? 0 : 1)), gate: M.HX.gM ? M.HX.gM.gain.value : null, hxOff: !!M.IDLE.hxOff, mask: [...M.HX.mask].join(' '), taps: M.MIX.src.filter((s) => s.hxT).map((s) => s.k).join(' '), rec: !!M.PD['xhxr.vol'].rec, inPatch: 'xhxr.vol' in M.patchValues() };
   });
   ok(r.route === 'dir' && r.to, `the strip „Hexenring“ goes straight to A.masterIn (route dir; through its gate – Ruhe: ${r.gate}, closed until the first Schleife: ${r.hxOff}), where „Alles“ listens (myzel-ring-in)`);
-  ok(r.taps === 'fin eb2 rgn gsp' && r.mask === 'fin eb2 rgn gsp', `„Gespielt“ taps the strips ${r.taps} (after their mute/solo gate); the Puls and the Bordun only by the mask`);
+  ok(r.taps === 'fin eb2 eb3 eb4 eb5 eb6 eb7 eb8 rgn gsp' && r.mask === 'fin eb2 eb3 eb4 eb5 eb6 eb7 eb8 rgn gsp',   // (30.10.2026: every Ebene's strip)
+     `„Gespielt“ taps the strips ${r.taps} (after their mute/solo gate); the Puls and the Bordun only by the mask`);
   ok(r.rec && !r.inPatch, 'the strip\'s settings stay out of the patch (a preset never changes the loops)');
 
   // a marker tone in two loops (out 0 burnt in, out 1 through its own copy of the chain), the Bordun playing live
@@ -185,7 +186,7 @@ const { ok } = H;
     const o = { has: !!el(), gone0: gone() };
     const id = M.hxLoopNew({ beats: 4 }); await window.__sleep(200);
     o.gone1 = gone(); o.src = M.mxSrcText('hxr');
-    o.order = [...document.querySelectorAll('.mx-st[data-k]')].map((e) => e.dataset.k).slice(0, 5).join(' ');
+    o.order = [...document.querySelectorAll('.mx-st[data-k]')].map((e) => e.dataset.k).filter((k) => !/^eb[3-8]$/.test(k)).slice(0, 5).join(' ');   // (Ebenen 3–8: hidden while unused, they stand after Ebene 2)
     await M.hxClear(id); await window.__sleep(200);
     o.gone2 = gone(); o.src2 = M.mxSrcText('hxr');
     return o;
