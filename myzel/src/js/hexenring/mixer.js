@@ -76,6 +76,12 @@ function hxmStripOf(o) {
     if (o.pidS) mPid(S.sb, o.pidS);
     ms.append(S.sb);
   }
+  // (30.10.2026) the way: K lit – the Schleife follows the live chain (its dry audio through it); dark – its chain is burnt in
+  if (o.weg) {
+    S.wb = h('button', { type: 'button', class: 'mx-s hxm-weg', 'aria-pressed': 'false', 'aria-label': o.name + ' Weg: Effektkette', title: 'Weg: leuchtend folgt die Schleife der Effektkette (Regler und Presets wirken auf sie); dunkel ist ihre Kette eingebrannt – sie klingt wie aufgenommen' }, h('span', null, 'K'));
+    S.wb.addEventListener('click', () => o.weg.set(!o.weg.get()));
+    ms.append(S.wb);
+  }
   el.append(ms);
   // the stem: scale, meter (canvas), the cap as the fader's knob; the value under it (a double click: 0 dB)
   S.cv = h('canvas', { 'aria-hidden': 'true' });
@@ -110,6 +116,7 @@ function hxmStrip(L0) {
     pan: { get: () => { const L = hxmL(S); return L ? L.pan || 0 : 0; }, set: (v) => { const L = hxmL(S); if (L) hxPan(L, v); } },
     mute: { get: () => { const L = hxmL(S); return !!L && (L.pendTo || L.state) === 'stumm'; }, set: (on) => { const L = hxmL(S); if (L) hxmMute(L, on); } },
     solo: { get: () => !!(HX.solo && hxmL(S) && HX.solo.id === hxmL(S).id), set: () => { const L = hxmL(S); if (L) hxmSolo(L); } },
+    weg: { get: () => { const L = hxmL(S); return !!(L && L.folgt); }, set: (on) => { const L = hxmL(S); if (L) hxFolgt(L, on); } },
     pidV: 'hx.ring.' + n + '.pegel', pidS: 'hx.ring.' + n + '.solo', pidM: 'hx.ring.' + n + '.stumm', pidP: 'hx.ring.' + n + '.balance',
     muteTip: 'Stumm: die Schleife läuft lautlos im Takt weiter (sofort). Auf dem Ring wartet dasselbe auf die Eins.' });
   return S;
@@ -165,12 +172,13 @@ function hxmDrawR(R, dt) {
     hxmText(S, 'src', S.src, hxEngName(L) + ' · ' + (hxTakt(L) ? dec(+(L.d.beats / (L.bpb || 4)).toFixed(2)) + ' T' : dec(hxLen(L).toFixed(1)) + ' s'));   // (short: the strip is narrow – the card says it whole)
     hxmText(S, 'state', S.state, (pv ? 'Vorhören' : st === 'spielt' ? 'spielt' : st === 'stumm' ? 'stumm' : 'angehalten') + (pend ? ' → ' + (pend === 'stumm' ? 'stumm' : 'an') : '') + (HX.fokus === L.id ? ' · Fokus' : ''));
     S.el.classList.toggle('spielt', st === 'spielt'); S.el.classList.toggle('dormant', st !== 'spielt');
+    if (S.wb) { const w = String(!!L.folgt); if (S.wb.getAttribute('aria-pressed') !== w) S.wb.setAttribute('aria-pressed', w); }
     hxmLv(S, m ? m[1] : 0, m ? m[2] : 0, dt, st === 'spielt' || pv);
     try { hxmStrDraw(S); } catch (e) { if (!HXM.err) { HXM.err = 1; console.warn('Hexenring: ein Schleifen-Kanal ließ sich nicht zeichnen', e); } }   // (one strip never blanks the others)
   }
   if (R.all) {
     const A2 = R.all, L2 = MX.ch.hxr && MX.ch.hxr.lv;
-    hxmText(A2, 'src', A2.src, hxSrcText()); hxmText(A2, 'state', A2.state, P['xhxr.mute'] ? 'stumm' : '');
+    hxmText(A2, 'src', A2.src, hxSrcText()); hxmText(A2, 'state', A2.state, (P['xhxr.mute'] ? 'stumm · ' : '') + (P['xhxr.route'] !== 'dir' ? 'Weg: Kette' : 'Weg: direkt'));
     A2.el.classList.toggle('dormant', !!(MX.ch.hxr && MX.ch.hxr.dorm));
     if (L2) { A2.lv = L2; A2.shared = true; }
     hxmStrDraw(A2);
