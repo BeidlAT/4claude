@@ -267,7 +267,7 @@ function kcItems() {
 }
 const kcSigOf = (it) => {
   const s = it.src, o = kcOut(s), B = it.B;
-  return it.key + ':' + (s ? (s.enabled ? 1 : 0) + (s.dup ? 'd' : '') + (profOn(s) ? 'p' : '') + (s.secondary ? 's' : '') + (s.gkr ? 'g' : '') + (s.kind === 'motion' && GK.rem ? 'r' : '') + (s.nkHx ? 'H' : '') + (hxPadsHx(s) ? 'X' : '') : '-') + (o ? 'o' + (o.clock ? 1 : 0) + (o.noClock ? 'n' : '') : '') + (B ? (B.state === 'err' || B.state === 'off' ? 'x' : 'y') + (B.dev && typeof B.dev.forget === 'function' ? 'f' : '') : '');
+  return it.key + ':' + (s && s.name && midiIface(s.name) ? (cbData(s).model || '') : '') + (s ? (s.enabled ? 1 : 0) + (s.dup ? 'd' : '') + (profOn(s) ? 'p' : '') + (s.secondary ? 's' : '') + (s.gkr ? 'g' : '') + (s.kind === 'motion' && GK.rem ? 'r' : '') + (s.nkHx ? 'H' : '') + (hxPadsHx(s) ? 'X' : '') : '-') + (o ? 'o' + (o.clock ? 1 : 0) + (o.noClock ? 'n' : '') : '') + (B ? (B.state === 'err' || B.state === 'off' ? 'x' : 'y') + (B.dev && typeof B.dev.forget === 'function' ? 'f' : '') : '');
 };
 // rebuilt when a device comes, goes or changes a switch; the texts and lights are refreshed in place (devFrame)
 function kcDevsUI() {
@@ -295,6 +295,17 @@ function kcFocus(el, k) {
   if (k === undefined) { const a = document.activeElement; return a && el.contains(a) && a.dataset ? a.dataset.kc || null : null; }
   if (k) { const n = el.querySelector('[data-kc="' + CSS.escape(k) + '"]'); if (n) n.focus({ preventScroll: true }); }
 }
+// which instrument plays through an interface's MIDI input (midi.js MIDI_IFACE): chosen once, kept per port (cbData,
+// by the port's name) – the card names it, the Gerätebild draws it
+function kcModelSel(s, it) {
+  const keys = CB_MODELS.filter((m) => m.id !== 'generic').sort((a, b) => (b.keys > 0) - (a.keys > 0) || (a.maker + a.name).localeCompare(b.maker + b.name, 'de'));
+  const cur = cbData(s).model || '';
+  const sel = h('select', { class: 'kc-msel', 'data-kc': it.key + ':model', 'aria-label': 'Gerät an diesem MIDI-Anschluss' },
+    h('option', { value: '' }, '– welches Gerät hängt daran? –'),
+    ...keys.map((m) => h('option', { value: m.id, selected: m.id === cur ? '' : null }, (m.maker ? m.maker + ' ' : '') + m.name)));
+  sel.addEventListener('change', () => { const d = cbData(s); d.model = sel.value || null; cbSave(s.name, d); MIDI.zv++; KC.sig = ''; updDevUI(); });
+  return h('label', { class: 'kc-mlab' }, 'Am Anschluss: ', sel);
+}
 function kcCard(it) {
   if (it.src && it.src.kind === 'motion') return gkCard(it);
   const s = it.src, B = it.B, C = { it, lit: false, lastT: null };
@@ -311,8 +322,15 @@ function kcCard(it) {
   if (on) {
     mapOf(s);
     const p = s.prof, po = profOn(s), o = kcOut(s);
-    const gm = cbModelFor(s), gmn = gm && gm.id !== 'generic' ? (gm.maker ? gm.maker + ' ' : '') + gm.name : '';   // (owner, 26.10.2026: the PCR-M50 „nirgends erkannt“ – the Gerätebild's model, named here too)
+    // (owner, 26.10.2026: the PCR-M50 „nirgends erkannt“ – the Gerätebild's model, named here too; 26./30.10.2026: „mein
+    // Keyboard ist nicht gelistet“ – it plays through the MIDI input of a Steinberg interface, whose port carries the
+    // interface's name, and „das Gerätebild des Interfaces streichen“) an interface's port names no instrument: the
+    // player says which one hangs on it; until then no Gerätebild – it would draw the interface as a controller
+    const iface = midiIface(s.name), cd = cbData(s), chosen = cd.model && cd.model !== 'generic' ? cbModelOf(cd.model) : null;
+    const gm = iface ? chosen : cbModelFor(s), gmn = gm && gm.id !== 'generic' ? (gm.maker ? gm.maker + ' ' : '') + gm.name : '';
     el.append(h('p', { class: 'kc-prof' }, p ? [h('b', null, p.name), ' erkannt – ' + p.what + (po ? '' : ' (Profil aus)')]
+      : iface && !gmn ? ['MIDI-Anschluss eines Audio-Interfaces – wähle unten, welches Keyboard oder welcher Controller daran hängt. Tasten, Räder und Pedale spielen schon.']
+      : gmn && iface ? [h('b', null, gmn), ' – über diesen MIDI-Anschluss. Tasten, Räder und Pedale spielen; seine Regler und Fader zeigt und belegt das „Gerätebild“.']
       : gmn ? [h('b', null, gmn), ' erkannt – Tasten, Räder und Pedale spielen; seine Regler und Fader zeigt und belegt das „Gerätebild“' + (cbData(s).model ? '' : ' (dort auch ein anderes Modell wählen)') + '.']
       : ['Kein eigenes Profil: Tasten, Räder und Pedale spielen', P['midi.std'] ? ', übliche Regler (CC 7, 10, 74, 91 …) wirken' : '', '. Modell nicht erkannt – im „Gerätebild“ wählst du es aus der Liste, weitere Regler weist du unter „Zuordnungen“ zu.']));
     C.last = h('p', { class: 'kc-last idle' });
@@ -320,7 +338,8 @@ function kcCard(it) {
     const opts = h('div', { class: 'kc-opts' });
     if (p) opts.append(kcSwitch('Profil nutzen', po, (v) => midiSetProfile(s, v), { aria: 'Profil ' + p.name + ' nutzen', key: it.key + ':prof' }));
     if (o && !o.noClock) opts.append(kcSwitch('Tempo senden', o.clock, (v) => midiSetClockOut(o, v), { aria: 'Tempo an ' + it.name + ' senden (MIDI-Clock)', key: it.key + ':clock' }));
-    opts.append(h('button', { type: 'button', class: 'btn', 'data-kc': it.key + ':bild', title: 'Das Gerät gezeichnet, mit allem, was jeder Regler steuert – einmessen, logisch belegen, einzeln ändern', onclick: () => cbOpen(s) }, 'Gerätebild'));   // (26.10.2026)
+    if (iface && !p) opts.append(kcModelSel(s, it));
+    if (!iface || gmn) opts.append(h('button', { type: 'button', class: 'btn', 'data-kc': it.key + ':bild', title: 'Das Gerät gezeichnet, mit allem, was jeder Regler steuert – einmessen, logisch belegen, einzeln ändern', onclick: () => cbOpen(s) }, 'Gerätebild'));   // (26.10.2026)
     if (opts.childNodes.length) el.append(opts);
     if (p && p.id === 'nks' && po) {   // Hexenring: the pads either strike the Spuren or play the Schleifen (pad 8 stays Stille)
       const hx = hxPadsHx(s), pc = (t, on, v, aria) => h('button', { type: 'button', class: 'chip', 'aria-pressed': String(on), 'data-kc': it.key + ':pads' + v, 'aria-label': aria, onclick: () => hxPadsSet(s, v === 'hx') }, t);

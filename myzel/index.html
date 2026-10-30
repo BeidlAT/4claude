@@ -674,6 +674,9 @@ body:not(.mlearn) :is(.gk-ax, .gk-ev) { cursor: default; }
 .lm-sum { margin: 6px 0 8px; font-size: 13px; }
 details.lm-rep { margin: 0 0 10px; max-width: none; }
 .lm-txt { width: 100%; box-sizing: border-box; min-height: 9em; font: 400 11px/1.4 var(--font-num); color: var(--hypha); background: rgba(0,0,0,0.25); border: 1px solid var(--line); border-radius: 6px; padding: 8px; resize: vertical; }
+/* (owner, 26./30.10.2026) which instrument hangs on an audio interface's MIDI input */
+.kc-mlab { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--dim); }
+.kc-msel { background: var(--loam-2); color: var(--hypha); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font: inherit; max-width: 100%; }
 /* ---------- start / resume overlays ---------- */
 .start {
   position: absolute; inset: 0; z-index: 10; overflow-y: auto; display: grid; place-items: center;
@@ -16650,6 +16653,13 @@ const MIDI_AUTO = !MOBILE && !!(navigator.userAgentData && navigator.userAgentDa
 // second ports of multi-port controllers (DAW, Mackie, editor, DIN thru …) repeat or remap what the main port sends:
 // off until the user switches them on
 const MIDI_SECONDARY = /\b(DAW|MCU|HUI|Mackie|ALV|Plugin|Software Control|Editor|DIN|Thru|Through)\b|MIDI(IN|OUT) ?[2-9]\b|\b(Port|Anschluss|Puerto|Porto) [2-9]\b|#[2-9]$|daw control/i;
+// (owner, 26.10.2026 and again 30.10.2026 – lost in the reset of 27.10.: „das Edirol PCR-M50 hängt am MIDI-Eingang
+// eines Steinberg-Interfaces und taucht nicht auf“) the MIDI ports of audio interfaces: the instrument hangs on their
+// DIN input, the port carries the interface's name (Windows „Steinberg UR22C-1“, „Yamaha Steinberg USB MIDI“, a Mac
+// „UR22mkII MIDI“ / „… Port1“). Every such port is a real input – never a second port to switch on first – and names no
+// instrument: the player says which one plays through it (geraet.js kcModelSel), the Gerätebild never draws the box
+const MIDI_IFACE = /steinberg|\bUR[-\s]?(\d|RT|C\b|M\b)|focusrite|scarlett|clarett|\bum-?one\b|midisport|\bmio\d*\b|midi ?interface|usb[- ]?midi ?(cable|interface)|\bmotu\b|presonus|audient|komplete audio|\bumc\s?\d|\bum-?\d|\bua-?\d{1,3}\b|rubix|babyface|fireface|tascam|\bssl ?[2+]|\bid(4|14|22|44)\b|\bevo ?(4|8|16)\b|\bvolt ?\d|minifuse|audiofuse|yamaha ag\d/i;
+const midiIface = (n) => MIDI_IFACE.test(n || '');
 // one device seen through two names (Windows "MIDIIN2 (…)", "2- …" for a second unit, " Bluetooth" on a Mac …)
 const devName = (n) => String(n || '').toLowerCase().replace(/^\d+-\s*/, '').replace(/^midi(in|out)\s*\d*\s*\((.*)\)$/, '$2').trim();
 // the name to show where room is short: without the port's function ("nanoKEY Studio KEYBOARD/CTRL" → "nanoKEY Studio")
@@ -16679,7 +16689,7 @@ function midiSource(key, name, kind, port) {
   let src = MIDI.srcs.get(key);
   if (!src) MIDI.srcs.set(key, (src = { key, dir: 'in', chs: [], mcm: null, mzOn: null, sense: false, lastIn: 0, act: 0, last: null, relVel: false, dup: false }));
   src.name = name || 'MIDI-Gerät'; src.kind = kind; src.port = port || null;
-  src.secondary = MIDI_SECONDARY.test(src.name);
+  src.secondary = MIDI_SECONDARY.test(src.name) && !midiIface(src.name);   // (an interface's „MIDI 2“, „DIN“: a real input)
   const pr = portPref(src);
   src.enabled = pr.on != null ? !!pr.on : !src.secondary;
   return src;
@@ -17704,6 +17714,21 @@ function mapApply(b, src, ev) {
     if (d) tStep(T, b.inv ? -d : d, cx);
     return true;
   }
+  // (owner, 26.10.2026: „Vorige Skala“ on a slider reacted only when it crossed the middle – it pressed once there, the
+  // 0.5 edge below; again 30.10.2026, lost in the reset of 27.10.) a fader or knob on a stepping target browses: each
+  // sixteenth of its travel one step, up the target's own way, down back; a control that only ever sends 0 and 127 (a
+  // button sending CC) still presses
+  if (!edge && m === 'abs' && T.step && !T.cont && ev.type === 'cc' && !b.hires) {
+    if (raw > 0.01 && raw < 0.99) st.fader = true;
+    if (st.fader) {
+      const x = raw * 16, z0 = st.fz == null ? Math.min(15, Math.floor(x)) : st.fz;
+      let z = z0;   // (a sixteenth's zone, left only 1/16 of a zone past its edge: a trembling slider does not flap)
+      if (x >= z0 + 1.0625 || x < z0 - 0.0625) z = Math.max(0, Math.min(15, Math.floor(x)));
+      const n = z - z0; st.fz = z;
+      for (let i = 0; i < Math.abs(n); i++) tStep(T, (b.inv ? -1 : 1) * Math.sign(n), cx);
+      return true;
+    }
+  }
   // values become presses and releases where the mode or the target wants a button
   const btn = m === 'toggle' || m === 'momentary' || m === 'trigger';
   if (!edge && (btn || !T.cont)) {
@@ -18400,7 +18425,9 @@ function cbOpen(src) {
   if (!CB.raf) CB.raf = requestAnimationFrame(cbFrame);
 }
 function cbClose() { CB.on = false; CB.step = -1; CB.wait = null; if (CB.el) CB.el.hidden = true; if (CB.raf) cancelAnimationFrame(CB.raf); CB.raf = 0; }
-const cbSources = () => [...MIDI.srcs.values()].filter((s) => s.kind !== 'motion' && s.kind !== 'ble' && s.enabled && !s.secondary).concat([...BLE.devs.values()].map((B) => B.src).filter(Boolean));
+// (an interface's MIDI port only once the player said which instrument hangs on it – geraet.js kcModelSel; owner,
+// 30.10.2026: „das Gerätebild des Interfaces streichen“)
+const cbSources = () => [...MIDI.srcs.values()].filter((s) => s.kind !== 'motion' && s.kind !== 'ble' && s.enabled && !s.secondary && !(midiIface(s.name) && !cbModelOf(cbData(s).model))).concat([...BLE.devs.values()].map((B) => B.src).filter(Boolean));
 function cbBuild() {
   CB.el = h('div', { class: 'cb', hidden: true, role: 'dialog', 'aria-label': 'Gerätebild' });
   CB.el.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); if (CB.step >= 0) cbCalStop(); else if (CB.sel) { CB.sel = null; cbRender(); } else cbClose(); } });
@@ -18411,7 +18438,7 @@ function cbRender() {
   const btn = (t, fn, tip, cls) => { const b = h('button', { type: 'button', class: 'btn' + (cls ? ' ' + cls : ''), title: tip || '' }, t); b.addEventListener('click', fn); return b; };
   const head = h('div', { class: 'cb-h' }, h('h2', null, 'Gerätebild'));
   const srcs = cbSources();
-  if (srcs.length > 1) { const sel = h('select', { class: 'cb-dev', 'aria-label': 'Gerät' }, ...srcs.map((s) => h('option', { value: s.key, selected: s === src ? '' : null }, s.name))); sel.addEventListener('change', () => { CB.src = srcs.find((s) => s.key === sel.value) || null; CB.sel = null; cbRender(); }); head.append(sel); }
+  if (srcs.length > 1) { const sel = h('select', { class: 'cb-dev', 'aria-label': 'Gerät' }, ...srcs.map((s) => { const m = cbModelOf(cbData(s).model); return h('option', { value: s.key, selected: s === src ? '' : null }, s.name + (m && m.id !== 'generic' && !(m.re && m.re.test(s.name)) ? ' · ' + m.name : '')); })); sel.addEventListener('change', () => { CB.src = srcs.find((s) => s.key === sel.value) || null; CB.sel = null; cbRender(); }); head.append(sel); }
   else head.append(h('span', { class: 'cb-dn' }, src ? src.name : 'kein Gerät verbunden'));
   const x = btn('✕', cbClose, 'Schließen (Esc)', 'ghost cb-x'); x.setAttribute('aria-label', 'Schließen'); head.append(h('span', { class: 'cb-sp' }), x);
   if (!src) { el.replaceChildren(head, h('p', { class: 'cb-note' }, 'Schließe einen MIDI-Controller an (USB oder Bluetooth) – dann zeigt Myzel ihn hier mit allen Belegungen.')); return; }
@@ -31719,7 +31746,7 @@ function kcItems() {
 }
 const kcSigOf = (it) => {
   const s = it.src, o = kcOut(s), B = it.B;
-  return it.key + ':' + (s ? (s.enabled ? 1 : 0) + (s.dup ? 'd' : '') + (profOn(s) ? 'p' : '') + (s.secondary ? 's' : '') + (s.gkr ? 'g' : '') + (s.kind === 'motion' && GK.rem ? 'r' : '') + (s.nkHx ? 'H' : '') + (hxPadsHx(s) ? 'X' : '') : '-') + (o ? 'o' + (o.clock ? 1 : 0) + (o.noClock ? 'n' : '') : '') + (B ? (B.state === 'err' || B.state === 'off' ? 'x' : 'y') + (B.dev && typeof B.dev.forget === 'function' ? 'f' : '') : '');
+  return it.key + ':' + (s && s.name && midiIface(s.name) ? (cbData(s).model || '') : '') + (s ? (s.enabled ? 1 : 0) + (s.dup ? 'd' : '') + (profOn(s) ? 'p' : '') + (s.secondary ? 's' : '') + (s.gkr ? 'g' : '') + (s.kind === 'motion' && GK.rem ? 'r' : '') + (s.nkHx ? 'H' : '') + (hxPadsHx(s) ? 'X' : '') : '-') + (o ? 'o' + (o.clock ? 1 : 0) + (o.noClock ? 'n' : '') : '') + (B ? (B.state === 'err' || B.state === 'off' ? 'x' : 'y') + (B.dev && typeof B.dev.forget === 'function' ? 'f' : '') : '');
 };
 // rebuilt when a device comes, goes or changes a switch; the texts and lights are refreshed in place (devFrame)
 function kcDevsUI() {
@@ -31747,6 +31774,17 @@ function kcFocus(el, k) {
   if (k === undefined) { const a = document.activeElement; return a && el.contains(a) && a.dataset ? a.dataset.kc || null : null; }
   if (k) { const n = el.querySelector('[data-kc="' + CSS.escape(k) + '"]'); if (n) n.focus({ preventScroll: true }); }
 }
+// which instrument plays through an interface's MIDI input (midi.js MIDI_IFACE): chosen once, kept per port (cbData,
+// by the port's name) – the card names it, the Gerätebild draws it
+function kcModelSel(s, it) {
+  const keys = CB_MODELS.filter((m) => m.id !== 'generic').sort((a, b) => (b.keys > 0) - (a.keys > 0) || (a.maker + a.name).localeCompare(b.maker + b.name, 'de'));
+  const cur = cbData(s).model || '';
+  const sel = h('select', { class: 'kc-msel', 'data-kc': it.key + ':model', 'aria-label': 'Gerät an diesem MIDI-Anschluss' },
+    h('option', { value: '' }, '– welches Gerät hängt daran? –'),
+    ...keys.map((m) => h('option', { value: m.id, selected: m.id === cur ? '' : null }, (m.maker ? m.maker + ' ' : '') + m.name)));
+  sel.addEventListener('change', () => { const d = cbData(s); d.model = sel.value || null; cbSave(s.name, d); MIDI.zv++; KC.sig = ''; updDevUI(); });
+  return h('label', { class: 'kc-mlab' }, 'Am Anschluss: ', sel);
+}
 function kcCard(it) {
   if (it.src && it.src.kind === 'motion') return gkCard(it);
   const s = it.src, B = it.B, C = { it, lit: false, lastT: null };
@@ -31763,8 +31801,15 @@ function kcCard(it) {
   if (on) {
     mapOf(s);
     const p = s.prof, po = profOn(s), o = kcOut(s);
-    const gm = cbModelFor(s), gmn = gm && gm.id !== 'generic' ? (gm.maker ? gm.maker + ' ' : '') + gm.name : '';   // (owner, 26.10.2026: the PCR-M50 „nirgends erkannt“ – the Gerätebild's model, named here too)
+    // (owner, 26.10.2026: the PCR-M50 „nirgends erkannt“ – the Gerätebild's model, named here too; 26./30.10.2026: „mein
+    // Keyboard ist nicht gelistet“ – it plays through the MIDI input of a Steinberg interface, whose port carries the
+    // interface's name, and „das Gerätebild des Interfaces streichen“) an interface's port names no instrument: the
+    // player says which one hangs on it; until then no Gerätebild – it would draw the interface as a controller
+    const iface = midiIface(s.name), cd = cbData(s), chosen = cd.model && cd.model !== 'generic' ? cbModelOf(cd.model) : null;
+    const gm = iface ? chosen : cbModelFor(s), gmn = gm && gm.id !== 'generic' ? (gm.maker ? gm.maker + ' ' : '') + gm.name : '';
     el.append(h('p', { class: 'kc-prof' }, p ? [h('b', null, p.name), ' erkannt – ' + p.what + (po ? '' : ' (Profil aus)')]
+      : iface && !gmn ? ['MIDI-Anschluss eines Audio-Interfaces – wähle unten, welches Keyboard oder welcher Controller daran hängt. Tasten, Räder und Pedale spielen schon.']
+      : gmn && iface ? [h('b', null, gmn), ' – über diesen MIDI-Anschluss. Tasten, Räder und Pedale spielen; seine Regler und Fader zeigt und belegt das „Gerätebild“.']
       : gmn ? [h('b', null, gmn), ' erkannt – Tasten, Räder und Pedale spielen; seine Regler und Fader zeigt und belegt das „Gerätebild“' + (cbData(s).model ? '' : ' (dort auch ein anderes Modell wählen)') + '.']
       : ['Kein eigenes Profil: Tasten, Räder und Pedale spielen', P['midi.std'] ? ', übliche Regler (CC 7, 10, 74, 91 …) wirken' : '', '. Modell nicht erkannt – im „Gerätebild“ wählst du es aus der Liste, weitere Regler weist du unter „Zuordnungen“ zu.']));
     C.last = h('p', { class: 'kc-last idle' });
@@ -31772,7 +31817,8 @@ function kcCard(it) {
     const opts = h('div', { class: 'kc-opts' });
     if (p) opts.append(kcSwitch('Profil nutzen', po, (v) => midiSetProfile(s, v), { aria: 'Profil ' + p.name + ' nutzen', key: it.key + ':prof' }));
     if (o && !o.noClock) opts.append(kcSwitch('Tempo senden', o.clock, (v) => midiSetClockOut(o, v), { aria: 'Tempo an ' + it.name + ' senden (MIDI-Clock)', key: it.key + ':clock' }));
-    opts.append(h('button', { type: 'button', class: 'btn', 'data-kc': it.key + ':bild', title: 'Das Gerät gezeichnet, mit allem, was jeder Regler steuert – einmessen, logisch belegen, einzeln ändern', onclick: () => cbOpen(s) }, 'Gerätebild'));   // (26.10.2026)
+    if (iface && !p) opts.append(kcModelSel(s, it));
+    if (!iface || gmn) opts.append(h('button', { type: 'button', class: 'btn', 'data-kc': it.key + ':bild', title: 'Das Gerät gezeichnet, mit allem, was jeder Regler steuert – einmessen, logisch belegen, einzeln ändern', onclick: () => cbOpen(s) }, 'Gerätebild'));   // (26.10.2026)
     if (opts.childNodes.length) el.append(opts);
     if (p && p.id === 'nks' && po) {   // Hexenring: the pads either strike the Spuren or play the Schleifen (pad 8 stays Stille)
       const hx = hxPadsHx(s), pc = (t, on, v, aria) => h('button', { type: 'button', class: 'chip', 'aria-pressed': String(on), 'data-kc': it.key + ':pads' + v, 'aria-label': aria, onclick: () => hxPadsSet(s, v === 'hx') }, t);
@@ -34511,8 +34557,8 @@ const hxName = (L) => 'Schleife ' + (L.slot + 1);
 const hxEngName = (L) => (L.bew ? 'Bewegung' : ENG_NAME[L.eng] || '');
 function hxLenText(L) {
   if (!hxTakt(L)) return 'frei · ' + dec(hxLen(L).toFixed(1)) + ' s';
-  const bars = L.d.beats / (L.bpb || 4);
-  return (Number.isInteger(bars) ? bars + (bars === 1 ? ' Takt' : ' Takte') : L.d.beats + ' Schläge') + (L.bpb === 3 ? ' (3er)' : '');
+  const bt = +L.d.beats.toFixed(4), bars = +(bt / (L.bpb || 4)).toFixed(4);   // (owner, 26.10.2026: a trim's „16.000000000000004 Schläge“ – 4 Takte)
+  return (Number.isInteger(bars) ? bars + (bars === 1 ? ' Takt' : ' Takte') : dec(+bt.toFixed(2)) + ' Schläge') + (L.bpb === 3 ? ' (3er)' : '');
 }
 
 // ---- Ernten (KONZEPT §2.3): what a Korb tap at heard time T takes – and where the Schleife enters ----
@@ -37259,29 +37305,44 @@ function hxHumSlice(H, c) {
   if (H.aud[0] && H.aud[0].dr) { const per = HX_CH / 128, b = Math.floor(off / 128), mx = H.aud.length * per - 1; dr = new Float32Array(Math.ceil(c.n / 128) + 1); for (let k = 0; k < dr.length; k++) { const q = Math.min(mx, b + k), ch = H.aud[Math.floor(q / per)]; dr[k] = ch && ch.dr ? ch.dr[q % per] : 0; } }
   return { aud, dr };
 }
+// (owner, 26.10.2026: „es passt überhaupt nicht zusammen“; again 30.10.2026 – lost in the reset of 27.10.) the window
+// that sounds, in the Ernte's frames: the cut's – or, trimmed (band.js: the cut keeps the whole's w0 … w1 and only its
+// pre moves, stale), the part of it that plays; null when what plays is no longer the Ernte's audio as it was
+// (mirrored, at another tape speed, doubled)
+function hxHumWin(L, S) {
+  const c = S && S.cut; if (!c) return null;
+  if (!c.stale) return { w0: c.w0, w1: c.w1 };
+  const T = L && L.trim && L.tr0 && L.tr0.sch.find((s) => s.key === S.key);
+  if (!T || !T.cut || T.cut.stale || L.rev || (L.sp || 1) !== 1 || (L.tr0.sp || 1) !== 1) return null;
+  const w0 = c.f0 + c.pre; return { w0, w1: w0 + c.len };
+}
+// the margins a fresh cut of that window gets (hxCut): how near the Ernte's ends the window may go
+const hxHumMar = (S, W) => { const n = hxCut(S.cut.in, 0, 0, { f0: W.w0, f1: W.w1 }); return { pre: n.pre, post: n.post }; };
 // the loop's window moved or resized in its Ernte (frames, absolute): heard at once when its length stays, else from the
-// next seam; one step in the history
+// next seam; one step in the history. A trimmed loop's window is the part that plays – moved, it is a whole cut of its own
 function hxHumApply(L, w0, w1, label) {
   hxRxWait();   // (a stretch's edit still in the Workers: written first – abschnitt.js)
   const S = L && HX.sch.get(L.sch[0]), H = L && L.hum;
   if (!S || !H) return false;
   if (L.sch.length > 1) { toast('Den Ausschnitt in der Ernte wählst du bei einer Schleife mit einer Schicht – lege die Schichten erst zusammen.'); return false; }
   if (!S.aud) { toast('Einen Moment – die Schleife wird noch aufgenommen.'); return false; }
-  const c = S.cut, tk = hxTakt(L), beatF = tk ? c.len / L.d.beats : 0;
+  const c = S.cut, W = hxHumWin(L, S), tk = hxTakt(L), beatF = tk ? c.len / L.d.beats : 0;
+  if (!W) { toast('Diese Schleife spielt verwandelt (rückwärts, anderes Band, verdoppelt) – den Ausschnitt in der Ernte wählst du erst nach „Wieder ganz“.'); return false; }
   w0 = Math.round(w0); w1 = Math.round(w1);
-  if (w0 === c.w0 && w1 === c.w1) return false;
+  if (w0 === W.w0 && w1 === W.w1) return false;
   const nc = hxCut(c.in, 0, 0, { f0: w0, f1: w1 });
   if (!hxHumOf(nc)) { toast('So weit reicht die Ernte nicht.'); return false; }
   const nb = tk ? Math.max(1, Math.round((w1 - w0) / beatF)) : 0, geom = tk ? (nb !== L.d.beats ? { beats: nb } : null) : (w1 - w0 !== L.d.L ? { L: w1 - w0 } : null);
-  const before = hxGeo(L), key = L.key, sw = geom ? hxNextSeam(L) : hxSwapAt(L);
+  const before = hxGeo(L), key = L.key, sw = geom ? hxNextSeam(L) : hxSwapAt(L), tr = { trim: L.trim, tr0: L.tr0 };
   hxSchSwap(S, nc, { f: sw.f, now: !!sw.now, geom });
+  L.trim = null; L.tr0 = null;   // (what plays is a cut of the Ernte again – „Wieder ganz“ has nothing to go back to)
   const after = {};
-  hxHist({ kind: 'recut', label: hxName(L) + ': ' + (label || 'Ausschnitt in der Ernte'), undo() { const X = hxByKey(key); if (X) { after.g = hxGeo(X); hxGeoBack(X, before); } }, redo() { const X = hxByKey(key); if (X && after.g) hxGeoBack(X, after.g); } });
+  hxHist({ kind: 'recut', label: hxName(L) + ': ' + (label || 'Ausschnitt in der Ernte'), undo() { const X = hxByKey(key); if (X) { after.g = hxGeo(X); hxGeoBack(X, before); X.trim = tr.trim; X.tr0 = tr.tr0; } }, redo() { const X = hxByKey(key); if (X && after.g) { hxGeoBack(X, after.g); X.trim = null; X.tr0 = null; } } });
   hxSay(hxName(L) + ': ' + (label || 'Ausschnitt in der Ernte')); hxSaveLoop(L); hxRailDirty(); hxCardDirty();
   return true;
 }
 // Grundeinstellung: the window as harvested
-function hxHumReset(L) { const H = L && L.hum, S = L && HX.sch.get(L.sch[0]); if (H && S && L.sch.length === 1 && (S.cut.w0 !== H.w0 || S.cut.w1 !== H.w1)) hxHumApply(L, H.w0, H.w1, 'Ausschnitt wie geerntet'); }
+function hxHumReset(L) { const H = L && L.hum, S = L && HX.sch.get(L.sch[0]), W = hxHumWin(L, S); if (H && W && L.sch.length === 1 && (W.w0 !== H.w0 || W.w1 !== H.w1)) hxHumApply(L, H.w0, H.w1, 'Ausschnitt wie geerntet'); }
 
 // ---- the editor's row: the Ernte whole, the loop's window in it ----
 const HXEH = { drag: null };
@@ -37293,10 +37354,10 @@ function hxEdHumRow(L) {
   const cv = h('canvas', { class: 'hx-ed-humcv', role: 'img', 'aria-label': 'Ganze Ernte von ' + hxName(L) + ' mit dem Ausschnitt der Schleife' });
   HXE.hcv = cv;
   const sec = (f) => (f >= 60 * SR ? Math.floor(f / SR / 60) + ':' + String(Math.floor(f / SR) % 60).padStart(2, '0') + ' min' : dec((f / SR).toFixed(1)) + ' s');
-  const tk = hxTakt(L), one = L.sch.length === 1;
-  const info = h('span', { class: 'hx-ms' }, 'Die ganze Ernte: ' + sec(hxHumView(H).n) + ' ab dem ersten Ton' + (tk ? ' · Ausschnitt ' + hxLenText(L) : ' · Ausschnitt ' + sec(S.cut.len)) + (one ? '' : ' – den Ausschnitt verschiebst du bei einer Schicht (Schichten zusammenlegen)'));
+  const tk = hxTakt(L), W = hxHumWin(L, S), one = L.sch.length === 1 && !!W;
+  const info = h('span', { class: 'hx-ms' }, 'Die ganze Ernte: ' + sec(hxHumView(H).n) + ' ab dem ersten Ton' + (tk ? ' · Ausschnitt ' + hxLenText(L) : ' · Ausschnitt ' + sec(S.cut.len)) + (one ? '' : !W ? ' – die Schleife spielt verwandelt (rückwärts, anderes Band, verdoppelt): der Ausschnitt lässt sich erst nach „Wieder ganz“ verschieben' : ' – den Ausschnitt verschiebst du bei einer Schicht (Schichten zusammenlegen)'));
   const btn = (t, fn, tip) => { const b = h('button', { type: 'button', class: 'btn ghost', title: tip }, t); b.addEventListener('click', fn); b.disabled = !one; return b; };
-  const beatF = tk ? S.cut.len / L.d.beats : 0, c = () => S.cut;   // (read at the click: one click after another adds up)
+  const beatF = tk ? S.cut.len / L.d.beats : 0, c = () => hxHumWin(L, HX.sch.get(L.sch[0])) || W || S.cut;   // (read at the click: one click after another adds up; a trimmed loop's: the part that plays)
   // (owner, 29.10.2026: „jeweils eine Auswahl, was vorne oder hinten dazukommt oder wegkommt … auch 1/32 oder gar 1/64 …
   // triolisches Raster würde wohl auch Sinn machen … zusätzlich nächsten Ton einrasten“) the step: a Takt loop's in note
   // values (a beat is a quarter), straight or as triplets (⅔); a free loop's in seconds. Anfang and Ende each take it away
@@ -37359,22 +37420,22 @@ const hxHumX = (H, f, w) => { const V = hxHumView(H); return ((f - V.f0) / Math.
 function hxHumDrag(box, L) {
   const fr = (e) => { const r = HXE.hcv.getBoundingClientRect(), V = hxHumView(L.hum); return V.f0 + clamp((e.clientX - r.left) / Math.max(1, r.width), 0, 1) * V.n; };
   box.addEventListener('pointerdown', (e) => {
-    const S = HX.sch.get(L.sch[0]), H = L.hum; if (!S || !H || e.button > 0) return;
-    const r = HXE.hcv.getBoundingClientRect(), x = e.clientX - r.left, xa = hxHumX(H, S.cut.w0, r.width), xb = hxHumX(H, S.cut.w1, r.width);
+    const S = HX.sch.get(L.sch[0]), H = L.hum, W = hxHumWin(L, S); if (!S || !H || !W || e.button > 0) return;
+    const r = HXE.hcv.getBoundingClientRect(), x = e.clientX - r.left, xa = hxHumX(H, W.w0, r.width), xb = hxHumX(H, W.w1, r.width);
     const mode = Math.abs(x - xa) < 8 ? 'a' : Math.abs(x - xb) < 8 ? 'b' : x > xa && x < xb ? 'm' : 'j';
-    HXEH.drag = { L, mode, f: fr(e), w0: S.cut.w0, w1: S.cut.w1, v0: S.cut.w0, v1: S.cut.w1, moved: false };
-    if (mode === 'j') { const len = S.cut.w1 - S.cut.w0, st = hxHumSnap(L, fr(e) - len / 2, e, S); Object.assign(HXEH.drag, { mode: 'm', w0: st, w1: st + len, v0: st, v1: st + len, moved: true }); }   // (a press beside the window: it jumps there, centred – dragging on moves it)
+    HXEH.drag = { L, mode, f: fr(e), w0: W.w0, w1: W.w1, v0: W.w0, v1: W.w1, mar: hxHumMar(S, W), moved: false };
+    if (mode === 'j') { const len = W.w1 - W.w0, st = hxHumSnap(L, fr(e) - len / 2, e, S); Object.assign(HXEH.drag, { mode: 'm', w0: st, w1: st + len, v0: st, v1: st + len, moved: true }); }   // (a press beside the window: it jumps there, centred – dragging on moves it)
     box.setPointerCapture(e.pointerId); e.preventDefault(); hxHumDraw();
   });
   box.addEventListener('pointermove', (e) => {
-    const D = HXEH.drag; if (!D || D.L !== L) { const S = HX.sch.get(L.sch[0]), H = L.hum; if (S && H && HXE.hcv) { const r = HXE.hcv.getBoundingClientRect(), x = e.clientX - r.left; box.style.cursor = Math.abs(x - hxHumX(H, S.cut.w0, r.width)) < 8 || Math.abs(x - hxHumX(H, S.cut.w1, r.width)) < 8 ? 'ew-resize' : 'grab'; } return; }
+    const D = HXEH.drag; if (!D || D.L !== L) { const S = HX.sch.get(L.sch[0]), H = L.hum, W = hxHumWin(L, S); if (S && H && W && HXE.hcv) { const r = HXE.hcv.getBoundingClientRect(), x = e.clientX - r.left; box.style.cursor = Math.abs(x - hxHumX(H, W.w0, r.width)) < 8 || Math.abs(x - hxHumX(H, W.w1, r.width)) < 8 ? 'ew-resize' : 'grab'; } return; }
     const S = HX.sch.get(L.sch[0]), H = L.hum; if (!S || !H) return;
     const d = fr(e) - D.f, minF = hxTakt(L) ? S.cut.len / L.d.beats : 0.1 * SR, maxF = hxTakt(L) ? (S.cut.len / L.d.beats) * 128 * (L.bpb || 4) : H.n;
     let v0 = D.w0, v1 = D.w1;
     if (D.mode === 'm') { v0 = hxHumSnap(L, D.w0 + d, e, S); v1 = v0 + (D.w1 - D.w0); }
     else if (D.mode === 'a') { v0 = clamp(hxHumSnap(L, D.w0 + d, e, S), D.w1 - maxF, D.w1 - minF); }
     else { v1 = clamp(hxHumSnap(L, D.w1 + d, e, S), D.w0 + minF, D.w0 + maxF); }
-    const lo = H.f0 + S.cut.pre, hi = H.f0 + H.n - S.cut.post;   // (its margins inside the Ernte)
+    const lo = H.f0 + D.mar.pre, hi = H.f0 + H.n - D.mar.post;   // (its margins inside the Ernte – a fresh cut's)
     if (v0 < lo) { const k = lo - v0; v0 += k; if (D.mode !== 'a') v1 += k; }
     if (v1 > hi) { const k = v1 - hi; v1 -= k; if (D.mode !== 'b') v0 -= k; }
     D.v0 = v0; D.v1 = v1; D.moved = D.moved || Math.abs(d) > 0.002 * H.n; hxHumDraw();
@@ -37384,9 +37445,10 @@ function hxHumDrag(box, L) {
 }
 // a frame on the loop's grid: its beats (Umschalt: bars) counted from where it starts, a free loop's 10 ms
 function hxHumSnap(L, f, e, S) {
-  if (!hxTakt(L)) { const q = 0.01 * SR; return S.cut.w0 + Math.round((f - S.cut.w0) / q) * q; }
+  const a = (hxHumWin(L, S) || S.cut).w0;
+  if (!hxTakt(L)) { const q = 0.01 * SR; return a + Math.round((f - a) / q) * q; }
   const beatF = S.cut.len / L.d.beats, q = e && e.shiftKey ? beatF * (L.bpb || 4) : beatF;
-  return S.cut.w0 + Math.round((f - S.cut.w0) / q) * q;
+  return a + Math.round((f - a) / q) * q;
 }
 // the strip: the Ernte's peaks (made once per width), its bars, the loop's window bright, the rest dim
 function hxHumDraw() {
@@ -37405,7 +37467,7 @@ function hxHumDraw() {
     let m = 1e-4; for (let x = 0; x < W; x++) m = Math.max(m, -mn[x], mx[x]);
     H.pk = { W, mn, mx, m };
   }
-  const D = HXEH.drag && HXEH.drag.L === L ? HXEH.drag : null, v0 = D ? D.v0 : S.cut.w0, v1 = D ? D.v1 : S.cut.w1;
+  const Wn = hxHumWin(L, S) || S.cut, D = HXEH.drag && HXEH.drag.L === L ? HXEH.drag : null, v0 = D ? D.v0 : Wn.w0, v1 = D ? D.v1 : Wn.w1;
   const xa = hxHumX(H, v0, w), xb = hxHumX(H, v1, w), amp = (hh * 0.44) / Math.max(H.pk.m, 0.05);
   c.clearRect(0, 0, w, hh); c.fillStyle = '#120e0b'; c.fillRect(0, 0, w, hh);
   c.fillStyle = 'rgba(255,179,92,.10)'; c.fillRect(xa, 0, Math.max(1, xb - xa), hh);
@@ -41742,7 +41804,7 @@ function hxSpeed(L, sp, o = {}) {
   const pw = HX.pend.find((x) => x.kind === 'band' && x.loop === L.id && !x.replay); if (pw) { hxPendDrop(pw); pw.cancel(); }
   const was = L.sp || 1; if (Math.abs(was - sp) < 1e-9) { hxCardDirty(); hxRailDirty(); return; }
   const sw = hxNextSeam(L), f = sw.f, k = sw.k - 1, takt = hxTakt(L);
-  const geo = takt ? { beats: (L.d.beats * was) / sp } : { L: Math.round((L.d.L * was) / sp) }, P1 = takt ? (geo.beats * 60) / tgBpm(hxT(f)) : geo.L / SR;
+  const geo = takt ? { beats: +((L.d.beats * was) / sp).toFixed(6) } : { L: Math.round((L.d.L * was) / sp) }, P1 = takt ? (geo.beats * 60) / tgBpm(hxT(f)) : geo.L / SR;
   const T = Math.max(0.05, Math.min(P['hx.traeg'], 0.9 * P1));
   const d0 = Object.assign({}, L.d);
   hxBatch(() => hxPost({ geom: Object.assign({ loop: L.id, f }, geo), band: { loop: L.id, f, vs: sp, T: Math.round(T * SR) } }));
@@ -41850,7 +41912,7 @@ function hxBandTrimDo(L, f, a) {
     const S = hxSchByKey(s.key); if (!S || !s.aud) return;
     const len = Math.max(1, Math.round(s.len * f)), pre = s.pre + Math.round(s.len * a), X = Math.round(0.01 * SR);
     const c = Object.assign({}, s.cut, { pre, len, post: s.n - pre - len, n: s.n, aus: whole && s.aus ? Object.assign({}, s.aus) : null, stale: true });
-    const geom = j === 0 ? (tk ? { beats: T0.d.beats * f * ks } : { L: Math.round(T0.d.L * f * ks) }) : null;
+    const geom = j === 0 ? (tk ? { beats: +(T0.d.beats * f * ks).toFixed(6) } : { L: Math.round(T0.d.L * f * ks) }) : null;
     hxSchSwap(S, c, { aud: s.aud, bak: s.bak, f: sw.f, join: whole ? s.join : 'xf', X: whole ? s.X : X, rho: whole ? s.rho : hxRho(s.bak && S.chain && !L.folgt ? s.bak : s.aud, s.n, pre, len, X), zo: whole ? s.zo : 0, kc: whole ? s.kc : hxSeamOf({ pre, len, X, zo: 0 }, s.aud), kcB: whole ? s.kcB : s.bak ? hxSeamOf({ pre, len, X, zo: 0 }, s.bak) : null, dr: s.dr, geom,
       fade: whole && s.aus ? Math.min(Math.round(0.03 * SR), s.aus.len) : 0 });
     S.wn = s.wn ? hxWnWin(s.wn, a, f) : S.wn;
