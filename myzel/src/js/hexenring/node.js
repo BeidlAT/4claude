@@ -24,7 +24,58 @@ function hxPost(m, tr) {
     if (Object.keys(m).some((k) => k in B.m)) { const o = B.m, t = B.tr; B.m = {}; B.tr = []; try { HX.node.port.postMessage(o, t); } catch (e) { console.warn(e); } }
     Object.assign(B.m, m); if (tr) B.tr.push(...tr); return true;
   }
+  if ((m.replace && ((m.replace.chunks && m.replace.chunks.length > HX_STG_N) || HXS.q.length)) || (m.ddGo && m.ddGo.dst && m.ddGo.dst.length > HX_STG_N)) { hxStg(m, tr); return true; }
   try { HX.node.port.postMessage(m, tr || []); return true; } catch (e) { console.warn(e); return false; }
+}
+// (owner, 30.10.2026: „eine Übergabe der Schleifen darf nicht passieren, wenn es gerade intensiver zur Sache geht – oder
+// sie muss sanfter erfolgen, so dass man es nicht merkt … in Chrome muss es reibungslos gehen“) a version for the
+// processor (a Wuchs or Treu version, a bake, a re-cut from the page's audio – up to 10 MB; the buffers of a de-drifted
+// version, ddGo) went in one message: its
+// hundreds of buffers taken over on the audio thread in one go, beside a full block in Chrome's 10-ms buffer. Now its
+// chunks go ahead in portions of HX_STG_N, one portion every few ms, spread over the time until its frame (at most
+// 0.4 s); the replace itself, the same message as before, follows and names them (stg). A swap heard at once (XM) waits
+// while much is played (the voices' load over half the budget, ≤ 3 s), and its frame moves on by the time it took.
+// One version after another, in order – a later message for the same Schicht never overtakes it.
+const HX_STG_N = 8, HXS = { q: [], run: false, id: 0 };
+HX.frP = new Map();
+// (what else the message carries – a new length at the same frame, the tempo – goes at once: the processor queues the
+// replace behind it by its frame, as before)
+function hxStg(m, tr) {
+  const key = m.replace ? 'replace' : 'ddGo', d = m[key], ch = (key === 'replace' ? d.chunks : d.dst) || [], cp = d.copy || [], mine = new Set(), seg = [{ ch, k: 'stg' }];
+  for (const c of ch.concat(cp)) mine.add(c[0].buffer).add(c[1].buffer);
+  for (const a of [d.dr, d.drc]) if (a && a.buffer) mine.add(a.buffer);
+  if (cp.length) { seg.push({ ch: cp, k: 'cpStg' }); d.copy = null; d.cpStg = ++HXS.id; }
+  if (key === 'replace') d.chunks = null; else d.dst = null;
+  d.stg = ++HXS.id;
+  const rest = Object.assign({}, m); delete rest[key];
+  if (Object.keys(rest).length) try { HX.node.port.postMessage(rest, (tr || []).filter((b) => !mine.has(b))); } catch (e) { console.warn(e); }
+  HXS.q.push({ m: { [key]: d }, d, seg, s: 0, i: 0, tr: [d.dr, d.drc].filter((a) => a && a.buffer && (tr || []).includes(a.buffer)).map((a) => a.buffer), t0: performance.now(), node: HX.node });
+  if (!HXS.run) hxStgRun();
+}
+// much played: the voices' own load (the notes sounding now) over 40 % of the budget
+const hxStgBusy = () => { let c = 0; for (const v of A.voices) c += v.cost || 0; return c > 0.4 * VBUDGET; };
+function hxStgRun() {
+  const J = HXS.q[0];
+  if (!J) { HXS.run = false; return; }
+  HXS.run = true;
+  if (J.node !== HX.node || !HX.node) { HXS.q.shift(); hxStgRun(); return; }   // (a new context: what was for the old one is void)
+  const d = J.d, now = performance.now();
+  if (!J.i && !J.s && d.XM != null && hxStgBusy() && now - J.t0 < 3000) { setTimeout(hxStgRun, 100); return; }
+  let left = 0; for (let s = J.s; s < J.seg.length; s++) left += Math.ceil((J.seg[s].ch.length - (s === J.s ? J.i : 0)) / HX_STG_N);
+  if (left > 0) {
+    const ms = d.f != null && Number.isFinite(d.f) ? Math.min(400, ((d.f - hxF(hxNowT())) / SR) * 1000 - 40) : 400;   // (all there before its frame)
+    const per = Math.max(1, Math.ceil(left / Math.max(1, Math.floor(ms / 5))));
+    for (let p = 0; p < per && J.s < J.seg.length; p++) {
+      const G = J.seg[J.s], part = G.ch.slice(J.i, J.i + HX_STG_N), t = []; for (const c of part) t.push(c[0].buffer, c[1].buffer);
+      if (part.length) try { HX.node.port.postMessage({ stg: { id: d[G.k], i0: J.i, ch: part } }, t); } catch (e) { console.warn(e); }
+      J.i += part.length; if (J.i >= G.ch.length) { J.s++; J.i = 0; }
+    }
+    if (J.s < J.seg.length) { setTimeout(hxStgRun, 5); return; }
+  }
+  HXS.q.shift();
+  if (d.XM != null && d.f != null) d.f = Math.max(d.f, Math.round(hxF(hxNowT() + 0.06)));   // (heard at once: from now)
+  try { HX.node.port.postMessage(J.m, J.tr); } catch (e) { console.warn(e); }
+  if (HXS.q.length) setTimeout(hxStgRun, 5); else HXS.run = false;
 }
 // the Taktgeber's segments from index i on, in the processor's frames (it replaces its own from the first one's frame)
 function hxSeg(i, reset) {
@@ -44,7 +95,7 @@ function hxNode() {
   let node;
   try {
     node = new AudioWorkletNode(ctx, 'myzel-ring', { numberOfInputs: 4, numberOfOutputs: 3, outputChannelCount: [2, 2, 2 * HX_SENDS], channelCount: 2, channelCountMode: 'explicit',
-      channelInterpretation: 'speakers', processorOptions: { humusS: hum, chunk: HX_CH, rid: (HX.rid = (HX.rid || 0) + 1), drift: 1, rings: 4, mic: 1 } });   // (step 4: in 3 and a fourth ring – the Mikro's, its chunks when it is first switched on)   // (step 1d: out 2 – the sends of Nähren, a pair per slot; step 2b: in 2 and a third ring – the Puls's lanes)
+      channelInterpretation: 'speakers', processorOptions: { humusS: hum, chunk: HX_CH, rid: (HX.rid = (HX.rid || 0) + 1), drift: 1, rings: 4, mic: 1, pace: 1 } });   // (step 4: in 3 and a fourth ring – the Mikro's, its chunks when it is first switched on)   // (step 1d: out 2 – the sends of Nähren, a pair per slot; step 2b: in 2 and a third ring – the Puls's lanes)
   } catch (e) { console.warn(e); HX.state = 'kein'; return; }
   // „Alles“ = what is heard, the Schleifen included: the master's input, into a node of its own downstream of it
   // (myzel-ring-in) that writes this node's ring 1 at its frames – no cycle, so no delay that depends on the graph
@@ -90,6 +141,12 @@ function hxParam(id) {
   hxRailDirty(); hxCardDirty();
 }
 function hxMsg(m) {
+  // (30.10.2026) what comes back in portions (hxStg's other half – dsp/ring.js gvFlush): joined with its last
+  for (const k of ['freed', 'filled']) {
+    const d = m[k]; if (!d) continue;
+    if (d.part != null) { const a = HX.frP.get(d.part); if (a) a.push(...d.chunks); else HX.frP.set(d.part, d.chunks.slice()); return; }
+    if (d.pid != null) { const a = HX.frP.get(d.pid); if (a) { HX.frP.delete(d.pid); d.chunks = a.concat(d.chunks); } }
+  }
   if (!m) return;
   if (m.frame != null) { HX.fR = m.frame; HX.tR = m.t; HX.rsw = m.rsw; }   // (rsw: the loops' resampler runs in WebAssembly – „Leistung messen“ tells)
   if (m.nan) { (HX.nan = HX.nan || []).push(m.nan); if (HX.nan.length > 8) HX.nan.shift(); console.warn('Hexenring: non-finite samples scrubbed', JSON.stringify(m.nan)); }   // (step 2b: the processor's tripwire)

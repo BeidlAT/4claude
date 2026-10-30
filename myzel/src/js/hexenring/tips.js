@@ -187,6 +187,7 @@ const HX_TIP_P = {
   'hx.start': 'Wann eine Aufnahme beginnt: auf der nächsten Eins, mit deinem ersten Ton oder sofort.',
   'hx.raster': 'Worauf eine Aufnahme beginnt und endet: Frei – du bestimmst es selbst; Takt, ½ Takt oder ¼ – genau auf diesem Raster, auch die erste Schleife (ohne Takt zählt Myzel einen Takt im Puls-Tempo ein).',
   'hx.ein': 'Ob vor der Aufnahme eingezählt wird – sichtbar, mit Vibration oder hörbar.',
+  'hx.taktbild': 'Tempo und Takt sehen: der Bildschirm pulsiert dezent – die Eins in Orange, die anderen Schläge neutral; um den Längen-Knopf läuft ein Kreis, eine Runde ist die eingestellte Länge.',
   'hx.klick': 'Ein hörbarer Klick zum Mitspielen: nur beim Einzählen oder durchgehend.',
   'hx.laenge': 'Wie lang neue Schleifen werden: automatisch erkannt, so lang wie Schleife 1 oder fest.',
   'hx.festT': 'Die feste Länge neuer Schleifen in Takten.',

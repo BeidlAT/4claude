@@ -26,7 +26,7 @@ function hxLenBuild() {
   window.addEventListener('resize', () => { if (HXLEN.open) hxLenPlace(); });
   const stop = () => { clearTimeout(HXLEN.rep0); clearInterval(HXLEN.rep); };
   for (const ev of ['pointerup', 'pointercancel', 'blur']) window.addEventListener(ev, stop, true);   // (a held tempo step ends wherever it is let go)
-  for (const id of ['hx.laenge', 'hx.festT', 'seq.bpm', 'hx.ein', 'hx.klick']) bindCtl(id, () => { hxLenFace(); if (HXLEN.open) hxLenUpd(); });
+  for (const id of ['hx.laenge', 'hx.festT', 'seq.bpm', 'hx.ein', 'hx.klick', 'hx.taktbild']) bindCtl(id, () => { hxLenFace(); if (HXLEN.open) hxLenUpd(); });
 }
 // the button's face: the bars a new recording will take (big), „Takte“ under it; auto / =1 otherwise
 function hxLenFace() {
@@ -35,6 +35,7 @@ function hxLenFace() {
   if (b.dataset.k !== k) {
     b.dataset.k = k; b.dataset.l = l;
     b.replaceChildren(h('b', null, l === 'fest' ? String(n) : l === 'wie1' ? '=1' : 'auto'), h('span', { class: 'w' }, l === 'fest' ? (n === 1 ? 'Takt' : 'Takte') : 'Länge'));
+    if (HXTB.ring) b.prepend(HXTB.ring);   // (Takt sehen: its ring stays – taktbild.js)
   }
   const aria = 'Länge neuer Schleifen: ' + hxLenSay() + ' – Auswahl öffnen';
   if (b.getAttribute('aria-label') !== aria) b.setAttribute('aria-label', aria);
@@ -88,12 +89,14 @@ function hxLenRender() {
     .map(([v, t]) => chip(t, P['hx.ein'] === v, () => setParam('hx.ein', v), { aus: 'Nicht einzählen: das Feld zeigt die Zählzeiten trotzdem.', sicht: 'Die Zählzeiten groß auf dem Feld.', vib: 'Das Gerät vibriert auf jeder Zählzeit.', ton: 'Ein Klick auf jeder Zählzeit vor der Aufnahme.' }[v], 'Einzählen ' + t, 'ein', v)));
   const kl = row('Klick', 'Ein hörbarer Klick zum Mitspielen (nur für dich – er kommt nicht in die Schleife).', ...[['aus', 'aus'], ['zaehl', 'Einzählen'], ['ein', 'immer']]
     .map(([v, t]) => chip(t, P['hx.klick'] === v, () => setParam('hx.klick', v), { aus: 'Kein Klick.', zaehl: 'Ein Klick nur beim Einzählen.', ein: 'Ein Klick auf jedem Schlag, solange ein Takt läuft.' }[v], 'Klick ' + t, 'kl', v)));
+  const tb = row('Takt sehen', 'Der Bildschirm pulsiert dezent im Takt – die Eins in Orange, die anderen Schläge neutral; um diesen Knopf läuft ein Kreis, eine Runde ist die eingestellte Länge.', ...[[false, 'aus'], [true, 'an']]
+    .map(([v, t]) => chip(t, !!P['hx.taktbild'] === v, () => setParam('hx.taktbild', v), v ? 'Takt sehen: Puls am Bildschirmrand und der Kreis um diesen Knopf.' : 'Kein Puls am Bildschirm.', 'Takt sehen ' + t, 'tb', String(v))));
   const more = h('button', { type: 'button', class: 'hx-lenmore', title: 'Alle Einstellungen der Aufnahme in der Karte: Beginn, Raster, Hauptknopf, Puls und Bordun mit, Speicher …' }, 'Alle Einstellungen …');
   more.addEventListener('click', () => {
     hxLenOpen(false); hxCardOpen();
     setTimeout(() => { const fb = HXK.sec && HXK.sec.querySelector('[aria-controls="kc-hxset"]'); if (!fb) return; if (fb.getAttribute('aria-expanded') !== 'true') fb.click(); fb.scrollIntoView({ block: 'start', behavior: 'smooth' }); }, 220);
   });
-  pop.replaceChildren(h('div', { class: 'hx-lh' }, 'Neue Schleife'), len, tempo, ein, kl, (HXLEN.note = h('p', { class: 'note' }, hxLenNote())), more);
+  pop.replaceChildren(h('div', { class: 'hx-lh' }, 'Neue Schleife'), len, tempo, ein, kl, tb, (HXLEN.note = h('p', { class: 'note' }, hxLenNote())), more);
 }
 const hxLenSig = () => { const n = P['hx.festT']; return hxGrid() + '|' + (HX_LEN_Q.includes(n) ? '' : n) + '|' + (P['hx.laenge'] === 'wie1'); };
 const hxLenBpm = () => (hxGrid() ? dec(tgBpm(hxNowT()).toFixed(1)) : Math.round(P['seq.bpm'])) + ' BPM';
@@ -101,7 +104,7 @@ const hxLenBpm = () => (hxGrid() ? dec(tgBpm(hxNowT()).toFixed(1)) : Math.round(
 function hxLenUpd() {
   const pop = HXU.lenPop; if (!pop || pop.hidden) return;
   if (HXLEN.sig !== hxLenSig()) { const a = document.activeElement, f = a && pop.contains(a) ? (a.dataset.g ? '[data-g="' + a.dataset.g + '"][data-v="' + a.dataset.v + '"]' : null) : null; hxLenRender(); if (f) { const e = pop.querySelector(f); if (e) e.focus(); } return; }
-  const l = P['hx.laenge'], n = P['hx.festT'], on = { len: l === 'fest' ? String(n) : l, ein: P['hx.ein'], kl: P['hx.klick'] };
+  const l = P['hx.laenge'], n = P['hx.festT'], on = { len: l === 'fest' ? String(n) : l, ein: P['hx.ein'], kl: P['hx.klick'], tb: String(!!P['hx.taktbild']) };
   for (const c of pop.querySelectorAll('.chip[data-g]')) { const v = String(on[c.dataset.g] === c.dataset.v); if (c.getAttribute('aria-pressed') !== v) c.setAttribute('aria-pressed', v); }
   if (HXLEN.bpm) { const t = hxLenBpm(); if (HXLEN.bpm.textContent !== t) HXLEN.bpm.textContent = t; }
   if (HXLEN.note) { const t = hxLenNote(); if (HXLEN.note.textContent !== t) HXLEN.note.textContent = t; }

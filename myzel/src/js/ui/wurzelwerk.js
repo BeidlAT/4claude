@@ -19,7 +19,7 @@ const wwLabel = (k) => { if (/^a:/.test(k)) { const t = MTARGETS.get(k.slice(2))
 ICON.knot = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="2.6"/><path d="M12 9.4V3.8M12 14.6v5.6M9.7 10.8 4.6 7.8M14.3 13.2l5.1 3M9.7 13.2l-5.1 3M14.3 10.8l5.1-3"/><circle cx="12" cy="3.4" r="1.1" fill="currentColor"/><circle cx="4.3" cy="7.6" r="1.1" fill="currentColor"/><circle cx="19.7" cy="16.4" r="1.1" fill="currentColor"/></svg>';
 ICON.spore = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3.4" fill="currentColor" stroke="none"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>';
 const WW_GROUPS = [
-  { k: 'schleifen', t: 'Schleifen', c: 'var(--spore)', ids: ['hx.beginn', ['hx.folgen', 'Tonart folgen'], 'hx.laenge', 'hx.start', 'hx.ein', 'hx.klick'] },
+  { k: 'schleifen', t: 'Schleifen', c: 'var(--spore)', ids: ['hx.beginn', ['hx.folgen', 'Tonart folgen'], 'hx.laenge', 'hx.start', 'hx.ein', 'hx.klick', 'hx.taktbild'] },
   { k: 'klang', t: 'Klang & Presets', c: 'var(--lilac)', ids: ['ui.tonart', 'ui.instrument', 'ui.leer', 't.root', 't.scale', ['rev.mix', 'Hall'], ['dly.mix', 'Echo'], ['flt.freq', 'Filter']] },
   { k: 'takt', t: 'Takt', c: 'var(--lumen)', ids: ['midi.clock'] },
   { k: 'geraet', t: 'Gerät', c: 'var(--rose)', ids: ['dev.lat', 'dev.q'] },

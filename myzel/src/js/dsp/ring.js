@@ -8,6 +8,7 @@
   // It counts its own frames (currentFrame can stall), reports {frame, t} every 0.25 s, plays on while the page hangs
   // and never allocates a buffer in process(): every buffer comes from the page, the scratch is made here once.
   const RS_T = 32, RS_N = 256, RS_C = RS_T / 2 - 1, HP = Math.PI / 2, RINGS = {};   // (RINGS: the Rings by rid, for myzel-ring-in)
+  const HX_GV_N = 8;   // chunks a block gives back to the page at most (16 transfers: ≈ 0.2 ms)
   const HX_TN = 16;   // tail streams a Schicht reads at once (step 2a: a Wuchs pass's tail rings under up to 15 passes after it)
   let RS = null;   // (RS_N + 1) × RS_T: phase p / RS_N of a frame, tap t at offset t − 15 − p / RS_N
   // (step 2b) a tape read faster than its own rate (speed steps up a fifth or an octave, their servo's overshoot) needs
@@ -105,11 +106,16 @@
       this.bG = new Float32Array(S); this.gSl = new Float32Array(S); this.slQ = new Float64Array(3); this.AB = [new Float32Array(S), new Float32Array(S)];   // (step 2b: a stop's fade, a slice's gains, a worn Schicht's own sum)   // (step 1d: Schluss „welkend“, the sends to the loops' own webs)
       this.rep = 0; this.met = 0; this.nA = 0; this.late = 0; this.wpt = []; this.wrep = 0;   // (step 2a: the Werk-Rahmen's ports – the live frame every 0.1 s)
       this.gW = new WeakMap();   // (step 2b: a chunk given back – by what, at which frame – for the tripwire's report)
+      // (owner, 30.10.2026: „eine Übergabe der Schleifen darf man nicht merken“ – Chrome, 10-ms buffers) a version moves in
+      // portions, never in one message: the page sends its chunks ahead (stg, a few per message), the replace then names
+      // them; what goes back to the page goes HX_GV_N chunks per block (one message of 300 chunks held this thread 8 ms)
+      this.gvPace = !!po.pace; this.gvOut = []; this.gvId = 0; this.stg = new Map();
       this.port.onmessage = (e) => this.msg(e.data);
       for (const m of po.msgs || []) this.msg(m);   // (offline renders: port messages arrive only at a suspend)
     }
     // ---- messages: what has a frame f is queued and acts at that frame; the rest at once ----
     msg(m) {
+      if (m.stg) { const d = m.stg; let a = this.stg.get(d.id); if (!a) this.stg.set(d.id, (a = [])); for (let i = 0; i < d.ch.length; i++) a[d.i0 + i] = d.ch[i]; }
       if (!m) return;
       if (m.pool) { const H = m.ring != null ? this.hum[m.ring] : null; for (const c of m.pool) { const h = m.ring != null ? (H && H.length < this.hN ? H : null) : this.hum.find((x, i) => i < this.nB && x.length < this.hN); (h || this.free).push(c); } }
       if (this.hum[this.nB - 1].length === this.hN) this.hOK = true;
@@ -151,7 +157,7 @@
       if (m.wport) { this.wpt.push(m.wport); m.wport.__id = m.wid; }   // (step 2a: a Werk-Rahmen's own port – the live frame every 0.1 s, for its pacing)
       if (m.wportOff != null) for (let i = 0; i < this.wpt.length; i++) if (this.wpt[i].__id === m.wportOff) { try { this.wpt[i].close(); } catch (e) {} this.wpt.splice(i--, 1); }   // (Leistung: a realm renewed – its port goes)
       if (m.tau) for (const L of this.loops) if (L.id === m.tau.loop) for (const S of L.sch) { S.tau = !!m.tau.on; if (S.tau) this.ddAsk(S); }
-      if (m.ddGo) this.ddStart(m.ddGo);   // (step 1d) the page's chunks for a de-drifted version
+      if (m.ddGo) { const d = m.ddGo; if (d.stg != null) { d.dst = this.stg.get(d.stg) || []; this.stg.delete(d.stg); d.stg = null; } this.ddStart(d); }   // (step 1d) the page's chunks for a de-drifted version
       // (step 1d) Nähren: a loop's output, post level and state, into its own pair of output 2 (ch: 0…7; −1 off) – the send
       // that feeds its own web (no tap hears output 2); a fade of X frames either way
       if (m.send) for (const d of [].concat(m.send)) { const L = this.lp(d.loop); if (!L) continue; const on = d.ch != null && d.ch >= 0; if (on) L.sendCh = d.ch | 0; envGo(L.sg, on ? (d.g != null ? +d.g : 1) : 0, this.xf(d.X)); }
@@ -207,6 +213,8 @@
       if (S.kcN != null) { S.kc = S.kcN || null; S.kcN = null; }
     }
     at(kind, d) {
+      if (d.stg != null) { d.chunks = this.stg.get(d.stg) || []; this.stg.delete(d.stg); d.stg = null; }   // (its chunks came ahead, in portions)
+      if (d.cpStg != null) { d.copy = this.stg.get(d.cpStg) || []; this.stg.delete(d.cpStg); d.cpStg = null; }
       const f = d.f == null ? -Infinity : Math.round(d.f), e = { f, kind, d, S: null };
       if (kind === 'schicht' || kind === 'replace') {   // (objects are made here, in the message – process() only links them)
         const B = e.S = this.newBuf(d);
@@ -375,7 +383,7 @@
       const n = Math.ceil((S.tot * 1.012 + 1024) / this.CH), dst = this.ddPool ? this.take(n) : null;
       if (dst) this.ddStart({ schicht: S.id, pv: S.pv, dst }); else this.port.postMessage({ ddReq: { schicht: S.id, pv: S.pv, n } });
     }
-    ddBack(id, dst) { if (!dst) return; const tr = [], H = this.held([]); dst = dst.filter((c) => !H.has(c[0]) || (this.heldBad({ schicht: id, dd: 1 }, c, H.get(c[0])), false)); for (const c of dst) { tr.push(c[0].buffer, c[1].buffer); this.gW.set(c[0], ['ddBack', id, this.F]); } this.port.postMessage({ freed: { schicht: id, old: 1, chunks: dst } }, tr); }
+    ddBack(id, dst) { if (!dst) return; const tr = [], H = this.held([]); dst = dst.filter((c) => !H.has(c[0]) || (this.heldBad({ schicht: id, dd: 1 }, c, H.get(c[0])), false)); for (const c of dst) { tr.push(c[0].buffer, c[1].buffer); this.gW.set(c[0], ['ddBack', id, this.F]); } if (this.gvPace && dst.length > HX_GV_N) { this.gvOut.push({ what: { schicht: id, old: 1 }, ch: dst, id: ++this.gvId }); return; } this.port.postMessage({ freed: { schicht: id, old: 1, chunks: dst } }, tr); }
     ddStart(d) {   // (in a message: everything it needs is made here)
       const S = this.sch(d.schicht), dst = d.dst;
       if (!S || S.pv !== d.pv || S.ddA || S.dying || S.dead || !S.dr || !dst || !dst.length) { this.ddBack(d.schicht, dst); return; }
@@ -719,7 +727,16 @@
     give(what, bufs, Lx) {
       const ch = [], tr = [], seen = new Set(), H = this.held(bufs, Lx);
       for (const B of bufs) for (const list of [B.ch, B.ac]) for (const c of list || []) if (c && c[0].buffer.byteLength && !seen.has(c[0])) { if (H.has(c[0])) { this.heldBad(what, c, H.get(c[0])); continue; } seen.add(c[0]); ch.push(c); tr.push(c[0].buffer, c[1].buffer); this.gW.set(c[0], [what, this.F]); }   // (step 2a: a slot's chunks not yet streamed are null; step 2b: who gave it back, for the tripwire)
+      if (this.gvPace && ch.length > HX_GV_N) { this.gvOut.push({ what, ch, id: ++this.gvId }); return; }
       this.port.postMessage({ freed: Object.assign(what, { chunks: ch }) }, tr);
+    }
+    // a block's portion of what goes back: HX_GV_N chunks (the last portion carries what it was – the page joins them)
+    gvFlush() {
+      const G = this.gvOut[0]; if (!G) return;
+      const part = G.ch.splice(0, HX_GV_N), tr = []; for (const c of part) tr.push(c[0].buffer, c[1].buffer);
+      const k = G.key || 'freed';
+      if (G.ch.length) { this.port.postMessage({ [k]: { part: G.id, chunks: part } }, tr); return; }
+      this.gvOut.shift(); this.port.postMessage({ [k]: Object.assign(G.what, { chunks: part, pid: G.id }) }, tr.concat(G.tr || []));
     }
     // (step 2b) the chunks a read still holds – a living Schicht's version, its old one, the parked ones, its stream's
     // fallback, its tails: never transferred (a detached chunk reads as nothing – NaN); what is being given is left out
@@ -928,7 +945,9 @@
       if (J.S) {   // a live fill: the Schicht keeps its chunks, the page gets the copy
         const tr = []; if (J.cp) for (const c of J.cp) { tr.push(c[0].buffer, c[1].buffer); this.gW.set(c[0], ['filled', J.id, this.F]); }
         if (J.drc) tr.push(J.drc.buffer);
-        this.port.postMessage({ filled: { schicht: J.id, v: J.v, chunks: J.cp, f0: J.f0, n: J.f1 - J.f0, lost: J.lost, dr: J.drc || null } }, tr);
+        const fd = { schicht: J.id, v: J.v, chunks: J.cp, f0: J.f0, n: J.f1 - J.f0, lost: J.lost, dr: J.drc || null };
+        if (this.gvPace && J.cp && J.cp.length > HX_GV_N) this.gvOut.push({ key: 'filled', what: fd, ch: J.cp.slice(), id: ++this.gvId, tr: J.drc ? [J.drc.buffer] : [] });
+        else this.port.postMessage({ filled: fd }, tr);
         if (J.S.id != null && J.lost >= 0) this.ddAsk(J.S);   // (step 1d: complete – its de-drifted version)
         return;
       }
@@ -963,6 +982,7 @@
       // between bursts: the bar is twice the usual gap between bursts, at least 20 ms; a gap over 2 s is the context
       // suspended and resumed, no stall)
       const tw = Date.now(), gap0 = this.pT ? tw - this.pT : 0, gap = gap0 > 2000 ? 0 : gap0; this.pT = tw;
+      if (this.gvOut.length) this.gvFlush();
       if (gap > 2) this.gE = this.gE ? this.gE + 0.02 * (Math.min(gap, 4 * this.gE) - this.gE) : gap;
       const o0 = outputs[0], o1 = outputs[1], n = o0 && o0[0] ? o0[0].length : 128;
       const est = currentFrame - this.done;
