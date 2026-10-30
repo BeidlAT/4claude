@@ -2,6 +2,14 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-30e",
+      "punkte": [
+        "Verzerrung behoben, die in jedem Preset auftreten konnte: Wurde kräftig oder mehrstimmig gespielt, schnitt die Effektkette alles über der Vollaussteuerung hart ab – auch mit Verzerrung auf 0. Jetzt hat sie 19 dB Luft; darunter klingt alles wie vorher.",
+        "Handpan-Kreis spielt ohne Röhre (dein Wunsch vom 26.10. war beim Zurücksetzen verloren gegangen).",
+        "Harmonizer und die anderen Effekte der Rückwege „Effekt“ und „Effekt 2“ stehen jetzt auch auf der Seite Effekte, nicht nur im Mixer."
+      ]
+    },
+    {
       "id": "2026-10-30d",
       "punkte": [
         "Kurzwellenritual neu: am Senderknopf durch die Nacht – Stationen huschen vorbei, alle im gespielten Ton, ein Pausenzeichen läutet, darunter Bordun und Ätherwelle.",

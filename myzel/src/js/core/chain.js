@@ -13,12 +13,18 @@ function vokConnect(c, k, src) {
 function makeChain() {
   const ctx = A.ctx, c = { in: G(1) };
   // drive: one shaper whose curve already contains the dry/wet blend
-  c.drv = ctx.createWaveShaper();
-  c.in.connect(c.drv);
+  // (owner, 30.10.2026: „Handpan-Kreis immer noch verzerrt“, „Kurzwellenritual von Haus aus verzerrt – der Effekt Verzerrung
+  // hat keinen Einfluss“) a WaveShaper clamps what lies beyond ±1 to its curve's ends: everything played into the chain
+  // above 0 dBFS was cut off hard here, whatever the drive was set to (measured at this input, played densely: Kurzwelle
+  // +5.3 dBFS, 9618 samples cut; Kalimbatraum +1.3; Handpan −3.8 – little room). Now the shaper works DRV_H times lower
+  // (its curve spans ±DRV_H, driveCurve) and the level is made up after it: below 0 dBFS the same curve on the same
+  // points, above it room up to +19 dB; the Begrenzer at the end catches the peaks
+  c.drvPre = G(1 / DRV_H); c.drv = ctx.createWaveShaper(); c.drvOut = G(DRV_H);
+  c.in.connect(c.drvPre).connect(c.drv).connect(c.drvOut);
   // ring modulator
   c.rngDry = G(1); c.rngWet = G(0); c.rngVca = G(0); c.rngOut = G(1);
-  c.drv.connect(c.rngDry).connect(c.rngOut);
-  c.drv.connect(c.rngVca).connect(c.rngWet).connect(c.rngOut);
+  c.drvOut.connect(c.rngDry).connect(c.rngOut);
+  c.drvOut.connect(c.rngVca).connect(c.rngWet).connect(c.rngOut);
   A.rngOsc.connect(c.rngVca.gain);
   // filter + LFO
   c.flt = BQ(P['flt.type'], P['flt.freq'], P['flt.q']);
