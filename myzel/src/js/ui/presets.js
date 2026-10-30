@@ -73,7 +73,7 @@ const PRESETS = [
   { key: 'regenwald', name: 'Regenwald', tags: 'Perkussiv · Natur', desc: 'Tropfen, Kalimbas und körnige Vogelstimmen in verschobenen Kreisen; ein Schwarm summt darüber.', v: {
     'v.eng': 'trp', 't.root': '7', 't.scale': 'mpent', 't.oct': 3, 't.range': 3,
     'trp.chirp': 1.2, 'trp.decay': 0.6, 'trp.rain': 0.4, 'kor.src': 'voegel', 'kor.dens': 14, 'kor.size': 0.18, 'kor.scat': 0.5, 'kor.att': 0.05, 'kor.rel': 1.2,
-    'klb.decay': 1.8, 'klb.buzz': 0.1, 'swm.chaos': 0.35, 'swm.chirp': 0.6,
+    'klb.decay': 1.8, 'swm.chaos': 0.35, 'swm.chirp': 0.6,
     'dly.div': '0.75', 'dly.fb': 0.4, 'dly.mix': 0.3, 'rev.size': 3.5, 'rev.mix': 0.4, 'mov.pan': 0.35, 'seq.bpm': 96, 'seq.swing': 0.15,
     'l0.on': true, 'l0.eng': 'trp', 'l0.steps': 16, 'l0.puls': 7, 'l0.div': '0.25', 'l0.deg': 5, 'l0.oct': 0, 'l0.walk': 0.6, 'l0.prob': 0.7, 'l0.vol': 0.55, 'l0.bright': 0.6, 'l0.pan': -0.3,
     'l1.on': true, 'l1.eng': 'klb', 'l1.steps': 12, 'l1.puls': 5, 'l1.div': '0.25', 'l1.deg': 2, 'l1.walk': 0.4, 'l1.prob': 0.85, 'l1.vol': 0.5, 'l1.bright': 0.5, 'l1.pan': 0.35,
@@ -81,7 +81,7 @@ const PRESETS = [
     'l3.on': true, 'l3.eng': 'swm', 'l3.steps': 7, 'l3.puls': 1, 'l3.div': '1', 'l3.deg': 0, 'l3.vol': 0.25, 'l3.bright': 0.4 } },
   { key: 'kalimbatraum', name: 'Kalimbatraum', tags: 'Perkussiv · Polyrhythmus', desc: 'Zwei Kalimbas im Fünf-gegen-Sieben über einem weichen Subbass, Tropfen fallen dazwischen.', v: {
     'v.eng': 'klb', 't.root': '4', 't.scale': 'akebono', 't.oct': 3, 't.range': 3,
-    'klb.decay': 2.6, 'klb.over': 0.55, 'klb.thumb': 0.4, 'klb.body': 0.6, 'klb.buzz': 0.2, 'tie.drive': 0.35, 'tie.rel': 0.4,
+    'klb.decay': 2.6, 'klb.over': 0.55, 'klb.thumb': 0.4, 'klb.body': 0.6, 'tie.drive': 0.35, 'tie.rel': 0.4,
     'dly.div': '0.75', 'dly.fb': 0.45, 'dly.pp': 0.9, 'dly.mix': 0.35, 'rev.size': 4, 'rev.mix': 0.35, 'seq.bpm': 104,
     'l0.on': true, 'l0.eng': 'klb', 'l0.steps': 8, 'l0.puls': 5, 'l0.div': '0.25', 'l0.deg': 0, 'l0.walk': 0.5, 'l0.vol': 0.6, 'l0.bright': 0.5, 'l0.pan': -0.4,
     'l1.on': true, 'l1.eng': 'klb', 'l1.steps': 12, 'l1.puls': 7, 'l1.div': '0.25', 'l1.deg': 4, 'l1.oct': 1, 'l1.walk': 0.3, 'l1.prob': 0.9, 'l1.vol': 0.45, 'l1.bright': 0.6, 'l1.pan': 0.45,
@@ -124,11 +124,11 @@ const PRESETS = [
     'l2.on': true, 'l2.eng': 'rnk', 'l2.steps': 7, 'l2.puls': 2, 'l2.div': '1', 'l2.bright': 0.7, 'l2.vol': 0.4, 'l3.on': false,
     'rev.mix': 0.45, 'rev.size': 9, 'cho.mix': 0.2 } },
   { key: 'kompostgarten', name: 'Kompostgarten', tags: 'Perkussiv · Polyrhythmus', desc: 'Ein Holzstab im Herbst, darum zerfallende Kompostglocken, ein kratzender Zapfen und ein Netz aus Saiten – vier Spuren gegeneinander.', v: {
-    'v.eng': 'jrg', 'jrg.jahreszeit': 'herbst', 'jrg.laub': 0.5, 't.root': '4', 't.scale': 'pelog', 't.oct': 3, 't.range': 3, 'seq.bpm': 92, 'seq.swing': 0.14,
+    'v.eng': 'jrg', 'jrg.jahreszeit': 'herbst', 't.root': '4', 't.scale': 'pelog', 't.oct': 3, 't.range': 3, 'seq.bpm': 92, 'seq.swing': 0.14,
     'l0.on': true, 'l0.eng': 'mdr', 'l0.steps': 16, 'l0.puls': 5, 'l0.oct': -1, 'l0.bright': 0.7,
     'l1.on': true, 'l1.eng': 'zpf', 'l1.steps': 12, 'l1.puls': 7, 'l1.bright': 0.35, 'l1.vol': 0.4,
     'l2.on': true, 'l2.eng': 'jrg', 'l2.steps': 7, 'l2.puls': 3, 'l2.div': '0.5', 'l2.walk': 0.5,
-    'l3.on': true, 'l3.eng': 'gsp', 'l3.steps': 11, 'l3.puls': 2, 'l3.div': '1', 'gsp.kopplung': 0.5, 'drv.amt': 0.2, 'rev.mix': 0.35 } },
+    'l3.on': true, 'l3.eng': 'gsp', 'l3.steps': 11, 'l3.puls': 2, 'l3.div': '1', 'gsp.kopplung': 0.5, 'rev.mix': 0.35 } },   // (owner, 30.10.2026: „ein unschönes Zischen/Verzerrtes als Begleitton“ – no leaves, the drive at its default)
   { key: 'atemrohr', name: 'Atemrohr', tags: 'Experimentell · Atem', desc: 'Ein Rohrblatt, darunter eine Oktave tiefer eine Rückkopplung, die nachglüht; eine Spur bläst kurze Stöße ins Echo.', v: {
     'v.eng': 'hlm', 'hlm.rohr': 'rohrblatt', 'hlm.luft': 0.5, 'v.layer': 'glt', 'v.layerInt': -12, 'v.layerLvl': 0.35, 'glt.gluehen': 0.45, 'glt.nachgluehen': 2.5,
     't.root': '2', 't.scale': 'dor', 't.oct': 3, 't.range': 2, 'v.glide': 0.15,
@@ -157,7 +157,7 @@ const PRESETS = [
   // the demo of Gestik's signature: its recipe is Sporenregen with Kalimba, and it brings a Fährte that leans the rain
   { key: 'sporenfaehrte', name: 'Sporenregen + Bewegung', tags: 'Gestik · Generativ', desc: 'Gestik einschalten, ein paar Töne spielen: eine Schleife aus Bewegung neigt den Kalimba-Regen hin und her, er spielt deine Töne von selbst.', fmt: 2, fae: rzDemoFae(), v: {
     'v.eng': 'klb', 'v.layer': 'glo', 'v.layerLvl': 0.15, 'v.layerInt': 12, 't.root': '2', 't.scale': 'mpent', 't.oct': 3, 't.range': 3,
-    'klb.decay': 2.2, 'klb.over': 0.5, 'klb.thumb': 0.35, 'klb.body': 0.6, 'klb.buzz': 0.12, 'glo.ratio': 3.5, 'glo.index': 2, 'glo.decay': 3,
+    'klb.decay': 2.2, 'klb.over': 0.5, 'klb.thumb': 0.35, 'klb.body': 0.6, 'glo.ratio': 3.5, 'glo.index': 2, 'glo.decay': 3,
     'dly.div': '0.75', 'dly.fb': 0.45, 'dly.pp': 0.8, 'dly.mix': 0.3, 'rev.size': 6, 'rev.mix': 0.45, 'mov.pan': 0.3, 'seq.bpm': 84,
     'l0.on': true, 'l0.eng': 'tie', 'l0.steps': 16, 'l0.puls': 3, 'l0.div': '0.25', 'l0.deg': 0, 'l0.oct': -1, 'l0.vol': 0.55, 'l0.bright': 0.3,
     'l1.on': false, 'l2.on': false, 'l3.on': false,
