@@ -3407,6 +3407,9 @@ function makeShaperCurve(fn, n = 4096) {
 }
 // The dry/wet mix is baked into the curve, so dry and driven signal share one path (no comb filter from oversampling delay).
 // Each shape is level-matched at a typical voice level (0.25) so the mix knob changes colour, not loudness.
+// (30.10.2026) the curve spans ±DRV_H of the signal (makeChain: ÷DRV_H before the shaper, ×DRV_H after) – its points on the
+// same grid as before inside ±1 (DRV_H odd: n − 1 = DRV_H · (n₀ − 1)), so nothing there changes
+const DRV_H = 9;
 function driveCurve(type, amt, mix) {
   const REF = 0.25;
   let shape;
@@ -3420,7 +3423,8 @@ function driveCurve(type, amt, mix) {
     const k = 1 + amt * 30, norm = REF / Math.tanh(k * REF);
     shape = (x) => Math.tanh(k * x) * norm;
   }
-  return makeShaperCurve((x) => (1 - mix) * x + mix * shape(x), type === 'crush' ? 8192 : 4096);
+  const n0 = type === 'crush' ? 8192 : 4096;
+  return makeShaperCurve((u) => { const x = u * DRV_H; return ((1 - mix) * x + mix * shape(x)) / DRV_H; }, DRV_H * (n0 - 1) + 1);
 }
 // Glue compressor curves. Stage 1: level relative to the threshold (x = level / threshold / 256) → dB above it with a
 // 10 dB soft knee, divided by 64. Stage 2: that amount, scaled by (1 − 1/ratio) → linear gain. Threshold and ratio are
@@ -4606,12 +4610,18 @@ function vokConnect(c, k, src) {
 function makeChain() {
   const ctx = A.ctx, c = { in: G(1) };
   // drive: one shaper whose curve already contains the dry/wet blend
-  c.drv = ctx.createWaveShaper();
-  c.in.connect(c.drv);
+  // (owner, 30.10.2026: „Handpan-Kreis immer noch verzerrt“, „Kurzwellenritual von Haus aus verzerrt – der Effekt Verzerrung
+  // hat keinen Einfluss“) a WaveShaper clamps what lies beyond ±1 to its curve's ends: everything played into the chain
+  // above 0 dBFS was cut off hard here, whatever the drive was set to (measured at this input, played densely: Kurzwelle
+  // +5.3 dBFS, 9618 samples cut; Kalimbatraum +1.3; Handpan −3.8 – little room). Now the shaper works DRV_H times lower
+  // (its curve spans ±DRV_H, driveCurve) and the level is made up after it: below 0 dBFS the same curve on the same
+  // points, above it room up to +19 dB; the Begrenzer at the end catches the peaks
+  c.drvPre = G(1 / DRV_H); c.drv = ctx.createWaveShaper(); c.drvOut = G(DRV_H);
+  c.in.connect(c.drvPre).connect(c.drv).connect(c.drvOut);
   // ring modulator
   c.rngDry = G(1); c.rngWet = G(0); c.rngVca = G(0); c.rngOut = G(1);
-  c.drv.connect(c.rngDry).connect(c.rngOut);
-  c.drv.connect(c.rngVca).connect(c.rngWet).connect(c.rngOut);
+  c.drvOut.connect(c.rngDry).connect(c.rngOut);
+  c.drvOut.connect(c.rngVca).connect(c.rngWet).connect(c.rngOut);
   A.rngOsc.connect(c.rngVca.gain);
   // filter + LFO
   c.flt = BQ(P['flt.type'], P['flt.freq'], P['flt.q']);
@@ -29553,7 +29563,7 @@ function engMissSay() {
 
 function buildFx() {
   const box = h('div');
-  box.append(h('p', { class: 'note', style: 'margin-top:12px' }, 'Signalweg: Verzerrung → Ringmodulator → Filter → Phaser → Schweben → Kreisen, dann parallel Echo und Hall in die Summe.'));
+  box.append(h('p', { class: 'note', style: 'margin-top:12px' }, 'Signalweg: Verzerrung → Ringmodulator → Filter → Phaser → Schweben → Kreisen, dann parallel Echo, Hall, Effekt und Effekt 2 in die Summe.'));
   box.append(section('Verzerrung', 'Sättigung, Wellenfalter, Bitreduktion', grid(ctl('drv.type'), ctl('drv.amt'), ctl('drv.mix'))));
   box.append(section('Ringmodulator', 'Metallische Seitenbänder', grid(ctl('rng.freq'), ctl('rng.mix'))));
   box.append(section('Filter', 'Mit langsamer Welle', grid(ctl('flt.type'), ctl('flt.freq'), ctl('flt.q'), ctl('flt.lfoRate'), ctl('flt.lfoDepth'))));
@@ -29562,6 +29572,14 @@ function buildFx() {
   box.append(section('Echo', 'Bandecho mit Ping-Pong', grid(ctl('dly.mix'), ctl('dly.fb'), ctl('dly.sync'), ctl('dly.div'), ctl('dly.ms'), ctl('dly.pp'), ctl('dly.tone'), ctl('dly.wow')),
     h('p', { class: 'note' }, 'Ab 100 % Rückkopplung schwillt das Echo von selbst an, die Bandsättigung begrenzt es. „Einfrieren“ (Schneeflocke oben) hält die aktuelle Schleife endlos fest; „Stille“ leert sie.')));
   box.append(section('Hall', 'Erzeugter Raum', grid(ctl('rev.mix'), ctl('rev.size'), ctl('rev.damp'), ctl('rev.pre'))));
+  // (owner, 30.10.2026: „Ich hab gestern einen Harmonizer in Auftrag gegeben. Wo ist der eigentlich zu finden?“) the
+  // returns „Effekt“ and „Effekt 2“ – until now only in the mixer's return channels: here too, the same settings
+  for (const [r, name] of FX_RETS) {
+    const grids = {}, txt = h('p', { class: 'note' }), upd = () => { const T = FX_TYPES[P[r + '.typ']] || FX_TYPES.netz; for (const t in grids) grids[t].hidden = t !== P[r + '.typ']; txt.textContent = T.i + '.'; };
+    for (const t in FX_TYPES) grids[t] = grid(...Object.values(FX_TYPES[t].keys).map((id) => ctl(r + '.' + id)));
+    bindCtl(r + '.typ', upd); upd();
+    box.append(section(name, 'Resonanz-Netz, Wolke, Spektral-Nebel, Oktav-Echo, Vokal-Filter oder Harmonizer – jeder Kanal sendet hinein (Mixer)', ctl(r + '.typ'), txt, grid(ctl(r + '.mix')), ...Object.values(grids)));
+  }
   box.append(section('Bewegung', 'Tonhöhe und Raum aller Stimmen', grid(ctl('mov.vib'), ctl('mov.vibRate'), ctl('mov.drift'), ctl('mov.driftRate'), ctl('mov.pan'), ctl('mov.panRate'))));
   box.append(section('Summe', 'Klangregelung, Kompressor, Sättigung', grid(ctl('mst.low'), ctl('mst.high'), ctl('mst.comp'), ctl('mst.vol')),
     h('p', { class: 'note' }, 'Die Verdichtung ändert die Dynamik, nicht die Lautstärke leiser Passagen. Eine weiche Sättigung am Ende fängt seltene Spitzen ab und hält den Ausgang unter 0 dBFS.')));
@@ -31100,7 +31118,7 @@ const PRESETS = [
   { key: 'handpankreis', name: 'Handpan-Kreis', tags: 'Welt · Meditation', desc: 'Ein Stahlfeld unter der Hand, ein zweites spielt Kreise im Akebono, warmer Raum.', v: {
     'v.eng': 'hng', 't.root': '2', 't.scale': 'akebono', 't.oct': 3, 't.range': 2,
     'hng.glanz': 0.5, 'hng.nachklang': 0.7, 'hng.koerper': 0.65, 'hng.schweben': 0.55,
-    'rev.size': 6, 'rev.damp': 0.5, 'rev.mix': 0.45, 'cho.mix': 0.15, 'dly.div': '0.75', 'dly.fb': 0.3, 'dly.mix': 0.18, 'seq.bpm': 76,
+    'drv.mix': 0, 'rev.size': 6, 'rev.damp': 0.5, 'rev.mix': 0.45, 'cho.mix': 0.15, 'dly.div': '0.75', 'dly.fb': 0.3, 'dly.mix': 0.18, 'seq.bpm': 76,   // (owner, 26.10.2026: „nur Handpan-Kreis ohne Röhre“ – PR #52, lost in the reset of 27.10.; again 30.10.)
     'l0.on': false, 'l1.on': true, 'l1.eng': 'hng', 'l1.steps': 11, 'l1.puls': 4, 'l1.div': '0.5', 'l1.walk': 0.7, 'l1.vol': 0.4, 'l1.bright': 0.35, 'l2.on': false, 'l3.on': false } },
   // Sphäre
   { key: 'nordlichtfeld', name: 'Nordlichtfeld', tags: 'Ambient · Spektral', desc: 'Lichtvorhänge wandern über 48 Teiltöne, ein Glockenschimmer fällt hinein.', v: {

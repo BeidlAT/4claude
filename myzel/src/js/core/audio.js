@@ -117,6 +117,9 @@ function makeShaperCurve(fn, n = 4096) {
 }
 // The dry/wet mix is baked into the curve, so dry and driven signal share one path (no comb filter from oversampling delay).
 // Each shape is level-matched at a typical voice level (0.25) so the mix knob changes colour, not loudness.
+// (30.10.2026) the curve spans ±DRV_H of the signal (makeChain: ÷DRV_H before the shaper, ×DRV_H after) – its points on the
+// same grid as before inside ±1 (DRV_H odd: n − 1 = DRV_H · (n₀ − 1)), so nothing there changes
+const DRV_H = 9;
 function driveCurve(type, amt, mix) {
   const REF = 0.25;
   let shape;
@@ -130,7 +133,8 @@ function driveCurve(type, amt, mix) {
     const k = 1 + amt * 30, norm = REF / Math.tanh(k * REF);
     shape = (x) => Math.tanh(k * x) * norm;
   }
-  return makeShaperCurve((x) => (1 - mix) * x + mix * shape(x), type === 'crush' ? 8192 : 4096);
+  const n0 = type === 'crush' ? 8192 : 4096;
+  return makeShaperCurve((u) => { const x = u * DRV_H; return ((1 - mix) * x + mix * shape(x)) / DRV_H; }, DRV_H * (n0 - 1) + 1);
 }
 // Glue compressor curves. Stage 1: level relative to the threshold (x = level / threshold / 256) → dB above it with a
 // 10 dB soft knee, divided by 64. Stage 2: that amount, scaled by (1 − 1/ratio) → linear gain. Threshold and ratio are

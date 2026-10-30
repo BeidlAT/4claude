@@ -209,7 +209,7 @@ const PRESETS = [
   { key: 'handpankreis', name: 'Handpan-Kreis', tags: 'Welt · Meditation', desc: 'Ein Stahlfeld unter der Hand, ein zweites spielt Kreise im Akebono, warmer Raum.', v: {
     'v.eng': 'hng', 't.root': '2', 't.scale': 'akebono', 't.oct': 3, 't.range': 2,
     'hng.glanz': 0.5, 'hng.nachklang': 0.7, 'hng.koerper': 0.65, 'hng.schweben': 0.55,
-    'rev.size': 6, 'rev.damp': 0.5, 'rev.mix': 0.45, 'cho.mix': 0.15, 'dly.div': '0.75', 'dly.fb': 0.3, 'dly.mix': 0.18, 'seq.bpm': 76,
+    'drv.mix': 0, 'rev.size': 6, 'rev.damp': 0.5, 'rev.mix': 0.45, 'cho.mix': 0.15, 'dly.div': '0.75', 'dly.fb': 0.3, 'dly.mix': 0.18, 'seq.bpm': 76,   // (owner, 26.10.2026: „nur Handpan-Kreis ohne Röhre“ – PR #52, lost in the reset of 27.10.; again 30.10.)
     'l0.on': false, 'l1.on': true, 'l1.eng': 'hng', 'l1.steps': 11, 'l1.puls': 4, 'l1.div': '0.5', 'l1.walk': 0.7, 'l1.vol': 0.4, 'l1.bright': 0.35, 'l2.on': false, 'l3.on': false } },
   // Sphäre
   { key: 'nordlichtfeld', name: 'Nordlichtfeld', tags: 'Ambient · Spektral', desc: 'Lichtvorhänge wandern über 48 Teiltöne, ein Glockenschimmer fällt hinein.', v: {
