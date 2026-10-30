@@ -257,7 +257,7 @@ function hxWUpdate(L, o = {}) {
 // one Treu render a Schicht at a time; a newer wish waits for it and renders again
 function hxWRenderFor(L, S, sig, o = {}) {
   if (S.wBusy) { S.wAgain = o; return; }
-  S.wBusy = sig; S.wAgain = null;
+  S.wBusy = sig; S.wAgain = null; hxLadeAdd(L, S);
   const ver = S.ver || 0, key = L.key;
   hxWRender(L, S, sig, o.key).then((V) => {
     S.wBusy = null;
@@ -330,7 +330,7 @@ function hxWTick(now, horizon) {
   hxWLiveTick(now, horizon);   // (Live mode: no Werk-Rahmen, or chosen – step 4)
   if (HX.folge && horizon + 0.04 >= HX.folge.t) hxWTonGo();
   if (HX.wTempo && now >= HX.wTempo.due) hxWTempoGo();
-  if (HX.wKlang && performance.now() >= HX.wKlang) { HX.wKlang = 0; for (const L of hxLoopsLive()) if (hxKlangOf(L) === 'feld' && hxWAktiv(L)) hxWUpdate(L); }
+  if (HX.wKlang && performance.now() >= HX.wKlang) { HX.wKlang = 0; for (const L of hxLoopsLive()) if (hxKlangOf(L) === 'feld' && hxWAktiv(L)) hxWUpdate(L, { now: true }); }   // (owner, 29.10.2026: „passt sich der neue Sound verspätet an … nach 1–2 Minuten mitunter“) its Treu version on the fly once rendered – not at the seam after it (a long loop waited up to a pass more)
   const fNow = hxF(now), pnow = performance.now(), G = HX.wGuard;
   if (G.max < Infinity && pnow - G.t > 60000) { G.t = pnow; G.max = G.max + 1 >= HX_WPOOL ? Infinity : G.max + 1; }   // (a minute without an underrun: one more at once again)
   if (pnow - (HXW.renT || 0) > 1000) { HXW.renT = pnow; hxwRenew(); }   // (Leistung: realms renewed – their renders' memory freed)

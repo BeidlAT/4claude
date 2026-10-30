@@ -2,6 +2,14 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-29n",
+      "punkte": [
+        "Preset-Wechsel mit „Schleifen spielen mit dem Instrument des Presets“: Der neue Klang setzt in den Schleifen ein, sobald er fertig gerechnet ist – mitten im Durchgang, nicht erst an der nächsten Naht (bei langen Schleifen bis zu einem Durchgang früher).",
+        "Ein Ladebalken über der Ringleiste zeigt, wie weit die Schleifen mit dem neuen Klang sind, und meldet „Neuer Klang da“.",
+        "Tonart beim Preset-Wechsel: Grundeinstellung ist jetzt „Preset passt sich den Schleifen an“ (steht zuerst) – die Schleifen behalten ihre Tonart und müssen nicht neu wachsen."
+      ]
+    },
+    {
       "id": "2026-10-29m",
       "punkte": [
         "Neu: das Sporenwerk – ein Arpeggiator im eigenen Reiter. Halte Töne, und es spielt sie im Takt: zehn Wuchsformen von Aufwärts bis Hyphe, Spirale, Sporenflug, Pilzring und Wachsen.",

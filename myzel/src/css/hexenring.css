@@ -76,7 +76,14 @@
 .hx-msg.an { opacity: 1; transform: translate(-50%, 0); }
 .hx-blitz { position: fixed; z-index: 60; pointer-events: none; background: rgba(134, 240, 208, .26); box-shadow: 0 0 0 2px rgba(134, 240, 208, .8), 0 0 16px rgba(134, 240, 208, .55); animation: hxBlitz .45s ease-out forwards; }
 @keyframes hxBlitz { from { opacity: 1; } to { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .hx-msg { transition: none; transform: translate(-50%, 0); } }
+/* (owner, 29.10.2026: „es macht nichts wenn es laden muss – dann einen Ladebalken, damit man sich auskennt“) the loops
+   rendering a new sound: how far, how many done – over the rail, at its left (the message line keeps the middle) */
+.hx-lade { position: absolute; left: 8px; bottom: calc(100% + 6px); width: min(300px, calc(100% - 16px)); padding: 6px 10px 7px; border-radius: 10px; background: rgba(17, 13, 11, .94); border: 1px solid var(--line); color: var(--hypha); font: 500 12px/1.3 var(--font-ui); pointer-events: none; z-index: 3; box-shadow: 0 4px 18px rgba(0, 0, 0, .45); transition: opacity .3s; }
+.hx-lade .t { display: block; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hx-lade .b { display: block; height: 5px; border-radius: 3px; background: var(--bark-2); overflow: hidden; }
+.hx-lade .b i { display: block; height: 100%; width: 0; border-radius: 3px; background: var(--lumen); transition: width .25s linear; }
+.hx-lade.fertig { opacity: 0; transition: opacity .6s .9s; }
+@media (prefers-reduced-motion: reduce) { .hx-msg { transition: none; transform: translate(-50%, 0); } .hx-lade, .hx-lade .b i { transition: none; } }
 .hx-vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .hx-coach {
   position: absolute; left: 10px; bottom: 30px; max-width: 250px; padding: 9px 12px; border-radius: 12px; background: var(--hypha); color: var(--ink);
