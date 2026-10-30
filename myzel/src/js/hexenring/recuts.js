@@ -19,6 +19,7 @@ function hxNowOk(L) {
 const hxSwapAt = (L) => (hxNowOk(L) ? { f: Math.round(hxF(hxNowT() + 0.06)), now: true } : hxNextSeam(L));
 function hxSchSwap(S, c, o = {}) {
   const L = HX.loops.get(S.loop); if (!L) return;
+  if (!o.rx && S.rxB && o.aud && o.aud !== S.aud && S.rxB.aud !== o.aud) S.rxB = null;   // (30.10.2026: another tool wrote new audio – the Klangfarbe's base is this audio from now on, klangebene.js)
   if (!o.aud) { const H = hxHumOf(c); if (H) o = Object.assign({}, o, hxHumSlice(H, c), { hum: true }); }   // (26.10.2026: a window inside a Schleife's whole Ernte – from there, whatever the ring still holds)
   // (owner, 26.10.2026: „die Zeitleisten passen nicht zusammen“) a window moved in the Ernte: its Ausklang ends where the
   // next thing played begins (a note, else an onset in the audio) – never the notes that followed carried over the start

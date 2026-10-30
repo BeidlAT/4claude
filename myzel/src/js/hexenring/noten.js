@@ -108,6 +108,7 @@ async function hxErstarren(L) {
     S.play = 'ab'; S.wu = null; S.anc = null; hxWStop(S);
     hxSchSwap(S, c, { aud: V.aud, f: sw.f, join: V.rev ? 'xf' : 'ola', X: Math.round(0.01 * SR), rho: 0, zo: 0, kc: V.rev ? hxSeamOf({ pre, len: V.len, X: Math.round(0.01 * SR), zo: 0 }, V.aud) : null, fade: V.rev ? 0 : Math.min(Math.round(0.03 * SR), Math.max(0, V.n - pre - V.len)) });
     S.chain = false; S.bak = null; S.baked = false; S.out = L.folgt ? 1 : 0; S.dr = null;
+    S.rxB = V.aud0 ? { aud: V.aud0, bak: null, n: V.n } : null;   // (30.10.2026: the render before the loop's Klangfarbe is the new base – klangebene.js)
     // (its notes are now what it froze: the tools applied, in the key it sounds in)
     const W = hxWNotesT(L, S); if (W) { const n = W.n.map((x) => { const f = hxWF(L, W, x, key); const y = Object.assign({}, x, { f }); const d = hxDeg(f); return Object.assign(y, { deg: d.deg, oct: d.oct, alt: d.alt }); }); S.wn = Object.assign({}, W, { key: { base: N.base, ...key }, n }); S.wnT = null; }
   }

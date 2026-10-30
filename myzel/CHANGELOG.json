@@ -2,6 +2,14 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-30k",
+      "punkte": [
+        "Bearbeiten-Fenster: Tonhöhe, Verstimmen, Verwandeln und Färben der ganzen Schleife sind jetzt Schalter – leuchtend heißt an, noch einmal klicken nimmt es zurück. Die Klangfarbe bleibt, auch wenn die Noten-Werkzeuge die Schleife neu spielen (vorher verschwand z. B. eine Verwandlung beim Klick auf „dünner“). Sie überlebt auch das Neuladen.",
+        "Ebenso als Schalter: Zeit (−1 Schlag, ±5 ms, +1 Schlag – noch einmal: zurück), Noten (Stufe ±1, dünner, dichter) und Trimmen (½, ¼ – noch einmal: ganz).",
+        "Presets auf den Tasten: F1–F10 laden die ersten zehn der Liste; mit angeschlossenem Touché (dessen Spielweisen liegen auf F1–F12) Strg+F1–F10. Die zwei Schalter des Touché SE blättern die Presets (rechts vor, links zurück)."
+      ]
+    },
+    {
       "id": "2026-10-30j",
       "punkte": [
         "Neu im Mixer: ein Verdichter (Kompressor) für jeden Kanal – Verhältnis, Schwelle, Anschlag, Loslassen, Knie, Ausgleich und Anteil (parallel), ohne Verzögerung; die Karte zeigt, wie viel er gerade zurücknimmt. Bei 1:1 ist er aus, bestehende Klänge bleiben unverändert.",

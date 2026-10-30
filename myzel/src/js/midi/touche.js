@@ -103,6 +103,17 @@ for (const [dir, nm] of [['weg', 'weg drücken'], ['her', 'heran ziehen'], ['li'
   midiTarget('tch.' + dir, 'Touché: ' + nm + ' (je nach Spielweise)', null, { group: 'Spielweise', cont: true, noTake: true, get: () => (TCH.raw && TCH.raw[dir]) || 0, set: (n) => tchSet(dir, n) });
 TCH_W.forEach(([w, nm], i) => midiTarget('tch.' + (i + 1), 'Touché: Spielweise ' + nm, (v) => { if (v >= 0.5) tchWeise(w, true); }, { group: 'Spielweise', button: true }));
 midiTarget('tch.next', 'Touché: nächste Spielweise', (v) => { if (v >= 0.5) tchStep(1); }, { group: 'Spielweise', button: true });
+// (owner, 30.10.2026: „die zwei Schalter unten für den Preset-Wechsel“) the Touché's two buttons change its slot and send
+// a Program Change: up (the right one) the next preset, down (the left one) the one before – whatever the numbers are;
+// not while learning (the buttons can be assigned to anything else there)
+function tchIn(src, ev) {
+  if (ev.type !== 'pc' || !src.prof || src.prof.id !== 'tch' || !profOn(src) || LEARN.on) return false;
+  const was = TCH.pc; TCH.pc = ev.num;
+  if (was == null || was === ev.num) return true;
+  let d = ev.num - was; if (Math.abs(d) > 64) d = -d;   // (wrapped round the end of its slots)
+  presetStep(d > 0 ? 1 : -1);
+  return true;
+}
 // F1–F4 and Umschalt + F1–F4 on the computer keyboard, while a Touché is there (not while typing, not while learning)
 window.addEventListener('keydown', (e) => {
   const m = /^F([1-9]|1[0-2])$/.exec(e.key), fk = m ? +m[1] : 0;
