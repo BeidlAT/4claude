@@ -106,6 +106,8 @@ function ctl0(id, opts = {}) {
 function section(title, sub, ...kids) {
   return h('div', { class: 'sec' }, h('div', { class: 'sec-h' }, h('h3', null, title), sub ? h('p', null, sub) : null), ...kids);
 }
+// a section in a colour of its own (css/modul.css: [data-ac])
+const tinted = (ac, sec) => { sec.dataset.ac = ac; return sec; };
 const grid = (...kids) => h('div', { class: 'grid' }, ...kids);
 const ctls = (ids, o) => ids.map((id) => ctl(id, o));
 
@@ -273,7 +275,7 @@ const sheet = $('#sheet'), sheetBody = $('#sheetBody'), sheetTitle = $('#sheetTi
 // build: the panel's content; optional open/close: called when it shows or hides; frame(dt, ts): every frame while open
 const PANELS = [
   { key: 'klang', title: 'Klang', icon: ICON.klang, build: buildKlang, frame: klangFrame },
-  { key: 'fx', title: 'Effekte', icon: ICON.fx, build: buildFx },
+  { key: 'fx', title: 'Effekte', icon: ICON.fx, build: buildFx, open: () => fxmOpen() },
   { key: 'puls', title: 'Puls', icon: ICON.puls, build: buildPuls, frame: (dt, ts) => { drawRings(); if (typeof pulsMixFrame === 'function') pulsMixFrame(dt, ts); },
     open: () => { if (typeof pulsMixOpen === 'function') pulsMixOpen(); }, close: () => { if (typeof pulsMixClose === 'function') pulsMixClose(); } },
   { key: 'rec', title: 'Aufnahme', icon: ICON.rec, build: buildRec, open: () => { renderTakes(); renderBarInfo(); hxCardRender(); }, frame: () => hxCardFrame() },   // (Hexenring: its card)

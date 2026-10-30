@@ -459,30 +459,37 @@ function engMissSay() {
 }
 
 function buildFx() {
-  const box = h('div');
-  box.append(h('p', { class: 'note', style: 'margin-top:12px' }, 'Signalweg: Verzerrung → Ringmodulator → Filter → Phaser → Schweben → Kreisen, dann parallel Echo, Hall, Effekt und Effekt 2 in die Summe.'));
-  box.append(section('Verzerrung', 'Sättigung, Wellenfalter, Bitreduktion', grid(ctl('drv.type'), ctl('drv.amt'), ctl('drv.mix'))));
-  box.append(section('Ringmodulator', 'Metallische Seitenbänder', grid(ctl('rng.freq'), ctl('rng.mix'))));
-  box.append(section('Filter', 'Mit langsamer Welle', grid(ctl('flt.type'), ctl('flt.freq'), ctl('flt.q'), ctl('flt.lfoRate'), ctl('flt.lfoDepth'))));
-  box.append(section('Phaser', '6 Allpass-Stufen', grid(ctl('pha.mix'), ctl('pha.rate'), ctl('pha.depth'), ctl('pha.fb'))));
-  box.append(section('Schweben', 'Stereo-Chorus', grid(ctl('cho.mix'), ctl('cho.rate'), ctl('cho.depth'))));
-  box.append(section('Echo', 'Bandecho mit Ping-Pong', grid(ctl('dly.mix'), ctl('dly.fb'), ctl('dly.sync'), ctl('dly.div'), ctl('dly.ms'), ctl('dly.pp'), ctl('dly.tone'), ctl('dly.wow')),
+  // (owner, 30.10.2026: „Die Effekt-Seite … sieht sehr basic aus“) every effect a module card in the order of the signal
+  // path, the Faden on top shows it and jumps (ui/modul.js); the controls are the same as before
+  const box = h('div', { class: 'fxp' });
+  box.append(...fxmStrip());
+  box.append(fxmGroup('färbung', 'in reihe – jede stimme'));
+  box.append(modul('drv', 'Sättigung, Wellenfalter, Bitreduktion', grid(ctl('drv.type'), ctl('drv.amt'), ctl('drv.mix'))));
+  box.append(modul('rng', 'Metallische Seitenbänder', grid(ctl('rng.freq'), ctl('rng.mix'))));
+  box.append(modul('flt', 'Mit langsamer Welle', grid(ctl('flt.type'), ctl('flt.freq'), ctl('flt.q'), ctl('flt.lfoRate'), ctl('flt.lfoDepth'))));
+  box.append(modul('pha', '6 Allpass-Stufen', grid(ctl('pha.mix'), ctl('pha.rate'), ctl('pha.depth'), ctl('pha.fb'))));
+  box.append(modul('cho', 'Stereo-Chorus', grid(ctl('cho.mix'), ctl('cho.rate'), ctl('cho.depth'))));
+  box.append(modul('mov', 'Tonhöhe und Raum aller Stimmen', grid(ctl('mov.vib'), ctl('mov.vibRate'), ctl('mov.drift'), ctl('mov.driftRate'), ctl('mov.pan'), ctl('mov.panRate'))));
+  box.append(fxmGroup('räume', 'parallel – jeder kanal sendet hinein'));
+  box.append(modul('dly', 'Bandecho mit Ping-Pong', grid(ctl('dly.mix'), ctl('dly.fb'), ctl('dly.sync'), ctl('dly.div'), ctl('dly.ms'), ctl('dly.pp'), ctl('dly.tone'), ctl('dly.wow')),
     h('p', { class: 'note' }, 'Ab 100 % Rückkopplung schwillt das Echo von selbst an, die Bandsättigung begrenzt es. „Einfrieren“ (Schneeflocke oben) hält die aktuelle Schleife endlos fest; „Stille“ leert sie.')));
-  box.append(section('Hall', 'Erzeugter Raum', grid(ctl('rev.mix'), ctl('rev.size'), ctl('rev.damp'), ctl('rev.pre'))));
+  box.append(modul('rev', 'Erzeugter Raum', grid(ctl('rev.mix'), ctl('rev.size'), ctl('rev.damp'), ctl('rev.pre'))));
   // (owner, 30.10.2026: „Ich hab gestern einen Harmonizer in Auftrag gegeben. Wo ist der eigentlich zu finden?“) the
   // returns „Effekt“ and „Effekt 2“ – until now only in the mixer's return channels: here too, the same settings
-  for (const [r, name] of FX_RETS) {
+  for (const [r] of FX_RETS) {
     const grids = {}, txt = h('p', { class: 'note' }), upd = () => { const T = FX_TYPES[P[r + '.typ']] || FX_TYPES.netz; for (const t in grids) grids[t].hidden = t !== P[r + '.typ']; txt.textContent = T.i + '.'; };
     for (const t in FX_TYPES) grids[t] = grid(...Object.values(FX_TYPES[t].keys).map((id) => ctl(r + '.' + id)));
     bindCtl(r + '.typ', upd); upd();
-    box.append(section(name, 'Resonanz-Netz, Wolke, Spektral-Nebel, Oktav-Echo, Vokal-Filter oder Harmonizer – jeder Kanal sendet hinein (Mixer)', ctl(r + '.typ'), txt, grid(ctl(r + '.mix')), ...Object.values(grids)));
+    box.append(modul(r, 'Resonanz-Netz, Wolke, Spektral-Nebel, Oktav-Echo, Vokal-Filter oder Harmonizer – jeder Kanal sendet hinein (Mixer)', ctl(r + '.typ'), txt, grid(ctl(r + '.mix')), ...Object.values(grids)));
   }
-  box.append(section('Bewegung', 'Tonhöhe und Raum aller Stimmen', grid(ctl('mov.vib'), ctl('mov.vibRate'), ctl('mov.drift'), ctl('mov.driftRate'), ctl('mov.pan'), ctl('mov.panRate'))));
-  box.append(section('Summe', 'Klangregelung, Kompressor, Sättigung', grid(ctl('mst.low'), ctl('mst.high'), ctl('mst.comp'), ctl('mst.vol')),
+  box.append(fxmGroup('ausgang'));
+  box.append(modul('mst', 'Klangregelung, Kompressor, Sättigung', grid(ctl('mst.low'), ctl('mst.high'), ctl('mst.comp'), ctl('mst.vol')),
     h('p', { class: 'note' }, 'Die Verdichtung ändert die Dynamik, nicht die Lautstärke leiser Passagen. Eine weiche Sättigung am Ende fängt seltene Spitzen ab und hält den Ausgang unter 0 dBFS.')));
+  fxmWatch(box);
   return box;
 }
-let ringCv = null, laneTabs = [], laneGrids = [];
+let ringCv = null, laneTabs = [], laneGrids = [], laneSec = null;
+const LANE_AC = ['var(--spore)', 'var(--lumen)', 'var(--lilac)', 'var(--rose)'];
 function buildPuls() {
   const box = h('div');
   const play = h('button', { type: 'button', class: 'btn primary', id: 'pulsPlay', 'aria-pressed': 'false', 'data-act': 'puls', onclick: () => (SEQ.on ? seqStop() : seqStart()) });
@@ -501,14 +508,17 @@ function buildPuls() {
     const g = grid(ctl(p + 'on'), ctl(p + 'eng'), ctl(p + 'steps'), ctl(p + 'puls'), ctl(p + 'rot'), ctl(p + 'div'), ctl(p + 'deg'), ctl(p + 'oct'), ctl(p + 'walk'), ctl(p + 'prob'), ctl(p + 'vol'), ctl(p + 'bright'), ctl(p + 'pan'));
     g.hidden = i !== UI.lane; return g;
   });
-  box.append(section('Spuren', 'Impulse verteilt auf Schritte', h('div', { class: 'lanehead' }, ringCv, lanes), ...laneGrids));
-  box.append(section('Bordun', 'Liegender Grundton unter allem', grid(ctl('bor.on'), ctl('bor.lvl'), ctl('bor.int'), ctl('bor.oct'), ctl('bor.wave'), ctl('bor.cut'), ctl('bor.breath'))));
+  laneSec = section('Spuren', 'Impulse verteilt auf Schritte', h('div', { class: 'lanehead' }, ringCv, lanes), ...laneGrids);
+  laneSec.style.setProperty('--ac', LANE_AC[UI.lane]);   // (30.10.2026: the lane's knobs in its colour)
+  box.append(laneSec);
+  box.append(tinted('bor', section('Bordun', 'Liegender Grundton unter allem', grid(ctl('bor.on'), ctl('bor.lvl'), ctl('bor.int'), ctl('bor.oct'), ctl('bor.wave'), ctl('bor.cut'), ctl('bor.breath')))));
   return box;
 }
 function selectLane(i) {
   UI.lane = i;
   laneTabs.forEach((b, k) => b.setAttribute('aria-pressed', String(k === i)));
   laneGrids.forEach((g, k) => (g.hidden = k !== i));
+  if (laneSec) laneSec.style.setProperty('--ac', LANE_AC[i]);
 }
 function updLaneTabs() {
   laneTabs.forEach((b, i) => {
@@ -573,8 +583,8 @@ function buildRec() {
     return h('div', { class: 'mrow' }, h('span', null, ch), h('div', { class: 'mbar' }, bar), pk);
   }));
   barInfoEl = h('p', { class: 'note', style: 'margin-top:8px' });
-  box.append(section('Aufnahme', null, h('div', { class: 'recbig' }, recBig, h('div', null, recTimeEl, recSubEl)), meters,
-    h('div', { class: 'grid', style: 'margin-top:12px' }, ctl('rec.len'), ctl('rec.bars')), barInfoEl));
+  box.append(tinted('rec', section('Aufnahme', null, h('div', { class: 'recbig' }, recBig, h('div', null, recTimeEl, recSubEl)), meters,
+    h('div', { class: 'grid', style: 'margin-top:12px' }, ctl('rec.len'), ctl('rec.bars')), barInfoEl)));
   recInfoEl = h('p', { class: 'note', style: 'margin-top:10px' });
   box.append(section('Qualität', null, grid(ctl('rec.fmt'), ctl('rec.norm'), ctl('rec.arm'), ctl('rec.tail'), ctl('rec.comp')), recInfoEl));
   takesEl = h('div', { class: 'takes' });
