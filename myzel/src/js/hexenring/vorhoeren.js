@@ -5,6 +5,7 @@
 // while it plays: the new render takes over at the same place, crossfaded. Space plays and stops (the focus in the
 // editor), a click into the waveform plays from there. ----
 const HXPV_X = 0.03;   // the crossfade between renders, at a jump, at the stop (s)
+const HXPV_HALT = 0.05;   // halting: the loop's level comes back after the processor's 10-ms fade of the halt (s)
 // where it plays: a share of the pass (stopped: its mark)
 function hxPvPos() {
   const P = HXE.pv; if (!P || !A.ctx) return HXE.pvAt || 0;
@@ -56,14 +57,22 @@ function hxPvSeam(buf, a, b) {
 }
 const HXPV_SEAM = { src: null, i0: 0, i1: 0, out: null };
 function hxPvFade(P, t) { try { P.x.gain.cancelScheduledValues(t); P.x.gain.setValueAtTime(P.x.gain.value, t); P.x.gain.linearRampToValueAtTime(0, t + HXPV_X); P.src.stop(t + HXPV_X + 0.02); } catch (e) {} }
-// late (s): the loop's own level comes back only then – it is being halted at the same moment, and its 10-ms fade must
-// not be heard under the 30-ms ramp back (Stopp, „alles beenden“)
-function hxPvStop(late) {
+// halting: the loop is being halted at the same moment (Stopp, „alles beenden“) – its own level comes back only after
+// that fade (HXPV_HALT), never heard under the 30-ms ramp back
+function hxPvStop(halting) {
   const P = HXE.pv; HXE.pvWant = false; if (!P) return;
   HXE.pvAt = hxPvPos(); HXE.pv = null;
   const t = A.ctx.currentTime; hxPvFade(P, t);
   setTimeout(() => { try { P.out.g.disconnect(); P.out.p.disconnect(); if (P.out.an) P.out.an.disconnect(); } catch (e) {} }, (HXPV_X + 0.1) * 1000);
-  const L = hxByKey(P.key); if (L) { L.pvMute = false; if (L.state !== 'weg') hxGain(L.id, L.gain, late ? A.ctx.currentTime + late : null, 0.03); }   // (the loop as it runs, at its own place)
+  const L = hxByKey(P.key);
+  if (L) {
+    L.pvMute = false;
+    if (L.state !== 'weg') {
+      const t1 = halting ? t + HXPV_HALT : null; hxGain(L.id, L.gain, t1, 0.03);   // (the loop as it runs, at its own place)
+      if (L.pvLate > (t1 || t)) hxGain(L.id, L.gain, L.pvLate + 0.001, 0.02);   // (a level planned meanwhile, sent as 0 then: its own again)
+    }
+    L.pvLate = 0;
+  }
   HXE.wsig = '';
 }
 // (owner, 26.10.2026: „die Schleife läuft beim Stoppen weiter“; again 30.10.2026) Stopp ends the listening and halts the
@@ -71,8 +80,9 @@ function hxPvStop(late) {
 function hxPvToggle() {
   if (!(HXE.pv || HXE.pvWant)) { hxPvPlay(); return; }
   const L = hxEdL(), halt = L && (L.state === 'spielt' || L.state === 'stumm') && A.started && HX.node;
-  hxPvStop(halt ? 0.05 : 0);
-  if (halt) { hxState(L.id, 'angehalten'); L.pendTo = null; hxSay(hxName(L) + ' angehalten'); toast(hxName(L) + ' angehalten – ihr Ring oder ▶ Weiter lässt sie wieder spielen.', 3000); hxRailDirty(); }
+  hxPvStop(halt);
+  if (halt) { for (const p of HX.pend.filter((x) => x.loop === L.id && (x.kind === 'state' || x.kind === 'weiter'))) hxPendDrop(p); hxState(L.id, 'angehalten', null, { over: true }); L.pendTo = null;   // (over: a start still to come is off too – a Lichtung's, Wiederkehr's)
+    hxSay(hxName(L) + ' angehalten'); toast(hxName(L) + ' angehalten – ihr Ring oder ▶ Weiter lässt sie wieder spielen.', 3000); hxRailDirty(); }
 }
 // a jump: playing – from there at once; stopped – the mark moves
 function hxPvJump(u) { u = clamp(u, 0, 0.9999); if (HXE.pv) hxPvPlay(u); else { HXE.pvAt = u; HXE.wsig = ''; } }

@@ -18,8 +18,12 @@ const MIDI_SECONDARY = /\b(DAW|MCU|HUI|Mackie|ALV|Plugin|Software Control|Editor
 // DIN input, the port carries the interface's name (Windows „Steinberg UR22C-1“, „Yamaha Steinberg USB MIDI“, a Mac
 // „UR22mkII MIDI“ / „… Port1“). Every such port is a real input – never a second port to switch on first – and names no
 // instrument: the player says which one plays through it (geraet.js kcModelSel), the Gerätebild never draws the box
-const MIDI_IFACE = /steinberg (ur|ixo|axr|mr816|usb)|\bUR[-\s]?(\d|RT|C\b|M\b)|focusrite|scarlett|clarett|\bum-?one\b|midisport|\bmio\d*\b|midi ?interface|usb[- ]?midi ?(cable|interface)|\bmotu\b|presonus (audiobox|studio|quantum|firestudio|revelator)|audient|komplete audio|\bumc\s?\d|\bum-?\d|\bua-?\d{1,3}\b|rubix|babyface|fireface|tascam (us-?\d+x\d|us-?1[24]\d\b|ixr|series)|\bssl ?[2+]|\bid(4|14|22|44)\b|\bevo ?(4|8|16)\b|\bvolt ?\d|minifuse|audiofuse|yamaha ag\d/i;
-const midiIface = (n) => MIDI_IFACE.test(n || '');
+const MIDI_IFACE = /steinberg|\bUR[-\s]?(\d|RT|C\b|M\b)|focusrite|scarlett|clarett|\bum-?one\b|midisport|\bmio\d*\b|midi ?interface|usb[- ]?midi ?(cable|interface)|\bmotu\b|presonus|audient|komplete audio|\bumc\s?\d|\bum-?\d|\bua-?\d{1,3}\b|rubix|babyface|fireface|tascam|\bssl ?[2+]|\bid(4|14|22|44)\b|\bevo ?(4|8|16)\b|\bvolt ?\d|minifuse|audiofuse|yamaha ag\d/i;
+// (review 30.10.2026) the makers' controllers that carry the same name – not interfaces: their own Gerätebild, their
+// second port stays a second port. A brand matches as a whole and only these are taken out: an interface missing from
+// the list would lose the player's keyboard behind it, a controller missing here only its picture until a model is chosen
+const MIDI_CTRL = /\batom\b|faderport|presonus fp ?\d|io ?station|\bcmc-|\bcc121\b|\bci2\b|us-?2400/i;
+const midiIface = (n) => MIDI_IFACE.test(n || '') && !MIDI_CTRL.test(n || '');
 // one device seen through two names (Windows "MIDIIN2 (…)", "2- …" for a second unit, " Bluetooth" on a Mac …)
 const devName = (n) => String(n || '').toLowerCase().replace(/^\d+-\s*/, '').replace(/^midi(in|out)\s*\d*\s*\((.*)\)$/, '$2').trim();
 // the name to show where room is short: without the port's function ("nanoKEY Studio KEYBOARD/CTRL" → "nanoKEY Studio")

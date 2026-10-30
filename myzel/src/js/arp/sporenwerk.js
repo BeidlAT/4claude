@@ -138,10 +138,11 @@ function arpTick() {
         const nt = L.n, degs = [0].concat(ARP_ST[P['arp.stimmen']] || []);
         for (const d of degs) {
           const f = arpDeg(nt, shift + d) * Math.pow(2, L.o), vel = clamp(nt.vel * (acc ? 1 + 0.6 * P['arp.akzent'] : 1 - 0.25 * P['arp.akzent']) * (d ? 0.7 : 1), 0.05, 1), y = clamp(nt.y + wave, 0, 1);
-          const lys = nt.fld ? layers(f, vel) : nt.layers;   // (each layer's Tonbereich and Anschlag at the step's own pitch)
+          const ix = nt.idx + shift + d;   // (the step's own degree: a layer's Tonstufe counts from there – it stays in the scale)
           for (let r = 0; r < rat; r++) {
             const tr = t + j * strum + r * dur / rat, g = rat > 1 ? Math.min(gate, dur / rat * 0.8) : gate, vr = vel * Math.pow(0.72, r);
-            { const grp = {}; for (const ly of lys) hit(ly.eng, tr, lyF(ly, f, nt.idx), y, vr * ly.lvl, { pan: touchPan(nt.x), bus: ly.bus, amp: ly.amp, gate: g, grp }); }   // (every layer of the note – Ebenen, stolen together)
+            const lys = nt.fld ? layers(f, vr) : nt.layers;   // (each layer's Tonbereich and Anschlag at the strike's own pitch and velocity)
+            { const grp = {}; for (const ly of lys) hit(ly.eng, tr, lyF(ly, f, ix), y, vr * ly.lvl, { pan: touchPan(nt.x), bus: ly.bus, amp: ly.amp, gate: g, grp }); }   // (every layer of the note – Ebenen, stolen together)
           }
           ARP.ev.push({ t, f, nf: nt.f, o: L.o, li, vel, rat, acc, d, k, n: lad.length, dur });
         }

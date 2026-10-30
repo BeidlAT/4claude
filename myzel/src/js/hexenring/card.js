@@ -138,10 +138,19 @@ function hxCardForm(btn) {
     hxCardFolge(btn) || '', hxCardTreffen(btn) || '');   // (step 2b; step 4: Treffen)
   wwMarkIn(box);
 }
+// a state chip of a card: angehalten at once, from angehalten anew on the next 1, else as the mixer's M (hxmState: at once,
+// a change that waited for the bar line given way)
+function hxCardState(L, to) {
+  if (to === L.state) return;
+  if (to === 'angehalten') hxState(L.id, 'angehalten');
+  else if (L.state === 'angehalten') hxReenter([L]);
+  else hxmState(L, to);
+  hxCardDirty(); hxRailDirty();
+}
 // (step 1d) a Schleife of Bewegung's card: what it moves, its state, Verblassen, Löschen
 function hxCardBewOne(L, btn, chip) {
   const row = (lab, ...kids) => h('div', { class: 'hx-row' }, h('span', { class: 'lab' }, lab), h('div', { class: 'chips small' }, ...kids));
-  const st = (to, t) => chip(t, L.state === to, () => { if (to === L.state) return; if (to === 'angehalten') hxState(L.id, 'angehalten'); else if (L.state === 'angehalten') hxReenter([L]); else { if (to === 'spielt') hxPvEnd(L); hxState(L.id, to, null, { X: 0.02 }); } hxCardDirty(); hxRailDirty(); });
+  const st = (to, t) => chip(t, L.state === to, () => hxCardState(L, to));
   const B = L.bew, g = A.ctx ? clamp(hxBewGain(L, faeB(A.ctx.currentTime)), 0, 1) : B.g0;
   return h('div', { class: 'hx-card' + (HX.fokus === L.id ? ' fok' : ''), id: 'hxc-' + L.slot },
     h('div', { class: 'hx-ch' }, h('b', null, hxName(L) + ' · Bewegung'), h('span', { class: 'meta', id: 'hxm-' + L.slot }, hxCardMeta(L))),
@@ -216,13 +225,7 @@ function hxCardOne(L, btn) {
     const d = h('button', { type: 'button', class: 'chip danger', 'aria-label': 'Schicht ' + (i + 1) + ' löschen' }, '✕'); d.addEventListener('click', () => hxSchDel(S));
     return h('div', { class: 'hx-srow' }, h('span', { class: 'lab' }, (i + 1) + ' · ' + (KIND[S.kind] || S.kind) + (S.group ? ' ' + S.group : '') + (S.aud ? '' : ' …')), r, m, d);
   });
-  const st = (to, t) => chip(t, L.state === to, () => {
-    if (to === L.state) return;
-    if (to === 'angehalten') hxState(L.id, 'angehalten');
-    else if (L.state === 'angehalten') hxReenter([L]);
-    else { if (to === 'spielt') hxPvEnd(L); hxState(L.id, to, null, { X: 0.02 }); }
-    hxCardDirty(); hxRailDirty();
-  });
+  const st = (to, t) => chip(t, L.state === to, () => hxCardState(L, to));
   const head = h('div', { class: 'hx-ch' }, h('b', null, hxName(L) + (hxEngName(L) ? ' · ' + hxEngName(L) : '')), h('span', { class: 'meta', id: 'hxm-' + L.slot }, hxCardMeta(L)));
   return h('div', { class: 'hx-card' + (HX.fokus === L.id ? ' fok' : ''), id: 'hxc-' + L.slot },
     head,

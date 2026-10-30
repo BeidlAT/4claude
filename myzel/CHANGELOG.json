@@ -2,6 +2,15 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-30i",
+      "punkte": [
+        "MIDI: Audio-Interfaces von TASCAM, PreSonus und Steinberg werden wieder alle erkannt (z. B. US-144MKII); nur ihre Controller wie ATOM, FaderPort oder CMC nicht. Schieberegler auf „Vorige Skala“ springen auch bei älteren Zuweisungen beim ersten Berühren nicht mehr, Tasten eines eigenen Geräts nie um viele Schritte.",
+        "Ebenen: Gleitet der Finger, schlagen „Anreißen“, Wirbel, Touché-Arp und Fächer mit den Ebenen der neuen Tonhöhe an. Im Sporenwerk bleibt eine Ebene mit Tonstufe in der Skala, und der Fächer klingt unter dem Sporenwerk nicht mehr mit.",
+        "Hexenring: Stopp und Stille heben auch einen Start auf, der schon für die nächste Eins geplant war. Ein gehaltener oder gezogener Ring beendet das Vorhören nicht mehr, und ein Pegel, den eine Lichtung währenddessen plant, kommt danach richtig an.",
+        "Die Zustands-Knöpfe in der Schleifen-Karte setzen sich gegen einen Wechsel durch, der noch auf den Taktstrich wartet."
+      ]
+    },
+    {
       "id": "2026-10-30h",
       "punkte": [
         "Mixer-Geflecht: Stamm, Kettenknoten und die Beschriftung „Kette“ werden wieder gezeichnet (seit dem letzten Update fehlten sie).",

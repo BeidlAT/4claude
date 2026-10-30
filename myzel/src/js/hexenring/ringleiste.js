@@ -159,6 +159,7 @@ function hxRingDown(i, e) {
   try { b.setPointerCapture(e.pointerId); } catch (x) {}
   const id = HX.slot[i], L = id && HX.loops.get(id), g0 = L ? L.gain : 1;
   const G = { i, pid: e.pointerId, x0: e.clientX, y0: e.clientY, mode: 'tap', g0, L, did: null };
+  G.pv = L && HXE.pv && HXE.pv.key === L.key ? hxPvPos() : null;   // (the editor listens to it: a hold or a drag gives the listening back – hxRingRevert)
   G.did = hxRingTap(i, e);
   G.tm = setTimeout(() => { if (G.mode === 'tap') { G.mode = 'menu'; hxRingRevert(G); const r0 = b.getBoundingClientRect(); hxCtxMenu(i, G.x0, Math.min(G.y0, r0.top) - 8); } }, HX_HOLD * 1000);   // (above the finger: lifting it touches no item)
   const mv = (ev) => {
@@ -180,6 +181,7 @@ function hxRingRevert(G) {
   const L = G.L;
   if (G.did === 'neu' && HX.rec && HX.rec.slot === G.i) { hxRecCancel(true); return; }
   if (!L || L.state === 'weg') return;
+  if (G.pv != null) { const u = G.pv; G.pv = null; setTimeout(() => { if (!HXE.pv && HXE.key === L.key) hxPvPlay(u); }, 0); }   // (after the state is back: the loop silent again under it)
   const p = HX.pend.find((x) => x.loop === L.id);
   if (p && (G.did === 'stumm' || G.did === 'spielt' || G.did === 'an')) { hxPendDrop(p); p.cancel(); return; }
   if (G.did === 'stumm') hxState(L.id, 'spielt', null, { X: 0.02 });

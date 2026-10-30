@@ -61,18 +61,19 @@ const hxAt = (at) => (at != null ? Math.round(hxF(at)) : undefined);
 // (owner, 27.10.2026: „sie spielt nur über Abspielen, nicht wenn ich in der Loopleiste auf Play gehe“) started by the
 // player (its ring, its card, ▶ Weiter) while the editor listens to it: the listening ends – the Schleife itself sounds.
 // Only there: what starts it by itself (Wiederkehr, a Lichtung, the form) leaves the listening alone.
-function hxPvEnd(L) { if (typeof HXE !== 'undefined' && HXE.pv && HXE.pv.key === L.key) hxPvStop(); }
+// (… also one still being rendered – it would start after the player's start and silence the loop again)
+function hxPvEnd(L, to = 'spielt') { if (to === 'spielt' && ((HXE.pv && HXE.pv.key === L.key) || (HXE.pvWant && HXE.key === L.key))) hxPvStop(); }
 function hxState(loop, to, at, o = {}) {
   const L = HX.loops.get(loop); if (!L) return false;
   L.state = to; hxCount();
   if (!L.bew && typeof hxMi === 'function') { if (to !== 'spielt' && !HX.gdAct) hxMi(L).uMute = A.ctx ? tgBeat(hxNowT()) : 0; if (to === 'spielt' && L.mi && L.mi.sugg && !HX.gdAct) hxSuggTake(L); }   // (Etappe 3: Wiederkehr never brings back what the player muted; a suggestion played is taken)
   if (L.bew) hxBewState(L, to, at);   // (step 1d: a Schleife of Bewegung follows on the mod layer)
-  return hxPost({ state: { loop, to, f: hxAt(at), X: o.X != null ? Math.round(o.X * SR) : undefined, b0: o.b0 != null ? o.b0 + TG.o : undefined } });
+  return hxPost({ state: { loop, to, f: hxAt(at), X: o.X != null ? Math.round(o.X * SR) : undefined, b0: o.b0 != null ? o.b0 + TG.o : undefined, over: o.over || undefined } });
 }
 // a level (a loop's, or a Schicht's: {schicht: id}), with a smooth ramp (s); pan for a loop
 function hxGain(target, g, at, ramp, pan) {
   const t = typeof target === 'object' ? target : { loop: target };
-  if (t.schicht == null && g != null) { const L = HX.loops.get(t.loop); if (L && L.gg != null) g *= L.gg; if (L && L.pvMute) g = 0; }   // (owner, 26.10.2026: silent while the editor plays it – Vorhören)   // (Etappe 3: under the Gärtner's factor – the player's level stays his own)
+  if (t.schicht == null && g != null) { const L = HX.loops.get(t.loop); if (L && L.gg != null) g *= L.gg; if (L && L.pvMute) { g = 0; if (at != null) L.pvLate = Math.max(L.pvLate || 0, at); } }   // (a level for later while silenced – a Lichtung's: hxPvStop sends it again then)   // (owner, 26.10.2026: silent while the editor plays it – Vorhören)   // (Etappe 3: under the Gärtner's factor – the player's level stays his own)
   return hxPost({ gain: Object.assign({}, t, { g, f: hxAt(at), ramp: ramp != null ? Math.round(ramp * SR) : undefined, pan }) });
 }
 // a Schicht out (its seam fade), a loop or all out; → Promise of the chunks the processor hands back

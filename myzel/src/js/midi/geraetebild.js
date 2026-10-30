@@ -83,6 +83,14 @@ function cbCtls(M, d) {
 }
 // the message a control sends: measured, else the factory's (only for a model whose map is known)
 const cbMsg = (C, d, M) => (C.deco ? null : (d.ctl && d.ctl[C.id]) || (M && M.known ? C.m : null));
+// (review 30.10.2026) a control that moves through its travel – fader, knob, crossfader (bindings.js: a stepping target
+// browses with it from its first value). An unknown device's tiles are all „Regler“, a CC button among them: not known.
+const cbTravels = (C, M) => !!C && (C.kind === 'fader' || C.kind === 'cross' || (C.kind === 'knob' && M.id !== 'generic'));
+// … and the control of a device that sends this CC, from its Gerätebild (a binding made before b.fad, a profile's)
+function cbCcTravels(src, ch, num) {
+  const d = cbData(src), M = cbModelFor(src);
+  return cbCtls(M, d).some((C) => { const m = cbMsg(C, d, M); return m && m.type === 'cc' && m.num === num && (m.ch == null || m.ch < 0 || m.ch === ch) && cbTravels(C, M); });
+}
 // the binding that acts for a message now (learned, else the profile's, else General MIDI)
 function cbBind(src, msg) {
   if (!msg) return null;
@@ -121,7 +129,7 @@ function cbLogical(src) {
   // write them as learned bindings of this device (the same controls replaced); a channel only where two controls share
   // a number (a mixer controller's channel per strip)
   const msgs = plan.map(([C]) => cbMsg(C, d, M)), dup = (m) => msgs.filter((x) => x && x.type === m.type && x.num === m.num).length > 1;
-  const nb = plan.map(([C, t, mode], k) => { const m = msgs[k]; return mapClean({ dev: src.name, type: m.type, ch: dup(m) ? m.ch : -1, num: m.num, target: t, mode: m.type === 'note' && mode === 'abs' ? 'toggle' : mode, name: C.label, fad: mode === 'abs' && m.type === 'cc' && C.kind !== 'button' && C.kind !== 'pad' }); }).filter(Boolean);
+  const nb = plan.map(([C, t, mode], k) => { const m = msgs[k]; return mapClean({ dev: src.name, type: m.type, ch: dup(m) ? m.ch : -1, num: m.num, target: t, mode: m.type === 'note' && mode === 'abs' ? 'toggle' : mode, name: C.label, fad: mode === 'abs' && cbTravels(C, M) }); }).filter(Boolean);
   MAP.user = MAP.user.filter((u) => !(sameDev(u.dev, src.name) && nb.some((n) => n.type === u.type && n.num === u.num && (n.ch < 0 || u.ch < 0 || n.ch === u.ch)))).concat(nb);
   mapSave(); MIDI.zv++;
   return nb.length;
@@ -199,7 +207,7 @@ function cbSide(src, M, ctl, d) {
       const it = h('button', { type: 'button', class: 'cb-it' }, h('b', null, t.label), h('span', null, t.group));
       it.addEventListener('click', () => {
         const T = mtOf(t.key), mode = T && (T.hit || (T.bool && !T.cont)) ? (msg.type === 'note' ? 'toggle' : 'trigger') : 'abs';
-        const nb = mapClean({ dev: src.name, type: msg.type, ch: -1, num: msg.num, target: t.key, mode, name: C.label });
+        const nb = mapClean({ dev: src.name, type: msg.type, ch: -1, num: msg.num, target: t.key, mode, name: C.label, fad: mode === 'abs' && cbTravels(C, M) });
         MAP.user = MAP.user.filter((u) => !(sameDev(u.dev, src.name) && u.type === nb.type && u.num === nb.num)).concat(nb); mapSave(); MIDI.zv++;
         toast(C.label + ' → ' + t.label); cbRender();
       });

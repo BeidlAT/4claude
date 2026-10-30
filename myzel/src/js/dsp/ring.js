@@ -239,6 +239,8 @@
         }
       }
       const q = this.q; let i = q.length;
+      // (review 30.10.2026) Stopp, Stille: a halt now overrides what that loop still had coming (a start at the next bar)
+      if (kind === 'state' && d.over && f === -Infinity) { for (let j = q.length - 1; j >= 0; j--) if (q[j].kind === 'state' && q[j].d.loop === d.loop) q.splice(j, 1); i = q.length; }
       while (i > 0 && q[i - 1].f > f) i--;
       q.splice(i, 0, e);
     }
