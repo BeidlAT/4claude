@@ -29,6 +29,11 @@ Begründungen stehen in `dev/STAND-2026-10-29.md` (Abschnitte „Danach (30.10.)
    – bis dahin laufen alle Tests nur in Chromium (immer dazusagen).
 
 ## Für die nächste Sitzung zu tun (ohne weitere Rückfrage)
+9b. **F-Tasten-Presets und Touché-Schalter (Besitzer 30.10.):** „F1–F10 = 10 Presets geht nicht mehr“ – im Code sind F1–F12
+    seit 25./26.10. die Touché-Spielweisen (touche.js, auf seinen Wunsch); eine Preset-Belegung der F-Tasten findet sich in
+    keiner Version seit der Rücksetzung. Klären, was er meint (ältere Fassung? Zifferntasten?), dann: Presets auf Tasten
+    legen, ohne die Spielweisen zu verlieren (z. B. Strg+F1–F10 oder F-Tasten ohne Touché), und die zwei unteren Touché-SE-
+    Schalter als voriges/nächstes Preset (MIDI-Ziele preset.prev/next im Touché-Profil).
 9a. **Bearbeiten-Fenster als Schalter (Besitzer 30.10., Screenshot):** jeder Eintrag zeigt seinen Aktiv-Zustand, ein zweiter
     Klick nimmt ihn zurück (ohne ↶) – Tonhöhe, Verstimmen, Verwandeln, Färben als nicht-destruktive Ebene `L.rx` über
     Abdruck **und** Wuchs-Version (heute verschwindet eine Verwandlung, sobald ein Noten-Werkzeug wie „dünner“ eine neue
