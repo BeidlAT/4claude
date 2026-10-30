@@ -72,8 +72,8 @@ const hxName = (L) => 'Schleife ' + (L.slot + 1);
 const hxEngName = (L) => (L.bew ? 'Bewegung' : ENG_NAME[L.eng] || '');
 function hxLenText(L) {
   if (!hxTakt(L)) return 'frei · ' + dec(hxLen(L).toFixed(1)) + ' s';
-  const bars = L.d.beats / (L.bpb || 4);
-  return (Number.isInteger(bars) ? bars + (bars === 1 ? ' Takt' : ' Takte') : L.d.beats + ' Schläge') + (L.bpb === 3 ? ' (3er)' : '');
+  const bt = +L.d.beats.toFixed(4), bars = +(bt / (L.bpb || 4)).toFixed(4);   // (owner, 26.10.2026: a trim's „16.000000000000004 Schläge“ – 4 Takte)
+  return (Number.isInteger(bars) ? bars + (bars === 1 ? ' Takt' : ' Takte') : dec(+bt.toFixed(2)) + ' Schläge') + (L.bpb === 3 ? ' (3er)' : '');
 }
 
 // ---- Ernten (KONZEPT §2.3): what a Korb tap at heard time T takes – and where the Schleife enters ----

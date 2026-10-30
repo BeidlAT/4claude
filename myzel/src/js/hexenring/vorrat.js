@@ -64,29 +64,44 @@ function hxHumSlice(H, c) {
   if (H.aud[0] && H.aud[0].dr) { const per = HX_CH / 128, b = Math.floor(off / 128), mx = H.aud.length * per - 1; dr = new Float32Array(Math.ceil(c.n / 128) + 1); for (let k = 0; k < dr.length; k++) { const q = Math.min(mx, b + k), ch = H.aud[Math.floor(q / per)]; dr[k] = ch && ch.dr ? ch.dr[q % per] : 0; } }
   return { aud, dr };
 }
+// (owner, 26.10.2026: „es passt überhaupt nicht zusammen“; again 30.10.2026 – lost in the reset of 27.10.) the window
+// that sounds, in the Ernte's frames: the cut's – or, trimmed (band.js: the cut keeps the whole's w0 … w1 and only its
+// pre moves, stale), the part of it that plays; null when what plays is no longer the Ernte's audio as it was
+// (mirrored, at another tape speed, doubled)
+function hxHumWin(L, S) {
+  const c = S && S.cut; if (!c) return null;
+  if (!c.stale) return { w0: c.w0, w1: c.w1 };
+  const T = L && L.trim && L.tr0 && L.tr0.sch.find((s) => s.key === S.key);
+  if (!T || !T.cut || T.cut.stale || L.rev || (L.sp || 1) !== 1 || (L.tr0.sp || 1) !== 1) return null;
+  const w0 = c.f0 + c.pre; return { w0, w1: w0 + c.len };
+}
+// the margins a fresh cut of that window gets (hxCut): how near the Ernte's ends the window may go
+const hxHumMar = (S, W) => { const n = hxCut(S.cut.in, 0, 0, { f0: W.w0, f1: W.w1 }); return { pre: n.pre, post: n.post }; };
 // the loop's window moved or resized in its Ernte (frames, absolute): heard at once when its length stays, else from the
-// next seam; one step in the history
+// next seam; one step in the history. A trimmed loop's window is the part that plays – moved, it is a whole cut of its own
 function hxHumApply(L, w0, w1, label) {
   hxRxWait();   // (a stretch's edit still in the Workers: written first – abschnitt.js)
   const S = L && HX.sch.get(L.sch[0]), H = L && L.hum;
   if (!S || !H) return false;
   if (L.sch.length > 1) { toast('Den Ausschnitt in der Ernte wählst du bei einer Schleife mit einer Schicht – lege die Schichten erst zusammen.'); return false; }
   if (!S.aud) { toast('Einen Moment – die Schleife wird noch aufgenommen.'); return false; }
-  const c = S.cut, tk = hxTakt(L), beatF = tk ? c.len / L.d.beats : 0;
+  const c = S.cut, W = hxHumWin(L, S), tk = hxTakt(L), beatF = tk ? c.len / L.d.beats : 0;
+  if (!W) { toast('Diese Schleife spielt verwandelt (rückwärts, anderes Band, verdoppelt) – den Ausschnitt in der Ernte wählst du erst nach „Wieder ganz“.'); return false; }
   w0 = Math.round(w0); w1 = Math.round(w1);
-  if (w0 === c.w0 && w1 === c.w1) return false;
+  if (w0 === W.w0 && w1 === W.w1) return false;
   const nc = hxCut(c.in, 0, 0, { f0: w0, f1: w1 });
   if (!hxHumOf(nc)) { toast('So weit reicht die Ernte nicht.'); return false; }
   const nb = tk ? Math.max(1, Math.round((w1 - w0) / beatF)) : 0, geom = tk ? (nb !== L.d.beats ? { beats: nb } : null) : (w1 - w0 !== L.d.L ? { L: w1 - w0 } : null);
-  const before = hxGeo(L), key = L.key, sw = geom ? hxNextSeam(L) : hxSwapAt(L);
+  const before = hxGeo(L), key = L.key, sw = geom ? hxNextSeam(L) : hxSwapAt(L), tr = { trim: L.trim, tr0: L.tr0 };
   hxSchSwap(S, nc, { f: sw.f, now: !!sw.now, geom });
+  L.trim = null; L.tr0 = null;   // (what plays is a cut of the Ernte again – „Wieder ganz“ has nothing to go back to)
   const after = {};
-  hxHist({ kind: 'recut', label: hxName(L) + ': ' + (label || 'Ausschnitt in der Ernte'), undo() { const X = hxByKey(key); if (X) { after.g = hxGeo(X); hxGeoBack(X, before); } }, redo() { const X = hxByKey(key); if (X && after.g) hxGeoBack(X, after.g); } });
+  hxHist({ kind: 'recut', label: hxName(L) + ': ' + (label || 'Ausschnitt in der Ernte'), undo() { const X = hxByKey(key); if (X) { after.g = hxGeo(X); hxGeoBack(X, before); X.trim = tr.trim; X.tr0 = tr.tr0; } }, redo() { const X = hxByKey(key); if (X && after.g) { hxGeoBack(X, after.g); X.trim = null; X.tr0 = null; } } });
   hxSay(hxName(L) + ': ' + (label || 'Ausschnitt in der Ernte')); hxSaveLoop(L); hxRailDirty(); hxCardDirty();
   return true;
 }
 // Grundeinstellung: the window as harvested
-function hxHumReset(L) { const H = L && L.hum, S = L && HX.sch.get(L.sch[0]); if (H && S && L.sch.length === 1 && (S.cut.w0 !== H.w0 || S.cut.w1 !== H.w1)) hxHumApply(L, H.w0, H.w1, 'Ausschnitt wie geerntet'); }
+function hxHumReset(L) { const H = L && L.hum, S = L && HX.sch.get(L.sch[0]), W = hxHumWin(L, S); if (H && W && L.sch.length === 1 && (W.w0 !== H.w0 || W.w1 !== H.w1)) hxHumApply(L, H.w0, H.w1, 'Ausschnitt wie geerntet'); }
 
 // ---- the editor's row: the Ernte whole, the loop's window in it ----
 const HXEH = { drag: null };
@@ -98,10 +113,10 @@ function hxEdHumRow(L) {
   const cv = h('canvas', { class: 'hx-ed-humcv', role: 'img', 'aria-label': 'Ganze Ernte von ' + hxName(L) + ' mit dem Ausschnitt der Schleife' });
   HXE.hcv = cv;
   const sec = (f) => (f >= 60 * SR ? Math.floor(f / SR / 60) + ':' + String(Math.floor(f / SR) % 60).padStart(2, '0') + ' min' : dec((f / SR).toFixed(1)) + ' s');
-  const tk = hxTakt(L), one = L.sch.length === 1;
-  const info = h('span', { class: 'hx-ms' }, 'Die ganze Ernte: ' + sec(hxHumView(H).n) + ' ab dem ersten Ton' + (tk ? ' · Ausschnitt ' + hxLenText(L) : ' · Ausschnitt ' + sec(S.cut.len)) + (one ? '' : ' – den Ausschnitt verschiebst du bei einer Schicht (Schichten zusammenlegen)'));
+  const tk = hxTakt(L), W = hxHumWin(L, S), one = L.sch.length === 1 && !!W;
+  const info = h('span', { class: 'hx-ms' }, 'Die ganze Ernte: ' + sec(hxHumView(H).n) + ' ab dem ersten Ton' + (tk ? ' · Ausschnitt ' + hxLenText(L) : ' · Ausschnitt ' + sec(S.cut.len)) + (one ? '' : !W ? ' – die Schleife spielt verwandelt (rückwärts, anderes Band, verdoppelt): der Ausschnitt lässt sich erst nach „Wieder ganz“ verschieben' : ' – den Ausschnitt verschiebst du bei einer Schicht (Schichten zusammenlegen)'));
   const btn = (t, fn, tip) => { const b = h('button', { type: 'button', class: 'btn ghost', title: tip }, t); b.addEventListener('click', fn); b.disabled = !one; return b; };
-  const beatF = tk ? S.cut.len / L.d.beats : 0, c = () => S.cut;   // (read at the click: one click after another adds up)
+  const beatF = tk ? S.cut.len / L.d.beats : 0, c = () => hxHumWin(L, HX.sch.get(L.sch[0])) || W || S.cut;   // (read at the click: one click after another adds up; a trimmed loop's: the part that plays)
   // (owner, 29.10.2026: „jeweils eine Auswahl, was vorne oder hinten dazukommt oder wegkommt … auch 1/32 oder gar 1/64 …
   // triolisches Raster würde wohl auch Sinn machen … zusätzlich nächsten Ton einrasten“) the step: a Takt loop's in note
   // values (a beat is a quarter), straight or as triplets (⅔); a free loop's in seconds. Anfang and Ende each take it away
@@ -164,22 +179,22 @@ const hxHumX = (H, f, w) => { const V = hxHumView(H); return ((f - V.f0) / Math.
 function hxHumDrag(box, L) {
   const fr = (e) => { const r = HXE.hcv.getBoundingClientRect(), V = hxHumView(L.hum); return V.f0 + clamp((e.clientX - r.left) / Math.max(1, r.width), 0, 1) * V.n; };
   box.addEventListener('pointerdown', (e) => {
-    const S = HX.sch.get(L.sch[0]), H = L.hum; if (!S || !H || e.button > 0) return;
-    const r = HXE.hcv.getBoundingClientRect(), x = e.clientX - r.left, xa = hxHumX(H, S.cut.w0, r.width), xb = hxHumX(H, S.cut.w1, r.width);
+    const S = HX.sch.get(L.sch[0]), H = L.hum, W = hxHumWin(L, S); if (!S || !H || !W || e.button > 0) return;
+    const r = HXE.hcv.getBoundingClientRect(), x = e.clientX - r.left, xa = hxHumX(H, W.w0, r.width), xb = hxHumX(H, W.w1, r.width);
     const mode = Math.abs(x - xa) < 8 ? 'a' : Math.abs(x - xb) < 8 ? 'b' : x > xa && x < xb ? 'm' : 'j';
-    HXEH.drag = { L, mode, f: fr(e), w0: S.cut.w0, w1: S.cut.w1, v0: S.cut.w0, v1: S.cut.w1, moved: false };
-    if (mode === 'j') { const len = S.cut.w1 - S.cut.w0, st = hxHumSnap(L, fr(e) - len / 2, e, S); Object.assign(HXEH.drag, { mode: 'm', w0: st, w1: st + len, v0: st, v1: st + len, moved: true }); }   // (a press beside the window: it jumps there, centred – dragging on moves it)
+    HXEH.drag = { L, mode, f: fr(e), w0: W.w0, w1: W.w1, v0: W.w0, v1: W.w1, mar: hxHumMar(S, W), moved: false };
+    if (mode === 'j') { const len = W.w1 - W.w0, st = hxHumSnap(L, fr(e) - len / 2, e, S); Object.assign(HXEH.drag, { mode: 'm', w0: st, w1: st + len, v0: st, v1: st + len, moved: true }); }   // (a press beside the window: it jumps there, centred – dragging on moves it)
     box.setPointerCapture(e.pointerId); e.preventDefault(); hxHumDraw();
   });
   box.addEventListener('pointermove', (e) => {
-    const D = HXEH.drag; if (!D || D.L !== L) { const S = HX.sch.get(L.sch[0]), H = L.hum; if (S && H && HXE.hcv) { const r = HXE.hcv.getBoundingClientRect(), x = e.clientX - r.left; box.style.cursor = Math.abs(x - hxHumX(H, S.cut.w0, r.width)) < 8 || Math.abs(x - hxHumX(H, S.cut.w1, r.width)) < 8 ? 'ew-resize' : 'grab'; } return; }
+    const D = HXEH.drag; if (!D || D.L !== L) { const S = HX.sch.get(L.sch[0]), H = L.hum, W = hxHumWin(L, S); if (S && H && W && HXE.hcv) { const r = HXE.hcv.getBoundingClientRect(), x = e.clientX - r.left; box.style.cursor = Math.abs(x - hxHumX(H, W.w0, r.width)) < 8 || Math.abs(x - hxHumX(H, W.w1, r.width)) < 8 ? 'ew-resize' : 'grab'; } return; }
     const S = HX.sch.get(L.sch[0]), H = L.hum; if (!S || !H) return;
     const d = fr(e) - D.f, minF = hxTakt(L) ? S.cut.len / L.d.beats : 0.1 * SR, maxF = hxTakt(L) ? (S.cut.len / L.d.beats) * 128 * (L.bpb || 4) : H.n;
     let v0 = D.w0, v1 = D.w1;
     if (D.mode === 'm') { v0 = hxHumSnap(L, D.w0 + d, e, S); v1 = v0 + (D.w1 - D.w0); }
     else if (D.mode === 'a') { v0 = clamp(hxHumSnap(L, D.w0 + d, e, S), D.w1 - maxF, D.w1 - minF); }
     else { v1 = clamp(hxHumSnap(L, D.w1 + d, e, S), D.w0 + minF, D.w0 + maxF); }
-    const lo = H.f0 + S.cut.pre, hi = H.f0 + H.n - S.cut.post;   // (its margins inside the Ernte)
+    const lo = H.f0 + D.mar.pre, hi = H.f0 + H.n - D.mar.post;   // (its margins inside the Ernte – a fresh cut's)
     if (v0 < lo) { const k = lo - v0; v0 += k; if (D.mode !== 'a') v1 += k; }
     if (v1 > hi) { const k = v1 - hi; v1 -= k; if (D.mode !== 'b') v0 -= k; }
     D.v0 = v0; D.v1 = v1; D.moved = D.moved || Math.abs(d) > 0.002 * H.n; hxHumDraw();
@@ -189,9 +204,10 @@ function hxHumDrag(box, L) {
 }
 // a frame on the loop's grid: its beats (Umschalt: bars) counted from where it starts, a free loop's 10 ms
 function hxHumSnap(L, f, e, S) {
-  if (!hxTakt(L)) { const q = 0.01 * SR; return S.cut.w0 + Math.round((f - S.cut.w0) / q) * q; }
+  const a = (hxHumWin(L, S) || S.cut).w0;
+  if (!hxTakt(L)) { const q = 0.01 * SR; return a + Math.round((f - a) / q) * q; }
   const beatF = S.cut.len / L.d.beats, q = e && e.shiftKey ? beatF * (L.bpb || 4) : beatF;
-  return S.cut.w0 + Math.round((f - S.cut.w0) / q) * q;
+  return a + Math.round((f - a) / q) * q;
 }
 // the strip: the Ernte's peaks (made once per width), its bars, the loop's window bright, the rest dim
 function hxHumDraw() {
@@ -210,7 +226,7 @@ function hxHumDraw() {
     let m = 1e-4; for (let x = 0; x < W; x++) m = Math.max(m, -mn[x], mx[x]);
     H.pk = { W, mn, mx, m };
   }
-  const D = HXEH.drag && HXEH.drag.L === L ? HXEH.drag : null, v0 = D ? D.v0 : S.cut.w0, v1 = D ? D.v1 : S.cut.w1;
+  const Wn = hxHumWin(L, S) || S.cut, D = HXEH.drag && HXEH.drag.L === L ? HXEH.drag : null, v0 = D ? D.v0 : Wn.w0, v1 = D ? D.v1 : Wn.w1;
   const xa = hxHumX(H, v0, w), xb = hxHumX(H, v1, w), amp = (hh * 0.44) / Math.max(H.pk.m, 0.05);
   c.clearRect(0, 0, w, hh); c.fillStyle = '#120e0b'; c.fillRect(0, 0, w, hh);
   c.fillStyle = 'rgba(255,179,92,.10)'; c.fillRect(xa, 0, Math.max(1, xb - xa), hh);
