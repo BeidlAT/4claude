@@ -67,7 +67,7 @@ function hxWNotesMk(L, S, w0, w1, evs) {
   if (takt && evs.length > 2) { const spb = 60 / tgBpm(w0), dv = evs.filter((e) => e.t0 >= w0 - 0.03).map((e) => { const x = u(e.t0) * 4; return (x - Math.round(x)) * spb / 4; }); const m = dv.reduce((a, b) => a + b, 0) / dv.length; sd = Math.sqrt(dv.reduce((a, b) => a + (b - m) * (b - m), 0) / dv.length); }
   return { u: takt ? 'b' : 's', len: takt ? L.d.beats : c.len / SR, key: k, sd, lanes: hxWLanes(w0, w1, u), n: evs.map((e) => {
     const t = u(e.t0), rel = (p) => p.map(([tt, v]) => [u(tt) - t, v]);
-    return { t, held: e.t0 < w0 - 0.03, d: e.t1 != null ? u(e.t1) - t : null, eng: e.eng, f: e.f, deg: e.deg, oct: e.oct, alt: e.alt, y0: e.y0, vel: e.vel, pan: e.pan, src: e.src === 'ras' ? 'fin' : e.src, burst: e.burst, gate: e.gate, hold: e.hold, cy: rel(e.curves.y), cf: rel(e.curves.f) };
+    return { t, held: e.t0 < w0 - 0.03, d: e.t1 != null ? u(e.t1) - t : null, eng: e.eng, f: e.f, deg: e.deg, oct: e.oct, alt: e.alt, y0: e.y0, vel: e.vel, pan: e.pan, amp: e.amp, src: e.src === 'ras' ? 'fin' : e.src, burst: e.burst, gate: e.gate, hold: e.hold, cy: rel(e.curves.y), cf: rel(e.curves.f) };
   }) };
 }
 // which Schichten can grow: Gespielt, with notes (Alles holds the loops and the echo – it stays an Abdruck)
@@ -89,8 +89,9 @@ function hxWF(L, W, n, key) {
 // the source a note sounds with: its own, the field's (Spielfeld: the layer it was played on), or one chosen
 function hxWEng(L, n) {
   const k = hxKlangOf(L);
-  if (k === 'eigen' || (n.src !== 'fin' && n.src !== 'eb2')) return n.eng;
-  if (k === 'feld') return n.src === 'eb2' && P['v.layer'] !== 'off' ? P['v.layer'] : P['v.eng'];
+  const e = EB_OF[n.src];   // (Ebenen 1–8, 30.10.2026)
+  if (k === 'eigen' || !e) return n.eng;
+  if (k === 'feld') return e.n > 1 && ENGINES[P[e.eng]] ? P[e.eng] : P['v.eng'];
   return ENGINES[k] ? k : n.eng;
 }
 const hxWQ = (L) => { const s = L.stufe || P['hx.stufe'] || '3'; return s === 'gespielt' ? L.q || P['dev.q'] : s; };
@@ -129,7 +130,7 @@ function hxWPass(L, S, k, o = {}) {
     const br = sd ? clamp(sd * hxWPink(S.wseed, kb * W.n.length + i), -2 * sd, 2 * sd) : 0;
     const f = hxWF(L, W, n, key), rf = f / n.f, eng = hxWEng(L, n), tt = Math.max(0, t0 + br);
     const cv = (p, map) => p.map(([dt, v]) => [Math.max(tt, sec(t + dt) + br), map(v)]).filter(([x]) => x < len + HX_WTAIL);
-    notes.push({ t0: tt, t1: t1 != null ? Math.max(tt + 0.005, t1 + br) : null, eng, f, y0: n.y0, vel: n.vel, pan: n.pan, src: n.src, burst: n.burst, gate: n.gate, hold: n.hold,
+    notes.push({ t0: tt, t1: t1 != null ? Math.max(tt + 0.005, t1 + br) : null, eng, f, y0: n.y0, vel: n.vel, pan: n.pan, amp: n.amp, src: n.src, burst: n.burst, gate: n.gate, hold: n.hold,
       curves: { y: cv(n.cy || [], (v) => v), f: cv(n.cf || [], (v) => v * rf) } });
   });
   const prm = []; for (const ln of W.lanes || []) for (const [x, v] of ln.pts) { const t = x <= 0 ? 0 : sec(x); if (t < len) prm.push([t, ln.id, v]); }
@@ -164,7 +165,7 @@ function hxWSig(L, S, key) {
 }
 // the signature of the field's sound, kept until a parameter changes (setParam, loadValues reset it)
 function hxWPHashC() { return HX.phH != null ? HX.phH : (HX.phH = hxWPHash()); }
-const hxWPIn = (id) => !!PD[id] && !PD[id].rec && !PD[id].dev && !id.startsWith('x') && !/^(rev|dly|mst|seq|l\d|rec|hx|mix)\./.test(id);   // (a parameter of the field's sound)
+const hxWPIn = (id) => !!PD[id] && !PD[id].rec && !PD[id].dev && !PD[id].live && !id.startsWith('x') && !/^(rev|dly|mst|seq|l\d|rec|hx|mix)\./.test(id);   // (a parameter of the field's sound)
 function hxWPHash() { let h = 7; for (const id in P) if (hxWPIn(id)) { const v = String(P[id]); for (let i = 0; i < v.length; i++) h = (Math.imul(h, 31) + v.charCodeAt(i)) | 0; } return h; }
 
 // a version whose tail was still sounding at the render's end (12 s, or a living pass's estimate) ends with a 30-ms fade

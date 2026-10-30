@@ -71,7 +71,7 @@ function ksBuffer(f, bright, decaySec, damp, pos) {
 ksBuffer.wait = new Set();
 // While Saite is in use, render every note of the current scale in the worker so taps never wait for it.
 function saiInUse() {
-  if (P['v.eng'] === 'sai' || P['v.layer'] === 'sai' || (RG.on && GK.p.rgS === 'sai')) return true;   // (Sporenregen striking strings)
+  if (ebEngs().includes('sai') || (RG.on && GK.p.rgS === 'sai')) return true;   // (Sporenregen striking strings)
   for (let i = 0; i < 4; i++) if (P['l' + i + '.on'] && P['l' + i + '.eng'] === 'sai') return true;
   return false;
 }

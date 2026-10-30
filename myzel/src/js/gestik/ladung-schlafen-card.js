@@ -41,7 +41,7 @@ function ladCardSync(C, noGyro) {
   tx(C.eTxt, GK.live && !GK.dmSeen ? 'Dieses Gerät meldet nur seine Lage, keine Beschleunigung – Schütteln lädt hier nichts auf (Neigen, Wenden und Ruhe gehen).'
     : p.entl < 1 ? 'Kurz: eine echte Rassel – sie klingt nur, solange du schüttelst.' : p.entl >= 15 ? 'Lang: ein Aufbau über viele Takte, während deine Hände längst wieder spielen.' : 'Nach dem Schütteln entlädt es sich über ' + dec(String(p.entl)) + ' s.');
   // what the charge does in the sound that plays now
-  const has = [SEQ.on && 'der Puls voller und heller', (P['v.eng'] === 'kor' || P['v.layer'] === 'kor') && 'Körner dichter', (P['v.eng'] === 'trp' || P['v.layer'] === 'trp') && 'Tropfen-Regen', gspInUse() && 'Gespinst koppelt stärker', rhzInUse() && 'das Rhizom reizbarer'].filter(Boolean);
+  const has = [SEQ.on && 'der Puls voller und heller', ebEngs().includes('kor') && 'Körner dichter', ebEngs().includes('trp') && 'Tropfen-Regen', gspInUse() && 'Gespinst koppelt stärker', rhzInUse() && 'das Rhizom reizbarer'].filter(Boolean);
   tx(C.lTxt, has.length ? 'In diesem Klang: ' + has.join(', ') + ', das Echo leiert.' : 'In diesem Klang: gehaltene Töne heller, mehr Echo und Schweben – mit Puls, Körnern oder Tropfen wirkt mehr.');
   tx(C.rTxt, p.ras ? 'Jeder Schüttel-Höhepunkt spielt einen Schlag, ' + (p.rasQ === 'frei' ? 'ohne Raster (für langsame Tempi).' : 'auf die nächste ' + (p.rasQ === '32' ? '1/32' : '1/16') + ' des Pulses gelegt.') + ' Er läuft über den Kanal „Klang“.' : 'Rassel-Schläge: jeder Schüttel-Höhepunkt spielt zusätzlich einen Tropfen, eine Membran, eine Schale, den Holzstab (Jahresring) oder eine Kompostglocke (Moder) im Raster.');
   const st = GK.R && GK.R.st;

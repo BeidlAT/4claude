@@ -6,7 +6,7 @@ const HX_CH = 8192;
 // seams included, 0.19–0.27; extra per Schicht while its loop is resampled 0.75–0.84
 const HX_COST = { capture: 1.38, schicht: 0.39, get rs() { return HX.rsw ? 0.8 : 1.32; }, fx1: 2.71, get dd() { return HX.rsw ? 1.5 : 3.5; }, stream: 0.1, get k16() { return HX.rsw ? 0.92 : 2.06; }, get k24() { return HX.rsw ? 1.0 : 2.69; }, slice: 0.77, abr: 0.21, acc: 0.33, mic: 0.47, hof: { glt: [0.8, 1.05], shn: [0.77, 1.16] } };   // (Leistung, 24.10.2026: the resampler and the de-drift job in WebAssembly – cost.js, this build against the one before, two runs each, alternating, table units: rs 0.31 / 0.18 against 0.52 / 0.46, k16 0.36 / 0.32 against 0.80 / 0.79, k24 0.42 / 0.37 against 1.08 / 1.13, dd 0.63 / 0.71 against 1.37 / 1.65 – this machine measures the old build under the table, so the table's entries × the least favourable ratio: rs 1.32 × 0.60, k16 2.06 × 0.44, k24 2.69 × 0.37, dd 3.5 × 0.43; without WebAssembly the JavaScript path ≈ 1.4× faster than before only – there, and until the processor has said which path it reads by (HX.rsw), the old entries stand)   // (step 4, cost.js three runs, table units, the higher + 15 %: the Mikro's ring hxi − hxc 0.13 / 0.41 / 0.33; a Sammelschleife recording hxk − hxj 0.19 / 0.17 / 0.28; a Hof's voice as built – its processor fed, its pan – Glut 0.65 / 0.70 at level 1, 0.91 / 0.92 at 3, Sehne 0.65 / 0.67, 0.94 / 1.01)   // (step 2b, cost.js two runs, the higher + 15 %: capture with the Puls's ring 1.20 / 1.07; a loop's speed through the 56-tap kernel hxu − hxs 1.79 / 1.56, the 80-tap 2.34 / 2.22 (½: the shared one, as rs); a Schicht in slices 0.67 / 0.65; worn 0.18 / 0.17)   // (klang/tests/cost.js, re-measured in step 1d: SPEC §21; stream: step 2a – a living Schicht's streams beyond its schicht, hxw − hxs 0.084 / 0.064, +15 %)
 const HX = { node: null, ctx: null, state: '', fR: 0, tR: 0, loops: new Map(), sch: new Map(), lid: 0, sid: 0, gid: 0, wait: new Map(), meter: [], back: [], ddRun: new Set(), dd: 0,
-  mask: new Set(['fin', 'eb2', 'rgn', 'gsp']), fx: null, fx1: null, play: 0, rs: 0, ev: [], evI: 0, evId: 0 };
+  mask: new Set([...EB_K, 'rgn', 'gsp']), fx: null, fx1: null, play: 0, rs: 0, ev: [], evI: 0, evId: 0 };
 const hxF = (t) => HX.fR + (t - HX.tR) * SR;   // audio time → the processor's frame (its own count, mapped by its reports)
 const hxT = (f) => HX.tR + (f - HX.fR) / SR;
 const hxLive = () => !!(A.ctx && !(typeof OfflineAudioContext !== 'undefined' && A.ctx instanceof OfflineAudioContext));
@@ -130,7 +130,7 @@ function hxNode() {
   if (HX.restore) setTimeout(hxRestoreApply, 300);   // Hexenring: the Schleifen of the last session come back, angehalten
 }
 // which strips „Gespielt“ hears: the sources always, the Puls and the Bordun when asked
-function hxMaskSync() { hxMask(['fin', 'eb2', 'rgn', 'gsp'].concat(P['hx.pulsMit'] ? ['l0', 'l1', 'l2', 'l3'] : [], P['hx.borMit'] ? ['bor'] : [])); }
+function hxMaskSync() { hxMask([...EB_K, 'rgn', 'gsp'].concat(P['hx.pulsMit'] ? ['l0', 'l1', 'l2', 'l3'] : [], P['hx.borMit'] ? ['bor'] : [])); }
 function hxParam(id) {
   if (id === 'hx.rail' || id === 'hx.buehne') hxRailShow();
   if (/^hx\.(gaertner|gPlatz|gRollen|gAntw|gBegl|gWk|hand)$/.test(id)) hxGdParam(id);   // (Etappe 3)
@@ -169,7 +169,7 @@ function hxMsg(m) {
 }
 const hxReport = () => new Promise((res) => { HX.wait.set('r', res); if (!hxPost({ report: 1 })) { HX.wait.delete('r'); res(null); } });
 
-// ---- the taps (SPEC §4): „Gespielt“ = each source strip after its mute/solo gate (fin, eb2, rgn, gsp; l0–l3 and bor
+// ---- the taps (SPEC §4): „Gespielt“ = each source strip after its mute/solo gate (fin, eb2–eb8, rgn, gsp; l0–l3 and bor
 // by the mask), „Alles“ = A.masterSum. The strip „Hexenring“ plays into A.masterIn behind both: no tap hears a Schleife.
 // (A masked-out strip has no tap at all – a tap is a node the browser runs.)
 function hxGraph() {

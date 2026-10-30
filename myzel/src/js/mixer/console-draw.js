@@ -420,7 +420,10 @@ const mxTouched = (k) => Object.keys(PD).some((id) => id.startsWith('x' + k + '.
 // (Hexenring: its strip likewise, from the first Schleife on)
 function mxRgnSync() {
   let ch = false;
-  for (const [k, gone] of [['rgn', !(GK.on && GK.p.neigen === 'regen') && !mxTouched('rgn')], ['hxr', !HX.loops.size && !mxTouched('hxr')]]) {
+  // (30.10.2026) Ebenen 3–8 likewise: only while the layer has a sound or its strip was set – eight empty strips would
+  // crowd the Pult (Ebene 2 stands as it always did)
+  const ly = EB.slice(2).map((e) => [e.k, !ENGINES[P[e.eng]] && !mxTouched(e.k)]);
+  for (const [k, gone] of [['rgn', !(GK.on && GK.p.neigen === 'regen') && !mxTouched('rgn')], ['hxr', !HX.loops.size && !mxTouched('hxr')], ...ly]) {
     const S = MX.ch[k];
     if (!S || !S.el || !!S.gone === gone) continue;
     S.gone = gone; S.el.classList.toggle('gone', gone); ch = true;
@@ -428,7 +431,9 @@ function mxRgnSync() {
   }
   if (!ch) return;
   MX.vis = MXC.filter((c) => !MX.ch[c.k].gone);
-  MX.dirtyStatic = true;
+  // the group's share of the rack without the Ebenen it does not show (Regen and Hexenring keep their place as before)
+  for (const g of MX.row ? MX.row.querySelectorAll('.mx-grp') : []) { const gs = g.querySelector('.mx-gs'); if (gs) g.style.flexGrow = String([...gs.children].filter((x) => !(x.classList.contains('gone') && EB_OF[x.dataset.k])).length); }
+  MX.dirtyStatic = true; MXG.w = 0;   // (the Geflecht lays its columns out anew – mxgLayout)
   if (MX.open) mxLayout();
 }
 function mxPultSelect(k) {

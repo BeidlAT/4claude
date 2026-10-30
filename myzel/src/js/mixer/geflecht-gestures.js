@@ -3,16 +3,16 @@
 // 4 px of a boundary between two columns could mean either – it goes to the chosen channel when that is one of
 // them, else to the column it landed in (which then lights up before anything moves)
 function mxgColAt(x, y, pick) {
-  const G = MXG, r = G.fr || G.field.getBoundingClientRect(), px = x - r.left, py = y - r.top, n = MXC.length;
+  const G = MXG, r = G.fr || G.field.getBoundingClientRect(), px = x - r.left, py = y - r.top, V = G.vis || G.cols, n = V.length;
   if (!G.w) return null;
-  if (py > G.soilY && Math.hypot(px - G.rootX, py - G.rootY) < G.rootR + 4) return G.cols[n - 1];
+  if (py > G.soilY && Math.hypot(px - G.rootX, py - G.rootY) < G.rootR + 4) return V[n - 1];
   if (px < G.x0 - 4) return null;
   const f = (px - G.x0) / G.u, i = clamp(Math.floor(f), 0, n - 1);
   if (pick && i < n - 1) {
     const fr = (f - Math.floor(f)) * G.u, j = fr < 4 ? i - 1 : fr > G.u - 4 ? i + 1 : -1;
-    if (j >= 0 && j < n && G.cols[j].k === MX.sel) return G.cols[j];
+    if (j >= 0 && j < n && V[j].k === MX.sel) return V[j];
   }
-  return G.cols[i];
+  return V[i];
 }
 function mxgPointer(f) {
   const G = MXG;

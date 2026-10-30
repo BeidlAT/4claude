@@ -473,7 +473,7 @@ function importPreset(input) {
 
 /* ---------- mutation & dice, kept inside audible, musical ranges ---------- */
 const MUT_SKIP = new Set(['mst.vol', 'mst.comp', 'mst.low', 'mst.high', 'mst.wid', 'seq.bpm', 't.a4', 't.oct', 't.range', 't.root', 'v.eng', 'v.layer', 'bor.on', 'v.vel', 'v.oct', 'v.deg', 'v.layerDeg']);
-const mutSkip = (id) => MUT_SKIP.has(id) || id[0] === 'x' || id.startsWith('mix.');
+const mutSkip = (id) => MUT_SKIP.has(id) || id[0] === 'x' || id.startsWith('mix.') || /^e\d\./.test(id);   // (the Ebenen 3–8, Feinstimmung and ranges: the player's own – 30.10.2026)
 function safeify(vals) {
   const lim = (id, lo, hi) => { vals[id] = sanitize(PD[id], clamp(vals[id], lo, hi)); };
   lim('dly.fb', 0, Math.max(0.85, Math.min(P['dly.fb'], 1.05)));

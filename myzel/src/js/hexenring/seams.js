@@ -235,7 +235,7 @@ async function hxTail(S) {
   if (!evs.length) return false;
   const tS = Math.min(...evs.map((e) => e.t0)) - 0.05, TT = 12, dur = w1 - tS + TT, from = w1 - tS + (al - xf) / SR - 0.06;
   const rel = (p) => p.map(([t, v]) => [t - tS, v]);
-  const notes = evs.map((e) => ({ t0: e.t0 - tS, t1: e.t1 != null ? e.t1 - tS : null, eng: e.eng, f: e.f, y0: e.y0, vel: e.vel, pan: e.pan, src: e.src === 'ras' ? 'fin' : e.src, burst: e.burst, gate: e.gate, hold: e.hold, curves: { y: rel(e.curves.y), f: rel(e.curves.f) } }));
+  const notes = evs.map((e) => ({ t0: e.t0 - tS, t1: e.t1 != null ? e.t1 - tS : null, eng: e.eng, f: e.f, y0: e.y0, vel: e.vel, pan: e.pan, amp: e.amp, src: e.src === 'ras' ? 'fin' : e.src, burst: e.burst, gate: e.gate, hold: e.hold, curves: { y: rel(e.curves.y), f: rel(e.curves.f) } }));
   const m = await hxwCall('tail', { sr: SR, dur, from, notes, P: Object.assign({}, P), q: P['dev.q'], seed: (Math.random() * 2147483647) | 1, jrg: { age: A.jrgAge, season: A.season }, mask: [...HX.mask] });
   if (!m || m.err || !m.L || !HX.sch.has(S.id) || !S.aud) return false;
   // level: the Humus's last 60 ms before the crossfade against the render's same 60 ms

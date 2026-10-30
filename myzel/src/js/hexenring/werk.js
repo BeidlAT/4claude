@@ -271,7 +271,7 @@ async function hxwNotes(d) {
   A.voices.clear(); A.grainVoices.clear(); A.revActive = null; A.revWant = 0; A.drvKey = null; A.bor = null; A.frozen = false; A.grains = 0; A.irJob = 0; A.gsp = null; A.elmDrift = null; A.echoCache = null;
   KS_CACHE.clear(); KS_CACHE.frames = 0; ksBuffer.wait.clear();
   RHZ.q.length = 0; RHZ.vs.clear(); RHZ.h = 0; RHZ.sp = null; RHZ.own = null;
-  HX.mask = new Set(d.mask || ['fin', 'eb2', 'rgn', 'gsp']);
+  HX.mask = new Set(d.mask || [...EB_K, 'rgn', 'gsp']);
   const dur = Math.max(0.05, +d.dur || 1), len = Math.ceil(dur * SR), ctx = new OfflineAudioContext(2, len, SR), notes = d.notes || [];
   hxwSeed(HXW_FIX);   // (the graph's own noise and drift buffers: the same in every render)
   const nsPre = d.port && HXW_NS ? hxwNsPre(ctx) : null;   // (Leistung: the worklet-free sink's analysers, made before the graph)
@@ -310,7 +310,7 @@ async function hxwNotes(d) {
     }
     add(n.t0, () => {
       const E = ENGINES[n.eng]; if (!E || !(n.f > 0 && Number.isFinite(n.f))) return;   // (never a note without a pitch)
-      const o = { pan: n.pan || 0, bus: stripIn(n.src && MIX.s[n.src] ? n.src : 'fin') };
+      const o = { pan: n.pan || 0, bus: stripIn(n.src && MIX.s[n.src] ? n.src : 'fin'), amp: n.amp };   // (amp: a layer's soft edge as played – Ebenen, 30.10.2026)
       const v = n.burst ? hit(n.eng, n.t0, n.f, n.y0 != null ? n.y0 : 0.5, n.vel, Object.assign(o, { burst: true, gate: n.gate != null ? n.gate : 0.22 })) : E.sustain || n.hold ? playNote(n.eng, n.t0, n.f, n.y0 != null ? n.y0 : 0.5, n.vel, o) : hit(n.eng, n.t0, n.f, n.y0 != null ? n.y0 : 0.5, n.vel, o);
       n._v = v;
     });

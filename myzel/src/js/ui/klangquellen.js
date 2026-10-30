@@ -10,7 +10,7 @@
 // ★ and ▶). It opens on the family of the chosen source. Favourites and the recent ones are this device's
 // (myzel.klang.v1), never the patch's.
 const KQ_KEY = 'myzel.klang.v1';
-const KQ_PIDS = ['v.eng', 'v.layer', 'l0.eng', 'l1.eng', 'l2.eng', 'l3.eng'];
+const KQ_PIDS = ['v.eng', 'v.layer', 'l0.eng', 'l1.eng', 'l2.eng', 'l3.eng', ...EB.slice(2).map((e) => e.eng)];   // (Ebenen 3–8, 30.10.2026)
 const KQ = { fav: [], recent: [], T: null, fam: '', q: '', where: '', el: null, probe: null, hold: null, rows: new Set(), miss: [], openers: new Set(), opener: null,
   save() { store.set(KQ_KEY, JSON.stringify({ fav: this.fav, recent: this.recent })); } };
 (() => { try { const o = JSON.parse(store.get(KQ_KEY) || 'null'); if (o && typeof o === 'object') { if (Array.isArray(o.fav)) KQ.fav = o.fav.filter((k) => typeof k === 'string').slice(0, 64); if (Array.isArray(o.recent)) KQ.recent = o.recent.filter((k) => typeof k === 'string').slice(0, 7); } } catch (e) {} })();
@@ -64,7 +64,11 @@ function kqTarget(key) {
     probe: () => { const nt = mid(); return { f: lyF(layers()[0], nt.f, nt.idx), y: 0.5, vel: P['v.vel'], bus: stripIn('fin') }; } };
   else if (key === 'v.layer') T = { where: 'zweite Ebene', dat: 'die zweite Ebene', ch: 'Ebene 2', opts: () => PD['v.layer'].opts, allow: ok, busy: () => touches.size > 0,
     probe: () => { const nt = mid(); return { f: lyF({ ratio: Math.pow(2, P['v.layerInt'] / 12), deg: P['v.layerDeg'] }, nt.f, nt.idx), y: 0.5, vel: P['v.vel'] * Math.max(0.35, P['v.layerLvl']), bus: stripIn('eb2') }; } };
-  else if (/^l\d\.eng$/.test(key)) {
+  else if (/^e\d\.eng$/.test(key)) {   // (Ebenen 3–8, 30.10.2026: as Ebene 2 – the note in the middle at its interval)
+    const e = EB.find((x) => x.eng === key), w = 'Ebene ' + e.n;
+    T = { where: w, dat: w, ch: w, opts: () => PD[key].opts, allow: ok, busy: () => touches.size > 0,
+      probe: () => { const nt = mid(), fine = P[e.pre + 'fine']; return { f: lyF({ ratio: Math.pow(2, P[e.int] / 12 + fine / 1200), deg: P[e.deg] }, nt.f, nt.idx), y: 0.5, vel: P['v.vel'] * Math.max(0.35, P[e.lvl]), bus: stripIn(e.k) }; } };
+  } else if (/^l\d\.eng$/.test(key)) {
     const i = +key[1], p = 'l' + i + '.';
     T = { where: 'Spur ' + (i + 1), dat: 'Spur ' + (i + 1), ch: 'Spur ' + (i + 1), lane: i, opts: all, allow: ok, busy: () => SEQ.on && !!P[p + 'on'],
       // the lane's own note (its step and octave, without its walk), brightness, level, balance and gate, through its channel
@@ -381,7 +385,7 @@ function kqRender(keep) {
   let why = false;
   groups.forEach((g, gi) => {
     out.push(h('h3', { class: 'kq-fh' }, g.h, h('small', null, g.sub(g.ks.length) ? ' · ' + g.sub(g.ks.length) : '')));
-    if (gi === 0 && T.key === 'v.layer' && !q) out.push(kqTile(T, 'off', cur));
+    if (gi === 0 && (T.key === 'v.layer' || /^e\d\.eng$/.test(T.key)) && !q) out.push(kqTile(T, 'off', cur));
     if (T.why && !why && g.ks.some((k) => T.allow(k))) { out.push(h('p', { class: 'kq-why' }, T.why)); why = true; }
     for (const k of g.ks) out.push(kqTile(T, k, cur));
     if (!g.ks.length && g.empty) {
@@ -453,7 +457,7 @@ function engKeysIn(vals) {
 function engMissSay() {
   if (!KQ.miss.length) return '';
   const q = (n) => '„' + n + '“', names = [...new Set(KQ.miss.map(([, k]) => q(ENG_LATER[k] || k)))];
-  const subs = [...new Set(KQ.miss.map(([id]) => (id === 'v.eng' ? ENG_NAME[P[id]] + ' gewählt' : id === 'v.layer' ? 'zweite Ebene aus' : 'Spur ' + (+id[1] + 1) + ' spielt ' + ENG_NAME[P[id]])))];
+  const subs = [...new Set(KQ.miss.map(([id]) => (id === 'v.eng' ? ENG_NAME[P[id]] + ' gewählt' : id === 'v.layer' ? 'zweite Ebene aus' : id[0] === 'e' ? 'Ebene ' + id[1] + ' aus' : 'Spur ' + (+id[1] + 1) + ' spielt ' + ENG_NAME[P[id]])))];
   KQ.miss = [];
   return (names.length > 1 ? 'Klangquellen ' + listDe(names) + ' gibt' : 'Klangquelle ' + names[0] + ' gibt') + ' es in dieser Version nicht – ' + listDe(subs) + '.';
 }

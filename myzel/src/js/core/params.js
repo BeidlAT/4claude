@@ -102,6 +102,43 @@ const fmtDeg = (v) => (v ? (v > 0 ? '+' : '−') + Math.abs(v) + (Math.abs(v) ==
 NUM('v.oct', 'Oktave', -2, 2, 0, '', { step: 1, fmt: fmtOct });
 NUM('v.deg', 'Tonstufe', -7, 7, 0, '', { step: 1, fmt: fmtDeg });
 NUM('v.layerDeg', 'Tonstufe Ebene', -7, 7, 0, '', { step: 1, fmt: fmtDeg });
+// Ebenen (owner, 30.10.2026: „bis zu 8 Ebenen … alles pro Ebene einstellbar … Presets, die es schon gibt, bleiben vorerst
+// so“): up to eight sounds on every finger, each with a strip of its own. Ebene 1 is the Klangquelle (v.eng, v.oct, v.deg,
+// strip „fin“), Ebene 2 the old second layer (v.layer, v.layerLvl, v.layerInt, v.layerDeg, strip „eb2“) – their ids stay,
+// so every preset, patch and test reads as before; Ebenen 3–8 (e<n>.*, strips eb3–eb8) are off by default. Per layer
+// besides: Feinstimmung, a Tonbereich (MIDI note numbers of the played note) and an Anschlags-Bereich, each with a soft
+// edge outside it (equal-power), Solo among the layers (live, never in a patch); Pan, Mute and the rest are its strip's
+// (x<k>.pan, x<k>.mute …). At the defaults a layer is exactly what it was: ratio ×1, gain 1, nothing gated.
+const EB_N = 8;
+const EB = [];
+for (let n = 1; n <= EB_N; n++) EB.push(n === 1 ? { n, k: 'fin', eng: 'v.eng', lvl: 'e1.lvl', oct: 'v.oct', deg: 'v.deg', pre: 'e1.' }
+  : n === 2 ? { n, k: 'eb2', eng: 'v.layer', lvl: 'v.layerLvl', int: 'v.layerInt', deg: 'v.layerDeg', pre: 'e2.' }
+  : { n, k: 'eb' + n, eng: 'e' + n + '.eng', lvl: 'e' + n + '.lvl', int: 'e' + n + '.int', deg: 'e' + n + '.deg', pre: 'e' + n + '.' });
+const EB_K = EB.map((e) => e.k), EB_OF = Object.fromEntries(EB.map((e) => [e.k, e])), EB_ENG = new Set(EB.map((e) => e.eng));
+// the sources the finger plays now (every layer with a sound – for what a source needs loaded or warmed)
+const ebEngs = () => EB.map((e) => P[e.eng]).filter((k) => k && k !== 'off');
+// a layer's own params (its pitch, its ranges) – they move the strings' warm-up, the field's loops, the Ebenen rows
+const EB_PIT = new Set(EB.flatMap((e) => [e.int, e.deg, e.pre + 'fine'].filter(Boolean)));
+const fmtKey = (v) => NOTE_NAMES[((v % 12) + 12) % 12] + (Math.floor(v / 12) - 1);
+const fmtCent = (v) => (Math.abs(v) < 0.5 ? '±0 ct' : (v > 0 ? '+' : '−') + Math.round(Math.abs(v)) + ' ct');
+for (const e of EB) {
+  const p = e.pre, w = 'Ebene ' + e.n;
+  if (e.n > 2) {
+    SEL(e.eng, 'Klang ' + w, [['off', 'Aus'], ...ENG_OPTS], 'off', { lib: 1 });
+    NUM(e.lvl, 'Lautstärke ' + w, 0, 1, 0.5, '%');
+    NUM(e.int, 'Intervall ' + w, -36, 36, 0, 'HT', { step: 1 });
+    NUM(e.deg, 'Tonstufe ' + w, -7, 7, 0, '', { step: 1, fmt: fmtDeg });
+  }
+  if (e.n === 1) NUM(e.lvl, 'Lautstärke ' + w, 0, 1, 1, '%');
+  NUM(p + 'fine', 'Feinstimmung ' + w, -100, 100, 0, 'ct', { step: 1, fmt: fmtCent });
+  NUM(p + 'lo', 'Tonbereich ab', 0, 127, 0, '', { step: 1, fmt: fmtKey });
+  NUM(p + 'hi', 'Tonbereich bis', 0, 127, 127, '', { step: 1, fmt: fmtKey });
+  NUM(p + 'rand', 'Weicher Rand (Ton)', 0, 24, 0, 'HT', { step: 1, fmt: (v) => (v ? v + ' HT' : 'hart') });
+  NUM(p + 'vlo', 'Anschlag ab', 0, 1, 0, '%', { step: 0.01 });
+  NUM(p + 'vhi', 'Anschlag bis', 0, 1, 1, '%', { step: 0.01 });
+  NUM(p + 'vrand', 'Weicher Rand (Anschlag)', 0, 0.5, 0, '%', { step: 0.01, fmt: (v) => (v ? Math.round(v * 100) + ' %' : 'hart') });
+  BOOL(p + 'solo', 'Solo ' + w, false, { live: 1 });
+}
 // Stimmung
 SEL('t.root', 'Grundton', NOTE_NAMES.map((n, i) => [String(i), n]), '2', { chips: 1, small: 1 });
 SEL('t.scale', 'Skala', Object.entries(SCALES).map(([k, s]) => [k, s.n]), 'mpent');
@@ -556,8 +593,9 @@ LANE_DEF.forEach((d, i) => {
 });
 // Mischpult: a channel strip for every sound layer (x<strip>.*), returns for echo and hall, the Puls group, "Pumpen"
 const STRIPS = [
-  { k: 'fin', name: 'Klang', info: 'Spielfläche und Keyboard' },
-  { k: 'eb2', name: 'Ebene 2', info: 'Zweiter Klang auf jedem Finger' },
+  { k: 'fin', name: 'Klang', info: 'Spielfläche und Keyboard', eb: 1 },
+  { k: 'eb2', name: 'Ebene 2', info: 'Zweiter Klang auf jedem Finger', eb: 2 },
+  ...EB.slice(2).map((e) => ({ k: e.k, name: 'Ebene ' + e.n, info: 'Klang ' + e.n + ' auf jedem Finger', eb: e.n })),   // (30.10.2026: Ebenen 3–8 – the mixer shows them once used, mxRgnSync)
   { k: 'rgn', name: 'Regen', info: 'Sporenregen (Gestik)' },
   { k: 'hxr', name: 'Hexenring', info: 'Schleifen' },   // Hexenring: its loops (no tap hears it)
   ...LANE_DEF.map((_, i) => ({ k: 'l' + i, name: 'Spur ' + (i + 1), info: 'Puls', lane: i })),
@@ -704,6 +742,7 @@ SEL('midi.tch', 'Touché-Spielweise', [['finger', 'Finger'], ['atem', 'Atem'], [
 const GROUP = {
   v: 'Spielweise', t: 'Stimmung', neb: 'Nebel', kor: 'Körner', hau: 'Hauch', glo: 'Glocke', mem: 'Membran', sai: 'Saite', sch: 'Schale', gng: "Gong", klb: "Kalimba", obt: "Obertöne", stm: "Stimme", swm: "Schwarm", tie: "Tiefe", trp: "Tropfen", nrd: 'Nordlicht', sht: 'Schimmer', ond: 'Ätherwelle', wal: 'Walgesang', stp: 'Endlostreppe', atr: 'Attraktor', tnl: 'Tunnel', wkg: 'Westküste', bnt: 'Schaltkreis', kas: 'Kassette', bit: 'Achtbit', gbs: 'Gleitbass', hht: 'Zischel', vox: 'Silbe', spu: 'Spieluhr', kto: 'Koto', hlm: 'Halm', rnk: 'Ranke', elm: 'Elmsfeuer', hng: 'Handpan', gml: 'Gamelan', sit: 'Sitar', tbl: 'Tabla', did: 'Didgeridoo', mtr: 'Maultrommel', jrg: 'Jahresring', hrz: 'Harz', shn: 'Sehne', zpf: 'Zapfen', glt: 'Glut', mdr: 'Moder', boe: 'Böe', amo: 'Amöbe', gsp: 'Gespinst', rhz: 'Rhizom', khl: 'Kehlchen',
   drv: 'Verzerrung', rng: 'Ringmodulator', flt: 'Filter', pha: 'Phaser', cho: 'Schweben', dly: 'Echo', rev: 'Hall', fx: 'Effekt', fx2: 'Effekt 2', arp: 'Sporenwerk', mov: 'Bewegung', mst: 'Summe',
+  e1: 'Ebene 1', e2: 'Ebene 2', e3: 'Ebene 3', e4: 'Ebene 4', e5: 'Ebene 5', e6: 'Ebene 6', e7: 'Ebene 7', e8: 'Ebene 8',
   seq: 'Puls', bor: 'Bordun', rec: 'Aufnahme', hx: 'Hexenring', dev: 'Gerät', midi: 'MIDI', l0: 'Spur 1', l1: 'Spur 2', l2: 'Spur 3', l3: 'Spur 4',
 };
 // the mixer's parts as the panel names them ("Kanal" is the MIDI channel's word here)

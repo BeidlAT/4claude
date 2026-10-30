@@ -191,7 +191,7 @@ function modBendAhead(now) {
 function modExprAhead(now) {
   const T = MOD.t.expr, timed = modTimes(T, now, 0.012), live = modLive(T);
   MOD.eg = modExprG(modVal('expr', now)); MOD.exL = true;   // (when the points end, the frame sets the gain anew)
-  for (const k of ['fin', 'eb2']) {
+  for (const k of EB_K) {
     const st = MIX.s[k];
     if (!st) continue;
     const p = st.in.gain, base = stripGain(st, 1), S = st.exS;
@@ -288,7 +288,7 @@ function modExpr(now) {
   if (g === MOD.eg && !MOD.exL) return;
   MOD.eg = g; MOD.exL = false;
   const tc = SLP.gE > now ? Math.max(0.008, (SLP.gE - now) / 3) : 0.008;   // waking: Schlafen's glide back is not cut short
-  for (const k of ['fin', 'eb2']) { const st = MIX.s[k]; if (st) { st.exS = null; setP(st.in.gain, stripGain(st), tc); } }
+  for (const k of EB_K) { const st = MIX.s[k]; if (st) { st.exS = null; setP(st.in.gain, stripGain(st), tc); } }
 }
 // the A/B-Morph: at most 25 times a second (the mixer's own morph is no faster), at once back to rest
 function modMorph() {

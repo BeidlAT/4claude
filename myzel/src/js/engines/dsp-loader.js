@@ -13,7 +13,7 @@ const WORKLET_ENGINES = new Set(['hrz', 'hlm', 'glt', 'boe', 'amo', 'rnk', 'shn'
 A.workletOK = false; A.workletBroken = new Set();
 function dspWanted() {
   const g = GK.p ? [GK.p.rgS, GK.p.rasS] : [];
-  return [P['v.eng'], P['v.layer'], P['l0.eng'], P['l1.eng'], P['l2.eng'], P['l3.eng'], ...g].some((k) => WORKLET_ENGINES.has(k));
+  return [...ebEngs(), P['l0.eng'], P['l1.eng'], P['l2.eng'], P['l3.eng'], ...g].some((k) => WORKLET_ENGINES.has(k));
 }
 function ensureDSP(ctx = A.ctx, quiet) {   // idempotent per context; resolves true when the processors are registered
   if (!ctx) return Promise.resolve(false);

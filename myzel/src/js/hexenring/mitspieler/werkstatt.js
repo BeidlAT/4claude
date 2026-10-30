@@ -78,7 +78,7 @@ function hxWsMake(L, seed) {
     const S = HX.sch.get(id); if (!hxWCan(S)) return;
     const W0 = hxWBase(L, S); if (!W0) return;
     const vn = hxWsNotes(W0, (seed ^ Math.imul(i + 3, 0x61c88647)) | 0);
-    const eng0 = (W0.n.find((n) => n.src === 'fin' || n.src === 'eb2') || W0.n[0] || {}).eng, eng = P['hx.ws.klang'] ? hxWsEng(hxWEng(L, { src: 'fin', eng: eng0 }), R) : null;
+    const eng0 = (W0.n.find((n) => EB_OF[n.src]) || W0.n[0] || {}).eng, eng = P['hx.ws.klang'] ? hxWsEng(hxWEng(L, { src: 'fin', eng: eng0 }), R) : null;
     if (vn || eng || fx) sch[i] = { vn: vn || null, eng: eng || null, fx };
   });
   return Object.keys(sch).length ? sch : null;
@@ -90,7 +90,7 @@ async function hxWsRender(L, rec, seed) {
     const S = HX.sch.get(L.sch[+i]); if (!S || !hxWCan(S)) continue;
     const W0 = hxWBase(L, S), r = rec[i], W = r.vn ? Object.assign({}, W0, { n: r.vn }) : W0;
     const k = hxNextSeam(L).k, job = hxWPass(L, S, k, { W }); if (!job) continue;
-    if (r.eng) for (const n of job.notes) if (n.src === 'fin' || n.src === 'eb2' || !n.src) n.eng = r.eng;
+    if (r.eng) for (const n of job.notes) if (EB_OF[n.src] || !n.src) n.eng = r.eng;
     const d = hxWJob(L, S, job, seed); if (r.fx) d.chain = hxWsChain(L, r.fx, seed);
     const m = await hxwCall('wuchs', d);
     if (!m || m.err || !m.L) { if (m && m.err) hxwLog('werkstatt: ' + String(m.err).slice(0, 120)); return null; }
