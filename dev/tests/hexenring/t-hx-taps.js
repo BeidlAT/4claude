@@ -186,7 +186,7 @@ const { ok } = H;
     const o = { has: !!el(), gone0: gone() };
     const id = M.hxLoopNew({ beats: 4 }); await window.__sleep(200);
     o.gone1 = gone(); o.src = M.mxSrcText('hxr');
-    o.order = [...document.querySelectorAll('.mx-st[data-k]')].map((e) => e.dataset.k).slice(0, 5).join(' ');
+    o.order = [...document.querySelectorAll('.mx-st[data-k]')].map((e) => e.dataset.k).filter((k) => !/^eb[3-8]$/.test(k)).slice(0, 5).join(' ');   // (Ebenen 3–8: hidden while unused, they stand after Ebene 2)
     await M.hxClear(id); await window.__sleep(200);
     o.gone2 = gone(); o.src2 = M.mxSrcText('hxr');
     return o;
