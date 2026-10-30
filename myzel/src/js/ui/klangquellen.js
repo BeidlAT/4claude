@@ -63,7 +63,7 @@ function kqTarget(key) {
   if (key === 'v.eng') T = { where: 'Spielfläche', dat: 'die Spielfläche', ch: 'Klang', opts: all, allow: ok, busy: () => touches.size > 0,
     probe: () => { const nt = mid(); return { f: lyF(layers()[0], nt.f, nt.idx), y: 0.5, vel: P['v.vel'], bus: stripIn('fin') }; } };
   else if (key === 'v.layer') T = { where: 'zweite Ebene', dat: 'die zweite Ebene', ch: 'Ebene 2', opts: () => PD['v.layer'].opts, allow: ok, busy: () => touches.size > 0,
-    probe: () => { const nt = mid(); return { f: lyF({ ratio: Math.pow(2, P['v.layerInt'] / 12), deg: P['v.layerDeg'] }, nt.f, nt.idx), y: 0.5, vel: P['v.vel'] * Math.max(0.35, P['v.layerLvl']), bus: stripIn('eb2') }; } };
+    probe: () => { const nt = mid(); return { f: lyF({ ratio: Math.pow(2, P['v.layerInt'] / 12 + P['e2.fine'] / 1200), deg: P['v.layerDeg'] }, nt.f, nt.idx), y: 0.5, vel: P['v.vel'] * Math.max(0.35, P['v.layerLvl']), bus: stripIn('eb2') }; } };
   else if (/^e\d\.eng$/.test(key)) {   // (Ebenen 3–8, 30.10.2026: as Ebene 2 – the note in the middle at its interval)
     const e = EB.find((x) => x.eng === key), w = 'Ebene ' + e.n;
     T = { where: w, dat: w, ch: w, opts: () => PD[key].opts, allow: ok, busy: () => touches.size > 0,

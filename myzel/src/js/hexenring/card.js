@@ -141,7 +141,7 @@ function hxCardForm(btn) {
 // (step 1d) a Schleife of Bewegung's card: what it moves, its state, Verblassen, Löschen
 function hxCardBewOne(L, btn, chip) {
   const row = (lab, ...kids) => h('div', { class: 'hx-row' }, h('span', { class: 'lab' }, lab), h('div', { class: 'chips small' }, ...kids));
-  const st = (to, t) => chip(t, L.state === to, () => { if (to === L.state) return; if (to === 'angehalten') hxState(L.id, 'angehalten'); else if (L.state === 'angehalten') hxReenter([L]); else hxState(L.id, to, null, { X: 0.02 }); hxCardDirty(); hxRailDirty(); });
+  const st = (to, t) => chip(t, L.state === to, () => { if (to === L.state) return; if (to === 'angehalten') hxState(L.id, 'angehalten'); else if (L.state === 'angehalten') hxReenter([L]); else { if (to === 'spielt') hxPvEnd(L); hxState(L.id, to, null, { X: 0.02 }); } hxCardDirty(); hxRailDirty(); });
   const B = L.bew, g = A.ctx ? clamp(hxBewGain(L, faeB(A.ctx.currentTime)), 0, 1) : B.g0;
   return h('div', { class: 'hx-card' + (HX.fokus === L.id ? ' fok' : ''), id: 'hxc-' + L.slot },
     h('div', { class: 'hx-ch' }, h('b', null, hxName(L) + ' · Bewegung'), h('span', { class: 'meta', id: 'hxm-' + L.slot }, hxCardMeta(L))),
@@ -220,7 +220,7 @@ function hxCardOne(L, btn) {
     if (to === L.state) return;
     if (to === 'angehalten') hxState(L.id, 'angehalten');
     else if (L.state === 'angehalten') hxReenter([L]);
-    else hxState(L.id, to, null, { X: 0.02 });
+    else { if (to === 'spielt') hxPvEnd(L); hxState(L.id, to, null, { X: 0.02 }); }
     hxCardDirty(); hxRailDirty();
   });
   const head = h('div', { class: 'hx-ch' }, h('b', null, hxName(L) + (hxEngName(L) ? ' · ' + hxEngName(L) : '')), h('span', { class: 'meta', id: 'hxm-' + L.slot }, hxCardMeta(L)));

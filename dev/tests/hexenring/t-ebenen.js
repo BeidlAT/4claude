@@ -143,6 +143,24 @@ const { ok } = H;
   });
   ok(r.n0 === 16 && r.g1 === 0 && r.g2 === 8, `stealing takes the oldest note with all its eight layers (${r.n0} voices → note 1: ${r.g1} left, note 2: ${r.g2})`);
   ok(r.kept && r.g2b === 0, 'a note being made never steals its own layers (keep): the next note goes instead');
+  // (review 30.10.2026) a struck layer is released at its start: stolen as a fading voice (steal(true, …) – Ladung,
+  // Sporenregen, vShed), it never takes its sustained sibling, whose finger is still down
+  r = await ev(async () => {
+    const M = window.__M, A = M.A;
+    M.panic(); await window.__sleep(300);
+    const was = M.EB.map((e) => M.P[e.eng]);
+    M.EB.slice(2).forEach((e) => M.setParam(e.eng, 'off'));
+    M.setParam('v.eng', 'neb'); M.setParam('v.layer', 'glo');
+    M.onDown({ pointerId: 'h1', pt: window.__pt(0.4, 0.5) }); await window.__sleep(30);
+    const t1 = M.touches.get('h1'), held = t1.voices.map(({ v }) => v), all = [...A.voices];
+    const struck = all.filter((v) => v.grp === t1 && v.released).length;
+    const took = M.steal(true, true);
+    const heldLeft = held.filter((v) => A.voices.has(v)).length, struckLeft = [...A.voices].filter((v) => v.grp === t1 && v.released).length;
+    M.onUp({ pointerId: 'h1' });
+    M.EB.forEach((e, i) => M.setParam(e.eng, was[i])); M.panic(); await window.__sleep(300);   // (the eight layers again, for what follows)
+    return { held: held.length, struck, took, heldLeft, struckLeft };
+  });
+  ok(r.held === 1 && r.struck === 1 && r.took && r.heldLeft === 1 && r.struckLeft === 0, `a fading struck layer goes alone: the held layer of the same note stays (held ${r.heldLeft}/${r.held}, struck ${r.struckLeft}/${r.struck})`);
 
   // ---------- 5 · Hexenring: the Gespielt taps ----------
   r = await ev(async () => {

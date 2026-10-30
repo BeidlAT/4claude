@@ -58,11 +58,12 @@ function hxRho(ch, n, pre, len, X) {
 const hxAt = (at) => (at != null ? Math.round(hxF(at)) : undefined);
 // a Schleife's state at a moment: 'spielt' · 'stumm' (its phase runs on) · 'angehalten' (at its seam: its Ausklang rings
 // once; b0 with 'spielt': it comes back from its start at that musical beat); X: the fade (s)
+// (owner, 27.10.2026: „sie spielt nur über Abspielen, nicht wenn ich in der Loopleiste auf Play gehe“) started by the
+// player (its ring, its card, ▶ Weiter) while the editor listens to it: the listening ends – the Schleife itself sounds.
+// Only there: what starts it by itself (Wiederkehr, a Lichtung, the form) leaves the listening alone.
+function hxPvEnd(L) { if (typeof HXE !== 'undefined' && HXE.pv && HXE.pv.key === L.key) hxPvStop(); }
 function hxState(loop, to, at, o = {}) {
   const L = HX.loops.get(loop); if (!L) return false;
-  // (owner, 27.10.2026: „sie spielt nur über Abspielen, nicht wenn ich in der Loopleiste auf Play gehe“) started from the
-  // Leiste while the editor listens to it: the listening ends – the Schleife itself sounds
-  if (to === 'spielt' && typeof HXE !== 'undefined' && HXE.pv && HXE.pv.key === L.key) hxPvStop();
   L.state = to; hxCount();
   if (!L.bew && typeof hxMi === 'function') { if (to !== 'spielt' && !HX.gdAct) hxMi(L).uMute = A.ctx ? tgBeat(hxNowT()) : 0; if (to === 'spielt' && L.mi && L.mi.sugg && !HX.gdAct) hxSuggTake(L); }   // (Etappe 3: Wiederkehr never brings back what the player muted; a suggestion played is taken)
   if (L.bew) hxBewState(L, to, at);   // (step 1d: a Schleife of Bewegung follows on the mod layer)

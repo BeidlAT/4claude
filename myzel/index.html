@@ -8272,6 +8272,8 @@ function spawnGrain(v, when) {
 // voice's decay at once, a click (Gestik's rain and rattle make room this way).
 // (owner, 30.10.2026: Ebenen) the layers of one note go together: the voice chosen takes the other voices of its strike
 // (v.grp) with it – never those of the note being made (keep), whose layers would otherwise take each other's room.
+// A fading voice takes only its fading siblings: a struck layer is released at its start, and its still-held
+// sustained sibling (the finger is down) must not go with it.
 function steal(fadingOnly, soft, loopOnly, keep) {
   const now = A.ctx.currentTime;
   let best = null, bestScore = -Infinity;
@@ -8288,9 +8290,9 @@ function steal(fadingOnly, soft, loopOnly, keep) {
     if (score > bestScore) { bestScore = score; best = v; }
   }
   if (best) {
-    const g = best.grp, out = (v) => { if (soft) vFade(v); else v.kill(); A.voices.delete(v); };
+    const g = best.grp, held = !best.released, out = (v) => { if (soft) vFade(v); else v.kill(); A.voices.delete(v); };
     out(best);
-    if (g) for (const v of A.voices) if (v.grp === g) out(v);
+    if (g) for (const v of A.voices) if (v.grp === g && (held || v.released)) out(v);
   }
   return !!best;
 }
@@ -16744,10 +16746,11 @@ function touchVel() { return P['v.vel'] * (1 - P['v.human'] * 0.3 * Math.random(
 // a keyboard brings its own dynamics and timing: no humanizing for MIDI notes
 const noteVel = (tt) => (tt.vel != null ? tt.vel : touchVel());
 function touchPan(x) { return clamp((x * 2 - 1) * P['v.width'] * 0.8 + rand(-0.15, 0.15) * P['v.width'], -1, 1); }
-function triggerPerc(tt, t, isRoll, grp) {
+// lys: the layers struck (default the note's own, tt.layers)
+function triggerPerc(tt, t, isRoll, grp, lys) {
   let any = false;
   grp = grp || {};   // (the layers of one strike are stolen together – alloc.js steal)
-  for (const ly of tt.layers) {
+  for (const ly of lys || tt.layers) {
     if (ENGINES[ly.eng].sustain) continue;
     const jit = tt.vel != null ? 0 : P['v.human'] * 0.01 * Math.random();
     const f = lyF(ly, tt.f, tt.col);
@@ -16823,7 +16826,8 @@ function moveTouch(tt, pt) {
   if (n.idx !== tt.col) {
     tt.col = n.idx;
     tt.hue = VIS.hueAt(pt.x);
-    if (P['v.strum'] && tt.rollNext == null && !tt.arp) triggerPerc(tt, A.ctx.currentTime, false);
+    // (a new strike: the layers of the new pitch – their Tonbereich, mute and solo – not those the finger landed with)
+    if (P['v.strum'] && tt.rollNext == null && !tt.arp) triggerPerc(tt, A.ctx.currentTime, false, null, layers(n.f, tt.vel));
   }
 }
 function onUp(e) {
@@ -16899,7 +16903,7 @@ const MIDI_SECONDARY = /\b(DAW|MCU|HUI|Mackie|ALV|Plugin|Software Control|Editor
 // DIN input, the port carries the interface's name (Windows „Steinberg UR22C-1“, „Yamaha Steinberg USB MIDI“, a Mac
 // „UR22mkII MIDI“ / „… Port1“). Every such port is a real input – never a second port to switch on first – and names no
 // instrument: the player says which one plays through it (geraet.js kcModelSel), the Gerätebild never draws the box
-const MIDI_IFACE = /steinberg|\bUR[-\s]?(\d|RT|C\b|M\b)|focusrite|scarlett|clarett|\bum-?one\b|midisport|\bmio\d*\b|midi ?interface|usb[- ]?midi ?(cable|interface)|\bmotu\b|presonus|audient|komplete audio|\bumc\s?\d|\bum-?\d|\bua-?\d{1,3}\b|rubix|babyface|fireface|tascam|\bssl ?[2+]|\bid(4|14|22|44)\b|\bevo ?(4|8|16)\b|\bvolt ?\d|minifuse|audiofuse|yamaha ag\d/i;
+const MIDI_IFACE = /steinberg (ur|ixo|axr|mr816|usb)|\bUR[-\s]?(\d|RT|C\b|M\b)|focusrite|scarlett|clarett|\bum-?one\b|midisport|\bmio\d*\b|midi ?interface|usb[- ]?midi ?(cable|interface)|\bmotu\b|presonus (audiobox|studio|quantum|firestudio|revelator)|audient|komplete audio|\bumc\s?\d|\bum-?\d|\bua-?\d{1,3}\b|rubix|babyface|fireface|tascam (us-?\d+x\d|us-?1[24]\d\b|ixr|series)|\bssl ?[2+]|\bid(4|14|22|44)\b|\bevo ?(4|8|16)\b|\bvolt ?\d|minifuse|audiofuse|yamaha ag\d/i;
 const midiIface = (n) => MIDI_IFACE.test(n || '');
 // one device seen through two names (Windows "MIDIIN2 (…)", "2- …" for a second unit, " Bluetooth" on a Mac …)
 const devName = (n) => String(n || '').toLowerCase().replace(/^\d+-\s*/, '').replace(/^midi(in|out)\s*\d*\s*\((.*)\)$/, '$2').trim();
@@ -17958,9 +17962,10 @@ function mapApply(b, src, ev) {
   // (owner, 26.10.2026: „Vorige Skala“ on a slider reacted only when it crossed the middle – it pressed once there, the
   // 0.5 edge below; again 30.10.2026, lost in the reset of 27.10.) a fader or knob on a stepping target browses: each
   // sixteenth of its travel one step, up the target's own way, down back; a control that only ever sends 0 and 127 (a
-  // button sending CC) still presses
+  // button sending CC) still presses. A control known as a fader since it was assigned (b.fad) browses from its first
+  // value on – a slider resting at the top that first sends 127 does not press
   if (!edge && m === 'abs' && T.step && !T.cont && ev.type === 'cc' && !b.hires) {
-    if (raw > 0.01 && raw < 0.99) st.fader = true;
+    if (b.fad || (raw > 0.01 && raw < 0.99)) st.fader = true;
     if (st.fader) {
       const x = raw * 16, z0 = st.fz == null ? Math.min(15, Math.floor(x)) : st.fz;
       let z = z0;   // (a sixteenth's zone, left only 1/16 of a zone past its edge: a trembling slider does not flap)
@@ -18200,6 +18205,7 @@ function mapClean(b) {
   if (b.to === false) o.to = false;
   if (b.hires === true && b.type === 'cc' && num < 32) o.hires = true;
   if (b.edge === 'any') o.edge = 'any';
+  if (b.fad === true && b.type === 'cc') o.fad = true;   // (a fader or knob – known when it was assigned: bindings.js mapApply)
   if (b.when === 'pads') o.when = 'pads';
   if (b.type === 'axis') {   // Gestik: Ruhezone, Glätte, Kurve
     if (typeof b.dz === 'number' && b.dz > 0) o.dz = clamp(b.dz, 0, 0.5);
@@ -18360,6 +18366,7 @@ function learnDone() {
   if (f.btn) mode = key === 'fae' || HX_MOMENT.has(key) ? 'momentary' : T.hit || !keeps ? 'trigger' : T.mod || key === 'xy.gate' || key === 'sus' || key === 'sost' || key === 'soft' || key === 'gk.hold' || key === 'gk.taste' ? 'momentary' : 'toggle';   // the Fährte pad: tap, hold and double tap need its release
   const b = { dev: c.src.name, ch: c.ch, type: c.kind, num: c.num, target: key, mode };
   if (f.hires) b.hires = true;
+  else if (c.kind === 'cc' && mode === 'abs' && !f.btn) b.fad = true;   // (it moved through its travel: a fader or knob)
   const prof = profOf(c.src), pb = prof && prof.binds.find((x) => x.type === c.kind && x.num === c.num && x.name);
   if (pb) b.name = pb.name;
   LEARN.undo = { b, prev: MAP.user.filter((u) => sameCtl(u, b)) };
@@ -18647,7 +18654,7 @@ function cbLogical(src) {
   // write them as learned bindings of this device (the same controls replaced); a channel only where two controls share
   // a number (a mixer controller's channel per strip)
   const msgs = plan.map(([C]) => cbMsg(C, d, M)), dup = (m) => msgs.filter((x) => x && x.type === m.type && x.num === m.num).length > 1;
-  const nb = plan.map(([C, t, mode], k) => { const m = msgs[k]; return mapClean({ dev: src.name, type: m.type, ch: dup(m) ? m.ch : -1, num: m.num, target: t, mode: m.type === 'note' && mode === 'abs' ? 'toggle' : mode, name: C.label }); }).filter(Boolean);
+  const nb = plan.map(([C, t, mode], k) => { const m = msgs[k]; return mapClean({ dev: src.name, type: m.type, ch: dup(m) ? m.ch : -1, num: m.num, target: t, mode: m.type === 'note' && mode === 'abs' ? 'toggle' : mode, name: C.label, fad: mode === 'abs' && m.type === 'cc' && C.kind !== 'button' && C.kind !== 'pad' }); }).filter(Boolean);
   MAP.user = MAP.user.filter((u) => !(sameDev(u.dev, src.name) && nb.some((n) => n.type === u.type && n.num === u.num && (n.ch < 0 || u.ch < 0 || n.ch === u.ch)))).concat(nb);
   mapSave(); MIDI.zv++;
   return nb.length;
@@ -19858,7 +19865,7 @@ function panic() {
   kqHoldEnd(); kqProbeEnd();
   // (owner, 30.10.2026: „alles beenden“) what plays besides: the editor's Vorhören, a take heard back, the Sporenwerk's
   // held chord (Halten would play it on after the fingers are gone)
-  if (typeof hxPvStop === 'function') hxPvStop();
+  if (typeof hxPvStop === 'function') hxPvStop(0.05);   // (its loop halts below – its level comes back after that fade)
   if (typeof stopPreview === 'function') stopPreview();
   if (typeof ARP !== 'undefined') { ARP.latch = []; ARP.next = 0; }
   A.jrgAge = 0;
@@ -21784,7 +21791,7 @@ function tfxArpTick() {
     else if (s < -0.25) { R.dir = -1; i = R.i = (R.i - 1 + n) % n; }
     else { if (n > 1 && (R.i + R.dir >= n || R.i + R.dir < 0)) R.dir = -R.dir; i = R.i = Math.max(0, Math.min(n - 1, R.i + R.dir)); }
     const [tt, o] = seq[i], nt = stepAt(t), dur = Math.max(0.03, (nt - t) * (0.85 - 0.55 * v.her)), vel = 0.3 + 0.65 * Math.pow(R.p, 0.8);
-    for (const ly of tt.layers) {
+    for (const ly of o ? layers(tt.f * Math.pow(2, o), tt.vel) : tt.layers) {   // (an octave up: the layers of that pitch – their Tonbereich)
       const f = lyF(ly, tt.f, tt.col) * Math.pow(2, o) * (tt.mb ? Math.pow(2, tt.mb / 12) : 1);
       hit(ly.eng, t, f, tt.my != null ? tt.my : tt.y, vel * ly.lvl, { pan: touchPan(tt.x), bus: ly.bus, amp: ly.amp, gate: dur });
     }
@@ -26871,7 +26878,7 @@ function mxgLayout() {
   G.rootD = 2 * G.rootR;
   G.rootX = Math.min(sc.cx, w - G.rootR - 4); G.rootY = hh - G.rootR - (short ? 4 : 8);
   // the chain's knot between the Puls lanes and the rest; the returns' nodes under their own columns
-  G.kx = gl + mxgCol('l1').s * u; G.ky = Math.round(G.tagEnd + (G.rootY - G.tagEnd) * 0.5);
+  G.kx = gl + mxgCol('l2').s * u;   // (the middle of the four lanes: l1's right edge) G.ky = Math.round(G.tagEnd + (G.rootY - G.tagEnd) * 0.5);
   G.dyy = G.ky + (short ? 8 : wide ? 22 : 15);
   const E = G.cols[MXK.dly.i], H = G.cols[MXK.rev.i];
   G.ex = E.cx; G.ey = G.tagEnd + (short ? 6 : wide ? 16 : 10); G.hx = H.cx; G.hy = G.ey + (wide || short ? 0 : 12);
@@ -29494,8 +29501,9 @@ function arpRing(k) {
   if (ARP.drop.has(i)) return false;
   return h >= n || Math.floor((i * h) / n) !== Math.floor(((i - 1) * h) / n);   // (Bresenham: h hits spread as evenly as n steps allow)
 }
-// a note of the pool: its pitch, its place in the scale, the layers it plays and how it was struck
-function arpNote(tt) { return { f: tt.f, idx: tt.col, layers: tt.layers, x: tt.x, y: tt.my != null ? tt.my : tt.y, vel: tt.vel != null ? tt.vel : P['v.vel'], seq: tt.arpSeq || 0, key: 'tt' + tt.id }; }
+// a note of the pool: its pitch, its place in the scale, the layers it plays and how it was struck (fld: a note of the
+// field – each step strikes the layers of the pitch it plays, touch.js layers; a Schleife's note keeps its own sound)
+function arpNote(tt) { return { fld: true, f: tt.f, idx: tt.col, layers: tt.layers, x: tt.x, y: tt.my != null ? tt.my : tt.y, vel: tt.vel != null ? tt.vel : P['v.vel'], seq: tt.arpSeq || 0, key: 'tt' + tt.id }; }
 // the notes it plays from now: what is held (and latched), the Schleife's (arp/schleifen.js), or both
 function arpPool(t) {
   let out = [];
@@ -29597,9 +29605,10 @@ function arpTick() {
         const nt = L.n, degs = [0].concat(ARP_ST[P['arp.stimmen']] || []);
         for (const d of degs) {
           const f = arpDeg(nt, shift + d) * Math.pow(2, L.o), vel = clamp(nt.vel * (acc ? 1 + 0.6 * P['arp.akzent'] : 1 - 0.25 * P['arp.akzent']) * (d ? 0.7 : 1), 0.05, 1), y = clamp(nt.y + wave, 0, 1);
+          const lys = nt.fld ? layers(f, vel) : nt.layers;   // (each layer's Tonbereich and Anschlag at the step's own pitch)
           for (let r = 0; r < rat; r++) {
             const tr = t + j * strum + r * dur / rat, g = rat > 1 ? Math.min(gate, dur / rat * 0.8) : gate, vr = vel * Math.pow(0.72, r);
-            { const grp = {}; for (const ly of nt.layers) hit(ly.eng, tr, lyF(ly, f, nt.idx), y, vr * ly.lvl, { pan: touchPan(nt.x), bus: ly.bus, amp: ly.amp, gate: g, grp }); }   // (every layer of the note – Ebenen, stolen together)
+            { const grp = {}; for (const ly of lys) hit(ly.eng, tr, lyF(ly, f, nt.idx), y, vr * ly.lvl, { pan: touchPan(nt.x), bus: ly.bus, amp: ly.amp, gate: g, grp }); }   // (every layer of the note – Ebenen, stolen together)
           }
           ARP.ev.push({ t, f, nf: nt.f, o: L.o, li, vel, rat, acc, d, k, n: lad.length, dur });
         }
@@ -29882,7 +29891,7 @@ function kqTarget(key) {
   if (key === 'v.eng') T = { where: 'Spielfläche', dat: 'die Spielfläche', ch: 'Klang', opts: all, allow: ok, busy: () => touches.size > 0,
     probe: () => { const nt = mid(); return { f: lyF(layers()[0], nt.f, nt.idx), y: 0.5, vel: P['v.vel'], bus: stripIn('fin') }; } };
   else if (key === 'v.layer') T = { where: 'zweite Ebene', dat: 'die zweite Ebene', ch: 'Ebene 2', opts: () => PD['v.layer'].opts, allow: ok, busy: () => touches.size > 0,
-    probe: () => { const nt = mid(); return { f: lyF({ ratio: Math.pow(2, P['v.layerInt'] / 12), deg: P['v.layerDeg'] }, nt.f, nt.idx), y: 0.5, vel: P['v.vel'] * Math.max(0.35, P['v.layerLvl']), bus: stripIn('eb2') }; } };
+    probe: () => { const nt = mid(); return { f: lyF({ ratio: Math.pow(2, P['v.layerInt'] / 12 + P['e2.fine'] / 1200), deg: P['v.layerDeg'] }, nt.f, nt.idx), y: 0.5, vel: P['v.vel'] * Math.max(0.35, P['v.layerLvl']), bus: stripIn('eb2') }; } };
   else if (/^e\d\.eng$/.test(key)) {   // (Ebenen 3–8, 30.10.2026: as Ebene 2 – the note in the middle at its interval)
     const e = EB.find((x) => x.eng === key), w = 'Ebene ' + e.n;
     T = { where: w, dat: w, ch: w, opts: () => PD[key].opts, allow: ok, busy: () => touches.size > 0,
@@ -34899,11 +34908,12 @@ function hxRho(ch, n, pre, len, X) {
 const hxAt = (at) => (at != null ? Math.round(hxF(at)) : undefined);
 // a Schleife's state at a moment: 'spielt' · 'stumm' (its phase runs on) · 'angehalten' (at its seam: its Ausklang rings
 // once; b0 with 'spielt': it comes back from its start at that musical beat); X: the fade (s)
+// (owner, 27.10.2026: „sie spielt nur über Abspielen, nicht wenn ich in der Loopleiste auf Play gehe“) started by the
+// player (its ring, its card, ▶ Weiter) while the editor listens to it: the listening ends – the Schleife itself sounds.
+// Only there: what starts it by itself (Wiederkehr, a Lichtung, the form) leaves the listening alone.
+function hxPvEnd(L) { if (typeof HXE !== 'undefined' && HXE.pv && HXE.pv.key === L.key) hxPvStop(); }
 function hxState(loop, to, at, o = {}) {
   const L = HX.loops.get(loop); if (!L) return false;
-  // (owner, 27.10.2026: „sie spielt nur über Abspielen, nicht wenn ich in der Loopleiste auf Play gehe“) started from the
-  // Leiste while the editor listens to it: the listening ends – the Schleife itself sounds
-  if (to === 'spielt' && typeof HXE !== 'undefined' && HXE.pv && HXE.pv.key === L.key) hxPvStop();
   L.state = to; hxCount();
   if (!L.bew && typeof hxMi === 'function') { if (to !== 'spielt' && !HX.gdAct) hxMi(L).uMute = A.ctx ? tgBeat(hxNowT()) : 0; if (to === 'spielt' && L.mi && L.mi.sugg && !HX.gdAct) hxSuggTake(L); }   // (Etappe 3: Wiederkehr never brings back what the player muted; a suggestion played is taken)
   if (L.bew) hxBewState(L, to, at);   // (step 1d: a Schleife of Bewegung follows on the mod layer)
@@ -35730,6 +35740,7 @@ function hxRingTap(slot, e) {
   if (L.state === 'spielt' && ((L.gg != null && L.gg !== 1) || L.gdv || (HXG.plan && HXG.plan.items.some((x) => x.key === L.key)))) { hxGdNein(L); return 'gd'; }   // (Etappe 3: a tap takes the Gärtner's change back – at once)
   if (L.state === 'angehalten') { hxReenter([L]); return 'an'; }
   const to = L.state === 'spielt' ? 'stumm' : 'spielt';
+  if (to === 'spielt') hxPvEnd(L);
   if (!hxTakt(L) && !hxGrid()) { hxState(L.id, to, null, { X: 0.04 }); hxSay(hxName(L) + (to === 'stumm' ? ' stumm' : ' spielt')); return to; }
   const B = hxBarOf(T, HX_RGRACE), X = 0.02;
   if (B.now) { hxState(L.id, to, null, { X }); hxSay(hxName(L) + (to === 'stumm' ? ' stumm' : ' spielt')); return to; }
@@ -35742,7 +35753,7 @@ function hxRingTap(slot, e) {
 }
 // angehalten → each from its own start on the next 1 (several meet anew); a Frei one too, or at once without a Takt
 function hxReenter(list) {
-  for (const L of list) L.pendTo = null;
+  for (const L of list) { L.pendTo = null; hxPvEnd(L); }
   const grid = hxGrid(), nb = grid ? Math.ceil(tgBeat(hxNowT() + HX_LEAD) / 4 - 1e-9) * 4 : null, t = grid ? tgTime(nb) : hxNowT() + HX_LEAD;
   for (const L of list) {
     if (hxTakt(L)) { hxState(L.id, 'spielt', t, { b0: nb != null ? nb : Math.ceil(tgBeat(t)), X: 0.01 }); L.d.b0 = (nb != null ? nb : Math.ceil(tgBeat(t))) + TG.o; }
@@ -37255,7 +37266,7 @@ function hxCardForm(btn) {
 // (step 1d) a Schleife of Bewegung's card: what it moves, its state, Verblassen, Löschen
 function hxCardBewOne(L, btn, chip) {
   const row = (lab, ...kids) => h('div', { class: 'hx-row' }, h('span', { class: 'lab' }, lab), h('div', { class: 'chips small' }, ...kids));
-  const st = (to, t) => chip(t, L.state === to, () => { if (to === L.state) return; if (to === 'angehalten') hxState(L.id, 'angehalten'); else if (L.state === 'angehalten') hxReenter([L]); else hxState(L.id, to, null, { X: 0.02 }); hxCardDirty(); hxRailDirty(); });
+  const st = (to, t) => chip(t, L.state === to, () => { if (to === L.state) return; if (to === 'angehalten') hxState(L.id, 'angehalten'); else if (L.state === 'angehalten') hxReenter([L]); else { if (to === 'spielt') hxPvEnd(L); hxState(L.id, to, null, { X: 0.02 }); } hxCardDirty(); hxRailDirty(); });
   const B = L.bew, g = A.ctx ? clamp(hxBewGain(L, faeB(A.ctx.currentTime)), 0, 1) : B.g0;
   return h('div', { class: 'hx-card' + (HX.fokus === L.id ? ' fok' : ''), id: 'hxc-' + L.slot },
     h('div', { class: 'hx-ch' }, h('b', null, hxName(L) + ' · Bewegung'), h('span', { class: 'meta', id: 'hxm-' + L.slot }, hxCardMeta(L))),
@@ -37334,7 +37345,7 @@ function hxCardOne(L, btn) {
     if (to === L.state) return;
     if (to === 'angehalten') hxState(L.id, 'angehalten');
     else if (L.state === 'angehalten') hxReenter([L]);
-    else hxState(L.id, to, null, { X: 0.02 });
+    else { if (to === 'spielt') hxPvEnd(L); hxState(L.id, to, null, { X: 0.02 }); }
     hxCardDirty(); hxRailDirty();
   });
   const head = h('div', { class: 'hx-ch' }, h('b', null, hxName(L) + (hxEngName(L) ? ' · ' + hxEngName(L) : '')), h('span', { class: 'meta', id: 'hxm-' + L.slot }, hxCardMeta(L)));
@@ -37489,6 +37500,7 @@ function hxmAllStrip() {
 function hxPan(L, v) { L.pan = clamp(Math.round(v * 100) / 100, -1, 1); hxGain(L.id, null, null, 0.03, L.pan); hxSaveMeta(L.id); }
 // M and S here act at once (a fade of 20 ms), as the card's state chips do; a change that waited for the bar line gives way
 function hxmState(L, to) {
+  if (to === 'spielt') hxPvEnd(L);
   const p = HX.pend.find((x) => x.loop === L.id && x.kind === 'state');
   if (p) { hxPendDrop(p); hxState(L.id, to, p.t, { X: 0.02 }); L.pendTo = null; }   // (the change it scheduled: overridden at its own moment)
   hxState(L.id, to, null, { X: 0.02 }); hxRailDirty(); hxCardDirty();
@@ -39049,20 +39061,23 @@ function hxPvSeam(buf, a, b) {
 }
 const HXPV_SEAM = { src: null, i0: 0, i1: 0, out: null };
 function hxPvFade(P, t) { try { P.x.gain.cancelScheduledValues(t); P.x.gain.setValueAtTime(P.x.gain.value, t); P.x.gain.linearRampToValueAtTime(0, t + HXPV_X); P.src.stop(t + HXPV_X + 0.02); } catch (e) {} }
-function hxPvStop() {
+// late (s): the loop's own level comes back only then – it is being halted at the same moment, and its 10-ms fade must
+// not be heard under the 30-ms ramp back (Stopp, „alles beenden“)
+function hxPvStop(late) {
   const P = HXE.pv; HXE.pvWant = false; if (!P) return;
   HXE.pvAt = hxPvPos(); HXE.pv = null;
   const t = A.ctx.currentTime; hxPvFade(P, t);
   setTimeout(() => { try { P.out.g.disconnect(); P.out.p.disconnect(); if (P.out.an) P.out.an.disconnect(); } catch (e) {} }, (HXPV_X + 0.1) * 1000);
-  const L = hxByKey(P.key); if (L) { L.pvMute = false; if (L.state !== 'weg') hxGain(L.id, L.gain, null, 0.03); }   // (the loop as it runs, at its own place)
+  const L = hxByKey(P.key); if (L) { L.pvMute = false; if (L.state !== 'weg') hxGain(L.id, L.gain, late ? A.ctx.currentTime + late : null, 0.03); }   // (the loop as it runs, at its own place)
   HXE.wsig = '';
 }
 // (owner, 26.10.2026: „die Schleife läuft beim Stoppen weiter“; again 30.10.2026) Stopp ends the listening and halts the
 // Schleife too – it comes back with its ring, ▶ Weiter or its own ▶ in the mixer
 function hxPvToggle() {
   if (!(HXE.pv || HXE.pvWant)) { hxPvPlay(); return; }
-  const L = hxEdL(); hxPvStop();
-  if (L && (L.state === 'spielt' || L.state === 'stumm') && A.started && HX.node) { hxState(L.id, 'angehalten'); L.pendTo = null; hxSay(hxName(L) + ' angehalten'); toast(hxName(L) + ' angehalten – ihr Ring oder ▶ Weiter lässt sie wieder spielen.', 3000); hxRailDirty(); }
+  const L = hxEdL(), halt = L && (L.state === 'spielt' || L.state === 'stumm') && A.started && HX.node;
+  hxPvStop(halt ? 0.05 : 0);
+  if (halt) { hxState(L.id, 'angehalten'); L.pendTo = null; hxSay(hxName(L) + ' angehalten'); toast(hxName(L) + ' angehalten – ihr Ring oder ▶ Weiter lässt sie wieder spielen.', 3000); hxRailDirty(); }
 }
 // a jump: playing – from there at once; stopped – the mark moves
 function hxPvJump(u) { u = clamp(u, 0, 0.9999); if (HXE.pv) hxPvPlay(u); else { HXE.pvAt = u; HXE.wsig = ''; } }
@@ -44224,7 +44239,7 @@ function hxCardMit(L, chip, row, btn) {
   const mi = hxMi(L), r = hxRoleOf(L), sch = L.sch.map((id) => HX.sch.get(id)).filter(Boolean), notes = sch.some(hxWCan);
   const out = [];
   if (mi.sugg) out.push(h('div', { class: 'hx-row' }, h('span', { class: 'lab' }, 'Vorschlag'), h('div', { class: 'chips small' }, h('span', { class: 'hx-ms' }, 'Begleitung (' + (HX_ROLEW[mi.sugg] || mi.sugg) + '), stumm'),
-    chip('Einschalten', false, () => { if (L.state === 'angehalten') hxReenter([L]); else hxState(L.id, 'spielt', null, { X: 0.02 }); hxSuggTake(L); }, 'Vorschlag einschalten'), chip('Verwerfen', false, () => hxDrop(L), 'Vorschlag verwerfen'))));
+    chip('Einschalten', false, () => { if (L.state === 'angehalten') hxReenter([L]); else { hxPvEnd(L); hxState(L.id, 'spielt', null, { X: 0.02 }); } hxSuggTake(L); }, 'Vorschlag einschalten'), chip('Verwerfen', false, () => hxDrop(L), 'Vorschlag verwerfen'))));
   out.push(row('Rolle', chip('auto' + (r && !mi.rolle ? ': ' + HX_ROLEW[r.role] + (r.conf < 0.25 ? '?' : '') : ''), !mi.rolle, () => { mi.rolle = null; mi.rc = null; hxSaveMeta(L.id); hxCardDirty(); }, 'Rolle automatisch'),
     ...HX_ROLES.map((k) => chip(HX_ROLEW[k], mi.rolle === k, () => { mi.rolle = k; hxSaveMeta(L.id); hxCardDirty(); hxSay(hxName(L) + ': Rolle ' + HX_ROLEW[k]); }, 'Rolle ' + HX_ROLEW[k]))));
   const sw = hxStance(L);

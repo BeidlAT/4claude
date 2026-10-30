@@ -126,6 +126,7 @@ function hxmAllStrip() {
 function hxPan(L, v) { L.pan = clamp(Math.round(v * 100) / 100, -1, 1); hxGain(L.id, null, null, 0.03, L.pan); hxSaveMeta(L.id); }
 // M and S here act at once (a fade of 20 ms), as the card's state chips do; a change that waited for the bar line gives way
 function hxmState(L, to) {
+  if (to === 'spielt') hxPvEnd(L);
   const p = HX.pend.find((x) => x.loop === L.id && x.kind === 'state');
   if (p) { hxPendDrop(p); hxState(L.id, to, p.t, { X: 0.02 }); L.pendTo = null; }   // (the change it scheduled: overridden at its own moment)
   hxState(L.id, to, null, { X: 0.02 }); hxRailDirty(); hxCardDirty();

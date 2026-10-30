@@ -134,7 +134,7 @@ function tfxArpTick() {
     else if (s < -0.25) { R.dir = -1; i = R.i = (R.i - 1 + n) % n; }
     else { if (n > 1 && (R.i + R.dir >= n || R.i + R.dir < 0)) R.dir = -R.dir; i = R.i = Math.max(0, Math.min(n - 1, R.i + R.dir)); }
     const [tt, o] = seq[i], nt = stepAt(t), dur = Math.max(0.03, (nt - t) * (0.85 - 0.55 * v.her)), vel = 0.3 + 0.65 * Math.pow(R.p, 0.8);
-    for (const ly of tt.layers) {
+    for (const ly of o ? layers(tt.f * Math.pow(2, o), tt.vel) : tt.layers) {   // (an octave up: the layers of that pitch – their Tonbereich)
       const f = lyF(ly, tt.f, tt.col) * Math.pow(2, o) * (tt.mb ? Math.pow(2, tt.mb / 12) : 1);
       hit(ly.eng, t, f, tt.my != null ? tt.my : tt.y, vel * ly.lvl, { pan: touchPan(tt.x), bus: ly.bus, amp: ly.amp, gate: dur });
     }

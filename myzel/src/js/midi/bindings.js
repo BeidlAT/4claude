@@ -71,9 +71,10 @@ function mapApply(b, src, ev) {
   // (owner, 26.10.2026: „Vorige Skala“ on a slider reacted only when it crossed the middle – it pressed once there, the
   // 0.5 edge below; again 30.10.2026, lost in the reset of 27.10.) a fader or knob on a stepping target browses: each
   // sixteenth of its travel one step, up the target's own way, down back; a control that only ever sends 0 and 127 (a
-  // button sending CC) still presses
+  // button sending CC) still presses. A control known as a fader since it was assigned (b.fad) browses from its first
+  // value on – a slider resting at the top that first sends 127 does not press
   if (!edge && m === 'abs' && T.step && !T.cont && ev.type === 'cc' && !b.hires) {
-    if (raw > 0.01 && raw < 0.99) st.fader = true;
+    if (b.fad || (raw > 0.01 && raw < 0.99)) st.fader = true;
     if (st.fader) {
       const x = raw * 16, z0 = st.fz == null ? Math.min(15, Math.floor(x)) : st.fz;
       let z = z0;   // (a sixteenth's zone, left only 1/16 of a zone past its edge: a trembling slider does not flap)
