@@ -29,7 +29,7 @@ function buildStrips() {
 }
 const faderGain = (db) => (db <= FADER_OFF ? 0 : dbToGain(db));
 function stripGain(st, eg = MOD.eg) {
-  const g = faderGain(mp('x' + st.k + '.vol')) * (st.d.eb ? MIDI.expr * eg : 1);   // expression pedal (CC 11), Formen · Ausdruck – on every Ebene
+  const g = faderGain(mp('x' + st.k + '.vol')) * (st.d.eb ? MIDI.expr * eg : 1) * (st.k === 'hxr' && typeof hxHrGain === 'function' ? hxHrGain() : 1);   // expression pedal (CC 11), Formen · Ausdruck – on every Ebene; Hexenring: its Pegelhaushalt (haushalt.js)
   const v = st.lane == null ? g : g * (mp('mix.pulsMute') ? 0 : faderGain(mp('mix.pulsVol')));
   return SLP.dk ? v * slpK(st) : v;   // Schlafen: the dry sound fades into the frozen tail
 }

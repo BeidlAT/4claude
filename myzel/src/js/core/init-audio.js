@@ -182,6 +182,6 @@ function masterLim() {
   lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(1, t + 0.03);
   A.clipG.gain.setValueAtTime(1, t); A.clipG.gain.linearRampToValueAtTime(0, t + 0.03);
   A.lim = n; A.limG = lg; A.limLat = (Math.max(16, Math.round(0.002 * SR)) + 6) / SR;
-  n.port.onmessage = (e) => { if (e.data && e.data.red != null) A.limRed = e.data.red; };
+  n.port.onmessage = (e) => { if (e.data && e.data.red != null) { A.limRed = e.data.red; if (!(A.limRedMin <= e.data.red)) A.limRedMin = e.data.red; } };   // (limRedMin: the deepest since the Pegelhaushalt last looked – haushalt.js)
   setTimeout(() => { if (A.lim === n) { try { A.cmpVca.disconnect(A.clipPre); } catch (e) {} } }, 200);
 }

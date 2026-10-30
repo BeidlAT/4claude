@@ -147,6 +147,17 @@ Damit werden Schlaginstrumente knackig oder weich und Gongs länger oder kürzer
 
 **Regler:** Anschlag, Ausklang. Pro Kette und auch pro Mixer-Kanal einsetzbar.
 
+**Gebaut (29.10.2026, je Mixer-Kanal, `myzel-trans`, Karte „Anschlag“ im Fruchtkörper; ohne Vorausschau – kein Delay im
+Kanal).** 30.10.: die langsame Hüllkurve lässt mit 0,8 s statt 0,15 s los – vorher folgte sie einem 0,4-s-Ausklang selbst und
+„Ausklang“ tat nichts (gemessen: jetzt −4,6 dB bei 300 ms für τ 0,4 s, −2,5 dB bei 500 ms für τ 1 s). Test `v2/t-formen-dsp.js`.
+
+### 3.3a Verdichter je Kanal (gebaut 30.10.2026)
+
+`myzel-komp` (dsp/kompressor.js) nach dem Transienten-Former: Spitzen-Detektor beider Seiten (ein Gain für beide),
+Anschlag 0,1–100 ms, Loslassen 10–2000 ms (nach langem Druck bis dreimal so lang), Schwelle, Verhältnis 1–20 (1 = aus,
+bitgenau durch), Knie 0–24 dB, Ausgleich −12…+24 dB, Anteil (parallel). Ohne Vorausschau. Kosten 1,1 Einheiten im Betrieb
+(gemessen), 0 bei 1:1. Karte „Verdichter“ im Fruchtkörper mit der Reduktion der letzten 3 s. Die Summen-Verdichtung bleibt.
+
 ### 3.4 Summe: transparenter Begrenzer statt Clipper (Pflicht, keine Option)
 
 **Technik:**
@@ -156,6 +167,15 @@ Damit werden Schlaginstrumente knackig oder weich und Gongs länger oder kürzer
 
 **Dazu kommt ein Pegelhaushalt für den Hexenring:** Je mehr Schleifen spielen, desto mehr Spielraum
 bekommt die Summe automatisch, damit vier Schleifen und das Live-Spiel nicht in den Begrenzer drücken.
+
+**Gebaut (30.10.2026, `hexenring/haushalt.js`) – aber nach Messung anders als oben:** vier dichte Schleifen plus
+Live-Spiel (Handpan-Kreis, Kalimbatraum, Kurzwellenritual, Chromium) halten die Summe bei −2 … −8 dBFS, der Begrenzer
+bleibt untätig – die Summen-Verdichtung fängt es vorher ab. Ein Trim nach der Zahl der Schleifen hätte nur leiser gemacht,
+ohne Not. Darum regelt der Haushalt nach dem, was der Begrenzer wirklich tut: meldet er > 1,5 dB Reduktion, während
+Schleifen spielen – oder hält die Summen-Verdichtung mehr als 10 dB (ihre üblichen 5–9 dB unter einer vollen Summe sind
+ihre Arbeit, gemessen) –, geht der Kanal „Hexenring“ langsam zurück (1 dB/s, ab 4 dB 2 dB/s, höchstens −6 dB); ist es
+6 s ruhig, kommt er mit ½ dB/s zurück, ohne spielende Schleife mit 2 dB/s. Gerät-Einstellung `hx.haushalt` (an), sichtbar
+im Kanaltext („Spielraum −2 dB“) und in Leistung. Test `t-hx-haushalt.js`.
 
 ### 3.5 Später sinnvoll
 

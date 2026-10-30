@@ -41,6 +41,11 @@ function mxdBuildFormen() {
   const sat = mxdCard('mxd-sat', 'Sättigung', F.satT, h('div', { class: 'mxd-cvb' }, F.satCv), h('div', { class: 'mxd-kr' }, F.satK.box));
   F.attK = mxdKnob(); F.ausK = mxdKnob();
   const tra = mxdCard('mxd-tra', 'Anschlag', h('small', null, 'Anfang und Ausklang der Töne'), h('div', { class: 'mxd-kr' }, F.attK.box, F.ausK.box));
+  // (30.10.2026) the Verdichter: its reduction over the last 3 s, its knobs (mixer/processing.js x.kp – dsp/kompressor.js)
+  F.kgr = mxTrace(150, 50); F.kCv = h('canvas', { 'aria-hidden': 'true' }); F.kT = h('small');
+  F.kK = ['krat', 'kthr', 'katt', 'krel', 'kknee', 'kmk', 'kmix'].map(() => mxdKnob('', { gr: () => mxdKred(MXD.k) }));
+  F.kK.slice(1).forEach((K) => { K.o.gr = null; });   // (only the Ratio's ring shows the reduction)
+  const kmp = mxdCard('mxd-kmp', 'Verdichter', F.kT, h('div', { class: 'mxd-cvb' }, F.kCv), h('div', { class: 'mxd-kr' }, ...F.kK.map((K) => K.box)));
   const wid = mxdCard('mxd-wid', 'Breite', F.widT, h('div', { class: 'mxd-cvb' }, F.widCv), h('div', { class: 'mxd-kr' }, F.widK.box));
   F.chips = mxdDuckChips();
   const pmp = mxdCard('mxd-pmp', 'Pumpen', F.pmpT, h('div', { class: 'mxd-cvb' }, F.pmpCv),
@@ -59,14 +64,19 @@ function mxdBuildFormen() {
   F.ins = mxdCard('mxd-ins', 'Einschub', F.insT, F.insC, h('div', { class: 'mxd-kr' }, F.insK.box));
   for (const [r] of FX_RETS) mxdWatch(r + '.typ');
   mxdWatch('mix.duckSrc', 'mix.duckRel', 'seq.bpm');
-  return h('section', { class: 'mxd-sec mxd-fo', 'aria-label': 'Formen' }, mxdSh('Formen', 'Sättigung · Breite · Pumpen · Anschlag · Einschub'), h('div', { class: 'mxd-cards' }, sat, wid, pmp, tra, F.ins));
+  return h('section', { class: 'mxd-sec mxd-fo', 'aria-label': 'Formen' }, mxdSh('Formen', 'Sättigung · Breite · Pumpen · Anschlag · Verdichter · Einschub'), h('div', { class: 'mxd-cards' }, sat, wid, pmp, tra, kmp, F.ins));
 }
+// the channel's compressor reduction now (dB, positive), smoothed in the detail's frame (quick down, ¼ s back)
+function mxdKred(k) { const st = MIX.s[k], x = st && st.proc; return x && x.kp ? x.kredS || 0 : 0; }
 const mxdIsTakt = (k) => MXK[k] && MXK[k].kind === 'lane' && Number(P['mix.duckSrc']) === MXK[k].lane;
 function mxdFormenAim(k) {
   const F = MXD.fo, c = MXK[k];
   mxdAim(F.satK, k, 'x' + k + '.sat', 'Menge', 'Sättigung', '#ffb35c');
   mxdAim(F.attK, k, 'x' + k + '.att', 'Anschlag', 'Anschlag: Tonanfänge lauter oder leiser', '#ffd27a');
   mxdAim(F.ausK, k, 'x' + k + '.aus', 'Ausklang', 'Ausklang: länger oder kürzer', '#ffd27a');
+  [['krat', 'Verdichtung', 'Verdichter: Verhältnis (1 = aus)'], ['kthr', 'Schwelle', 'Verdichter: ab welchem Pegel'], ['katt', 'Anschlag', 'Verdichter: wie schnell er zugreift'], ['krel', 'Loslassen', 'Verdichter: wie schnell er zurückkommt (nach langem Druck bis dreimal so lang)'], ['kknee', 'Knie', 'Verdichter: weicher Übergang um die Schwelle'], ['kmk', 'Ausgleich', 'Verdichter: Pegel danach'], ['kmix', 'Anteil', 'Verdichter: Anteil des verdichteten Signals (parallel)']]
+    .forEach(([s, name, label], i) => mxdAim(F.kK[i], k, 'x' + k + '.' + s, name, label, '#ff8f9e'));
+  F.kgr.b.fill(0);
   mxdAim(F.widK, k, 'x' + k + '.wid', 'Breite', 'Stereobreite', c.col);
   mxdAim(F.pmpK, k, 'x' + k + '.duck', 'Tiefe', 'Pumpen', '#ff8f9e');
   mxdAim(F.relK, k, 'mix.duckRel', 'Rückkehr', 'Pumpen: Rückkehr, für alle Kanäle', '#ff8f9e');
@@ -81,6 +91,7 @@ function mxdFormenText(k) {
   F.satT.textContent = !(a > 0) ? 'aus' : x > 0.003 ? 'Spitze ' + (g < 0 ? MX_MINUS : '+') + dec(Math.abs(g).toFixed(1)) + ' dB' : 'still';
   F.widT.textContent = w < 0.005 ? 'Mono' : w > 1.005 ? 'breiter' : w < 0.995 ? 'schmaler' : 'unverändert';
   F.pmpT.textContent = mxdIsTakt(k) ? 'gibt den Takt' : d > 0 ? 'von Spur ' + (src + 1) : 'aus';
+  const kr = mxdKred(k); F.kT.textContent = P['x' + k + '.krat'] < 1.05 ? 'aus' : kr > 0.05 ? MX_MINUS + dec(kr.toFixed(1)) + ' dB' : 'ruhig';
   if (!F.ins.hidden) {
     const r = P['x' + k + '.ins'], t = r !== '0' && FX_RETS.some((x) => x[0] === r) ? fxType(r).name : 'aus';
     if (F.insT.textContent !== t) F.insT.textContent = t;

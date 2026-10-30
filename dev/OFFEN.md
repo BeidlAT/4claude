@@ -42,6 +42,10 @@ Begründungen stehen in `dev/STAND-2026-10-29.md` (Abschnitte „Danach (30.10.)
     abgesichert). Testserver mit `setsid` starten; `sh dev/setup-tests.sh <scratch>` kopiert die Tests.
 
 ## Erledigt am 30.10. (zur Orientierung)
+#120 Dynamik: Verdichter je Kanal (`myzel-komp`, Karte „Verdichter“), Transienten-Former „Ausklang“ wirksam (langsame
+Hüllkurve 0,8 s), Pegelhaushalt Hexenring nach Begrenzer-Last (`haushalt.js`, `hx.haushalt`); Messung: der Begrenzer bleibt
+bei 4 Schleifen + Live untätig (Summen-Verdichtung hält −2…−8 dBFS). Offen fürs Ohr: Verdichter an einer Puls-Spur und
+einer Kalimba-Ebene; „Ausklang −“ dimmt nach einem lauten Ton kurz auch einen leiseren, der folgt (Transient-Designer-Art).
 #109 Preset-Wechsel ohne Warten auf die Naht, Ladebalken, Tonart-Grundwert · #110 Übergabe in Portionen, „Takt sehen“ ·
 #111/#112 Kompostgarten, Kalimba-Schnarren, Jahresring-Laub · #113 Kurzwellenritual, Puls-Spuren-Hinweis, Ebenen-Recherche ·
 #114 Kappung vor der Effektkette, Harmonizer auf der Effekte-Seite · #115 8 Ebenen, Design, Bearbeiten-Fenster, globaler
