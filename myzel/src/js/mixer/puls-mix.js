@@ -239,8 +239,7 @@ function buildKlang() {
     box.append(s);
   }
   wkUiSync();
-  box.append(section('Zweite Ebene', 'Ein zweiter Klang auf jedem Finger', grid(ctl('v.layer', { label: 'Ebene' }), ctl('v.layerLvl'), ctl('v.layerInt'), ctl('v.layerDeg')),
-    h('p', { class: 'note' }, 'Tonstufe verschiebt um Stufen der Skala – so bleibt jeder Ton in der Tonart. Lautstärke, Klangfarbe und Raum jeder Ebene regelst du im Mixer.')));
+  box.append(ebSection());   // (30.10.2026: the Ebenen – ui/ebenen.js; Ebene 2 was „Zweite Ebene“ here)
   box.append(section('Spielweise', null, grid(ctl('v.roll'), ctl('v.strum'), ctl('v.glide'), ctl('v.vel'), ctl('v.human'), ctl('v.width'))));
   box.append(section('Stimmung', null, grid(ctl('t.root'), ctl('t.scale'), ctl('t.oct'), ctl('t.range'), ctl('t.a4'), ctl('t.just'))));
   return box;
@@ -259,22 +258,23 @@ function klangFrame() {
   if (engSecs.jrg && !engSecs.jrg.hidden && !(now - (klangFrame.t || 0) < 1000)) { klangFrame.t = now; jrgText(); }
 }
 function refreshEngineUI() {
-  const a = P['v.eng'], b = P['v.layer'];
-  for (const k in engSecs) engSecs[k].hidden = !(k === a || k === b);
-  // keep the active engine's section right below the source chooser, layer engine after it
+  // (30.10.2026) every Ebene's source has its section, in the order of the layers: the Klangquelle's first
+  const a = P['v.eng'], more = [...new Set(ebEngs().slice(1))].filter((k) => k !== a && ENGINES[k]), b = more[0] || 'off';
+  for (const k in engSecs) engSecs[k].hidden = !(k === a || more.includes(k));
+  // keep the active engine's section right below the source chooser, the layers' engines after it
   const host = engSecs[a] && engSecs[a].parentNode;
   if (host) {
     const first = host.children[0];
     first.after(engSecs[a]);
-    if (b !== 'off' && b !== a) engSecs[a].after(engSecs[b]);
+    let at = engSecs[a]; for (const k of more) if (engSecs[k]) { at.after(engSecs[k]); at = engSecs[k]; }
   }
-  const two = b !== 'off' && b !== a, label = ENG_NAME[a] + (two ? ' + ' + ENG_NAME[b] : '');
+  const two = more.length > 0, label = ENG_NAME[a] + (more.length === 1 ? ' + ' + ENG_NAME[b] : more.length > 1 ? ' + ' + more.length + ' Klänge' : '');
   $('#engName').textContent = label;
-  const gl = $('#engGlyph'), fb = kqFb(a) || (two && kqFb(b));
-  gl.replaceChildren(kqGlyph(a), ...(two ? [kqGlyph(b)] : []));
+  const gl = $('#engGlyph'), fb = kqFb(a) || (two && more.map(kqFb).find(Boolean));
+  gl.replaceChildren(kqGlyph(a), ...more.slice(0, 2).map((k) => kqGlyph(k)));
   let dot = $('#engChip .fbdot');
   if (fb && !dot) { dot = h('span', { class: 'fbdot' }); $('#engChip').append(dot); }
-  if (dot) { dot.hidden = !fb; dot.title = fb ? 'spielt als ' + ENG_NAME[kqFb(a) || kqFb(b)] : ''; }
-  $('#engChip').setAttribute('aria-label', 'Klangquelle: ' + ENG_NAME[a] + (two ? ', dazu ' + ENG_NAME[b] : '') + (fb ? ' (vereinfacht)' : '') + '. Einstellungen öffnen; lange drücken öffnet die Bibliothek');
+  if (dot) { dot.hidden = !fb; dot.title = fb ? 'spielt als ' + ENG_NAME[fb] : ''; }
+  $('#engChip').setAttribute('aria-label', 'Klangquelle: ' + ENG_NAME[a] + (two ? ', dazu ' + more.map((k) => ENG_NAME[k]).join(', ') : '') + (fb ? ' (vereinfacht)' : '') + '. Einstellungen öffnen; lange drücken öffnet die Bibliothek');
   for (const k in engSecs) if (engSecs[k].richNote) engSecs[k].richNote.hidden = !Q.rich;
 }

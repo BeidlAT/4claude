@@ -2567,6 +2567,43 @@ const fmtDeg = (v) => (v ? (v > 0 ? '+' : '−') + Math.abs(v) + (Math.abs(v) ==
 NUM('v.oct', 'Oktave', -2, 2, 0, '', { step: 1, fmt: fmtOct });
 NUM('v.deg', 'Tonstufe', -7, 7, 0, '', { step: 1, fmt: fmtDeg });
 NUM('v.layerDeg', 'Tonstufe Ebene', -7, 7, 0, '', { step: 1, fmt: fmtDeg });
+// Ebenen (owner, 30.10.2026: „bis zu 8 Ebenen … alles pro Ebene einstellbar … Presets, die es schon gibt, bleiben vorerst
+// so“): up to eight sounds on every finger, each with a strip of its own. Ebene 1 is the Klangquelle (v.eng, v.oct, v.deg,
+// strip „fin“), Ebene 2 the old second layer (v.layer, v.layerLvl, v.layerInt, v.layerDeg, strip „eb2“) – their ids stay,
+// so every preset, patch and test reads as before; Ebenen 3–8 (e<n>.*, strips eb3–eb8) are off by default. Per layer
+// besides: Feinstimmung, a Tonbereich (MIDI note numbers of the played note) and an Anschlags-Bereich, each with a soft
+// edge outside it (equal-power), Solo among the layers (live, never in a patch); Pan, Mute and the rest are its strip's
+// (x<k>.pan, x<k>.mute …). At the defaults a layer is exactly what it was: ratio ×1, gain 1, nothing gated.
+const EB_N = 8;
+const EB = [];
+for (let n = 1; n <= EB_N; n++) EB.push(n === 1 ? { n, k: 'fin', eng: 'v.eng', lvl: 'e1.lvl', oct: 'v.oct', deg: 'v.deg', pre: 'e1.' }
+  : n === 2 ? { n, k: 'eb2', eng: 'v.layer', lvl: 'v.layerLvl', int: 'v.layerInt', deg: 'v.layerDeg', pre: 'e2.' }
+  : { n, k: 'eb' + n, eng: 'e' + n + '.eng', lvl: 'e' + n + '.lvl', int: 'e' + n + '.int', deg: 'e' + n + '.deg', pre: 'e' + n + '.' });
+const EB_K = EB.map((e) => e.k), EB_OF = Object.fromEntries(EB.map((e) => [e.k, e])), EB_ENG = new Set(EB.map((e) => e.eng));
+// the sources the finger plays now (every layer with a sound – for what a source needs loaded or warmed)
+const ebEngs = () => EB.map((e) => P[e.eng]).filter((k) => k && k !== 'off');
+// a layer's own params (its pitch, its ranges) – they move the strings' warm-up, the field's loops, the Ebenen rows
+const EB_PIT = new Set(EB.flatMap((e) => [e.int, e.deg, e.pre + 'fine'].filter(Boolean)));
+const fmtKey = (v) => NOTE_NAMES[((v % 12) + 12) % 12] + (Math.floor(v / 12) - 1);
+const fmtCent = (v) => (Math.abs(v) < 0.5 ? '±0 ct' : (v > 0 ? '+' : '−') + Math.round(Math.abs(v)) + ' ct');
+for (const e of EB) {
+  const p = e.pre, w = 'Ebene ' + e.n;
+  if (e.n > 2) {
+    SEL(e.eng, 'Klang ' + w, [['off', 'Aus'], ...ENG_OPTS], 'off', { lib: 1 });
+    NUM(e.lvl, 'Lautstärke ' + w, 0, 1, 0.5, '%');
+    NUM(e.int, 'Intervall ' + w, -36, 36, 0, 'HT', { step: 1 });
+    NUM(e.deg, 'Tonstufe ' + w, -7, 7, 0, '', { step: 1, fmt: fmtDeg });
+  }
+  if (e.n === 1) NUM(e.lvl, 'Lautstärke ' + w, 0, 1, 1, '%');
+  NUM(p + 'fine', 'Feinstimmung ' + w, -100, 100, 0, 'ct', { step: 1, fmt: fmtCent });
+  NUM(p + 'lo', 'Tonbereich ab', 0, 127, 0, '', { step: 1, fmt: fmtKey });
+  NUM(p + 'hi', 'Tonbereich bis', 0, 127, 127, '', { step: 1, fmt: fmtKey });
+  NUM(p + 'rand', 'Weicher Rand (Ton)', 0, 24, 0, 'HT', { step: 1, fmt: (v) => (v ? v + ' HT' : 'hart') });
+  NUM(p + 'vlo', 'Anschlag ab', 0, 1, 0, '%', { step: 0.01 });
+  NUM(p + 'vhi', 'Anschlag bis', 0, 1, 1, '%', { step: 0.01 });
+  NUM(p + 'vrand', 'Weicher Rand (Anschlag)', 0, 0.5, 0, '%', { step: 0.01, fmt: (v) => (v ? Math.round(v * 100) + ' %' : 'hart') });
+  BOOL(p + 'solo', 'Solo ' + w, false, { live: 1 });
+}
 // Stimmung
 SEL('t.root', 'Grundton', NOTE_NAMES.map((n, i) => [String(i), n]), '2', { chips: 1, small: 1 });
 SEL('t.scale', 'Skala', Object.entries(SCALES).map(([k, s]) => [k, s.n]), 'mpent');
@@ -3021,8 +3058,9 @@ LANE_DEF.forEach((d, i) => {
 });
 // Mischpult: a channel strip for every sound layer (x<strip>.*), returns for echo and hall, the Puls group, "Pumpen"
 const STRIPS = [
-  { k: 'fin', name: 'Klang', info: 'Spielfläche und Keyboard' },
-  { k: 'eb2', name: 'Ebene 2', info: 'Zweiter Klang auf jedem Finger' },
+  { k: 'fin', name: 'Klang', info: 'Spielfläche und Keyboard', eb: 1 },
+  { k: 'eb2', name: 'Ebene 2', info: 'Zweiter Klang auf jedem Finger', eb: 2 },
+  ...EB.slice(2).map((e) => ({ k: e.k, name: 'Ebene ' + e.n, info: 'Klang ' + e.n + ' auf jedem Finger', eb: e.n })),   // (30.10.2026: Ebenen 3–8 – the mixer shows them once used, mxRgnSync)
   { k: 'rgn', name: 'Regen', info: 'Sporenregen (Gestik)' },
   { k: 'hxr', name: 'Hexenring', info: 'Schleifen' },   // Hexenring: its loops (no tap hears it)
   ...LANE_DEF.map((_, i) => ({ k: 'l' + i, name: 'Spur ' + (i + 1), info: 'Puls', lane: i })),
@@ -3169,6 +3207,7 @@ SEL('midi.tch', 'Touché-Spielweise', [['finger', 'Finger'], ['atem', 'Atem'], [
 const GROUP = {
   v: 'Spielweise', t: 'Stimmung', neb: 'Nebel', kor: 'Körner', hau: 'Hauch', glo: 'Glocke', mem: 'Membran', sai: 'Saite', sch: 'Schale', gng: "Gong", klb: "Kalimba", obt: "Obertöne", stm: "Stimme", swm: "Schwarm", tie: "Tiefe", trp: "Tropfen", nrd: 'Nordlicht', sht: 'Schimmer', ond: 'Ätherwelle', wal: 'Walgesang', stp: 'Endlostreppe', atr: 'Attraktor', tnl: 'Tunnel', wkg: 'Westküste', bnt: 'Schaltkreis', kas: 'Kassette', bit: 'Achtbit', gbs: 'Gleitbass', hht: 'Zischel', vox: 'Silbe', spu: 'Spieluhr', kto: 'Koto', hlm: 'Halm', rnk: 'Ranke', elm: 'Elmsfeuer', hng: 'Handpan', gml: 'Gamelan', sit: 'Sitar', tbl: 'Tabla', did: 'Didgeridoo', mtr: 'Maultrommel', jrg: 'Jahresring', hrz: 'Harz', shn: 'Sehne', zpf: 'Zapfen', glt: 'Glut', mdr: 'Moder', boe: 'Böe', amo: 'Amöbe', gsp: 'Gespinst', rhz: 'Rhizom', khl: 'Kehlchen',
   drv: 'Verzerrung', rng: 'Ringmodulator', flt: 'Filter', pha: 'Phaser', cho: 'Schweben', dly: 'Echo', rev: 'Hall', fx: 'Effekt', fx2: 'Effekt 2', arp: 'Sporenwerk', mov: 'Bewegung', mst: 'Summe',
+  e1: 'Ebene 1', e2: 'Ebene 2', e3: 'Ebene 3', e4: 'Ebene 4', e5: 'Ebene 5', e6: 'Ebene 6', e7: 'Ebene 7', e8: 'Ebene 8',
   seq: 'Puls', bor: 'Bordun', rec: 'Aufnahme', hx: 'Hexenring', dev: 'Gerät', midi: 'MIDI', l0: 'Spur 1', l1: 'Spur 2', l2: 'Spur 3', l3: 'Spur 4',
 };
 // the mixer's parts as the panel names them ("Kanal" is the MIDI channel's word here)
@@ -4808,10 +4847,10 @@ function buildStrips() {
     const st = { k: d.k, d, ret: !!d.ret, lane: d.lane, proc: null, procOn: false, mat: null, matOn: false, to: {}, dTo: null, duckOn: false };
     st.in = G(1); st.in.channelCount = 2; st.in.channelCountMode = 'explicit'; st.in.channelInterpretation = 'speakers';
     st.byp = G(1); st.wet = G(0); st.mBy = G(1); st.mWet = G(0); st.duck = G(1); st.dry = G(1);
-    // (owner, 26.10.2026) Klang and Ebene 2: the Touché's insert sits between the input and the strip's blocks – a dry
+    // (owner, 26.10.2026) Klang and Ebene 2 (30.10.2026: every Ebene): the Touché's insert sits between the input and the strip's blocks – a dry
     // gain at 1 and a wet one at 0 (nothing feeds it): exactly the strip as before until a Spielweise F5–F12 plays; st.pt is
     // what follows it (the strip's own EQ takes its input there)
-    if (d.k === 'fin' || d.k === 'eb2') { st.tD = G(1); st.tW = G(0); st.pt = G(1); st.in.connect(st.tD).connect(st.pt); st.tW.connect(st.pt); } else st.pt = st.in;
+    if (d.eb) { st.tD = G(1); st.tW = G(0); st.pt = G(1); st.in.connect(st.tD).connect(st.pt); st.tW.connect(st.pt); } else st.pt = st.in;
     st.pt.connect(st.byp);
     st.byp.connect(st.mBy).connect(st.duck).connect(st.dry);
     st.wet.connect(st.mBy); st.mWet.connect(st.duck);
@@ -4822,7 +4861,7 @@ function buildStrips() {
 }
 const faderGain = (db) => (db <= FADER_OFF ? 0 : dbToGain(db));
 function stripGain(st, eg = MOD.eg) {
-  const g = faderGain(mp('x' + st.k + '.vol')) * (st.k === 'fin' || st.k === 'eb2' ? MIDI.expr * eg : 1);   // expression pedal (CC 11), Formen · Ausdruck
+  const g = faderGain(mp('x' + st.k + '.vol')) * (st.d.eb ? MIDI.expr * eg : 1);   // expression pedal (CC 11), Formen · Ausdruck – on every Ebene
   const v = st.lane == null ? g : g * (mp('mix.pulsMute') ? 0 : faderGain(mp('mix.pulsVol')));
   return SLP.dk ? v * slpK(st) : v;   // Schlafen: the dry sound fades into the frozen tail
 }
@@ -4851,12 +4890,15 @@ function mixParam(st, key) {
 }
 // Solo: a soloed channel silences the other channels (dry and sends); echo and hall stay open so it keeps its space.
 // A soloed return plays only the effect: the channels go on feeding it, but their dry sound is muted.
+// (30.10.2026) Solo among the Ebenen (e<n>.solo, the Klang page): the other layers' strips close as well – everything
+// else plays on (a layer's solo is the instrument's, not the mixer's); a new note plays no voice on them (touch.js layers).
 function updSolo(inst) {
   if (!A.ctx) return;
-  const anySrc = MIX.src.some((st) => P['x' + st.k + '.solo']), anyRet = MIX.list.some((st) => st.ret && P['x' + st.k + '.solo']);
+  const anySrc = MIX.src.some((st) => P['x' + st.k + '.solo']), anyRet = MIX.list.some((st) => st.ret && P['x' + st.k + '.solo']), anyLy = EB.some((e) => P[e.pre + 'solo']);
   for (const st of MIX.list) {
     const p = 'x' + st.k + '.', solo = P[p + 'solo'];
     let on = !mp(p + 'mute'), dry = true;
+    if (anyLy && st.d.eb && !P[EB[st.d.eb - 1].pre + 'solo']) on = false;
     if (st.ret) { if (anyRet && !solo) on = false; }
     else { if (anySrc && !solo) on = false; if (anyRet && !solo) dry = false; }
     st.silent = !on; st.dryOff = !dry;
@@ -7586,7 +7628,7 @@ const ENGINES = {
       lp.connect(v.out);
       v.out.gain.value = vel * GSP_PEAK;
       if (W) {   // the send: post-fader on the voice's own channel (gspSend), so a muted lane feeds nothing
-        const bus = o.bus || stripIn('fin'), sg = v.n(G(vel * vel * (0.3 + 0.7 * clamp(y, 0, 1)) * (bus === stripIn('rgn') ? 0.5 : 1)));
+        const bus = o.bus || stripIn('fin'), sg = v.n(G(vel * vel * (0.3 + 0.7 * clamp(y, 0, 1)) * (bus === stripIn('rgn') ? 0.5 : 1) * (o.amp != null ? o.amp : 1)));   // (amp: an Ebene's soft edge – the web hears what the channel hears)
         lp.connect(sg).connect(gspSend(bus));
         W.active = true;
       }
@@ -7727,7 +7769,7 @@ function ksBuffer(f, bright, decaySec, damp, pos) {
 ksBuffer.wait = new Set();
 // While Saite is in use, render every note of the current scale in the worker so taps never wait for it.
 function saiInUse() {
-  if (P['v.eng'] === 'sai' || P['v.layer'] === 'sai' || (RG.on && GK.p.rgS === 'sai')) return true;   // (Sporenregen striking strings)
+  if (ebEngs().includes('sai') || (RG.on && GK.p.rgS === 'sai')) return true;   // (Sporenregen striking strings)
   for (let i = 0; i < 4; i++) if (P['l' + i + '.on'] && P['l' + i + '.eng'] === 'sai') return true;
   return false;
 }
@@ -8060,12 +8102,15 @@ function spawnGrain(v, when) {
 // Steal the voice that has faded furthest: released voices by the share of their release already elapsed,
 // held voices only when nothing is releasing (oldest first). soft: faded out in ~25 ms (vFade) – kill() can cut a struck
 // voice's decay at once, a click (Gestik's rain and rattle make room this way).
-function steal(fadingOnly, soft, loopOnly) {
+// (owner, 30.10.2026: Ebenen) the layers of one note go together: the voice chosen takes the other voices of its strike
+// (v.grp) with it – never those of the note being made (keep), whose layers would otherwise take each other's room.
+function steal(fadingOnly, soft, loopOnly, keep) {
   const now = A.ctx.currentTime;
   let best = null, bestScore = -Infinity;
   for (const v of A.voices) {
     let score;
     if (loopOnly && !v.loop) continue;   // Hexenring: (step 2a) a loop's voice never takes a live one
+    if (keep && v.grp === keep) continue;
     if (v.loop) score = 3e6 + (now - v.t0);   // Hexenring: (step 2a, Live mode) the loops' voices give way before any live one
     else if (v.released) {
       const from = v.relAt != null ? v.relAt : v.t0;
@@ -8074,20 +8119,24 @@ function steal(fadingOnly, soft, loopOnly) {
     else score = now - v.t0;
     if (score > bestScore) { bestScore = score; best = v; }
   }
-  if (best) { if (soft) vFade(best); else best.kill(); A.voices.delete(best); }
+  if (best) {
+    const g = best.grp, out = (v) => { if (soft) vFade(v); else v.kill(); A.voices.delete(v); };
+    out(best);
+    if (g) for (const v of A.voices) if (v.grp === g) out(v);
+  }
   return !!best;
 }
 // (Leistung, 25.10.2026, owner) after the guard lowered the budget: what is over it fades out (vFade, the voice's own
-// release) – voices already fading first, then the loops' Live voices, then the oldest held ones, the second layer
-// (Ebene 2) before the first. Returns how many
+// release) – voices already fading first, then the loops' Live voices, then the oldest held ones, the higher layers
+// before the lower (Ebene 8 … 2 before the first). Returns how many
 function vShed() {
   let n = 0;
-  const eb2 = stripIn('eb2');
+  const ly = new Map(EB.slice(1).map((e) => [stripIn(e.k), 1e6 + (e.n - 2) * 1e5]));
   while (A.voices.size && voiceLoad() > VBUDGET) {
     if (steal(true, true)) { n++; continue; }
     const now = A.ctx.currentTime;
     let best = null, bs = -Infinity;
-    for (const v of A.voices) { const sc = (v.loop ? 2e6 : v.bus === eb2 ? 1e6 : 0) + (now - v.t0); if (sc > bs) { bs = sc; best = v; } }
+    for (const v of A.voices) { const sc = (v.loop ? 2e7 : ly.get(v.bus) || 0) + (now - v.t0); if (sc > bs) { bs = sc; best = v; } }
     if (!best) break;
     vFade(best); A.voices.delete(best); n++;
   }
@@ -8098,11 +8147,14 @@ function playNote(eng, t, f, y, vel, o = {}) {
   if (!A.ctx || !ENGINES[eng]) return null;
   const as = ENGINES[eng].needs ? wkPlays(eng) : eng;   // a worklet engine without its module: its stand-in
   const cost = Q.cost[as] || 1;
-  while (A.voices.size && (A.voices.size >= MAXV || voiceLoad() + cost > VBUDGET)) if (!steal(false, false, !!o.loop)) { if (o.loop) return null; break; }   // Hexenring: (step 2a) a loop's note that does not fit is not played
+  while (A.voices.size && (A.voices.size >= MAXV || voiceLoad() + cost > VBUDGET)) if (!steal(false, false, !!o.loop, o.grp)) { if (o.loop) return null; break; }   // Hexenring: (step 2a) a loop's note that does not fit is not played
   const v = new Voice(eng);
-  v.cost = cost; v.bend = o.bend || false; v.as = as; v.bus = o.bus || null; if (o.loop) v.loop = true;
+  v.cost = cost; v.bend = o.bend || false; v.as = as; v.bus = o.bus || null; if (o.loop) v.loop = true; if (o.grp) v.grp = o.grp;
   const pan = v.n(PAN(o.pan || 0));
-  v.out.connect(pan); pan.connect(o.bus || stripIn('fin'));
+  // (30.10.2026) a layer's soft edge (touch.js ebZone): a gain of its own between the voice and its pan – only when it is
+  // not 1, so a note inside every range is the voice as before
+  if (o.amp != null && o.amp !== 1) v.out.connect(v.n(G(o.amp))).connect(pan); else v.out.connect(pan);
+  pan.connect(o.bus || stripIn('fin'));
   A.voices.add(v);
   try { ENGINES[as].start(v, t, f, clamp(y, 0, 1), vel, o); }
   catch (e) { console.error(e); v.cleanup(); return null; }
@@ -15222,7 +15274,7 @@ const WORKLET_ENGINES = new Set(['hrz', 'hlm', 'glt', 'boe', 'amo', 'rnk', 'shn'
 A.workletOK = false; A.workletBroken = new Set();
 function dspWanted() {
   const g = GK.p ? [GK.p.rgS, GK.p.rasS] : [];
-  return [P['v.eng'], P['v.layer'], P['l0.eng'], P['l1.eng'], P['l2.eng'], P['l3.eng'], ...g].some((k) => WORKLET_ENGINES.has(k));
+  return [...ebEngs(), P['l0.eng'], P['l1.eng'], P['l2.eng'], P['l3.eng'], ...g].some((k) => WORKLET_ENGINES.has(k));
 }
 function ensureDSP(ctx = A.ctx, quiet) {   // idempotent per context; resolves true when the processors are registered
   if (!ctx) return Promise.resolve(false);
@@ -15329,7 +15381,7 @@ function sitTarab() {
 // when the level (8 or 12 strings) changes; retuned (a 90-ms glide) with the field's scale; {clear} at Stille/Schlafen.
 // (the web's cost: 24 webs against 24 Nebel voices, the voices' method – 1.82–2.15 / 2.51–2.70 measured, the highest + 15 %)
 const GSP_PEAK = 1.5, GSP_COST = [2.47, 3.11];
-const gspInUse = () => [P['v.eng'], P['v.layer'], ...[0, 1, 2, 3].map((i) => P['l' + i + '.on'] && P['l' + i + '.eng']), RG.on && GK.p && GK.p.rgS].includes('gsp');
+const gspInUse = () => [...ebEngs(), ...[0, 1, 2, 3].map((i) => P['l' + i + '.on'] && P['l' + i + '.eng']), RG.on && GK.p && GK.p.rgS].includes('gsp');
 // the strings: the first N degrees of the field's scale from its base octave (Saiten „Zwei Oktaven“: every other one,
 // over two octaves); a free field has no scale – the root's harmonics then
 function gspFreqs() {
@@ -15407,7 +15459,7 @@ const RHZ_KN = {
   metall: { r: [1, 2.76, 5.4], a: [1, 0.45, 0.2], d: [1, 0.7, 0.45], tau: 1.8, bp: 5, q: 2, ck: 0.0011, cl: 0.35, lv: 0.69 },
   glas: { r: [1, 2.32, 4.25], a: [1, 0.38, 0.16], d: [1, 0.8, 0.5], tau: 1.4, bp: 7, q: 3, ck: 0.0008, cl: 0.3, lv: 0.87 },
 };
-const rhzInUse = () => [P['v.eng'], P['v.layer'], ...[0, 1, 2, 3].map((i) => P['l' + i + '.on'] && P['l' + i + '.eng']), RG.on && GK.p && GK.p.rgS, GK.p && GK.p.ras && GK.p.rasS].includes('rhz');
+const rhzInUse = () => [...ebEngs(), ...[0, 1, 2, 3].map((i) => P['l' + i + '.on'] && P['l' + i + '.eng']), RG.on && GK.p && GK.p.rgS, GK.p && GK.p.ras && GK.p.rasS].includes('rhz');
 const rhzReiz = (t) => clamp(P['rhz.reiz'] + (MOD.t.rhzR && MOD.t.rhzR.s.size ? 0.6 * modVal('rhzR', t) : 0), 0, 1);   // (Gestik: tilt and Ladung)
 // offline (tests) or a stopped clock: a strike's whole cascade is laid out at once (RHZ.step: tests run the clock themselves)
 const rhzAhead = () => !RHZ.step && ((typeof OfflineAudioContext !== 'undefined' && A.ctx instanceof OfflineAudioContext) || A.ctx.state !== 'running');
@@ -16485,10 +16537,33 @@ function startClock() {
    Touch play
    ===================================================================== */
 const touches = new Map();
-function layers() {
-  const out = [{ eng: P['v.eng'], ratio: Math.pow(2, P['v.oct']), deg: P['v.deg'], lvl: 1, bus: stripIn('fin') }];
-  if (P['v.layer'] !== 'off') out.push({ eng: P['v.layer'], ratio: Math.pow(2, P['v.layerInt'] / 12), deg: P['v.layerDeg'], lvl: P['v.layerLvl'], bus: stripIn('eb2') });
+// the layers a note plays (owner, 30.10.2026: „alle Ebenen klingen auf jedem Ton“ – params.js EB): Ebene 1 always,
+// 2–8 once a sound is chosen. With the note's pitch f and velocity vel (a played note) each layer is gated by its
+// Tonbereich and Anschlags-Bereich – amp, the soft edge's gain, a gain of the voice's own (playNote), never its velocity –
+// and a muted layer (its strip's M) or one outside a layer solo plays no voice at all: nothing heard, nothing counted,
+// nothing in the Humus. Without f (warming the strings, the library's probe) every layer that has a sound.
+function layers(f, vel) {
+  const out = [], solo = f != null && EB.some((e) => P[e.pre + 'solo']);
+  for (const e of EB) {
+    const eng = P[e.eng];
+    if (e.n > 1 && !ENGINES[eng]) continue;
+    let amp = 1;
+    if (f != null) {
+      if (P['x' + e.k + '.mute'] || (solo && !P[e.pre + 'solo'])) continue;
+      amp = ebZone(e, f, vel); if (amp < 1e-3) continue;
+    }
+    const r = e.n === 1 ? Math.pow(2, P['v.oct']) : Math.pow(2, P[e.int] / 12), fine = P[e.pre + 'fine'];
+    out.push({ eng, ratio: fine ? r * Math.pow(2, fine / 1200) : r, deg: P[e.deg], lvl: P[e.lvl], bus: stripIn(e.k), amp, n: e.n });
+  }
   return out;
+}
+// a layer's gain for a note: 1 inside its Tonbereich (a key counts from half a semitone below to half above) and its
+// Anschlags-Bereich, falling to 0 over the soft edge outside them (a quarter sine: two layers fading across the same
+// edge keep the power), 0 beyond; a hard edge (0) gates
+function ebZone(e, f, vel) {
+  const p = e.pre, z = (x, lo, hi, w) => { const d = x < lo ? lo - x : x > hi ? x - hi : 0; return d <= 0 ? 1 : w > 0 && d < w ? Math.sin(Math.PI / 2 * (1 - d / w)) : 0; };
+  const key = 69 + 12 * Math.log2(Math.max(1e-6, f) / P['t.a4']);
+  return z(key, P[p + 'lo'] - 0.5, P[p + 'hi'] + 0.5, P[p + 'rand']) * z(vel != null ? vel : P['v.vel'], P[p + 'vlo'] - 1e-6, P[p + 'vhi'] + 1e-6, P[p + 'vrand']);
 }
 // the pitch a layer plays for a note of the field: moved by whole steps of the scale (semitones in the free scale),
 // then by its octave or interval
@@ -16501,13 +16576,14 @@ function touchVel() { return P['v.vel'] * (1 - P['v.human'] * 0.3 * Math.random(
 // a keyboard brings its own dynamics and timing: no humanizing for MIDI notes
 const noteVel = (tt) => (tt.vel != null ? tt.vel : touchVel());
 function touchPan(x) { return clamp((x * 2 - 1) * P['v.width'] * 0.8 + rand(-0.15, 0.15) * P['v.width'], -1, 1); }
-function triggerPerc(tt, t, isRoll) {
+function triggerPerc(tt, t, isRoll, grp) {
   let any = false;
+  grp = grp || {};   // (the layers of one strike are stolen together – alloc.js steal)
   for (const ly of tt.layers) {
     if (ENGINES[ly.eng].sustain) continue;
     const jit = tt.vel != null ? 0 : P['v.human'] * 0.01 * Math.random();
     const f = lyF(ly, tt.f, tt.col);
-    hit(ly.eng, t + jit, tt.mb ? f * Math.pow(2, tt.mb / 12) : f, modY(tt, touches.get(tt.id) === tt ? undefined : tt), noteVel(tt) * ly.lvl, { pan: touchPan(tt.x), bend: tt.fb || tt.bend, bus: ly.bus });   // a note being struck is the newest
+    hit(ly.eng, t + jit, tt.mb ? f * Math.pow(2, tt.mb / 12) : f, modY(tt, touches.get(tt.id) === tt ? undefined : tt), noteVel(tt) * ly.lvl, { pan: touchPan(tt.x), bend: tt.fb || tt.bend, bus: ly.bus, amp: ly.amp, grp });   // a note being struck is the newest
     any = true;
   }
   if (any) visPush({ t, kind: 'hit', x: tt.x, y: tt.y, s: isRoll ? 0.6 : 1, hue: tt.hue });
@@ -16527,17 +16603,17 @@ function onDown(e) {
   if (touches.has(e.pointerId)) onUp({ pointerId: e.pointerId, force: true, at: e.at });   // never leave a note hanging on a reused pointer id (a key struck again: the old note ends where the new one starts)
   if (e.pointerType) { try { cvFx.setPointerCapture(e.pointerId); } catch (err) {} }
   const pt = e.pt || stagePoint(e), n = e.note || noteAt(pt.x), now = e.at > A.ctx.currentTime ? e.at : A.ctx.currentTime;   // (a key: at its moment – midiAt)
-  const tt = { id: e.pointerId, t0: now, x: pt.x, y: pt.y, px: pt.px, py: pt.py, col: n.idx, f: n.f, name: n.name, layers: layers(), voices: [], rollNext: null, hue: VIS.hueAt(pt.x), vel: e.vel, bend: e.bend || false, vn: e.vn, mb: e.mb || 0, mpe: e.mpe, seq: ++MOD.seq, stk: modStroke(e.stkT), ptype: e.pointerType || null };
+  const tt = { id: e.pointerId, t0: now, x: pt.x, y: pt.y, px: pt.px, py: pt.py, col: n.idx, f: n.f, name: n.name, layers: layers(n.f, e.vel), voices: [], rollNext: null, hue: VIS.hueAt(pt.x), vel: e.vel, bend: e.bend || false, vn: e.vn, mb: e.mb || 0, mpe: e.mpe, seq: ++MOD.seq, stk: modStroke(e.stkT), ptype: e.pointerType || null };
   const y0 = (tt.my = modY(tt, tt));   // the newest note: Höhe's full share from its first moment
   const arp = typeof arpTake === 'function' && arpTake(tt);   // (the Sporenwerk: the note joins its pool and does not sound itself – arp/sporenwerk.js)
   if (!arp) for (const ly of tt.layers) {
     if (ENGINES[ly.eng].sustain) {
       const f = lyF(ly, n.f, n.idx);   // mb: an MPE note's own bend in semitones
-      const v = playNote(ly.eng, now, tt.mb ? f * Math.pow(2, tt.mb / 12) : f, y0, noteVel(tt) * ly.lvl, { pan: touchPan(pt.x), bend: tt.bend, bus: ly.bus });
+      const v = playNote(ly.eng, now, tt.mb ? f * Math.pow(2, tt.mb / 12) : f, y0, noteVel(tt) * ly.lvl, { pan: touchPan(pt.x), bend: tt.bend, bus: ly.bus, amp: ly.amp, grp: tt });
       if (v) tt.voices.push({ v, ly });
     }
   }
-  if (!arp) triggerPerc(tt, now, false);
+  if (!arp) triggerPerc(tt, now, false, tt);
   if (!arp && P['v.roll'] !== 'off' && tt.layers.some((ly) => !ENGINES[ly.eng].sustain)) tt.rollNext = now + rollInterval();
   touches.set(e.pointerId, tt);
   if (GK.on) gkNote(tt, true, e);
@@ -17584,7 +17660,7 @@ function srcPedal(src, cc, on, ch) {
 function exprSet(g, src) {
   if (g === MIDI.expr) return;
   MIDI.expr = g; MIDI.exprSrc = src;
-  if (A.ctx) for (const k of ['fin', 'eb2']) if (MIX.s[k]) setP(MIX.s[k].in.gain, stripGain(MIX.s[k]), 0.012);
+  if (A.ctx) for (const k of EB_K) if (MIX.s[k]) setP(MIX.s[k].in.gain, stripGain(MIX.s[k]), 0.012);
   // the mixer says it (once a frame at most – a pedal sends many values)
   if (MX.root && !MIDI.exprUI) MIDI.exprUI = requestAnimationFrame(() => { MIDI.exprUI = 0; mxSrcAll(); });
 }
@@ -20913,7 +20989,7 @@ function modBendAhead(now) {
 function modExprAhead(now) {
   const T = MOD.t.expr, timed = modTimes(T, now, 0.012), live = modLive(T);
   MOD.eg = modExprG(modVal('expr', now)); MOD.exL = true;   // (when the points end, the frame sets the gain anew)
-  for (const k of ['fin', 'eb2']) {
+  for (const k of EB_K) {
     const st = MIX.s[k];
     if (!st) continue;
     const p = st.in.gain, base = stripGain(st, 1), S = st.exS;
@@ -21010,7 +21086,7 @@ function modExpr(now) {
   if (g === MOD.eg && !MOD.exL) return;
   MOD.eg = g; MOD.exL = false;
   const tc = SLP.gE > now ? Math.max(0.008, (SLP.gE - now) / 3) : 0.008;   // waking: Schlafen's glide back is not cut short
-  for (const k of ['fin', 'eb2']) { const st = MIX.s[k]; if (st) { st.exS = null; setP(st.in.gain, stripGain(st), tc); } }
+  for (const k of EB_K) { const st = MIX.s[k]; if (st) { st.exS = null; setP(st.in.gain, stripGain(st), tc); } }
 }
 // the A/B-Morph: at most 25 times a second (the mixer's own morph is no faster), at once back to rest
 function modMorph() {
@@ -21386,7 +21462,7 @@ setInterval(() => {
 // Gespielt tap follows the strip).
 const TFX_WK = ['koerner', 'eis', 'oberton', 'stottern', 'resonanz'];
 const TFX = { mode: '', ins: new Map(), busy: false, arp: { next: 0, i: 0, dir: 1, tm: 0, last: 0 } };
-const tfxStrips = () => ['fin', 'eb2'].map((k) => MIX.s[k]).filter((st) => st && st.tW);
+const tfxStrips = () => EB_K.map((k) => MIX.s[k]).filter((st) => st && st.tW);   // (every layer's strip – Ebenen, 30.10.2026)
 // the beat (Stottern, Arpeggio): the Puls's tempo, else its setting
 const tfxBeat = () => 60 / (typeof tgBpm === 'function' && A.ctx ? tgBpm(A.ctx.currentTime) : P['seq.bpm'] || 100);
 // what the strings of Resonanz are tuned to: the held notes (up to six, octaves to fill), else the key's root triad
@@ -21445,7 +21521,7 @@ function tfxSet(w, v) {
   const p = Math.max(v.weg, v.her, v.li, v.re);
   if (mine) {
     for (const st of tfxStrips()) {
-      if (st.k === 'eb2' && P['v.layer'] === 'off') continue;   // (Ebene 2 silent: no insert of its own)
+      if (st.k !== 'fin' && !ENGINES[P[EB_OF[st.k].eng]]) continue;   // (a layer without a sound: no insert of its own)
       let I = TFX.ins.get(st.k);
       if (!I) { I = tfxMake(st, mine); if (!I) continue; TFX.ins.set(st.k, I); }
       if (p > 0) { tfxIn(st, I, true); I.at = performance.now(); }
@@ -21513,7 +21589,7 @@ function tfxArpTick() {
     const [tt, o] = seq[i], nt = stepAt(t), dur = Math.max(0.03, (nt - t) * (0.85 - 0.55 * v.her)), vel = 0.3 + 0.65 * Math.pow(R.p, 0.8);
     for (const ly of tt.layers) {
       const f = lyF(ly, tt.f, tt.col) * Math.pow(2, o) * (tt.mb ? Math.pow(2, tt.mb / 12) : 1);
-      hit(ly.eng, t, f, tt.my != null ? tt.my : tt.y, vel * ly.lvl, { pan: touchPan(tt.x), bus: ly.bus, gate: dur });
+      hit(ly.eng, t, f, tt.my != null ? tt.my : tt.y, vel * ly.lvl, { pan: touchPan(tt.x), bus: ly.bus, amp: ly.amp, gate: dur });
     }
     R.next = nt;
   }
@@ -21539,7 +21615,7 @@ function tfxFan(v) {
       let C = F[k];
       const det = k === 'du' ? Math.pow(2, (6 + 12 * v.weg) / 1200) : k === 'dd' ? Math.pow(2, -(6 + 12 * v.weg) / 1200) : 1;
       const strike = (C2) => tt.layers.forEach((ly, j) => {
-        const f = lyF(ly, tt.f, tt.col) * ratio * det * (tt.mb ? Math.pow(2, tt.mb / 12) : 1), y = tt.my != null ? tt.my : tt.y, vel = noteVel(tt) * ly.lvl, o = { pan: clamp(touchPan(tt.x) + pan, -1, 1), bend: tt.fb || tt.bend, bus: C2.g[j] };
+        const f = lyF(ly, tt.f, tt.col) * ratio * det * (tt.mb ? Math.pow(2, tt.mb / 12) : 1), y = tt.my != null ? tt.my : tt.y, vel = noteVel(tt) * ly.lvl, o = { pan: clamp(touchPan(tt.x) + pan, -1, 1), bend: tt.fb || tt.bend, bus: C2.g[j], amp: ly.amp };
         if (ENGINES[ly.eng] && ENGINES[ly.eng].sustain) { if (!C2.sus[j]) { const vv = playNote(ly.eng, now, f, y, vel, o); if (vv) { C2.sus[j] = vv; tt.voices.push({ v: vv, ly, fan: k }); } } }
         else hit(ly.eng, now, f, y, vel * Math.max(0.35, lv), o);
       });
@@ -21829,7 +21905,7 @@ function ladTick(now) {
 for (const k in LAD_AMT) gkRoute('lad.' + k, { axis: 'ladung', target: k, on: ladOn, fn: (o, raw, now) => (ladTick(now), ladQ(LAD.ro * LAD_AMT[k] * ladK())) });
 // A sound with nothing to make denser – no grains or Tropfen (as the Klang or Ebene 2), the Puls standing – would only
 // wow a little: then the charge goes where any held sound answers – brighter (Höhe), more echo, more shimmer
-const ladFull = () => SEQ.on || ['kor', 'trp'].includes(P['v.eng']) || (P['v.layer'] !== 'off' && ['kor', 'trp'].includes(P['v.layer']));
+const ladFull = () => SEQ.on || ebEngs().some((k) => k === 'kor' || k === 'trp');
 const ladDry = () => ladOn() && !SLP.on && !ladFull();   // (asleep the Puls stops by itself: no reason to start)
 for (const [k, t, a] of [['fh', 'hoehe', 0.55], ['fd', 'dly', 0.35], ['fc', 'cho', 0.5]]) gkRoute('lad.' + k, { axis: 'ladung', target: t, on: ladDry, fn: (o, raw, now) => (ladTick(now), ladQ(LAD.ro * a * ladK())), opts: t === 'hoehe' ? { older: 1 } : undefined });
 gkRoute('sw.expr', { target: 'expr', on: swOn, fn: (o, raw, now) => (ladTick(now), ladQ(LAD.go * 0.6)) });
@@ -21924,7 +22000,7 @@ const SLP_KAD = 3, SLP_SZ = 2.5;
 // unfrozen echo has died away
 const SLP = { down: false, on: false, art: '', dk: false, k: 1, kt: 1, open: false, mg: 1, fade: null, iv: 0, tm: 0, tmM: 0, tmT: 0, frzSet: false, frzWas: false, pulsWas: false, t0: 0, n: 0, gE: 0 };
 const SLP_HOLD = 7, SLP_DIE = 20, SLP_LONG = 20000;
-const slpK = (st) => (st.ret ? SLP.kt : SLP.open && (st.k === 'fin' || st.k === 'eb2') ? 1 : SLP.k);
+const slpK = (st) => (st.ret ? SLP.kt : SLP.open && st.d.eb ? 1 : SLP.k);
 // a binding of Wenden ("Eigene") takes the gesture
 const GK_OWNE = { v: -1, s: new Set() };
 function gkOwnEv(i) {
@@ -21985,7 +22061,7 @@ function slpFade() {
 function slpOpen() {
   if (!SLP.on || SLP.art !== 'kadenz' || SLP.open || !A.ctx) return;
   SLP.open = true;
-  for (const k of ['fin', 'eb2']) { const st = MIX.s[k]; if (st) setP(st.in.gain, stripGain(st), 0.01); }
+  for (const k of EB_K) { const st = MIX.s[k]; if (st) setP(st.in.gain, stripGain(st), 0.01); }
 }
 function slpWake() {
   if (!SLP.on) return;
@@ -22167,7 +22243,7 @@ function ladCardSync(C, noGyro) {
   tx(C.eTxt, GK.live && !GK.dmSeen ? 'Dieses Gerät meldet nur seine Lage, keine Beschleunigung – Schütteln lädt hier nichts auf (Neigen, Wenden und Ruhe gehen).'
     : p.entl < 1 ? 'Kurz: eine echte Rassel – sie klingt nur, solange du schüttelst.' : p.entl >= 15 ? 'Lang: ein Aufbau über viele Takte, während deine Hände längst wieder spielen.' : 'Nach dem Schütteln entlädt es sich über ' + dec(String(p.entl)) + ' s.');
   // what the charge does in the sound that plays now
-  const has = [SEQ.on && 'der Puls voller und heller', (P['v.eng'] === 'kor' || P['v.layer'] === 'kor') && 'Körner dichter', (P['v.eng'] === 'trp' || P['v.layer'] === 'trp') && 'Tropfen-Regen', gspInUse() && 'Gespinst koppelt stärker', rhzInUse() && 'das Rhizom reizbarer'].filter(Boolean);
+  const has = [SEQ.on && 'der Puls voller und heller', ebEngs().includes('kor') && 'Körner dichter', ebEngs().includes('trp') && 'Tropfen-Regen', gspInUse() && 'Gespinst koppelt stärker', rhzInUse() && 'das Rhizom reizbarer'].filter(Boolean);
   tx(C.lTxt, has.length ? 'In diesem Klang: ' + has.join(', ') + ', das Echo leiert.' : 'In diesem Klang: gehaltene Töne heller, mehr Echo und Schweben – mit Puls, Körnern oder Tropfen wirkt mehr.');
   tx(C.rTxt, p.ras ? 'Jeder Schüttel-Höhepunkt spielt einen Schlag, ' + (p.rasQ === 'frei' ? 'ohne Raster (für langsame Tempi).' : 'auf die nächste ' + (p.rasQ === '32' ? '1/32' : '1/16') + ' des Pulses gelegt.') + ' Er läuft über den Kanal „Klang“.' : 'Rassel-Schläge: jeder Schüttel-Höhepunkt spielt zusätzlich einen Tropfen, eine Membran, eine Schale, den Holzstab (Jahresring) oder eine Kompostglocke (Moder) im Raster.');
   const st = GK.R && GK.R.st;
@@ -23590,14 +23666,15 @@ function updInactive() {
 function onParamChanged(id) {
   if ((id === 't.root' || id === 't.scale') && hxWTonHold(id)) return;   // Hexenring: (step 2a) the field and the loops change key on the announced bar line
   const pre = id.slice(0, id.indexOf('.'));
-  if (HX.wFeld && A.ctx && (ENGINES[pre] || id === 'v.eng' || id === 'v.layer')) HX.wKlang = performance.now() + 400;
+  if (HX.wFeld && A.ctx && (ENGINES[pre] || EB_ENG.has(id))) HX.wKlang = performance.now() + 400;
   else if (A.ctx && P['ui.instrument'] === 'preset' && hxWPIn(id) && hxLoopsLive().length) { HX.wFeld = true; HX.wKlang = performance.now() + 400; }   // (29.10.2026: a loop made in the field's sound follows it once that changes – hxKlangOf)   // Hexenring: (step 2a) loops that sound as the field: anew, once the knob rests
-  if (id === 'v.eng' || id === 'v.layer') { refreshEngineUI(); }
+  if (EB_ENG.has(id)) { refreshEngineUI(); }
+  if (EB_ENG.has(id) || /^e\d\./.test(id) || EB_PIT.has(id) || id === 'v.layerLvl' || /^x(fin|eb\d)\.(mute|pan)$/.test(id)) ebUI();   // (the Klang page's Ebenen rows)
   if (id === 'ui.instrument' && A.ctx) for (const L of hxLoopsLive()) hxWUpdate(L);   // Hexenring: (28.10.2026) the loops take the preset's instrument, or their own again, from their next seam
   if (KQ_PIDS.includes(id) && !UI.loading) kqUsed(P[id]);
-  if ((id === 'v.eng' || id === 'v.layer' || /^l\d\.eng$/.test(id)) && WORKLET_ENGINES.has(P[id])) dspMaybe();
+  if ((EB_ENG.has(id) || /^l\d\.eng$/.test(id)) && WORKLET_ENGINES.has(P[id])) dspMaybe();
   if (id === 'flt.type') for (const fn of CTL['flt.q'] || []) fn(P['flt.q'], null);
-  if (pre === 'sai' || pre === 't' || id === 'v.eng' || id === 'v.layer' || id === 'v.layerInt' || id === 'v.oct' || id === 'v.deg' || id === 'v.layerDeg' || /^l\d\.(eng|on|oct)$/.test(id)) warmKS();
+  if (pre === 'sai' || pre === 't' || EB_ENG.has(id) || EB_PIT.has(id) || id === 'v.oct' || /^l\d\.(eng|on|oct)$/.test(id)) warmKS();
   if (id === 'kor.src' && P['kor.src'] === 'echo' && A.started) ensureCapture();
   if (id === 'kor.src' && A.ctx && !LIVE_SRC.has(P['kor.src'])) texture(P['kor.src']);
   if (id === 'dly.sync') updInactive();
@@ -23609,7 +23686,7 @@ function onParamChanged(id) {
   if (pre === 'l' + id[1] && /^l\d$/.test(pre)) updLaneTabs();
   if (pre === 'rec') return;
   if (PD[id].dev) { onDeviceChanged(id); return; }
-  if (PD[id].live) { if (A.ctx && pre[0] === 'x' && MIX.s[pre.slice(1)]) mixParam(MIX.s[pre.slice(1)], 'solo'); return; }
+  if (PD[id].live) { if (A.ctx && pre[0] === 'x' && MIX.s[pre.slice(1)]) mixParam(MIX.s[pre.slice(1)], 'solo'); if (A.ctx && /^e\d\.solo$/.test(id)) { updSolo(); updSends(); } ebUI(); return; }   // (an Ebene's solo – the Klang page)
   if (pre === 'xhxr') { if (A.ctx) mixParam(MIX.s.hxr, id.slice(5)); return; }   // Hexenring: its strip is not the patch's
   if (pre === 'hx') { hxParam(id); return; }
   markPresetDirty();
@@ -23691,7 +23768,7 @@ function loadValues(vals, keepUnset) {
   HX.phH = null;
   for (const id of PATCH_IDS) for (const fn of CTL[id] || []) fn(P[id], null);
   hxMvSync(was);
-  buildNotes(); drawBg(); refreshEngineUI(); updLaneTabs(); updInactive(); renderBarInfo();
+  buildNotes(); drawBg(); refreshEngineUI(); ebUI(); updLaneTabs(); updInactive(); renderBarInfo();
   if (A.ctx) { applyAll(); seqRetempo(); warmKS(); dspMaybe(); if (P['kor.src'] === 'echo') ensureCapture(); if (!LIVE_SRC.has(P['kor.src'])) texture(P['kor.src']); }
   syncMic();
   // (owner, 27.10.2026: „man muss erst auf stille gehen … dann ein preset … dann auf weiter“) a preset's values come in here,
@@ -23766,6 +23843,7 @@ const MX_DORM = [118, 106, 97];
 function mxChannels() {
   const own = { fin: ['spiel', '#f0e6d8'], eb2: ['spiel', '#c9dc82'], rgn: ['spiel', RG_COL], hxr: ['spiel', '#e9a35e'], bor: ['grund', '#5a7cff'], gsp: ['grund', '#b9a46e'], dly: ['rueck', '#6cc9ef'], rev: ['rueck', '#d6cbff'] };
   for (const [r, , col] of FX_RETS) own[r] = ['rueck', col];
+  EB.slice(2).forEach((e, i) => { own[e.k] = ['spiel', ['#9fd8a4', '#e6d27c', '#7fc8b8', '#dcb487', '#a9c4ec', '#e2a7bb'][i]]; });   // (Ebenen 3–8: the field's warm greens and sands, apart from Ebene 2's lime)
   for (const st of STRIPS) {
     if (st.k === 'bor') MXC.push({ k: 'puls', name: 'Puls', g: 'puls', kind: 'puls', col: '#f2cf86' });
     const lane = st.lane != null;
@@ -24317,7 +24395,7 @@ function mxSrcText(k) {
   // a keyboard's expression (CC 11) below full: said where the sound would be missed
   const ex = MIDI.expr < 0.995 ? 'Ausdruck ' + Math.round(Math.sqrt(MIDI.expr) * 100) + ' %' : '';
   if (k === 'fin') return ex || engLabel(P['v.eng']) || '';
-  if (k === 'eb2') return P['v.layer'] === 'off' ? 'aus' : ex || engLabel(P['v.layer']);
+  if (EB_OF[k]) return !ENGINES[P[EB_OF[k].eng]] ? 'aus' : ex || engLabel(P[EB_OF[k].eng]);   // (Ebene 2–8)
   if (k === 'rgn') return rgOn() ? (GK.p.rgArt === 'harfe' ? 'Harfe · ' : '') + rgName() : 'aus';   // Sporenregen: its strike, or silent
   if (k === 'hxr') return hxSrcText();   // Hexenring: its Schleifen
   if (c.kind === 'lane') return P['l' + c.lane + '.on'] ? engLabel(P['l' + c.lane + '.eng']) : 'aus';
@@ -24331,8 +24409,8 @@ function mxSrcText(k) {
   return (A.monoChk ? 'mono' : 'stereo') + (A.dim ? ' · ' + MX_MINUS + '20 dB' : '');
 }
 const mxPulsOff = () => !P['l0.on'] && !P['l1.on'] && !P['l2.on'] && !P['l3.on'];
-const MX_SRC_IDS = ['v.eng', 'v.layer', 'bor.on', 'bor.wave', 'bor.int', 'gsp.saiten', 'dly.sync', 'dly.div', 'dly.ms', 'rev.size', 'rev.typ', ...FX_RETS.map((x) => x[0] + '.typ'), 'seq.bpm', 'l0.on', 'l0.eng', 'l1.on', 'l1.eng', 'l2.on', 'l2.eng', 'l3.on', 'l3.eng'];
-// A channel whose source plays nothing (Ebene 2, a lane or the Bordun switched off; the Puls group with all four
+const MX_SRC_IDS = [...EB.map((e) => e.eng), 'bor.on', 'bor.wave', 'bor.int', 'gsp.saiten', 'dly.sync', 'dly.div', 'dly.ms', 'rev.size', 'rev.typ', ...FX_RETS.map((x) => x[0] + '.typ'), 'seq.bpm', 'l0.on', 'l0.eng', 'l1.on', 'l1.eng', 'l2.on', 'l2.eng', 'l3.on', 'l3.eng'];
+// A channel whose source plays nothing (an Ebene, a lane or the Bordun switched off; the Puls group with all four
 // lanes off) is an empty mushroom in the Pult and a hollow spore in the Geflecht – one rule, kept in S.srcoff.
 function mxSrcAll() {
   for (const c of MXC) {
@@ -25094,7 +25172,10 @@ const mxTouched = (k) => Object.keys(PD).some((id) => id.startsWith('x' + k + '.
 // (Hexenring: its strip likewise, from the first Schleife on)
 function mxRgnSync() {
   let ch = false;
-  for (const [k, gone] of [['rgn', !(GK.on && GK.p.neigen === 'regen') && !mxTouched('rgn')], ['hxr', !HX.loops.size && !mxTouched('hxr')]]) {
+  // (30.10.2026) Ebenen 3–8 likewise: only while the layer has a sound or its strip was set – eight empty strips would
+  // crowd the Pult (Ebene 2 stands as it always did)
+  const ly = EB.slice(2).map((e) => [e.k, !ENGINES[P[e.eng]] && !mxTouched(e.k)]);
+  for (const [k, gone] of [['rgn', !(GK.on && GK.p.neigen === 'regen') && !mxTouched('rgn')], ['hxr', !HX.loops.size && !mxTouched('hxr')], ...ly]) {
     const S = MX.ch[k];
     if (!S || !S.el || !!S.gone === gone) continue;
     S.gone = gone; S.el.classList.toggle('gone', gone); ch = true;
@@ -25102,7 +25183,9 @@ function mxRgnSync() {
   }
   if (!ch) return;
   MX.vis = MXC.filter((c) => !MX.ch[c.k].gone);
-  MX.dirtyStatic = true;
+  // the group's share of the rack without the Ebenen it does not show (Regen and Hexenring keep their place as before)
+  for (const g of MX.row ? MX.row.querySelectorAll('.mx-grp') : []) { const gs = g.querySelector('.mx-gs'); if (gs) g.style.flexGrow = String([...gs.children].filter((x) => !(x.classList.contains('gone') && EB_OF[x.dataset.k])).length); }
+  MX.dirtyStatic = true; MXG.w = 0;   // (the Geflecht lays its columns out anew – mxgLayout)
   if (MX.open) mxLayout();
 }
 function mxPultSelect(k) {
@@ -25871,6 +25954,7 @@ function buildMixer() {
   if (MXV.detail) R.dataset.detailOn = '1';
   MX.vsw = mxBuildViewSwitch();
   for (const id of MX_SRC_IDS) bindCtl(id, () => { if (MX.root) mxSrcAll(); });
+  for (const e of EB.slice(2)) bindCtl(e.eng, () => { if (MX.root) mxRgnSync(); });   // (an Ebene given a sound stands in the Pult)
   for (const id of ['drv.mix', 'rng.mix', 'pha.mix', 'cho.mix']) bindCtl(id, () => { MX.dirtyStatic = true; });
   mxSrcAll();
   mxSetLayer(MX.layer);
@@ -26136,7 +26220,12 @@ function mxgLayout() {
   const w = f.clientWidth, hh = f.clientHeight;
   if (!w || !hh) { G.w = 0; return; }
   G.w = w; G.h = hh;
-  const wide = G.wide = w >= 560, short = G.short = MX.root.dataset.short === '1' || hh < 240, n = MXC.length - 1;
+  // (30.10.2026) the Ebenen 3–8 the Pult does not show (mxRgnSync: no sound, never set) have no column here either: the
+  // others stand in slots (C.s) as before
+  G.vis = G.cols.filter((C) => !(EB_OF[C.k] && MX.ch[C.k] && MX.ch[C.k].gone));
+  for (const C of G.cols) { C.hid = !G.vis.includes(C); C.el.hidden = C.tag.hidden = C.hid; }
+  G.vis.forEach((C, s) => { C.s = s; });
+  const wide = G.wide = w >= 560, short = G.short = MX.root.dataset.short === '1' || hh < 240, n = G.vis.length - 1;
   f.dataset.wide = wide ? '1' : ''; f.dataset.short = short ? '1' : '';
   // the dB gutter is as narrow as its numbers allow on phones: every pixel goes to the columns (the touch targets)
   const gl = wide ? 38 : 24, gr = wide ? 12 : 3, sumU = wide ? 1.6 : 1.4, u = G.u = (w - gl - gr) / (n + sumU);
@@ -26155,19 +26244,19 @@ function mxgLayout() {
   for (const C of G.cols) {
     const sum = C.c.kind === 'sum';
     C.cw = sum ? sumU * u : u;
-    C.cx = sum ? gl + n * u + C.cw / 2 : gl + (C.i + 0.5) * u;
+    C.cx = C.hid ? -1e4 : sum ? gl + n * u + C.cw / 2 : gl + (C.s + 0.5) * u;
     C.pr = mxgHasPan(C) ? Math.max(3, C.cw / 2 - (wide ? 15 : 7)) : 0;
-    const row = G.rows === 2 ? (sum ? 1 - (n - 1) % 2 : C.i % 2) : 0;   // (the Summe in the row its neighbour leaves free)
+    const row = G.rows === 2 ? (sum ? 1 - (n - 1) % 2 : C.s % 2) : 0;   // (the Summe in the row its neighbour leaves free)
     C.tag.style.transform = 'translate(' + C.cx.toFixed(1) + 'px,' + (G.tagY + row * G.tagH) + 'px) translateX(-50%)';
     C.tag.style.maxWidth = Math.floor(G.rows === 2 ? 2 * u - 4 : C.cw - 4) + 'px';
   }
   // the root: the Summe's fruiting body, as large as the soil allows
-  const sc = G.cols[n];
+  const sc = G.vis[n];
   G.rootR = Math.round(short ? clamp(sH * 0.27, 14, 18) : wide ? clamp(Math.min(sH * 0.34, sc.cw * 0.62), 40, 62) : clamp(sH * 0.25, 26, 34));
   G.rootD = 2 * G.rootR;
   G.rootX = Math.min(sc.cx, w - G.rootR - 4); G.rootY = hh - G.rootR - (short ? 4 : 8);
   // the chain's knot between the Puls lanes and the rest; the returns' nodes under their own columns
-  G.kx = gl + 6 * u; G.ky = Math.round(G.tagEnd + (G.rootY - G.tagEnd) * 0.5);
+  G.kx = gl + mxgCol('l1').s * u; G.ky = Math.round(G.tagEnd + (G.rootY - G.tagEnd) * 0.5);
   G.dyy = G.ky + (short ? 8 : wide ? 22 : 15);
   const E = G.cols[MXK.dly.i], H = G.cols[MXK.rev.i];
   G.ex = E.cx; G.ey = G.tagEnd + (short ? 6 : wide ? 16 : 10); G.hx = H.cx; G.hy = G.ey + (wide || short ? 0 : 12);
@@ -26178,6 +26267,7 @@ function mxgLayout() {
   mxgBz(G.trunk, G.trunkP, G.kx, G.ky, G.kx + (G.rootX - G.kx) * 0.35, G.ky + 2, G.rootX - G.rootR - (wide ? 30 : 16), G.rootY - 2, G.rootX, G.rootY);
   for (const C of G.cols) {
     C.snd = null;
+    if (C.hid) continue;
     if (C.c.kind !== 'src' && C.c.kind !== 'lane') continue;
     C.snd = MXG_SND.map((r, j) => [...G.nd[r], [0.07, 0.1, 0.085, 0.115][j] || 0.1]).map(([nx, ny, s]) => {
       const p = new Path2D(), y0 = G.tagEnd, sag = 4 + Math.abs(nx - C.cx) * s;
@@ -26314,7 +26404,7 @@ function mxgStatic() {
   // the columns: a dotted thread where each light rises, and the Puls group's bracket over its four lanes
   c.setLineDash([1, 5]); c.lineWidth = 1; c.strokeStyle = 'rgba(240,230,216,.05)';
   c.beginPath();
-  for (const C of G.cols) { const x = Math.round(C.cx) + 0.5; c.moveTo(x, G.yTop - 4); c.lineTo(x, sy - 2); }
+  for (const C of G.cols) { if (C.hid) continue; const x = Math.round(C.cx) + 0.5; c.moveTo(x, G.yTop - 4); c.lineTo(x, sy - 2); }
   c.stroke(); c.setLineDash([]);
   // the scale: labels in the gutter, lines across the columns; 0 dB in spore light like the stems
   const marks = G.span > 330 ? [6, 0, -6, -12, -18, -24, -36, -48] : G.span > 230 ? [6, 0, -6, -12, -18, -24, -48] : [6, 0, -6, -12, -24, -48];
@@ -26405,6 +26495,7 @@ function mxgDraw(dt, t) {
   // signal: spores of light flow down every hypha with the level, Puls hits run as bright pulses
   if (!REDUCED) {
     for (const C of G.cols) {
+      if (C.hid) continue;   // (an Ebene the Pult does not show – mxgLayout)
       if (C.c.kind === 'puls' || !C.fn) continue;
       const S = MX.ch[C.k];
       if (!S.dorm && Math.random() < S.lv.lvl * dt * (G.wide ? 8 : 6)) mxgSpawn(C.i, false);
@@ -26440,11 +26531,12 @@ function mxgLight(c, k, a) {
 function mxgSoil(c, t) {
   const G = MXG, sy = G.soilY, sel = MX.sel, hov = G.hov;
   let chain = 0;
-  for (const C of G.cols) if (C.fx && !MX.ch[C.k].dorm) chain = Math.max(chain, MX.ch[C.k].lv.lvl);
+  for (const C of G.cols) if (!C.hid && C.fx && !MX.ch[C.k].dorm) chain = Math.max(chain, MX.ch[C.k].lv.lvl);
   c.globalCompositeOperation = 'lighter';
   c.strokeStyle = mxgA(MXG_WARM, 0.05 + 0.1 * chain); c.lineWidth = 4 + 7 * chain; c.stroke(G.trunk);
   c.strokeStyle = mxgA(MXG_WARM, 0.25 + 0.45 * chain); c.lineWidth = 1.1 + 2 * chain; c.stroke(G.trunk);
   for (const C of G.cols) {
+    if (C.hid) continue;   // (an Ebene the Pult does not show – mxgLayout)
     if (C.c.kind === 'puls') continue;
     const S = MX.ch[C.k], L = S.lv, lv = L.lvl;
     if (S.dorm) {
@@ -26460,6 +26552,7 @@ function mxgSoil(c, t) {
   }
   // send threads: dashed and as thick as send × level; bright only for the chosen (or hovered) channel
   for (const C of G.cols) {
+    if (C.hid) continue;   // (an Ebene the Pult does not show – mxgLayout)
     if (!C.snd || MX.ch[C.k].dorm) continue;
     const lv = MX.ch[C.k].lv.lvl, foc = C.k === sel || C.k === hov;
     for (let j = 0; j < MXG_SND.length; j++) {
@@ -26544,6 +26637,7 @@ function mxgAir(c, dt, t) {
   const G = MXG, sy = G.soilY, span = G.span, sel = MX.sel, hov = G.hov, pd = G.pd;
   // stems first, then the light, then the spores, so nothing of a neighbour ever covers a spore
   for (const C of G.cols) {
+    if (C.hid) continue;   // (an Ebene the Pult does not show – mxgLayout)
     const S = MX.ch[C.k], L = S.lv;
     if (C.off) continue;
     c.strokeStyle = L.clip ? 'rgba(255,91,77,.85)' : S.dorm ? 'rgba(168,153,138,.28)' : mxgA(C.al, 0.24 + 0.3 * L.lvl + (C.k === sel ? 0.18 : 0));
@@ -26557,6 +26651,7 @@ function mxgAir(c, dt, t) {
   }
   c.globalCompositeOperation = 'lighter';
   for (const C of G.cols) {
+    if (C.hid) continue;   // (an Ebene the Pult does not show – mxgLayout)
     const S = MX.ch[C.k], L = S.lv, dorm = S.dorm, kind = C.c.kind;
     const src = kind === 'puls' ? G.cols[MXK['l' + L.dom].i] : C, bw = kind === 'sum' ? G.bwS : G.bw, gap = G.gap, x0 = C.cx - bw - gap / 2;
     let top = sy;
@@ -26584,7 +26679,7 @@ function mxgAir(c, dt, t) {
   c.globalCompositeOperation = 'source-over';
   // a/b while the morph is in use: where A and B put each spore (strong for the chosen one)
   if (MX.ghost) mxgGhosts(c);
-  for (const C of G.cols) mxgSpore(c, C, C.k === sel, C.k === hov || C === G.grab, t);
+  for (const C of G.cols) if (!C.hid) mxgSpore(c, C, C.k === sel, C.k === hov || C === G.grab, t);
   // dust rising from the struck spores
   if (!REDUCED) {
     c.globalCompositeOperation = 'lighter';
@@ -26689,6 +26784,7 @@ function mxgGhosts(c) {
   const G = MXG, a = MX.snap.a, b = MX.snap.b, sy = G.soilY;
   c.font = G.fGhost; c.textAlign = 'center'; c.textBaseline = 'middle';
   for (const C of G.cols) {
+    if (C.hid) continue;   // (an Ebene the Pult does not show – mxgLayout)
     const vid = mxVolId(C.k), pid = C.pid, hp = mxgHasPan(C);
     if (a[vid] === b[vid] && (!hp || a[pid] === b[pid])) continue;
     const xa = C.cx + (hp ? a[pid] : 0) * C.pr, ya = sy - mxPos(a[vid]) * G.span, xb = C.cx + (hp ? b[pid] : 0) * C.pr, yb = sy - mxPos(b[vid]) * G.span;
@@ -26735,16 +26831,16 @@ function mxgNumbers(t) {
 // 4 px of a boundary between two columns could mean either – it goes to the chosen channel when that is one of
 // them, else to the column it landed in (which then lights up before anything moves)
 function mxgColAt(x, y, pick) {
-  const G = MXG, r = G.fr || G.field.getBoundingClientRect(), px = x - r.left, py = y - r.top, n = MXC.length;
+  const G = MXG, r = G.fr || G.field.getBoundingClientRect(), px = x - r.left, py = y - r.top, V = G.vis || G.cols, n = V.length;
   if (!G.w) return null;
-  if (py > G.soilY && Math.hypot(px - G.rootX, py - G.rootY) < G.rootR + 4) return G.cols[n - 1];
+  if (py > G.soilY && Math.hypot(px - G.rootX, py - G.rootY) < G.rootR + 4) return V[n - 1];
   if (px < G.x0 - 4) return null;
   const f = (px - G.x0) / G.u, i = clamp(Math.floor(f), 0, n - 1);
   if (pick && i < n - 1) {
     const fr = (f - Math.floor(f)) * G.u, j = fr < 4 ? i - 1 : fr > G.u - 4 ? i + 1 : -1;
-    if (j >= 0 && j < n && G.cols[j].k === MX.sel) return G.cols[j];
+    if (j >= 0 && j < n && V[j].k === MX.sel) return V[j];
   }
-  return G.cols[i];
+  return V[i];
 }
 function mxgPointer(f) {
   const G = MXG;
@@ -27797,7 +27893,12 @@ function mxdQuelle(k) {
   else if (k === 'eb2') kids = [C('v.layer', 'Klang der zweiten Ebene'),
     h('div', { class: 'mxd-pair' }, mxdStep('v.layerInt', 'Ebene 2', 'Intervall', (v) => fmt(PD['v.layerInt'], v), () => 'Grundton ' + mxNoteName(mxDegF(P['v.layerDeg']) * Math.pow(2, P['v.layerInt'] / 12)), ['v.layerInt', 'v.layerDeg']),
       mxdStep('v.layerDeg', 'Ebene 2', 'Tonstufe', (v) => fmt(PD['v.layerDeg'], v))),
-    grid(C('v.layerLvl', 'Anteil'))];
+    grid(C('v.layerLvl', 'Anteil'), C('e2.fine'))];
+  else if (EB_OF[k]) { const e = EB_OF[k], w = 'Ebene ' + e.n;   // (Ebenen 3–8, 30.10.2026: as Ebene 2)
+    kids = [C(e.eng, 'Klang der ' + w),
+      h('div', { class: 'mxd-pair' }, mxdStep(e.int, w, 'Intervall', (v) => fmt(PD[e.int], v), () => 'Grundton ' + mxNoteName(mxDegF(P[e.deg]) * Math.pow(2, P[e.int] / 12)), [e.int, e.deg]),
+        mxdStep(e.deg, w, 'Tonstufe', (v) => fmt(PD[e.deg], v))),
+      grid(C(e.lvl, 'Anteil'), C(e.pre + 'fine'))]; }
   else if (c.kind === 'lane') {
     const i = c.lane, p = 'l' + i + '.';
     kids = [C(p + 'on', 'Spur spielt'), C(p + 'eng', 'Klang'), mxdRhythm(i),
@@ -28174,7 +28275,7 @@ function mxdOpen(k, first) {
     const q = mxdQuelle(k);
     if (q.parentNode !== MXD.quSec) { const old = MXD.quSec.querySelector('.mxd-qbody'); if (old) old.remove(); MXD.quSec.append(q); }
     if (q.sync) q.sync();
-    MXD.quSub.textContent = { fin: 'was die Spielfläche spielt', eb2: 'der zweite Klang auf jedem Finger', rgn: 'der Sporenregen aus deinen Tönen', bor: 'der liegende Grundton', dly: 'das Bandecho', rev: 'der erzeugte Raum', fx: 'der Effekt-Rückweg', fx2: 'der zweite Effekt-Rückweg' }[k] || 'Rhythmus und Ton der Spur';
+    MXD.quSub.textContent = { fin: 'was die Spielfläche spielt', eb2: 'der zweite Klang auf jedem Finger', eb3: 'der dritte Klang auf jedem Finger', eb4: 'der vierte Klang auf jedem Finger', eb5: 'der fünfte Klang auf jedem Finger', eb6: 'der sechste Klang auf jedem Finger', eb7: 'der siebte Klang auf jedem Finger', eb8: 'der achte Klang auf jedem Finger', rgn: 'der Sporenregen aus deinen Tönen', bor: 'der liegende Grundton', dly: 'das Bandecho', rev: 'der erzeugte Raum', fx: 'der Effekt-Rückweg', fx2: 'der zweite Effekt-Rückweg' }[k] || 'Rhythmus und Ton der Spur';
   } else if (page === 'puls') { MXD.pu.fd.set('puls'); mxdAim(MXD.pu.rel, 'puls', 'mix.duckRel', 'Rückkehr', 'Pumpen: Rückkehr, für alle Kanäle', '#ff8f9e'); }
   else mxdSumAim();
   MXD.dirty = true;
@@ -28703,8 +28804,7 @@ function buildKlang() {
     box.append(s);
   }
   wkUiSync();
-  box.append(section('Zweite Ebene', 'Ein zweiter Klang auf jedem Finger', grid(ctl('v.layer', { label: 'Ebene' }), ctl('v.layerLvl'), ctl('v.layerInt'), ctl('v.layerDeg')),
-    h('p', { class: 'note' }, 'Tonstufe verschiebt um Stufen der Skala – so bleibt jeder Ton in der Tonart. Lautstärke, Klangfarbe und Raum jeder Ebene regelst du im Mixer.')));
+  box.append(ebSection());   // (30.10.2026: the Ebenen – ui/ebenen.js; Ebene 2 was „Zweite Ebene“ here)
   box.append(section('Spielweise', null, grid(ctl('v.roll'), ctl('v.strum'), ctl('v.glide'), ctl('v.vel'), ctl('v.human'), ctl('v.width'))));
   box.append(section('Stimmung', null, grid(ctl('t.root'), ctl('t.scale'), ctl('t.oct'), ctl('t.range'), ctl('t.a4'), ctl('t.just'))));
   return box;
@@ -28723,23 +28823,24 @@ function klangFrame() {
   if (engSecs.jrg && !engSecs.jrg.hidden && !(now - (klangFrame.t || 0) < 1000)) { klangFrame.t = now; jrgText(); }
 }
 function refreshEngineUI() {
-  const a = P['v.eng'], b = P['v.layer'];
-  for (const k in engSecs) engSecs[k].hidden = !(k === a || k === b);
-  // keep the active engine's section right below the source chooser, layer engine after it
+  // (30.10.2026) every Ebene's source has its section, in the order of the layers: the Klangquelle's first
+  const a = P['v.eng'], more = [...new Set(ebEngs().slice(1))].filter((k) => k !== a && ENGINES[k]), b = more[0] || 'off';
+  for (const k in engSecs) engSecs[k].hidden = !(k === a || more.includes(k));
+  // keep the active engine's section right below the source chooser, the layers' engines after it
   const host = engSecs[a] && engSecs[a].parentNode;
   if (host) {
     const first = host.children[0];
     first.after(engSecs[a]);
-    if (b !== 'off' && b !== a) engSecs[a].after(engSecs[b]);
+    let at = engSecs[a]; for (const k of more) if (engSecs[k]) { at.after(engSecs[k]); at = engSecs[k]; }
   }
-  const two = b !== 'off' && b !== a, label = ENG_NAME[a] + (two ? ' + ' + ENG_NAME[b] : '');
+  const two = more.length > 0, label = ENG_NAME[a] + (more.length === 1 ? ' + ' + ENG_NAME[b] : more.length > 1 ? ' + ' + more.length + ' Klänge' : '');
   $('#engName').textContent = label;
-  const gl = $('#engGlyph'), fb = kqFb(a) || (two && kqFb(b));
-  gl.replaceChildren(kqGlyph(a), ...(two ? [kqGlyph(b)] : []));
+  const gl = $('#engGlyph'), fb = kqFb(a) || (two && more.map(kqFb).find(Boolean));
+  gl.replaceChildren(kqGlyph(a), ...more.slice(0, 2).map((k) => kqGlyph(k)));
   let dot = $('#engChip .fbdot');
   if (fb && !dot) { dot = h('span', { class: 'fbdot' }); $('#engChip').append(dot); }
-  if (dot) { dot.hidden = !fb; dot.title = fb ? 'spielt als ' + ENG_NAME[kqFb(a) || kqFb(b)] : ''; }
-  $('#engChip').setAttribute('aria-label', 'Klangquelle: ' + ENG_NAME[a] + (two ? ', dazu ' + ENG_NAME[b] : '') + (fb ? ' (vereinfacht)' : '') + '. Einstellungen öffnen; lange drücken öffnet die Bibliothek');
+  if (dot) { dot.hidden = !fb; dot.title = fb ? 'spielt als ' + ENG_NAME[fb] : ''; }
+  $('#engChip').setAttribute('aria-label', 'Klangquelle: ' + ENG_NAME[a] + (two ? ', dazu ' + more.map((k) => ENG_NAME[k]).join(', ') : '') + (fb ? ' (vereinfacht)' : '') + '. Einstellungen öffnen; lange drücken öffnet die Bibliothek');
   for (const k in engSecs) if (engSecs[k].richNote) engSecs[k].richNote.hidden = !Q.rich;
 }
 /* =====================================================================
@@ -28883,7 +28984,7 @@ function arpTick() {
           const f = arpDeg(nt, shift + d) * Math.pow(2, L.o), vel = clamp(nt.vel * (acc ? 1 + 0.6 * P['arp.akzent'] : 1 - 0.25 * P['arp.akzent']) * (d ? 0.7 : 1), 0.05, 1), y = clamp(nt.y + wave, 0, 1);
           for (let r = 0; r < rat; r++) {
             const tr = t + j * strum + r * dur / rat, g = rat > 1 ? Math.min(gate, dur / rat * 0.8) : gate, vr = vel * Math.pow(0.72, r);
-            for (const ly of nt.layers) hit(ly.eng, tr, lyF(ly, f, nt.idx), y, vr * ly.lvl, { pan: touchPan(nt.x), bus: ly.bus, gate: g });
+            { const grp = {}; for (const ly of nt.layers) hit(ly.eng, tr, lyF(ly, f, nt.idx), y, vr * ly.lvl, { pan: touchPan(nt.x), bus: ly.bus, amp: ly.amp, gate: g, grp }); }   // (every layer of the note – Ebenen, stolen together)
           }
           ARP.ev.push({ t, f, nf: nt.f, o: L.o, li, vel, rat, acc, d, k, n: lad.length, dur });
         }
@@ -28932,7 +29033,7 @@ function arpLoopPool(t) {
       const end = x.t + Math.max(x.d != null ? x.d : 0, win);
       if (!(pos >= x.t - 1e-6 && pos < end) && !(x.held && pos < end)) continue;
       const fr = hxWF(L, W, x, key), d = hxDeg(fr), per = N.free ? 12 : Math.max(1, Math.round((N.notes.length - 1) / Math.max(1, P['t.range'])));
-      out.push({ f: fr, idx: N.free ? Math.round(12 * Math.log2(fr / N.base)) : d.oct * per + d.deg, layers: [{ eng: hxWEng(L, x), ratio: 1, deg: 0, lvl: 1, bus: stripIn(x.src === 'eb2' ? 'eb2' : 'fin') }], x: d.x != null ? d.x : 0.5, y: x.y0 != null ? x.y0 : 0.5, vel: x.vel != null ? x.vel : 0.7, seq: x.t, key: 'L' + L.id + ':' + x.t });
+      out.push({ f: fr, idx: N.free ? Math.round(12 * Math.log2(fr / N.base)) : d.oct * per + d.deg, layers: [{ eng: hxWEng(L, x), ratio: 1, deg: 0, lvl: 1, bus: stripIn(EB_OF[x.src] ? x.src : 'fin'), amp: x.amp }], x: d.x != null ? d.x : 0.5, y: x.y0 != null ? x.y0 : 0.5, vel: x.vel != null ? x.vel : 0.7, seq: x.t, key: 'L' + L.id + ':' + x.t });
     }
   }
   return out;
@@ -29113,7 +29214,7 @@ function spwFrame(dt) {
 // ★ and ▶). It opens on the family of the chosen source. Favourites and the recent ones are this device's
 // (myzel.klang.v1), never the patch's.
 const KQ_KEY = 'myzel.klang.v1';
-const KQ_PIDS = ['v.eng', 'v.layer', 'l0.eng', 'l1.eng', 'l2.eng', 'l3.eng'];
+const KQ_PIDS = ['v.eng', 'v.layer', 'l0.eng', 'l1.eng', 'l2.eng', 'l3.eng', ...EB.slice(2).map((e) => e.eng)];   // (Ebenen 3–8, 30.10.2026)
 const KQ = { fav: [], recent: [], T: null, fam: '', q: '', where: '', el: null, probe: null, hold: null, rows: new Set(), miss: [], openers: new Set(), opener: null,
   save() { store.set(KQ_KEY, JSON.stringify({ fav: this.fav, recent: this.recent })); } };
 (() => { try { const o = JSON.parse(store.get(KQ_KEY) || 'null'); if (o && typeof o === 'object') { if (Array.isArray(o.fav)) KQ.fav = o.fav.filter((k) => typeof k === 'string').slice(0, 64); if (Array.isArray(o.recent)) KQ.recent = o.recent.filter((k) => typeof k === 'string').slice(0, 7); } } catch (e) {} })();
@@ -29167,7 +29268,11 @@ function kqTarget(key) {
     probe: () => { const nt = mid(); return { f: lyF(layers()[0], nt.f, nt.idx), y: 0.5, vel: P['v.vel'], bus: stripIn('fin') }; } };
   else if (key === 'v.layer') T = { where: 'zweite Ebene', dat: 'die zweite Ebene', ch: 'Ebene 2', opts: () => PD['v.layer'].opts, allow: ok, busy: () => touches.size > 0,
     probe: () => { const nt = mid(); return { f: lyF({ ratio: Math.pow(2, P['v.layerInt'] / 12), deg: P['v.layerDeg'] }, nt.f, nt.idx), y: 0.5, vel: P['v.vel'] * Math.max(0.35, P['v.layerLvl']), bus: stripIn('eb2') }; } };
-  else if (/^l\d\.eng$/.test(key)) {
+  else if (/^e\d\.eng$/.test(key)) {   // (Ebenen 3–8, 30.10.2026: as Ebene 2 – the note in the middle at its interval)
+    const e = EB.find((x) => x.eng === key), w = 'Ebene ' + e.n;
+    T = { where: w, dat: w, ch: w, opts: () => PD[key].opts, allow: ok, busy: () => touches.size > 0,
+      probe: () => { const nt = mid(), fine = P[e.pre + 'fine']; return { f: lyF({ ratio: Math.pow(2, P[e.int] / 12 + fine / 1200), deg: P[e.deg] }, nt.f, nt.idx), y: 0.5, vel: P['v.vel'] * Math.max(0.35, P[e.lvl]), bus: stripIn(e.k) }; } };
+  } else if (/^l\d\.eng$/.test(key)) {
     const i = +key[1], p = 'l' + i + '.';
     T = { where: 'Spur ' + (i + 1), dat: 'Spur ' + (i + 1), ch: 'Spur ' + (i + 1), lane: i, opts: all, allow: ok, busy: () => SEQ.on && !!P[p + 'on'],
       // the lane's own note (its step and octave, without its walk), brightness, level, balance and gate, through its channel
@@ -29484,7 +29589,7 @@ function kqRender(keep) {
   let why = false;
   groups.forEach((g, gi) => {
     out.push(h('h3', { class: 'kq-fh' }, g.h, h('small', null, g.sub(g.ks.length) ? ' · ' + g.sub(g.ks.length) : '')));
-    if (gi === 0 && T.key === 'v.layer' && !q) out.push(kqTile(T, 'off', cur));
+    if (gi === 0 && (T.key === 'v.layer' || /^e\d\.eng$/.test(T.key)) && !q) out.push(kqTile(T, 'off', cur));
     if (T.why && !why && g.ks.some((k) => T.allow(k))) { out.push(h('p', { class: 'kq-why' }, T.why)); why = true; }
     for (const k of g.ks) out.push(kqTile(T, k, cur));
     if (!g.ks.length && g.empty) {
@@ -29556,7 +29661,7 @@ function engKeysIn(vals) {
 function engMissSay() {
   if (!KQ.miss.length) return '';
   const q = (n) => '„' + n + '“', names = [...new Set(KQ.miss.map(([, k]) => q(ENG_LATER[k] || k)))];
-  const subs = [...new Set(KQ.miss.map(([id]) => (id === 'v.eng' ? ENG_NAME[P[id]] + ' gewählt' : id === 'v.layer' ? 'zweite Ebene aus' : 'Spur ' + (+id[1] + 1) + ' spielt ' + ENG_NAME[P[id]])))];
+  const subs = [...new Set(KQ.miss.map(([id]) => (id === 'v.eng' ? ENG_NAME[P[id]] + ' gewählt' : id === 'v.layer' ? 'zweite Ebene aus' : id[0] === 'e' ? 'Ebene ' + id[1] + ' aus' : 'Spur ' + (+id[1] + 1) + ' spielt ' + ENG_NAME[P[id]])))];
   KQ.miss = [];
   return (names.length > 1 ? 'Klangquellen ' + listDe(names) + ' gibt' : 'Klangquelle ' + names[0] + ' gibt') + ' es in dieser Version nicht – ' + listDe(subs) + '.';
 }
@@ -29824,6 +29929,74 @@ function updateMeters(dt) {
   }
 }
 
+/* ---------- Ebenen on the Klang page (owner, 30.10.2026: „bis zu 8 Ebenen … eine klare Ebenen-Sektion“) ----------
+   One row per layer (params.js EB): its name, what it plays, Pegel, Mute (its strip's M) and Solo (among the layers);
+   „Einstellen“ opens the rest – interval, scale step, Feinstimmung, Pan (its strip's), the Tonbereich and the
+   Anschlags-Bereich with their soft edges. Ebene 1 is the Klangquelle above (its octave and step there), Ebene 2 the old
+   second layer (its controls keep their ids, #p-v-layer …). Ebenen 3–8 show once they have a sound or „+ Ebene“ opened
+   them – the page stays short for a preset of one or two. Built from the page's own parts (section, grid, ctl, chip). */
+const EBUI = { sec: null, rows: [], shown: new Set(), add: null };
+const ebHas = (e) => e.n === 1 || !!ENGINES[P[e.eng]];
+function ebSection() {
+  EBUI.rows = EB.map(ebRow);
+  EBUI.add = h('button', { type: 'button', class: 'btn ghost', onclick: ebAdd }, '+ Ebene');
+  EBUI.sec = section('Ebenen', 'Bis zu acht Klänge auf jedem Finger, jeder mit eigenem Kanal im Mixer', ...EBUI.rows.map((r) => r.el), h('div', { class: 'row' }, EBUI.add),
+    h('p', { class: 'note' }, 'Alle Ebenen klingen auf jedem Ton. Tonstufe verschiebt um Stufen der Skala – so bleibt jeder Ton in der Tonart. Ton- und Anschlags-Bereich lassen eine Ebene nur in einem Teil der Fläche oder der Tastatur, nur leise oder nur kräftig spielen; der weiche Rand blendet sie dort aus. Mute und Solo gelten ab dem nächsten Ton (was klingt, verstummt sofort). Klangfarbe, Raum und Effekte jeder Ebene regelst du im Mixer.'));
+  ebUI();
+  return EBUI.sec;
+}
+function ebRow(e) {
+  const k = e.k, w = 'Ebene ' + e.n, pre = { prefix: 'eb-' };
+  const sum = h('span', { class: 'note', style: 'margin:0' });
+  const chip = (id, txt, aria) => {
+    const b = h('button', { type: 'button', class: 'chip', role: 'switch', 'aria-checked': 'false', 'aria-label': aria, 'data-pid': PD[id].live ? null : id, onclick: () => setParam(id, !P[id]) }, txt);
+    bindCtl(id, (v) => b.setAttribute('aria-checked', String(!!v)));
+    return b;
+  };
+  const det = grid(...[e.int ? ctl(e.int, { label: 'Intervall' }) : null, e.n > 1 ? ctl(e.deg, { label: 'Tonstufe' }) : null, ctl(e.pre + 'fine', { label: 'Feinstimmung' }), ctl('x' + k + '.pan', Object.assign({ label: 'Pan' }, pre)),
+    ctl(e.pre + 'lo'), ctl(e.pre + 'hi'), ctl(e.pre + 'rand'), ctl(e.pre + 'vlo'), ctl(e.pre + 'vhi'), ctl(e.pre + 'vrand')].filter(Boolean));
+  det.hidden = true;
+  const tog = h('button', { type: 'button', class: 'chip', 'aria-expanded': 'false', 'aria-label': w + ' einstellen', onclick: () => { det.hidden = !det.hidden; tog.setAttribute('aria-expanded', String(!det.hidden)); } }, 'Einstellen');
+  const head = h('div', { class: 'chips small', style: 'align-items:center' }, h('b', { style: 'min-width:5.5em' }, w), chip('x' + k + '.mute', 'M', w + ' stumm'), chip(e.pre + 'solo', 'S', w + ' solo (unter den Ebenen)'), tog, sum);
+  // Ebene 1 plays the Klangquelle chosen above; Ebene 2 keeps its controls' ids (no prefix); 3–8 their own
+  const src = e.n === 1 ? null : ctl(e.eng, { label: 'Klang' });
+  const lvl = ctl(e.lvl, { label: 'Pegel' });
+  const el = h('div', { class: 'eb-row', 'data-eb': String(e.n), style: 'padding:6px 0 8px;border-top:1px solid var(--line)' }, head, src, grid(lvl), det);
+  return { e, el, sum, det };
+}
+// the next layer without a sound shows its row (its sound is chosen there)
+function ebAdd() {
+  const e = EB.find((x) => x.n > 2 && !ebHas(x) && !EBUI.shown.has(x.n));
+  if (!e) return;
+  EBUI.shown.add(e.n); ebUI();
+  const r = EBUI.rows[e.n - 1], b = r.el.querySelector('.kq-name');
+  if (b) b.focus({ preventScroll: true });
+  r.el.scrollIntoView({ block: 'nearest', behavior: REDUCED ? 'auto' : 'smooth' });
+}
+// what each row says: its sound, its pitch, its ranges when set, and whether it plays now
+function ebUI() {
+  if (!EBUI.sec) return;
+  const solo = EB.some((x) => P[x.pre + 'solo']);
+  for (const r of EBUI.rows) {
+    const e = r.e, p = e.pre, has = ebHas(e);
+    r.el.hidden = e.n > 2 && !has && !EBUI.shown.has(e.n);
+    const bits = [];
+    if (e.n === 1) bits.push(ENG_NAME[P['v.eng']] || '');
+    else if (!has) bits.push('aus');
+    if (has) {
+      if (e.n === 1 ? P['v.oct'] : P[e.int]) bits.push(e.n === 1 ? 'Oktave ' + fmtOct(P['v.oct']) : fmt(PD[e.int], P[e.int]));
+      if (P[e.deg]) bits.push(fmtDeg(P[e.deg]));
+      if (P[p + 'fine']) bits.push(fmtCent(P[p + 'fine']));
+      if (P[p + 'lo'] > 0 || P[p + 'hi'] < 127) bits.push(fmtKey(P[p + 'lo']) + '–' + fmtKey(P[p + 'hi']));
+      if (P[p + 'vlo'] > 0 || P[p + 'vhi'] < 1) bits.push('Anschlag ' + Math.round(P[p + 'vlo'] * 100) + '–' + Math.round(P[p + 'vhi'] * 100) + ' %');
+      if (P['x' + e.k + '.mute']) bits.push('stumm');
+      else if (solo && !P[p + 'solo']) bits.push('still (Solo)');
+    }
+    const t = bits.filter(Boolean).join(' · ');
+    if (r.sum.textContent !== t) r.sum.textContent = t;
+  }
+  if (EBUI.add) EBUI.add.hidden = !EB.some((x) => x.n > 2 && !ebHas(x) && !EBUI.shown.has(x.n));
+}
 /* ---------- Klangwelten: every preset drawn ---------- */
 // (owner, 26.10.2026: „die einzelnen Presets schön grafisch ausarbeiten, ihnen Charakter geben – eine besonders schöne
 // Lösung, so wie beim Mixer“) Each preset card wears a small picture of its world: its own motif and colours (the
@@ -31382,7 +31555,7 @@ function importPreset(input) {
 
 /* ---------- mutation & dice, kept inside audible, musical ranges ---------- */
 const MUT_SKIP = new Set(['mst.vol', 'mst.comp', 'mst.low', 'mst.high', 'mst.wid', 'seq.bpm', 't.a4', 't.oct', 't.range', 't.root', 'v.eng', 'v.layer', 'bor.on', 'v.vel', 'v.oct', 'v.deg', 'v.layerDeg']);
-const mutSkip = (id) => MUT_SKIP.has(id) || id[0] === 'x' || id.startsWith('mix.');
+const mutSkip = (id) => MUT_SKIP.has(id) || id[0] === 'x' || id.startsWith('mix.') || /^e\d\./.test(id);   // (the Ebenen 3–8, Feinstimmung and ranges: the player's own – 30.10.2026)
 function safeify(vals) {
   const lim = (id, lo, hi) => { vals[id] = sanitize(PD[id], clamp(vals[id], lo, hi)); };
   lim('dly.fb', 0, Math.max(0.85, Math.min(P['dly.fb'], 1.05)));
@@ -33742,7 +33915,7 @@ const HX_CH = 8192;
 // seams included, 0.19–0.27; extra per Schicht while its loop is resampled 0.75–0.84
 const HX_COST = { capture: 1.38, schicht: 0.39, get rs() { return HX.rsw ? 0.8 : 1.32; }, fx1: 2.71, get dd() { return HX.rsw ? 1.5 : 3.5; }, stream: 0.1, get k16() { return HX.rsw ? 0.92 : 2.06; }, get k24() { return HX.rsw ? 1.0 : 2.69; }, slice: 0.77, abr: 0.21, acc: 0.33, mic: 0.47, hof: { glt: [0.8, 1.05], shn: [0.77, 1.16] } };   // (Leistung, 24.10.2026: the resampler and the de-drift job in WebAssembly – cost.js, this build against the one before, two runs each, alternating, table units: rs 0.31 / 0.18 against 0.52 / 0.46, k16 0.36 / 0.32 against 0.80 / 0.79, k24 0.42 / 0.37 against 1.08 / 1.13, dd 0.63 / 0.71 against 1.37 / 1.65 – this machine measures the old build under the table, so the table's entries × the least favourable ratio: rs 1.32 × 0.60, k16 2.06 × 0.44, k24 2.69 × 0.37, dd 3.5 × 0.43; without WebAssembly the JavaScript path ≈ 1.4× faster than before only – there, and until the processor has said which path it reads by (HX.rsw), the old entries stand)   // (step 4, cost.js three runs, table units, the higher + 15 %: the Mikro's ring hxi − hxc 0.13 / 0.41 / 0.33; a Sammelschleife recording hxk − hxj 0.19 / 0.17 / 0.28; a Hof's voice as built – its processor fed, its pan – Glut 0.65 / 0.70 at level 1, 0.91 / 0.92 at 3, Sehne 0.65 / 0.67, 0.94 / 1.01)   // (step 2b, cost.js two runs, the higher + 15 %: capture with the Puls's ring 1.20 / 1.07; a loop's speed through the 56-tap kernel hxu − hxs 1.79 / 1.56, the 80-tap 2.34 / 2.22 (½: the shared one, as rs); a Schicht in slices 0.67 / 0.65; worn 0.18 / 0.17)   // (klang/tests/cost.js, re-measured in step 1d: SPEC §21; stream: step 2a – a living Schicht's streams beyond its schicht, hxw − hxs 0.084 / 0.064, +15 %)
 const HX = { node: null, ctx: null, state: '', fR: 0, tR: 0, loops: new Map(), sch: new Map(), lid: 0, sid: 0, gid: 0, wait: new Map(), meter: [], back: [], ddRun: new Set(), dd: 0,
-  mask: new Set(['fin', 'eb2', 'rgn', 'gsp']), fx: null, fx1: null, play: 0, rs: 0, ev: [], evI: 0, evId: 0 };
+  mask: new Set([...EB_K, 'rgn', 'gsp']), fx: null, fx1: null, play: 0, rs: 0, ev: [], evI: 0, evId: 0 };
 const hxF = (t) => HX.fR + (t - HX.tR) * SR;   // audio time → the processor's frame (its own count, mapped by its reports)
 const hxT = (f) => HX.tR + (f - HX.fR) / SR;
 const hxLive = () => !!(A.ctx && !(typeof OfflineAudioContext !== 'undefined' && A.ctx instanceof OfflineAudioContext));
@@ -33866,7 +34039,7 @@ function hxNode() {
   if (HX.restore) setTimeout(hxRestoreApply, 300);   // Hexenring: the Schleifen of the last session come back, angehalten
 }
 // which strips „Gespielt“ hears: the sources always, the Puls and the Bordun when asked
-function hxMaskSync() { hxMask(['fin', 'eb2', 'rgn', 'gsp'].concat(P['hx.pulsMit'] ? ['l0', 'l1', 'l2', 'l3'] : [], P['hx.borMit'] ? ['bor'] : [])); }
+function hxMaskSync() { hxMask([...EB_K, 'rgn', 'gsp'].concat(P['hx.pulsMit'] ? ['l0', 'l1', 'l2', 'l3'] : [], P['hx.borMit'] ? ['bor'] : [])); }
 function hxParam(id) {
   if (id === 'hx.rail' || id === 'hx.buehne') hxRailShow();
   if (/^hx\.(gaertner|gPlatz|gRollen|gAntw|gBegl|gWk|hand)$/.test(id)) hxGdParam(id);   // (Etappe 3)
@@ -33905,7 +34078,7 @@ function hxMsg(m) {
 }
 const hxReport = () => new Promise((res) => { HX.wait.set('r', res); if (!hxPost({ report: 1 })) { HX.wait.delete('r'); res(null); } });
 
-// ---- the taps (SPEC §4): „Gespielt“ = each source strip after its mute/solo gate (fin, eb2, rgn, gsp; l0–l3 and bor
+// ---- the taps (SPEC §4): „Gespielt“ = each source strip after its mute/solo gate (fin, eb2–eb8, rgn, gsp; l0–l3 and bor
 // by the mask), „Alles“ = A.masterSum. The strip „Hexenring“ plays into A.masterIn behind both: no tap hears a Schleife.
 // (A masked-out strip has no tap at all – a tap is a node the browser runs.)
 function hxGraph() {
@@ -34181,7 +34354,7 @@ function hxNote(v, eng, t, f, y, vel, o) {
   if (HX.rec && HX.rec.phase === 'listen' && hxSrcIn(src, 0)) hxRecNote(t);   // (the Hauptknopf listening for the first note)
   const e = hxEvSlot(), id = (e.id = ++HX.evId), n = hxDeg(f);
   e.t0 = t; e.t1 = o.burst ? t + (o.gate != null ? o.gate : 0.22) : null; e.src = src; e.eng = eng; e.f = f; e.deg = n.deg; e.oct = n.oct; e.alt = n.alt; e.x = n.x;
-  e.y0 = y; e.vel = vel; e.pan = o.pan || 0; e.layer = src === 'eb2' ? 2 : 1; e.gate = o.gate != null ? o.gate : null; e.burst = !!o.burst; e.probe = false; v.hxE = e;
+  e.y0 = y; e.vel = vel; e.pan = o.pan || 0; e.layer = EB_OF[src] ? EB_OF[src].n : 1; e.amp = o.amp != null ? o.amp : 1; e.gate = o.gate != null ? o.gate : null; e.burst = !!o.burst; e.probe = false; v.hxE = e;
   e.hold = !!v.release && !o.burst;   // (a voice that can be held; a struck one rings out by itself)
   // a curve as flat [t, x, t, x …], a point at most every 5 ms; a long hold thins to every other point (no voice is kept)
   const pt = (arr, x) => {
@@ -34201,7 +34374,7 @@ function hxBor(on, f) {
   if (!A.started || !hxLive()) return;
   if (on) {
     const e = hxEvSlot(), n = hxDeg(f);
-    Object.assign(e, { id: ++HX.evId, t0: A.ctx.currentTime, t1: null, src: 'bor', eng: 'bor', f, deg: n.deg, oct: n.oct, alt: n.alt, x: n.x, y0: 0, vel: P['bor.lvl'], pan: 0, layer: 0, gate: null, burst: false, probe: false });
+    Object.assign(e, { id: ++HX.evId, t0: A.ctx.currentTime, t1: null, src: 'bor', eng: 'bor', f, deg: n.deg, oct: n.oct, alt: n.alt, x: n.x, y0: 0, vel: P['bor.lvl'], pan: 0, layer: 0, amp: 1, gate: null, burst: false, probe: false });
     HX.borE = e;
   } else if (HX.borE) { if (HX.borE.t1 == null) HX.borE.t1 = A.ctx.currentTime; HX.borE = null; }
 }
@@ -34213,7 +34386,7 @@ function hxEvents(t0, t1, held) {
     const e = HX.ev[(HX.evI + i) % HX_EV];
     if (!e || e.t0 == null || e.t0 < old || e.probe) continue;
     if (!(e.t0 >= t0 && e.t0 < t1) && !(held && e.t0 < t0 && (e.t1 == null || e.t1 > t0))) continue;
-    out.push({ id: e.id, t0: e.t0, t1: e.t1, src: e.src, eng: e.eng, f: e.f, deg: e.deg, oct: e.oct, alt: e.alt, x: e.x, y0: e.y0, vel: e.vel, pan: e.pan, layer: e.layer,
+    out.push({ id: e.id, t0: e.t0, t1: e.t1, src: e.src, eng: e.eng, f: e.f, deg: e.deg, oct: e.oct, alt: e.alt, x: e.x, y0: e.y0, vel: e.vel, pan: e.pan, layer: e.layer, amp: e.amp,
       gate: e.gate, burst: e.burst, hold: !!e.hold, curves: { y: hxPairs(e.curves.y), f: hxPairs(e.curves.f), pp: e.curves.pp, mb: e.curves.mb } });
   }
   return out.sort((a, b) => a.t0 - b.t0);
@@ -39139,7 +39312,7 @@ async function hxwNotes(d) {
   A.voices.clear(); A.grainVoices.clear(); A.revActive = null; A.revWant = 0; A.drvKey = null; A.bor = null; A.frozen = false; A.grains = 0; A.irJob = 0; A.gsp = null; A.elmDrift = null; A.echoCache = null;
   KS_CACHE.clear(); KS_CACHE.frames = 0; ksBuffer.wait.clear();
   RHZ.q.length = 0; RHZ.vs.clear(); RHZ.h = 0; RHZ.sp = null; RHZ.own = null;
-  HX.mask = new Set(d.mask || ['fin', 'eb2', 'rgn', 'gsp']);
+  HX.mask = new Set(d.mask || [...EB_K, 'rgn', 'gsp']);
   const dur = Math.max(0.05, +d.dur || 1), len = Math.ceil(dur * SR), ctx = new OfflineAudioContext(2, len, SR), notes = d.notes || [];
   hxwSeed(HXW_FIX);   // (the graph's own noise and drift buffers: the same in every render)
   const nsPre = d.port && HXW_NS ? hxwNsPre(ctx) : null;   // (Leistung: the worklet-free sink's analysers, made before the graph)
@@ -39178,7 +39351,7 @@ async function hxwNotes(d) {
     }
     add(n.t0, () => {
       const E = ENGINES[n.eng]; if (!E || !(n.f > 0 && Number.isFinite(n.f))) return;   // (never a note without a pitch)
-      const o = { pan: n.pan || 0, bus: stripIn(n.src && MIX.s[n.src] ? n.src : 'fin') };
+      const o = { pan: n.pan || 0, bus: stripIn(n.src && MIX.s[n.src] ? n.src : 'fin'), amp: n.amp };   // (amp: a layer's soft edge as played – Ebenen, 30.10.2026)
       const v = n.burst ? hit(n.eng, n.t0, n.f, n.y0 != null ? n.y0 : 0.5, n.vel, Object.assign(o, { burst: true, gate: n.gate != null ? n.gate : 0.22 })) : E.sustain || n.hold ? playNote(n.eng, n.t0, n.f, n.y0 != null ? n.y0 : 0.5, n.vel, o) : hit(n.eng, n.t0, n.f, n.y0 != null ? n.y0 : 0.5, n.vel, o);
       n._v = v;
     });
@@ -39713,7 +39886,7 @@ async function hxTail(S) {
   if (!evs.length) return false;
   const tS = Math.min(...evs.map((e) => e.t0)) - 0.05, TT = 12, dur = w1 - tS + TT, from = w1 - tS + (al - xf) / SR - 0.06;
   const rel = (p) => p.map(([t, v]) => [t - tS, v]);
-  const notes = evs.map((e) => ({ t0: e.t0 - tS, t1: e.t1 != null ? e.t1 - tS : null, eng: e.eng, f: e.f, y0: e.y0, vel: e.vel, pan: e.pan, src: e.src === 'ras' ? 'fin' : e.src, burst: e.burst, gate: e.gate, hold: e.hold, curves: { y: rel(e.curves.y), f: rel(e.curves.f) } }));
+  const notes = evs.map((e) => ({ t0: e.t0 - tS, t1: e.t1 != null ? e.t1 - tS : null, eng: e.eng, f: e.f, y0: e.y0, vel: e.vel, pan: e.pan, amp: e.amp, src: e.src === 'ras' ? 'fin' : e.src, burst: e.burst, gate: e.gate, hold: e.hold, curves: { y: rel(e.curves.y), f: rel(e.curves.f) } }));
   const m = await hxwCall('tail', { sr: SR, dur, from, notes, P: Object.assign({}, P), q: P['dev.q'], seed: (Math.random() * 2147483647) | 1, jrg: { age: A.jrgAge, season: A.season }, mask: [...HX.mask] });
   if (!m || m.err || !m.L || !HX.sch.has(S.id) || !S.aud) return false;
   // level: the Humus's last 60 ms before the crossfade against the render's same 60 ms
@@ -40910,7 +41083,7 @@ function hxWNotesMk(L, S, w0, w1, evs) {
   if (takt && evs.length > 2) { const spb = 60 / tgBpm(w0), dv = evs.filter((e) => e.t0 >= w0 - 0.03).map((e) => { const x = u(e.t0) * 4; return (x - Math.round(x)) * spb / 4; }); const m = dv.reduce((a, b) => a + b, 0) / dv.length; sd = Math.sqrt(dv.reduce((a, b) => a + (b - m) * (b - m), 0) / dv.length); }
   return { u: takt ? 'b' : 's', len: takt ? L.d.beats : c.len / SR, key: k, sd, lanes: hxWLanes(w0, w1, u), n: evs.map((e) => {
     const t = u(e.t0), rel = (p) => p.map(([tt, v]) => [u(tt) - t, v]);
-    return { t, held: e.t0 < w0 - 0.03, d: e.t1 != null ? u(e.t1) - t : null, eng: e.eng, f: e.f, deg: e.deg, oct: e.oct, alt: e.alt, y0: e.y0, vel: e.vel, pan: e.pan, src: e.src === 'ras' ? 'fin' : e.src, burst: e.burst, gate: e.gate, hold: e.hold, cy: rel(e.curves.y), cf: rel(e.curves.f) };
+    return { t, held: e.t0 < w0 - 0.03, d: e.t1 != null ? u(e.t1) - t : null, eng: e.eng, f: e.f, deg: e.deg, oct: e.oct, alt: e.alt, y0: e.y0, vel: e.vel, pan: e.pan, amp: e.amp, src: e.src === 'ras' ? 'fin' : e.src, burst: e.burst, gate: e.gate, hold: e.hold, cy: rel(e.curves.y), cf: rel(e.curves.f) };
   }) };
 }
 // which Schichten can grow: Gespielt, with notes (Alles holds the loops and the echo – it stays an Abdruck)
@@ -40932,8 +41105,9 @@ function hxWF(L, W, n, key) {
 // the source a note sounds with: its own, the field's (Spielfeld: the layer it was played on), or one chosen
 function hxWEng(L, n) {
   const k = hxKlangOf(L);
-  if (k === 'eigen' || (n.src !== 'fin' && n.src !== 'eb2')) return n.eng;
-  if (k === 'feld') return n.src === 'eb2' && P['v.layer'] !== 'off' ? P['v.layer'] : P['v.eng'];
+  const e = EB_OF[n.src];   // (Ebenen 1–8, 30.10.2026)
+  if (k === 'eigen' || !e) return n.eng;
+  if (k === 'feld') return e.n > 1 && ENGINES[P[e.eng]] ? P[e.eng] : P['v.eng'];
   return ENGINES[k] ? k : n.eng;
 }
 const hxWQ = (L) => { const s = L.stufe || P['hx.stufe'] || '3'; return s === 'gespielt' ? L.q || P['dev.q'] : s; };
@@ -40972,7 +41146,7 @@ function hxWPass(L, S, k, o = {}) {
     const br = sd ? clamp(sd * hxWPink(S.wseed, kb * W.n.length + i), -2 * sd, 2 * sd) : 0;
     const f = hxWF(L, W, n, key), rf = f / n.f, eng = hxWEng(L, n), tt = Math.max(0, t0 + br);
     const cv = (p, map) => p.map(([dt, v]) => [Math.max(tt, sec(t + dt) + br), map(v)]).filter(([x]) => x < len + HX_WTAIL);
-    notes.push({ t0: tt, t1: t1 != null ? Math.max(tt + 0.005, t1 + br) : null, eng, f, y0: n.y0, vel: n.vel, pan: n.pan, src: n.src, burst: n.burst, gate: n.gate, hold: n.hold,
+    notes.push({ t0: tt, t1: t1 != null ? Math.max(tt + 0.005, t1 + br) : null, eng, f, y0: n.y0, vel: n.vel, pan: n.pan, amp: n.amp, src: n.src, burst: n.burst, gate: n.gate, hold: n.hold,
       curves: { y: cv(n.cy || [], (v) => v), f: cv(n.cf || [], (v) => v * rf) } });
   });
   const prm = []; for (const ln of W.lanes || []) for (const [x, v] of ln.pts) { const t = x <= 0 ? 0 : sec(x); if (t < len) prm.push([t, ln.id, v]); }
@@ -41007,7 +41181,7 @@ function hxWSig(L, S, key) {
 }
 // the signature of the field's sound, kept until a parameter changes (setParam, loadValues reset it)
 function hxWPHashC() { return HX.phH != null ? HX.phH : (HX.phH = hxWPHash()); }
-const hxWPIn = (id) => !!PD[id] && !PD[id].rec && !PD[id].dev && !id.startsWith('x') && !/^(rev|dly|mst|seq|l\d|rec|hx|mix)\./.test(id);   // (a parameter of the field's sound)
+const hxWPIn = (id) => !!PD[id] && !PD[id].rec && !PD[id].dev && !PD[id].live && !id.startsWith('x') && !/^(rev|dly|mst|seq|l\d|rec|hx|mix)\./.test(id);   // (a parameter of the field's sound)
 function hxWPHash() { let h = 7; for (const id in P) if (hxWPIn(id)) { const v = String(P[id]); for (let i = 0; i < v.length; i++) h = (Math.imul(h, 31) + v.charCodeAt(i)) | 0; } return h; }
 
 // a version whose tail was still sounding at the render's end (12 s, or a living pass's estimate) ends with a 30-ms fade
@@ -41541,7 +41715,7 @@ function hxWLiveTick(now, horizon) {
         const t0 = hxT(hxPassF(L, k));
         for (const n of job.notes) {
           const t = t0 + n.t0; if (t < now || n.eng === 'bor') continue;
-          const o = { pan: n.pan || 0, bus: out(), loop: true, hxSrc: 'hxr' }, E = ENGINES[n.eng]; if (!E) continue;   // (step 4: hxSrc – before, the chain's copy was no strip, so they counted as the field's notes in the Humus)
+          const o = { pan: n.pan || 0, bus: out(), loop: true, hxSrc: 'hxr', amp: n.amp }, E = ENGINES[n.eng]; if (!E) continue;   // (step 4: hxSrc – before, the chain's copy was no strip, so they counted as the field's notes in the Humus)
           // (a held note's length as the engine's own gate – it lets go on time; struck ones ring)
           const g = n.t1 != null ? n.t1 - n.t0 : null, v = n.burst || (E.sustain && g != null) ? playNote(n.eng, t, n.f, n.y0 != null ? n.y0 : 0.5, n.vel, Object.assign(o, { burst: true, gate: n.burst ? n.gate || 0.22 : g })) : E.sustain ? playNote(n.eng, t, n.f, n.y0 != null ? n.y0 : 0.5, n.vel, o) : hit(n.eng, t, n.f, n.y0 != null ? n.y0 : 0.5, n.vel, o);
           if (!v) continue;
@@ -42954,7 +43128,7 @@ async function hxBeglRender(Lm, notes, lenB, seed) {
   const k = hxPassK(Lm, Math.round(hxF(hxNowT()))), lenF = hxPassF(Lm, k + 1) - hxPassF(Lm, k), sec = (b) => (b / lenB) * (lenF / SR);
   const p = Object.assign({}, P, { 'mov.drift': 0 }), q = hxWQ(Lm);
   const ns = notes.map((n) => ({ t0: sec(n.t), t1: n.d != null ? sec(n.t + n.d) : null, eng: n.eng, f: n.f, y0: n.y0, vel: n.vel, pan: n.pan || 0, src: 'fin', burst: false, gate: null, hold: n.hold, curves: { y: [], f: [] } }));
-  const m = await hxwCall('wuchs', { sr: SR, dur: lenF / SR + HX_WTAIL, body: lenF / SR, notes: ns, prm: [], P: p, q, seed, chain: null, mask: ['fin', 'eb2', 'rgn', 'gsp'], jrg: { age: A.jrgAge || 0, season: A.season || 0 } });
+  const m = await hxwCall('wuchs', { sr: SR, dur: lenF / SR + HX_WTAIL, body: lenF / SR, notes: ns, prm: [], P: p, q, seed, chain: null, mask: [...EB_K, 'rgn', 'gsp'], jrg: { age: A.jrgAge || 0, season: A.season || 0 } });
   if (!m || m.err || !m.L) return null;
   const n = hxWTrim(m.L, m.R, lenF), [aud] = hxChunks(n);
   for (let i = 0; i < n; i++) { const c = aud[Math.floor(i / HX_CH)], j = i % HX_CH; c[0][j] = m.L[i]; c[1][j] = m.R[i]; }
@@ -43453,7 +43627,7 @@ function hxWsMake(L, seed) {
     const S = HX.sch.get(id); if (!hxWCan(S)) return;
     const W0 = hxWBase(L, S); if (!W0) return;
     const vn = hxWsNotes(W0, (seed ^ Math.imul(i + 3, 0x61c88647)) | 0);
-    const eng0 = (W0.n.find((n) => n.src === 'fin' || n.src === 'eb2') || W0.n[0] || {}).eng, eng = P['hx.ws.klang'] ? hxWsEng(hxWEng(L, { src: 'fin', eng: eng0 }), R) : null;
+    const eng0 = (W0.n.find((n) => EB_OF[n.src]) || W0.n[0] || {}).eng, eng = P['hx.ws.klang'] ? hxWsEng(hxWEng(L, { src: 'fin', eng: eng0 }), R) : null;
     if (vn || eng || fx) sch[i] = { vn: vn || null, eng: eng || null, fx };
   });
   return Object.keys(sch).length ? sch : null;
@@ -43465,7 +43639,7 @@ async function hxWsRender(L, rec, seed) {
     const S = HX.sch.get(L.sch[+i]); if (!S || !hxWCan(S)) continue;
     const W0 = hxWBase(L, S), r = rec[i], W = r.vn ? Object.assign({}, W0, { n: r.vn }) : W0;
     const k = hxNextSeam(L).k, job = hxWPass(L, S, k, { W }); if (!job) continue;
-    if (r.eng) for (const n of job.notes) if (n.src === 'fin' || n.src === 'eb2' || !n.src) n.eng = r.eng;
+    if (r.eng) for (const n of job.notes) if (EB_OF[n.src] || !n.src) n.eng = r.eng;
     const d = hxWJob(L, S, job, seed); if (r.fx) d.chain = hxWsChain(L, r.fx, seed);
     const m = await hxwCall('wuchs', d);
     if (!m || m.err || !m.L) { if (m && m.err) hxwLog('werkstatt: ' + String(m.err).slice(0, 120)); return null; }

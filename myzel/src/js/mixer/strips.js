@@ -15,10 +15,10 @@ function buildStrips() {
     const st = { k: d.k, d, ret: !!d.ret, lane: d.lane, proc: null, procOn: false, mat: null, matOn: false, to: {}, dTo: null, duckOn: false };
     st.in = G(1); st.in.channelCount = 2; st.in.channelCountMode = 'explicit'; st.in.channelInterpretation = 'speakers';
     st.byp = G(1); st.wet = G(0); st.mBy = G(1); st.mWet = G(0); st.duck = G(1); st.dry = G(1);
-    // (owner, 26.10.2026) Klang and Ebene 2: the Touché's insert sits between the input and the strip's blocks – a dry
+    // (owner, 26.10.2026) Klang and Ebene 2 (30.10.2026: every Ebene): the Touché's insert sits between the input and the strip's blocks – a dry
     // gain at 1 and a wet one at 0 (nothing feeds it): exactly the strip as before until a Spielweise F5–F12 plays; st.pt is
     // what follows it (the strip's own EQ takes its input there)
-    if (d.k === 'fin' || d.k === 'eb2') { st.tD = G(1); st.tW = G(0); st.pt = G(1); st.in.connect(st.tD).connect(st.pt); st.tW.connect(st.pt); } else st.pt = st.in;
+    if (d.eb) { st.tD = G(1); st.tW = G(0); st.pt = G(1); st.in.connect(st.tD).connect(st.pt); st.tW.connect(st.pt); } else st.pt = st.in;
     st.pt.connect(st.byp);
     st.byp.connect(st.mBy).connect(st.duck).connect(st.dry);
     st.wet.connect(st.mBy); st.mWet.connect(st.duck);
@@ -29,7 +29,7 @@ function buildStrips() {
 }
 const faderGain = (db) => (db <= FADER_OFF ? 0 : dbToGain(db));
 function stripGain(st, eg = MOD.eg) {
-  const g = faderGain(mp('x' + st.k + '.vol')) * (st.k === 'fin' || st.k === 'eb2' ? MIDI.expr * eg : 1);   // expression pedal (CC 11), Formen · Ausdruck
+  const g = faderGain(mp('x' + st.k + '.vol')) * (st.d.eb ? MIDI.expr * eg : 1);   // expression pedal (CC 11), Formen · Ausdruck – on every Ebene
   const v = st.lane == null ? g : g * (mp('mix.pulsMute') ? 0 : faderGain(mp('mix.pulsVol')));
   return SLP.dk ? v * slpK(st) : v;   // Schlafen: the dry sound fades into the frozen tail
 }
@@ -58,12 +58,15 @@ function mixParam(st, key) {
 }
 // Solo: a soloed channel silences the other channels (dry and sends); echo and hall stay open so it keeps its space.
 // A soloed return plays only the effect: the channels go on feeding it, but their dry sound is muted.
+// (30.10.2026) Solo among the Ebenen (e<n>.solo, the Klang page): the other layers' strips close as well – everything
+// else plays on (a layer's solo is the instrument's, not the mixer's); a new note plays no voice on them (touch.js layers).
 function updSolo(inst) {
   if (!A.ctx) return;
-  const anySrc = MIX.src.some((st) => P['x' + st.k + '.solo']), anyRet = MIX.list.some((st) => st.ret && P['x' + st.k + '.solo']);
+  const anySrc = MIX.src.some((st) => P['x' + st.k + '.solo']), anyRet = MIX.list.some((st) => st.ret && P['x' + st.k + '.solo']), anyLy = EB.some((e) => P[e.pre + 'solo']);
   for (const st of MIX.list) {
     const p = 'x' + st.k + '.', solo = P[p + 'solo'];
     let on = !mp(p + 'mute'), dry = true;
+    if (anyLy && st.d.eb && !P[EB[st.d.eb - 1].pre + 'solo']) on = false;
     if (st.ret) { if (anyRet && !solo) on = false; }
     else { if (anySrc && !solo) on = false; if (anyRet && !solo) dry = false; }
     st.silent = !on; st.dryOff = !dry;

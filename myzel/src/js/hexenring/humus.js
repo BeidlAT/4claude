@@ -26,7 +26,7 @@ function hxNote(v, eng, t, f, y, vel, o) {
   if (HX.rec && HX.rec.phase === 'listen' && hxSrcIn(src, 0)) hxRecNote(t);   // (the Hauptknopf listening for the first note)
   const e = hxEvSlot(), id = (e.id = ++HX.evId), n = hxDeg(f);
   e.t0 = t; e.t1 = o.burst ? t + (o.gate != null ? o.gate : 0.22) : null; e.src = src; e.eng = eng; e.f = f; e.deg = n.deg; e.oct = n.oct; e.alt = n.alt; e.x = n.x;
-  e.y0 = y; e.vel = vel; e.pan = o.pan || 0; e.layer = src === 'eb2' ? 2 : 1; e.gate = o.gate != null ? o.gate : null; e.burst = !!o.burst; e.probe = false; v.hxE = e;
+  e.y0 = y; e.vel = vel; e.pan = o.pan || 0; e.layer = EB_OF[src] ? EB_OF[src].n : 1; e.amp = o.amp != null ? o.amp : 1; e.gate = o.gate != null ? o.gate : null; e.burst = !!o.burst; e.probe = false; v.hxE = e;
   e.hold = !!v.release && !o.burst;   // (a voice that can be held; a struck one rings out by itself)
   // a curve as flat [t, x, t, x …], a point at most every 5 ms; a long hold thins to every other point (no voice is kept)
   const pt = (arr, x) => {
@@ -46,7 +46,7 @@ function hxBor(on, f) {
   if (!A.started || !hxLive()) return;
   if (on) {
     const e = hxEvSlot(), n = hxDeg(f);
-    Object.assign(e, { id: ++HX.evId, t0: A.ctx.currentTime, t1: null, src: 'bor', eng: 'bor', f, deg: n.deg, oct: n.oct, alt: n.alt, x: n.x, y0: 0, vel: P['bor.lvl'], pan: 0, layer: 0, gate: null, burst: false, probe: false });
+    Object.assign(e, { id: ++HX.evId, t0: A.ctx.currentTime, t1: null, src: 'bor', eng: 'bor', f, deg: n.deg, oct: n.oct, alt: n.alt, x: n.x, y0: 0, vel: P['bor.lvl'], pan: 0, layer: 0, amp: 1, gate: null, burst: false, probe: false });
     HX.borE = e;
   } else if (HX.borE) { if (HX.borE.t1 == null) HX.borE.t1 = A.ctx.currentTime; HX.borE = null; }
 }
@@ -58,7 +58,7 @@ function hxEvents(t0, t1, held) {
     const e = HX.ev[(HX.evI + i) % HX_EV];
     if (!e || e.t0 == null || e.t0 < old || e.probe) continue;
     if (!(e.t0 >= t0 && e.t0 < t1) && !(held && e.t0 < t0 && (e.t1 == null || e.t1 > t0))) continue;
-    out.push({ id: e.id, t0: e.t0, t1: e.t1, src: e.src, eng: e.eng, f: e.f, deg: e.deg, oct: e.oct, alt: e.alt, x: e.x, y0: e.y0, vel: e.vel, pan: e.pan, layer: e.layer,
+    out.push({ id: e.id, t0: e.t0, t1: e.t1, src: e.src, eng: e.eng, f: e.f, deg: e.deg, oct: e.oct, alt: e.alt, x: e.x, y0: e.y0, vel: e.vel, pan: e.pan, layer: e.layer, amp: e.amp,
       gate: e.gate, burst: e.burst, hold: !!e.hold, curves: { y: hxPairs(e.curves.y), f: hxPairs(e.curves.f), pp: e.curves.pp, mb: e.curves.mb } });
   }
   return out.sort((a, b) => a.t0 - b.t0);

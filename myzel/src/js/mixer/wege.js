@@ -124,7 +124,12 @@ function mxdQuelle(k) {
   else if (k === 'eb2') kids = [C('v.layer', 'Klang der zweiten Ebene'),
     h('div', { class: 'mxd-pair' }, mxdStep('v.layerInt', 'Ebene 2', 'Intervall', (v) => fmt(PD['v.layerInt'], v), () => 'Grundton ' + mxNoteName(mxDegF(P['v.layerDeg']) * Math.pow(2, P['v.layerInt'] / 12)), ['v.layerInt', 'v.layerDeg']),
       mxdStep('v.layerDeg', 'Ebene 2', 'Tonstufe', (v) => fmt(PD['v.layerDeg'], v))),
-    grid(C('v.layerLvl', 'Anteil'))];
+    grid(C('v.layerLvl', 'Anteil'), C('e2.fine'))];
+  else if (EB_OF[k]) { const e = EB_OF[k], w = 'Ebene ' + e.n;   // (Ebenen 3–8, 30.10.2026: as Ebene 2)
+    kids = [C(e.eng, 'Klang der ' + w),
+      h('div', { class: 'mxd-pair' }, mxdStep(e.int, w, 'Intervall', (v) => fmt(PD[e.int], v), () => 'Grundton ' + mxNoteName(mxDegF(P[e.deg]) * Math.pow(2, P[e.int] / 12)), [e.int, e.deg]),
+        mxdStep(e.deg, w, 'Tonstufe', (v) => fmt(PD[e.deg], v))),
+      grid(C(e.lvl, 'Anteil'), C(e.pre + 'fine'))]; }
   else if (c.kind === 'lane') {
     const i = c.lane, p = 'l' + i + '.';
     kids = [C(p + 'on', 'Spur spielt'), C(p + 'eng', 'Klang'), mxdRhythm(i),

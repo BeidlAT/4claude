@@ -21,7 +21,7 @@ function mxSrcText(k) {
   // a keyboard's expression (CC 11) below full: said where the sound would be missed
   const ex = MIDI.expr < 0.995 ? 'Ausdruck ' + Math.round(Math.sqrt(MIDI.expr) * 100) + ' %' : '';
   if (k === 'fin') return ex || engLabel(P['v.eng']) || '';
-  if (k === 'eb2') return P['v.layer'] === 'off' ? 'aus' : ex || engLabel(P['v.layer']);
+  if (EB_OF[k]) return !ENGINES[P[EB_OF[k].eng]] ? 'aus' : ex || engLabel(P[EB_OF[k].eng]);   // (Ebene 2–8)
   if (k === 'rgn') return rgOn() ? (GK.p.rgArt === 'harfe' ? 'Harfe · ' : '') + rgName() : 'aus';   // Sporenregen: its strike, or silent
   if (k === 'hxr') return hxSrcText();   // Hexenring: its Schleifen
   if (c.kind === 'lane') return P['l' + c.lane + '.on'] ? engLabel(P['l' + c.lane + '.eng']) : 'aus';
@@ -35,8 +35,8 @@ function mxSrcText(k) {
   return (A.monoChk ? 'mono' : 'stereo') + (A.dim ? ' · ' + MX_MINUS + '20 dB' : '');
 }
 const mxPulsOff = () => !P['l0.on'] && !P['l1.on'] && !P['l2.on'] && !P['l3.on'];
-const MX_SRC_IDS = ['v.eng', 'v.layer', 'bor.on', 'bor.wave', 'bor.int', 'gsp.saiten', 'dly.sync', 'dly.div', 'dly.ms', 'rev.size', 'rev.typ', ...FX_RETS.map((x) => x[0] + '.typ'), 'seq.bpm', 'l0.on', 'l0.eng', 'l1.on', 'l1.eng', 'l2.on', 'l2.eng', 'l3.on', 'l3.eng'];
-// A channel whose source plays nothing (Ebene 2, a lane or the Bordun switched off; the Puls group with all four
+const MX_SRC_IDS = [...EB.map((e) => e.eng), 'bor.on', 'bor.wave', 'bor.int', 'gsp.saiten', 'dly.sync', 'dly.div', 'dly.ms', 'rev.size', 'rev.typ', ...FX_RETS.map((x) => x[0] + '.typ'), 'seq.bpm', 'l0.on', 'l0.eng', 'l1.on', 'l1.eng', 'l2.on', 'l2.eng', 'l3.on', 'l3.eng'];
+// A channel whose source plays nothing (an Ebene, a lane or the Bordun switched off; the Puls group with all four
 // lanes off) is an empty mushroom in the Pult and a hollow spore in the Geflecht – one rule, kept in S.srcoff.
 function mxSrcAll() {
   for (const c of MXC) {

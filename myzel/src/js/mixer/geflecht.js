@@ -165,7 +165,12 @@ function mxgLayout() {
   const w = f.clientWidth, hh = f.clientHeight;
   if (!w || !hh) { G.w = 0; return; }
   G.w = w; G.h = hh;
-  const wide = G.wide = w >= 560, short = G.short = MX.root.dataset.short === '1' || hh < 240, n = MXC.length - 1;
+  // (30.10.2026) the Ebenen 3–8 the Pult does not show (mxRgnSync: no sound, never set) have no column here either: the
+  // others stand in slots (C.s) as before
+  G.vis = G.cols.filter((C) => !(EB_OF[C.k] && MX.ch[C.k] && MX.ch[C.k].gone));
+  for (const C of G.cols) { C.hid = !G.vis.includes(C); C.el.hidden = C.tag.hidden = C.hid; }
+  G.vis.forEach((C, s) => { C.s = s; });
+  const wide = G.wide = w >= 560, short = G.short = MX.root.dataset.short === '1' || hh < 240, n = G.vis.length - 1;
   f.dataset.wide = wide ? '1' : ''; f.dataset.short = short ? '1' : '';
   // the dB gutter is as narrow as its numbers allow on phones: every pixel goes to the columns (the touch targets)
   const gl = wide ? 38 : 24, gr = wide ? 12 : 3, sumU = wide ? 1.6 : 1.4, u = G.u = (w - gl - gr) / (n + sumU);
@@ -184,19 +189,19 @@ function mxgLayout() {
   for (const C of G.cols) {
     const sum = C.c.kind === 'sum';
     C.cw = sum ? sumU * u : u;
-    C.cx = sum ? gl + n * u + C.cw / 2 : gl + (C.i + 0.5) * u;
+    C.cx = C.hid ? -1e4 : sum ? gl + n * u + C.cw / 2 : gl + (C.s + 0.5) * u;
     C.pr = mxgHasPan(C) ? Math.max(3, C.cw / 2 - (wide ? 15 : 7)) : 0;
-    const row = G.rows === 2 ? (sum ? 1 - (n - 1) % 2 : C.i % 2) : 0;   // (the Summe in the row its neighbour leaves free)
+    const row = G.rows === 2 ? (sum ? 1 - (n - 1) % 2 : C.s % 2) : 0;   // (the Summe in the row its neighbour leaves free)
     C.tag.style.transform = 'translate(' + C.cx.toFixed(1) + 'px,' + (G.tagY + row * G.tagH) + 'px) translateX(-50%)';
     C.tag.style.maxWidth = Math.floor(G.rows === 2 ? 2 * u - 4 : C.cw - 4) + 'px';
   }
   // the root: the Summe's fruiting body, as large as the soil allows
-  const sc = G.cols[n];
+  const sc = G.vis[n];
   G.rootR = Math.round(short ? clamp(sH * 0.27, 14, 18) : wide ? clamp(Math.min(sH * 0.34, sc.cw * 0.62), 40, 62) : clamp(sH * 0.25, 26, 34));
   G.rootD = 2 * G.rootR;
   G.rootX = Math.min(sc.cx, w - G.rootR - 4); G.rootY = hh - G.rootR - (short ? 4 : 8);
   // the chain's knot between the Puls lanes and the rest; the returns' nodes under their own columns
-  G.kx = gl + 6 * u; G.ky = Math.round(G.tagEnd + (G.rootY - G.tagEnd) * 0.5);
+  G.kx = gl + mxgCol('l1').s * u; G.ky = Math.round(G.tagEnd + (G.rootY - G.tagEnd) * 0.5);
   G.dyy = G.ky + (short ? 8 : wide ? 22 : 15);
   const E = G.cols[MXK.dly.i], H = G.cols[MXK.rev.i];
   G.ex = E.cx; G.ey = G.tagEnd + (short ? 6 : wide ? 16 : 10); G.hx = H.cx; G.hy = G.ey + (wide || short ? 0 : 12);
@@ -207,6 +212,7 @@ function mxgLayout() {
   mxgBz(G.trunk, G.trunkP, G.kx, G.ky, G.kx + (G.rootX - G.kx) * 0.35, G.ky + 2, G.rootX - G.rootR - (wide ? 30 : 16), G.rootY - 2, G.rootX, G.rootY);
   for (const C of G.cols) {
     C.snd = null;
+    if (C.hid) continue;
     if (C.c.kind !== 'src' && C.c.kind !== 'lane') continue;
     C.snd = MXG_SND.map((r, j) => [...G.nd[r], [0.07, 0.1, 0.085, 0.115][j] || 0.1]).map(([nx, ny, s]) => {
       const p = new Path2D(), y0 = G.tagEnd, sag = 4 + Math.abs(nx - C.cx) * s;

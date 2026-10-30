@@ -2,10 +2,33 @@
    Touch play
    ===================================================================== */
 const touches = new Map();
-function layers() {
-  const out = [{ eng: P['v.eng'], ratio: Math.pow(2, P['v.oct']), deg: P['v.deg'], lvl: 1, bus: stripIn('fin') }];
-  if (P['v.layer'] !== 'off') out.push({ eng: P['v.layer'], ratio: Math.pow(2, P['v.layerInt'] / 12), deg: P['v.layerDeg'], lvl: P['v.layerLvl'], bus: stripIn('eb2') });
+// the layers a note plays (owner, 30.10.2026: „alle Ebenen klingen auf jedem Ton“ – params.js EB): Ebene 1 always,
+// 2–8 once a sound is chosen. With the note's pitch f and velocity vel (a played note) each layer is gated by its
+// Tonbereich and Anschlags-Bereich – amp, the soft edge's gain, a gain of the voice's own (playNote), never its velocity –
+// and a muted layer (its strip's M) or one outside a layer solo plays no voice at all: nothing heard, nothing counted,
+// nothing in the Humus. Without f (warming the strings, the library's probe) every layer that has a sound.
+function layers(f, vel) {
+  const out = [], solo = f != null && EB.some((e) => P[e.pre + 'solo']);
+  for (const e of EB) {
+    const eng = P[e.eng];
+    if (e.n > 1 && !ENGINES[eng]) continue;
+    let amp = 1;
+    if (f != null) {
+      if (P['x' + e.k + '.mute'] || (solo && !P[e.pre + 'solo'])) continue;
+      amp = ebZone(e, f, vel); if (amp < 1e-3) continue;
+    }
+    const r = e.n === 1 ? Math.pow(2, P['v.oct']) : Math.pow(2, P[e.int] / 12), fine = P[e.pre + 'fine'];
+    out.push({ eng, ratio: fine ? r * Math.pow(2, fine / 1200) : r, deg: P[e.deg], lvl: P[e.lvl], bus: stripIn(e.k), amp, n: e.n });
+  }
   return out;
+}
+// a layer's gain for a note: 1 inside its Tonbereich (a key counts from half a semitone below to half above) and its
+// Anschlags-Bereich, falling to 0 over the soft edge outside them (a quarter sine: two layers fading across the same
+// edge keep the power), 0 beyond; a hard edge (0) gates
+function ebZone(e, f, vel) {
+  const p = e.pre, z = (x, lo, hi, w) => { const d = x < lo ? lo - x : x > hi ? x - hi : 0; return d <= 0 ? 1 : w > 0 && d < w ? Math.sin(Math.PI / 2 * (1 - d / w)) : 0; };
+  const key = 69 + 12 * Math.log2(Math.max(1e-6, f) / P['t.a4']);
+  return z(key, P[p + 'lo'] - 0.5, P[p + 'hi'] + 0.5, P[p + 'rand']) * z(vel != null ? vel : P['v.vel'], P[p + 'vlo'] - 1e-6, P[p + 'vhi'] + 1e-6, P[p + 'vrand']);
 }
 // the pitch a layer plays for a note of the field: moved by whole steps of the scale (semitones in the free scale),
 // then by its octave or interval
@@ -18,13 +41,14 @@ function touchVel() { return P['v.vel'] * (1 - P['v.human'] * 0.3 * Math.random(
 // a keyboard brings its own dynamics and timing: no humanizing for MIDI notes
 const noteVel = (tt) => (tt.vel != null ? tt.vel : touchVel());
 function touchPan(x) { return clamp((x * 2 - 1) * P['v.width'] * 0.8 + rand(-0.15, 0.15) * P['v.width'], -1, 1); }
-function triggerPerc(tt, t, isRoll) {
+function triggerPerc(tt, t, isRoll, grp) {
   let any = false;
+  grp = grp || {};   // (the layers of one strike are stolen together – alloc.js steal)
   for (const ly of tt.layers) {
     if (ENGINES[ly.eng].sustain) continue;
     const jit = tt.vel != null ? 0 : P['v.human'] * 0.01 * Math.random();
     const f = lyF(ly, tt.f, tt.col);
-    hit(ly.eng, t + jit, tt.mb ? f * Math.pow(2, tt.mb / 12) : f, modY(tt, touches.get(tt.id) === tt ? undefined : tt), noteVel(tt) * ly.lvl, { pan: touchPan(tt.x), bend: tt.fb || tt.bend, bus: ly.bus });   // a note being struck is the newest
+    hit(ly.eng, t + jit, tt.mb ? f * Math.pow(2, tt.mb / 12) : f, modY(tt, touches.get(tt.id) === tt ? undefined : tt), noteVel(tt) * ly.lvl, { pan: touchPan(tt.x), bend: tt.fb || tt.bend, bus: ly.bus, amp: ly.amp, grp });   // a note being struck is the newest
     any = true;
   }
   if (any) visPush({ t, kind: 'hit', x: tt.x, y: tt.y, s: isRoll ? 0.6 : 1, hue: tt.hue });
@@ -44,17 +68,17 @@ function onDown(e) {
   if (touches.has(e.pointerId)) onUp({ pointerId: e.pointerId, force: true, at: e.at });   // never leave a note hanging on a reused pointer id (a key struck again: the old note ends where the new one starts)
   if (e.pointerType) { try { cvFx.setPointerCapture(e.pointerId); } catch (err) {} }
   const pt = e.pt || stagePoint(e), n = e.note || noteAt(pt.x), now = e.at > A.ctx.currentTime ? e.at : A.ctx.currentTime;   // (a key: at its moment – midiAt)
-  const tt = { id: e.pointerId, t0: now, x: pt.x, y: pt.y, px: pt.px, py: pt.py, col: n.idx, f: n.f, name: n.name, layers: layers(), voices: [], rollNext: null, hue: VIS.hueAt(pt.x), vel: e.vel, bend: e.bend || false, vn: e.vn, mb: e.mb || 0, mpe: e.mpe, seq: ++MOD.seq, stk: modStroke(e.stkT), ptype: e.pointerType || null };
+  const tt = { id: e.pointerId, t0: now, x: pt.x, y: pt.y, px: pt.px, py: pt.py, col: n.idx, f: n.f, name: n.name, layers: layers(n.f, e.vel), voices: [], rollNext: null, hue: VIS.hueAt(pt.x), vel: e.vel, bend: e.bend || false, vn: e.vn, mb: e.mb || 0, mpe: e.mpe, seq: ++MOD.seq, stk: modStroke(e.stkT), ptype: e.pointerType || null };
   const y0 = (tt.my = modY(tt, tt));   // the newest note: Höhe's full share from its first moment
   const arp = typeof arpTake === 'function' && arpTake(tt);   // (the Sporenwerk: the note joins its pool and does not sound itself – arp/sporenwerk.js)
   if (!arp) for (const ly of tt.layers) {
     if (ENGINES[ly.eng].sustain) {
       const f = lyF(ly, n.f, n.idx);   // mb: an MPE note's own bend in semitones
-      const v = playNote(ly.eng, now, tt.mb ? f * Math.pow(2, tt.mb / 12) : f, y0, noteVel(tt) * ly.lvl, { pan: touchPan(pt.x), bend: tt.bend, bus: ly.bus });
+      const v = playNote(ly.eng, now, tt.mb ? f * Math.pow(2, tt.mb / 12) : f, y0, noteVel(tt) * ly.lvl, { pan: touchPan(pt.x), bend: tt.bend, bus: ly.bus, amp: ly.amp, grp: tt });
       if (v) tt.voices.push({ v, ly });
     }
   }
-  if (!arp) triggerPerc(tt, now, false);
+  if (!arp) triggerPerc(tt, now, false, tt);
   if (!arp && P['v.roll'] !== 'off' && tt.layers.some((ly) => !ENGINES[ly.eng].sustain)) tt.rollNext = now + rollInterval();
   touches.set(e.pointerId, tt);
   if (GK.on) gkNote(tt, true, e);

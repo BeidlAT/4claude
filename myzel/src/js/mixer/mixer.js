@@ -31,6 +31,7 @@ const MX_DORM = [118, 106, 97];
 function mxChannels() {
   const own = { fin: ['spiel', '#f0e6d8'], eb2: ['spiel', '#c9dc82'], rgn: ['spiel', RG_COL], hxr: ['spiel', '#e9a35e'], bor: ['grund', '#5a7cff'], gsp: ['grund', '#b9a46e'], dly: ['rueck', '#6cc9ef'], rev: ['rueck', '#d6cbff'] };
   for (const [r, , col] of FX_RETS) own[r] = ['rueck', col];
+  EB.slice(2).forEach((e, i) => { own[e.k] = ['spiel', ['#9fd8a4', '#e6d27c', '#7fc8b8', '#dcb487', '#a9c4ec', '#e2a7bb'][i]]; });   // (Ebenen 3–8: the field's warm greens and sands, apart from Ebene 2's lime)
   for (const st of STRIPS) {
     if (st.k === 'bor') MXC.push({ k: 'puls', name: 'Puls', g: 'puls', kind: 'puls', col: '#f2cf86' });
     const lane = st.lane != null;

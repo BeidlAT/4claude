@@ -21,7 +21,7 @@ const SLP_KAD = 3, SLP_SZ = 2.5;
 // unfrozen echo has died away
 const SLP = { down: false, on: false, art: '', dk: false, k: 1, kt: 1, open: false, mg: 1, fade: null, iv: 0, tm: 0, tmM: 0, tmT: 0, frzSet: false, frzWas: false, pulsWas: false, t0: 0, n: 0, gE: 0 };
 const SLP_HOLD = 7, SLP_DIE = 20, SLP_LONG = 20000;
-const slpK = (st) => (st.ret ? SLP.kt : SLP.open && (st.k === 'fin' || st.k === 'eb2') ? 1 : SLP.k);
+const slpK = (st) => (st.ret ? SLP.kt : SLP.open && st.d.eb ? 1 : SLP.k);
 // a binding of Wenden ("Eigene") takes the gesture
 const GK_OWNE = { v: -1, s: new Set() };
 function gkOwnEv(i) {
@@ -82,7 +82,7 @@ function slpFade() {
 function slpOpen() {
   if (!SLP.on || SLP.art !== 'kadenz' || SLP.open || !A.ctx) return;
   SLP.open = true;
-  for (const k of ['fin', 'eb2']) { const st = MIX.s[k]; if (st) setP(st.in.gain, stripGain(st), 0.01); }
+  for (const k of EB_K) { const st = MIX.s[k]; if (st) setP(st.in.gain, stripGain(st), 0.01); }
 }
 function slpWake() {
   if (!SLP.on) return;

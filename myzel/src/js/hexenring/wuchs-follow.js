@@ -336,7 +336,7 @@ function hxWLiveTick(now, horizon) {
         const t0 = hxT(hxPassF(L, k));
         for (const n of job.notes) {
           const t = t0 + n.t0; if (t < now || n.eng === 'bor') continue;
-          const o = { pan: n.pan || 0, bus: out(), loop: true, hxSrc: 'hxr' }, E = ENGINES[n.eng]; if (!E) continue;   // (step 4: hxSrc – before, the chain's copy was no strip, so they counted as the field's notes in the Humus)
+          const o = { pan: n.pan || 0, bus: out(), loop: true, hxSrc: 'hxr', amp: n.amp }, E = ENGINES[n.eng]; if (!E) continue;   // (step 4: hxSrc – before, the chain's copy was no strip, so they counted as the field's notes in the Humus)
           // (a held note's length as the engine's own gate – it lets go on time; struck ones ring)
           const g = n.t1 != null ? n.t1 - n.t0 : null, v = n.burst || (E.sustain && g != null) ? playNote(n.eng, t, n.f, n.y0 != null ? n.y0 : 0.5, n.vel, Object.assign(o, { burst: true, gate: n.burst ? n.gate || 0.22 : g })) : E.sustain ? playNote(n.eng, t, n.f, n.y0 != null ? n.y0 : 0.5, n.vel, o) : hit(n.eng, t, n.f, n.y0 != null ? n.y0 : 0.5, n.vel, o);
           if (!v) continue;

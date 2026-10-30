@@ -59,7 +59,7 @@ function ladTick(now) {
 for (const k in LAD_AMT) gkRoute('lad.' + k, { axis: 'ladung', target: k, on: ladOn, fn: (o, raw, now) => (ladTick(now), ladQ(LAD.ro * LAD_AMT[k] * ladK())) });
 // A sound with nothing to make denser – no grains or Tropfen (as the Klang or Ebene 2), the Puls standing – would only
 // wow a little: then the charge goes where any held sound answers – brighter (Höhe), more echo, more shimmer
-const ladFull = () => SEQ.on || ['kor', 'trp'].includes(P['v.eng']) || (P['v.layer'] !== 'off' && ['kor', 'trp'].includes(P['v.layer']));
+const ladFull = () => SEQ.on || ebEngs().some((k) => k === 'kor' || k === 'trp');
 const ladDry = () => ladOn() && !SLP.on && !ladFull();   // (asleep the Puls stops by itself: no reason to start)
 for (const [k, t, a] of [['fh', 'hoehe', 0.55], ['fd', 'dly', 0.35], ['fc', 'cho', 0.5]]) gkRoute('lad.' + k, { axis: 'ladung', target: t, on: ladDry, fn: (o, raw, now) => (ladTick(now), ladQ(LAD.ro * a * ladK())), opts: t === 'hoehe' ? { older: 1 } : undefined });
 gkRoute('sw.expr', { target: 'expr', on: swOn, fn: (o, raw, now) => (ladTick(now), ladQ(LAD.go * 0.6)) });

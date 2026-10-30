@@ -137,14 +137,15 @@ function updInactive() {
 function onParamChanged(id) {
   if ((id === 't.root' || id === 't.scale') && hxWTonHold(id)) return;   // Hexenring: (step 2a) the field and the loops change key on the announced bar line
   const pre = id.slice(0, id.indexOf('.'));
-  if (HX.wFeld && A.ctx && (ENGINES[pre] || id === 'v.eng' || id === 'v.layer')) HX.wKlang = performance.now() + 400;
+  if (HX.wFeld && A.ctx && (ENGINES[pre] || EB_ENG.has(id))) HX.wKlang = performance.now() + 400;
   else if (A.ctx && P['ui.instrument'] === 'preset' && hxWPIn(id) && hxLoopsLive().length) { HX.wFeld = true; HX.wKlang = performance.now() + 400; }   // (29.10.2026: a loop made in the field's sound follows it once that changes – hxKlangOf)   // Hexenring: (step 2a) loops that sound as the field: anew, once the knob rests
-  if (id === 'v.eng' || id === 'v.layer') { refreshEngineUI(); }
+  if (EB_ENG.has(id)) { refreshEngineUI(); }
+  if (EB_ENG.has(id) || /^e\d\./.test(id) || EB_PIT.has(id) || id === 'v.layerLvl' || /^x(fin|eb\d)\.(mute|pan)$/.test(id)) ebUI();   // (the Klang page's Ebenen rows)
   if (id === 'ui.instrument' && A.ctx) for (const L of hxLoopsLive()) hxWUpdate(L);   // Hexenring: (28.10.2026) the loops take the preset's instrument, or their own again, from their next seam
   if (KQ_PIDS.includes(id) && !UI.loading) kqUsed(P[id]);
-  if ((id === 'v.eng' || id === 'v.layer' || /^l\d\.eng$/.test(id)) && WORKLET_ENGINES.has(P[id])) dspMaybe();
+  if ((EB_ENG.has(id) || /^l\d\.eng$/.test(id)) && WORKLET_ENGINES.has(P[id])) dspMaybe();
   if (id === 'flt.type') for (const fn of CTL['flt.q'] || []) fn(P['flt.q'], null);
-  if (pre === 'sai' || pre === 't' || id === 'v.eng' || id === 'v.layer' || id === 'v.layerInt' || id === 'v.oct' || id === 'v.deg' || id === 'v.layerDeg' || /^l\d\.(eng|on|oct)$/.test(id)) warmKS();
+  if (pre === 'sai' || pre === 't' || EB_ENG.has(id) || EB_PIT.has(id) || id === 'v.oct' || /^l\d\.(eng|on|oct)$/.test(id)) warmKS();
   if (id === 'kor.src' && P['kor.src'] === 'echo' && A.started) ensureCapture();
   if (id === 'kor.src' && A.ctx && !LIVE_SRC.has(P['kor.src'])) texture(P['kor.src']);
   if (id === 'dly.sync') updInactive();
@@ -156,7 +157,7 @@ function onParamChanged(id) {
   if (pre === 'l' + id[1] && /^l\d$/.test(pre)) updLaneTabs();
   if (pre === 'rec') return;
   if (PD[id].dev) { onDeviceChanged(id); return; }
-  if (PD[id].live) { if (A.ctx && pre[0] === 'x' && MIX.s[pre.slice(1)]) mixParam(MIX.s[pre.slice(1)], 'solo'); return; }
+  if (PD[id].live) { if (A.ctx && pre[0] === 'x' && MIX.s[pre.slice(1)]) mixParam(MIX.s[pre.slice(1)], 'solo'); if (A.ctx && /^e\d\.solo$/.test(id)) { updSolo(); updSends(); } ebUI(); return; }   // (an Ebene's solo – the Klang page)
   if (pre === 'xhxr') { if (A.ctx) mixParam(MIX.s.hxr, id.slice(5)); return; }   // Hexenring: its strip is not the patch's
   if (pre === 'hx') { hxParam(id); return; }
   markPresetDirty();
@@ -238,7 +239,7 @@ function loadValues(vals, keepUnset) {
   HX.phH = null;
   for (const id of PATCH_IDS) for (const fn of CTL[id] || []) fn(P[id], null);
   hxMvSync(was);
-  buildNotes(); drawBg(); refreshEngineUI(); updLaneTabs(); updInactive(); renderBarInfo();
+  buildNotes(); drawBg(); refreshEngineUI(); ebUI(); updLaneTabs(); updInactive(); renderBarInfo();
   if (A.ctx) { applyAll(); seqRetempo(); warmKS(); dspMaybe(); if (P['kor.src'] === 'echo') ensureCapture(); if (!LIVE_SRC.has(P['kor.src'])) texture(P['kor.src']); }
   syncMic();
   // (owner, 27.10.2026: „man muss erst auf stille gehen … dann ein preset … dann auf weiter“) a preset's values come in here,

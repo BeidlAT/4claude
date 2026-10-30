@@ -198,7 +198,7 @@ function srcPedal(src, cc, on, ch) {
 function exprSet(g, src) {
   if (g === MIDI.expr) return;
   MIDI.expr = g; MIDI.exprSrc = src;
-  if (A.ctx) for (const k of ['fin', 'eb2']) if (MIX.s[k]) setP(MIX.s[k].in.gain, stripGain(MIX.s[k]), 0.012);
+  if (A.ctx) for (const k of EB_K) if (MIX.s[k]) setP(MIX.s[k].in.gain, stripGain(MIX.s[k]), 0.012);
   // the mixer says it (once a frame at most – a pedal sends many values)
   if (MX.root && !MIDI.exprUI) MIDI.exprUI = requestAnimationFrame(() => { MIDI.exprUI = 0; mxSrcAll(); });
 }
