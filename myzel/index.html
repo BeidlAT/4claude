@@ -26878,7 +26878,7 @@ function mxgLayout() {
   G.rootD = 2 * G.rootR;
   G.rootX = Math.min(sc.cx, w - G.rootR - 4); G.rootY = hh - G.rootR - (short ? 4 : 8);
   // the chain's knot between the Puls lanes and the rest; the returns' nodes under their own columns
-  G.kx = gl + mxgCol('l2').s * u;   // (the middle of the four lanes: l1's right edge) G.ky = Math.round(G.tagEnd + (G.rootY - G.tagEnd) * 0.5);
+  G.kx = gl + mxgCol('l2').s * u; G.ky = Math.round(G.tagEnd + (G.rootY - G.tagEnd) * 0.5);   // (kx: the middle of the four lanes, l1's right edge)
   G.dyy = G.ky + (short ? 8 : wide ? 22 : 15);
   const E = G.cols[MXK.dly.i], H = G.cols[MXK.rev.i];
   G.ex = E.cx; G.ey = G.tagEnd + (short ? 6 : wide ? 16 : 10); G.hx = H.cx; G.hy = G.ey + (wide || short ? 0 : 12);
