@@ -11,13 +11,9 @@ deinem Ermessen“. Grundlage: `effekte-konzept.md` (26.10.).
   - 23 echte Räume aus OpenAIR (University of York, CC BY 4.0), aufbereitet von `dev/tools/raeume.py` zu
     `myzel/raeume/<id>.flac` (48 kHz, 24 bit, gekürzt bei −70 dB/Rauschen+10 dB), bei der ersten Wahl geladen
     (PWA: eigener Cache `raeume-1`, nicht vorgeladen). Quellennennung unter der Wahl. Lagerhalle verworfen (verrauscht).
-  - 8 gerechnete (genRoom: Spiegelquellen 3. Ordnung, ORTF-Paar, Material je Oktave, Luft, Eyring je Band; Nachhall
+  - 7 gerechnete (genRoom: Spiegelquellen 3. Ordnung, ORTF-Paar, Material je Oktave, Luft, Eyring je Band; Nachhall
     nach Vorgabe T je Band, Materialien darauf skaliert; Pegel aus dem Diffusfeld 16πr²/3A). Gegen OpenAIR gemessen:
     T30 in allen Bändern nah, EDT/C80 hängen am Abstand.
-    „Kleine Steinkuppel“ (`r-steinkuppel`, 22 × 20 × 15 m, Stein, 30.10.2026) ist die Steinkuppel des Handpan-Piloten
-    (PR #53, vom Besitzer abgenommen): gemessen T 4,8 s bei 500 Hz, 6,0 s bei 125 Hz, 2,4 s bei 8 kHz – kürzer als die
-    echte Steinkuppel (bei Länge ×0,5 noch 6,3 s), runder und länger als die Steinhalle (3,9 s). Der Holzsaal des Piloten
-    ist durch `r-holzsaal` abgedeckt.
   - 15 besondere (genSpecial): Platte, Federhall, Rückwärts, Gatter, Myzelgeflecht, Unter Wasser, Eiskristall,
     Spiegelkabinett, Sternenstaub, Riesenrohr, Glockenkammer (in der Tonart), Tropfsteinhöhle, Kirche mit Krypta,
     Nebelbank, Unendlich.
