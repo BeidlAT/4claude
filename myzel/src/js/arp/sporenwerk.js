@@ -34,8 +34,9 @@ function arpRing(k) {
   if (ARP.drop.has(i)) return false;
   return h >= n || Math.floor((i * h) / n) !== Math.floor(((i - 1) * h) / n);   // (Bresenham: h hits spread as evenly as n steps allow)
 }
-// a note of the pool: its pitch, its place in the scale, the layers it plays and how it was struck
-function arpNote(tt) { return { f: tt.f, idx: tt.col, layers: tt.layers, x: tt.x, y: tt.my != null ? tt.my : tt.y, vel: tt.vel != null ? tt.vel : P['v.vel'], seq: tt.arpSeq || 0, key: 'tt' + tt.id }; }
+// a note of the pool: its pitch, its place in the scale, the layers it plays and how it was struck (fld: a note of the
+// field – each step strikes the layers of the pitch it plays, touch.js layers; a Schleife's note keeps its own sound)
+function arpNote(tt) { return { fld: true, f: tt.f, idx: tt.col, layers: tt.layers, x: tt.x, y: tt.my != null ? tt.my : tt.y, vel: tt.vel != null ? tt.vel : P['v.vel'], seq: tt.arpSeq || 0, key: 'tt' + tt.id }; }
 // the notes it plays from now: what is held (and latched), the Schleife's (arp/schleifen.js), or both
 function arpPool(t) {
   let out = [];
@@ -137,9 +138,10 @@ function arpTick() {
         const nt = L.n, degs = [0].concat(ARP_ST[P['arp.stimmen']] || []);
         for (const d of degs) {
           const f = arpDeg(nt, shift + d) * Math.pow(2, L.o), vel = clamp(nt.vel * (acc ? 1 + 0.6 * P['arp.akzent'] : 1 - 0.25 * P['arp.akzent']) * (d ? 0.7 : 1), 0.05, 1), y = clamp(nt.y + wave, 0, 1);
+          const lys = nt.fld ? layers(f, vel) : nt.layers;   // (each layer's Tonbereich and Anschlag at the step's own pitch)
           for (let r = 0; r < rat; r++) {
             const tr = t + j * strum + r * dur / rat, g = rat > 1 ? Math.min(gate, dur / rat * 0.8) : gate, vr = vel * Math.pow(0.72, r);
-            { const grp = {}; for (const ly of nt.layers) hit(ly.eng, tr, lyF(ly, f, nt.idx), y, vr * ly.lvl, { pan: touchPan(nt.x), bus: ly.bus, amp: ly.amp, gate: g, grp }); }   // (every layer of the note – Ebenen, stolen together)
+            { const grp = {}; for (const ly of lys) hit(ly.eng, tr, lyF(ly, f, nt.idx), y, vr * ly.lvl, { pan: touchPan(nt.x), bus: ly.bus, amp: ly.amp, gate: g, grp }); }   // (every layer of the note – Ebenen, stolen together)
           }
           ARP.ev.push({ t, f, nf: nt.f, o: L.o, li, vel, rat, acc, d, k, n: lad.length, dur });
         }

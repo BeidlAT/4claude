@@ -8,7 +8,8 @@ Begründungen stehen in `dev/STAND-2026-10-29.md` (Abschnitte „Danach (30.10.)
    Tonhöhe, Quell-Regler), Stufe 3 Frickler (zeichenbar, Schleifen, Zufall, Modulationsmatrix). Konzept:
    `dev/klang/huellkurven-recherche.md`. Wichtig: Firefox hat kein `cancelAndHoldAtTime` → Hüllkurven im Worklet.
 2. **Ebenen – Fragen:** Mute wird gespeichert, Solo nicht – so gewollt? Tonbereich gilt nur beim Anschlag (gleitender
-   Finger wechselt die Ebene nicht). Anschlagsbereich wirkt auf der Fläche nur über MIDI/„Anschlag“. Export einer
+   Finger wechselt die Ebene nicht; neue Anschläge – „Anreißen“, Sporenwerk, Touché-Arp – nehmen seit dem Review vom
+   30.10. die Ebenen der neuen Tonhöhe). Anschlagsbereich wirkt auf der Fläche nur über MIDI/„Anschlag“. Export einer
    Hexenring-Leiste als Preset nimmt nur Ebene 2 mit. (`dev/klang/ebenen-recherche.md` → „Stufe 1 gebaut“)
 3. **Ebenen – Stufen 2/3** (Makros, Überblend-Wähler, Ebene als Baustein speichern, Vorlagen): erst nach seinem Okay.
 4. **Presets mit vielen Ebenen:** neue bauen oder bestehende „aufpimpen“ nur nach seinem Okay je Preset; bestehende
@@ -44,5 +45,6 @@ Begründungen stehen in `dev/STAND-2026-10-29.md` (Abschnitte „Danach (30.10.)
 #109 Preset-Wechsel ohne Warten auf die Naht, Ladebalken, Tonart-Grundwert · #110 Übergabe in Portionen, „Takt sehen“ ·
 #111/#112 Kompostgarten, Kalimba-Schnarren, Jahresring-Laub · #113 Kurzwellenritual, Puls-Spuren-Hinweis, Ebenen-Recherche ·
 #114 Kappung vor der Effektkette, Harmonizer auf der Effekte-Seite · #115 8 Ebenen, Design, Bearbeiten-Fenster, globaler
-Stopp, Interface-Keyboard, „Vorige Skala“, Ernte-Leiste, Sporenwerk-Fix. Aus `dev/OFFEN-2026-10-27.md` damit erledigt:
+Stopp, Interface-Keyboard, „Vorige Skala“, Ernte-Leiste, Sporenwerk-Fix · Code-Review von #115 (9 Funde, alle behoben:
+Stehlen nach Ebenen, Vorhören-Stopp, Tonbereich bei neuen Anschlägen, Geflecht-Knoten, Interface-Erkennung, Fader `b.fad`). Aus `dev/OFFEN-2026-10-27.md` damit erledigt:
 1, 2, 5, 7, 8 (iPad Hintergrund), 13; 3/4 (Handpan) vom Besitzer zurückgestellt; 9/10/11/12 von ihm als geklärt bestätigt.

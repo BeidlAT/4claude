@@ -182,6 +182,7 @@ function mapClean(b) {
   if (b.to === false) o.to = false;
   if (b.hires === true && b.type === 'cc' && num < 32) o.hires = true;
   if (b.edge === 'any') o.edge = 'any';
+  if (b.fad === true && b.type === 'cc') o.fad = true;   // (a fader or knob – known when it was assigned: bindings.js mapApply)
   if (b.when === 'pads') o.when = 'pads';
   if (b.type === 'axis') {   // Gestik: Ruhezone, Glätte, Kurve
     if (typeof b.dz === 'number' && b.dz > 0) o.dz = clamp(b.dz, 0, 0.5);

@@ -121,7 +121,7 @@ function cbLogical(src) {
   // write them as learned bindings of this device (the same controls replaced); a channel only where two controls share
   // a number (a mixer controller's channel per strip)
   const msgs = plan.map(([C]) => cbMsg(C, d, M)), dup = (m) => msgs.filter((x) => x && x.type === m.type && x.num === m.num).length > 1;
-  const nb = plan.map(([C, t, mode], k) => { const m = msgs[k]; return mapClean({ dev: src.name, type: m.type, ch: dup(m) ? m.ch : -1, num: m.num, target: t, mode: m.type === 'note' && mode === 'abs' ? 'toggle' : mode, name: C.label }); }).filter(Boolean);
+  const nb = plan.map(([C, t, mode], k) => { const m = msgs[k]; return mapClean({ dev: src.name, type: m.type, ch: dup(m) ? m.ch : -1, num: m.num, target: t, mode: m.type === 'note' && mode === 'abs' ? 'toggle' : mode, name: C.label, fad: mode === 'abs' && m.type === 'cc' && C.kind !== 'button' && C.kind !== 'pad' }); }).filter(Boolean);
   MAP.user = MAP.user.filter((u) => !(sameDev(u.dev, src.name) && nb.some((n) => n.type === u.type && n.num === u.num && (n.ch < 0 || u.ch < 0 || n.ch === u.ch)))).concat(nb);
   mapSave(); MIDI.zv++;
   return nb.length;

@@ -180,6 +180,7 @@ function hxRingTap(slot, e) {
   if (L.state === 'spielt' && ((L.gg != null && L.gg !== 1) || L.gdv || (HXG.plan && HXG.plan.items.some((x) => x.key === L.key)))) { hxGdNein(L); return 'gd'; }   // (Etappe 3: a tap takes the Gärtner's change back – at once)
   if (L.state === 'angehalten') { hxReenter([L]); return 'an'; }
   const to = L.state === 'spielt' ? 'stumm' : 'spielt';
+  if (to === 'spielt') hxPvEnd(L);
   if (!hxTakt(L) && !hxGrid()) { hxState(L.id, to, null, { X: 0.04 }); hxSay(hxName(L) + (to === 'stumm' ? ' stumm' : ' spielt')); return to; }
   const B = hxBarOf(T, HX_RGRACE), X = 0.02;
   if (B.now) { hxState(L.id, to, null, { X }); hxSay(hxName(L) + (to === 'stumm' ? ' stumm' : ' spielt')); return to; }
@@ -192,7 +193,7 @@ function hxRingTap(slot, e) {
 }
 // angehalten → each from its own start on the next 1 (several meet anew); a Frei one too, or at once without a Takt
 function hxReenter(list) {
-  for (const L of list) L.pendTo = null;
+  for (const L of list) { L.pendTo = null; hxPvEnd(L); }
   const grid = hxGrid(), nb = grid ? Math.ceil(tgBeat(hxNowT() + HX_LEAD) / 4 - 1e-9) * 4 : null, t = grid ? tgTime(nb) : hxNowT() + HX_LEAD;
   for (const L of list) {
     if (hxTakt(L)) { hxState(L.id, 'spielt', t, { b0: nb != null ? nb : Math.ceil(tgBeat(t)), X: 0.01 }); L.d.b0 = (nb != null ? nb : Math.ceil(tgBeat(t))) + TG.o; }

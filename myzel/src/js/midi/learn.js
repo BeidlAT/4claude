@@ -77,6 +77,7 @@ function learnDone() {
   if (f.btn) mode = key === 'fae' || HX_MOMENT.has(key) ? 'momentary' : T.hit || !keeps ? 'trigger' : T.mod || key === 'xy.gate' || key === 'sus' || key === 'sost' || key === 'soft' || key === 'gk.hold' || key === 'gk.taste' ? 'momentary' : 'toggle';   // the Fährte pad: tap, hold and double tap need its release
   const b = { dev: c.src.name, ch: c.ch, type: c.kind, num: c.num, target: key, mode };
   if (f.hires) b.hires = true;
+  else if (c.kind === 'cc' && mode === 'abs' && !f.btn) b.fad = true;   // (it moved through its travel: a fader or knob)
   const prof = profOf(c.src), pb = prof && prof.binds.find((x) => x.type === c.kind && x.num === c.num && x.name);
   if (pb) b.name = pb.name;
   LEARN.undo = { b, prev: MAP.user.filter((u) => sameCtl(u, b)) };

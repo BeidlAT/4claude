@@ -41,10 +41,11 @@ function touchVel() { return P['v.vel'] * (1 - P['v.human'] * 0.3 * Math.random(
 // a keyboard brings its own dynamics and timing: no humanizing for MIDI notes
 const noteVel = (tt) => (tt.vel != null ? tt.vel : touchVel());
 function touchPan(x) { return clamp((x * 2 - 1) * P['v.width'] * 0.8 + rand(-0.15, 0.15) * P['v.width'], -1, 1); }
-function triggerPerc(tt, t, isRoll, grp) {
+// lys: the layers struck (default the note's own, tt.layers)
+function triggerPerc(tt, t, isRoll, grp, lys) {
   let any = false;
   grp = grp || {};   // (the layers of one strike are stolen together – alloc.js steal)
-  for (const ly of tt.layers) {
+  for (const ly of lys || tt.layers) {
     if (ENGINES[ly.eng].sustain) continue;
     const jit = tt.vel != null ? 0 : P['v.human'] * 0.01 * Math.random();
     const f = lyF(ly, tt.f, tt.col);
@@ -120,7 +121,8 @@ function moveTouch(tt, pt) {
   if (n.idx !== tt.col) {
     tt.col = n.idx;
     tt.hue = VIS.hueAt(pt.x);
-    if (P['v.strum'] && tt.rollNext == null && !tt.arp) triggerPerc(tt, A.ctx.currentTime, false);
+    // (a new strike: the layers of the new pitch – their Tonbereich, mute and solo – not those the finger landed with)
+    if (P['v.strum'] && tt.rollNext == null && !tt.arp) triggerPerc(tt, A.ctx.currentTime, false, null, layers(n.f, tt.vel));
   }
 }
 function onUp(e) {

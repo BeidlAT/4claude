@@ -32,6 +32,11 @@ const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) process
     await send(26, 70, 0); const i2 = at(); await send(26, 0, 127); o.sweep = md(i2 - at());
     // a button sending CC (only 127 and 0): one press, one step
     const i3 = at(); window.__send([0xb0, 80, 127]); await sl(30); window.__send([0xb0, 80, 0]); await sl(80); o.btn = md(at() - i3);
+    // (review 30.10.2026) a slider known as one since it was assigned (b.fad): its first value 127 (resting at the top)
+    // is a position, not a press – it steps only as it travels down
+    M.MAP.user = M.MAP.user.concat([{ dev, ch: 0, type: 'cc', num: 27, target: 'scale.down', mode: 'abs', fad: true }]); M.MAP.v++;
+    const i4 = at(); window.__send([0xb0, 27, 127]); await sl(80); o.fadTop = md(i4 - at());
+    await send(27, 126, 100); o.fadDown = md(at() - i4);
     o.n = keys.length;
     return o;
   });
@@ -40,6 +45,7 @@ const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) process
   ok(r.down === 7, `down again: ${r.down} forward`);
   ok(r.sweep === 15 % r.n, `a whole sweep from the bottom: 15 steps (around ${r.n} scales: ${r.sweep} on)`);
   ok(r.btn === 1, `a CC button: one press, one step (${r.btn})`);
+  ok(r.fadTop === 0 && r.fadDown === 3, `a learned slider resting at the top: its first 127 does not press (${r.fadTop}); down to 100 three steps forward (${r.fadDown})`);
   ok(!errors.length, 'no page errors ' + errors.slice(0, 3).join(' | '));
   await browser.close();
 })();

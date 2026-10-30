@@ -4,6 +4,8 @@
 // voice's decay at once, a click (Gestik's rain and rattle make room this way).
 // (owner, 30.10.2026: Ebenen) the layers of one note go together: the voice chosen takes the other voices of its strike
 // (v.grp) with it – never those of the note being made (keep), whose layers would otherwise take each other's room.
+// A fading voice takes only its fading siblings: a struck layer is released at its start, and its still-held
+// sustained sibling (the finger is down) must not go with it.
 function steal(fadingOnly, soft, loopOnly, keep) {
   const now = A.ctx.currentTime;
   let best = null, bestScore = -Infinity;
@@ -20,9 +22,9 @@ function steal(fadingOnly, soft, loopOnly, keep) {
     if (score > bestScore) { bestScore = score; best = v; }
   }
   if (best) {
-    const g = best.grp, out = (v) => { if (soft) vFade(v); else v.kill(); A.voices.delete(v); };
+    const g = best.grp, held = !best.released, out = (v) => { if (soft) vFade(v); else v.kill(); A.voices.delete(v); };
     out(best);
-    if (g) for (const v of A.voices) if (v.grp === g) out(v);
+    if (g) for (const v of A.voices) if (v.grp === g && (held || v.released)) out(v);
   }
   return !!best;
 }
