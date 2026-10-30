@@ -35,7 +35,7 @@ const BPM = 120;
     { const rows = [...document.querySelectorAll('.hx-ed-hrow')], v = rows.find((x) => x.textContent.startsWith('Verschieben')); o.versch = v ? [...v.querySelectorAll('button')].map((b) => b.textContent).join(' | ') : '(keine Zeile)'; }
     // 5 · the hint
     M.hxNtSet(L, 'krebs'); await sl(400);
-    { const st = document.querySelector('.hx-ed-part'); o.hint = st ? st.textContent.slice(0, 160) : ''; }
+    { M.HXE.sel = { a: 0, b: 0.5 }; M.hxEdRender(); await sl(300); const st = document.querySelector('.hx-ed-part'); o.hint = st ? st.textContent.slice(0, 200) : ''; M.HXE.sel = null; M.hxEdRender(); await sl(200); }   // (the hint stands by the stretch tools – the whole loop's rows are switches now)
     M.hxNtSet(L, 'krebs'); await sl(300);   // (off again)
     // 6 · the head's key
     { const meta = () => (document.querySelector('.hx-ed-h .meta') || {}).textContent || ''; o.key0 = meta(); M.setParam('t.root', 7); M.setParam('t.scale', 'dpent'); await sl(900); o.key1 = meta(); M.setParam('t.root', 0); M.setParam('t.scale', 'mpent'); await sl(600); }

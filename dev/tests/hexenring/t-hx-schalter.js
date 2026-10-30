@@ -44,13 +44,13 @@ const BPM = 120;
     o.wuOff = { rx: M.hxRxOn(M.hxRxOf(L)), own: !!(S.wu && S.wu.aud === S.wu.aud0) };
     M.hxNtSet(L, 'dens', 1); await sl(300); o.densBack = (L.nt && L.nt.dens) || 0;   // (the switch: back to 0)
     // 3 · Zeit, Noten, Trimmen
-    const chipOf = (t) => [...document.querySelectorAll('.hx-ed-row .chip')].find((x) => x.textContent === t);
+    const chipOf = (t, lab) => [...document.querySelectorAll('.hx-ed-row')].filter((r) => !lab || r.textContent.startsWith(lab)).flatMap((r) => [...r.querySelectorAll('.chip')]).find((x) => x.textContent === t);   // (lab: the row – Band has a ½ too)
     chipOf('−5 ms').click(); await sl(400); o.z1 = { nudge: +((L.nudge || 0) * 1000).toFixed(1), lit: chipOf('−5 ms').getAttribute('aria-pressed') };
     chipOf('−5 ms').click(); await sl(400); o.z2 = { nudge: +((L.nudge || 0) * 1000).toFixed(1), lit: chipOf('−5 ms').getAttribute('aria-pressed') };
     chipOf('Stufe +1').click(); await sl(600); o.s1 = { tr: L.nt && L.nt.tr, lit: chipOf('Stufe +1').getAttribute('aria-pressed') };
     chipOf('Stufe +1').click(); await sl(600); o.s2 = { tr: (L.nt && L.nt.tr) || 0, lit: chipOf('Stufe +1').getAttribute('aria-pressed') };
-    chipOf('½').click(); for (let i = 0; i < 60 && !(L.trim && L.trim.f === 0.5); i++) await sl(100); await sl(300); o.t1 = { f: L.trim && L.trim.f, lit: chipOf('½').getAttribute('aria-pressed') };
-    chipOf('½').click(); for (let i = 0; i < 60 && L.trim; i++) await sl(100); await sl(300); o.t2 = { f: L.trim ? L.trim.f : 1, lit: chipOf('½').getAttribute('aria-pressed') };
+    chipOf('½', 'Trimmen').click(); for (let i = 0; i < 60 && !(L.trim && L.trim.f === 0.5); i++) await sl(100); await sl(300); o.t1 = { f: L.trim && L.trim.f, lit: chipOf('½', 'Trimmen').getAttribute('aria-pressed') };
+    chipOf('½', 'Trimmen').click(); for (let i = 0; i < 60 && L.trim; i++) await sl(100); await sl(300); o.t2 = { f: L.trim ? L.trim.f : 1, lit: chipOf('½', 'Trimmen').getAttribute('aria-pressed') };
     // 4 · the layer kept over a reload
     M.hxRxToggle(L, 'farb', 'erde'); await idle(); await sl(300); o.erde = L.rx && L.rx.farb;
     for (let i = 0; i < 200 && !((S.savedR || 0) >= 1 && S.saved >= 1); i++) await sl(100);

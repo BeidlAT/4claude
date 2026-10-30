@@ -19,7 +19,7 @@ const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) process
   await page.click('#btnStart'); await page.waitForTimeout(1200);
   const cur = () => page.evaluate(() => window.__M.UI.preset);
   const key = async (k, mods = []) => { for (const m of mods) await page.keyboard.down(m); await page.keyboard.press(k); for (const m of mods) await page.keyboard.up(m); await page.waitForTimeout(500); };
-  const names = await page.evaluate(() => window.__M.PRESETS.slice(0, 10).map((p) => p.key));
+  const names = await page.evaluate(() => window.__M.PRESETS.slice(0, 10).map((p) => p.key)), was = await cur();   // (the sound the page opened with: given back at the end – the test pages share it)
   // without a Touché: F3, F10
   await key('F3'); const a = await cur(); await key('F10'); const b = await cur();
   ok(a === names[2] && b === names[9], `F3 → ${a}, F10 → ${b} (the list's 3rd and 10th)`);
@@ -34,6 +34,7 @@ const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) process
   await pc(3); const e0 = await cur(); await pc(4); const e1 = await cur(); await pc(5); const e2 = await cur(); await pc(4); const e3 = await cur();
   const idx = (k) => names.indexOf(k);
   ok(e0 === d && idx(e1) === idx(e0) + 1 && idx(e2) === idx(e1) + 1 && e3 === e1, `the buttons: the first PC only arms (${e0}), up → ${e1}, up → ${e2}, down → ${e3}`);
+  await page.evaluate((k) => { const M = window.__M, p = M.PRESETS.find((x) => x.key === k); if (p) M.loadPreset(p); }, was); await page.waitForTimeout(600);
   ok(!errors.length, 'no page errors ' + errors.slice(0, 3).join(' | '));
   await browser.close();
 })();
