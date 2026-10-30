@@ -1316,7 +1316,10 @@ const ENGINES = {
     sustain: false, needs: 'worklet', fallback: 'glo',
     start(v, t, f, y, vel, o) {
       const L0 = (2 + 10 * P['hng.nachklang']) * clamp(Math.pow(220 / f, 0.3), 0.6, 1.5) * 1.15, dmul = wkDmul(o, L0), life = L0 * dmul + 0.3;
-      wkVoice(v, 'myzel-hng', f, y, { prm: wkPrm('hng'), seed: wkSeed(), on: { on: t, f, y, vel, dmul, seed: wkSeed() } });
+      // (Handpan-Pilot, 26.10.2026; again 30.10.) a strike on a field that still rings touches it first; the other fields of the scale ring along
+      for (const w of A.voices) if (w !== v && w.alive && w.as === 'hng' && w.wk && w.bus === v.bus && w.hOn < t && Math.abs(w.hf / f - 1) < 0.01) w.wk.port.postMessage({ touch: 1, y, t });
+      v.hf = f; v.hOn = t;
+      wkVoice(v, 'myzel-hng', f, y, { prm: wkPrm('hng'), seed: wkSeed(), on: { on: t, f, y, vel, dmul, seed: wkSeed(), sym: N.notes.slice(0, 13).map((n) => n.f) } });
       wkRing(v, t, HNG_PEAK, life);
     },
   },
