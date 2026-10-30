@@ -28,7 +28,7 @@ function hxBase() {
 // (owner, 25.10.2026) the Raster of a recording by hand: Frei – as it always was (on a Takt its bar lines, without one
 // free, the tempo found from the notes); Takt, ½ Takt, ¼ – it begins and ends exactly on that grid, also the first
 // loop: without a Takt yet one is set at the Puls's tempo, one bar counted in (as the Einzählen shows it)
-const HX_RASTER = { takt: 4, halb: 2, viertel: 1 };
+const HX_RASTER = { takt: 4, halb: 2, viertel: 1, achtel: 0.5, triole: 1 / 3 };   // (beats; 30.10.2026: eighths and triplet eighths – owner: „Triolen schon hier wählbar“)
 const hxUnit = (R) => (R && R.u) || 4;
 // the grid point a press at T means: the one just passed when it came within ⅛ of the unit (≥ 0.1 s, ≤ grace s), else the next
 function hxUnitOf(T, u, grace) {
@@ -279,6 +279,19 @@ function hxDrop(L, X) {
   L.slot = null;
   if (!HX.fokus) { const n = hxLoopsLive().filter((x) => !x.bew).sort((a, b) => b.made - a.made)[0]; if (n) HX.fokus = n.id; }
   hxRailDirty(); hxCardDirty(); hxStripSync();
+}
+// (owner, 30.10.2026: „Schleifen müssen duplizierbar sein“) a copy on a free place – new keys, the same Schichten, edits,
+// Wuchs and pigment; it comes in phase-correct, so it plays with the original until one of them is changed
+function hxDuplicate(L) {
+  if (!L || hxZiel() < 0) { toast('Kein freier Platz zum Duplizieren.'); return null; }
+  const sn = hxSnap(L); sn.key = hxKey('l'); sn.slot = null; for (const s of sn.sch) s.key = hxKey('s');
+  const X = hxRebuild(sn, { fokus: false, state: L.state });
+  if (!X) return null;
+  X.made = Date.now(); hxSaveLoop(X);
+  const key = X.key, snD = hxSnap(X);
+  hxHist({ kind: 'dup', label: hxName(L) + ' dupliziert → ' + hxName(X), undo() { const Y = hxByKey(key); if (Y) hxDrop(Y, 0.04); }, redo() { hxRebuild(snD); } });
+  hxSay(hxName(X) + ': Kopie von ' + hxName(L)); hxRailDirty(); hxCardDirty();
+  return X;
 }
 function hxDelete(L) {
   hxKrSecure('Gelöscht: ' + hxName(L), [L]);   // (kept as an automatic Kreis first – kreise.js)

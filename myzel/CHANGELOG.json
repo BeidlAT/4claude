@@ -6,7 +6,9 @@
       "punkte": [
         "Neu im Mixer: ein Verdichter (Kompressor) für jeden Kanal – Verhältnis, Schwelle, Anschlag, Loslassen, Knie, Ausgleich und Anteil (parallel), ohne Verzögerung; die Karte zeigt, wie viel er gerade zurücknimmt. Bei 1:1 ist er aus, bestehende Klänge bleiben unverändert.",
         "Anschlag-Karte im Mixer: „Ausklang“ wirkt jetzt auch auf natürliche Ausklänge (ein Ton, der eine halbe Sekunde ausklingt, lässt sich kürzen oder verlängern); vorher griff er nur bei sehr kurzen.",
-        "Hexenring: Pegelhaushalt – drücken Schleifen und Spiel die Summe in den Begrenzer, werden die Schleifen langsam etwas leiser (bis 6 dB) und kommen zurück, sobald es ruhiger ist; im normalen Spiel ändert sich nichts (gemessen). Abschaltbar unter Einstellungen."
+        "Hexenring: Pegelhaushalt – drücken Schleifen und Spiel die Summe in den Begrenzer, werden die Schleifen langsam etwas leiser (bis 6 dB) und kommen zurück, sobald es ruhiger ist; im normalen Spiel ändert sich nichts (gemessen). Abschaltbar unter Einstellungen.",
+        "Schleifen: Duplizieren im Menü des Rings. „Instrument beim Preset-Wechsel“ rechnet die Schleife nicht mehr neu, wenn der Klang derselbe bleibt. Die Ernte-Leiste verschiebt wieder um Schlag und Ton. „Neue Schleife“ hat das Raster dabei, jetzt auch Achtel und Triole.",
+        "Bearbeiten-Fenster: oben stehen Tonart und Skala der Schleife – beim Ernten und, wenn sie anders ist, die jetzige; der Hinweis sagt, welche Noten-Werkzeuge gerade wirken."
       ]
     },
     {

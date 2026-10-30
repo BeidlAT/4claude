@@ -29,6 +29,11 @@ Begründungen stehen in `dev/STAND-2026-10-29.md` (Abschnitte „Danach (30.10.)
    – bis dahin laufen alle Tests nur in Chromium (immer dazusagen).
 
 ## Für die nächste Sitzung zu tun (ohne weitere Rückfrage)
+9a. **Bearbeiten-Fenster als Schalter (Besitzer 30.10., Screenshot):** jeder Eintrag zeigt seinen Aktiv-Zustand, ein zweiter
+    Klick nimmt ihn zurück (ohne ↶) – Tonhöhe, Verstimmen, Verwandeln, Färben als nicht-destruktive Ebene `L.rx` über
+    Abdruck **und** Wuchs-Version (heute verschwindet eine Verwandlung, sobald ein Noten-Werkzeug wie „dünner“ eine neue
+    Wuchs-Version spielt – hxWAktiv wird durch nt wieder wahr, abschnitt.js hxRegionEdit schreibt nur in den Abdruck);
+    Zeit-Chips absolut (−5 ms gedrückt = −5 ms), Noten Stufe/dünner/dichter als Schalter, Trimmen ½/¼ zweiter Klick = ganz.
 10. **Chrome-Aussetzer** (Bericht 29.10. 23:09, Latenz „min“): die Übergabe in Portionen (#110) und die Kappung vor der
     Kette (#114) sind behoben – nächsten Leistungsbericht des Besitzers aus Chrome abwarten und prüfen, ob noch etwas bleibt.
 11. **Firefox: Werk-Rahmen liefert zeitweise keine Durchgänge** (alt, OFFEN-2026-10-27 Punkt 6) – Diagnose aus seinem
@@ -42,7 +47,8 @@ Begründungen stehen in `dev/STAND-2026-10-29.md` (Abschnitte „Danach (30.10.)
     abgesichert). Testserver mit `setsid` starten; `sh dev/setup-tests.sh <scratch>` kopiert die Tests.
 
 ## Erledigt am 30.10. (zur Orientierung)
-#120 Dynamik: Verdichter je Kanal (`myzel-komp`, Karte „Verdichter“), Transienten-Former „Ausklang“ wirksam (langsame
+#120 Dynamik und Besitzer-Punkte 1–6 (Instrument-Schalter ohne Neuberechnung `hxWPHashOf`, Verschieben Schlag/Ton, Raster
+im Neue-Schleife-Popup mit Achtel/Triole, `hxDuplicate`, Hinweistext `hxNtWords`, Tonart/Skala im Editor-Kopf) · #120 Dynamik: Verdichter je Kanal (`myzel-komp`, Karte „Verdichter“), Transienten-Former „Ausklang“ wirksam (langsame
 Hüllkurve 0,8 s), Pegelhaushalt Hexenring nach Begrenzer-Last (`haushalt.js`, `hx.haushalt`); Messung: der Begrenzer bleibt
 bei 4 Schleifen + Live untätig (Summen-Verdichtung hält −2…−8 dBFS). Offen fürs Ohr: Verdichter an einer Puls-Spur und
 einer Kalimba-Ebene; „Ausklang −“ dimmt nach einem lauten Ton kurz auch einen leiseren, der folgt (Transient-Designer-Art).

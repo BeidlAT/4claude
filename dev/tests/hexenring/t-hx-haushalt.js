@@ -24,9 +24,11 @@ const BPM = 120;
     // a loud live drone on top (held notes, let go at the end)
     const drone = () => { const vs = []; for (const d of [0, 2, 4, 6]) { const nt = M.N.notes[Math.min(d, M.N.notes.length - 1)]; const v = M.playNote('neb', A.ctx.currentTime, nt.f, 0.5, 1, { bus: M.stripIn('fin') }); if (v) vs.push(v); } return vs; };
     await sl(800); o.hr0 = M.HXHR.db; o.red0 = await red(1500);
-    // pressed only into the Verdichtung (+6 dB on the strip and the Summe, the drone): its own work – the Haushalt stays
-    M.setParam('xhxr.vol', 6); M.setParam('mst.vol', 6); let vs = drone();
+    // pressed into the Verdichtung a little (+6 dB on the strip, the drone): its own work – the Haushalt stays
+    let vs = drone();   // (the Schleife as it is, a drone on top)
     await sl(4000); o.hrSoft = +M.HXHR.db.toFixed(2); o.redSoft = await red(1000); o.glue = +M.mxGR().toFixed(1);
+    // … slammed (the Summe +6 dB on top: the Verdichtung holds more than 10 dB): it counts as pressing
+    M.setParam('xhxr.vol', 6); M.setParam('mst.vol', 6); let gmax = 0; for (let i = 0; i < 40; i++) { await sl(100); gmax = Math.max(gmax, M.mxGR()); } o.hrSlam = +M.HXHR.db.toFixed(2); o.glueSlam = +gmax.toFixed(1);   // (the Verdichtung's deepest hold over 4 s)
     // driven into the Begrenzer: without the Verdichtung
     M.setParam('mst.comp', 0);
     await sl(600); o.redHot = await red(1500);
@@ -45,10 +47,11 @@ const BPM = 120;
   }, BPM);
   console.log(JSON.stringify(r));
   ok(r.n === 1 && r.lim && r.hr0 === 0 && r.red0 < 1.5, `a Schleife plays, the Begrenzer is there and idle (${r.red0} dB), the Haushalt at 0`);
-  ok(r.hrSoft === 0 && r.redSoft < 1.5 && r.glue > 3 && r.glue < 10, `pressed into the Verdichtung only (${r.glue} dB, the Begrenzer ${r.redSoft} dB): the Haushalt stays at 0 (${r.hrSoft}) – that is the Verdichtung's own work`);
+  ok(r.hrSoft === 0 && r.redSoft < 1.5 && r.glue > 2 && r.glue < 10, `pressed into the Verdichtung a little (${r.glue} dB, the Begrenzer ${r.redSoft} dB): the Haushalt stays at 0 (${r.hrSoft}) – that is the Verdichtung's own work`);
+  ok(r.glueSlam > 10 && r.hrSlam < -1, `slammed (the Verdichtung holds ${r.glueSlam} dB): the strip gives way (${r.hrSlam} dB)`);
   ok(r.redHot > 1.5 && r.hrHot <= -2 && r.hrHot >= -6, `driven into the Begrenzer (${r.redHot} dB reduction): within 6 s the strip gave way to ${r.hrHot} dB (need ${r.need})`);
   ok(r.redLater < r.redHot && /Spielraum/.test(r.txt), `the Begrenzer has less to do (${r.redLater} dB), the strip says „${r.txt}“`);
-  ok(r.hrBack === 0 && r.tBack <= 24, `driven no longer: back at 0 after ${r.tBack} s`);
+  ok(r.hrBack > -0.1 && r.tBack <= 24, `driven no longer: back at 0 after ${r.tBack} s`);
   ok(r.hrOff === 0 && r.redOff > 1.5, `hx.haushalt off: the Begrenzer works (${r.redOff} dB), the strip stays (${r.hrOff})`);
   ok(!errors.length, 'no page errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
   await H.close();

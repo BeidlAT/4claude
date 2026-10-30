@@ -12,7 +12,9 @@
 //                 heard where the Schicht is baked; its level as played (the Schicht's own level taken out)
 //   Tonhöhe     – semitones, Verstimmen – cents: grains read faster or slower, the length kept (verwandeln.js) ----
 // why a loop plays its notes anew (Wuchs) – said in the editor before it is frozen for an edit
-const hxWWhy = (L) => { const w = L.wwhy || {}, r = []; if (hxWTonOff(L)) r.push('sie folgt der Tonart'); if (w.tempo) r.push('sie folgt dem Tempo'); if (hxKlangOf(L) !== 'eigen') r.push('ein anderer Klang'); if (w.wahl) r.push('Wiedergabe „Wuchs“'); if (hxEigN(L) >= 1) r.push('Eigensinn'); if (hxNtOn(L)) r.push('Noten-Werkzeuge'); if (w.ausl) r.push('Auslese'); return r.join(', '); };
+const hxWWhy = (L) => { const w = L.wwhy || {}, r = []; if (hxWTonOff(L)) r.push('sie folgt der Tonart'); if (w.tempo) r.push('sie folgt dem Tempo'); if (hxKlangOf(L) !== 'eigen') r.push('ein anderer Klang'); if (w.wahl) r.push('Wiedergabe „Wuchs“'); if (hxEigN(L) >= 1) r.push('Eigensinn'); if (hxNtOn(L)) r.push('Noten-Werkzeuge: ' + hxNtWords(L)); if (w.ausl) r.push('Auslese'); return r.join(', '); };
+// the notes' tools that are on, by name (noten.js L.nt)
+const hxNtWords = (L) => { const n = L.nt || {}, w = []; if (n.tr) w.push('Stufe ' + (n.tr > 0 ? '+' : '') + n.tr); if (n.dens) w.push(n.dens < 0 ? 'dünner' : 'dichter'); if (n.gq) w.push(n.gq > 0 ? 'straffer' : 'lockerer'); if (n.krebs) w.push('Krebs'); if (n.umk) w.push('Umkehrung'); return w.join(', '); };
 const hxRxPitchName = (v) => (Math.abs(v - Math.round(v)) < 1e-6 ? 'Tonhöhe ' + (v > 0 ? '+' : '−') + Math.abs(Math.round(v)) : 'verstimmt ' + (v > 0 ? '+' : '−') + Math.round(Math.abs(v) * 100) + ' ct');
 // a take laid over the stretch: frame i of the stretch plus frame i of the take (where it has one)
 const hxRxAdd = (ch, r0, seg) => { const get = hxRxGet(ch), n = seg[0].length; return (i) => { const s = get(r0 + i); return i < n ? [s[0] + seg[0][i], s[1] + seg[1][i]] : s; }; };

@@ -653,7 +653,7 @@ PD['xhxr.route'].d = 'dir';
 NUM('hx.humus', 'Humus-Länge', 16, 900, MOBILE ? 64 : 300, 's', { step: 1, rec: 1 });   // (owner, 26.10.2026: on the PC 5 min by default, up to 15 – 128 bars even at 40 BPM)
 SEL('hx.modus', 'Hauptknopf', [['neu', 'Neue Schleife'], ['dieselbe', 'Dieselbe Schleife']], 'neu', { chips: 1, small: 1, rec: 1 });
 SEL('hx.start', 'Aufnahme beginnt', [['takt', 'Am Takt'], ['ton', 'Beim ersten Ton'], ['sofort', 'Sofort']], 'takt', { chips: 1, small: 1, rec: 1 });
-SEL('hx.raster', 'Raster', [['frei', 'Frei'], ['takt', 'Takt'], ['halb', '½ Takt'], ['viertel', '¼']], 'frei', { chips: 1, small: 1, rec: 1 });   // (25.10.2026: where a recording by hand begins and ends – grammar.js HX_RASTER)
+SEL('hx.raster', 'Raster', [['frei', 'Frei'], ['takt', 'Takt'], ['halb', '½ Takt'], ['viertel', '¼'], ['achtel', '⅛'], ['triole', 'Triole']], 'frei', { chips: 1, small: 1, rec: 1 });   // (25.10.2026: where a recording by hand begins and ends – grammar.js HX_RASTER)
 SEL('hx.laenge', 'Länge', [['auto', 'Automatisch'], ['wie1', 'Wie Schleife 1'], ['fest', 'Fest']], 'auto', { chips: 1, small: 1, rec: 1 });
 NUM('hx.festT', 'Feste Länge', 1, 128, 4, '', { step: 1, rec: 1, fmt: (v) => v + (v === 1 ? ' Takt' : ' Takte') });
 BOOL('hx.ernte', 'Ganze Ernte behalten', !MOBILE, { rec: 1 });   // (26.10.2026: the whole Humus beside each Schleife – vorrat.js)

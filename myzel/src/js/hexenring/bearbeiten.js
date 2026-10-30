@@ -24,6 +24,7 @@ function hxCtxMenu(slot, x, y) {
     box.append(h('div', { class: 'hx-cm-h' }, h('i', { class: 'hx-cm-dot', style: 'background:' + hxCol(L) }), hxName(L) + (hxEngName(L) ? ' · ' + hxEngName(L) : '') + ' · ' + hxLenText(L)), hxColRow(L, hxCtxClose));   // (26.10.2026: its pigment)
     it('Ansehen und bearbeiten …', () => hxEdOpen(L), { key: '⇧' + (slot + 1), tip: 'Wellenform, Noten und Schichten ansehen; schneiden, Band, Zeit und Noten bearbeiten.' });
     it('Karte – alle Einstellungen', () => hxCardOpen(slot), { tip: 'Die Karte der Schleife im Aufnahme-Panel.' });
+    it('Duplizieren', () => hxDuplicate(L), { tip: 'Eine Kopie auf einem freien Platz – mit Schichten, Bearbeitungen und Farbe; sie spielt im Takt mit dem Original.', dis: hxZiel() < 0 });
     sep();
     if (L.state === 'angehalten') it('Weiterspielen', () => hxReenter([L]), { tip: 'Beginnt auf der nächsten Eins wieder.' });
     else it(L.state === 'stumm' ? 'Wieder an' : 'Stumm', () => hxmMute(L, L.state !== 'stumm'), { tip: 'Sofort – auf dem Ring wartet dasselbe auf die Eins.' });
@@ -95,7 +96,7 @@ function hxEdPlace() {
 // what the editor shows depends on: rebuilt when it changes (a frame compares it), the playhead drawn every frame
 // (the ↶ ↷ buttons follow the history, the state its words and colour: part of what is shown, not of what is rendered –
 // 30.10.2026: Stopp halts the loop, ▶ right after plays the same pass without rendering it again)
-const hxEdSig = (L) => hxEdRSig(L) + '|' + L.state + '|' + HX.hist.length + ':' + HX.redo.length + ':' + HX.pend.length + ':' + !!L.prev;
+const hxEdSig = (L) => hxEdRSig(L) + '|' + L.state + '|' + HX.hist.length + ':' + HX.redo.length + ':' + HX.pend.length + ':' + !!L.prev + '|' + P['t.root'] + P['t.scale'] + P['t.a4'];   // (30.10.2026: the head names the key)
 function hxEdRSig(L) {
   const sch = L.sch.map((id) => HX.sch.get(id)).filter(Boolean);
   return [L.key, L.hum ? 1 : L.humBusy ? 2 : 0, L.d.beats, L.d.L, L.bpb, L.sp || 1, !!L.rev, JSON.stringify(L.trim || 0), L.dbl || 1, HX.fokus === L.id, HX.solo ? HX.solo.id : 0, JSON.stringify(L.nt || 0), JSON.stringify(L.slc || 0), L.vb, JSON.stringify(L.ab || 0), L.notes.length,   // (26.10.2026: Lücken – its chips lit only after another change)
@@ -113,8 +114,15 @@ function hxEdRender() {
   const go = (d) => { const X = loops[(i + d + loops.length) % loops.length]; if (X && X !== L) hxEdOpen(X); };
   const sch = L.sch.map((id) => HX.sch.get(id)).filter(Boolean), notes = sch.some(hxWCan), tk = hxTakt(L), k = hxCorrs(L);
   const bpm = tk ? dec(tgBpm(hxNowT()).toFixed(1)) + ' BPM' : '';
+  // (owner, 30.10.2026: „oben muss auch Stimmung und Skala stehen – auch die ursprüngliche“) the key it was harvested in
+  // (its notes' record) and the field's now; the Kammerton when it is not 440 Hz
+  const W = sch.map((S) => S.wn).find((w) => w && w.key), k0 = W && W.key, kn = { root: P['t.root'], scale: P['t.scale'] };
+  const kName = (k) => NOTE_NAMES[((Math.round(+k.root) % 12) + 12) % 12] + ' ' + ((SCALES[k.scale] || {}).n || k.scale);
+  const same = k0 && String(k0.root) === String(kn.root) && k0.scale === kn.scale;
+  const keyTxt = !k0 ? '' : same ? kName(k0) : (hxTonOf(L) === 'fest' ? kName(k0) + ' (geerntet; Feld jetzt ' + kName(kn) + ')' : 'jetzt ' + kName(kn) + ' · geerntet in ' + kName(k0));
+  const a4 = Math.round(P['t.a4']) !== 440 ? 'a′ ' + dec((+P['t.a4']).toFixed(1)) + ' Hz' : '';
   const head = h('div', { class: 'hx-ed-h' },
-    h('div', { class: 'hx-ed-t' }, h('h3', { style: 'color:' + hxCol(L) }, h('i', { class: 'hx-cm-dot', style: 'background:' + hxCol(L) }), hxName(L)), h('span', { class: 'meta' }, [hxEngName(L), hxLenText(L), bpm, { spielt: 'spielt', stumm: 'stumm', angehalten: 'angehalten' }[L.state] || L.state, HX.fokus === L.id ? 'Fokus' : ''].filter(Boolean).join(' · '))),
+    h('div', { class: 'hx-ed-t' }, h('h3', { style: 'color:' + hxCol(L) }, h('i', { class: 'hx-cm-dot', style: 'background:' + hxCol(L) }), hxName(L)), h('span', { class: 'meta' }, [hxEngName(L), hxLenText(L), bpm, keyTxt, a4, { spielt: 'spielt', stumm: 'stumm', angehalten: 'angehalten' }[L.state] || L.state, HX.fokus === L.id ? 'Fokus' : ''].filter(Boolean).join(' · '))),
     h('div', { class: 'hx-ed-hb' },
       loops.length > 1 ? btn('‹', () => go(-1), 'Vorige Schleife', 'ghost') : null, loops.length > 1 ? btn('›', () => go(1), 'Nächste Schleife', 'ghost') : null,
       (() => { const u = btn('↶', hxUndoStep, HX.hist.length ? 'Rückgängig: ' + HX.hist[HX.hist.length - 1].label + ' (Strg+Z)' : 'Nichts rückgängig zu machen', 'ghost'); u.disabled = !HX.hist.length && !HX.pend.length; u.setAttribute('aria-label', 'Rückgängig'); return u; })(),
@@ -192,7 +200,7 @@ function hxEdRender() {
     const mk = HXE.mark && HXE.mark.key === L.key ? HXE.mark : null, mOk = hxRxMarkOk(L, s.a, s.b), tk = HX.take && HX.take.key === L.key ? HX.take : null;
     HXE.takeEl = h('span', { class: 'hx-ed-take', role: 'status' }, hxTakeText());
     const semis = [-12, -7, -5, -2, -1, 1, 2, 5, 7, 12], cents = [-50, -20, -10, 10, 20, 50], sg = (x) => (x > 0 ? '+' : '−') + Math.abs(x);
-    part = h('div', { class: 'hx-ed-sec hx-ed-part' }, h('div', { class: 'hx-ed-st' }, whole ? 'Klang verwandeln – die ganze Schleife (oder oben einen Teil wählen: dann nur ihn)' : 'Abschnitt bearbeiten – ' + hxRxName(L, s.a, s.b) + ' (nur dieser Teil; der Rest bleibt)'), hxWAktiv(L) ? h('p', { class: 'hx-ed-frz' }, 'Diese Schleife spielt gerade neu gewachsene Noten' + (hxWWhy(L) ? ' (' + hxWWhy(L) + ')' : '') + '. Bearbeitet wird ein fester Klang: beim ersten Klick hier wird sie so festgehalten, wie sie jetzt klingt („Erstarren“) – danach folgt sie Tonart und Tempo nicht mehr von selbst. ↶ nimmt es zurück.') : null,
+    part = h('div', { class: 'hx-ed-sec hx-ed-part' }, h('div', { class: 'hx-ed-st' }, whole ? 'Klang verwandeln – die ganze Schleife (oder oben einen Teil wählen: dann nur ihn)' : 'Abschnitt bearbeiten – ' + hxRxName(L, s.a, s.b) + ' (nur dieser Teil; der Rest bleibt)'), hxWAktiv(L) ? h('p', { class: 'hx-ed-frz' }, 'Diese Schleife spielt ihre Noten gerade neu' + (hxWWhy(L) ? ' – ' + hxWWhy(L) : '') + '. Bearbeitet wird ein fester Klang: beim ersten Klick hier wird sie so festgehalten, wie sie jetzt klingt („Erstarren“) – danach folgt sie Tonart und Tempo nicht mehr von selbst. ↶ nimmt es zurück.') : null,
       whole ? null : row('Direkt', 'Den Abschnitt löschen (die Schleife bleibt gleich lang), merken – und dann einen anderen Teil mit ihm tauschen oder ihn dort einsetzen.',
         act('Löschen', 'loeschen', 0, 'Den Abschnitt leeren – die Schleife bleibt gleich lang'),
         chip(mk && Math.abs(mk.a - s.a) < 1e-9 && Math.abs(mk.b - s.b) < 1e-9 ? 'Gemerkt ✓' : 'Merken', !!(mk && Math.abs(mk.a - s.a) < 1e-9 && Math.abs(mk.b - s.b) < 1e-9), () => hxRxMark(L, s.a, s.b), 'Diesen Abschnitt merken – dann einen anderen Teil wählen'),
