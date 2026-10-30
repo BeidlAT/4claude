@@ -348,6 +348,17 @@ function undo() {
 function updUndo() { if (undoBtn) undoBtn.disabled = !HIST.length; }
 const UNDO = { label: 'Rückgängig', fn: () => undo() };
 
+// (owner, 30.10.2026: „F1–F10 – da waren 10 Presets drauf“) the first ten presets of the list on F1–F10; with a Touché
+// (its Spielweisen sit on F1–F12 – touche.js) on Strg+F1–F10. Not while typing or learning. Capture: ahead of the Touché's handler
+window.addEventListener('keydown', (e) => {
+  const m = /^F([1-9]|10)$/.exec(e.key); if (!m || e.altKey || e.metaKey || e.shiftKey) return;
+  const tch = typeof TCH !== 'undefined' && TCH.live;
+  if (tch ? !e.ctrlKey : e.ctrlKey) return;
+  if ((typeof LEARN !== 'undefined' && LEARN.on) || /^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || '') || (e.target && e.target.isContentEditable)) return;
+  const p = PRESETS[+m[1] - 1]; if (!p) return;
+  e.preventDefault(); if (e.repeat) return;
+  loadPreset(p); toast((tch ? 'Strg+' : '') + 'F' + m[1] + ': ' + p.name, 1600);
+}, true);
 function loadPreset(p, own) {
   hxUprLeave();   // (the own preset it leaves keeps the Leiste it ends with – kreise.js)
   remember();

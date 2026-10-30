@@ -12,13 +12,14 @@ function hxEstimate() { try { if (navigator.storage && navigator.storage.estimat
 function hxRecOf(L) {
   const mv = L.mv ? { a: L.mv.a, b: L.mv.b, lanes: L.mv.lanes.map((x) => Object.assign({}, x, { v: Array.from(x.v) })) } : null;
   return { id: L.key, v: 1, col: L.col || null, colA: L.colA || null, slot: L.slot, lock: L.d.lock, b0: L.d.b0 - TG.o, beats: L.d.beats, L: L.d.L, ph0: L.d.ph0, bpb: L.bpb, notes: L.notes, mv, cut: L.cut, eng: L.eng, setTG: L.setTG, gain: L.gain, pan: L.pan || 0, src: L.src,
-    bpm: hxTakt(L) ? tgBpm(hxNowT()) : L.bpm, state: L.state, made: L.made, nudge: L.nudge || 0, sr: SR, tk: L.tk || null, plan: L.plan, folgt: !!L.folgt, taumeln: L.taumeln !== false, eig: L.eig || 'treu', naehrt: L.naehrt ? { gsp: !!L.naehrt.gsp, rhz: !!L.naehrt.rhz, rgn: !!L.naehrt.rgn, glt: !!L.naehrt.glt, shn: !!L.naehrt.shn } : null, mi: hxMiSave(L), eco: hxEcoOf(L), gap: !!L.d.gap,   // (step 4: Rhizom, Regen, Glut, Sehne; its ecology; gap – Treffen setzen)
+    bpm: hxTakt(L) ? tgBpm(hxNowT()) : L.bpm, state: L.state, made: L.made, nudge: L.nudge || 0, rx: L.rx || null, sr: SR, tk: L.tk || null, plan: L.plan, folgt: !!L.folgt, taumeln: L.taumeln !== false, eig: L.eig || 'treu', naehrt: L.naehrt ? { gsp: !!L.naehrt.gsp, rhz: !!L.naehrt.rhz, rgn: !!L.naehrt.rgn, glt: !!L.naehrt.glt, shn: !!L.naehrt.shn } : null, mi: hxMiSave(L), eco: hxEcoOf(L), gap: !!L.d.gap,   // (step 4: Rhizom, Regen, Glut, Sehne; its ecology; gap – Treffen setzen)
     sch: L.sch.map((id) => HX.sch.get(id)).filter(Boolean).map((S) => ({ key: S.key, len: S.len, pre: S.pre, n: S.n, cut: S.cut, aus: S.aus, join: S.join, X: S.X, rho: S.rho, gain: S.gain, mute: S.mute, kind: S.kind, group: S.group, sr: S.sr, segs: hxSegs(S), saved: S.saved >= hxSegs(S),
       chain: !!S.chain, bakd: !!S.bak && (S.savedB || 0) >= hxSegs(S), zo: S.zo || 0, kc: S.kc ? Array.from(S.kc) : null, kcB: S.kcB ? Array.from(S.kcB) : null, dr: S.dr ? Array.from(S.dr) : null, cold: !!S.cold, cutAus: !!S.cutAus, spliced: !!S.spliced,
       // (step 2a) its notes for Wuchs, its throw, its Treu render and its anchor (audio beside, ~w and ~x), what it played
       wn: S.wn || null, wseed: S.wseed || 0, gate: S.gate || null, play: S.play || 'ab',
       wu: S.wu && (S.savedW || 0) >= hxSegsV(S, 'w') ? { n: S.wu.n, len: S.wu.len, sig: S.wu.sig, seed: S.wu.seed } : null,
-      anc: S.anc && (S.savedX || 0) >= hxSegsV(S, 'x') ? { n: S.anc.n, len: S.anc.len, sig: S.anc.sig, seed: S.anc.seed, br: S.anc.br != null ? S.anc.br : null, vn: S.anc.vn || null } : null })),
+      anc: S.anc && (S.savedX || 0) >= hxSegsV(S, 'x') ? { n: S.anc.n, len: S.anc.len, sig: S.anc.sig, seed: S.anc.seed, br: S.anc.br != null ? S.anc.br : null, vn: S.anc.vn || null } : null,
+      rxb: S.rxB && (S.savedR || 0) >= hxSegsV(S, 'r') ? { n: S.rxB.n, b: !!S.rxB.bak && (S.savedQ || 0) >= hxSegsV(S, 'q') } : null })),   // (30.10.2026: the Klangfarbe's base – klangebene.js)
     wwhy: L.wwhy || {}, krt: L.krea && L.krea.triebe.length ? L.krea.triebe.map(hxWsRecipe) : null, krs: L.krea && typeof L.krea.sel === 'string' ? L.krea.sel : null, ton: L.ton || 'diatonisch', klang: L.klang || 'eigen', stufe: L.stufe || null, q: L.q || null, P: L.P || null, mask: L.mask || null, chainRec: L.chainRec || null, jrg: L.jrg || null, tb: hxTbOf(L),
     bew: L.bew ? { n: L.bew.n, g0: L.bew.g0, gs: L.bew.gs - L.d.b0, fade: L.bew.fade, why: L.bew.why, lanes: L.bew.lanes.map((ln) => ({ k: ln.k, src: ln.src, d: faeEnc(ln.v) })), disp: L.bew.disp ? Object.fromEntries(Object.entries(L.bew.disp).map(([k, v]) => [k, faeEnc(v)])) : null } : null };   // (step 1d: a Schleife of Bewegung, its lanes as the Fährte kept them)
 }
@@ -32,20 +33,20 @@ function hxSaveMeta(loopId) {
 const hxSessRec = () => ({ id: '_s', hx: TG.hx, hxOn: TG.hxOn, keep: TG.keep, bpm: tgBpm(hxNowT()), fokus: (hxFok() || {}).key || null, lich: HX.lich, lichCur: HX.lichCur, fl: HX.fl ? { items: HX.fl.items, loop: HX.fl.loop } : null });   // (step 2b: the Folge)
 function hxSaveLoop(L) {
   if (!L) return; hxSaveMeta(L.id);
-  for (const id of L.sch) { const S = HX.sch.get(id); if (!S) continue; if (S.aud && !S.saved) { hxSaveSch(S); if (S.bak) hxSaveSch(S, 'b'); } else if (S.bak && !((S.savedB || 0) >= hxSegs(S))) hxSaveSch(S, 'b'); if (S.wu && !((S.savedW || 0) >= hxSegsV(S, 'w'))) hxSaveSch(S, 'w'); if (S.anc && !((S.savedX || 0) >= hxSegsV(S, 'x'))) hxSaveSch(S, 'x'); }
+  for (const id of L.sch) { const S = HX.sch.get(id); if (!S) continue; if (S.aud && !S.saved) { hxSaveSch(S); if (S.bak) hxSaveSch(S, 'b'); } else if (S.bak && !((S.savedB || 0) >= hxSegs(S))) hxSaveSch(S, 'b'); if (S.wu && !((S.savedW || 0) >= hxSegsV(S, 'w'))) hxSaveSch(S, 'w'); if (S.anc && !((S.savedX || 0) >= hxSegsV(S, 'x'))) hxSaveSch(S, 'x'); if (S.rxB && !((S.savedR || 0) >= hxSegsV(S, 'r'))) { hxSaveSch(S, 'r'); if (S.rxB.bak) hxSaveSch(S, 'q'); } }
 }
 function hxSaveAll() { for (const L of hxLoopsLive()) hxSaveMeta(L.id); }
 // a Schicht's audio, segment by segment, when the page is idle (never all at once: the playing must not stutter)
 const hxSegs = (S) => Math.ceil(S.n / (HX_SEG * S.sr));
-const hxSegsV = (S, w) => { const V = w === 'w' ? S.wu : w === 'x' ? S.anc : null; return V ? Math.ceil(V.n / (HX_SEG * S.sr)) : hxSegs(S); };   // (step 2a)
+const hxSegsV = (S, w) => { const V = w === 'w' ? S.wu : w === 'x' ? S.anc : w === 'r' || w === 'q' ? S.rxB : null; return V ? Math.ceil(V.n / (HX_SEG * S.sr)) : hxSegs(S); };   // (step 2a)
 // (step 1c: the dry Abdruck – w 'a' – and its baked version beside it under the key …~b – w 'b' –, each counted on its
 // own, so a bake that comes later never makes a stored Schicht unstored meanwhile)
-const HX_SV = { a: ['saving', 'saved'], b: ['savingB', 'savedB'], w: ['savingW', 'savedW'], x: ['savingX', 'savedX'] };
-const hxSrcOf = (S, w) => (w === 'b' ? S.bak : w === 'w' ? S.wu && S.wu.aud : w === 'x' ? S.anc && S.anc.aud : S.aud);
+const HX_SV = { a: ['saving', 'saved'], b: ['savingB', 'savedB'], w: ['savingW', 'savedW'], x: ['savingX', 'savedX'], r: ['savingR', 'savedR'], q: ['savingQ', 'savedQ'] };   // (r/q: the Klangfarbe's base, dry and baked – klangebene.js)
+const hxSrcOf = (S, w) => (w === 'b' ? S.bak : w === 'w' ? S.wu && S.wu.aud : w === 'x' ? S.anc && S.anc.aud : w === 'r' ? S.rxB && S.rxB.aud : w === 'q' ? S.rxB && S.rxB.bak : S.aud);
 function hxSaveSch(S, w = 'a') {
   const L = HX.loops.get(S.loop);
   if (!L || !hxSrcOf(S, w) || !IDB.ok || !hxLive()) return;
-  const seg = HX_SEG * S.sr, nseg = hxSegsV(S, w), k = HX_SV[w][0], n = w === 'w' ? S.wu.n : w === 'x' ? S.anc.n : S.n;
+  const seg = HX_SEG * S.sr, nseg = hxSegsV(S, w), k = HX_SV[w][0], n = w === 'w' ? S.wu.n : w === 'x' ? S.anc.n : w === 'r' || w === 'q' ? S.rxB.n : S.n;
   if (w === 'a') { S.saved = 0; S.savedB = 0; } else S[HX_SV[w][1]] = 0;
   S[k] = (S[k] || 0) + 1;
   const ver = S[k];
@@ -158,7 +159,9 @@ async function hxRecBuild(r, segsOf, o = {}) {
     // (step 2a) its Treu render and its anchor, as they were (at another rate: rendered again from the notes)
     const ver = async (V, w) => { if (!V || sr !== SR) return null; const a = await read(s.key + '~' + w, V.n, Math.ceil(V.n / (HX_SEG * sr))); return a ? Object.assign({}, V, { aud: a }) : null; };
     const wu = await ver(s.wu, 'w'), anc = await ver(s.anc, 'x');
-    sch.push(Object.assign({}, s, { aud, bak, kc: f32(s.kc), kcB: f32(s.kcB), dr: f32(s.dr), sr, cut: s.cut ? Object.assign({}, s.cut, { stale: true }) : null, wu, anc }));
+    // (30.10.2026) the Klangfarbe's base beside it (~r, ~q) – the switches take the layer off again after a reload
+    const rxA = s.rxb && sr === SR ? await read(s.key + '~r', s.rxb.n, Math.ceil(s.rxb.n / (HX_SEG * sr))) : null, rxQ = rxA && s.rxb.b ? await read(s.key + '~q', s.rxb.n, Math.ceil(s.rxb.n / (HX_SEG * sr))) : null;
+    sch.push(Object.assign({}, s, { aud, bak, kc: f32(s.kc), kcB: f32(s.kcB), dr: f32(s.dr), sr, cut: s.cut ? Object.assign({}, s.cut, { stale: true }) : null, wu, anc, rxB: rxA ? { aud: rxA, bak: rxQ, n: s.rxb.n } : null }));
   }
   if (!sch.length) return null;
   // another sample rate: the processor's resampler, then every frame count scaled (one it could not convert stays out
@@ -174,11 +177,11 @@ async function hxRecBuild(r, segsOf, o = {}) {
   if (o.fresh) for (const x of sch) x.key = hxKey('s');   // (a Kreis loaded: new keys – it may come twice, beside the Schleifen it was made of)
   const k = r.sr && r.sr !== SR ? SR / r.sr : 1;
   const sn = { key: o.fresh ? hxKey('l') : r.id, col: r.col || null, colA: r.colA || null, slot: r.slot, d: { lock: r.lock, b0: r.b0 + TG.o, beats: r.beats, L: r.L ? (k === 1 ? r.L : r.L * k) : r.L, ph0: 0, gap: !!r.gap }, bpb: r.bpb, eco: r.eco || null, notes: r.notes || [], mv: r.mv, cut: r.cut ? Object.assign({}, r.cut, { stale: true }) : null, eng: r.eng, setTG: r.setTG, gain: r.gain, pan: r.pan || 0, src: r.src, bpm: r.bpm, state: 'angehalten', tk: r.tk, folgt: r.folgt, taumeln: r.taumeln, eig: r.eig, naehrt: r.naehrt || null, sch,
-    wwhy: r.wwhy || {}, krt: r.krt || null, krs: r.krs || null, ton: r.ton, klang: r.klang, stufe: r.stufe, q: r.q, P: r.P, mask: r.mask, chainRec: r.chainRec, jrg: r.jrg, tb: r.tb || null, mi: r.mi || null };   // (step 2a; step 2b: its tools; Etappe 3: role, Gärtner, Wiederkehr)
+    wwhy: r.wwhy || {}, krt: r.krt || null, krs: r.krs || null, ton: r.ton, klang: r.klang, stufe: r.stufe, q: r.q, P: r.P, mask: r.mask, chainRec: r.chainRec, jrg: r.jrg, tb: r.tb || null, mi: r.mi || null, rx: r.rx || null };   // (step 2a; step 2b: its tools; Etappe 3: role, Gärtner, Wiederkehr)
   const L = hxRebuild(sn, { state: 'angehalten', fokus: false, noSave: true });
   if (L) { for (const id of L.sch) { const S = HX.sch.get(id), s = S && sch.find((x) => x.key === S.key); if (s) { S.sr0 = s.sr0; S.bakWhy = s.bakWhy || null; if (s.kcBnew && S.bak) S.kcB = S.join === 'xf' ? hxSeamOf(S, S.bak) : null; } } hxRebakeLater(L); }   // (28.10.2026: a Schicht without its baked version gets it again – bake.js)
   if (L && o.fresh) { L.nudge = r.nudge || 0; L.plan = r.plan; L.made = Date.now(); hxSaveLoop(L); return L; }
-  if (L) { L.nudge = r.nudge || 0; L.plan = r.plan; L.made = r.made || Date.now(); for (const id of L.sch) { const S = HX.sch.get(id); if (S) { S.saved = hxSegs(S); if (S.bak) S.savedB = hxSegs(S); if (S.wu) S.savedW = hxSegsV(S, 'w'); if (S.anc) S.savedX = hxSegsV(S, 'x'); } } hxSaveMeta(L.id); }
+  if (L) { L.nudge = r.nudge || 0; L.plan = r.plan; L.made = r.made || Date.now(); for (const id of L.sch) { const S = HX.sch.get(id); if (S) { S.saved = hxSegs(S); if (S.bak) S.savedB = hxSegs(S); if (S.wu) S.savedW = hxSegsV(S, 'w'); if (S.anc) S.savedX = hxSegsV(S, 'x'); if (S.rxB) { S.savedR = hxSegsV(S, 'r'); if (S.rxB.bak) S.savedQ = hxSegsV(S, 'q'); } } } hxSaveMeta(L.id); }
   return L;
 }
 // a Schicht stored at another rate: through the processor's resampler (160 taps) in an offline render of its own – on

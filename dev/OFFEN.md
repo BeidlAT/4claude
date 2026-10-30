@@ -29,29 +29,13 @@ Begründungen stehen in `dev/STAND-2026-10-29.md` (Abschnitte „Danach (30.10.)
    – bis dahin laufen alle Tests nur in Chromium (immer dazusagen).
 
 ## Für die nächste Sitzung zu tun (ohne weitere Rückfrage)
-9b. **F-Tasten-Presets und Touché-Schalter (Besitzer 30.10.):** „F1–F10 = 10 Presets geht nicht mehr“ – im Code sind F1–F12
-    seit 25./26.10. die Touché-Spielweisen (touche.js, auf seinen Wunsch); eine Preset-Belegung der F-Tasten findet sich in
-    keiner Version seit der Rücksetzung. Klären, was er meint (ältere Fassung? Zifferntasten?), dann: Presets auf Tasten
-    legen, ohne die Spielweisen zu verlieren (z. B. Strg+F1–F10 oder F-Tasten ohne Touché), und die zwei unteren Touché-SE-
-    Schalter als voriges/nächstes Preset (MIDI-Ziele preset.prev/next im Touché-Profil).
-9a. **Bearbeiten-Fenster als Schalter (Besitzer 30.10., Screenshot):** jeder Eintrag zeigt seinen Aktiv-Zustand, ein zweiter
-    Klick nimmt ihn zurück (ohne ↶) – Tonhöhe, Verstimmen, Verwandeln, Färben als nicht-destruktive Ebene `L.rx` über
-    Abdruck **und** Wuchs-Version (heute verschwindet eine Verwandlung, sobald ein Noten-Werkzeug wie „dünner“ eine neue
-    Wuchs-Version spielt – hxWAktiv wird durch nt wieder wahr, abschnitt.js hxRegionEdit schreibt nur in den Abdruck);
-    Zeit-Chips absolut (−5 ms gedrückt = −5 ms), Noten Stufe/dünner/dichter als Schalter, Trimmen ½/¼ zweiter Klick = ganz.
-10. **Chrome-Aussetzer** (Bericht 29.10. 23:09, Latenz „min“): die Übergabe in Portionen (#110) und die Kappung vor der
-    Kette (#114) sind behoben – nächsten Leistungsbericht des Besitzers aus Chrome abwarten und prüfen, ob noch etwas bleibt.
-11. **Firefox: Werk-Rahmen liefert zeitweise keine Durchgänge** (alt, OFFEN-2026-10-27 Punkt 6) – Diagnose aus seinem
-    Firefox (Gerät → Leistung messen → Kopieren: `werklog`, `hxstate`, `proc`).
-12. **Bekannt rote Tests** (schon vor den Änderungen rot): t-hx-taps 16/17 (Pegelschwelle −30,6 dBFS gegen −30),
-    midi-tests/t-ui 5, t-hx-raum und t-hx-allepresets (`M.HXR` fehlt), t-hx-kette 3, t-hx-livepatch 1 – Funktionen, die
-    mit der Rücksetzung am 27.10. herausgingen; Tests an den heutigen Stand anpassen oder die Funktion klären.
-    t-hx-wuchs schwankt in headless Chromium (Wächter senkt das Budget) – Test robuster machen.
-13. **Sporenwerk – Ausbau** (`dev/klang/sporenwerk.md` → Offen): MIDI-Lernziele, Schnellknopf, Rezepte.
-14. **Testvorlage:** `dev/tests/v2/mk.sh` exportiert jetzt alle Namen, die Tests als `M.<Name>` lesen (per `typeof`
-    abgesichert). Testserver mit `setsid` starten; `sh dev/setup-tests.sh <scratch>` kopiert die Tests.
-
 ## Erledigt am 30.10. (zur Orientierung)
+#121 Punkt 7 Schalter im Bearbeiten-Fenster (`hexenring/klangebene.js`: Klangfarbe-Ebene `L.rx` über Abdruck und Wuchs-
+Version, Basis `S.rxB` gespeichert als ~r/~q; Zeit/Noten/Trimmen als Schalter) · Punkt 8 F1–F10 Presets (mit Touché
+Strg+F1–F10), Touché-Schalter per Program Change (`tchIn`). Nach Band-Werkzeugen, die neues Audio schreiben (rückwärts,
+Verdoppeln, Abschnitt-Schritte) gilt das aktuelle Audio als neue Basis – die Klangfarbe ist dann fest im Band; ↶ oder
+„Grundeinstellung“ holen das Original. Offen fürs Ohr: ob der Touché SE wirklich Program Change von seinen zwei Schaltern
+sendet (sonst unter „Zuweisen“ auf preset.prev/next legen).
 #120 Dynamik und Besitzer-Punkte 1–6 (Instrument-Schalter ohne Neuberechnung `hxWPHashOf`, Verschieben Schlag/Ton, Raster
 im Neue-Schleife-Popup mit Achtel/Triole, `hxDuplicate`, Hinweistext `hxNtWords`, Tonart/Skala im Editor-Kopf) · #120 Dynamik: Verdichter je Kanal (`myzel-komp`, Karte „Verdichter“), Transienten-Former „Ausklang“ wirksam (langsame
 Hüllkurve 0,8 s), Pegelhaushalt Hexenring nach Begrenzer-Last (`haushalt.js`, `hx.haushalt`); Messung: der Begrenzer bleibt

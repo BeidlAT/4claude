@@ -222,12 +222,12 @@ function hxStille() {
 }
 // ---- deleting: one loop (its card) into the session's graveyard; all of them (↶ held 1.5 s) – both undoable ----
 function hxSnapS(S) { return S && { key: S.key, len: S.len, pre: S.pre, n: S.n, cut: S.cut, aus: S.aus ? Object.assign({}, S.aus) : null, join: S.join, X: S.X, rho: S.rho, gain: S.gain, mute: S.mute, kind: S.kind, group: S.group, sr: S.sr, aud: S.aud,
-  bak: S.bak, chain: S.chain, zo: S.zo, kc: S.kc, kcB: S.kcB, dr: S.dr, cold: S.cold, cutAus: S.cutAus, spliced: S.spliced, wn: S.wn || null, wseed: S.wseed || 0, wu: S.wu || null, anc: S.anc || null, gate: S.gate || null }; }   // (step 2a: its Wuchs)
+  bak: S.bak, chain: S.chain, zo: S.zo, kc: S.kc, kcB: S.kcB, dr: S.dr, cold: S.cold, cutAus: S.cutAus, spliced: S.spliced, wn: S.wn || null, wseed: S.wseed || 0, wu: S.wu || null, anc: S.anc || null, gate: S.gate || null, rxB: S.rxB || null }; }   // (step 2a: its Wuchs; 30.10.2026: the Klangfarbe's base)
 function hxSnap(L) {
   return { key: L.key, slot: L.slot, d: Object.assign({}, L.d), bpb: L.bpb, notes: L.notes, mv: L.mv, cut: L.cut, eng: L.eng, setTG: L.setTG, gain: L.gain, pan: L.pan || 0, src: L.src, bpm: L.bpm, state: L.state, tk: L.tk,
     folgt: !!L.folgt, taumeln: L.taumeln !== false, nudge: L.nudge || 0, eig: L.eig, sch: L.sch.map((id) => hxSnapS(HX.sch.get(id))).filter(Boolean),
     wwhy: Object.assign({}, L.wwhy || {}), krt: L.krea && L.krea.triebe.length ? L.krea.triebe.map(hxWsRecipe) : null, krs: L.krea && typeof L.krea.sel === 'string' ? L.krea.sel : null, ton: L.ton, klang: L.klang, stufe: L.stufe, q: L.q, P: L.P, mask: L.mask, chainRec: L.chainRec, jrg: L.jrg, tb: hxTbOf(L), tr0: L.tr0 || null,   // (step 2a; step 2b: its tools)
-    hum: L.hum || null, col: L.col || null, colA: L.colA || null, bew: L.bew ? { lanes: L.bew.lanes.map((ln) => ({ k: ln.k, src: ln.src, v: ln.v })), disp: L.bew.disp, n: L.bew.n, g0: L.bew.g0, gs: L.bew.gs, fade: L.bew.fade, why: L.bew.why } : null, naehrt: L.naehrt || null, mi: hxMiSave(L), eco: hxEcoOf(L) };   // (step 4: its ecology)
+    hum: L.hum || null, col: L.col || null, colA: L.colA || null, rx: L.rx || null, bew: L.bew ? { lanes: L.bew.lanes.map((ln) => ({ k: ln.k, src: ln.src, v: ln.v })), disp: L.bew.disp, n: L.bew.n, g0: L.bew.g0, gs: L.bew.gs, fade: L.bew.fade, why: L.bew.why } : null, naehrt: L.naehrt || null, mi: hxMiSave(L), eco: hxEcoOf(L) };   // (step 4: its ecology)
 }
 const hxMiSave = (L) => { const m = L.mi; if (!m) return null; const o = {}; for (const k of ['rolle', 'wk', 'gOff', 'sugg', 'from', 'begl']) if (m[k] != null && m[k] !== false) o[k] = m[k]; return Object.keys(o).length ? o : null; };   // (Etappe 3: role, Gärtner, Wiederkehr, a suggestion)
 function hxSchRebuild(loop, s, o = {}) {
@@ -236,7 +236,7 @@ function hxSchRebuild(loop, s, o = {}) {
   const id = hxSchNew(loop, s.aud ? c : s.cut, { aud: s.aud, bak: s.bak, chain: s.chain, zo: s.zo, kc: s.kc, kcB: s.kcB, dr: s.dr, cold: s.cold, cutAus: s.cutAus, spliced: s.spliced, key: s.key, gain: s.gain, mute: s.mute, join: s.join, X: s.X / SR, rho: s.rho, kind: s.kind, group: s.group, sr: s.sr, fin: o.fin != null ? o.fin : 0.01, seamK: o.seamK, probe: false });
   const S = HX.sch.get(id);
   if (S && S.aud && S.chain && !S.bak && !(HX.loops.get(loop) || {}).folgt) hxAfterFill(S);   // (a dry one: baked again)
-  if (S) { S.wn = s.wn || null; S.wseed = s.wseed || 0; S.wu = s.wu || null; S.anc = s.anc || null; S.gate = s.gate || null; }   // (step 2a: its Wuchs – played once the loop is made: hxRebuild)
+  if (S) { S.wn = s.wn || null; S.wseed = s.wseed || 0; S.wu = s.wu || null; S.anc = s.anc || null; S.gate = s.gate || null; S.rxB = s.rxB || null; }   // (step 2a: its Wuchs – played once the loop is made: hxRebuild)
   return id;
 }
 // a loop back from a snapshot: phase-correct where it would be (its geometry is its own beat or frame), fading in
@@ -247,7 +247,7 @@ function hxRebuild(sn, o = {}) {
     wwhy: sn.wwhy || {}, ton: sn.ton, klang: sn.klang, stufe: sn.stufe, q: sn.q, P: sn.P, mask: sn.mask, chainRec: sn.chainRec, jrg: sn.jrg });   // (step 2a: its Wuchs)
   if (sn.hum) L.hum = sn.hum;
   if (sn.krt && sn.krt.length) hxWsRestore(L, sn.krt, sn.krs);   // (28.10.2026: its Triebe – werkstatt.js)
-  L.col = sn.col || null; L.colA = sn.colA || null;   // (26.10.2026: its pigment)   // (26.10.2026: its whole Ernte comes back with it)
+  L.col = sn.col || null; L.colA = sn.colA || null; L.rx = sn.rx || null;   // (26.10.2026: its pigment; 30.10.2026: its Klangfarbe)   // (26.10.2026: its whole Ernte comes back with it)
   L.tk = sn.tk; L.folgt = !!sn.folgt; L.taumeln = sn.taumeln !== false; if (sn.nudge) L.nudge = sn.nudge;
   if (sn.mi) L.mi = Object.assign({}, sn.mi);   // (Etappe 3)
   if (sn.tb) { Object.assign(L, sn.tb); if (sn.tr0) L.tr0 = sn.tr0; }   // (step 2b: its tools – sent once its Schichten are there)

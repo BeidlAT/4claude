@@ -264,10 +264,11 @@ function hxWRenderFor(L, S, sig, o = {}) {
   if (S.wBusy) { S.wAgain = o; return; }
   S.wBusy = sig; S.wAgain = null; hxLadeAdd(L, S);
   const ver = S.ver || 0, key = L.key;
-  hxWRender(L, S, sig, o.key).then((V) => {
+  hxWRender(L, S, sig, o.key).then(async (V) => {
     S.wBusy = null;
-    const X = hxByKey(key);
+    let X = hxByKey(key);
     if (!X || !HX.sch.has(S.id) || (S.ver || 0) !== ver) return;
+    if (V && typeof hxRxOnV === 'function' && hxRxOn(hxRxOf(X))) { V = await hxRxOnV(X, V); X = hxByKey(key); if (!X || !HX.sch.has(S.id) || (S.ver || 0) !== ver) return; }   // (30.10.2026: the loop's Klangfarbe – klangebene.js)
     if (V && V.sig === hxWSig(X, S, o.key) && (S.wu || hxMemOk(V.n))) {   // (final pass: a first Treu version within the Speichergrenze, as every other buffer – else the Abdruck plays on)
       S.wu = V; S.wuSaved = 0;
       if (hxWAktiv(X) && !(S.anc && S.anc.sig === V.sig)) { const now = !!o.now && o.f == null && hxNowOk(X); hxWPlay(S, 'wu', o.f != null && o.f > hxF(hxNowT() + 0.05) ? o.f : now ? hxSwapAt(X).f : hxNextSeam(X).f, false, now); }

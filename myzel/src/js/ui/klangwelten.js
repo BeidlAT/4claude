@@ -186,7 +186,7 @@ function kbCard(p, i, onClick) {
   const cv = h('canvas', { class: 'kb-art', 'aria-hidden': 'true' });
   const sub = h('span', { class: 'kb-sc' }, NOTE_NAMES[S.root] + ' · ' + S.scale);
   const foot = h('span', { class: 'kb-foot' }, kbTonring(S), sub, h('span', { class: 'kb-sp' }), ...(S.on.length ? [kbPulsRows(S), h('span', { class: 'kb-bpm' }, String(Math.round(S.bpm)))] : []));
-  const el = h('button', { type: 'button', class: 'pcard kb', 'aria-current': 'false', style: '--a:' + S.a + ';--b:' + S.b, onclick: onClick },
+  const el = h('button', { type: 'button', class: 'pcard kb', 'aria-current': 'false', style: '--a:' + S.a + ';--b:' + S.b, title: i >= 1 && i <= 10 ? 'Taste F' + i + ' (mit Touché: Strg+F' + i + ')' : null, onclick: onClick },   // (30.10.2026: the first ten on F1–F10 – presets.js)
     h('span', { class: 'kb-frame' }, cv, h('span', { class: 'kb-nr', 'aria-hidden': 'true' }, i != null ? String(i).padStart(2, '0') : '')),
     h('b', null, p.name), h('span', { class: 'tags' }, p.tags || ''), p.desc ? h('small', null, p.desc) : null, foot);
   el.dataset.key = p.key;
