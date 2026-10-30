@@ -45,6 +45,7 @@ function tgRetempo(bpm, at) {
   if (!A.ctx) { TG.seg = [{ t: 0, b: 0, bpm }]; TG.ver++; return; }
   const now = A.ctx.currentTime;
   tgAdd(Math.max(now, at != null ? at : now + TG_LEAD), bpm);
+  if (typeof fxTune === 'function') fxTune();   // (30.10.2026: the Flechtwerk follows the Takt)
 }
 // a new origin: musical beat b0 sounds at t0 (a Puls start, a device's Start or Continue); returns the shift of the count
 function tgRebase(b0, t0) { const o = TG.o; TG.o = tgCb(t0) - b0; TG.ver++; TG.anc = { t: t0, b: b0 }; return TG.o - o; }

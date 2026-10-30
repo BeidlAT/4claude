@@ -90,8 +90,9 @@ function seqStart(b0 = 0, t0) {
   keepAwake();
   updPulsUI();
   clkOutStart(b0);
+  if (typeof fxTune === 'function') fxTune();   // (30.10.2026: the Flechtwerk's Takt)
 }
-function seqStop() { SEQ.on = false; SEQ.stopB = null; SEQ.lanes.forEach((L) => (L.cur = -1)); barRecue(); updPulsUI(); clkOutStop(); }
+function seqStop() { SEQ.on = false; SEQ.stopB = null; SEQ.lanes.forEach((L) => (L.cur = -1)); barRecue(); updPulsUI(); clkOutStop(); if (typeof fxTune === 'function') fxTune(); }   // (30.10.2026: the Flechtwerk's Takt)
 
 function rollInterval() { return (4 / Number(P['v.roll'])) * 60 / seqBpm(); }
 function rollTick(horizon) {

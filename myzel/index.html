@@ -2643,7 +2643,8 @@ const RAUM_BY = Object.fromEntries(RAUM_LISTE.map((r) => [r.id, r]));
 const PD = {};
 // (29.10.2026) the mixer's effect returns (mixer/effekt.js): key, name, colour, the effect each starts with
 const ARP_FORMS_P = [['auf', 'Aufwärts'], ['ab', 'Abwärts'], ['pendel', 'Pendel'], ['gespielt', 'Wie gespielt'], ['zufall', 'Zufall'], ['hyphe', 'Hyphe'], ['spirale', 'Spirale'], ['sporen', 'Sporenflug'], ['pilzring', 'Pilzring'], ['wachsen', 'Wachsen']];   // (the Sporenwerk's Wuchsformen – arp/sporenwerk.js)
-const FX_RETS = [['fx', 'Effekt', '#9fe3b0', 'netz'], ['fx2', 'Effekt 2', '#f2a8d8', 'wolke']];
+// (owner, 30.10.2026: „Effekt und Effekt 2 sind identisch … wir brauchen nur einen davon … eine kurze knackige Bezeichnung“)
+const FX_RETS = [['fx', 'Wandel', '#9fe3b0', 'netz']];
 const def = (id, o) => (PD[id] = Object.assign({ id }, o));
 const NUM = (id, label, min, max, d, unit = '', o = {}) => def(id, Object.assign({ kind: 'num', label, min, max, d, unit, curve: 'lin' }, o));
 const SEL = (id, label, opts, d, o = {}) => def(id, Object.assign({ kind: 'sel', label, opts, d }, o));
@@ -3150,12 +3151,19 @@ NUM('rev.mix', 'Anteil', 0, 1, 0.45, '%');
 SEL('rev.typ', 'Raum', RAUM_LISTE.map((r) => [r.id, r.name + (r.t ? ' · ' + String(r.t).replace('.', ',') + ' s' : ''), RAUM_ART[r.art]]), 'nebel');
 NUM('rev.dist', 'Abstand', 0, 1, 0.5, '%');
 NUM('rev.len', 'Länge', 0.5, 1.5, 1, '', { fmt: (v) => '×' + dec(v.toFixed(2)) });
-// (29.10.2026) the returns „Effekt“ and „Effekt 2“ (mixer/effekt.js, dsp/effekte.js): which one, how much, and each one's
-// knobs – the same set for both (FX_RETS: key, name, colour, the effect it starts with)
+// (29.10.2026) the return „Wandel“ (mixer/effekt.js, dsp/effekte.js): which effect, how much, its way, and every effect's knobs
+// (FX_RETS: key, name, colour, the effect it starts with)
 for (const [r, , , typ] of FX_RETS) {
   const q = r + '.';
-  SEL(q + 'typ', 'Effekt', [['netz', 'Resonanz-Netz'], ['wolke', 'Wolke'], ['spektral', 'Spektral-Nebel'], ['oktav', 'Oktav-Echo'], ['vokal', 'Vokal-Filter'], ['harmo', 'Harmonizer']], typ);
+  SEL(q + 'typ', 'Wandel', [['netz', 'Resonanz-Netz'], ['wolke', 'Wolke'], ['spektral', 'Spektral-Nebel'], ['oktav', 'Oktav-Echo'], ['vokal', 'Vokal-Filter'], ['harmo', 'Harmonizer'], ['flecht', 'Flechtwerk']], typ);
   NUM(q + 'mix', 'Anteil', 0, 1, 0, '%');
+  // (30.10.2026: „auch durch den Filter und andere Bereiche jagen“) its way into the sum: straight, or through a copy of the chain
+  SEL(q + 'weg', 'Weg', [['dir', 'Direkt'], ['kette', 'Durch die Kette']], 'dir', { chips: 1, small: 1 });
+  // (30.10.2026) Flechtwerk: a rhythmic weave on the Takt – a Euclidean pattern gates the sound and runs a filter through it
+  SEL(q + 'fsteps', 'Schritte', [['8', '8'], ['12', '12'], ['16', '16']], '16', { chips: 1, small: 1 });
+  NUM(q + 'fschl', 'Schläge', 1, 16, 6, '', { step: 1 }); NUM(q + 'fdreh', 'Drehung', 0, 15, 0, '', { step: 1 });
+  SEL(q + 'fraster', 'Raster', [['0.5', '⅛'], ['0.25', '1/16'], ['0.3333', '⅛ Triole']], '0.25', { chips: 1, small: 1 });
+  NUM(q + 'ftiefe', 'Tiefe', 0, 1, 0.8, '%'); NUM(q + 'ffilt', 'Filterlauf', 0, 1, 0.5, '%'); NUM(q + 'fweich', 'Weiche', 0, 1, 0.3, '%'); NUM(q + 'fseite', 'Seiten', 0, 1, 0.5, '%');
   SEL(q + 'art', 'Art', [['0', 'Saiten'], ['1', 'Glocken'], ['2', 'Holzkörper']], '0', { chips: 1, small: 1 });
   NUM(q + 'klang', 'Nachklang', 0, 1, 0.5, '%'); NUM(q + 'hell', 'Helligkeit', 0, 1, 0.6, '%'); NUM(q + 'breite', 'Breite', 0, 1, 0.7, '%');
   SEL(q + 'ton', 'Lage', [['-1', 'Oktave tiefer'], ['0', 'Wie gespielt'], ['1', 'Oktave höher']], '0', { chips: 1, small: 1 });
@@ -3391,7 +3399,7 @@ SEL('midi.tch', 'Touché-Spielweise', [['finger', 'Finger'], ['atem', 'Atem'], [
 
 const GROUP = {
   v: 'Spielweise', t: 'Stimmung', neb: 'Nebel', kor: 'Körner', hau: 'Hauch', glo: 'Glocke', mem: 'Membran', sai: 'Saite', sch: 'Schale', gng: "Gong", klb: "Kalimba", obt: "Obertöne", stm: "Stimme", swm: "Schwarm", tie: "Tiefe", trp: "Tropfen", nrd: 'Nordlicht', sht: 'Schimmer', ond: 'Ätherwelle', wal: 'Walgesang', stp: 'Endlostreppe', atr: 'Attraktor', tnl: 'Tunnel', wkg: 'Westküste', bnt: 'Schaltkreis', kas: 'Kassette', bit: 'Achtbit', gbs: 'Gleitbass', hht: 'Zischel', vox: 'Silbe', spu: 'Spieluhr', kto: 'Koto', hlm: 'Halm', rnk: 'Ranke', elm: 'Elmsfeuer', hng: 'Handpan', gml: 'Gamelan', sit: 'Sitar', tbl: 'Tabla', did: 'Didgeridoo', mtr: 'Maultrommel', jrg: 'Jahresring', hrz: 'Harz', shn: 'Sehne', zpf: 'Zapfen', glt: 'Glut', mdr: 'Moder', boe: 'Böe', amo: 'Amöbe', gsp: 'Gespinst', rhz: 'Rhizom', khl: 'Kehlchen',
-  drv: 'Verzerrung', rng: 'Ringmodulator', flt: 'Filter', pha: 'Phaser', cho: 'Schweben', dly: 'Echo', rev: 'Hall', fx: 'Effekt', fx2: 'Effekt 2', arp: 'Sporenwerk', mov: 'Bewegung', mst: 'Summe',
+  drv: 'Verzerrung', rng: 'Ringmodulator', flt: 'Filter', pha: 'Phaser', cho: 'Schweben', dly: 'Echo', rev: 'Hall', fx: 'Wandel', arp: 'Sporenwerk', mov: 'Bewegung', mst: 'Summe',
   e1: 'Ebene 1', e2: 'Ebene 2', e3: 'Ebene 3', e4: 'Ebene 4', e5: 'Ebene 5', e6: 'Ebene 6', e7: 'Ebene 7', e8: 'Ebene 8',
   seq: 'Puls', bor: 'Bordun', rec: 'Aufnahme', hx: 'Hexenring', dev: 'Gerät', midi: 'MIDI', l0: 'Spur 1', l1: 'Spur 2', l2: 'Spur 3', l3: 'Spur 4',
 };
@@ -5101,7 +5109,7 @@ function gates(st, set) {
 }
 // dry path: through the insert chain or straight into the sum; a move fades the channel out and back in
 function wireStrip(st) {
-  const want = () => (st.k === 'hxr' ? hxRoute() : !st.ret && P['x' + st.k + '.route'] !== 'dir' ? A.voiceBus : A.masterSum);   // Hexenring: never into A.masterSum
+  const want = () => (st.k === 'hxr' ? hxRoute() : st.k === 'fx' ? (P['fx.weg'] === 'kette' ? fxKetteIn() : A.masterSum) : !st.ret && P['x' + st.k + '.route'] !== 'dir' ? A.voiceBus : A.masterSum);   // Hexenring: never into A.masterSum; Wandel: its own way (effekt.js)
   if (st.dTo === want()) return;
   if (st.k === 'hxr' && IDLE.hxOff) hxGates(true);   // Ruhe: through the chain's copy, the processor's zeros run as before
   if (!st.dTo) { st.dTo = want(); st.dry.connect(st.dTo); return; }
@@ -5305,27 +5313,33 @@ function setMonDim(on) { A.dim = !!on; updMonitor(); }
    master), and it plays the effect chosen (fx.typ – dsp/effekte.js): Resonanz-Netz, Wolke, Spektral-Nebel, Oktav-Echo,
    Vokal-Filter. Its processor is made the first time it is wanted (Anteil above 0) and replaced with a crossfade when
    another is chosen; the scale and the Puls's beat go to it as they change. Without AudioWorklet it stays silent.
-   (owner, 29.10.2026: „ja alle 3 offenen Punkte erledigen“) Two of them: „Effekt“ and „Effekt 2“ (FX_RETS, params.js),
-   each with its own choice and knobs; and a channel can take either into itself as its Einschub (x…ins, x…insmix –
-   mixer/processing.js): a processor of its own with that return's settings, mixed with the channel's sound. ---------- */
+   (owner, 30.10.2026: „wir brauchen nur einen davon“) One return, „Wandel“ (FX_RETS, params.js – 29.10. there were two,
+   „Effekt“ and „Effekt 2“; old patches' fx2 keys are ignored); a channel can take it into itself as its Einschub (x…ins,
+   x…insmix – mixer/processing.js): a processor of its own with the return's settings, mixed with the channel's sound.
+   Its way (fx.weg): straight into the sum, or „Durch die Kette“ – a copy of the chain (fxKetteIn) so filter, phaser,
+   drive and all shape the wet sound. The Flechtwerk (dsp/effekte.js Flecht) gets the Taktgeber's grid (fxGrid). ---------- */
 const FX_TYPES = {
-  netz: { proc: 'myzel-netz', name: 'Resonanz-Netz', i: 'Saiten, Glocken oder ein Holzkörper, auf die Tonleiter gestimmt, schwingen mit allem mit, was hineinklingt', keys: { art: 'art', klang: 'klang', hell: 'hell', breite: 'breite', ton: 'ton' } },
-  wolke: { proc: 'myzel-wolke', name: 'Wolke', i: 'Körner des eben Gespielten kommen im Takt zurück – oktaviert, rückwärts, weit verstreut', keys: { dichte: 'dichte', zeit: 'zeit', hoehe: 'hoehe', rueck: 'rueck', streu: 'streu', nach: 'nach' } },
-  spektral: { proc: 'myzel-spek', name: 'Spektral-Nebel', i: 'Der Klang zerfließt in eine stehende Fläche – „Halten“ friert sie ein', keys: { zeit: 'szeit', hell: 'shell', halten: 'halten' } },
-  oktav: { proc: 'myzel-oktav', name: 'Oktav-Echo', i: 'Ein Echo im Takt, das sich mit jeder Wiederholung hochschraubt (oder hinab)', keys: { zeit: 'ozeit', nach: 'onach', schritt: 'schritt', hell: 'ohell' } },
-  harmo: { proc: 'myzel-harmo', name: 'Harmonizer', i: 'Bis zu drei Stimmen über oder unter dem Klang – in der Tonart (es hört, welcher Ton kommt) oder in Halbtönen; der Formant bleibt, eine Stimme klingt nicht nach Micky Maus', keys: { v1: 'hv1', v2: 'hv2', v3: 'hv3', modus: 'hmod', form: 'hform', breite: 'hbreit', schimmer: 'hschim' } },
-  vokal: { proc: 'myzel-vokal', name: 'Vokal-Filter', i: 'Der Klang spricht: drei Formanten gleiten durch a, e, i, o, u', keys: { vokal: 'vokal', bewegung: 'beweg', resonanz: 'reso', stimme: 'stimme' } },
+  netz: { proc: 'myzel-netz', name: 'Resonanz-Netz', i: 'Saiten, Glocken oder Holz auf der Tonleiter schwingen mit', keys: { art: 'art', klang: 'klang', hell: 'hell', breite: 'breite', ton: 'ton' } },
+  wolke: { proc: 'myzel-wolke', name: 'Wolke', i: 'Körner des Gespielten kehren im Takt zurück', keys: { dichte: 'dichte', zeit: 'zeit', hoehe: 'hoehe', rueck: 'rueck', streu: 'streu', nach: 'nach' } },
+  spektral: { proc: 'myzel-spek', name: 'Spektral-Nebel', i: 'Der Klang zerfließt zur stehenden Fläche', keys: { zeit: 'szeit', hell: 'shell', halten: 'halten' } },
+  oktav: { proc: 'myzel-oktav', name: 'Oktav-Echo', i: 'Ein Echo, das sich im Takt hochschraubt', keys: { zeit: 'ozeit', nach: 'onach', schritt: 'schritt', hell: 'ohell' } },
+  // (30.10.2026) Flechtwerk: a rhythmic weave – a Euclidean pattern on the Takt gates the sound and runs a filter through it
+  flecht: { proc: 'myzel-flecht', name: 'Flechtwerk', i: 'Ein Muster im Takt webt den Klang: Tore, Filterlauf, Seiten', keys: { steps: 'fsteps', schl: 'fschl', dreh: 'fdreh', raster: 'fraster', tiefe: 'ftiefe', filt: 'ffilt', weich: 'fweich', seite: 'fseite' } },
+  harmo: { proc: 'myzel-harmo', name: 'Harmonizer', i: 'Bis zu drei Stimmen in der Tonart oder in Halbtönen', keys: { v1: 'hv1', v2: 'hv2', v3: 'hv3', modus: 'hmod', form: 'hform', breite: 'hbreit', schimmer: 'hschim' } },
+  vokal: { proc: 'myzel-vokal', name: 'Vokal-Filter', i: 'Der Klang spricht: a, e, i, o, u', keys: { vokal: 'vokal', bewegung: 'beweg', resonanz: 'reso', stimme: 'stimme' } },
 };
 // T.keys: the processor's knob → the parameter's name after the return's prefix (r + '.')
 const fxSet = (T, r) => { const o = {}; for (const k in T.keys) { const v = P[r + '.' + T.keys[k]]; o[k] = v === 'ton' ? 1 : v === 'halb' ? 0 : +v; } return o; };   // (the Harmonizer's „Stimmen in“: Tonart 1, Halbtöne 0)
 const fxFreqs = () => [...new Set((N.notes || []).map((n) => +n.f.toFixed(2)))].slice(0, 12);
 const fxBeat = () => 60 / Math.max(20, P['seq.bpm'] || 90);
+// (30.10.2026) the Takt for the Flechtwerk: the frame of beat 0 and the frames per beat (none without a Takt: it runs free)
+const fxGrid = () => (A.ctx && typeof hxGrid === 'function' && hxGrid() && typeof tgTime === 'function' ? { f0: tgTime(0) * SR, fpb: (60 / tgBpm(A.ctx.currentTime)) * SR } : { f0: 0, fpb: 0 });
 const fxType = (r) => FX_TYPES[P[r + '.typ']] || FX_TYPES.netz;
 // a processor of the return r's effect (null without AudioWorklet)
 function fxNode(r) {
   if (!A.ctx.__dspOK) return null;
   const T = fxType(r);
-  try { return new AudioWorkletNode(A.ctx, T.proc, { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit', processorOptions: { set: fxSet(T, r), beat: fxBeat(), freqs: fxFreqs() } }); } catch (e) { return null; }
+  try { return new AudioWorkletNode(A.ctx, T.proc, { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit', processorOptions: { set: fxSet(T, r), beat: fxBeat(), freqs: fxFreqs(), grid: fxGrid() } }); } catch (e) { return null; }
 }
 // a slot (a return's, or a channel's Einschub) moves to a new processor: the new one fades in, the old one out and goes
 function fxSwap(S, from, to, typ) {
@@ -5354,9 +5368,18 @@ function fxUpd(r, force) {
 }
 // the scale and the beat, as they change (notes.js, the Puls) – to the returns and the Einschübe
 function fxTune() {
-  const m = { freqs: fxFreqs(), beat: fxBeat() };
+  const m = { freqs: fxFreqs(), beat: fxBeat(), grid: fxGrid() };
   for (const S of Object.values(A.fxR || {})) if (S.cur) S.cur.node.port.postMessage(m);
   for (const st of MIX.src) if (st.proc && st.proc.ins && st.proc.ins.cur) st.proc.ins.cur.node.port.postMessage(m);
+}
+// (30.10.2026: „auch durch den Filter und andere Bereiche jagen“) the return's way through a copy of the chain (the same
+// settings and modulators – makeChain lists it in A.chains, so every knob moves it too), ending in the sum
+function fxKetteIn() {
+  if (A.fxKette && A.fxKette.ctx === A.ctx) return A.fxKette.in;
+  const c = makeChain(); c.ctx = A.ctx;
+  updDrive(c); updRing(c); updFilter(c); updPhaser(c); updChorus(c);
+  c.out.connect(A.masterSum);
+  return (A.fxKette = c).in;
 }
 // what its details say: the effect's own sentence
 const fxText = (r = 'fx') => fxType(r).i;
@@ -5380,7 +5403,7 @@ function fxInsUpd(st, inst) {
 // through and cost next to nothing), the Begrenzer always
 // (29.10.2026: NV 16 of each fed by noise, two runs on this machine after the processors were made faster, the higher
 // + 15 %; Resonanz-Netz per Art – Saiten, Glocken, Holzkörper; Wolke at full density, the Begrenzer pressed)
-const FX_COST = { netz: [1.37, 1.58, 0.85], wolke: 4.52, spektral: 6.29, oktav: 1.05, vokal: 1.32, harmo: 7.5, trans: 0.47, sat: 1.41, lim: 1.23, komp: 1.1 };   // (komp 30.10.2026: fxkomp1 1.03 − hxz1 0.09 = 0.94, one run of 4 rounds + 15 %; a log and a pow per sample)
+const FX_COST = { netz: [1.37, 1.58, 0.85], wolke: 4.52, spektral: 6.29, oktav: 1.05, vokal: 1.32, harmo: 7.5, trans: 0.47, sat: 1.41, lim: 1.23, komp: 1.1, flecht: 1.1 };   // (flecht 30.10.2026: fxflecht1 1.02 − hxz1 0.075 = 0.95, one run of 4 rounds + 15 %; two state-variable filters and a pow per sample)   // (komp 30.10.2026: fxkomp1 1.03 − hxz1 0.09 = 0.94, one run of 4 rounds + 15 %; a log and a pow per sample)
 function fxLoad() {
   if (!A.fxR) return 0;
   const cost = (typ, r) => { const c = FX_COST[typ]; return Array.isArray(c) ? c[Math.round(+P[r + '.art']) || 0] || c[0] : c || 0; };
@@ -15097,7 +15120,8 @@ function myzelDsp() {
       const po = (o && o.processorOptions) || {};
       this.p = Object.assign({}, this.defaults(), po.set || {}); this.beat = po.beat || 0.5; this.freqs = po.freqs || [220, 247, 277, 330, 370, 440];
       this.quiet = 0; this.idle = false; this.alive = true;
-      this.port.onmessage = (e) => { const m = e.data || {}; if (m.kill) { this.alive = false; return; } if (m.set) for (const k in m.set) this.p[k] = +m.set[k]; if (m.beat) this.beat = Math.max(0.05, Math.min(4, +m.beat)); if (m.freqs && m.freqs.length) { this.freqs = m.freqs.slice(); this.tune && this.tune(); } };
+      this.port.onmessage = (e) => { const m = e.data || {}; if (m.kill) { this.alive = false; return; } if (m.set) for (const k in m.set) this.p[k] = +m.set[k]; if (m.beat) this.beat = Math.max(0.05, Math.min(4, +m.beat)); if (m.freqs && m.freqs.length) { this.freqs = m.freqs.slice(); this.tune && this.tune(); } if (m.grid) this.grid = m.grid; };
+      this.grid = po.grid || { f0: 0, fpb: 0 };   // (30.10.2026: the Takt – frame of beat 0, frames per beat; fpb 0: none)
     }
     defaults() { return {}; }
     process(inputs, outputs) {
@@ -15346,6 +15370,48 @@ function myzelDsp() {
     }
   }
 
+  // ---- Flechtwerk (owner, 30.10.2026: „ein weiterer kreativer Effekt, der sich für Myzel bestens eignet“): a rhythmic
+  // weave on the Takt. A Euclidean pattern (schl hits over steps steps, turned by dreh) in a grid of raster beats opens
+  // and closes a gate on the sound (tiefe: how far it closes; weich: the edges, 2 … 60 ms) – and runs a filter through
+  // the pattern (filt: a low pass that climbs from the first step to the last and falls back, up to 5 octaves) – and
+  // lays every other hit to the other side (seite). On the Taktgeber's grid (f0, fpb: the hits sit on the beats, with the
+  // Puls, the Schleifen, the Sporenwerk); without a Takt it runs free in the Puls's tempo. Wet only, as the other
+  // Wandel effects: with the dry sound it is a rhythmic second layer, through the Kette a moving one. ----
+  const fxEuclid = (k, n, rot) => { const p = []; let acc = 0; for (let i = 0; i < n; i++) { acc += k; if (acc >= n) { acc -= n; p.push(1); } else p.push(0); } const r = ((rot % n) + n) % n; return p.slice(n - r).concat(p.slice(0, n - r)); };
+  class Flecht extends FxBase {
+    defaults() { return { steps: 16, schl: 6, dreh: 0, raster: 0.25, tiefe: 0.8, filt: 0.5, weich: 0.3, seite: 0.5 }; }
+    constructor(o) {
+      super(o);
+      this.g = 1; this.gL = 1; this.gR = 1; this.fc = 2000; this.z = [0, 0, 0, 0]; this.free = 0; this.pat = null; this.pk = ''; this.step = -1; this.hit = 0;
+    }
+    pattern() { const p = this.p, n = [8, 12, 16].includes(Math.round(p.steps)) ? Math.round(p.steps) : 16, k = Math.max(1, Math.min(n, Math.round(p.schl))), key = n + ':' + k + ':' + Math.round(p.dreh); if (this.pk !== key) { this.pk = key; this.pat = fxEuclid(k, n, Math.round(p.dreh)); } return this.pat; }
+    run(iL, iR, oL, oR, n) {
+      const p = this.p, pat = this.pattern(), N = pat.length, rs = Math.max(0.1, +p.raster || 0.25), G = this.grid, fpb = G && G.fpb > 0 ? G.fpb : this.beat * SR, f0 = G && G.fpb > 0 ? G.f0 : 0;
+      const tw = 0.002 + 0.06 * p.weich, cg = 1 - Math.exp(-1 / (tw * SR)), cf = 1 - Math.exp(-1 / (0.004 * SR)), floor = 1 - p.tiefe;
+      const fMin = 250, oct = 5 * p.filt;
+      for (let i = 0; i < n; i++) {
+        const fr = G && G.fpb > 0 ? currentFrame + i - f0 : this.free++;
+        const b = fr / fpb, s = ((Math.floor(b / rs) % N) + N) % N;
+        if (s !== this.step) { this.step = s; if (pat[s]) this.hit++; }
+        const on = pat[s] === 1, want = on ? 1 : floor;
+        this.g += cg * (want - this.g);
+        // the filter: a low pass whose cutoff follows the pattern's place (up over its first half, down over its second)
+        const pos = s / N, tri = pos < 0.5 ? pos * 2 : 2 - pos * 2, fcT = p.filt > 0 ? fMin * Math.pow(2, oct * tri + (1 - p.filt) * 6.3) : 20000;
+        this.fc += cf * (Math.min(20000, fcT) - this.fc);
+        const k = Math.min(0.99, 2 * Math.sin(Math.PI * this.fc / SR)), z = this.z;
+        // the side: every other hit leans to the other side (equal power)
+        const side = on ? (this.hit % 2 ? 1 : -1) * p.seite * 0.5 : 0, aL = Math.cos((side + 0.5) * Math.PI / 2) * Math.SQRT2, aR = Math.sin((side + 0.5) * Math.PI / 2) * Math.SQRT2;
+        this.gL += cg * (aL - this.gL); this.gR += cg * (aR - this.gR);
+        let xl = iL ? iL[i] : 0, xr = iR ? iR[i] : 0;
+        if (p.filt > 0) {   // (two-pole state-variable low pass, the same on both sides)
+          z[0] += k * (xl - z[0]); z[1] += k * (z[0] - z[1]); xl = z[1];
+          z[2] += k * (xr - z[2]); z[3] += k * (z[2] - z[3]); xr = z[3];
+        }
+        oL[i] = xl * this.g * this.gL; oR[i] = xr * this.g * this.gR;
+      }
+      for (let j = 0; j < 4; j++) this.z[j] = flush(this.z[j]);
+    }
+  }
   // ---- Transienten-Former (a channel's insert, after its Sättigung – mixer/processing.js): two followers of the level (a
   // fast one, 0.5/20 ms, and a slow one, 15/800 ms – both sides at once); where the fast is above the slow a note begins,
   // where it is below it dies away. anschlag (−1 … 1): the beginnings louder or softer, ausklang (−1 … 1): the dying away
@@ -15512,7 +15578,7 @@ function myzelDsp() {
   }
   // an empty voice: the per-node price of the contract (SPEC §8 step 1 gate, ≈ 0.06 + 0.03 per param)
   class Null extends MyzelProc { render(L, R, a, b) { for (let i = a; i < b; i++) L[i] = 0; } }
-  for (const [k, C] of [['myzel-blow', Blow], ['myzel-scan', Scan], ['myzel-bow', Bow], ['myzel-rot', Rot], ['myzel-aeol', Aeol], ['myzel-gendy', Gendy], ['myzel-web', Web], ['myzel-string', Strg], ['myzel-syrinx', Syrinx], ['myzel-scrape', Scrape], ['myzel-ember', Ember], ['myzel-null', Null], ['myzel-ring', Ring], ['myzel-ring-in', RingIn], ['myzel-wsend', WSend], ['myzel-tfx', Tfx], ['myzel-hng', Hng], ['myzel-gml', Gml], ['myzel-sit', Sit], ['myzel-tbl', Tbl], ['myzel-did', Did], ['myzel-mtr', Mtr], ['myzel-nrd', Nrd], ['myzel-sht', Sht], ['myzel-ond', Ond], ['myzel-wal', Wal], ['myzel-stp', Stp], ['myzel-atr', Atr], ['myzel-tnl', Tnl], ['myzel-wkg', Wkg], ['myzel-bnt', Bnt], ['myzel-kas', Kas], ['myzel-bit', Bit], ['myzel-gbs', Gbs], ['myzel-hht', Hht], ['myzel-vox', Vox], ['myzel-spu', Spu], ['myzel-kto', Kto], ['myzel-sat', Sat], ['myzel-komp', Komp], ['myzel-lim', Lim], ['myzel-netz', Netz], ['myzel-wolke', Wolke], ['myzel-spek', Spektral], ['myzel-oktav', Oktav], ['myzel-vokal', Vokal], ['myzel-trans', Trans], ['myzel-harmo', Harmo]]) registerProcessor(k, C);
+  for (const [k, C] of [['myzel-blow', Blow], ['myzel-scan', Scan], ['myzel-bow', Bow], ['myzel-rot', Rot], ['myzel-aeol', Aeol], ['myzel-gendy', Gendy], ['myzel-web', Web], ['myzel-string', Strg], ['myzel-syrinx', Syrinx], ['myzel-scrape', Scrape], ['myzel-ember', Ember], ['myzel-null', Null], ['myzel-ring', Ring], ['myzel-ring-in', RingIn], ['myzel-wsend', WSend], ['myzel-tfx', Tfx], ['myzel-hng', Hng], ['myzel-gml', Gml], ['myzel-sit', Sit], ['myzel-tbl', Tbl], ['myzel-did', Did], ['myzel-mtr', Mtr], ['myzel-nrd', Nrd], ['myzel-sht', Sht], ['myzel-ond', Ond], ['myzel-wal', Wal], ['myzel-stp', Stp], ['myzel-atr', Atr], ['myzel-tnl', Tnl], ['myzel-wkg', Wkg], ['myzel-bnt', Bnt], ['myzel-kas', Kas], ['myzel-bit', Bit], ['myzel-gbs', Gbs], ['myzel-hht', Hht], ['myzel-vox', Vox], ['myzel-spu', Spu], ['myzel-kto', Kto], ['myzel-sat', Sat], ['myzel-komp', Komp], ['myzel-lim', Lim], ['myzel-netz', Netz], ['myzel-wolke', Wolke], ['myzel-spek', Spektral], ['myzel-oktav', Oktav], ['myzel-vokal', Vokal], ['myzel-flecht', Flecht], ['myzel-trans', Trans], ['myzel-harmo', Harmo]]) registerProcessor(k, C);
   return { SIN, NOISE, Reso, Biquad, Allpass1, OnePole, DcBlock, FracDelay, PRNG };   // (for later processors; unused here)
 }
 // end myzelDsp
@@ -16731,8 +16797,9 @@ function seqStart(b0 = 0, t0) {
   keepAwake();
   updPulsUI();
   clkOutStart(b0);
+  if (typeof fxTune === 'function') fxTune();   // (30.10.2026: the Flechtwerk's Takt)
 }
-function seqStop() { SEQ.on = false; SEQ.stopB = null; SEQ.lanes.forEach((L) => (L.cur = -1)); barRecue(); updPulsUI(); clkOutStop(); }
+function seqStop() { SEQ.on = false; SEQ.stopB = null; SEQ.lanes.forEach((L) => (L.cur = -1)); barRecue(); updPulsUI(); clkOutStop(); if (typeof fxTune === 'function') fxTune(); }   // (30.10.2026: the Flechtwerk's Takt)
 
 function rollInterval() { return (4 / Number(P['v.roll'])) * 60 / seqBpm(); }
 function rollTick(horizon) {
@@ -21135,8 +21202,7 @@ const MODT = {
   wow: { label: 'Leiern (Echo)', lo: 0, u: (v) => v * 0.004 },
   dly: { label: 'Echo-Anteil', u: mixRel('dly.mix') },
   rev: { label: 'Hall-Anteil', u: mixRel('rev.mix') },
-  fx: { label: 'Effekt-Anteil', u: mixRel('fx.mix') },   // (29.10.2026: the effect returns – mixer/effekt.js)
-  fx2: { label: 'Effekt-2-Anteil', u: mixRel('fx2.mix') },
+  fx: { label: 'Wandel-Anteil', u: mixRel('fx.mix') },   // (29.10.2026: the effect return – mixer/effekt.js)
   cho: { label: 'Schweben-Anteil', u: mixRel('cho.mix') },
   bor: { label: 'Bordun öffnen', u: (v) => v * 2400 },
   korD: { label: 'Körner-Dichte', js: 1 },
@@ -21168,7 +21234,7 @@ const FA = { t0: null, b0: 0, bpm: 84, d: 0, ph: 0, pon: false, lanes: new Map()
 // parameters with a counterpart in Formen: written down as they change (a knob, a slider), played back as that
 // counterpart's deflection – [target, scale ('log': in octaves), units of the target per unit]
 const FAE_PAR = { 'flt.freq': ['flt', 'log', 0.5], 'rng.freq': ['rng', 'log', 0.5], 'bor.cut': ['bor', 'log', 0.5], 'kor.dens': ['korD', 'log', 1 / 1.5],
-  'kor.scat': ['korS', 'lin', 2], 'trp.rain': ['trp', 'lin', 1 / 0.65], 'dly.mix': ['dly', 'lin', 1], 'rev.mix': ['rev', 'lin', 1], 'fx.mix': ['fx', 'lin', 1], 'fx2.mix': ['fx2', 'lin', 1], 'cho.mix': ['cho', 'lin', 1] };
+  'kor.scat': ['korS', 'lin', 2], 'trp.rain': ['trp', 'lin', 1 / 0.65], 'dly.mix': ['dly', 'lin', 1], 'rev.mix': ['rev', 'lin', 1], 'fx.mix': ['fx', 'lin', 1], 'cho.mix': ['cho', 'lin', 1] };
 // Körner-Dichte: ×0.35 … ×2.8 of the patch's grains per second
 const modKorD = (t) => Math.pow(2, 1.5 * modVal('korD', t));
 // one source's value at audio time t: a live one is constant; one set ahead runs linearly from point to point (0 before
@@ -21369,7 +21435,7 @@ function modNode(T) {
   if (T.k === 'rng') cs.connect(A.rngOsc.detune);
   else if (T.k === 'dly') cs.connect(A.dlySend.gain);
   else if (T.k === 'rev') cs.connect(A.revSend.gain);
-  else if (T.k === 'fx' || T.k === 'fx2') { cs.connect(A.fxR[T.k].send.gain); fxUpd(T.k, true); }   // (its processor, even while the patch's Anteil is 0)
+  else if (T.k === 'fx') { cs.connect(A.fxR[T.k].send.gain); fxUpd(T.k, true); }   // (its processor, even while the patch's Anteil is 0)
   else if (T.k === 'bor') { if (A.bor) cs.connect(A.bor.filt.detune); }
   else if (T.k === 'wow') {
     const w = G(0), f = G(0), s = G(0.15);   // flutter: 0.0006 for every 0.004 of wow, as updDelay
@@ -21434,7 +21500,7 @@ function mxoApply() {
   let solo = false, sends = false, mst = false, puls = false;
   for (const id of all) {
     const m = /^x(\w+)\.(\w+)$/.exec(id);
-    if (m) { strips.add(m[1]); if (m[2] === 'mute') solo = true; else if (m[2] === 'dly' || m[2] === 'rev' || m[2] === 'fx' || m[2] === 'fx2') sends = true; }
+    if (m) { strips.add(m[1]); if (m[2] === 'mute') solo = true; else if (m[2] === 'dly' || m[2] === 'rev' || m[2] === 'fx') sends = true; }
     else if (id.startsWith('mst.')) mst = true;
     else if (id === 'mix.pulsVol' || id === 'mix.pulsMute') puls = true;
   }
@@ -21578,7 +21644,7 @@ for (const k in MODT) midiTarget('mod.' + k, MODT[k].label, null, { group: MOD_G
 // Gestik's axes never write the patch: a parameter with a counterpart in Formen becomes that one, anything else that
 // would change the preset (parameters, the engine macros, steps of octave, tuning and tempo, the mixer's scenes) is
 // refused. Gestik's events (Wenden, Ruhe, Schütteln) are deliberate presses, like a pad.
-const MOD_EQ = { 'flt.freq': 'mod.flt', 'rng.freq': 'mod.rng', 'dly.wow': 'mod.wow', 'dly.mix': 'mod.dly', 'rev.mix': 'mod.rev', 'fx.mix': 'mod.fx', 'fx2.mix': 'mod.fx2', 'cho.mix': 'mod.cho', 'bor.cut': 'mod.bor',
+const MOD_EQ = { 'flt.freq': 'mod.flt', 'rng.freq': 'mod.rng', 'dly.wow': 'mod.wow', 'dly.mix': 'mod.dly', 'rev.mix': 'mod.rev', 'fx.mix': 'mod.fx', 'cho.mix': 'mod.cho', 'bor.cut': 'mod.bor',
   'kor.dens': 'mod.korD', 'kor.scat': 'mod.korS', 'trp.rain': 'mod.trp', 'gsp.kopplung': 'mod.gspK', 'rhz.reiz': 'mod.rhzR', morph: 'mod.morph', expr: 'expr' };
 const MOD_WRITES = new Set(['macro.a', 'macro.b', 'oct.up', 'oct.down', 'deg.up', 'deg.down', 'root.up', 'root.down', 'scale.up', 'scale.down', 'tap', 'scene.a', 'scene.b', 'scene.ab']);
 function gkTarget(key) {
@@ -24032,7 +24098,7 @@ function onParamChanged(id) {
     case 'dly': updDelay(); break;
     case 'rev': if (id === 'rev.size' || id === 'rev.damp' || id === 'rev.typ' || id === 'rev.dist' || id === 'rev.len') regenIR(); else updReverbMix(); break;
     case 'arp': if (id === 'arp.on') arpOn(P['arp.on']); else if (P['arp.on']) arpStart(); if (!P['arp.on'] || P['arp.quelle'] === 'spiel') arpLoopQuiet(); break;   // (the Sporenwerk – arp/sporenwerk.js)
-    case 'fx': case 'fx2': fxUpd(pre); if (id.endsWith('.hmod')) for (const v of ['hv1', 'hv2', 'hv3']) for (const fn of CTL[pre + '.' + v] || []) fn(P[pre + '.' + v], null); break;   // (the Harmonizer's voices named anew: steps or semitones)
+    case 'fx': fxUpd(pre); if (id === 'fx.weg' && A.ctx && MIX.s.fx) wireStrip(MIX.s.fx); if (id.endsWith('.hmod')) for (const v of ['hv1', 'hv2', 'hv3']) for (const fn of CTL[pre + '.' + v] || []) fn(P[pre + '.' + v], null); break;   // (the Harmonizer's voices named anew: steps or semitones)
     case 'mov': updMove(); break;
     case 'mst': updMaster(); break;
     case 'bor': updBordun(); break;
@@ -24175,7 +24241,6 @@ const FXM_ICO = {
   dly: fxmSvg('<path d="M4 6v12"/><path d="M9.5 8v8" opacity=".75"/><path d="M14.5 9.5v5" opacity=".5"/><path d="M19 11v2" opacity=".3"/>'),
   rev: fxmSvg('<path d="M4 19V11a8 8 0 0 1 16 0v8"/><path d="M8 19v-7a4 4 0 0 1 8 0v7" opacity=".55"/>'),
   fx: fxmSvg('<circle cx="8" cy="9" r="2.6"/><circle cx="15.5" cy="7.5" r="1.8"/><circle cx="14" cy="15" r="3.2"/><circle cx="6.5" cy="16.5" r="1.3"/>'),
-  fx2: fxmSvg('<circle cx="16" cy="9" r="2.6"/><circle cx="8.5" cy="7.5" r="1.8"/><circle cx="10" cy="15" r="3.2"/><circle cx="17.5" cy="16.5" r="1.3"/>'),
   mst: fxmSvg('<path d="M3 6c5 0 6 6 9 6M3 18c5 0 6-6 9-6h9"/><path d="M18 9l3 3-3 3"/>'),
 };
 // how strongly a module acts (0…1) – its node's glow, the card's light – and what its badge says
@@ -24604,7 +24669,7 @@ const mxMuteId = (k) => (k === 'puls' ? 'mix.pulsMute' : k === 'sum' ? null : 'x
 const mxSoloId = (k) => (k === 'puls' || k === 'sum' ? null : 'x' + k + '.solo');
 // what the second knob of every strip controls, chosen in the head: [suffix, chip label, printed name, colour]
 const MX_LAYERS = [['dly', 'Echo', 'Echo', '#6cc9ef'], ['rev', 'Hall', 'Hall', '#d6cbff'], ...FX_RETS.map(([r, name, col]) => [r, name, name, col]), ['duck', 'Pumpen', 'Pumpen', '#ff8f9e'], ['wid', 'Breite', 'Breite', '#f0e6d8']];
-const MX_LAYER_ARIA = { dly: 'Echo-Send', rev: 'Hall-Send', fx: 'Effekt-Send', fx2: 'Effekt-2-Send', duck: 'Pumpen', wid: 'Stereobreite' };
+const MX_LAYER_ARIA = { dly: 'Echo-Send', rev: 'Hall-Send', fx: 'Wandel-Send', duck: 'Pumpen', wid: 'Stereobreite' };
 const MX_BOR = { 1: '1:1', 1.5: '3:2', 1.3333: '4:3', 2: '2:1', 1.75: '7:4', 1.2: '6:5' };
 
 /* ---------- helpers ---------- */
@@ -24859,7 +24924,7 @@ function mxHits(dt) {
 /* ---------- knobs: gill fans ---------- */
 const MX_KA0 = -0.75 * Math.PI, MX_KA1 = 0.75 * Math.PI;
 const mxBip = (id) => /\.pan$/.test(id) || id === 'mst.low' || id === 'mst.high';
-const mxMark = (id) => (/^x\w+\.(wid|dly|rev|fx2?)$/.test(id) || id === 'mst.wid' ? 0.5 : null);
+const mxMark = (id) => (/^x\w+\.(wid|dly|rev|fx)$/.test(id) || id === 'mst.wid' ? 0.5 : null);
 function mxKnobTxt(id, v) {
   const key = id.slice(id.indexOf('.') + 1);
   if (id === 'mix.duckRel') return Math.round(v * 60 / Math.max(30, P['seq.bpm']) * 1000) + ' ms';
@@ -28539,15 +28604,17 @@ function mxdBuildWege() {
     S.el = h('div', { class: 'mxd-snd' }, S.K.box, h('div', { class: 'mxd-sx' }, S.t1, h('span', { class: 'mxd-eff', 'aria-hidden': 'true' }, S.bar), S.t2));
     return S;
   });
-  const opt = (v, t, d) => h('button', { type: 'button', role: 'radio', 'aria-checked': 'false', 'data-v': v, onclick: () => { const id = 'x' + MXD.k + '.route'; if (PD[id]) setParam(id, v); } }, h('b', null, t), h('small', null, d));
+  // (30.10.2026) the return „Wandel“ has a way of its own (fx.weg: through a copy of the chain, or straight)
+  const rid = () => (MXD.k === 'fx' ? 'fx.weg' : 'x' + MXD.k + '.route'), rv = (v) => (MXD.k === 'fx' ? (v === 'fx' ? 'kette' : 'dir') : v);
+  const opt = (v, t, d) => h('button', { type: 'button', role: 'radio', 'aria-checked': 'false', 'data-v': v, onclick: () => { const id = rid(); if (PD[id]) setParam(id, rv(v)); } }, h('b', null, t), h('small', null, d));
   W.rFx = opt('fx', 'Kette', ''); W.rDir = opt('dir', 'Direkt', 'an der Kette vorbei');
   W.rDir.title = 'Direkt in die Summe – Echo und Hall bekommen den Kanal trocken';
   W.route = h('div', { class: 'mxd-route', role: 'radiogroup', 'aria-label': 'Weg in die Summe' }, W.rFx, W.rDir);
   W.route.addEventListener('keydown', (e) => {
     if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
-    const id = 'x' + MXD.k + '.route';
+    const id = rid();
     if (!PD[id]) return;
-    e.preventDefault(); setParam(id, P[id] === 'dir' ? 'fx' : 'dir'); (P[id] === 'dir' ? W.rDir : W.rFx).focus();
+    e.preventDefault(); setParam(id, P[id] === 'dir' ? rv('fx') : 'dir'); (P[id] === 'dir' ? W.rDir : W.rFx).focus();
   });
   W.ret = h('p', { class: 'mxd-note' });
   W.grpV = h('b');
@@ -28564,15 +28631,16 @@ function mxdWegeAim(k) {
   const W = MXD.wg, c = MXK[k];
   W.fd.set(k);
   mxdAim(W.bal, k, 'x' + k + '.pan', 'Balance', 'Balance', c.col);
-  mxdWatch('x' + k + '.mute', 'x' + k + '.solo', 'x' + k + '.route', 'x' + k + '.dly', 'x' + k + '.rev', ...FX_RETS.map(([r]) => 'x' + k + '.' + r));
+  mxdWatch('x' + k + '.mute', 'x' + k + '.solo', 'x' + k + '.route', 'fx.weg', 'x' + k + '.dly', 'x' + k + '.rev', ...FX_RETS.map(([r]) => 'x' + k + '.' + r));
   // (30.10.2026) the Hexenring's way means its Schleifen's: Kette – all follow the live chain; Direkt – each as set (burnt in)
-  const hx = k === 'hxr';
-  W.rFx.querySelector('small').textContent = hx ? 'alle Schleifen folgen ihr' : ''; W.rDir.querySelector('small').textContent = hx ? 'jede wie eingestellt' : 'an der Kette vorbei';
-  W.rFx.title = hx ? 'Kette: jede Schleife folgt der Effektkette – Regler und Presets wirken auf sie' : ''; W.rDir.title = hx ? 'Direkt: jede Schleife wie in ihrem Kanal eingestellt (K) – eingebrannt klingt sie wie aufgenommen' : 'Direkt in die Summe – Echo und Hall bekommen den Kanal trocken';
+  const hx = k === 'hxr', wd = k === 'fx';
+  W.rFx.querySelector('small').textContent = hx ? 'alle Schleifen folgen ihr' : wd ? 'durch Filter, Phaser & Co.' : ''; W.rDir.querySelector('small').textContent = hx ? 'jede wie eingestellt' : 'an der Kette vorbei';
+  W.rFx.title = hx ? 'Kette: jede Schleife folgt der Effektkette – Regler und Presets wirken auf sie' : wd ? 'Durch eine Kopie der Effektkette (Verzerrung, Ring, Filter, Phaser, Schweben – dieselben Regler)' : ''; W.rDir.title = hx ? 'Direkt: jede Schleife wie in ihrem Kanal eingestellt (K) – eingebrannt klingt sie wie aufgenommen' : 'Direkt in die Summe – Echo und Hall bekommen den Kanal trocken';
   const [s0, s1, ...sx] = W.slots;
   if (c.kind === 'ret') {
     mxdAim(s0.K, k, k + '.mix', 'Anteil', 'Anteil – wie viel alle Kanäle hineinschicken', c.col);
     if (k !== 'rev') mxdAim(s1.K, k, 'x' + k + '.rev', 'Hall', 'in den Hall', '#d6cbff');
+    if (k === 'fx') { const r = P['fx.weg'] === 'kette' ? 'fx' : 'dir'; W.rFx.setAttribute('aria-checked', String(r === 'fx')); W.rDir.setAttribute('aria-checked', String(r === 'dir')); W.rFx.tabIndex = r === 'fx' ? 0 : -1; W.rDir.tabIndex = r === 'dir' ? 0 : -1; W.rFx.lastChild.textContent = 'durch Filter, Phaser & Co.'; }
   } else {
     mxdAim(s0.K, k, 'x' + k + '.dly', 'Echo', 'Echo-Send', '#6cc9ef');
     mxdAim(s1.K, k, 'x' + k + '.rev', 'Hall', 'Hall-Send', '#d6cbff');
@@ -28580,7 +28648,7 @@ function mxdWegeAim(k) {
   }
   s1.el.hidden = k === 'rev';
   for (const S of sx) S.el.hidden = c.kind === 'ret';
-  W.route.hidden = c.kind === 'ret'; W.ret.hidden = c.kind !== 'ret'; W.grp.hidden = c.kind !== 'lane';
+  W.route.hidden = c.kind === 'ret' && k !== 'fx'; W.ret.hidden = c.kind !== 'ret'; W.grp.hidden = c.kind !== 'lane';
   W.mb.setAttribute('aria-label', c.name + ' stumm'); W.sb.setAttribute('aria-label', c.name + ' solo');
 }
 // the texts of the Wege: what a send really is ("140 % von 35 % Echo-Anteil = 49 %"), which way the channel takes
@@ -29037,7 +29105,7 @@ function mxdOpen(k, first) {
     const q = mxdQuelle(k);
     if (q.parentNode !== MXD.quSec) { const old = MXD.quSec.querySelector('.mxd-qbody'); if (old) old.remove(); MXD.quSec.append(q); }
     if (q.sync) q.sync();
-    MXD.quSub.textContent = { fin: 'was die Spielfläche spielt', eb2: 'der zweite Klang auf jedem Finger', eb3: 'der dritte Klang auf jedem Finger', eb4: 'der vierte Klang auf jedem Finger', eb5: 'der fünfte Klang auf jedem Finger', eb6: 'der sechste Klang auf jedem Finger', eb7: 'der siebte Klang auf jedem Finger', eb8: 'der achte Klang auf jedem Finger', rgn: 'der Sporenregen aus deinen Tönen', bor: 'der liegende Grundton', dly: 'das Bandecho', rev: 'der erzeugte Raum', fx: 'der Effekt-Rückweg', fx2: 'der zweite Effekt-Rückweg' }[k] || 'Rhythmus und Ton der Spur';
+    MXD.quSub.textContent = { fin: 'was die Spielfläche spielt', eb2: 'der zweite Klang auf jedem Finger', eb3: 'der dritte Klang auf jedem Finger', eb4: 'der vierte Klang auf jedem Finger', eb5: 'der fünfte Klang auf jedem Finger', eb6: 'der sechste Klang auf jedem Finger', eb7: 'der siebte Klang auf jedem Finger', eb8: 'der achte Klang auf jedem Finger', rgn: 'der Sporenregen aus deinen Tönen', bor: 'der liegende Grundton', dly: 'das Bandecho', rev: 'der erzeugte Raum', fx: 'der Wandel – ein Effekt, in den jeder Kanal sendet' }[k] || 'Rhythmus und Ton der Spur';
   } else if (page === 'puls') { MXD.pu.fd.set('puls'); mxdAim(MXD.pu.rel, 'puls', 'mix.duckRel', 'Rückkehr', 'Pumpen: Rückkehr, für alle Kanäle', '#ff8f9e'); }
   else mxdSumAim();
   MXD.dirty = true;
@@ -30450,12 +30518,12 @@ function buildFx() {
     h('p', { class: 'note' }, 'Ab 100 % Rückkopplung schwillt das Echo von selbst an, die Bandsättigung begrenzt es. „Einfrieren“ (Schneeflocke oben) hält die aktuelle Schleife endlos fest; „Stille“ leert sie.')));
   box.append(modul('rev', 'Erzeugter Raum', grid(ctl('rev.mix'), ctl('rev.size'), ctl('rev.damp'), ctl('rev.pre'))));
   // (owner, 30.10.2026: „Ich hab gestern einen Harmonizer in Auftrag gegeben. Wo ist der eigentlich zu finden?“) the
-  // returns „Effekt“ and „Effekt 2“ – until now only in the mixer's return channels: here too, the same settings
+  // return „Wandel“ – until now only in the mixer's return channel: here too, the same settings
   for (const [r] of FX_RETS) {
     const grids = {}, txt = h('p', { class: 'note' }), upd = () => { const T = FX_TYPES[P[r + '.typ']] || FX_TYPES.netz; for (const t in grids) grids[t].hidden = t !== P[r + '.typ']; txt.textContent = T.i + '.'; };
     for (const t in FX_TYPES) grids[t] = grid(...Object.values(FX_TYPES[t].keys).map((id) => ctl(r + '.' + id)));
     bindCtl(r + '.typ', upd); upd();
-    box.append(modul(r, 'Resonanz-Netz, Wolke, Spektral-Nebel, Oktav-Echo, Vokal-Filter oder Harmonizer – jeder Kanal sendet hinein (Mixer)', ctl(r + '.typ'), txt, grid(ctl(r + '.mix')), ...Object.values(grids)));
+    box.append(modul(r, 'Ein wählbarer Effekt – jeder Kanal sendet hinein', ctl(r + '.typ'), txt, grid(ctl(r + '.mix'), ctl(r + '.weg')), ...Object.values(grids)));
   }
   box.append(fxmGroup('ausgang'));
   box.append(modul('mst', 'Klangregelung, Kompressor, Sättigung', grid(ctl('mst.low'), ctl('mst.high'), ctl('mst.comp'), ctl('mst.vol')),
@@ -34690,6 +34758,7 @@ function tgRetempo(bpm, at) {
   if (!A.ctx) { TG.seg = [{ t: 0, b: 0, bpm }]; TG.ver++; return; }
   const now = A.ctx.currentTime;
   tgAdd(Math.max(now, at != null ? at : now + TG_LEAD), bpm);
+  if (typeof fxTune === 'function') fxTune();   // (30.10.2026: the Flechtwerk follows the Takt)
 }
 // a new origin: musical beat b0 sounds at t0 (a Puls start, a device's Start or Continue); returns the shift of the count
 function tgRebase(b0, t0) { const o = TG.o; TG.o = tgCb(t0) - b0; TG.ver++; TG.anc = { t: t0, b: b0 }; return TG.o - o; }

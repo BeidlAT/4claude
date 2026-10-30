@@ -45,7 +45,7 @@ const mxMuteId = (k) => (k === 'puls' ? 'mix.pulsMute' : k === 'sum' ? null : 'x
 const mxSoloId = (k) => (k === 'puls' || k === 'sum' ? null : 'x' + k + '.solo');
 // what the second knob of every strip controls, chosen in the head: [suffix, chip label, printed name, colour]
 const MX_LAYERS = [['dly', 'Echo', 'Echo', '#6cc9ef'], ['rev', 'Hall', 'Hall', '#d6cbff'], ...FX_RETS.map(([r, name, col]) => [r, name, name, col]), ['duck', 'Pumpen', 'Pumpen', '#ff8f9e'], ['wid', 'Breite', 'Breite', '#f0e6d8']];
-const MX_LAYER_ARIA = { dly: 'Echo-Send', rev: 'Hall-Send', fx: 'Effekt-Send', fx2: 'Effekt-2-Send', duck: 'Pumpen', wid: 'Stereobreite' };
+const MX_LAYER_ARIA = { dly: 'Echo-Send', rev: 'Hall-Send', fx: 'Wandel-Send', duck: 'Pumpen', wid: 'Stereobreite' };
 const MX_BOR = { 1: '1:1', 1.5: '3:2', 1.3333: '4:3', 2: '2:1', 1.75: '7:4', 1.2: '6:5' };
 
 /* ---------- helpers ---------- */

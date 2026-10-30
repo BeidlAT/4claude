@@ -12,15 +12,17 @@ function mxdBuildWege() {
     S.el = h('div', { class: 'mxd-snd' }, S.K.box, h('div', { class: 'mxd-sx' }, S.t1, h('span', { class: 'mxd-eff', 'aria-hidden': 'true' }, S.bar), S.t2));
     return S;
   });
-  const opt = (v, t, d) => h('button', { type: 'button', role: 'radio', 'aria-checked': 'false', 'data-v': v, onclick: () => { const id = 'x' + MXD.k + '.route'; if (PD[id]) setParam(id, v); } }, h('b', null, t), h('small', null, d));
+  // (30.10.2026) the return „Wandel“ has a way of its own (fx.weg: through a copy of the chain, or straight)
+  const rid = () => (MXD.k === 'fx' ? 'fx.weg' : 'x' + MXD.k + '.route'), rv = (v) => (MXD.k === 'fx' ? (v === 'fx' ? 'kette' : 'dir') : v);
+  const opt = (v, t, d) => h('button', { type: 'button', role: 'radio', 'aria-checked': 'false', 'data-v': v, onclick: () => { const id = rid(); if (PD[id]) setParam(id, rv(v)); } }, h('b', null, t), h('small', null, d));
   W.rFx = opt('fx', 'Kette', ''); W.rDir = opt('dir', 'Direkt', 'an der Kette vorbei');
   W.rDir.title = 'Direkt in die Summe – Echo und Hall bekommen den Kanal trocken';
   W.route = h('div', { class: 'mxd-route', role: 'radiogroup', 'aria-label': 'Weg in die Summe' }, W.rFx, W.rDir);
   W.route.addEventListener('keydown', (e) => {
     if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
-    const id = 'x' + MXD.k + '.route';
+    const id = rid();
     if (!PD[id]) return;
-    e.preventDefault(); setParam(id, P[id] === 'dir' ? 'fx' : 'dir'); (P[id] === 'dir' ? W.rDir : W.rFx).focus();
+    e.preventDefault(); setParam(id, P[id] === 'dir' ? rv('fx') : 'dir'); (P[id] === 'dir' ? W.rDir : W.rFx).focus();
   });
   W.ret = h('p', { class: 'mxd-note' });
   W.grpV = h('b');
@@ -37,15 +39,16 @@ function mxdWegeAim(k) {
   const W = MXD.wg, c = MXK[k];
   W.fd.set(k);
   mxdAim(W.bal, k, 'x' + k + '.pan', 'Balance', 'Balance', c.col);
-  mxdWatch('x' + k + '.mute', 'x' + k + '.solo', 'x' + k + '.route', 'x' + k + '.dly', 'x' + k + '.rev', ...FX_RETS.map(([r]) => 'x' + k + '.' + r));
+  mxdWatch('x' + k + '.mute', 'x' + k + '.solo', 'x' + k + '.route', 'fx.weg', 'x' + k + '.dly', 'x' + k + '.rev', ...FX_RETS.map(([r]) => 'x' + k + '.' + r));
   // (30.10.2026) the Hexenring's way means its Schleifen's: Kette – all follow the live chain; Direkt – each as set (burnt in)
-  const hx = k === 'hxr';
-  W.rFx.querySelector('small').textContent = hx ? 'alle Schleifen folgen ihr' : ''; W.rDir.querySelector('small').textContent = hx ? 'jede wie eingestellt' : 'an der Kette vorbei';
-  W.rFx.title = hx ? 'Kette: jede Schleife folgt der Effektkette – Regler und Presets wirken auf sie' : ''; W.rDir.title = hx ? 'Direkt: jede Schleife wie in ihrem Kanal eingestellt (K) – eingebrannt klingt sie wie aufgenommen' : 'Direkt in die Summe – Echo und Hall bekommen den Kanal trocken';
+  const hx = k === 'hxr', wd = k === 'fx';
+  W.rFx.querySelector('small').textContent = hx ? 'alle Schleifen folgen ihr' : wd ? 'durch Filter, Phaser & Co.' : ''; W.rDir.querySelector('small').textContent = hx ? 'jede wie eingestellt' : 'an der Kette vorbei';
+  W.rFx.title = hx ? 'Kette: jede Schleife folgt der Effektkette – Regler und Presets wirken auf sie' : wd ? 'Durch eine Kopie der Effektkette (Verzerrung, Ring, Filter, Phaser, Schweben – dieselben Regler)' : ''; W.rDir.title = hx ? 'Direkt: jede Schleife wie in ihrem Kanal eingestellt (K) – eingebrannt klingt sie wie aufgenommen' : 'Direkt in die Summe – Echo und Hall bekommen den Kanal trocken';
   const [s0, s1, ...sx] = W.slots;
   if (c.kind === 'ret') {
     mxdAim(s0.K, k, k + '.mix', 'Anteil', 'Anteil – wie viel alle Kanäle hineinschicken', c.col);
     if (k !== 'rev') mxdAim(s1.K, k, 'x' + k + '.rev', 'Hall', 'in den Hall', '#d6cbff');
+    if (k === 'fx') { const r = P['fx.weg'] === 'kette' ? 'fx' : 'dir'; W.rFx.setAttribute('aria-checked', String(r === 'fx')); W.rDir.setAttribute('aria-checked', String(r === 'dir')); W.rFx.tabIndex = r === 'fx' ? 0 : -1; W.rDir.tabIndex = r === 'dir' ? 0 : -1; W.rFx.lastChild.textContent = 'durch Filter, Phaser & Co.'; }
   } else {
     mxdAim(s0.K, k, 'x' + k + '.dly', 'Echo', 'Echo-Send', '#6cc9ef');
     mxdAim(s1.K, k, 'x' + k + '.rev', 'Hall', 'Hall-Send', '#d6cbff');
@@ -53,7 +56,7 @@ function mxdWegeAim(k) {
   }
   s1.el.hidden = k === 'rev';
   for (const S of sx) S.el.hidden = c.kind === 'ret';
-  W.route.hidden = c.kind === 'ret'; W.ret.hidden = c.kind !== 'ret'; W.grp.hidden = c.kind !== 'lane';
+  W.route.hidden = c.kind === 'ret' && k !== 'fx'; W.ret.hidden = c.kind !== 'ret'; W.grp.hidden = c.kind !== 'lane';
   W.mb.setAttribute('aria-label', c.name + ' stumm'); W.sb.setAttribute('aria-label', c.name + ' solo');
 }
 // the texts of the Wege: what a send really is ("140 % von 35 % Echo-Anteil = 49 %"), which way the channel takes

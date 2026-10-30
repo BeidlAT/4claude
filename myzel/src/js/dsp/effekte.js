@@ -18,7 +18,8 @@
       const po = (o && o.processorOptions) || {};
       this.p = Object.assign({}, this.defaults(), po.set || {}); this.beat = po.beat || 0.5; this.freqs = po.freqs || [220, 247, 277, 330, 370, 440];
       this.quiet = 0; this.idle = false; this.alive = true;
-      this.port.onmessage = (e) => { const m = e.data || {}; if (m.kill) { this.alive = false; return; } if (m.set) for (const k in m.set) this.p[k] = +m.set[k]; if (m.beat) this.beat = Math.max(0.05, Math.min(4, +m.beat)); if (m.freqs && m.freqs.length) { this.freqs = m.freqs.slice(); this.tune && this.tune(); } };
+      this.port.onmessage = (e) => { const m = e.data || {}; if (m.kill) { this.alive = false; return; } if (m.set) for (const k in m.set) this.p[k] = +m.set[k]; if (m.beat) this.beat = Math.max(0.05, Math.min(4, +m.beat)); if (m.freqs && m.freqs.length) { this.freqs = m.freqs.slice(); this.tune && this.tune(); } if (m.grid) this.grid = m.grid; };
+      this.grid = po.grid || { f0: 0, fpb: 0 };   // (30.10.2026: the Takt – frame of beat 0, frames per beat; fpb 0: none)
     }
     defaults() { return {}; }
     process(inputs, outputs) {
@@ -267,6 +268,48 @@
     }
   }
 
+  // ---- Flechtwerk (owner, 30.10.2026: „ein weiterer kreativer Effekt, der sich für Myzel bestens eignet“): a rhythmic
+  // weave on the Takt. A Euclidean pattern (schl hits over steps steps, turned by dreh) in a grid of raster beats opens
+  // and closes a gate on the sound (tiefe: how far it closes; weich: the edges, 2 … 60 ms) – and runs a filter through
+  // the pattern (filt: a low pass that climbs from the first step to the last and falls back, up to 5 octaves) – and
+  // lays every other hit to the other side (seite). On the Taktgeber's grid (f0, fpb: the hits sit on the beats, with the
+  // Puls, the Schleifen, the Sporenwerk); without a Takt it runs free in the Puls's tempo. Wet only, as the other
+  // Wandel effects: with the dry sound it is a rhythmic second layer, through the Kette a moving one. ----
+  const fxEuclid = (k, n, rot) => { const p = []; let acc = 0; for (let i = 0; i < n; i++) { acc += k; if (acc >= n) { acc -= n; p.push(1); } else p.push(0); } const r = ((rot % n) + n) % n; return p.slice(n - r).concat(p.slice(0, n - r)); };
+  class Flecht extends FxBase {
+    defaults() { return { steps: 16, schl: 6, dreh: 0, raster: 0.25, tiefe: 0.8, filt: 0.5, weich: 0.3, seite: 0.5 }; }
+    constructor(o) {
+      super(o);
+      this.g = 1; this.gL = 1; this.gR = 1; this.fc = 2000; this.z = [0, 0, 0, 0]; this.free = 0; this.pat = null; this.pk = ''; this.step = -1; this.hit = 0;
+    }
+    pattern() { const p = this.p, n = [8, 12, 16].includes(Math.round(p.steps)) ? Math.round(p.steps) : 16, k = Math.max(1, Math.min(n, Math.round(p.schl))), key = n + ':' + k + ':' + Math.round(p.dreh); if (this.pk !== key) { this.pk = key; this.pat = fxEuclid(k, n, Math.round(p.dreh)); } return this.pat; }
+    run(iL, iR, oL, oR, n) {
+      const p = this.p, pat = this.pattern(), N = pat.length, rs = Math.max(0.1, +p.raster || 0.25), G = this.grid, fpb = G && G.fpb > 0 ? G.fpb : this.beat * SR, f0 = G && G.fpb > 0 ? G.f0 : 0;
+      const tw = 0.002 + 0.06 * p.weich, cg = 1 - Math.exp(-1 / (tw * SR)), cf = 1 - Math.exp(-1 / (0.004 * SR)), floor = 1 - p.tiefe;
+      const fMin = 250, oct = 5 * p.filt;
+      for (let i = 0; i < n; i++) {
+        const fr = G && G.fpb > 0 ? currentFrame + i - f0 : this.free++;
+        const b = fr / fpb, s = ((Math.floor(b / rs) % N) + N) % N;
+        if (s !== this.step) { this.step = s; if (pat[s]) this.hit++; }
+        const on = pat[s] === 1, want = on ? 1 : floor;
+        this.g += cg * (want - this.g);
+        // the filter: a low pass whose cutoff follows the pattern's place (up over its first half, down over its second)
+        const pos = s / N, tri = pos < 0.5 ? pos * 2 : 2 - pos * 2, fcT = p.filt > 0 ? fMin * Math.pow(2, oct * tri + (1 - p.filt) * 6.3) : 20000;
+        this.fc += cf * (Math.min(20000, fcT) - this.fc);
+        const k = Math.min(0.99, 2 * Math.sin(Math.PI * this.fc / SR)), z = this.z;
+        // the side: every other hit leans to the other side (equal power)
+        const side = on ? (this.hit % 2 ? 1 : -1) * p.seite * 0.5 : 0, aL = Math.cos((side + 0.5) * Math.PI / 2) * Math.SQRT2, aR = Math.sin((side + 0.5) * Math.PI / 2) * Math.SQRT2;
+        this.gL += cg * (aL - this.gL); this.gR += cg * (aR - this.gR);
+        let xl = iL ? iL[i] : 0, xr = iR ? iR[i] : 0;
+        if (p.filt > 0) {   // (two-pole state-variable low pass, the same on both sides)
+          z[0] += k * (xl - z[0]); z[1] += k * (z[0] - z[1]); xl = z[1];
+          z[2] += k * (xr - z[2]); z[3] += k * (z[2] - z[3]); xr = z[3];
+        }
+        oL[i] = xl * this.g * this.gL; oR[i] = xr * this.g * this.gR;
+      }
+      for (let j = 0; j < 4; j++) this.z[j] = flush(this.z[j]);
+    }
+  }
   // ---- Transienten-Former (a channel's insert, after its Sättigung – mixer/processing.js): two followers of the level (a
   // fast one, 0.5/20 ms, and a slow one, 15/800 ms – both sides at once); where the fast is above the slow a note begins,
   // where it is below it dies away. anschlag (−1 … 1): the beginnings louder or softer, ausklang (−1 … 1): the dying away

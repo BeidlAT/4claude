@@ -84,7 +84,7 @@ function gates(st, set) {
 }
 // dry path: through the insert chain or straight into the sum; a move fades the channel out and back in
 function wireStrip(st) {
-  const want = () => (st.k === 'hxr' ? hxRoute() : !st.ret && P['x' + st.k + '.route'] !== 'dir' ? A.voiceBus : A.masterSum);   // Hexenring: never into A.masterSum
+  const want = () => (st.k === 'hxr' ? hxRoute() : st.k === 'fx' ? (P['fx.weg'] === 'kette' ? fxKetteIn() : A.masterSum) : !st.ret && P['x' + st.k + '.route'] !== 'dir' ? A.voiceBus : A.masterSum);   // Hexenring: never into A.masterSum; Wandel: its own way (effekt.js)
   if (st.dTo === want()) return;
   if (st.k === 'hxr' && IDLE.hxOff) hxGates(true);   // Ruhe: through the chain's copy, the processor's zeros run as before
   if (!st.dTo) { st.dTo = want(); st.dry.connect(st.dTo); return; }

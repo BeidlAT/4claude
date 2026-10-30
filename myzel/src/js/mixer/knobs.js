@@ -1,7 +1,7 @@
 /* ---------- knobs: gill fans ---------- */
 const MX_KA0 = -0.75 * Math.PI, MX_KA1 = 0.75 * Math.PI;
 const mxBip = (id) => /\.pan$/.test(id) || id === 'mst.low' || id === 'mst.high';
-const mxMark = (id) => (/^x\w+\.(wid|dly|rev|fx2?)$/.test(id) || id === 'mst.wid' ? 0.5 : null);
+const mxMark = (id) => (/^x\w+\.(wid|dly|rev|fx)$/.test(id) || id === 'mst.wid' ? 0.5 : null);
 function mxKnobTxt(id, v) {
   const key = id.slice(id.indexOf('.') + 1);
   if (id === 'mix.duckRel') return Math.round(v * 60 / Math.max(30, P['seq.bpm']) * 1000) + ' ms';

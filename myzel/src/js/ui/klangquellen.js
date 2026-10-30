@@ -477,12 +477,12 @@ function buildFx() {
     h('p', { class: 'note' }, 'Ab 100 % Rückkopplung schwillt das Echo von selbst an, die Bandsättigung begrenzt es. „Einfrieren“ (Schneeflocke oben) hält die aktuelle Schleife endlos fest; „Stille“ leert sie.')));
   box.append(modul('rev', 'Erzeugter Raum', grid(ctl('rev.mix'), ctl('rev.size'), ctl('rev.damp'), ctl('rev.pre'))));
   // (owner, 30.10.2026: „Ich hab gestern einen Harmonizer in Auftrag gegeben. Wo ist der eigentlich zu finden?“) the
-  // returns „Effekt“ and „Effekt 2“ – until now only in the mixer's return channels: here too, the same settings
+  // return „Wandel“ – until now only in the mixer's return channel: here too, the same settings
   for (const [r] of FX_RETS) {
     const grids = {}, txt = h('p', { class: 'note' }), upd = () => { const T = FX_TYPES[P[r + '.typ']] || FX_TYPES.netz; for (const t in grids) grids[t].hidden = t !== P[r + '.typ']; txt.textContent = T.i + '.'; };
     for (const t in FX_TYPES) grids[t] = grid(...Object.values(FX_TYPES[t].keys).map((id) => ctl(r + '.' + id)));
     bindCtl(r + '.typ', upd); upd();
-    box.append(modul(r, 'Resonanz-Netz, Wolke, Spektral-Nebel, Oktav-Echo, Vokal-Filter oder Harmonizer – jeder Kanal sendet hinein (Mixer)', ctl(r + '.typ'), txt, grid(ctl(r + '.mix')), ...Object.values(grids)));
+    box.append(modul(r, 'Ein wählbarer Effekt – jeder Kanal sendet hinein', ctl(r + '.typ'), txt, grid(ctl(r + '.mix'), ctl(r + '.weg')), ...Object.values(grids)));
   }
   box.append(fxmGroup('ausgang'));
   box.append(modul('mst', 'Klangregelung, Kompressor, Sättigung', grid(ctl('mst.low'), ctl('mst.high'), ctl('mst.comp'), ctl('mst.vol')),

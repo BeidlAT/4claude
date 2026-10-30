@@ -2,6 +2,15 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-30n",
+      "punkte": [
+        "Statt „Effekt“ und „Effekt 2“ gibt es einen Rückweg „Wandel“ – mit kurzen Beschreibungen der Effekte, die nicht mehr abgeschnitten werden.",
+        "Der Wandel kann auf Wunsch durch Filter, Phaser, Verzerrung und die ganze Effektkette laufen („Durch die Kette“) statt direkt in die Summe.",
+        "Neuer Effekt „Flechtwerk“: ein Muster im Takt (euklidisch, 8/12/16 Schritte, Schläge, Drehung, Raster bis zur Triole) webt den Klang – Tore, ein Filterlauf durchs Muster, Seiten im Wechsel. Es sitzt auf dem Puls und den Schleifen.",
+        "Alte Presets mit zwei Effekten laden weiter; der zweite Send entfällt."
+      ]
+    },
+    {
       "id": "2026-10-30m",
       "punkte": [
         "Eigene Presets lassen sich überschreiben: in der Liste hat jedes Preset „Überschreiben“ – beim geladenen mit einem Tipp (oder Strg+S), bei anderen mit Nachfrage.",
