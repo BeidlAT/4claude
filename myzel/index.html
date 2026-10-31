@@ -3420,7 +3420,7 @@ SEL('midi.clock', 'Tempo vom Gerät (MIDI-Clock)', [['off', 'Aus'], ['follow', '
 SEL('midi.ble', 'Bluetooth-Timing', [['direct', 'Direkt'], ['even', 'Gleichmäßig']], 'direct', { chips: 1, dev: 1 });
 BOOL('midi.pads', 'Pads als Auslöser', false, { dev: 1 });
 BOOL('midi.std', 'Standard-Zuordnungen', true, { dev: 1 });
-SEL('midi.tch', 'Touché-Spielweise', [['finger', 'Finger'], ['atem', 'Atem'], ['raum', 'Raum'], ['verw', 'Verwandlung'], ['gleiten', 'Gleiten'], ['streichen', 'Streichen'], ['platte', 'Platte'], ['vokal', 'Vokal'], ['koerner', 'Körner'], ['eis', 'Eis'], ['oberton', 'Obertöne'], ['faecher', 'Fächer'], ['ort', 'Ort'], ['stottern', 'Stottern'], ['resonanz', 'Resonanz'], ['arp', 'Arpeggio']], 'finger', { chips: 1, dev: 1 });   // (Expressive E Touché, js/midi/touche.js)
+SEL('midi.tch', 'Touché-Spielweise', [['finger', 'Finger'], ['atem', 'Atem'], ['raum', 'Raum'], ['verw', 'Verwandlung'], ['gleiten', 'Gleiten'], ['streichen', 'Streichen'], ['platte', 'Platte'], ['vokal', 'Vokal'], ['koerner', 'Körner'], ['eis', 'Eis'], ['oberton', 'Obertöne'], ['faecher', 'Fächer'], ['ort', 'Ort'], ['stottern', 'Stottern'], ['resonanz', 'Resonanz'], ['arp', 'Arpeggio'], ['gestik', 'Gestik']], 'finger', { chips: 1, dev: 1 });   // (Expressive E Touché, js/midi/touche.js)
 
 const GROUP = {
   v: 'Spielweise', t: 'Stimmung', neb: 'Nebel', kor: 'Körner', hau: 'Hauch', glo: 'Glocke', mem: 'Membran', sai: 'Saite', sch: 'Schale', gng: "Gong", klb: "Kalimba", obt: "Obertöne", stm: "Stimme", swm: "Schwarm", tie: "Tiefe", trp: "Tropfen", nrd: 'Nordlicht', sht: 'Schimmer', ond: 'Ätherwelle', wal: 'Walgesang', stp: 'Endlostreppe', atr: 'Attraktor', tnl: 'Tunnel', wkg: 'Westküste', bnt: 'Schaltkreis', kas: 'Kassette', bit: 'Achtbit', gbs: 'Gleitbass', hht: 'Zischel', vox: 'Silbe', spu: 'Spieluhr', kto: 'Koto', hlm: 'Halm', rnk: 'Ranke', elm: 'Elmsfeuer', hng: 'Handpan', gml: 'Gamelan', sit: 'Sitar', tbl: 'Tabla', did: 'Didgeridoo', mtr: 'Maultrommel', jrg: 'Jahresring', hrz: 'Harz', shn: 'Sehne', zpf: 'Zapfen', glt: 'Glut', mdr: 'Moder', boe: 'Böe', amo: 'Amöbe', gsp: 'Gespinst', rhz: 'Rhizom', khl: 'Kehlchen',
@@ -21787,7 +21787,7 @@ MOD.set = modSet; MOD.clear = modClear; MOD.val = modVal; MOD.route = gkRoute;
 //   drive, folding · Fächer detuned pair, octaves, fifth · Ort a place in space, binaural, far and near ·
 //   Stottern repeats in the Puls's tempo · Resonanz six strings tuned to the held notes · Arpeggio
 const TCH_W = [['finger', 'Finger'], ['atem', 'Atem'], ['raum', 'Raum'], ['verw', 'Verwandlung'], ['gleiten', 'Gleiten'], ['streichen', 'Streichen'], ['platte', 'Platte'], ['vokal', 'Vokal'],
-  ['koerner', 'Körner'], ['eis', 'Eis'], ['oberton', 'Obertöne'], ['faecher', 'Fächer'], ['ort', 'Ort'], ['stottern', 'Stottern'], ['resonanz', 'Resonanz'], ['arp', 'Arpeggio']];
+  ['koerner', 'Körner'], ['eis', 'Eis'], ['oberton', 'Obertöne'], ['faecher', 'Fächer'], ['ort', 'Ort'], ['stottern', 'Stottern'], ['resonanz', 'Resonanz'], ['arp', 'Arpeggio'], ['gestik', 'Gestik']];   // (Gestik: the phone's motion – touche-gestik.js)
 const TCH = { v: { weg: 0, her: 0, li: 0, re: 0 }, ph: 0, t: 0, raf: 0, vib: 0, rate: 5.5 };
 const TCH_SRC = [['h', 'hoehe'], ['b', 'bend'], ['e', 'expr'], ['f', 'flt'], ['r', 'rev'], ['d', 'dly'], ['p', 'pan'], ['m', 'morph'], ['g', 'bend'], ['s', 'hoehe'], ['w', 'vok'], ['o', 'vokO'], ['u', 'vokV']];
 // Gleiten: the newest note, a fifth (700 cents) at full; Streichen: every held note's height set to the bow's (field units)
@@ -21808,7 +21808,8 @@ function tchApply() {
   else if (w === 'streichen') { const p = Math.max(weg, her); o.e = p - 1; TCH.sy = clamp(0.08 + 0.92 * weg, 0, 1); o.s = 0.5 + 0.5 * TCH.sy; o.b = 0.5 * (re - li); }   // (o.s only keeps the source alive and moving; its per sets the height)
   else if (w === 'vokal') { o.w = Math.max(weg, her, li, re); o.o = weg - her; o.u = re - li; }
   else if (w === 'ort') o.r = 0.8 * Math.pow(weg, 1.2) - 0.25 * her;   // (far away: the hall comes up; close: drier)
-  if (typeof tfxSet === 'function') tfxSet(w, { weg, her, li, re });   // (Körner … Arpeggio: the insert, the place, the arpeggio)
+  if (typeof tfxSet === 'function') tfxSet(w, { weg, her, li, re });
+  if (typeof tchGestik === 'function') tchGestik(w === 'gestik', { weg, her, li, re });   // (the Touché as a phone – touche-gestik.js)   // (Körner … Arpeggio: the insert, the place, the arpeggio)
   for (const [n, k] of TCH_SRC) modSet('map:tch:' + n, k, o[n] || 0, TCH_OPT[n]);
   tchEigMod(R);   // (the own routes' targets – none: they leave)
   const pr = R ? R.t.platte || 0 : 0, kr = pr < 0 ? 1 + 0.97 * pr : 1 + pr;
@@ -21870,7 +21871,8 @@ function tchMark() {
 // what a Spielweise of Körner … Arpeggio does, in a word (the toast; the device card says it whole)
 const TCH_SAY = { koerner: 'eine Körnerwolke aus dem eben Gespielten', eis: 'Drücken friert den Klang ein, seitlich malst du ihn in der Höhe', oberton: 'Obertöne kneten: links gerade, rechts ungerade, weg Antrieb, heran falten',
   faecher: 'ein Ton fächert sich auf: Stimmen, Oktaven, Quinte', ort: 'der Klang an einem Ort im Raum – weit weg, nah am Ohr, rundherum', stottern: 'Drücken wiederholt den Moment im Tempo – links lang, rechts kurz',
-  resonanz: 'Saiten, gestimmt auf deine Töne, schwingen mit', arp: 'ein Arpeggio aus der Hand über die gehaltenen Töne' };
+  resonanz: 'Saiten, gestimmt auf deine Töne, schwingen mit', arp: 'ein Arpeggio aus der Hand über die gehaltenen Töne',
+  gestik: 'die Hand als Handy – Neigen, Bebung, Drehen, Ladung, Schütteln; zweimal kurz heran: Schlafen' };
 // (the sixteen, then the own ones – touche-eigen.js)
 const tchStep = (d) => {
   const L = TCH_W.map((x) => x[0]).concat(TCHE.list.map((E) => 'e:' + E.id)), own = tchEigCur(), i = L.indexOf(own ? 'e:' + own.id : P['midi.tch']), nx = L[(i + d + L.length) % L.length];
@@ -23823,10 +23825,120 @@ function gkRemEnd() {
 }
 function gkRemCheck(now) {
   const m = GK.rem, s = m.src;
+  if (s.syn) { if (!s.syn()) gkRemEnd(); return; }   // (the Touché as a phone – touche-gestik.js: it ends itself)
   if (now - s.gkr.t > 10000 || MIDI.srcs.get(s.key) !== s || !s.enabled || s.dup || !profOn(s)) gkRemEnd();
 }
-const gkRemText = () => { const G = GK.rem.src.gkr, live = performance.now() - GK.last < 250; return 'Funkstrecke: ' + devShort(GK.rem.src.name) + (live ? ' · ' + (G.rate || '…') + ' Werte/s' : ' – wartet auf das Handy'); };
+const gkRemText = () => { const G = GK.rem.src.gkr, live = performance.now() - GK.last < 250; if (GK.rem.src.syn) return 'Touché als Handy (Spielweise „Gestik“)' + (live ? ' · ' + (G.rate || '…') + ' Werte/s' : ''); return 'Funkstrecke: ' + devShort(GK.rem.src.name) + (live ? ' · ' + (G.rate || '…') + ' Werte/s' : ' – wartet auf das Handy'); };
 
+/* ---------- Touché: die Gestik des Handys (owner, 31.10.2026) ---------- */
+// „Überleg dir, wie man mit dem Touché die Gestik des Handys vollständig nachmachen könnte – als weitere Spielweise.“ The
+// Spielweise „Gestik“ makes the Touché a phone: the hand on the skin becomes the phone's motion, handed to Gestik exactly
+// where a phone's arrives over the Funkstrecke (gestik/funkstrecke.js: gkRemOn, the values of NRPN 42/0–7, the event notes)
+// – so everything Gestik does plays as with the phone, with all of its settings: Anlehnen (Höhe, Tonhöhe zum Nachbarton,
+// Raum, Okarina), Bebung, Ladung (Körner, Tropfen, Puls, Rassel …), Schwenken, Schlafen, Sporenregen, the presets' Rezepte,
+// „Zuweisen“ of its axes and events, the clutch (Kupplung) and Festhalten.
+//   Neigen ↔ / ↕      links/rechts, weg/heran – the skin's way is the phone's tilt (full pressure: a little past the Weite)
+//   Bebung            a trembling hand on the skin (2.5 … 10 Hz in the pressure, either axis) – as the wrist's tremor
+//   Drehen            circling on the skin (weg → rechts → heran → links: clockwise +), a spring brings it back in ~1 s
+//   Schwenken         steady circles (0.4 … 4 a second) for 0.6 s fill its calm store, as circling the wine glass
+//   Ladung            quick movement of the hand fills it, the Entladung drains it – as shaking the phone does
+//   Schütteln         at least 3 strong reversals within 600 ms (a quick to-and-fro on the skin); each swing a peak (Rassel)
+//   Wenden (Schlafen) a double flick toward you (heran, twice within 450 ms) – and again to wake
+//   Ruhe              the hand off the skin for 1.5 s – as the phone lying still
+// Rest stays the zero (the Touché springs back: no new zero from the pose a note starts in). Sampled at 100 Hz while chosen.
+const TCHG = { src: null, tm: 0, said: false };
+const TCHG_DT = 0.01;
+function tchGestik(on, v) {
+  TCHG.v = v;
+  if (on && !TCHG.tm) tchGestikOn();
+  else if (!on && TCHG.tm) tchGestikOff();
+}
+function tchGestikOn() {
+  if (GK.rem && (!TCHG.src || GK.rem.src !== TCHG.src)) {   // a phone sends already: it stays Gestik's
+    if (!TCHG.said) { TCHG.said = true; toast('Touché-Gestik: ein Handy sendet schon über die Funkstrecke – es bleibt die Gestik.', 5000); }
+    return;
+  }
+  const now = performance.now();
+  const S = TCHG.src = { key: 'tch:gestik', name: 'Touché', enabled: true, syn: () => !!TCHG.tm,
+    gkr: { t: now, flags: 3, latS: 6, v: new Float64Array(GKF.n), ev: [], due: false, n: 0, rn: 0, rt: now, rate: 0 } };
+  if (GK.remOff === S.key) { toast('Touché-Gestik: Gestik wurde ausgeschaltet – schalte sie unter „Gerät → Gestik“ wieder ein.', 5000); return; }
+  gkRemOn(S);
+  if (!GK.rem || GK.rem.src !== S) return;
+  const R = GK.R; R.zero = () => { gkRemAx(R); return true; };   // (rest is the zero – the skin springs back)
+  TCHG.st = { x: 0, y: 0, bx: [0, 0, 0, 0, 0, 0], beb: 0, benv: 0, bg: 0, th: null, drh: 0, swS: 0, swHz: 0, swDir: 0, swT: 0, sw: 0, lad: 0, exc: 0,
+    sh: { dir: null, t0: 0, pk: 0, revs: [], on: false, last: 0, sw: false }, fl: { up: false, ts: [] }, wend: false, rest: 0, ruhe: false };
+  TCHG.tm = setInterval(tchGestikTick, 10);
+  toast('Touché als Handy: Neigen, Bebung, Drehen, Ladung, Schütteln – Schlafen mit zweimal kurz heran.', 4200);
+}
+function tchGestikOff() {
+  clearInterval(TCHG.tm); TCHG.tm = 0;
+  if (GK.rem && GK.rem.src === TCHG.src) gkRemEnd();
+  TCHG.src = null;
+}
+// one step: the hand → the phone's eight values and its events (gkRemIn takes them as one frame)
+function tchGestikTick() {
+  const S = TCHG.src, G = S && S.gkr;
+  if (!G || !GK.rem || GK.rem.src !== S) { if (TCHG.tm) { clearInterval(TCHG.tm); TCHG.tm = 0; } return; }
+  const st = TCHG.st, v = TCHG.v || { weg: 0, her: 0, li: 0, re: 0 }, dt = TCHG_DT, now = performance.now();
+  const x = v.re - v.li, y = v.weg - v.her, dx = (x - st.x) / dt, dy = (y - st.y) / dt, p = Math.max(v.weg, v.her, v.li, v.re), ev = G.ev;
+  st.x = x; st.y = y;
+  const W = (GK.p.weite || 30) * 1.15;
+  // Bebung: the pressure's tremor, 2.5 … 10 Hz (two high-pass poles, one low-pass), its swept way leaky, gated above a
+  // resting tremor – the hand's wobble on either axis (the sideways one is the Touché's natural vibrato)
+  const hp = (1 / (2 * Math.PI * 2.5)) / (1 / (2 * Math.PI * 2.5) + dt), lpk = 1 - Math.exp(-dt * 2 * Math.PI * 10), b = st.bx, w = (dx + dy) * W;   // (deg/s of the 'phone')
+  b[0] = hp * (b[0] + w - b[1]); b[1] = w; b[2] = hp * (b[2] + b[0] - b[3]); b[3] = b[0]; b[4] += lpk * (b[2] - b[4]);
+  st.beb = st.beb * Math.exp(-dt / 0.12) + b[4] * dt; st.benv += (1 - Math.exp(-dt / 0.15)) * (b[4] * b[4] - st.benv);
+  const env = Math.sqrt(st.benv), gt = clamp((env - 12) / 12, 0, 1); st.bg += (gt > st.bg ? 0.2 : 0.02) * (gt - st.bg);
+  const beb = clamp((st.beb * st.bg) / 5, -1, 1);
+  // Drehen and Schwenken: circling the pressure round the centre (clockwise seen from above: weg → rechts → heran → links)
+  const r = Math.hypot(x, y), th = r > 0.15 ? Math.atan2(x, y) : null;
+  let wdeg = 0;
+  if (th != null && st.th != null) { let d = th - st.th; if (d > Math.PI) d -= 2 * Math.PI; else if (d < -Math.PI) d += 2 * Math.PI; wdeg = (d * 180 / Math.PI) / dt; }
+  st.th = th;
+  const wv = Math.abs(wdeg) > 6 ? wdeg * 0.25 : 0;   // (a quarter of the angle: one circle turns the knob 90°)
+  st.drh = st.drh * Math.exp(-dt / 1) + wv * dt;
+  const fq = Math.abs(wdeg) / 360, circ = th != null && fq > 0.4 && fq < 4 && r > 0.25;
+  st.swT = circ ? st.swT + dt : 0;
+  const sg = st.swT >= 0.6 ? Math.min(1, r * 1.2) : 0;
+  st.sw = clamp(st.sw * (1 - (1 - sg) * (1 - Math.exp(-dt / 4))) + (sg * dt) / 2.5, 0, 1);
+  if (sg > 0.2) { st.swHz += 0.05 * (fq - st.swHz); st.swDir += 0.05 * ((wdeg > 0 ? 1 : -1) - st.swDir); }
+  // Ladung: quick movement of the hand above a floor fills it, the Entladung drains it (the phone's own law)
+  const TE = Math.max(0.05, (GK.p.entl || 8) / 3), e2 = (dx * dx + dy * dy) / 100;   // (a brisk to-and-fro, ~20 units/s, as a shaken phone: ≈ 2)
+  st.exc += (1 - Math.exp(-dt / 0.15)) * (e2 - st.exc);
+  st.lad = clamp(st.lad * Math.exp(-dt / TE) + Math.max(0, Math.sqrt(Math.max(0, st.exc)) - 0.6) * Math.max(0.8, 0.7 / TE) * dt, 0, 1);
+  // Schütteln: a swing is a stretch of fast movement (≥ 3 units/s) for 30 ms; a reversal is the next swing more than
+  // 120° away; 3 within 600 ms shake, 500 ms without one end it; each swing's peak a 'peak' (the Rassel)
+  const sh = st.sh, sp = Math.hypot(dx, dy);
+  if (sp > 3) {
+    const a = Math.atan2(dy, dx);
+    if (!sh.sw) { sh.sw = true; sh.t0 = now; sh.pk = 0; sh.a = a; }
+    sh.pk = Math.max(sh.pk, sp);
+    if (now - sh.t0 >= 30 && !sh.cnt) {
+      sh.cnt = true;
+      if (sh.dir != null) { let d = Math.abs(a - sh.dir); if (d > Math.PI) d = 2 * Math.PI - d; if (d > (2 * Math.PI) / 3) { sh.revs.push(now); sh.last = now; } }
+      sh.dir = a;
+    }
+  } else if (sh.sw) {
+    sh.sw = false;
+    if (sh.cnt && sh.on) ev.push({ type: 'peak', v: clamp(sh.pk / 12, 0, 1), t: now, i: 0 });
+    sh.cnt = false;
+  }
+  while (sh.revs.length && now - sh.revs[0] > 600) sh.revs.shift();
+  if (!sh.on && sh.revs.length >= 3) { sh.on = true; ev.push({ type: 'schuetteln', on: true, v: clamp(sh.pk / 12, 0, 1) }); }
+  else if (sh.on && now - sh.last > 500) { sh.on = false; ev.push({ type: 'schuetteln', on: false, v: 0 }); }
+  // Wenden: two short flicks toward you within 450 ms turn the 'phone' over (Schlafen) – and back
+  const fl = st.fl;
+  if (!fl.up && v.her > 0.6 && v.weg < 0.2) { fl.up = true; fl.t = now; }
+  else if (fl.up && v.her < 0.25) { fl.up = false; if (now - fl.t < 250) { fl.ts.push(now); while (fl.ts.length && now - fl.ts[0] > 450) fl.ts.shift(); if (fl.ts.length >= 2) { fl.ts.length = 0; st.wend = !st.wend; ev.push({ type: 'wenden', on: st.wend, v: 1 }); } } }
+  // Ruhe: the hand off the skin for 1.5 s – the phone lying still
+  if (p < 0.02) { st.rest += dt; if (!st.ruhe && st.rest >= 1.5) { st.ruhe = true; ev.push({ type: 'ruhe', on: true, v: 1 }); } }
+  else if (p > 0.05) { st.rest = 0; if (st.ruhe) { st.ruhe = false; ev.push({ type: 'ruhe', on: false, v: 0 }); } }
+  // the frame: the phone's eight values (tilt in degrees as the phone sends them)
+  const V = G.v;
+  V[0] = x * W; V[1] = y * W; V[2] = beb; V[3] = Math.tanh(st.drh / 60); V[4] = st.lad; V[5] = st.sw; V[6] = clamp(st.swHz, 0, 4); V[7] = clamp(st.swDir, -1, 1);
+  G.t = now; GK.dmSeen = true;
+  gkrDue(S);
+}
 /* =====================================================================
    Visuals
    ===================================================================== */
@@ -33029,7 +33141,7 @@ function kcCard(it) {
       el.append(h('div', { class: 'kc-pads' }, h('span', { class: 'lab' }, 'Pads:'), h('div', { class: 'chips small', role: 'group', 'aria-label': 'Pads' }, pc('Spuren', !hx, 'sp', 'Pads: Spur 1–4, Puls, Bordun, Freeze, Stille'), pc('Hexenring', hx, 'hx', 'Pads: Schleife 1–4, Korb, Zurück, nächste Lichtung, Stille'))));
     }
     if (p && p.id === 'tch' && po) {   // (Touché, 25.10.2026: its Spielweise – the knob on the device sends nothing)
-      const tip = { finger: 'weg/heran: Höhe · links/rechts: Tonhöhe', atem: 'weg: anschwellen · heran: dunkel · links/rechts: Vibrato', raum: 'weg: Hall · heran: Echo · links/rechts: Panorama', verw: 'weg/heran: Mixer-Szene B/A · links/rechts: Filter', gleiten: 'weg/heran: Höhe · links/rechts: Tonhöhe bis eine Quinte', streichen: 'ohne Druck still · weg: Bogen- oder Atemdruck · heran: leicht und luftig · links/rechts: Intonation', platte: 'Hand auf der Schleife: weg bremst · heran schiebt an · links/rechts kleine Schübe', vokal: 'Druck öffnet den Mund · weg/heran: a ↔ i/u · links/rechts: u/o ↔ e/i' , koerner: 'Körnerwolke aus dem eben Gespielten · weg: dichter · heran: Tonhöhen streuen, rückwärts · links: zurück in der Zeit · rechts: weit streuen', eis: 'Drücken friert ein (Druck = Lautstärke) · links/rechts: Tonhöhe ±1 Oktave · weg: verwischen · heran: dunkler, Oktave darunter', oberton: 'weg: Antrieb · links: gerade Obertöne (warm) · rechts: ungerade (hohl) · heran: Welle falten (rau, metallisch)', faecher: 'weg: verstimmtes Paar, breit · links: Oktave darunter · rechts: Oktave darüber · heran: Quinte', ort: 'weg: weit weg (verhallt, dumpfer, später) · heran: nah am Ohr · links/rechts: um den Kopf herum (Kopfhörer!)', stottern: 'Drücken wiederholt den Moment im Tempo · links: lang (ein Schlag) · rechts: kurz (1/16) · weg: Band langsamer · heran: ausklingen, dunkler', resonanz: 'Saiten auf deine Töne gestimmt · Druck: länger klingen · weg: heller · heran: glockig · links/rechts: Stimmung ±1 Oktave', arp: 'Druck startet das Arpeggio (und ist seine Stärke) · weg: schneller · heran: mehr Oktaven, kürzer · rechts: aufwärts · links: abwärts · beide: zufällig'};
+      const tip = { finger: 'weg/heran: Höhe · links/rechts: Tonhöhe', atem: 'weg: anschwellen · heran: dunkel · links/rechts: Vibrato', raum: 'weg: Hall · heran: Echo · links/rechts: Panorama', verw: 'weg/heran: Mixer-Szene B/A · links/rechts: Filter', gleiten: 'weg/heran: Höhe · links/rechts: Tonhöhe bis eine Quinte', streichen: 'ohne Druck still · weg: Bogen- oder Atemdruck · heran: leicht und luftig · links/rechts: Intonation', platte: 'Hand auf der Schleife: weg bremst · heran schiebt an · links/rechts kleine Schübe', vokal: 'Druck öffnet den Mund · weg/heran: a ↔ i/u · links/rechts: u/o ↔ e/i' , koerner: 'Körnerwolke aus dem eben Gespielten · weg: dichter · heran: Tonhöhen streuen, rückwärts · links: zurück in der Zeit · rechts: weit streuen', eis: 'Drücken friert ein (Druck = Lautstärke) · links/rechts: Tonhöhe ±1 Oktave · weg: verwischen · heran: dunkler, Oktave darunter', oberton: 'weg: Antrieb · links: gerade Obertöne (warm) · rechts: ungerade (hohl) · heran: Welle falten (rau, metallisch)', faecher: 'weg: verstimmtes Paar, breit · links: Oktave darunter · rechts: Oktave darüber · heran: Quinte', ort: 'weg: weit weg (verhallt, dumpfer, später) · heran: nah am Ohr · links/rechts: um den Kopf herum (Kopfhörer!)', stottern: 'Drücken wiederholt den Moment im Tempo · links: lang (ein Schlag) · rechts: kurz (1/16) · weg: Band langsamer · heran: ausklingen, dunkler', resonanz: 'Saiten auf deine Töne gestimmt · Druck: länger klingen · weg: heller · heran: glockig · links/rechts: Stimmung ±1 Oktave', arp: 'Druck startet das Arpeggio (und ist seine Stärke) · weg: schneller · heran: mehr Oktaven, kürzer · rechts: aufwärts · links: abwärts · beide: zufällig', gestik: 'die Hand als Handy – alles aus „Gestik“: links/rechts und weg/heran neigen · zittern: Bebung · kreisen: Drehen und Schwenken · schnell hin und her: Ladung und Schütteln · zweimal kurz heran: Schlafen · Hand weg: Ruhe'};
       // (owner, 31.10.2026: no keys on them any more; laid out as a grid – the four families of four in rows)
       el.append(h('div', { class: 'kc-pads kc-tch' }, h('span', { class: 'lab' }, 'Spielweise'), h('div', { class: 'chips small', role: 'group', 'aria-label': 'Touché-Spielweise' },
         ...TCH_W.map(([w, nm]) => h('button', { type: 'button', class: 'chip', 'aria-pressed': String(P['midi.tch'] === w), 'data-kc': it.key + ':tch' + w, title: nm + ': ' + tip[w], onclick: () => tchWeise(w, true) }, nm))),
