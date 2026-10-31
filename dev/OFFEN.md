@@ -34,8 +34,6 @@ Begründungen stehen in `dev/STAND-2026-10-29.md` (Abschnitte „Danach (30.10.)
 
 ## Für die nächste Sitzung zu tun (ohne weitere Rückfrage)
 ## Erledigt am 31.10.
-<<<<<<< Updated upstream
-=======
 Wege-Bedienung umgebaut (Besitzer: „F anklicken macht keinen Unterschied … mehrere aktivieren/deaktivieren … schlüsselfertig“):
 die Perlen V R F P S sind die Schalter des bearbeiteten Kanals (`WFX.t` – gewählt im Mixer über `selectChannel`, Puls =
 alle Spuren, Hexenring = alle Schleifen, Schleife durch Antippen ihres Kanals/Knotens), leuchten in seiner Farbe, Name
@@ -48,7 +46,6 @@ Auftrag; dreimal in 2 min → bleibt aus); Start-Fehler dürfen nach 20 s erneut
 Wiederholungen, dann bleibt die Schleife beim alten Klang (`S.wSkip`); ✕ am Ladebalken (`hxLadeCancel`, `S.wGen`). Test
 `hexenring/t-hx-lade.js`. Die eigentliche Ursache des Hängers in Firefox ist damit abgefangen, aber nicht gefunden –
 bei Gelegenheit die Werk-Protokollzeilen („rahmen-haengt“, „keine-antwort“) aus dem Leistungsbericht ansehen.
->>>>>>> Stashed changes
 Routing je Kanal durch einzelne Effekte (Besitzer: „überrasche mich … Design so behalten, mit den Neuerungen“):
 `makeChain(m)` mit Maske (core/chain.js, 1 V · 2 R · 4 F · 8 P · 16 S; ausgelassene Stufen gebaut, nicht verdrahtet);
 Parameter `x<k>.fxm` je Kanal; `mixer/wege-fx.js`: eine Kette je benutzter Maske (`fxmIn`/`fxmChain`, Sends über eigene

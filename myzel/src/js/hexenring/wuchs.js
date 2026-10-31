@@ -260,15 +260,30 @@ function hxWUpdate(L, o = {}) {
   hxCardDirty(); hxRailDirty();
 }
 // one Treu render a Schicht at a time; a newer wish waits for it and renders again
+// (owner, 31.10.2026: „die Neugenerierung bleibt stecken … sorge dafür, dass sie immer und unter allen Umständen
+// zuverlässig passiert“) a render that fails or throws never holds its Schicht: it is tried again (after 1.5 s, 3 s), then
+// the Schicht plays on as it did and says so; a render let go under the bar (✕ – hxLadeCancel) is not played when it
+// comes back, and the same wish is not asked again until something changes it (S.wSkip)
 function hxWRenderFor(L, S, sig, o = {}) {
+  if (S.wSkip === sig && !o.re) return;
   if (S.wBusy) { S.wAgain = o; return; }
-  S.wBusy = sig; S.wAgain = null; hxLadeAdd(L, S);
-  const ver = S.ver || 0, key = L.key;
+  S.wBusy = sig; S.wAgain = null; S.wSkip = null; hxLadeAdd(L, S);
+  const ver = S.ver || 0, key = L.key, gen = S.wGen || 0;
+  const done = () => { if ((S.wGen || 0) === gen) S.wBusy = null; hxCardDirty(); hxRailDirty(); };
   hxWRender(L, S, sig, o.key).then(async (V) => {
+    if ((S.wGen || 0) !== gen) return;   // (let go meanwhile)
     S.wBusy = null;
     let X = hxByKey(key);
     if (!X || !HX.sch.has(S.id) || (S.ver || 0) !== ver) return;
-    if (V && typeof hxRxOnV === 'function' && hxRxOn(hxRxOf(X))) { V = await hxRxOnV(X, V); X = hxByKey(key); if (!X || !HX.sch.has(S.id) || (S.ver || 0) !== ver) return; }   // (30.10.2026: the loop's Klangfarbe – klangebene.js)
+    if (V && typeof hxRxOnV === 'function' && hxRxOn(hxRxOf(X))) { V = await hxRxOnV(X, V); X = hxByKey(key); if (!X || !HX.sch.has(S.id) || (S.ver || 0) !== ver || (S.wGen || 0) !== gen) return; }   // (30.10.2026: the loop's Klangfarbe – klangebene.js)
+    if (!V && sig === hxWSig(X, S, o.key) && !S.wAgain) {   // (failed: again, twice, then as it was)
+      S.wFail = (S.wFail || 0) + 1;
+      hxwLog('wuchs:fehlschlag ' + hxName(X) + ' #' + S.wFail);
+      if (S.wFail < 3) { setTimeout(() => { const Y = hxByKey(key); if (Y && HX.sch.has(S.id) && !S.wBusy && (S.wGen || 0) === gen) hxWUpdate(Y, o); }, 1500 * S.wFail); }
+      else { S.wSkip = sig; S.wFail = 0; hxSay(hxName(X) + ': der neue Klang ließ sich nicht rechnen – sie spielt weiter wie bisher'); }
+      hxCardDirty(); hxRailDirty(); return;
+    }
+    if (V) S.wFail = 0;
     if (V && V.sig === hxWSig(X, S, o.key) && (S.wu || hxMemOk(V.n))) {   // (final pass: a first Treu version within the Speichergrenze, as every other buffer – else the Abdruck plays on)
       S.wu = V; S.wuSaved = 0;
       if (hxWAktiv(X) && !(S.anc && S.anc.sig === V.sig)) { const now = !!o.now && o.f == null && hxNowOk(X); hxWPlay(S, 'wu', o.f != null && o.f > hxF(hxNowT() + 0.05) ? o.f : now ? hxSwapAt(X).f : hxNextSeam(X).f, false, now); }
@@ -276,7 +291,7 @@ function hxWRenderFor(L, S, sig, o = {}) {
     }
     if (S.wAgain || (V && V.sig !== hxWSig(X, S, o.key))) hxWUpdate(X, S.wAgain || {});
     hxCardDirty(); hxRailDirty();
-  });
+  }).catch((e) => { console.warn('Hexenring: Wuchs', e); hxwLog('wuchs:ausnahme ' + String((e && e.message) || e).slice(0, 160)); done(); });
 }
 
 // ---- Lebendig: every pass a new throw, streamed – the page posts the pass's slot to the processor (its port) and the

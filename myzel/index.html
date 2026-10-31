@@ -897,7 +897,15 @@ body.mlearn #stage::after { content: ""; position: absolute; inset: 0; backgroun
 @keyframes hxBlitz { from { opacity: 1; } to { opacity: 0; } }
 /* (owner, 29.10.2026: „es macht nichts wenn es laden muss – dann einen Ladebalken, damit man sich auskennt“) the loops
    rendering a new sound: how far, how many done – over the rail, at its left (the message line keeps the middle) */
-.hx-lade { position: absolute; left: 8px; bottom: calc(100% + 6px); width: min(300px, calc(100% - 16px)); padding: 6px 10px 7px; border-radius: 10px; background: rgba(17, 13, 11, .94); border: 1px solid var(--line); color: var(--hypha); font: 500 12px/1.3 var(--font-ui); pointer-events: none; z-index: 3; box-shadow: 0 4px 18px rgba(0, 0, 0, .45); transition: opacity .3s; }
+.hx-lade { position: absolute; left: 8px; bottom: calc(100% + 6px); width: min(300px, calc(100% - 16px)); padding: 6px 10px 7px; border-radius: 10px; background: rgba(17, 13, 11, .94); border: 1px solid var(--line); color: var(--hypha); font: 500 12px/1.3 var(--font-ui); pointer-events: none; z-index: 3; box-shadow: 0 4px 18px rgba(0, 0, 0, .45); transition: opacity .3s; display: flex; align-items: center; gap: 8px; }
+.hx-lade[hidden] { display: none; }
+.hx-lade .p { display: block; flex: 1; min-width: 0; }
+/* (31.10.2026) abbrechen: the one part of the bar that takes a press */
+.hx-lade .x { pointer-events: auto; flex: none; width: 28px; height: 28px; margin: -4px -4px -4px 0; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--dim); font: 500 14px/1 var(--font-ui); cursor: pointer; }
+.hx-lade .x:hover { color: var(--hypha); background: rgba(240, 230, 216, .06); }
+.hx-lade .x:focus-visible { outline: 2px solid var(--lumen); outline-offset: -2px; }
+.hx-lade.fertig .x { visibility: hidden; }
+@media (pointer: coarse) { .hx-lade .x { width: 40px; height: 40px; margin: -10px -8px -10px 0; } }
 .hx-lade .t { display: block; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hx-lade .b { display: block; height: 5px; border-radius: 3px; background: var(--bark-2); overflow: hidden; }
 .hx-lade .b i { display: block; height: 100%; width: 0; border-radius: 3px; background: var(--lumen); transition: width .25s linear; }
@@ -2479,7 +2487,7 @@ input[type=range].dragging::-moz-range-thumb, input[type=range]:active::-moz-ran
       <button type="button" class="hxb hx-fold" id="hxFold" aria-label="Ringleiste einklappen" tabindex="-1"></button>
       <div class="hx-vh" id="hxLive" aria-live="polite"></div>
       <div class="hx-msg" id="hxMsg" aria-hidden="true"></div>
-      <div class="hx-lade" id="hxLade" role="progressbar" aria-label="Schleifen laden den neuen Klang" aria-valuemin="0" aria-valuemax="100" hidden><span class="t"></span><span class="b"><i></i></span></div>
+      <div class="hx-lade" id="hxLade" hidden><span class="p" role="progressbar" aria-label="Schleifen laden den neuen Klang" aria-valuemin="0" aria-valuemax="100"><span class="t"></span><span class="b"><i></i></span></span><button type="button" class="x" aria-label="Neuen Klang der Schleifen abbrechen" title="Abbrechen – die Schleifen spielen weiter wie bisher">✕</button></div>
       <div class="hx-lenpop" id="hxLenPop" role="dialog" aria-label="Neue Schleife: Länge, Tempo, Einzählen und Klick" hidden></div>
     </div>
     </div>
@@ -37252,6 +37260,22 @@ function hxLadeAdd(L, S) {
   if (!HXLD.on) { HXLD.on = true; HXLD.t0 = now; HXLD.est = 0; HXLD.ids.clear(); HXLD.endT = 0; }
   if (!HXLD.ids.has(S.id)) { const e = Math.max(0.4, hxWPredict(L, S, hxLen(L) + hxWTailEst(S))); HXLD.ids.set(S.id, { L: L.key, e }); HXLD.est += e; }
 }
+// (owner, 31.10.2026: „eine Option, um die Schleifen-Generierung zu beenden – rechts ein X“) every render under the bar
+// is let go: what comes back later is not played, the same wish is not asked again until something changes it; the
+// Schleifen play on what they played (their Abdruck or an earlier version)
+function hxLadeCancel() {
+  if (!HXLD.on) return;
+  let n = 0;
+  for (const [id, o] of HXLD.ids) {
+    const S = HX.sch.get(id), L = hxByKey(o.L); if (!S || !L) continue;
+    if (S.wBusy || S.wAgain) { n++; S.wSkip = S.wBusy || hxWSig(L, S); S.wGen = (S.wGen || 0) + 1; S.wBusy = null; S.wAgain = null; }
+  }
+  HXLD.on = false; HXLD.endT = performance.now() - 1200; HXLD.ids.clear();
+  const el = HXU.lade; if (el) { el.querySelector('.t').textContent = 'Abgebrochen'; el.classList.add('fertig'); }
+  hxwLog('lade:abgebrochen:' + n);
+  hxSay(n ? 'Neuer Klang abgebrochen – die Schleifen spielen weiter wie bisher' : 'Nichts mehr zu laden');
+  hxCardDirty(); hxRailDirty();
+}
 function hxLadeFrame() {
   const el = HXU.lade; if (!el) return;
   const now = performance.now();
@@ -37260,11 +37284,11 @@ function hxLadeFrame() {
   HXLD.drawT = now;
   let n = 0, done = 0; const loops = new Set();
   for (const [id, o] of HXLD.ids) { n++; const S = HX.sch.get(id), L = hxByKey(o.L); if (!S || !L || L.state === 'weg' || !(S.wBusy || S.wAgain)) done++; else loops.add(L.slot + 1); }
-  if (done >= n) { HXLD.on = false; HXLD.endT = now; el.querySelector('.t').textContent = 'Neuer Klang da'; el.querySelector('i').style.width = '100%'; el.setAttribute('aria-valuenow', '100'); el.classList.add('fertig'); return; }
+  if (done >= n) { HXLD.on = false; HXLD.endT = now; el.querySelector('.t').textContent = 'Neuer Klang da'; el.querySelector('i').style.width = '100%'; el.querySelector('.p').setAttribute('aria-valuenow', '100'); el.classList.add('fertig'); return; }
   const x = (now - HXLD.t0) / 1000 / Math.max(0.4, HXLD.est), p = Math.max(done / n, x < 1 ? 0.9 * x : 0.9 + 0.09 * (1 - Math.exp(-(x - 1))));
   el.classList.remove('fertig'); el.hidden = false;
   el.querySelector('.t').textContent = 'Neuer Klang wird geladen: ' + (loops.size > 1 ? 'Schleifen ' : 'Schleife ') + [...loops].sort((a, b) => a - b).join(', ') + (n > 1 ? ' · ' + done + ' von ' + n + ' fertig' : '');
-  el.querySelector('i').style.width = Math.round(100 * p) + '%'; el.setAttribute('aria-valuenow', String(Math.round(100 * p)));
+  el.querySelector('i').style.width = Math.round(100 * p) + '%'; el.querySelector('.p').setAttribute('aria-valuenow', String(Math.round(100 * p)));
 }
 // a keyboard press (Enter or Space: a click without a pointer, detail 0) acts on click – the buttons that act at the press
 // act on pointerdown. Chromium also sends a click with detail 0 after a touch tap that changed the layout (UI audit B1,
@@ -37279,6 +37303,7 @@ function hxRailBuild() {
   if (!rail || HXU.rail) return;
   HXU.rail = rail; HXU.cv = $('#hxCv'); HXU.cx = HXU.cv.getContext('2d');
   HXU.korb = $('#hxKorb'); HXU.haupt = $('#hxHaupt'); HXU.mid = $('#hxMid'); HXU.pg = $('#hxPg'); HXU.undo = $('#hxUndo'); HXU.redo = $('#hxRedo'); HXU.fold = $('#hxFold'); HXU.live = $('#hxLive'); HXU.coach = $('#hxCoach'); HXU.msg = $('#hxMsg'); HXU.lade = $('#hxLade');
+  if (HXU.lade) HXU.lade.querySelector('.x').addEventListener('click', hxLadeCancel);   // (31.10.2026: abbrechen)
   HXU.form = $('#hxForm');   // (step 1d)
   HXU.len = $('#hxLen'); HXU.lenPop = $('#hxLenPop'); hxLenBuild();   // (owner, 25.10.2026: the length of a new loop)
   const ringBox = h('div', { class: 'hx-rings' });
@@ -40819,6 +40844,8 @@ function hxWerk(R0) {
       R.frame = null; R.port = null;
       for (const w of R.wait.values()) w(null);
       R.wait.clear(); res(false); hxCardDirty();
+      // (31.10.2026) a boot that failed for a passing reason (too slow while the page was busy, no answer) may try again
+      if (why !== 'ort' && why !== 'rahmen') setTimeout(() => { if (R.st === 'kein' && R.why === why && !(R.kills && R.kills.length >= 3)) { R.p = null; R.st = ''; hxwLog('rahmen-nochmal:' + why); } }, 20000);
     };
     let url = '';
     try { if (!/^(https?|file):$/.test(location.protocol)) throw new Error('ort'); const u = new URL(location.href); u.hash = ''; u.searchParams.set('werk', '1'); url = u.href; } catch (e) { fail('ort'); return; }
@@ -40929,14 +40956,36 @@ function hxwNs(ctx, pre, tap, port, n, body, from) {
 // (seeded, built afresh), so the sound does not change.
 const HX_WRENEW = +(window.__hxRenew || 0) || 12;   // (window.__hxRenew: tests only)
 const HX_WRENEW_S = 90;   // (… or this many seconds after its first render)
+// (owner, 31.10.2026: „die Neugenerierung bleibt stecken … sorge dafür, dass sie immer zuverlässig passiert“) a realm that
+// does not answer a job within its time (20 s and 8 s per second of audio – far beyond any render seen) is taken down and
+// booted afresh at its next job: every job still waiting on it gets its answer (none), so nothing waits for ever. A realm
+// that keeps hanging (three times in two minutes) stays down – the Schleifen play on as they did.
+function hxwKill(R, why) {
+  const now = performance.now();
+  R.kills = (R.kills || []).filter((t) => now - t < 120000); R.kills.push(now);
+  hxwLog('rahmen-haengt:' + why + (R.kills.length >= 3 ? ':bleibt-aus' : ':neu'));
+  const waits = [...R.wait.values()];
+  try { if (R.port) R.port.close(); } catch (e) {}
+  try { if (R.frame) R.frame.remove(); } catch (e) {}
+  if (R.wid != null) hxPost({ wportOff: R.wid });
+  for (const S of HX.sch.values()) if (S.wRe) for (const k in S.wRe) if (S.wRe[k] === R) delete S.wRe[k];
+  if (R.kills.length >= 3) Object.assign(R, { st: 'kein', why: 'haengt', p: Promise.resolve(false), frame: null, port: null, wait: new Map(), n: 0 });
+  else Object.assign(R, { st: '', p: null, frame: null, port: null, wait: new Map(), n: 0, used: 0, old: false, ms: [] });
+  for (const w of waits) w(null);
+  hxCardDirty();
+}
+const hxwLimit = (job, d) => { const sec = d && (d.dur || (d.n && d.sr ? d.n / d.sr : 0)) || 10; return (20000 + 8000 * Math.max(1, Math.min(600, sec))) * (HXW.limK || 1); };   // (limK: tests shorten it)
 function hxwCall(job, d, tr, R0) {
   const R = R0 || HXW;
   if (job === 'wuchs' || job === 'bake' || job === 'tail') { if (!R.used) R.t0 = performance.now(); R.used = (R.used || 0) + 1; if (R.used >= HX_WRENEW && !R.old) { R.old = true; R.oldT = performance.now(); } }
   return hxWerk(R).then((ok) => new Promise((res) => {
     if (!ok || !R.port) { hxwLog(job + ':kein-rahmen(' + (R.why || R.st) + ')'); res(null); return; }
     const id = ++R.id;
-    R.wait.set(id, res);
-    try { R.port.postMessage(Object.assign({ job, id }, d), tr || []); } catch (e) { hxwLog(job + ':senden:' + ((e && e.message) || e)); R.wait.delete(id); res(null); }
+    // (an answer that does not come within its time: the realm hangs – hxwKill answers every waiting job, this one too)
+    const tm = job === 'warm' ? 0 : setTimeout(() => { if (R.wait.get(id) === done) { hxwLog(job + ':keine-antwort:' + Math.round(hxwLimit(job, d) / 1000) + 's'); hxwKill(R, job); } }, hxwLimit(job, d));
+    const done = (m) => { clearTimeout(tm); res(m); };
+    R.wait.set(id, done);
+    try { R.port.postMessage(Object.assign({ job, id }, d), tr || []); } catch (e) { hxwLog(job + ':senden:' + ((e && e.message) || e)); R.wait.delete(id); done(null); }
   }));
 }
 
@@ -43065,15 +43114,30 @@ function hxWUpdate(L, o = {}) {
   hxCardDirty(); hxRailDirty();
 }
 // one Treu render a Schicht at a time; a newer wish waits for it and renders again
+// (owner, 31.10.2026: „die Neugenerierung bleibt stecken … sorge dafür, dass sie immer und unter allen Umständen
+// zuverlässig passiert“) a render that fails or throws never holds its Schicht: it is tried again (after 1.5 s, 3 s), then
+// the Schicht plays on as it did and says so; a render let go under the bar (✕ – hxLadeCancel) is not played when it
+// comes back, and the same wish is not asked again until something changes it (S.wSkip)
 function hxWRenderFor(L, S, sig, o = {}) {
+  if (S.wSkip === sig && !o.re) return;
   if (S.wBusy) { S.wAgain = o; return; }
-  S.wBusy = sig; S.wAgain = null; hxLadeAdd(L, S);
-  const ver = S.ver || 0, key = L.key;
+  S.wBusy = sig; S.wAgain = null; S.wSkip = null; hxLadeAdd(L, S);
+  const ver = S.ver || 0, key = L.key, gen = S.wGen || 0;
+  const done = () => { if ((S.wGen || 0) === gen) S.wBusy = null; hxCardDirty(); hxRailDirty(); };
   hxWRender(L, S, sig, o.key).then(async (V) => {
+    if ((S.wGen || 0) !== gen) return;   // (let go meanwhile)
     S.wBusy = null;
     let X = hxByKey(key);
     if (!X || !HX.sch.has(S.id) || (S.ver || 0) !== ver) return;
-    if (V && typeof hxRxOnV === 'function' && hxRxOn(hxRxOf(X))) { V = await hxRxOnV(X, V); X = hxByKey(key); if (!X || !HX.sch.has(S.id) || (S.ver || 0) !== ver) return; }   // (30.10.2026: the loop's Klangfarbe – klangebene.js)
+    if (V && typeof hxRxOnV === 'function' && hxRxOn(hxRxOf(X))) { V = await hxRxOnV(X, V); X = hxByKey(key); if (!X || !HX.sch.has(S.id) || (S.ver || 0) !== ver || (S.wGen || 0) !== gen) return; }   // (30.10.2026: the loop's Klangfarbe – klangebene.js)
+    if (!V && sig === hxWSig(X, S, o.key) && !S.wAgain) {   // (failed: again, twice, then as it was)
+      S.wFail = (S.wFail || 0) + 1;
+      hxwLog('wuchs:fehlschlag ' + hxName(X) + ' #' + S.wFail);
+      if (S.wFail < 3) { setTimeout(() => { const Y = hxByKey(key); if (Y && HX.sch.has(S.id) && !S.wBusy && (S.wGen || 0) === gen) hxWUpdate(Y, o); }, 1500 * S.wFail); }
+      else { S.wSkip = sig; S.wFail = 0; hxSay(hxName(X) + ': der neue Klang ließ sich nicht rechnen – sie spielt weiter wie bisher'); }
+      hxCardDirty(); hxRailDirty(); return;
+    }
+    if (V) S.wFail = 0;
     if (V && V.sig === hxWSig(X, S, o.key) && (S.wu || hxMemOk(V.n))) {   // (final pass: a first Treu version within the Speichergrenze, as every other buffer – else the Abdruck plays on)
       S.wu = V; S.wuSaved = 0;
       if (hxWAktiv(X) && !(S.anc && S.anc.sig === V.sig)) { const now = !!o.now && o.f == null && hxNowOk(X); hxWPlay(S, 'wu', o.f != null && o.f > hxF(hxNowT() + 0.05) ? o.f : now ? hxSwapAt(X).f : hxNextSeam(X).f, false, now); }
@@ -43081,7 +43145,7 @@ function hxWRenderFor(L, S, sig, o = {}) {
     }
     if (S.wAgain || (V && V.sig !== hxWSig(X, S, o.key))) hxWUpdate(X, S.wAgain || {});
     hxCardDirty(); hxRailDirty();
-  });
+  }).catch((e) => { console.warn('Hexenring: Wuchs', e); hxwLog('wuchs:ausnahme ' + String((e && e.message) || e).slice(0, 160)); done(); });
 }
 
 // ---- Lebendig: every pass a new throw, streamed – the page posts the pass's slot to the processor (its port) and the
