@@ -38,6 +38,9 @@ const BPM = 120;
     // 2 Auslösen
     M.hxFuSet(L, 'ausl'); t = A.ctx.currentTime + 0.2; await sl(pass() * 1000); o.noHand = log(t).length;
     press(ri, 0.5); await sl(200); t = A.ctx.currentTime + 0.2; await sl(pass() * 1000); o.hand = log(t).length; M.onUp({ pointerId: 77 });
+    // a hand let go midway under Auslösen: that pass is not kept (its gaps would become the loop)
+    await sl(pass() * 1000); const K2 = L.wwhy && L.wwhy.fuKeep; press(ri, 0.5); await sl(pass() * 600); M.onUp({ pointerId: 77 }); await sl(pass() * 1500);
+    o.partKept = (L.wwhy && L.wwhy.fuKeep) !== K2; o.k2whole = !!(K2 && K2.whole);
     // 3 Klang & Ausdruck
     M.setParam('v.eng', 'mem'); M.hxFuSet(L, 'klang'); press(ri, 0.85); await sl(200); t = A.ctx.currentTime + 0.2; await sl(pass() * 1000);
     const lk = log(t); o.kEng = [...new Set(lk.map((x) => x.eng))]; o.kY = [...new Set(lk.map((x) => +x.y.toFixed(2)))]; o.kTt = +(M.touches.get(77).my ?? M.touches.get(77).y).toFixed(2); await sl(pass() * 1000); M.onUp({ pointerId: 77 });   // (a whole pass under the hand)
@@ -57,6 +60,7 @@ const BPM = 120;
   ok(r.silent, 'the field\'s own note is silent – it sounds in the Schleife');
   ok(r.firstAs.length && r.firstAs.every((x) => Math.abs(x - 1) < 0.01) && r.moved.some((x) => x > 1.05), `a note held two steps up: its first note sounds as it (${r.firstAs}), all moved (${r.moved})`);
   ok(r.back.length >= 4 && r.back.every((x) => x === 1), `let go: as it was (${r.back})`);
+  ok(!r.partKept && r.k2whole, 'Auslösen, the hand let go midway: that pass is not kept – the last whole one stays');
   ok(r.noHand === 0 && r.hand >= 4, `Auslösen: silent without a hand (${r.noHand}), sounding with one (${r.hand})`);
   ok(r.kEng.length === 1 && r.kEng[0] === 'mem' && r.kY.length === 1 && Math.abs(r.kY[0] - r.kTt) < 0.02, `Klang & Ausdruck: the field's instrument (${r.kEng}) and the hand's Höhe (${r.kY} = ${r.kTt})`);
   ok(r.off === 0 && !r.offL && !r.lm, `aus: it plays for itself again (${r.off} led notes)`);

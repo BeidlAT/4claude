@@ -44702,7 +44702,7 @@ function hxFuSched(L, S, now, horizon, out) {
       if (hxT(hxPassF(L, k)) >= lim) return;
       const job = hxWPass(L, S, k, { live: hxEigN(L) >= 1, tail: 0 }); if (!job) return;
       const b = hxT(hxPassF(L, k + 1));
-      F.k = k; S.lk = k; F.job = job; F.i = 0; F.t0 = hxT(hxPassF(L, k)); F.rec = []; F.led = false; F.full = F.t0 >= now - 0.03;
+      F.k = k; S.lk = k; F.job = job; F.i = 0; F.t0 = hxT(hxPassF(L, k)); F.rec = []; F.n = 0; F.ledN = 0; F.full = F.t0 >= now - 0.03;
       F.takt = !!(S.wn && S.wn.u === 'b'); F.b0 = F.takt ? tgBeat(F.t0) : 0; const pu = F.takt ? tgBeat(b) - F.b0 : b - F.t0; F.sc = pu > 0 && S.wn ? S.wn.len / pu : 1;
     }
     const ns = F.job.notes;
@@ -44712,8 +44712,8 @@ function hxFuSched(L, S, now, horizon, out) {
       F.i++;
       if (n.eng === 'bor') continue;
       if (t < now) { if (t < now - 0.03) { F.full = false; continue; } t = now; }   // (a tick late by a hair: at once)
+      F.n++; if (lead) F.ledN++;
       if (m === 'ausl' && !lead) continue;
-      if (lead) F.led = true;
       const eng = expr && ENGINES[P['v.eng']] ? P['v.eng'] : n.eng, E = ENGINES[eng]; if (!E) continue;
       const r = pitch && lead ? hxFuMove(L, S, n.f, lead) / n.f : 1, f = n.f * r;
       const y = expr && lead ? lead.y : n.y0 != null ? n.y0 : 0.5;
@@ -44734,7 +44734,12 @@ function hxFuSched(L, S, now, horizon, out) {
     // (owner, 31.10.2026: „das, was man unter Führen eingespielt hat, ist beim nächsten Start verschwunden – die Schleife muss
     // gesichert werden, der neue Klang zu 100 % erhalten“) a whole pass the hand led: kept as the loop's notes to be (stored
     // with it at once) – laid in when Führen ends, or at the next start
-    if (F.led && F.full && F.rec.length) hxFuKeep(L, S, F.rec);
+    // (owner, 31.10.2026: „die geführte Schleife ist verschwunden, jetzt ist eine leere Schleife an der Stelle“ – a pass the
+    // hand let go of midway was kept: under Auslösen only its few notes) kept: a pass led from its first note to its last;
+    // one led only in part only while there is no whole one, and never under Auslösen (its gaps would be the loop)
+    const whole = F.full && F.n > 0 && F.ledN === F.n && F.rec.length, K0 = L.wwhy && L.wwhy.fuKeep;
+    if (whole) hxFuKeep(L, S, F.rec, true);
+    else if (F.full && F.ledN > 0 && F.rec.length && m !== 'ausl' && !(K0 && K0.whole)) hxFuKeep(L, S, F.rec, false);
   }
 }
 // a played note in the record's units (beats of the pass, or seconds) – its pitch, sound and expression as heard
@@ -44743,10 +44748,10 @@ function hxFuNote(F, t, gt, n, eng, f, y, vel, curvesY, r) {
   return { t: Math.max(0, t0), held: false, d: gt != null ? Math.max(0.01, u(t + gt) - t0) : null, eng, f, deg: d.deg, oct: d.oct, alt: d.alt, y0: y, vel, pan: n.pan || 0, amp: n.amp, src: n.src || 'fin', burst: n.burst, gate: n.gate, hold: n.hold,
     cy: curvesY ? (n.curves.y || []).map(([tc, yy]) => [u(F.t0 + tc) - t0, yy]) : [], cf: (n.curves.f || []).map(([tc, ff]) => [u(F.t0 + tc) - t0, ff * r]) };
 }
-function hxFuKeep(L, S, rec) {
+function hxFuKeep(L, S, rec, whole) {
   const W = S.wn; if (!W) return;
   const k = { base: N.base, ...hxWScale(P['t.root'], P['t.scale']) };
-  L.wwhy = Object.assign({}, L.wwhy || {}, { fuKeep: { sk: S.key, wn: Object.assign({}, W, { n: rec.slice().sort((a, b) => a.t - b.t), key: k, lanes: [] }) } });
+  L.wwhy = Object.assign({}, L.wwhy || {}, { fuKeep: { sk: S.key, whole: !!whole, wn: Object.assign({}, W, { n: rec.slice().sort((a, b) => a.t - b.t), key: k, lanes: [] }) } });
   hxSaveMeta(L.id);
 }
 // the kept pass laid in: its notes become the loop's, it grows from them (Treu – the same throw, so it sounds as led);

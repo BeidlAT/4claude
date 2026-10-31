@@ -34,6 +34,12 @@ Begründungen stehen in `dev/STAND-2026-10-29.md` (Abschnitte „Danach (30.10.)
 
 ## Für die nächste Sitzung zu tun (ohne weitere Rückfrage)
 ## Erledigt am 31.10.
+Führen-Sicherung (Besitzer: „die geführte Schleife ist nach dem Neuladen verschwunden, eine leere Schleife an der
+Stelle, nichts zum Zurücksetzen“): nachgestellt (Chromium) kommt sie nach dem Neuladen richtig wieder (angehalten, nach ▶
+mit dem geführten Klang). Wahrscheinliche Ursache bei ihm: ein nur teilweise geführter Durchgang (Auslösen, Hand mitten im
+Durchgang weg) wurde gesichert. Jetzt: `fuKeep` nur aus ganz geführten Durchgängen (`F.ledN === F.n`), Teil-Durchgänge
+nur ohne ganzen und nie unter Auslösen. Seine schon falsch gesicherte Schleife: „Original“ → Abdruck (Aufnahme); `S.wn0`
+fehlt dort (vor #142). Falls es weiter auftritt: welche Art, wie lange geführt, angehalten vor dem Neuladen?
 Wartezeit + Original (Besitzer: „lange Wartezeiten unvermeidlich?“ / „komme nicht mehr auf den Original-Zustand“):
 `hxWSet`, `hxFuCommit`, `hxPresetTaken` rufen `hxWUpdate(…, { now: true })` – Überblenden mitten im Durchgang wie bei den
 Noten-Werkzeugen; Längen-/Band-Änderungen bleiben an der Naht (Geometrie). `hxOriginal` (band.js): Grundeinstellung +
