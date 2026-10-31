@@ -32,7 +32,7 @@ function hxPrmAt(key, T, base) {
 }
 // ---- the chain's state written down (in the Humus's timebase): every change of drive, ring, filter, phaser, chorus and
 // Kreisen as a snapshot of their settings, and the mod layer's deflections of them as lines – three minutes ----
-const HX_CHAIN = ['drv.type', 'drv.amt', 'drv.mix', 'rng.freq', 'rng.mix', 'flt.type', 'flt.freq', 'flt.q', 'flt.lfoRate', 'flt.lfoDepth', 'pha.mix', 'pha.fb', 'pha.rate', 'pha.depth', 'cho.rate', 'cho.depth', 'cho.mix', 'mov.pan', 'mov.panRate'];   // (until 24.10.2026 also 'dev.lat': „Minimal“ then played the drive without oversampling – such a record keeps it, HXW.latOld)
+const HX_CHAIN = ['drv.type', 'drv.amt', 'drv.mix', 'drv.farbe', 'rng.freq', 'rng.mix', 'flt.type', 'flt.freq', 'flt.q', 'flt.lfoRate', 'flt.lfoDepth', 'pha.mix', 'pha.fb', 'pha.rate', 'pha.depth', 'cho.rate', 'cho.depth', 'cho.mix', 'mov.pan', 'mov.panRate'];   // (until 24.10.2026 also 'dev.lat': „Minimal“ then played the drive without oversampling – such a record keeps it, HXW.latOld)
 const HXL = { ev: [], mod: {} };
 function hxChainLog() {
   if (HXW.on || !A.ctx || !hxLive()) return;

@@ -157,13 +157,18 @@ const FXM_PIC = {
     let shape;
     if (type === 'fold') { const g = 1 + amt * 7; shape = (x) => Math.sin(x * g * Math.PI / 2) * 0.5; }
     else if (type === 'crush') { const steps = Math.pow(2, 16 - amt * 14) / 2; shape = (x) => Math.round(x * steps) / steps; }
+    // (31.10.2026) the circuits: their static character (the processor's curves without their memory)
+    else if (type === 'vorstufe') { const k = 1 + amt * 24, b = 0.35; shape = (x) => (Math.tanh(k * x + b) - Math.tanh(b)) / k * (1 + amt * 6) * (x < 0 ? 0.85 : 1); }
+    else if (type === 'endstufe') { const k = 1 + amt * 14; shape = (x) => { const u = k * x, cr = Math.sign(u) * Math.max(0, Math.abs(u) - 0.04 * amt); return Math.tanh(cr) * 0.5; }; }
+    else if (type === 'pult') { const k = 1 + amt * 6; shape = (x) => { const a = k * x; return Math.tanh(a + 0.12 * a * a) * 0.45; }; }
+    else if (type === 'band') { const k = 1 + amt * 8; shape = (x) => Math.tanh(k * x) / Math.tanh(k * 0.5) * 0.5; }
     else { const k = 1 + amt * 30, nrm = 0.25 / Math.tanh(k * 0.25); shape = (x) => Math.tanh(k * x) * nrm; }
     const inp = (x) => 0.5 * Math.sin(x / W * Math.PI * 4);
     let pk = 1e-6; for (let x = 0; x <= W; x += 2) pk = Math.max(pk, Math.abs((1 - mix) * inp(x) + mix * shape(inp(x))));
     fxmBase(c, W, cy);
     fxmLine(c, W, (x) => cy - inp(x) / 0.5 * A, col, { dim: 0.22, w: 1 });
     fxmLine(c, W, (x) => cy - ((1 - mix) * inp(x) + mix * shape(inp(x))) / pk * A, col);
-    return { tube: 'Röhre', fold: 'Falter', crush: 'Bitbrecher' }[type] + ' · ' + Math.round(amt * 100) + ' %';
+    return { tube: 'Röhre', fold: 'Falter', crush: 'Bitbrecher', vorstufe: 'Vorstufe', endstufe: 'Endstufe', pult: 'Übertrager', band: 'Tonband' }[type] + ' · ' + Math.round(amt * 100) + ' %' + (RO_KINDS.includes(type) ? ' · Farbe ' + Math.round(P['drv.farbe'] * 100) + ' %' : '');
   },
   // a slow wave times the carrier: the sidebands' beating
   rng(c, W, H, col) {

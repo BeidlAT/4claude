@@ -466,7 +466,10 @@ function buildFx() {
   const box = h('div', { class: 'fxp' });
   box.append(...fxmStrip());
   box.append(fxmGroup('färbung', 'in reihe – jede stimme'));
-  box.append(modul('drv', 'Sättigung, Wellenfalter, Bitreduktion', grid(ctl('drv.type'), ctl('drv.amt'), ctl('drv.mix'))));
+  // (31.10.2026) Farbe only for the circuits (Vorstufe, Endstufe, Übertrager, Tonband): what it does said on it
+  const drvF = ctl('drv.farbe'), RO_FARBE = { vorstufe: 'Farbe: dunkel und voll → offen, straff, hell (Kathode, Miller)', endstufe: 'Farbe: Halbleiter-Gleichrichter (straff) → Röhrengleichrichter (sackt ein, atmet)', pult: 'Farbe: wenig Eisen, sauber → viel Eisen, dicht', band: 'Farbe: Bandgeschwindigkeit 7,5 → 15 → 30 ips (Kopfresonanz tiefer → höher, dunkler → heller)' };
+  bindCtl('drv.type', (v) => { drvF.hidden = !RO_KINDS.includes(v); drvF.title = RO_FARBE[v] || ''; });
+  box.append(modul('drv', 'Sättigung, Röhren, Übertrager, Tonband, Falter, Bits', grid(ctl('drv.type'), ctl('drv.amt'), ctl('drv.mix'), drvF)));
   box.append(modul('rng', 'Metallische Seitenbänder', grid(ctl('rng.freq'), ctl('rng.mix'))));
   box.append(modul('flt', 'Mit langsamer Welle', grid(ctl('flt.type'), ctl('flt.freq'), ctl('flt.q'), ctl('flt.lfoRate'), ctl('flt.lfoDepth'))));
   box.append(modul('pha', '6 Allpass-Stufen', grid(ctl('pha.mix'), ctl('pha.rate'), ctl('pha.depth'), ctl('pha.fb'))));

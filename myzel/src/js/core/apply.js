@@ -1,10 +1,46 @@
 /* ---------- live parameter application ---------- */
+// the Verzerrung's circuit types (dsp/roehre.js) – the processor of one chain, made on first use and fed the settings; the way
+// through the shaper or through it, crossfaded over 15 ms. Without AudioWorklet (no DSP here) the shaper's Röhre stands in.
+const RO_KINDS = ['vorstufe', 'endstufe', 'pult', 'band'];
+const RO_LAT = 54.5;   // (its delay in frames: the half-bands up and down – the tape's wobble adds ≈ 60)
+function roehreWire(c, set, on) {
+  if (!c.gS || !c.drvIn) return;
+  const ctx = c.drvIn.context;
+  if (on && !c.vt && ctx.__dspOK) {
+    try {
+      c.vt = new AudioWorkletNode(ctx, 'myzel-roehre', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit',
+        processorOptions: { type: P['drv.type'], s: P['drv.amt'], f: P['drv.farbe'], mix: P['drv.mix'] } });
+      c.gV = G(0); c.vt.connect(c.gV).connect(c.drvSum); c.vtIn = false;
+    } catch (e) { console.warn('Röhre:', e); c.vt = null; }
+  }
+  if (!c.vt) {   // (no processor: the shaper's Röhre at this Stärke)
+    if (on) { c.drv.curve = driveCurve('tube', P['drv.amt'], P['drv.mix']); if (c.drv.oversample !== Q.os) c.drv.oversample = Q.os; set(c.gS.gain, 1); }
+    return;
+  }
+  if (on) {
+    if (!c.vtIn) { c.drvIn.connect(c.vt); c.vtIn = true; clearTimeout(c.vtT); }
+    c.vt.port.postMessage({ type: P['drv.type'], s: P['drv.amt'], f: P['drv.farbe'], mix: P['drv.mix'] });
+    set(c.gV.gain, 1); set(c.gS.gain, 0);
+    if (c.drv.curve) { const sh = c.drv; clearTimeout(c.shT); c.shT = setTimeout(() => { if (c.vtIn && RO_KINDS.includes(P['drv.type'])) { sh.curve = null; sh.oversample = 'none'; } }, 60); }
+  } else {
+    set(c.gV.gain, 0); set(c.gS.gain, 1);
+    if (c.vtIn) { clearTimeout(c.vtT); c.vtT = setTimeout(() => { if (!RO_KINDS.includes(P['drv.type']) && c.vtIn) { try { c.drvIn.disconnect(c.vt); } catch (e) {} c.vtIn = false; } }, 80); }   // (taken out once faded: it costs nothing then)
+  }
+}
 function updDrive(only) {
   if (!A.ctx) return;
   const type = P['drv.type'], amt = P['drv.amt'], mix = P['drv.mix'];
   const key = type + ':' + amt.toFixed(3) + ':' + mix.toFixed(3) + ':' + Q.os + ':' + !!A.lite;
   if (!only && A.drvKey === key) return;
   if (!only) A.drvKey = key;
+  // (31.10.2026) Vorstufe, Endstufe, Übertrager, Tonband: their processor (dsp/roehre.js); the shaper meanwhile passes through
+  // untouched and costs nothing (no curve, no oversampling)
+  if (RO_KINDS.includes(type)) {
+    for (const [c, set] of chainsOf(only)) roehreWire(c, set, true);
+    if (!only) { A.drvKey = null; hxChainLog(); }
+    return;
+  }
+  for (const [c, set] of chainsOf(only)) if (c.vt || c.gS) roehreWire(c, set, false);
   const curve = driveCurve(type, amt, mix);
   // the oversampling follows the quality level in every latency mode (owner, 24.10.2026: the full sound, and the 2–4 ms it
   // adds – 2x 128, 4x 192 frames – in „Minimal“ too). Hexenring: a loop recorded before that, in „Minimal“, renders as it

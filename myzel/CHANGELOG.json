@@ -2,6 +2,15 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-31j",
+      "punkte": [
+        "Verzerrung: vier neue Arten, von Grund auf gebaut – Vorstufe (zwei 12AX7-Trioden mit Gitterstrom: der Arbeitspunkt wandert, der Klang blüht auf), Endstufe (Gegentakt mit einsackendem Netzteil), Übertrager (Eisen, das die Bässe zuerst verdichtet) und Tonband (Hysterese, Kopfresonanz, Höhenverlust, ein Hauch Leiern).",
+        "Neuer Regler „Farbe“ für diese vier: bei der Vorstufe dunkel → hell, bei der Endstufe Halbleiter- → Röhrengleichrichter, beim Übertrager wenig → viel Eisen, beim Tonband die Geschwindigkeit 7,5 → 30 ips.",
+        "Alle vier rechnen vierfach überabgetastet und gleichen ihren Pegel selbst aus – lauter oder leiser wird es beim Aufdrehen nicht, nur dichter.",
+        "Die bisherige „Röhre“, Falter und Bitbrecher bleiben, wie sie waren."
+      ]
+    },
+    {
       "id": "2026-10-31i",
       "punkte": [
         "Mixer: Die Perlen V, R, F, P, S unten auf der Kettenschiene sind jetzt die Effekt-Schalter der gewählten Spur – leuchtend in ihrer Farbe geht sie durch den Effekt, ein Tipp schaltet ihn ab oder an, beliebig viele. Unter den Perlen steht, welche Spur gerade dran ist.",

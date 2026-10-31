@@ -93,11 +93,13 @@ function fxInsUpd(st, inst) {
 // through and cost next to nothing), the Begrenzer always
 // (29.10.2026: NV 16 of each fed by noise, two runs on this machine after the processors were made faster, the higher
 // + 15 %; Resonanz-Netz per Art – Saiten, Glocken, Holzkörper; Wolke at full density, the Begrenzer pressed)
-const FX_COST = { netz: [1.37, 1.58, 0.85], wolke: 4.52, spektral: 6.29, oktav: 1.05, vokal: 1.32, harmo: 7.5, trans: 0.47, sat: 1.41, lim: 1.23, komp: 1.1, flecht: 1.1 };   // (flecht 30.10.2026: fxflecht1 1.02 − hxz1 0.075 = 0.95, one run of 4 rounds + 15 %; two state-variable filters and a pow per sample)   // (komp 30.10.2026: fxkomp1 1.03 − hxz1 0.09 = 0.94, one run of 4 rounds + 15 %; a log and a pow per sample)
+const FX_COST = { roehre: { vorstufe: 8.4, endstufe: 6.3, pult: 3.0, band: 7.5 }, netz: [1.37, 1.58, 0.85], wolke: 4.52, spektral: 6.29, oktav: 1.05, vokal: 1.32, harmo: 7.5, trans: 0.47, sat: 1.41, lim: 1.23, komp: 1.1, flecht: 1.1 };   // (flecht 30.10.2026: fxflecht1 1.02 − hxz1 0.075 = 0.95, one run of 4 rounds + 15 %; two state-variable filters and a pow per sample)   // (komp 30.10.2026: fxkomp1 1.03 − hxz1 0.09 = 0.94, one run of 4 rounds + 15 %; a log and a pow per sample)
 function fxLoad() {
   if (!A.fxR) return 0;
   const cost = (typ, r) => { const c = FX_COST[typ]; return Array.isArray(c) ? c[Math.round(+P[r + '.art']) || 0] || c[0] : c || 0; };
   let c = A.lim ? FX_COST.lim : 0;
+  // (31.10.2026) the Verzerrung's circuits, in every chain that runs one (measured in Node against Sättigung = 1.41, noise at Stärke 0.6)
+  if (RO_KINDS.includes(P['drv.type'])) for (const ch of A.chains || []) if (ch.vtIn) c += FX_COST.roehre[P['drv.type']] || 0;
   for (const r in A.fxR) { const S = A.fxR[r]; if (S.cur) c += cost(S.cur.typ, r); }
   for (const st of MIX.list) {
     const x = st.proc;

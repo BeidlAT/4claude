@@ -27,8 +27,11 @@ function makeChain(m) {
   // (its curve spans ±DRV_H, driveCurve) and the level is made up after it: below 0 dBFS the same curve on the same
   // points, above it room up to +19 dB; the Begrenzer at the end catches the peaks
   c.drvPre = G(1 / DRV_H); c.drv = ctx.createWaveShaper(); c.drvOut = G(DRV_H);
-  c.drvPre.connect(c.drv).connect(c.drvOut);
-  if (has(1)) { node.connect(c.drvPre); node = c.drvOut; }
+  // (31.10.2026) beside the shaper, a circuit of its own for Vorstufe, Endstufe, Übertrager, Tonband (dsp/roehre.js): made when
+  // such a type is first chosen (updDrive – roehreWire), the two ways crossfaded into drvSum
+  c.gS = G(1); c.drvSum = G(1);
+  c.drvPre.connect(c.drv).connect(c.drvOut).connect(c.gS).connect(c.drvSum);
+  if (has(1)) { node.connect(c.drvPre); c.drvIn = node; node = c.drvSum; }
   // ring modulator
   c.rngDry = G(1); c.rngWet = G(0); c.rngVca = G(0); c.rngOut = G(1);
   c.rngDry.connect(c.rngOut); c.rngVca.connect(c.rngWet).connect(c.rngOut);
