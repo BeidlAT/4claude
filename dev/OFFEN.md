@@ -34,6 +34,14 @@ Begründungen stehen in `dev/STAND-2026-10-29.md` (Abschnitte „Danach (30.10.)
 
 ## Für die nächste Sitzung zu tun (ohne weitere Rückfrage)
 ## Erledigt am 31.10.
+Puls/Bordun/Leiste (Besitzer: „Puls und Bordun spielen nicht mehr, auch wenn ich ein Preset lade … Puls starten soll auch
+spielen … das Symbol unten soll leuchten, wenn der Puls aktiv ist; dasselbe für das Sporenwerk … immer noch werden Schleifen
+neu berechnet, obwohl ich nur den Filter einstelle“): `loadPreset` startet den Puls, wenn das Preset Spuren hat (vorher nur
+ein Hinweis „▶ startet …“); `pulsGo()` (Leiste, Puls-Seite, MIDI) schaltet Spur 1 dazu, wenn keine an ist; `tabLive()`
+(`ui/sheet.js`) setzt `data-live` auf Puls-/Sporenwerk-Reiter (mint, atmet im Tempo; Orange bleibt die offene Seite);
+`hxWPIn` nimmt `drv/rng/flt/pha/cho/fx/bor` aus der Klang-Signatur der Schleifen. Tests `t-puls-start.js`,
+`t-hx-filter-still.js` (Chromium). Nicht nachgestellt: dass Bordun/Puls beim Laden *gar nicht* spielten – in Chromium
+lädt Tiefsee beides; falls es beim Besitzer weiter auftritt: welches Preset, welche Seite, Schleifen in der Leiste?
 Verzerrung: Vorstufe, Endstufe, Übertrager, Tonband (Besitzer: „hochwertige Röhrensimulationen, Richtung Vintage, eigener
 Code“) – Prozessor `dsp/roehre.js` (`myzel-roehre`), Parameter `drv.farbe`, Einbau in `makeChain`/`updDrive`
 (`roehreWire`, gS/gV-Überblendung), Kosten `FX_COST.roehre`. Recherche, Messungen, behobene Bau-Fehler:

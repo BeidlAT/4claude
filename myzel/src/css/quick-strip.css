@@ -16,6 +16,11 @@
 .tab span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 460px) { .tab { padding-left: 0; padding-right: 0; font-size: 10px; letter-spacing: 0; } }
 .tab { position: relative; }
+/* a tab whose part runs (Puls, Sporenwerk): mint glow, breathing – not the amber of the open panel */
+.tab[data-live] svg { color: var(--lumen); filter: drop-shadow(0 0 3px var(--lumen)) drop-shadow(0 0 7px rgba(134, 240, 208, .45)); animation: tabLive var(--beat, 1.6s) ease-in-out infinite; }
+.tab[data-live]::before { content: ''; position: absolute; top: 0; left: 28%; right: 28%; height: 2px; border-radius: 0 0 2px 2px; background: var(--lumen); box-shadow: 0 0 6px var(--lumen); }
+@keyframes tabLive { 0%, 100% { opacity: 1; } 50% { opacity: .62; } }
+@media (prefers-reduced-motion: reduce) { .tab[data-live] svg { animation: none; } }
 .tab .mdot { position: absolute; top: 6px; left: calc(50% + 9px); width: 7px; height: 7px; border-radius: 50%; background: var(--lumen); opacity: 0; transition: opacity .12s; }
 .tab .mdot.conn { opacity: .4; }
 .tab .mdot.on { opacity: 1; transition: none; }

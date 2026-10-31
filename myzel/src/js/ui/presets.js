@@ -365,10 +365,12 @@ function loadPreset(p, own) {
   kqUsed(P['v.eng']);
   const miss = engMissSay();
   const ton = keep ? ' Tonart der Schleifen behalten: ' + NOTE_NAMES[+P['t.root']] + ' ' + ((SCALES[P['t.scale']] || {}).n || P['t.scale']) + '.' : '';
-  // (owner, 30.10.2026: „Pilzregen … in der Beschreibung stehen vier Spuren, aber es ist nur eine eingestellt“) its Puls
-  // lanes sound only while the Puls runs – said when they are there and it stands
-  const nl = [0, 1, 2, 3].filter((i) => P['l' + i + '.on']).length, pl = nl && !SEQ.on ? ' ▶ startet ' + (nl === 1 ? 'seine Puls-Spur' : 'seine ' + nl + ' Puls-Spuren') + '.' : '';
-  toast('„' + p.name + '“ geladen.' + pl + ton + rzSay() + (miss ? ' ' + miss : ''), miss || keep || pl ? 8000 : 4500, UNDO);
+  // (owner, 31.10.2026: „jedes Preset hatte Puls und Bordun individuell auf das Preset abgestimmt“) a preset with Puls
+  // lanes starts its Puls (with Schleifen in the Leiste: on their next bar) – ■ in the bar or the Puls tab halts it
+  const nl = [0, 1, 2, 3].filter((i) => P['l' + i + '.on']).length, go = nl && !SEQ.on && A.started;
+  if (go) seqStart();
+  const pl = nl && SEQ.on ? ' Sein Puls ' + (go ? 'startet' : 'läuft') + ' (' + (nl === 1 ? '1 Spur' : nl + ' Spuren') + ').' : '';
+  toast('„' + p.name + '“ geladen.' + pl + ton + rzSay() + (miss ? ' ' + miss : ''), miss || keep ? 8000 : 4500, UNDO);
 }
 // (owner, 26.10.2026: „mit einem leeren Preset beginnen können“) Leere Erde: every setting at its plain start, the
 // effects dry, no second layer, no Bordun, no Puls lane, no Fährte – a sound to build from. Apart from PRESETS, whose
