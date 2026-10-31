@@ -33,16 +33,23 @@ const BPM = 120;
     await sl(300); t = A.ctx.currentTime + 0.2; await sl(pass() * 1000); const lg = log(t);
     o.firstAs = lg.filter((x) => Math.abs(x.nf / ref - 1) < 0.01).map((x) => +(x.f / tt.f).toFixed(3));
     o.moved = lg.map((x) => +(x.f / x.nf).toFixed(3));
+    await sl(pass() * 1000); const K1 = L.wwhy && L.wwhy.fuKeep; o.keep1 = K1 ? K1.wn.n.map((x) => +(x.f / tt.f).toFixed(3)) : null;
     M.onUp({ pointerId: 77 }); await sl(300); t = A.ctx.currentTime + 0.2; await sl(pass() * 1000); o.back = log(t).map((x) => +(x.f / x.nf).toFixed(3));
     // 2 Auslösen
     M.hxFuSet(L, 'ausl'); t = A.ctx.currentTime + 0.2; await sl(pass() * 1000); o.noHand = log(t).length;
     press(ri, 0.5); await sl(200); t = A.ctx.currentTime + 0.2; await sl(pass() * 1000); o.hand = log(t).length; M.onUp({ pointerId: 77 });
     // 3 Klang & Ausdruck
     M.setParam('v.eng', 'mem'); M.hxFuSet(L, 'klang'); press(ri, 0.85); await sl(200); t = A.ctx.currentTime + 0.2; await sl(pass() * 1000);
-    const lk = log(t); o.kEng = [...new Set(lk.map((x) => x.eng))]; o.kY = [...new Set(lk.map((x) => +x.y.toFixed(2)))]; o.kTt = +(M.touches.get(77).my ?? M.touches.get(77).y).toFixed(2); M.onUp({ pointerId: 77 });
+    const lk = log(t); o.kEng = [...new Set(lk.map((x) => x.eng))]; o.kY = [...new Set(lk.map((x) => +x.y.toFixed(2)))]; o.kTt = +(M.touches.get(77).my ?? M.touches.get(77).y).toFixed(2); await sl(pass() * 1000); M.onUp({ pointerId: 77 });   // (a whole pass under the hand)
     // 4 aus
     [...document.querySelectorAll('.hx-ed-furow .chip')].find((b) => b.textContent === 'aus').click(); await sl(pass() * 1000 + 300);
     t = A.ctx.currentTime; await sl(pass() * 1000); o.off = log(t).length; o.offL = L.fuehr; o.lm = !!S.lm;
+    // what was led stays: its notes are the loop's now (stored with it), ↶ gives the old ones back
+    o.kept = { eng: [...new Set(S.wn.n.map((x) => x.eng))], y: [...new Set(S.wn.n.map((x) => +x.y0.toFixed(2)))], n: S.wn.n.length, keepGone: !(L.wwhy && L.wwhy.fuKeep), wahl: !!L.wwhy.wahl, hist: M.HX.hist[M.HX.hist.length - 1].label };
+    const KW = S.wn; M.hxUndoStep(); await sl(300); o.undoEng = [...new Set(S.wn.n.map((x) => x.eng))];
+    // a reload while it was led: the kept pass comes in by itself at the next start
+    L.wwhy = Object.assign({}, L.wwhy, { fuKeep: { sk: S.key, wn: KW } }); L.fuehr = null; await sl(400);
+    o.reload = [...new Set(S.wn.n.map((x) => x.eng))]; o.reloadGone = !L.wwhy.fuKeep;
     return o;
   }, BPM);
   ok(r.chips.join('|').startsWith('aus|Tonhöhe|Klang & Ausdruck|Auslösen|Tonhöhe + Ausdruck'), `the editor: Führen ${r.chips.join(' · ')}`);
@@ -53,6 +60,10 @@ const BPM = 120;
   ok(r.noHand === 0 && r.hand >= 4, `Auslösen: silent without a hand (${r.noHand}), sounding with one (${r.hand})`);
   ok(r.kEng.length === 1 && r.kEng[0] === 'mem' && r.kY.length === 1 && Math.abs(r.kY[0] - r.kTt) < 0.02, `Klang & Ausdruck: the field's instrument (${r.kEng}) and the hand's Höhe (${r.kY} = ${r.kTt})`);
   ok(r.off === 0 && !r.offL && !r.lm, `aus: it plays for itself again (${r.off} led notes)`);
+  ok(r.keep1 && r.keep1[0] === 1, `a whole pass led: kept with the loop at once, as heard (first note = the hand's: ${r.keep1 && r.keep1.join(',')})`);
+  ok(r.kept.eng.join() === 'mem' && r.kept.y.join() === '0.85' && r.kept.keepGone && r.kept.wahl && /Geführt übernommen/.test(r.kept.hist), `aus: the last pass led is the loop's now (${r.kept.n} notes, ${r.kept.eng}, Höhe ${r.kept.y}; „${r.kept.hist}“)`);
+  ok(r.undoEng.join() === 'glo', `↶: its own notes again (${r.undoEng})`);
+  ok(r.reload.join() === 'mem' && r.reloadGone, 'a reload while it was led: what was led comes in by itself');
   ok(!errors.length, 'no page errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
   await H.close();
   process.exit(H.summary() ? 1 : 0);
