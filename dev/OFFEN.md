@@ -28,6 +28,10 @@ Begründungen stehen in `dev/STAND-2026-10-29.md` (Abschnitte „Danach (30.10.)
    playwright.download.prss.microsoft.com, playwright.azureedge.net, ftp.mozilla.org, download-installer.cdn.mozilla.net)
    – bis dahin laufen alle Tests nur in Chromium (immer dazusagen).
 
+12. **Routing je Kanal durch einzelne Effekte (31.10.):** Konzept `dev/klang/routing-konzept.md` + klickbare Vorschau
+   (Artifact „Myzel Wege-Leiste“). Wartet auf sein Urteil. Schritt 1 ist schon bestätigt: Schleifen im Pult mit
+   KETTE/DIREKT wie jede Spur, „K“ weg, nach Aufnahme mit Effekten automatisch Direkt, auf Kette läuft ihr Klang (wie er ist)
+   noch einmal durch die Kette.
 11. **Latenz (31.10.):** Im Browser ist mit seinem Steinberg-Treiber nichts mehr zu holen (Chrome-Bericht: 10 ms Puffer +
    48–64 ms Ausgang; Exklusiv-Modus +50 ms). Firefox-Bericht steht aus. Entscheidung offen: eigenes Programm mit ASIO –
    Konzept `dev/klang/nativ-asio-konzept.md` (zuerst Probe-Bau Electron + node-web-audio-api, 1–2 Sitzungen).
