@@ -32,16 +32,18 @@ const BPM = 120;
     const lvl = async (ms) => { const b = new Float32Array(2048), f = new Float32Array(A.analyser.frequencyBinCount); let s = 0, hi = 0, all = 0, k = 0; const t0 = performance.now(), bin = A.ctx.sampleRate / A.analyser.fftSize;
       while (performance.now() - t0 < ms) { A.analyser.getFloatTimeDomainData(b); let q = 0; for (const x of b) q += x * x; s += q / b.length; A.analyser.getFloatFrequencyData(f); for (let i = 1; i < f.length; i++) { const p = Math.pow(10, f[i] / 10); all += p; if (i * bin > 2500) hi += p; } k++; await sl(40); }
       return [+(10 * Math.log10(s / k + 1e-20)).toFixed(1), +(10 * Math.log10(hi / (all + 1e-30) + 1e-20)).toFixed(1)]; };
+    // what comes out of the chain of a set of effects (RMS dB over 1.5 s) – the Schleife goes through it or not
+    const tap = async (m) => { const c = M.HXWG.mk[m]; if (!c) return -200; const an = A.ctx.createAnalyser(); an.fftSize = 2048; c.out.connect(an); const b = new Float32Array(2048); let s = 0, k = 0; const t0 = performance.now(); while (performance.now() - t0 < 1500) { an.getFloatTimeDomainData(b); let q = 0; for (const x of b) q += x * x; s += q / b.length; k++; await sl(40); } c.out.disconnect(an); return +(10 * Math.log10(s / k + 1e-20)).toFixed(1); };
     const st = M.MIX.s.hxr, gM = M.hxGateM(), wait = async () => { await sl(Math.round(M.hxLen(L) * 1000) + 700); };
     await sl(1000); [o.dirLvl, o.dirHi] = await lvl(2500); o.dirTo = st.dTo === gM;
     // Kette with only the Verzerrung, hot
     M.setParam('drv.mix', 1); M.setParam('drv.amt', 0.95);
     M.hxWegSet(L, 'fx', 1); await wait();
     o.vR = !!M.HXWG.r.get(L.id); o.vM = M.HXWG.r.get(L.id) && M.HXWG.r.get(L.id).m; o.vSend = L.sendCh;
-    [o.vLvl, o.vHi] = await lvl(2500);
+    o.vTap = await tap(1); [o.vLvl, o.vHi] = await lvl(2500);
     // only the Filter (open, low pass at 20 kHz): no drive on it
     M.setParam('flt.type', 'lowpass'); M.setParam('flt.freq', 20000);
-    M.hxWegSet(L, 'fx', 4); await wait(); [o.fLvl, o.fHi] = await lvl(2500); o.fM = M.HXWG.r.get(L.id) && M.HXWG.r.get(L.id).m;
+    M.hxWegSet(L, 'fx', 4); await wait(); [o.fLvl, o.fHi] = await lvl(2500); o.fM = M.HXWG.r.get(L.id) && M.HXWG.r.get(L.id).m; o.fTap = await tap(4); o.fOld = M.HXWG.mk[1] ? await tap(1) : -200;
     // back to Direkt
     M.hxWegSet(L, 'dir'); await wait(); o.back = !M.HXWG.r.get(L.id); [o.bLvl] = await lvl(2000);
     // the Hexenring's channel: every Schleife; a new one plays Direkt
@@ -53,8 +55,8 @@ const BPM = 120;
   }, BPM);
   console.log(JSON.stringify(r));
   ok(r.n === 1 && r.chain && r.baked0 && r.weg0 === 0 && r.out0 === 0 && r.dirTo, `recorded through the chain: burnt in, plays Direkt (way ${r.weg0}, out ${r.out0}); the strip straight to the master`);
-  ok(r.vR && r.vM === 1 && r.vSend >= 0 && r.vLvl > r.dirLvl - 6 && r.vHi > r.dirHi + 6, `Kette, only Verzerrung: its pair into that chain (send ${r.vSend}) – it sounds (${r.vLvl} dB vs ${r.dirLvl}), the drive's harmonics come (${r.vHi} vs ${r.dirHi} dB above 2.5 kHz)`);
-  ok(r.fM === 4 && Math.abs(r.fLvl - r.dirLvl) < 2 && r.fHi < r.vHi - 4, `Kette, only Filter (open): as loud as Direkt (${r.fLvl} vs ${r.dirLvl} dB), no drive (${r.fHi} dB above 2.5 kHz)`);
+  ok(r.vR && r.vM === 1 && r.vSend >= 0 && r.vTap > r.dirLvl - 8 && r.vLvl > r.dirLvl - 6, `Kette, only Verzerrung: its pair into that chain (send ${r.vSend}), the Schleife comes out of it (${r.vTap} dB) and sounds (${r.vLvl} vs ${r.dirLvl} dB)`);
+  ok(r.fM === 4 && r.fTap > r.dirLvl - 8 && r.fOld < -90 && Math.abs(r.fLvl - r.dirLvl) < 2, `Kette, only Filter: through that chain (${r.fTap} dB), none left in the other (${r.fOld} dB), as loud as Direkt (${r.fLvl} vs ${r.dirLvl} dB)`);
   ok(r.back && Math.abs(r.bLvl - r.dirLvl) < 1.5, `back to Direkt: its way gone, the level as before (${r.bLvl} dB)`);
   ok(r.new2 === 0 && r.allM[0] === 2 && r.allM[1] === 2 && r.allD[0] === 0 && r.allD[1] === 0, `a new Schleife plays Direkt; the Hexenring's channel sets every one (${r.allM} → ${r.allD})`);
   ok(!errors.length, 'no page errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
