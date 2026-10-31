@@ -26,20 +26,22 @@ function mxStatic() {
   // active, their initials inside where the soil has room, their names under the mouse
   const bx0 = MX.ch.dly.g.cx - 22, bx1 = MX.ch.rev.g.cx + 22, big = MX.soil >= 44, br = big ? 6.5 : 6;
   c.font = '600 7.5px ' + COL.fontNum; c.textAlign = 'center';
+  MX.bx = [];
   for (let i = 0; i < 5; i++) {
-    const x = bx0 + (bx1 - bx0) * i / 4, on = mxFxOn(i);
-    c.fillStyle = on ? 'rgba(255,179,92,.16)' : 'rgba(255,179,92,.05)'; c.beginPath(); c.arc(x, yK, br + 2, 0, MX_TAU); c.fill();
-    c.fillStyle = '#17110e'; c.beginPath(); c.arc(x, yK, big ? br : 2.6, 0, MX_TAU); c.fill();
-    c.strokeStyle = on ? 'rgba(255,179,92,.8)' : 'rgba(255,179,92,.3)'; c.lineWidth = 1; c.stroke();
-    if (big) { c.fillStyle = on ? 'rgba(255,200,140,.95)' : 'rgba(168,153,138,.6)'; c.fillText(MX_FX[i][2], x, yK + 0.5); }
+    const x = bx0 + (bx1 - bx0) * i / 4, on = mxFxOn(i), sel = FXV.j === i, dim = FXV.j >= 0 && !sel;
+    MX.bx.push(x);
+    c.fillStyle = sel ? 'rgba(255,179,92,.34)' : on ? 'rgba(255,179,92,' + (dim ? 0.07 : 0.16) + ')' : 'rgba(255,179,92,.05)'; c.beginPath(); c.arc(x, yK, br + (sel ? 4 : 2), 0, MX_TAU); c.fill();
+    c.fillStyle = sel ? '#ffb35c' : '#17110e'; c.beginPath(); c.arc(x, yK, big || sel ? br : 2.6, 0, MX_TAU); c.fill();
+    c.strokeStyle = sel ? '#ffd29c' : on ? 'rgba(255,179,92,' + (dim ? 0.4 : 0.8) + ')' : 'rgba(255,179,92,.3)'; c.lineWidth = 1; c.stroke();
+    if (big || sel) { c.fillStyle = sel ? '#140f0c' : on ? 'rgba(255,200,140,' + (dim ? 0.55 : 0.95) + ')' : 'rgba(168,153,138,.6)'; c.fillText(MX_FX[i][2], x, yK + 0.5); }
     const b = MX.beads && MX.beads[i];
-    if (b) { b.style.transform = 'translate(' + (x - 9).toFixed(1) + 'px,' + (yK - 9).toFixed(1) + 'px)'; b.title = MX_FX[i][1] + (on ? ' – an' : ' – aus') + ' (Effektkette)'; }
+    if (b) { b.style.transform = 'translate(' + (x - 9).toFixed(1) + 'px,' + (yK - 9).toFixed(1) + 'px)'; b.title = MX_FX[i][1] + (on ? ' – an' : ' – aus') + (sel ? ' · Effekt-Blick: Kanäle antippen oder überstreichen, Alt: nur dieser, Umschalt: nur solange gedrückt, Esc: zurück' : ' · antippen: welche Kanäle hindurchgehen'); }
   }
   // hyphae: from the base of each stem down to its rail; returns always go straight in
   c.lineCap = 'round';
   for (const cc of MXC) {
     if (cc.kind === 'sum' || cc.kind === 'puls' || MX.ch[cc.k].gone) continue;
-    const S = MX.ch[cc.k], g = S.g, dir = cc.kind === 'ret' || P['x' + cc.k + '.route'] === 'dir', ry = dir ? yD : yK;
+    const S = MX.ch[cc.k], g = S.g, fm = cc.kind === 'ret' ? 0 : fxmGet(cc.k), dir = !fm, ry = dir ? yD : yK;
     const y0 = g.yb + 9, a = S.dorm || S.srcoff ? 0.1 : 0.34;
     c.strokeStyle = mxRgba(cc.rgb, a); c.lineWidth = 1.1;
     c.beginPath(); c.moveTo(g.cx, y0); c.bezierCurveTo(g.cx - 2, y0 + (ry - y0) * 0.4, g.cx + 2, y0 + (ry - y0) * 0.7, g.cx, ry); c.stroke();
@@ -50,6 +52,18 @@ function mxStatic() {
     // the knot: the channel's colour; hollow when its source is off, grey when it is still
     c.fillStyle = S.dorm ? 'rgba(118,106,97,.9)' : S.srcoff ? '#17110e' : mxRgba(cc.rgb, 1); c.beginPath(); c.arc(g.cx, ry, 3.8, 0, MX_TAU); c.fill();
     c.strokeStyle = S.srcoff && !S.dorm ? mxRgba(cc.rgb, 0.6) : '#140f0c'; c.lineWidth = 1.2; c.stroke();
+    if (cc.kind !== 'ret') mxFxmMark(c, g.cx, yK, yD, fm, cc.rgb);
+  }
+  // (31.10.2026) the Schleifen's knots, under their strips in the group „Schleifen“ (wege-fx.js, hexenring/weg.js)
+  fxlSync();
+  for (const G2 of FXL.geo) {
+    const fm = fxmGet(G2.k), ry = fm ? yK : yD, rgb = mxRgb(G2.col), y0 = G2.yb + 4;
+    c.strokeStyle = mxRgba(rgb, 0.3); c.lineWidth = 1.1;
+    c.beginPath(); c.moveTo(G2.cx, y0); c.bezierCurveTo(G2.cx - 2, y0 + (ry - y0) * 0.4, G2.cx + 2, y0 + (ry - y0) * 0.7, G2.cx, ry); c.stroke();
+    c.strokeStyle = 'rgba(240,230,216,.22)'; c.lineWidth = 1; c.beginPath(); c.arc(G2.cx, fm ? yD : yK, 3.2, 0, MX_TAU); c.stroke();
+    c.fillStyle = mxRgba(rgb, G2.L.state === 'spielt' ? 1 : 0.55); c.beginPath(); c.arc(G2.cx, ry, 3.8, 0, MX_TAU); c.fill();
+    c.strokeStyle = '#140f0c'; c.lineWidth = 1.2; c.stroke();
+    mxFxmMark(c, G2.cx, yK, yD, fm, rgb);
   }
   // the Puls group is a VCA: a bracket over its four lanes
   const pg = MX.ch.puls.g, l0 = MX.ch.l0.g, by = soilY + 3;
@@ -161,10 +175,10 @@ function mxPulse(k) { const v = MXV.views[MX.view]; if (v && v.pulse) v.pulse(k)
 const MX_PATHS = [];
 function mxPaths() {
   for (const cc of MXC) {
-    const g = MX.ch[cc.k].g, p = MX_PATHS[cc.i] || (MX_PATHS[cc.i] = new Float32Array(5));
+    const g = MX.ch[cc.k].g, p = MX_PATHS[cc.i] || (MX_PATHS[cc.i] = new Float32Array(6));
     if (!g || MX.ch[cc.k].gone) continue;
-    const ry = cc.kind === 'ret' || P['x' + cc.k + '.route'] === 'dir' ? MX.yD : MX.yK, y0 = g.yb + 9;
-    p[0] = g.cx; p[1] = y0; p[2] = ry; p[3] = ry - y0; p[4] = MX.railEnd - g.cx;
+    const fm = cc.kind === 'ret' ? 0 : fxmGet(cc.k), ry = fm ? MX.yK : MX.yD, y0 = g.yb + 9;
+    p[0] = g.cx; p[1] = y0; p[2] = ry; p[3] = ry - y0; p[4] = MX.railEnd - g.cx; p[5] = fm;
   }
 }
 function mxPultFrame(dt, ts) {
@@ -234,15 +248,19 @@ function mxDrawRack(dt) {
     const L = p[3] + p[4];
     MXP.d[j] += MXP.v[j] * dt;
     if (MXP.d[j] >= L) { MXP.k[j] = -1; continue; }
-    const d = MXP.d[j], x = d < p[3] ? p[0] : p[0] + d - p[3], y = d < p[3] ? p[1] + d : p[2];
+    const d = MXP.d[j], x = d < p[3] ? p[0] : p[0] + d - p[3];
     if (x < x0 || x > x1) continue;
+    // (31.10.2026) on the chain rail through only some effects: a hop under the beads it skips, a light in those it passes
+    const [dy, lit] = d >= p[3] && p[5] > 0 && p[5] !== FXM_ALL ? mxFxmSpore(x, p[5]) : [0, -1], y = (d < p[3] ? p[1] + d : p[2]) + dy;
     const a = Math.min(1, d / 10, (L - d) / 30) * (MXP.f[j] ? 1 : 0.85), big = MXP.s[j] > 1, s = MXP.f[j] ? 14 : big ? 6 : 4.5;
+    if (lit >= 0) { c.globalAlpha = a * 0.5; c.drawImage(cc.spr.p2, MX.bx[lit] - 11, MX.yK - 11, 22, 22); }
     c.globalAlpha = a;
     c.drawImage(MXP.f[j] ? cc.spr.pulse : big ? cc.spr.p2 : cc.spr.p1, x - s, y - s, s * 2, s * 2);
     c.fillStyle = MXP.f[j] ? '#fff6ea' : cc.c1;
     c.fillRect(x - MXP.s[j] * 0.6, y - MXP.s[j] * 0.6, MXP.s[j] * 1.2, MXP.s[j] * 1.2);
   }
   c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+  mxLoopSpores(c, dt, x0, x1);
 }
 // Send threads of the selected (or hovered) channel: hyphae from its knot that dip below both rails and come up
 // under Echo and Hall, as thick as what it sends. They fade towards their middle and are at full strength only for a

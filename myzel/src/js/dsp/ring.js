@@ -102,7 +102,7 @@
       this.gS = [0, 1, 2, 3].map(() => [[new Float32Array(this.CH), new Float32Array(this.CH)]]);
       this.gM = [0, 1, 2, 3].map(() => ({ n: 0, r: 0, p: 0, fr: 0, ch: [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], tot: new Float64Array(16), d: new Float64Array(16), g: new Float64Array(16) }));
       this.noSum = !!po.noSum; this.noDD = !!po.noDD; this.noMute = !!po.noMute; this.ddPool = !!po.ddPool; this.gvQ = []; this.dvF = 1; this.ddT = null; this.ddBlk = Math.max(16, po.ddBlk | 0 || 64);
-      this.wA = new Float32Array(S); this.wG = new Float32Array(S); this.sgA = new Float32Array(S); this.sndW = false;
+      this.wA = new Float32Array(S); this.wG = new Float32Array(S); this.sgA = new Float32Array(S); this.rgA = new Float32Array(S); this.sndW = false;
       this.bG = new Float32Array(S); this.gSl = new Float32Array(S); this.slQ = new Float64Array(3); this.AB = [new Float32Array(S), new Float32Array(S)];   // (step 2b: a stop's fade, a slice's gains, a worn Schicht's own sum)   // (step 1d: Schluss „welkend“, the sends to the loops' own webs)
       this.rep = 0; this.met = 0; this.nA = 0; this.late = 0; this.wpt = []; this.wrep = 0;   // (step 2a: the Werk-Rahmen's ports – the live frame every 0.1 s)
       this.gW = new WeakMap();   // (step 2b: a chunk given back – by what, at which frame – for the tripwire's report)
@@ -160,6 +160,9 @@
       if (m.ddGo) { const d = m.ddGo; if (d.stg != null) { d.dst = this.stg.get(d.stg) || []; this.stg.delete(d.stg); d.stg = null; } this.ddStart(d); }   // (step 1d) the page's chunks for a de-drifted version
       // (step 1d) Nähren: a loop's output, post level and state, into its own pair of output 2 (ch: 0…7; −1 off) – the send
       // that feeds its own web (no tap hears output 2); a fade of X frames either way
+      // (31.10.2026) the loop's own way (Kette with some effects – the page's chain behind its pair): its outputs give way to
+      // its pair (which then carries it whole, the send's gain at 1 – the page asks for both), a fade of X frames either way
+      if (m.rt) for (const d of [].concat(m.rt)) { const L = this.lp(d.loop); if (L) envGo(L.rg, d.on ? 1 : 0, this.xf(d.X)); }
       if (m.send) for (const d of [].concat(m.send)) { const L = this.lp(d.loop); if (!L) continue; const on = d.ch != null && d.ch >= 0; if (on) L.sendCh = d.ch | 0; envGo(L.sg, on ? (d.g != null ? +d.g : 1) : 0, this.xf(d.X)); }
       // (step 1d) Schluss „welkend“: from frame f0 to f1 the loop's gain falls (equal power), a one-pole low pass closes
       // from no filter to lo Hz, slices of sl frames drop out (seeded, ever more often, 3-ms edges); at f1 it is angehalten
@@ -280,7 +283,7 @@
       const L = { id: d.id, takt: d.lock !== 'frei', b0: +d.b0 || 0, beats: +d.beats || 4, Lf: Math.max(1, d.fr ? +d.L || SR : Math.round(d.L || SR)), ph0: d.fr ? +d.ph0 || 0 : Math.round(d.ph0 || 0),   // (step 4: a frei length may be fractional – Treffen setzen; its pass starts are rounded, as a Takt loop's)
         k: -1, s0: 0, s1: 0, pe: 0, q: 0, r: 1, rt: 1, rv: 0, re: true, sch: [], st: envNew(d.state === 'stumm' || d.state === 'angehalten' ? 0 : 1),
         lv: envNew(d.gain != null ? +d.gain : 1), pan: +d.pan || 0, out: d.out ? 1 : 0, state: d.state || 'spielt', dying: false, ms: 0, mp: 0, mn: 0,
-        sendCh: -1, sg: envNew(0), wk: null, lpS: new Float32Array(4),   // (step 1d: its send, a Schluss „welkend“ with its filter's state)
+        sendCh: -1, sg: envNew(0), rg: envNew(0), wk: null, lpS: new Float32Array(4),   // (step 1d: its send, a Schluss „welkend“ with its filter's state)
         vs: 1, vg: null, sl: null, slA: false,   // (step 2b: the tape's speed and its glide or stop; the slices)
         gap: !!d.gap, ps0: 0, acc: null, accTo: null };   // (step 4: gap – only the silence after the phrase changes (Treffen setzen); the pass start before s0; a Sammelschleife's recording, the ones this loop feeds)
       return L;
@@ -1280,6 +1283,7 @@
       const O2 = L.sendCh >= 0 && outs[2] && outs[2][2 * L.sendCh + 1] ? outs[2] : null, sgc = O2 ? !this.env(L.sg, this.sgA, o, n) : true, sgv = L.sg.v, SG = this.sgA;
       const SL = O2 ? O2[2 * L.sendCh] : null, SR2 = O2 ? O2[2 * L.sendCh + 1] : null;
       if (O2) this.sndW = true;
+      const rgc = !this.env(L.rg, this.rgA, o, n), rgv = L.rg.v, RG = this.rgA, rgo = !rgc || rgv !== 0;   // (its own way: the outputs give way)
       const BG = bgS ? this.bG : null, AT = L.accTo && L.accTo.length ? L.accTo : null;   // (step 4: the Sammelschleifen it feeds)
       if (BG) for (let k = o, F = X; k < o + n; k++, F++) { const x = (F - bgS.f0) / bgS.T; BG[k] = x < 0.8 ? 1 : x >= 1 ? 0 : Math.cos(HP * (0.5 - 0.5 * Math.cos(Math.PI * (x - 0.8) / 0.2))); }   // (step 2b: a stop fades over its last fifth – the tape near standstill only hums)
       let ms = 0, mp = 0;
@@ -1293,7 +1297,7 @@
           let yl = gl * (g * bL[k] + l * tL[k]), yr = gr * (g * bR[k] + l * tR[k]);
           if (W) { const a = WA[k]; if (a >= 1) { zl = yl; zr = yr; } else { zl += a * (yl - zl); zr += a * (yr - zr); } const w = WG[k]; yl = zl * w; yr = zr * w; }
           if (BG) { const w = BG[k]; yl *= w; yr *= w; }
-          OL[k] += yl; if (OR !== OL) OR[k] += yr;
+          if (rgo) { const q = 1 - (rgc ? rgv : RG[k]); OL[k] += q * yl; if (OR !== OL) OR[k] += q * yr; } else { OL[k] += yl; if (OR !== OL) OR[k] += yr; }
           if (O2) { const s = sgc ? sgv : SG[k]; SL[k] += s * yl; SR2[k] += s * yr; }
           if (AT) for (let q = 0; q < AT.length; q++) { const A2 = AT[q].acc; if (A2) { A2.L[k] += yl; A2.R[k] += yr; } }
           ms += yl * yl + yr * yr; const a = yl < 0 ? -yl : yl, b2 = yr < 0 ? -yr : yr; if (a > mp) mp = a; if (b2 > mp) mp = b2;

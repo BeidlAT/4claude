@@ -28,16 +28,22 @@ Begründungen stehen in `dev/STAND-2026-10-29.md` (Abschnitte „Danach (30.10.)
    playwright.download.prss.microsoft.com, playwright.azureedge.net, ftp.mozilla.org, download-installer.cdn.mozilla.net)
    – bis dahin laufen alle Tests nur in Chromium (immer dazusagen).
 
-12. **Routing je Kanal durch einzelne Effekte (31.10.):** Konzept `dev/klang/routing-konzept.md` + klickbare Vorschau
-   (Artifact „Myzel Wege-Leiste“). Wartet auf sein Urteil. Schritt 1 ist schon bestätigt: Schleifen im Pult mit
-   KETTE/DIREKT wie jede Spur, „K“ weg, nach Aufnahme mit Effekten automatisch Direkt, auf Kette läuft ihr Klang (wie er ist)
-   noch einmal durch die Kette.
 11. **Latenz (31.10.):** Im Browser ist mit seinem Steinberg-Treiber nichts mehr zu holen (Chrome-Bericht: 10 ms Puffer +
    48–64 ms Ausgang; Exklusiv-Modus +50 ms). Firefox-Bericht steht aus. Entscheidung offen: eigenes Programm mit ASIO –
    Konzept `dev/klang/nativ-asio-konzept.md` (zuerst Probe-Bau Electron + node-web-audio-api, 1–2 Sitzungen).
 
 ## Für die nächste Sitzung zu tun (ohne weitere Rückfrage)
 ## Erledigt am 31.10.
+Routing je Kanal durch einzelne Effekte (Besitzer: „überrasche mich … Design so behalten, mit den Neuerungen“):
+`makeChain(m)` mit Maske (core/chain.js, 1 V · 2 R · 4 F · 8 P · 16 S; ausgelassene Stufen gebaut, nicht verdrahtet);
+Parameter `x<k>.fxm` je Kanal; `mixer/wege-fx.js`: eine Kette je benutzter Maske (`fxmIn`/`fxmChain`, Sends über eigene
+Kopien je Maske in `updSends`), Effekt-Blick (Perle antippen), Malen, Alt/Umschalt/Esc, feiner Ring je Knoten, Lichtpunkte
+hüpfen/leuchten an den Perlen, Knoten der Schleifen im Pult (`FXL`). Schleifen: `hexenring/weg.js` – L.weg/L.fxm, der
+Prozessor gibt die Schleife über `rt` an ihr Paar von Ausgang 2 ab (Nähren-Paar), Seite → Kette der Maske → Strip
+„Hexenring“; neue Schleifen spielen Direkt; Kanal „Hexenring“ setzt alle (`hxRouteAll`). „K“ entfernt, A/B-Morph schaltet
+Masken in der Mitte. Tests `midi-tests/t-wege-fx.js`, `hexenring/t-hx-route.js` (neu gefasst). Offen fürs Auge/Ohr: die
+Leiste in Firefox; Tastatur-Kürzel V/R/F/P/S (nicht gebaut – „r“ ist im Pult schon „Spitze zurücksetzen“); Wege in den
+Szenen A/B weich überblenden (Idee, noch nicht gebaut).
 Testserver (Besitzer: „wieso beenden die ganze Zeit die Testserver?“): der Container der Sitzung wird bei Leerlauf neu
 gestartet – alle Prozesse enden, das Scratchpad bleibt; außerdem brach `setup-tests.sh` im flachen Klon vor dem Serverstart ab
 (alte Grundlagen-Commits fehlen). Jetzt `dev/tests/serve.sh` (startet :8790 nur wenn nötig), aufgerufen von `setup-tests.sh`,

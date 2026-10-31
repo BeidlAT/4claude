@@ -2,6 +2,16 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-31f",
+      "punkte": [
+        "Mixer: Jede Spur kann auf „Kette“ nur durch einzelne Effekte gehen. Tipp unten auf der Kettenschiene einen Effekt an (V, R, F, P, S) – dann schaltest du ihn je Spur mit einem Tipp auf ihren Punkt, oder streichst über mehrere. Alt-Klick: nur diese Spur, Umschalt: nur solange gedrückt, Esc: zurück.",
+        "Eine Spur, die nur durch einige Effekte geht, trägt einen feinen Ring aus fünf Strichen; ihre Lichtpunkte hüpfen unter den Effekten durch, die sie auslässt, und lassen die aufleuchten, durch die sie geht.",
+        "Die Schleifen des Hexenrings haben im Pult jetzt eigene Punkte auf Kette und Direkt – wie jede Spur, mit denselben Effekt-Wegen. Der Schalter „K“ entfällt.",
+        "Eine Schleife, die mit Effekten aufgenommen wurde, spielt danach direkt; auf „Kette“ geht sie noch einmal durch die Effekte. Der Kanal „Hexenring“ setzt alle Schleifen auf einmal.",
+        "Auf der Wege-Seite eines Kanals stehen die fünf Effekte zum Ankreuzen."
+      ]
+    },
+    {
       "id": "2026-10-31e",
       "punkte": [
         "Touché: neue Spielweise „Gestik“ – die Hand auf dem Touché wird zum Handy, mit allem, was die Gestik kann: Anlehnen, Bebung, Drehen, Schwenken, Ladung, Schütteln, Schlafen, Sporenregen und die Rezepte der Presets.",

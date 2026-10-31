@@ -628,6 +628,8 @@ for (const st of STRIPS) {
   BOOL(p + 'solo', 'Solo', false, { live: 1 });
   if (!st.ret) {
     SEL(p + 'route', 'Weg', [['fx', 'Durch die Effektkette'], ['dir', 'Direkt in die Summe']], 'fx', { chips: 1, small: 1 });
+    // (owner, 31.10.2026) which effects of the chain the channel goes through on „Kette“ – a mask over V R F P S (mixer/wege-fx.js)
+    NUM(p + 'fxm', 'Effekte im Weg', 0, 31, 31, '', { step: 1, fmt: (v) => fxmText(v) });
     NUM(p + 'dly', 'Echo', 0, 2, 1, '%', { step: 0.01 });
     for (const [r, name] of FX_RETS) NUM(p + r, name, 0, 2, 1, '%', { step: 0.01 });
     // (29.10.2026) the Einschub: one of the two effects inside the channel itself (its settings, an instance of its own), and how much
