@@ -34,6 +34,9 @@ Begründungen stehen in `dev/STAND-2026-10-29.md` (Abschnitte „Danach (30.10.)
 
 ## Für die nächste Sitzung zu tun (ohne weitere Rückfrage)
 ## Erledigt am 31.10.
+Gefunden mit `t-hx-lade.js`: der Ladebalken blieb 120 s stehen, obwohl nichts mehr rechnete – ein liegengebliebener Wunsch
+(`S.wAgain`) zählte als laufend (`hxLadeFrame`, `hxWUpdate` im Live-Weg) – behoben. Bekannt und nicht von diesen Änderungen:
+`t-hx-wuchs-firefox.js` hat auch auf dem Stand vor ihnen 2 Fehlschläge („another throw“, ein zeitabhängiger wechselnder).
 Wege-Bedienung umgebaut (Besitzer: „F anklicken macht keinen Unterschied … mehrere aktivieren/deaktivieren … schlüsselfertig“):
 die Perlen V R F P S sind die Schalter des bearbeiteten Kanals (`WFX.t` – gewählt im Mixer über `selectChannel`, Puls =
 alle Spuren, Hexenring = alle Schleifen, Schleife durch Antippen ihres Kanals/Knotens), leuchten in seiner Farbe, Name
