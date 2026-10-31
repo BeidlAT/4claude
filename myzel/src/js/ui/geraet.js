@@ -147,6 +147,7 @@ function graphLatency() {
   // the oversampled drive is the only part of the playing path with a delay (measured in Chromium: 2x 128, 4x 192 frames)
   // (29.10.2026) and the sum's Begrenzer: 2.1 ms ahead of its peaks
   const lim = A.lim ? A.limLat || 0 : 0;
+  if (typeof RO_KINDS !== 'undefined' && RO_KINDS.includes(P['drv.type']) && A.chains && A.chains[0] && A.chains[0].vt) return lim + (RO_LAT + (P['drv.type'] === 'band' ? 60 : 0)) / SR;   // (31.10.2026: the circuit's half-bands)
   if (!A.drvShaper) return lim;
   return lim + (A.drvShaper.oversample === '4x' ? 192 / SR : A.drvShaper.oversample === '2x' ? 128 / SR : 0);
 }

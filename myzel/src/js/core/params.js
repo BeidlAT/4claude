@@ -478,9 +478,12 @@ NUM('glt.zunder', 'Zunder (Klopfen)', 0, 1, 0.4, '%');
 NUM('glt.hitze', 'Hitze (Sättigung)', 0, 1, 0.5, '%');
 NUM('glt.kasten', 'Kasten (offen)', 0, 1, 0.5, '%');
 // Effekte
-SEL('drv.type', 'Art', [['tube', 'Röhre'], ['fold', 'Falter'], ['crush', 'Bitbrecher']], 'tube', { chips: 1 });
+// (owner, 31.10.2026: „hochwertige Röhrensimulationen, auch Richtung Vintage“) four circuits with a memory, in their own
+// processor (dsp/roehre.js): Vorstufe, Endstufe, Übertrager, Tonband – and Farbe, what each makes of it
+SEL('drv.type', 'Art', [['tube', 'Röhre'], ['fold', 'Falter'], ['crush', 'Bitbrecher'], ['vorstufe', 'Vorstufe'], ['endstufe', 'Endstufe'], ['pult', 'Übertrager'], ['band', 'Tonband']], 'tube', { chips: 1 });
 NUM('drv.amt', 'Stärke', 0, 1, 0.12, '%');
 NUM('drv.mix', 'Anteil', 0, 1, 0.35, '%');
+NUM('drv.farbe', 'Farbe', 0, 1, 0.5, '%');
 NUM('rng.freq', 'Frequenz', 0.5, 3000, 220, 'Hz', { curve: 'exp' });
 NUM('rng.mix', 'Anteil', 0, 1, 0, '%');
 SEL('flt.type', 'Typ', [['lowpass', 'Tiefpass'], ['bandpass', 'Bandpass'], ['highpass', 'Hochpass'], ['notch', 'Kerbe']], 'lowpass', { chips: 1 });

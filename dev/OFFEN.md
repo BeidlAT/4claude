@@ -34,6 +34,10 @@ Begründungen stehen in `dev/STAND-2026-10-29.md` (Abschnitte „Danach (30.10.)
 
 ## Für die nächste Sitzung zu tun (ohne weitere Rückfrage)
 ## Erledigt am 31.10.
+Verzerrung: Vorstufe, Endstufe, Übertrager, Tonband (Besitzer: „hochwertige Röhrensimulationen, Richtung Vintage, eigener
+Code“) – Prozessor `dsp/roehre.js` (`myzel-roehre`), Parameter `drv.farbe`, Einbau in `makeChain`/`updDrive`
+(`roehreWire`, gS/gV-Überblendung), Kosten `FX_COST.roehre`. Recherche, Messungen, behobene Bau-Fehler:
+`dev/klang/roehre-recherche.md`. Test `t-roehre.js` 13/13 (Chromium). Offen fürs Ohr in Firefox.
 Gefunden mit `t-hx-lade.js`: der Ladebalken blieb 120 s stehen, obwohl nichts mehr rechnete – ein liegengebliebener Wunsch
 (`S.wAgain`) zählte als laufend (`hxLadeFrame`, `hxWUpdate` im Live-Weg) – behoben. Bekannt und nicht von diesen Änderungen:
 `t-hx-wuchs-firefox.js` hat auch auf dem Stand vor ihnen 2 Fehlschläge („another throw“, ein zeitabhängiger wechselnder).
