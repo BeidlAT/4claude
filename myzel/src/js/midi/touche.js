@@ -23,7 +23,7 @@
 //   drive, folding · Fächer detuned pair, octaves, fifth · Ort a place in space, binaural, far and near ·
 //   Stottern repeats in the Puls's tempo · Resonanz six strings tuned to the held notes · Arpeggio
 const TCH_W = [['finger', 'Finger'], ['atem', 'Atem'], ['raum', 'Raum'], ['verw', 'Verwandlung'], ['gleiten', 'Gleiten'], ['streichen', 'Streichen'], ['platte', 'Platte'], ['vokal', 'Vokal'],
-  ['koerner', 'Körner'], ['eis', 'Eis'], ['oberton', 'Obertöne'], ['faecher', 'Fächer'], ['ort', 'Ort'], ['stottern', 'Stottern'], ['resonanz', 'Resonanz'], ['arp', 'Arpeggio']];
+  ['koerner', 'Körner'], ['eis', 'Eis'], ['oberton', 'Obertöne'], ['faecher', 'Fächer'], ['ort', 'Ort'], ['stottern', 'Stottern'], ['resonanz', 'Resonanz'], ['arp', 'Arpeggio'], ['gestik', 'Gestik']];   // (Gestik: the phone's motion – touche-gestik.js)
 const TCH = { v: { weg: 0, her: 0, li: 0, re: 0 }, ph: 0, t: 0, raf: 0, vib: 0, rate: 5.5 };
 const TCH_SRC = [['h', 'hoehe'], ['b', 'bend'], ['e', 'expr'], ['f', 'flt'], ['r', 'rev'], ['d', 'dly'], ['p', 'pan'], ['m', 'morph'], ['g', 'bend'], ['s', 'hoehe'], ['w', 'vok'], ['o', 'vokO'], ['u', 'vokV']];
 // Gleiten: the newest note, a fifth (700 cents) at full; Streichen: every held note's height set to the bow's (field units)
@@ -44,7 +44,8 @@ function tchApply() {
   else if (w === 'streichen') { const p = Math.max(weg, her); o.e = p - 1; TCH.sy = clamp(0.08 + 0.92 * weg, 0, 1); o.s = 0.5 + 0.5 * TCH.sy; o.b = 0.5 * (re - li); }   // (o.s only keeps the source alive and moving; its per sets the height)
   else if (w === 'vokal') { o.w = Math.max(weg, her, li, re); o.o = weg - her; o.u = re - li; }
   else if (w === 'ort') o.r = 0.8 * Math.pow(weg, 1.2) - 0.25 * her;   // (far away: the hall comes up; close: drier)
-  if (typeof tfxSet === 'function') tfxSet(w, { weg, her, li, re });   // (Körner … Arpeggio: the insert, the place, the arpeggio)
+  if (typeof tfxSet === 'function') tfxSet(w, { weg, her, li, re });
+  if (typeof tchGestik === 'function') tchGestik(w === 'gestik', { weg, her, li, re });   // (the Touché as a phone – touche-gestik.js)   // (Körner … Arpeggio: the insert, the place, the arpeggio)
   for (const [n, k] of TCH_SRC) modSet('map:tch:' + n, k, o[n] || 0, TCH_OPT[n]);
   tchEigMod(R);   // (the own routes' targets – none: they leave)
   const pr = R ? R.t.platte || 0 : 0, kr = pr < 0 ? 1 + 0.97 * pr : 1 + pr;
@@ -106,7 +107,8 @@ function tchMark() {
 // what a Spielweise of Körner … Arpeggio does, in a word (the toast; the device card says it whole)
 const TCH_SAY = { koerner: 'eine Körnerwolke aus dem eben Gespielten', eis: 'Drücken friert den Klang ein, seitlich malst du ihn in der Höhe', oberton: 'Obertöne kneten: links gerade, rechts ungerade, weg Antrieb, heran falten',
   faecher: 'ein Ton fächert sich auf: Stimmen, Oktaven, Quinte', ort: 'der Klang an einem Ort im Raum – weit weg, nah am Ohr, rundherum', stottern: 'Drücken wiederholt den Moment im Tempo – links lang, rechts kurz',
-  resonanz: 'Saiten, gestimmt auf deine Töne, schwingen mit', arp: 'ein Arpeggio aus der Hand über die gehaltenen Töne' };
+  resonanz: 'Saiten, gestimmt auf deine Töne, schwingen mit', arp: 'ein Arpeggio aus der Hand über die gehaltenen Töne',
+  gestik: 'die Hand als Handy – Neigen, Bebung, Drehen, Ladung, Schütteln; zweimal kurz heran: Schlafen' };
 // (the sixteen, then the own ones – touche-eigen.js)
 const tchStep = (d) => {
   const L = TCH_W.map((x) => x[0]).concat(TCHE.list.map((E) => 'e:' + E.id)), own = tchEigCur(), i = L.indexOf(own ? 'e:' + own.id : P['midi.tch']), nx = L[(i + d + L.length) % L.length];

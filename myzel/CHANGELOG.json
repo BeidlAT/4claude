@@ -2,6 +2,15 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-31e",
+      "punkte": [
+        "Touché: neue Spielweise „Gestik“ – die Hand auf dem Touché wird zum Handy, mit allem, was die Gestik kann: Anlehnen, Bebung, Drehen, Schwenken, Ladung, Schütteln, Schlafen, Sporenregen und die Rezepte der Presets.",
+        "Neigen: links/rechts und weg/heran · Bebung: die Hand zittern lassen · Drehen und Schwenken: auf dem Touché kreisen · Ladung und Schütteln: schnell hin und her.",
+        "Schlafen (wie das Handy umdrehen): zweimal kurz heranziehen – noch einmal zweimal weckt. Hand weg für 1,5 s ist „Ruhe“.",
+        "Alle Einstellungen unter „Gerät → Gestik“ gelten wie beim Handy (Kupplung, Weite, Entladung, Zuweisen)."
+      ]
+    },
+    {
       "id": "2026-10-31d",
       "punkte": [
         "Touché: eigene Spielweisen – auf der Gerätekarte „＋ Eigene aus dieser“ legt eine Kopie der gewählten Spielweise an, mit Namen.",

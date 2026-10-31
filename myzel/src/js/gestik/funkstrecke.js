@@ -253,7 +253,8 @@ function gkRemEnd() {
 }
 function gkRemCheck(now) {
   const m = GK.rem, s = m.src;
+  if (s.syn) { if (!s.syn()) gkRemEnd(); return; }   // (the Touché as a phone – touche-gestik.js: it ends itself)
   if (now - s.gkr.t > 10000 || MIDI.srcs.get(s.key) !== s || !s.enabled || s.dup || !profOn(s)) gkRemEnd();
 }
-const gkRemText = () => { const G = GK.rem.src.gkr, live = performance.now() - GK.last < 250; return 'Funkstrecke: ' + devShort(GK.rem.src.name) + (live ? ' · ' + (G.rate || '…') + ' Werte/s' : ' – wartet auf das Handy'); };
+const gkRemText = () => { const G = GK.rem.src.gkr, live = performance.now() - GK.last < 250; if (GK.rem.src.syn) return 'Touché als Handy (Spielweise „Gestik“)' + (live ? ' · ' + (G.rate || '…') + ' Werte/s' : ''); return 'Funkstrecke: ' + devShort(GK.rem.src.name) + (live ? ' · ' + (G.rate || '…') + ' Werte/s' : ' – wartet auf das Handy'); };
 
