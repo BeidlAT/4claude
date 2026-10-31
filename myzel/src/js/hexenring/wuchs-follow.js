@@ -313,7 +313,7 @@ const hxTauOn = (L) => L.taumeln !== false && !HX.tauRest;   // (what the proces
 // chain's copy and the strip „Hexenring“ (no tap hears them). Its Abdruck rests meanwhile. They cost what voices cost and
 // give way before any live note – a loop's note that does not fit the budget is not played (owner: never the live ones).
 // Lebendig: every pass its own randomness (the voices' own) and its breath; ✓ ✕ ⚓ need rendered passes (Werk-Rahmen). ----
-const hxWLm = (L) => !L.bew && L.state !== 'weg' && (L.live ? L.sch.some((id) => hxWCan(HX.sch.get(id))) : HXW.st === 'kein' && hxWAktiv(L));   // (step 4: or chosen – „Wiedergabe: Live“)
+const hxWLm = (L) => !L.bew && L.state !== 'weg' && (L.live || L.fuehr ? L.sch.some((id) => hxWCan(HX.sch.get(id))) : HXW.st === 'kein' && hxWAktiv(L));   // (step 4: or chosen – „Wiedergabe: Live“)
 function hxWLiveSync(L) {
   const on = hxWLm(L) && L.state === 'spielt', sw = hxNextSeam(L);
   for (const id of L.sch) {
@@ -330,6 +330,7 @@ function hxWLiveTick(now, horizon) {
     for (const id of L.sch) {
       const S = HX.sch.get(id); if (!S || !S.lm || L.state !== 'spielt') continue;
       if (S.mute) { S.lk = Math.max(S.lk, hxPassK(L, Math.round(fB))); continue; }
+      if (L.fuehr) { hxFuSched(L, S, now, horizon, out); continue; }   // (31.10.2026: Führen – note by note, fuehren.js)
       for (let k = Math.max(S.lk + 1, hxPassK(L, Math.round(fA))); hxPassF(L, k) < fB; k++) {
         const job = hxWPass(L, S, k, { live: hxEigN(L) >= 1, tail: 0 }); S.lk = k;
         if (!job) break;
@@ -346,6 +347,7 @@ function hxWLiveTick(now, horizon) {
       }
     }
   }
+  hxFuFollow();
   if (HX.wLq.length) { const due = HX.wLq.filter((x) => x[0] <= now + 0.012); if (due.length) { HX.wLq = HX.wLq.filter((x) => x[0] > now + 0.012); for (const [, fn] of due) try { fn(); } catch (e) {} } }
 }
 HX.wLq = [];
