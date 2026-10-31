@@ -2,6 +2,13 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-31r",
+      "punkte": [
+        "Ein gewähltes Instrument, Wuchs-Einstellungen oder Geführtes setzen jetzt nach etwa einer Sekunde ein – auch in langen Schleifen: Der laufende Durchgang wird ab dort gestreamt, während der Rest im Hintergrund fertig wird (vorher: erst nach dem ganzen Rechnen, in einer 8-s-Schleife über 8 s).",
+        "Das Bearbeiten-Fenster sagt in Sekunden, wann der neue Klang einsetzt – und nichts mehr, sobald er spielt. Wo nichts gestreamt werden kann (angehaltene Schleife), zählt es die Rechenzeit in Sekunden herunter."
+      ]
+    },
+    {
       "id": "2026-10-31q",
       "punkte": [
         "Führen sichert jetzt nur noch einen Durchgang, den du vom ersten bis zum letzten Ton geführt hast. Lässt du mitten im Durchgang los, bleibt der letzte ganze Durchgang – eine Schleife wird so nicht mehr fast leer gespeichert.",

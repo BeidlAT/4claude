@@ -34,6 +34,11 @@ Begründungen stehen in `dev/STAND-2026-10-29.md` (Abschnitte „Danach (30.10.)
 
 ## Für die nächste Sitzung zu tun (ohne weitere Rückfrage)
 ## Erledigt am 31.10.
+Brücke (Besitzer: „gleich statt Sekunden – kompletter Fail“, „wieso Sekundenanzeige, wenn gestreamt wird?“): `hxWBridge`
+in `hxWRenderFor` bei `o.now` – der laufende Durchgang als Treu-Slot ab `at` (wie beim Tempowechsel), `hxWTick` streamt die
+folgenden, `hxWBridgeEnd` (wstop) sobald der ganze Render da ist oder scheitert. Text: „setzt in N s ein“, danach nichts;
+ohne Stream Rechenzeit-Schätzung (`S.wEst` aus `hxWPredict`) in Sekunden. Gemessen: 0,78 s statt 8,2 s, nie still. Test
+`t-hx-bruecke.js` (Chromium).
 Führen-Sicherung (Besitzer: „die geführte Schleife ist nach dem Neuladen verschwunden, eine leere Schleife an der
 Stelle, nichts zum Zurücksetzen“): nachgestellt (Chromium) kommt sie nach dem Neuladen richtig wieder (angehalten, nach ▶
 mit dem geführten Klang). Wahrscheinliche Ursache bei ihm: ein nur teilweise geführter Durchgang (Auslösen, Hand mitten im

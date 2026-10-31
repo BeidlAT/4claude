@@ -473,7 +473,13 @@ function hxEdFrame() {
   if (HXE.waitEl) {   // (26.10.2026) what still waits: the notes played anew, a new length or a swap at the next seam
     const now = hxNowT(), f = L.prev ? L.prev.until : null, p = HX.pend.find((x) => x.loop === L.id && x.kind === 'band'), sch = L.sch.map((id) => HX.sch.get(id)).filter(Boolean), sw = sch.reduce((m, S) => (S.swapF != null && hxT(S.swapF) > now + 0.15 ? Math.max(m, hxT(S.swapF)) : m), 0);
     const t = f != null ? hxT(f) : p ? p.t : sw || null, s = t != null ? Math.max(0, Math.ceil(t - now)) : null, busy = sch.some((S) => S.wBusy);
-    const tx = busy ? 'Die Noten werden neu gespielt … gleich zu hören.' : s != null ? (HXE.pv ? 'Beim Vorhören schon zu hören – in der laufenden Schleife ab der nächsten Naht, in ' : 'Das Bild zeigt schon den neuen Stand – zu hören ab der nächsten Naht, in ') + s + ' s.' : '';
+    // (owner, 31.10.2026: „da waren immer Sekunden angegeben … kompletter Fail“) the render's time in seconds, counted down;
+    // with the stream: only when the new sound sets in (a second or two) – then nothing: it plays (owner: „wieso eine
+    // Sekundenanzeige, wenn es währenddessen gestreamt wird?“); seconds to wait only where nothing can stream
+    const bS = sch.find((S) => S.wBusy), est = bS ? Math.max(1, Math.ceil((bS.wEst || 2) - (performance.now() - (bS.wT0 || performance.now())) / 1000)) : 0;
+    const br = bS && bS.wBrAt != null ? Math.ceil(hxT(bS.wBrAt) - now) : null;
+    const busyTx = !bS ? '' : br != null && br > 0 ? 'Der neue Klang setzt in ' + br + ' s ein.' : br != null ? '' : 'Die Noten werden neu gespielt – zu hören in etwa ' + est + ' s.';
+    const tx = busy ? busyTx : s != null ? (HXE.pv ? 'Beim Vorhören schon zu hören – in der laufenden Schleife ab der nächsten Naht, in ' : 'Das Bild zeigt schon den neuen Stand – zu hören ab der nächsten Naht, in ') + s + ' s.' : '';
     if (HXE.waitEl.textContent !== tx) HXE.waitEl.textContent = tx;
   }
 }
