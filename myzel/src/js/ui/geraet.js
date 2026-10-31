@@ -355,6 +355,7 @@ function kcCard(it) {
       // (owner, 31.10.2026: no keys on them any more; laid out as a grid – the four families of four in rows)
       el.append(h('div', { class: 'kc-pads kc-tch' }, h('span', { class: 'lab' }, 'Spielweise'), h('div', { class: 'chips small', role: 'group', 'aria-label': 'Touché-Spielweise' },
         ...TCH_W.map(([w, nm]) => h('button', { type: 'button', class: 'chip', 'aria-pressed': String(P['midi.tch'] === w), 'data-kc': it.key + ':tch' + w, title: nm + ': ' + tip[w], onclick: () => tchWeise(w, true) }, nm))),
+        tchEigRow(it.key),   // (31.10.2026: own Spielweisen – touche-eigen.js)
         h('button', { type: 'button', class: 'chip', 'data-kc': it.key + ':tchcal', title: 'Myzel misst, wie weit du jede Richtung drückst – danach reicht jede über ihren ganzen Weg. Neu einmessen: jede Richtung einmal kräftig drücken.', onclick: () => tchEinmessen() }, 'Neu einmessen')));
     }
     if (p && p.id === 'nk2' && po) el.append(h('p', { class: 'kc-hint' }, s.nkHx ? 'Seite Hexenring (SET leuchtet) – SET noch einmal: Mixer.' : 'SET: Seite Hexenring (Schleifen statt Mixer).'));

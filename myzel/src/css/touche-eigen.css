@@ -1,0 +1,19 @@
+/* (31.10.2026) Touché: eigene Spielweisen – the card's row and the editor (js/midi/touche-eigen.js) */
+.tche-row { display: grid; gap: 6px; margin-top: 4px; } .tche-row .lab { font-size: 12px; color: var(--dim); }
+.kc-tch .tche-row .chip.tche-edit { border-style: dashed; }
+.tche { position: fixed; inset: 0; z-index: 60; background: rgba(17, 13, 11, .97); color: var(--hypha); display: flex; flex-direction: column; gap: 12px; padding: 14px 18px 18px; overflow: auto; font: 400 14px/1.35 var(--font-ui); }
+.tche-h { display: flex; align-items: center; gap: 10px; } .tche-h h2 { margin: 0; font-size: 18px; font-weight: 500; } .tche-sp { flex: 1; }
+.tche-top { display: flex; flex-wrap: wrap; gap: 12px; } .tche-top label { display: grid; gap: 4px; flex: 1 1 240px; } .tche-top label > span { font-size: 12px; color: var(--dim); }
+.tche input[type=text], .tche select { background: var(--bark-2); color: var(--hypha); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font: inherit; min-width: 0; }
+.tche-note { margin: 0; font-size: 12.5px; color: var(--dim); max-width: 70ch; }
+.tche-dirs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 12px; }
+.tche-dir { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: grid; gap: 8px; align-content: start; }
+.tche-dir h3 { margin: 0; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 10px; }
+.tche-m { flex: 1; height: 6px; border-radius: 3px; background: var(--bark-2); overflow: hidden; } .tche-m i { display: block; height: 100%; width: 0; background: var(--spore); }
+.tche-list { display: grid; gap: 6px; }
+.tche-r { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.4fr) minmax(0, 1fr) auto; gap: 6px; align-items: center; }
+.tche-s { display: flex; align-items: center; gap: 6px; min-width: 0; } .tche-s input { flex: 1; min-width: 0; } .tche-v { width: 4.2em; text-align: right; font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.tche-none { margin: 0; font-size: 12.5px; color: var(--dim); } .tche-add { justify-self: start; }
+.tche-foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+@media (max-width: 560px) { .tche-r { grid-template-columns: minmax(0, 1fr) auto; } .tche-r .tche-s { grid-column: 1 / -1; order: 3; } .tche-r > select:nth-of-type(2) { grid-column: 1 / -1; order: 4; } }
+@media (pointer: coarse) { .tche select, .tche input[type=text], .tche .btn { min-height: 44px; } }
