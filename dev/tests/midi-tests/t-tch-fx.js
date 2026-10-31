@@ -19,6 +19,7 @@ const { open, ok, close } = require('./hm');
         else if (kind === 'sine' && t < 1) v = 0.5 * Math.sin(2 * Math.PI * 440 * t);
         else if (kind === 'sweep' && t < 1.2) v = 0.4 * Math.sin(2 * Math.PI * (200 * t + 300 * t * t));
         else if (kind === 'burst' && t < 0.04) v = 0.6 * (Math.random() * 2 - 1);
+        else if (kind === 'tone') v = 0.5 * Math.sin(2 * Math.PI * 330 * t + 3 * Math.sin(2 * Math.PI * 0.7 * t));
         L[i] = v; R[i] = v * 0.9;
       }
       return [L, R];
@@ -54,6 +55,11 @@ const { open, ok, close } = require('./hm');
     r = await run('stottern', 'sweep', [0, 0, 0, 0], [[0.6, [0, 0, 1, 0]]], { beat: 0.5 });
     { const i0 = Math.round(0.68 * SR), N = Math.round(0.3 * SR), off2 = Math.round(0.5 * SR), off3 = Math.round(1.0 * SR); let sxy = 0, sxx = 0, syy = 0, s2 = 0, s3 = 0, s4 = 0; for (let i = i0; i < i0 + N; i++) { const x = r.oL[i], y = r.L[i - off2], z = r.oL[i + off2]; sxy += x * y; sxx += x * x; syy += y * y; s2 += x * z; s3 += z * z; }
       o.stottern = { bad: r.bad, pk: r.pk, corrIn: +(sxy / Math.sqrt(sxx * syy + 1e-30)).toFixed(3), corrRep: +(s2 / Math.sqrt(sxx * s3 + 1e-30)).toFixed(3) }; }
+    // (31.10.2026, owner: „Stottern knackst, wenn ich stärker nach links oder rechts drücke“) pressed in the middle, then
+    // harder left (a whole beat – it read past the ring's head), right (a sixteenth), heran (each repetition a step down):
+    // the output's curvature stays that of a gliding tone – no jump anywhere
+    r = await run('stottern', 'tone', [0, 0, 0, 0], [[0.6, [0.3, 0, 0, 0]], [0.75, [0.3, 0, 1, 0]], [1.6, [0.3, 0, 0, 1]], [2.0, [0.3, 0.8, 0.2, 0.6]], [2.6, [0.3, 0, 0.7, 0]]], { beat: 0.5 });
+    { let mx = 0, at = 0; for (let i = Math.round(0.5 * SR); i < n; i++) { const d = Math.abs(r.oL[i] - 2 * r.oL[i - 1] + r.oL[i - 2]); if (d > mx) { mx = d; at = i / SR; } } o.stClick = { bad: r.bad, d2: +mx.toFixed(4), at: +at.toFixed(3) }; }
     // Resonanz: a short noise burst – the strings (tuned 220, 330 …) ring on long after it
     r = await run('resonanz', 'burst', [0.9, 0, 0, 0], [], { freqs: [220, 330, 440, 550, 660, 880] });
     o.res = { bad: r.bad, pk: r.pk, ring: +r.rms(0.5, 1.0).toFixed(4), a220: +r.gz(220, 0.4, 1.2).toFixed(1), a300: +r.gz(300, 0.4, 1.2).toFixed(1) };
@@ -66,11 +72,12 @@ const { open, ok, close } = require('./hm');
   ok(off.eisUp.a440 > off.eisUp.a220 + 6, `Eis rechts: the frozen chord an octave up (${JSON.stringify(off.eisUp)})`);
   ok(!off.odd.bad && off.odd.h3 > off.odd.h1 - 30 && off.odd.h3 > off.odd.h2 + 10 && off.even.h2 > off.even.h1 - 35 && off.clean.h3 < off.odd.h3 - 60, `Obertöne: rechts odd harmonics, links even ones, at rest none (${JSON.stringify([off.odd, off.even, off.clean])})`);
   ok(!off.stottern.bad && off.stottern.corrIn > 0.9 && off.stottern.corrRep > 0.9, `Stottern: the half second before is played again, and again (${JSON.stringify(off.stottern)})`);
+  ok(!off.stottern.bad && off.stClick.d2 < 0.03, `Stottern: links/rechts/heran harder while it repeats – no click (${JSON.stringify(off.stClick)})`);
   ok(!off.res.bad && off.res.ring > 0.005 && off.res.a220 > off.res.a300 + 15 && off.res.pk < 2, `Resonanz: strings tuned to the notes ring on after a short burst (${JSON.stringify(off.res)})`);
   // 2. with a Touché
   const live = await page.evaluate(async () => {
     const M = window.__M, T = (b) => window.__send(b, 'k1'), K = (b) => window.__send(b, 'k2'), sl = window.__sleep, o = {};
-    const key = (k) => document.body.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+    const key = (k) => M.tchWeise(M.TCH_W[+k.slice(1) <= 4 ? +k.slice(1) - 1 : +k.slice(1) + 3][0]);   // (31.10.2026: the F keys are unbound – the old numbering, chosen directly)
     const st = M.MIX.s.fin, path = () => [+st.tD.gain.value.toFixed(2), +st.tW.gain.value.toFixed(2)];
     o.keys = []; for (const k of ['F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11', 'F12']) { key(k); await sl(40); o.keys.push(M.P['midi.tch']); }
     key('F5'); await sl(300); o.made = !!M.TFX.ins.get('fin'); o.rest = path();

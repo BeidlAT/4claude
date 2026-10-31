@@ -1,4 +1,4 @@
-/* ---------- Touché F5–F12: the sound shaped in depth (owner, 26.10.2026) ---------- */
+/* ---------- Touché Körner … Arpeggio: the sound shaped in depth (owner, 26.10.2026) ---------- */
 // „Mit dem Touché viel weitreichendere Klangformung – acht weitere F-Tasten, jede klingt fundamental anders“ – chosen:
 // each shapes the sound being played (not a sound of its own). Five live in the processor myzel-tfx (js/dsp/touche-fx.js),
 // one is a place in space (the browser's own binaural panner), two play the instrument itself: Fächer (more voices of

@@ -38,7 +38,7 @@
       // oberton: the 4× oversampler (a 64-tap windowed sinc at the 4× rate, polyphase) and its state
       this.os = this.osDesign(); this.uL = new Float32Array(16); this.uR = new Float32Array(16); this.dL = new Float32Array(64); this.dR = new Float32Array(64); this.ui = 0; this.di = 0; this.dcL = new DcBlock(12); this.dcR = new DcBlock(12); this.obMix = 0;
       // stottern
-      this.st = { on: false, start: 0, len: 0, ph: 0, rate: 1, mix: 0, g: 1, lp: 0, lpR: 0, n: 0 };
+      this.st = { on: false, at: 0, len: 0, ph: 0, rate: 1, mix: 0, g: 1, gT: 1, lp: 0, lpR: 0, n: 0 };
       // resonanz: six strings (delay line, loop low pass, a dispersion allpass)
       this.rs = [0, 1, 2, 3, 4, 5].map(() => ({ b: new Float32Array(4096), w: 0, z: 0, ap: 0, apx: 0, d: 200 })); this.rsLvl = 0; this.rsHp = 0; this.rsHpx = 0; this.rsEnv = 0;
       // (tests and offline renders: the Spielweise and the hand from the start)
@@ -230,7 +230,11 @@
       // the division of a beat: links a whole beat … rechts a sixteenth (in steps – a stutter is in time; from where the
       // hand is going, not the glide on its way there)
       const sd = ct[3] - ct[2], steps = [1, 0.5, 0.25, 0.125, 0.0625], k = Math.max(0, Math.min(4, Math.round((sd + 1) * 2))), len = Math.max(64, Math.round(steps[k] * this.beat * SR));
-      if (!S.on && p > 0.08) { S.on = true; S.len = len; S.start = w0 - len; S.ph = 0; S.g = 1; S.n = 0; }
+      // (31.10.2026, owner: „bei Chill-Hop Abend knackst Stottern, wenn ich stärker nach links oder rechts drücke“) the
+      // slice always ends at the moment of the press (S.at) and reaches back by its length: a longer division (links) used
+      // to read on past the ring's head into seconds-old sound, and a new length's seam joined at the wrong place. Pressed
+      // again while the last one still fades out: it goes on (a new moment there was a jump under the fading wet sound).
+      if (!S.on && p > 0.08) { S.on = true; if (S.mix < 1e-3) { S.len = len; S.at = w0; S.ph = 0; S.g = S.gT = 1; S.n = 0; } }
       else if (S.on && p < 0.04) S.on = false;
       const mg = 1 - Math.exp(-1 / (0.004 * SR)), X = Math.min(Math.round(0.003 * SR), S.len >> 2);
       let mix = S.mix;
@@ -239,11 +243,13 @@
       for (let i = 0; i < n; i++) {
         mix += ((S.on ? 1 : 0) - mix) * mg;
         S.rate += (rT - S.rate) * 0.0005;
-        // at a repetition's end: the next (a new division takes over there), its level a step down with heran
-        if (S.ph >= S.len) { S.ph -= S.len; S.n++; S.g *= dec; if (S.on && len !== S.len) S.len = len; }
-        const t = S.ph, pos = S.start + t;
+        // at a repetition's end: the next (a new division takes over there), its level a step down with heran – gliding
+        // (a step at full level clicked)
+        if (S.ph >= S.len) { S.ph -= S.len; S.n++; S.gT *= dec; if (S.on && len !== S.len) S.len = len; }
+        S.g += (S.gT - S.g) * mg;
+        const t = S.ph, pos = S.at - S.len + t;
         let x = this.rd(this.bL, pos), y = this.rd(this.bR, pos);
-        if (t < X) { const e = t / X; x = x * e + this.rd(this.bL, pos + S.len) * (1 - e); y = y * e + this.rd(this.bR, pos + S.len) * (1 - e); }   // (the seam: the slice's own continuation fades under its start)
+        if (t < X) { const e = t / X; x = x * e + this.rd(this.bL, S.at + t) * (1 - e); y = y * e + this.rd(this.bR, S.at + t) * (1 - e); }   // (the seam: what followed the slice's end fades under its start – the same place for every length)
         S.lp += (x - S.lp) * lpc; S.lpR += (y - S.lpR) * lpc;
         const g = S.g; x = S.lp * g; y = S.lpR * g;
         oL[i] = (iL ? iL[i] : 0) * (1 - mix) + x * mix; oR[i] = (iR ? iR[i] : 0) * (1 - mix) + y * mix;

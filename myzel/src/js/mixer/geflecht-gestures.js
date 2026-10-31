@@ -185,7 +185,7 @@ function mxgKeys(C) {
     } else if (mxVolKey(e, mxVolId(k))) { if (MXG.geo) mxgGeo(); mxTipFlash(MX.root, el, mxTipVol(k)); return; }
     else if (key === 'Enter' || key === ' ') openDetail(k);
     else if ((key === 'Delete' || key === 'Backspace') && mxgHasPan(C)) setParam(pid, 0);
-    else if (key === 'ContextMenu' || (key === 'F10' && e.shiftKey)) mxgMenu(k);
+    else if (key === 'ContextMenu') mxgMenu(k);
     else if ((key === 'm' || key === 'M') && mid) setParam(mid, !P[mid]);
     else if ((key === 's' || key === 'S') && sid) setParam(sid, !P[sid]);
     else return;

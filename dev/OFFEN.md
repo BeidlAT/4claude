@@ -29,6 +29,15 @@ Begründungen stehen in `dev/STAND-2026-10-29.md` (Abschnitte „Danach (30.10.)
    – bis dahin laufen alle Tests nur in Chromium (immer dazusagen).
 
 ## Für die nächste Sitzung zu tun (ohne weitere Rückfrage)
+## Erledigt am 31.10.
+Besitzer: „unbinde alle F-Tasten, Touché-Preset-Code weg, Presets am Screen anordnen, Stottern knackst bei Chill-Hop
+Abend“ → F-Tasten frei (keine Presets F1–F10, keine Spielweisen F1–F12, kein Umschalt+F10 im Geflecht), Touché-Schalter
+(Program Change, `tchIn`) blättern keine Presets mehr, Test `t-fkeys.js` entfernt; Spielweise-Knöpfe der Touché-Karte als
+Raster (`.kc-tch`, 4 Spalten, schmal 2). Stottern (`dsp/touche-fx.js`): Ausschnitt endet immer am Druckmoment (`S.at`) –
+eine längere Teilung las vorher über den Ring-Kopf hinaus, die Naht passte bei Längenwechsel nicht; Pegelschritt (heran)
+gleitet; erneuter Druck im Ausklingen setzt fort. Neuer Prüfpunkt in `t-tch-fx.js` (Krümmung 0,071 → 0,003, Chromium).
+Offen fürs Ohr: Stottern im Chill-Hop Abend mit dem echten Touché in Firefox.
+
 ## Erledigt am 30.10. (zur Orientierung)
 (ungemergt, Besitzer: „warte mit GitHub, es kommen noch Kleinigkeiten“) Punkt 11: ein Rückweg „Wandel“ statt
 Effekt/Effekt 2 (`FX_RETS` nur `fx`, kurze Texte in `FX_TYPES`), Weg `fx.weg` Direkt / Durch die Kette (`fxKetteIn`,
