@@ -4,14 +4,23 @@
 // effects, timing jitter and the screen; level 2 is capped by the same measure on slow machines. Underruns reported
 // by the browser lower the budget further.
 const CAL = { unit: Number(store.get('myzel.cal.v1')) || 0, running: false };
-function applyQuality() {
-  Q = QP[P['dev.q']] || QP[1];
+// (31.10.2026, owner: „die Qualitätsstufen sind nicht nachvollziehbar und verhalten sich widersprüchlich“) the three
+// budgets, in level-1 Nebel voices' worth of the core, from one measure and in order: a higher level never gets less of the
+// core than the one below (unmeasured, level 3 had 48 – 25 Nebel voices against level 2's 40; on a slower machine level 2
+// fell to 14 under level 1's fixed 22, level 3 stood at a floor of 24 above it). Level 3's voices are richer, so the same
+// share holds fewer of them – said so on the card, with all three counts.
+function qBudgets() {
   // (the smallest buffer leaves less slack per callback: 40 % of the core instead of 50 – the context's own buffer, which a
   // new setting changes only at the next sound start)
   const cap = CAL.unit ? Math.floor(((A.ctx ? A.latMode : P['dev.lat']) === 'min' ? 0.4 : 0.5) / CAL.unit) : 0;
-  if (Q === QP[2]) Q.budget = cap ? clamp(cap, 14, Q.base) : Q.base;
+  const b1 = cap ? clamp(cap, 8, QP[1].base) : QP[1].base, b2 = cap ? clamp(cap, b1, QP[2].base) : QP[2].base;
+  return { 1: b1, 2: b2, 3: cap ? clamp(cap, b2, 360) : Math.round(QP[2].base * VCOST3.neb), cap };
+}
+function applyQuality() {
+  Q = QP[P['dev.q']] || QP[1];
+  const B = qBudgets();
+  Q.budget = B[P['dev.q']] || B[1];
   if (Q === QP[3]) {
-    Q.budget = cap ? clamp(cap, 24, 360) : 48;
     Q.maxv = clamp(Math.round(Q.budget * 1.5), 64, 400); Q.grainMax = clamp(Q.budget * 8, 320, 1600);
   }
   VBUDGET = Math.max(6, Math.round(Q.budget * (A.budgetScale || 1))); MAXV = Q.maxv;

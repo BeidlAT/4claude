@@ -2,6 +2,14 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-31c",
+      "punkte": [
+        "Qualitätsstufen nachvollziehbar: eine höhere Stufe bekommt nie weniger Rechenzeit als die darunter – vorher hatte „Gewaltig“ vor der Messung weniger Stimmen als „Voll“, und auf langsameren Rechnern fiel „Voll“ unter „Leicht“.",
+        "Unter „Gerät → Qualität“ stehen jetzt alle drei Stufen mit ihrer Stimmenzahl auf diesem Gerät nebeneinander.",
+        "Die Latenz-Karte sagt in Firefox, dass die Wahl dort nicht wirkt (Firefox nimmt immer den Puffer von Windows), und was stattdessen hilft."
+      ]
+    },
+    {
       "id": "2026-10-31b",
       "punkte": [
         "Touché-Stottern klingt sauber: weiche Nahtstellen bei jeder Wiederholung, auch im Bass.",

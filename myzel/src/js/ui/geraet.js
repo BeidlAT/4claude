@@ -156,14 +156,19 @@ function updDevUI() {
   if (!A.started) startKeysLine();   // the start screen's button and line
   kcLearnSync();
   if (!devEls || !devEls.qInfo) return;
-  const lv = P['dev.q'], nNeb = Math.floor(VBUDGET / Q.cost.neb);
-  devEls.qInfo.textContent = lv === '1'
-    ? 'Leicht: sparsam, damit Handys nicht aussetzen. Bis zu ' + nNeb + ' Nebel-Stimmen gleichzeitig; leichtere Klänge wie ' + listDe(ENG_OPTS.map((o) => o[0]).filter((k) => k !== 'neb' && k !== 'gsp' && k !== 'rhz').sort((x, y) => VCOST1[x] - VCOST1[y]).slice(0, 3).map((k) => ENG_NAME[k]), 'oder') + ' entsprechend mehr.'
+  // (31.10.2026) what each level is, and – from the same measure – how many Nebel voices each holds on this device, side by
+  // side (the level chosen with the guard's lowering, if any): a richer level never gets less of the core
+  const lv = P['dev.q'], B = qBudgets(), sc = A.budgetScale || 1;
+  const nOf = (q) => Math.floor(Math.max(6, Math.round(B[q] * (q === lv ? sc : 1))) / QP[q].cost.neb);
+  const what = lv === '1'
+    ? 'Leicht: einfache Stimmen, sparsam – für schwache Geräte und Handys.'
     : lv === '2'
-      ? 'Voll: der Klang wie in der ersten Fassung, mit deutlich mehr Stimmen gleichzeitig – bis zu ' + nNeb + ' Nebel-Stimmen. Für neuere Handys und Computer.'
-      : 'Gewaltig: jede Stimme wird reicher – sieben statt drei Oszillatoren im Nebel, Doppelsaiten, zwei Glocken pro Anschlag, mehr Teiltöne und Trommelmoden, doppelt so dichte Körnerwolken und Hall in echtem Stereo. ' +
-        (CAL.running ? 'Myzel misst gerade, wie viel dieses Gerät schafft …' : CAL.unit ? 'Gemessen auf diesem Gerät: bis zu ' + nNeb + ' Nebel-Stimmen gleichzeitig.' : 'Die Stimmenzahl wird beim Klangstart auf diesem Gerät gemessen.') +
-        ' Der Browser rechnet allen Klang auf einem Prozessorkern – Stufe 3 füllt ihn' + (MOBILE ? '; auf Handys kann es knacken.' : '.');
+      ? 'Voll: der Klang wie in der ersten Fassung, mit mehr Stimmen gleichzeitig als „Leicht“.'
+      : 'Gewaltig: jede Stimme wird reicher – sieben statt drei Oszillatoren im Nebel, Doppelsaiten, zwei Glocken pro Anschlag, mehr Teiltöne und Trommelmoden, doppelt so dichte Körnerwolken und Hall in echtem Stereo. Eine reichere Stimme braucht etwa doppelt so viel Rechenzeit – darum passen in dieselbe Rechenzeit weniger Stimmen.';
+  const cnt = (CAL.running ? 'Myzel misst gerade, wie viel dieses Gerät schafft … ' : '') + (CAL.unit ? 'Gemessen auf diesem Gerät' : 'Noch nicht gemessen (das geschieht beim Klangstart), vorläufig') +
+    ' – Nebel-Stimmen gleichzeitig: Stufe 1 bis ' + nOf('1') + ' · Stufe 2 bis ' + nOf('2') + ' · Stufe 3 bis ' + nOf('3') + '.' +
+    (lv === '3' ? ' Der Browser rechnet allen Klang auf einem Prozessorkern – Stufe 3 nutzt, was er hergibt' + (MOBILE ? '; auf Handys kann es knacken.' : '.') : '');
+  devEls.qInfo.textContent = what + ' ' + cnt;
   updDevLive();
   updLatText();
   lmUI();

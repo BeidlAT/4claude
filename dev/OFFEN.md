@@ -28,8 +28,17 @@ Begründungen stehen in `dev/STAND-2026-10-29.md` (Abschnitte „Danach (30.10.)
    playwright.download.prss.microsoft.com, playwright.azureedge.net, ftp.mozilla.org, download-installer.cdn.mozilla.net)
    – bis dahin laufen alle Tests nur in Chromium (immer dazusagen).
 
+10. **Spielweisen bearbeiten (Idee des Besitzers, 31.10.):** die Touché-Spielweisen umfangreich selbst bearbeiten (je
+   Richtung Ziel, Stärke, Kurve; eigene Spielweisen speichern) – Umfang mit ihm klären, dann Konzept.
+11. **Latenz (31.10.):** Recherche `dev/klang/latenz-recherche.md` – er testet Treiber-„Mode“, Firefox-Pref, Chrome-Test;
+   große Lösung (native Hülle mit ASIO) nur auf seinen Entscheid.
+
 ## Für die nächste Sitzung zu tun (ohne weitere Rückfrage)
 ## Erledigt am 31.10.
+Qualitätsstufen (Besitzer: „nicht nachvollziehbar, widersprüchlich“): ungemessen hatte Stufe 3 25 Nebel-Stimmen gegen
+40 in Stufe 2, auf langsameren Rechnern fiel Stufe 2 unter Stufe 1 – jetzt `qBudgets()` (quality.js): eine Messung, Stufe
+für Stufe nie weniger Rechenzeit, die Karte nennt alle drei Zahlen; Test `midi-tests/t-qstufen.js`. Latenz-Karte sagt in
+Firefox, dass die Wahl dort nicht wirkt (latencyHint ignoriert) und was wirkt.
 Besitzer: „unbinde alle F-Tasten, Touché-Preset-Code weg, Presets am Screen anordnen, Stottern knackst bei Chill-Hop
 Abend“ → F-Tasten frei (keine Presets F1–F10, keine Spielweisen F1–F12, kein Umschalt+F10 im Geflecht), Touché-Schalter
 (Program Change, `tchIn`) blättern keine Presets mehr, Test `t-fkeys.js` entfernt; Spielweise-Knöpfe der Touché-Karte als

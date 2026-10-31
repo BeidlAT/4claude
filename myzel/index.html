@@ -3562,7 +3562,7 @@ for (const [i, T] of [[0, VCOST1], [1, VCOST3]]) Object.defineProperty(T, 'zpf',
 const GLT_COST = { wk: [0.96, 1.74], nat: [1.48, 2.13] };
 for (const [i, T] of [[0, VCOST1], [1, VCOST3]]) Object.defineProperty(T, 'glt', { get: () => (A.ctx && gltNat() ? GLT_COST.nat : GLT_COST.wk)[i], enumerable: true });
 const QP = {
-  1: { budget: MOBILE ? 14 : 22, maxv: 32, grainMax: MOBILE ? 80 : 128, overlap: MOBILE ? 16 : 24, os: MOBILE ? '2x' : '4x', rich: false, korDens: 1, cost: VCOST1 },
+  1: { base: MOBILE ? 14 : 22, budget: MOBILE ? 14 : 22, maxv: 32, grainMax: MOBILE ? 80 : 128, overlap: MOBILE ? 16 : 24, os: MOBILE ? '2x' : '4x', rich: false, korDens: 1, cost: VCOST1 },
   2: { base: MOBILE ? 24 : 40, budget: MOBILE ? 24 : 40, maxv: 64, grainMax: MOBILE ? 128 : 224, overlap: 24, os: '4x', rich: false, korDens: 1, cost: VCOST1 },
   3: { budget: 48, maxv: 96, grainMax: 640, overlap: 40, os: '4x', rich: true, korDens: 1.75, cost: VCOST3 },
 };
@@ -8389,14 +8389,23 @@ function playNote(eng, t, f, y, vel, o = {}) {
 // effects, timing jitter and the screen; level 2 is capped by the same measure on slow machines. Underruns reported
 // by the browser lower the budget further.
 const CAL = { unit: Number(store.get('myzel.cal.v1')) || 0, running: false };
-function applyQuality() {
-  Q = QP[P['dev.q']] || QP[1];
+// (31.10.2026, owner: „die Qualitätsstufen sind nicht nachvollziehbar und verhalten sich widersprüchlich“) the three
+// budgets, in level-1 Nebel voices' worth of the core, from one measure and in order: a higher level never gets less of the
+// core than the one below (unmeasured, level 3 had 48 – 25 Nebel voices against level 2's 40; on a slower machine level 2
+// fell to 14 under level 1's fixed 22, level 3 stood at a floor of 24 above it). Level 3's voices are richer, so the same
+// share holds fewer of them – said so on the card, with all three counts.
+function qBudgets() {
   // (the smallest buffer leaves less slack per callback: 40 % of the core instead of 50 – the context's own buffer, which a
   // new setting changes only at the next sound start)
   const cap = CAL.unit ? Math.floor(((A.ctx ? A.latMode : P['dev.lat']) === 'min' ? 0.4 : 0.5) / CAL.unit) : 0;
-  if (Q === QP[2]) Q.budget = cap ? clamp(cap, 14, Q.base) : Q.base;
+  const b1 = cap ? clamp(cap, 8, QP[1].base) : QP[1].base, b2 = cap ? clamp(cap, b1, QP[2].base) : QP[2].base;
+  return { 1: b1, 2: b2, 3: cap ? clamp(cap, b2, 360) : Math.round(QP[2].base * VCOST3.neb), cap };
+}
+function applyQuality() {
+  Q = QP[P['dev.q']] || QP[1];
+  const B = qBudgets();
+  Q.budget = B[P['dev.q']] || B[1];
   if (Q === QP[3]) {
-    Q.budget = cap ? clamp(cap, 24, 360) : 48;
     Q.maxv = clamp(Math.round(Q.budget * 1.5), 64, 400); Q.grainMax = clamp(Q.budget * 8, 320, 1600);
   }
   VBUDGET = Math.max(6, Math.round(Q.budget * (A.budgetScale || 1))); MAXV = Q.maxv;
@@ -32648,14 +32657,19 @@ function updDevUI() {
   if (!A.started) startKeysLine();   // the start screen's button and line
   kcLearnSync();
   if (!devEls || !devEls.qInfo) return;
-  const lv = P['dev.q'], nNeb = Math.floor(VBUDGET / Q.cost.neb);
-  devEls.qInfo.textContent = lv === '1'
-    ? 'Leicht: sparsam, damit Handys nicht aussetzen. Bis zu ' + nNeb + ' Nebel-Stimmen gleichzeitig; leichtere Klänge wie ' + listDe(ENG_OPTS.map((o) => o[0]).filter((k) => k !== 'neb' && k !== 'gsp' && k !== 'rhz').sort((x, y) => VCOST1[x] - VCOST1[y]).slice(0, 3).map((k) => ENG_NAME[k]), 'oder') + ' entsprechend mehr.'
+  // (31.10.2026) what each level is, and – from the same measure – how many Nebel voices each holds on this device, side by
+  // side (the level chosen with the guard's lowering, if any): a richer level never gets less of the core
+  const lv = P['dev.q'], B = qBudgets(), sc = A.budgetScale || 1;
+  const nOf = (q) => Math.floor(Math.max(6, Math.round(B[q] * (q === lv ? sc : 1))) / QP[q].cost.neb);
+  const what = lv === '1'
+    ? 'Leicht: einfache Stimmen, sparsam – für schwache Geräte und Handys.'
     : lv === '2'
-      ? 'Voll: der Klang wie in der ersten Fassung, mit deutlich mehr Stimmen gleichzeitig – bis zu ' + nNeb + ' Nebel-Stimmen. Für neuere Handys und Computer.'
-      : 'Gewaltig: jede Stimme wird reicher – sieben statt drei Oszillatoren im Nebel, Doppelsaiten, zwei Glocken pro Anschlag, mehr Teiltöne und Trommelmoden, doppelt so dichte Körnerwolken und Hall in echtem Stereo. ' +
-        (CAL.running ? 'Myzel misst gerade, wie viel dieses Gerät schafft …' : CAL.unit ? 'Gemessen auf diesem Gerät: bis zu ' + nNeb + ' Nebel-Stimmen gleichzeitig.' : 'Die Stimmenzahl wird beim Klangstart auf diesem Gerät gemessen.') +
-        ' Der Browser rechnet allen Klang auf einem Prozessorkern – Stufe 3 füllt ihn' + (MOBILE ? '; auf Handys kann es knacken.' : '.');
+      ? 'Voll: der Klang wie in der ersten Fassung, mit mehr Stimmen gleichzeitig als „Leicht“.'
+      : 'Gewaltig: jede Stimme wird reicher – sieben statt drei Oszillatoren im Nebel, Doppelsaiten, zwei Glocken pro Anschlag, mehr Teiltöne und Trommelmoden, doppelt so dichte Körnerwolken und Hall in echtem Stereo. Eine reichere Stimme braucht etwa doppelt so viel Rechenzeit – darum passen in dieselbe Rechenzeit weniger Stimmen.';
+  const cnt = (CAL.running ? 'Myzel misst gerade, wie viel dieses Gerät schafft … ' : '') + (CAL.unit ? 'Gemessen auf diesem Gerät' : 'Noch nicht gemessen (das geschieht beim Klangstart), vorläufig') +
+    ' – Nebel-Stimmen gleichzeitig: Stufe 1 bis ' + nOf('1') + ' · Stufe 2 bis ' + nOf('2') + ' · Stufe 3 bis ' + nOf('3') + '.' +
+    (lv === '3' ? ' Der Browser rechnet allen Klang auf einem Prozessorkern – Stufe 3 nutzt, was er hergibt' + (MOBILE ? '; auf Handys kann es knacken.' : '.') : '');
+  devEls.qInfo.textContent = what + ' ' + cnt;
   updDevLive();
   updLatText();
   lmUI();
@@ -34078,6 +34092,11 @@ function updLatText() {
   lt += ' Der Klang ist in allen drei gleich (die Verzerrung mit Überabtastung nach der Qualitätsstufe, 2–4 ms).';
   // (Android, 24.10.2026: „Minimal“ by default, stepping back by itself – ui/leistung.js)
   if (ANDROID) lt += LAT.own ? ' Von dir eingestellt.' : LAT.auto ? ' Automatisch: nach wiederholten Aussetzern auf „' + LAT_NAME[LAT.auto] + '“ gestellt.' : ' Automatisch: setzt der Klang immer wieder aus, nimmt Myzel ab dem nächsten Start „Standard“, danach „Sicher“.';
+  // (31.10.2026, owner: „die Einstellungen am Interface haben keinen Einfluss“) Firefox takes no latencyHint (its
+  // AudioContextOptions hold only the sample rate) and always reports a buffer of 0: its output is the Windows audio
+  // engine's period (≈ 10 ms, WASAPI shared – never ASIO); said so, with what does act there
+  const FF = /Firefox\//.test(navigator.userAgent || '');
+  if (FF) lt += ' Firefox nimmt diese Wahl nicht an: es gibt den Klang immer mit dem Puffer des Windows-Audiosystems aus (meist 10 ms, nie über ASIO) und meldet keinen eigenen Puffer. Dort wirken: im Steinberg-Treiber „Mode: Low Latency“, 48 kHz überall gleich, und in about:config „media.cubeb_latency_mtg_frames“ (probeweise 384 oder 256 – bei Aussetzern zurücksetzen).';
   if (IOS) lt += ' iPhone und iPad wählen den Puffer selbst.';
   else if (!MOBILE && A.ctx && A.ctx.baseLatency) lt += ' Den Puffer bestimmt der Browser: hier ' + Math.round(A.ctx.baseLatency * A.ctx.sampleRate) + ' Samples (' + dec((A.ctx.baseLatency * 1000).toFixed(1)) + ' ms) – eine ASIO-Einstellung des Interfaces (etwa 128) gilt im Browser nicht.';   // (owner, 28.10.2026)
   if (A.ctx) lt += A.latMode !== mode ? ' Der neue Puffer gilt nach einem Neustart des Klangs.' : ' Nach Änderungen am Audiotreiber den Klang neu starten, dann misst der Browser neu.';
