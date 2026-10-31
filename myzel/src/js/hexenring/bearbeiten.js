@@ -100,7 +100,7 @@ function hxEdPlace() {
 // what the editor shows depends on: rebuilt when it changes (a frame compares it), the playhead drawn every frame
 // (the ↶ ↷ buttons follow the history, the state its words and colour: part of what is shown, not of what is rendered –
 // 30.10.2026: Stopp halts the loop, ▶ right after plays the same pass without rendering it again)
-const hxEdSig = (L) => hxEdRSig(L) + '|' + L.state + '|' + HX.hist.length + ':' + HX.redo.length + ':' + HX.pend.length + ':' + !!L.prev + '|' + P['t.root'] + P['t.scale'] + P['t.a4'] + '|' + hxRxSig(hxRxOf(L)) + (L.rxBusy ? 'b' : '') + (L.nudge || 0) + '|' + (L.klang || 'eigen') + hxKlangOf(L);   // (31.10.2026: the Instrument row; 30.10.2026: the head names the key; the switches of the Klangfarbe and the shifts)
+const hxEdSig = (L) => hxEdRSig(L) + '|' + L.state + '|' + HX.hist.length + ':' + HX.redo.length + ':' + HX.pend.length + ':' + !!L.prev + '|' + P['t.root'] + P['t.scale'] + P['t.a4'] + '|' + hxRxSig(hxRxOf(L)) + (L.rxBusy ? 'b' : '') + (L.nudge || 0) + '|' + (L.klang || 'eigen') + hxKlangOf(L) + (L.ein ? 'E' : '');   // (31.10.2026: the Instrument row; 30.10.2026: the head names the key; the switches of the Klangfarbe and the shifts)
 function hxEdRSig(L) {
   const sch = L.sch.map((id) => HX.sch.get(id)).filter(Boolean);
   return [L.key, L.hum ? 1 : L.humBusy ? 2 : 0, L.d.beats, L.d.L, L.bpb, L.sp || 1, !!L.rev, JSON.stringify(L.trim || 0), L.dbl || 1, HX.fokus === L.id, HX.solo ? HX.solo.id : 0, JSON.stringify(L.nt || 0), JSON.stringify(L.slc || 0), L.vb, JSON.stringify(L.ab || 0), L.notes.length,   // (26.10.2026: Lücken – its chips lit only after another change)
@@ -136,7 +136,8 @@ function hxEdRender() {
       (() => { const x = btn('✕', hxEdClose, 'Schließen (Esc)', 'ghost hx-ed-x'); x.setAttribute('aria-label', 'Schließen'); return x; })()));
   // (owner, 31.10.2026: „es würde Sinn machen, wenn man einzelnen Schleifen ein Instrument zuweisen kann – der Sound ist dann
   // der vom gewählten Instrument“) right under the head: its notes played anew with any source (hxWSet 'klang' – a history
-  // step, rendered like every Wuchs); „wie aufgenommen“ its own, „Spielfeld“ whatever the field plays
+  // step, rendered like every Wuchs); „wie aufgenommen“ its own; ● Einspielen: what the field plays goes into it
+  // (owner, 31.10.2026: „der Button Spielfeld ist hinfällig … an der Stelle meine Interpretation einbauen“ – einspielen.js)
   const kl = L.klang || 'eigen', klNow = hxKlangOf(L);
   const isel = h('select', { class: 'hx-eng hx-ed-inst', 'aria-label': 'Instrument dieser Schleife wählen', disabled: notes ? null : '' },
     h('option', { value: '' }, ENGINES[kl] ? 'Instrument …' : 'anderes Instrument …'), ...ENG_OPTS.map(([k2, n]) => h('option', { value: k2, selected: kl === k2 ? '' : null }, n)));
@@ -144,8 +145,8 @@ function hxEdRender() {
   const inst = h('div', { class: 'hx-ed-row hx-ed-instrow' }, h('span', { class: 'lab', title: 'Mit welchem Instrument diese Schleife ihre Noten spielt' }, 'Instrument'),
     notes ? h('div', { class: 'chips' },
       chip('wie aufgenommen', kl === 'eigen', () => hxWSet(L, 'klang', 'eigen'), 'Ihr eigener Klang (' + (ENG_NAME[L.eng] || '?') + ')' + (klNow === 'preset' ? ' – spielt gerade mit dem geladenen Preset („Instrument beim Preset-Wechsel“)' : '')),
-      chip('Spielfeld', kl === 'feld', () => hxWSet(L, 'klang', 'feld'), 'Spielt mit dem Instrument, das gerade auf der Spielfläche liegt – wechselst du es, folgt sie'),
-      isel)
+      isel,
+      chip('● Einspielen', !!L.ein, () => hxEinSet(L, !L.ein), 'Einspielen: was du jetzt auf dem Spielfeld spielst (Bildschirm oder MIDI), kommt am Ende jedes Durchgangs an derselben Stelle in diese Schleife – gespielt mit ihrem Instrument. Jeder Durchgang ist ein Schritt für ↶.', { cls: 'hx-ein' }))
       : h('span', { class: 'hx-ms' }, 'ohne Noten (aufgenommener Klang) – das Instrument lässt sich nicht tauschen'));
   // the waveform: drag over it to choose a stretch
   HXE.cv = h('canvas', { class: 'hx-ed-cv', role: 'img', 'aria-label': 'Wellenform von ' + hxName(L) + (tk ? ', ' + hxLenText(L) : '') });
