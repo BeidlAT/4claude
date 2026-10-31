@@ -87,3 +87,5 @@ s=s.replace("\nboot();\n})();","\nboot();\nwindow.__M = { "+exp+(", "+", ".join(
 assert '__M' in s
 open(sys.argv[2],'w').write(s)
 PY
+# (31.10.2026) the server for the built slot: a restarted container ended it – started again when needed
+sh "$P/../serve.sh" || true
