@@ -4,7 +4,9 @@ const { chromium } = require('/opt/node22/lib/node_modules/playwright');
 const BASE = process.env.BASE || 'http://127.0.0.1:8790/mr-inst/index.html';
 const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) process.exitCode = 1; };
 let browser = null;
-async function launch() { if (!browser) browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] }); return browser; }
+// (31.10.2026) the test server: a restarted container ends it – started again when it does not answer (../serve.sh)
+function serve() { if (!/127\.0\.0\.1:8790|localhost:8790/.test(BASE)) return; try { require('child_process').execFileSync('sh', [require('path').join(__dirname, '..', 'serve.sh')], { stdio: 'inherit' }); } catch (e) {} }
+async function launch() { if (!browser) { serve(); browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] }); } return browser; }
 async function close() { if (browser) await browser.close(); browser = null; }
 // cfg: { ins: [[id, name]], outs: [[id, name]], noState, fresh, deny, perm: 'prompt'|'granted', noMidi, seed }
 async function open(opts = {}) {

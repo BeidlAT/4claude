@@ -33,6 +33,10 @@ Begründungen stehen in `dev/STAND-2026-10-29.md` (Abschnitte „Danach (30.10.)
 
 ## Für die nächste Sitzung zu tun (ohne weitere Rückfrage)
 ## Erledigt am 31.10.
+Testserver (Besitzer: „wieso beenden die ganze Zeit die Testserver?“): der Container der Sitzung wird bei Leerlauf neu
+gestartet – alle Prozesse enden, das Scratchpad bleibt; außerdem brach `setup-tests.sh` im flachen Klon vor dem Serverstart ab
+(alte Grundlagen-Commits fehlen). Jetzt `dev/tests/serve.sh` (startet :8790 nur wenn nötig), aufgerufen von `setup-tests.sh`,
+`v2/mk.sh` und `midi-tests/h.js` (vor jedem Browserstart); fehlende Grundlagen nur gemeldet.
 Touché-Spielweise „Gestik“ (Besitzer: „mit dem Touché die Gestik des Handys vollständig nachmachen“): `midi/touche-gestik.js`
 – ein künstlicher Funkstrecken-Sender (`TCHG.src`, `syn`, über `gkRemOn`/`gkrDue`/`gkRemIn`), 100 Hz: Neigen = Weg der Haut
 (×1,15 Weite), Bebung = 2,5–10 Hz im Druck, Drehen/Schwenken = Kreisen, Ladung = schnelle Bewegung (Gesetz des Handys),
