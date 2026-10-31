@@ -34,6 +34,17 @@ Begründungen stehen in `dev/STAND-2026-10-29.md` (Abschnitte „Danach (30.10.)
 
 ## Für die nächste Sitzung zu tun (ohne weitere Rückfrage)
 ## Erledigt am 31.10.
+Führen nachgebessert (Besitzer: „mega … nur laggy, der Sound hat Probleme; das Geführte ist beim nächsten Start
+verschwunden“): Vorlauf nur 50 ms (`HX_FU_LA`) statt des ganzen Planer-Horizonts, knapp verspätete Noten sofort; gehaltene
+Töne gleiten bei Tonhöhe mit (`hxFuFollow`), Ausdruck/Gleiten ins Protokoll; geführte Noten ohne `loop`-Vorrang (sein
+Bericht: Last 50–55 bei Budget 48 – Schleifen-Stimmen wurden zuerst gestohlen/verworfen); gehaltene Töne ohne Ende enden
+am Durchgangsende. Sichern: jeder ganz geführte Durchgang → `L.wwhy.fuKeep` (mit `hxSaveMeta` sofort gespeichert),
+`hxFuCommit` bei „aus“ oder beim nächsten Start → `S.wn`, Wuchs Treu, ↶. Offen: das regelmäßige „audio-stockt“ alle ~4,3 s
+in seinem Firefox-Bericht (40 ms) – Ursache noch nicht belegt; neuen Bericht abwarten.
+Klang verwandeln in Schritten (Besitzer: „mehrmals −1 klicken … beim Verstimmen auch, 1 und 2 ct dazu … ein Knopf zum
+Resetten“): ganze Schleife – Tonhöhe/Verstimmen addieren (`add` in `hxEdRender`, Grenzen ±36 HT, ±99 ct), „jetzt …“, „0“ je
+Zeile, „Zurücksetzen“ im Titel; ±1/±2 ct auch für Abschnitte. Genauigkeit gemessen (Phase-Vocoder + Sinc): +1/−2 ct auf
+< 0,02 Hz. Test `t-hx-rx-schritte.js` (Chromium).
 Führen (Besitzer: „was ich spiele, erklingt in der Schleife – ihre MIDI-Noten bleiben die Basis“, alle vier Arten wählbar;
 das Noten-Einschreiben „Einspielen“ war ein Missverständnis und ist wieder raus): `hexenring/fuehren.js` – `L.fuehr`
 ton/klang/ausl/beides, `L.fuStumm`; die Schleife spielt live (`hxWLm`), Note für Note bis zum Horizont (`hxFuSched` aus

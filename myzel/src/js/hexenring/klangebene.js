@@ -34,7 +34,7 @@ async function hxRxLayer(L, to, o = {}) {
   if (!L || L.bew || !HX.node) return false;
   hxRxWait();
   const sch = hxBandReady(L); if (!sch) return false;
-  if (L.rxBusy) { L.rxAgain = to; return true; }
+  if (L.rxBusy) { L.rxAgain = to; L.rx = hxRxOn(to) ? Object.assign({}, to) : null; hxEdRender(); return true; }   // (31.10.2026: clicks that add up while it works – each counts from the last)
   const was = hxRxOf(L), key = L.key, seed = L.rxSeed || (L.rxSeed = ((Math.random() * 2147483646) | 0) + 1), sig = hxRxSig(to), on = hxRxOn(to);
   L.rxBusy = true; L.rx = on ? Object.assign({}, to) : null; hxEdRender();   // (the chips show it at once)
   try {
