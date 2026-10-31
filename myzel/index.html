@@ -1503,7 +1503,10 @@ body.mlearn #stage::after { content: ""; position: absolute; inset: 0; backgroun
 .mx-val span { padding: 3px 7px; border-radius: 7px; background: var(--bark); box-shadow: 0 0 0 1px rgba(240, 230, 216, .09); font: 500 11.5px/1 var(--font-num); font-variant-numeric: tabular-nums; color: var(--hypha); white-space: nowrap; }
 /* the route node: in the soil under its strip (placed by the layout), never over the value above it */
 .mx-node { position: absolute; left: 0; top: 100%; width: 44px; height: 44px; z-index: 2; padding: 0; border: 0; background: none; border-radius: 12px; cursor: pointer; }
-.mx-bead { position: absolute; left: 0; top: 0; z-index: 1; width: 18px; height: 18px; border-radius: 50%; }
+.mx-bead { position: absolute; left: 0; top: 0; z-index: 3; width: 18px; height: 18px; border-radius: 50%; padding: 0; border: 0; background: none; cursor: pointer; }
+.mx-bead::after { content: ''; position: absolute; inset: -7px; border-radius: 50%; }   /* (a target bigger than the bead) */
+.mx-bead:focus-visible { outline: 2px solid var(--lumen); outline-offset: 1px; }
+.fxl-node { z-index: 2; }
 .mx-node:hover { background: rgba(240, 230, 216, .035); }
 .mx-node:focus-visible { outline-offset: -3px; }
 
@@ -3292,6 +3295,8 @@ for (const st of STRIPS) {
   BOOL(p + 'solo', 'Solo', false, { live: 1 });
   if (!st.ret) {
     SEL(p + 'route', 'Weg', [['fx', 'Durch die Effektkette'], ['dir', 'Direkt in die Summe']], 'fx', { chips: 1, small: 1 });
+    // (owner, 31.10.2026) which effects of the chain the channel goes through on „Kette“ – a mask over V R F P S (mixer/wege-fx.js)
+    NUM(p + 'fxm', 'Effekte im Weg', 0, 31, 31, '', { step: 1, fmt: (v) => wfxText(v) });
     NUM(p + 'dly', 'Echo', 0, 2, 1, '%', { step: 0.01 });
     for (const [r, name] of FX_RETS) NUM(p + r, name, 0, 2, 1, '%', { step: 0.01 });
     // (29.10.2026) the Einschub: one of the two effects inside the channel itself (its settings, an instance of its own), and how much
@@ -4859,13 +4864,20 @@ const VOK_F = [470, 1350, 2550], VOK_C = [800, 910, 150], VOK_MAKEUP = 3.2;
 // a Formen source on the Vokal (live: its ConstantSource; a bake: the recorded line): 'vok' opens the mouth (wet up, dry
 // down to 8 %), 'vokO' the jaw (F1), 'vokV' front–back (F2, F3 a little)
 function vokConnect(c, k, src) {
-  if (!c.vokOn) { c.vokOn = true; for (const b of c.vokF) c.flt.connect(b); }
+  if (!c.vokOn) { c.vokOn = true; for (const b of c.vokF) (c.vokSrc || c.flt).connect(b); }
   if (k === 'vok') { src.connect(c.vokWet.gain); src.connect(G(-0.92)).connect(c.vokDry.gain); }
   else if (k === 'vokO') src.connect(c.vokF[0].detune);
   else if (k === 'vokV') { src.connect(c.vokF[1].detune); src.connect(G(VOK_C[2] / VOK_C[1])).connect(c.vokF[2].detune); }
 }
-function makeChain() {
-  const ctx = A.ctx, c = { in: G(1) };
+// (owner, 31.10.2026: „eine Schleife geht nur durch einen Effekt, wenn man das möchte“) m: the effects this chain holds,
+// a mask over MX_FX's order – 1 Verzerrung, 2 Ring, 4 Filter, 8 Phaser, 16 Schweben (31: the whole chain, the one
+// everything played through until now). A stage left out is built all the same (every knob reaches every chain) but
+// not wired in: the signal goes past it untouched.
+const FXM_ALL = 31;
+function makeChain(m) {
+  const ctx = A.ctx, c = { in: G(1), m: m == null ? FXM_ALL : m };
+  const has = (b) => (c.m & b) !== 0;
+  let node = c.in;
   // drive: one shaper whose curve already contains the dry/wet blend
   // (owner, 30.10.2026: „Handpan-Kreis immer noch verzerrt“, „Kurzwellenritual von Haus aus verzerrt – der Effekt Verzerrung
   // hat keinen Einfluss“) a WaveShaper clamps what lies beyond ±1 to its curve's ends: everything played into the chain
@@ -4874,16 +4886,18 @@ function makeChain() {
   // (its curve spans ±DRV_H, driveCurve) and the level is made up after it: below 0 dBFS the same curve on the same
   // points, above it room up to +19 dB; the Begrenzer at the end catches the peaks
   c.drvPre = G(1 / DRV_H); c.drv = ctx.createWaveShaper(); c.drvOut = G(DRV_H);
-  c.in.connect(c.drvPre).connect(c.drv).connect(c.drvOut);
+  c.drvPre.connect(c.drv).connect(c.drvOut);
+  if (has(1)) { node.connect(c.drvPre); node = c.drvOut; }
   // ring modulator
   c.rngDry = G(1); c.rngWet = G(0); c.rngVca = G(0); c.rngOut = G(1);
-  c.drvOut.connect(c.rngDry).connect(c.rngOut);
-  c.drvOut.connect(c.rngVca).connect(c.rngWet).connect(c.rngOut);
+  c.rngDry.connect(c.rngOut); c.rngVca.connect(c.rngWet).connect(c.rngOut);
+  if (has(2)) { node.connect(c.rngDry); node.connect(c.rngVca); node = c.rngOut; }
   A.rngOsc.connect(c.rngVca.gain);
   // filter + LFO
   c.flt = BQ(P['flt.type'], P['flt.freq'], P['flt.q']);
   A.fltLfoG.connect(c.flt.detune);
-  c.rngOut.connect(c.flt);
+  if (has(4)) { node.connect(c.flt); node = c.flt; }
+  c.vokSrc = node;   // (the Vokal's formants listen here – after the filter, or what comes before it when it is left out)
   // phaser: six swept allpass stages summed with the dry signal (no feedback loop: a loop would need a 128-frame delay = static comb)
   // (25.10.2026, the Touché's Vokal) a mouth after the filter: three formants (F1 opens with the jaw, F2 moves front–back,
   // F3 the singer's ring) in parallel with the dry path. Until the Vokal is first used its formants are not even fed; at
@@ -4891,26 +4905,25 @@ function makeChain() {
   // open it, glide the formants by detune, and bake into a loop
   c.vokDry = G(1); c.vokWet = G(0); c.vokOut = G(1);
   c.vokF = [[VOK_F[0], 9, 1], [VOK_F[1], 13, 0.7], [VOK_F[2], 16, 0.4]].map(([f, q, g]) => { const b = BQ('bandpass', f, q); b.connect(G(g * VOK_MAKEUP)).connect(c.vokWet); return b; });   // (fed only once the Vokal is first used: vokConnect – until then they cost nothing)
-  c.flt.connect(c.vokDry).connect(c.vokOut); c.vokWet.connect(c.vokOut);
+  node.connect(c.vokDry).connect(c.vokOut); c.vokWet.connect(c.vokOut);
   c.phaDry = G(1); c.phaWet = G(0); c.phaOut = G(1);
   c.phaAps = [180, 360, 720, 1440, 2600, 4200].map((f) => BQ('allpass', f, 0.6));
-  c.vokOut.connect(c.phaDry).connect(c.phaOut);
-  let node = c.vokOut;
-  for (const ap of c.phaAps) { node.connect(ap); node = ap; A.phaLfoG.connect(ap.detune); }
-  node.connect(c.phaWet).connect(c.phaOut);
+  node = c.vokOut;
+  c.phaDry.connect(c.phaOut);
+  { let a = c.phaDry; c.phaAps.forEach((ap, i) => { if (i) a.connect(ap); a = ap; A.phaLfoG.connect(ap.detune); }); a.connect(c.phaWet).connect(c.phaOut); }
+  if (has(8)) { node.connect(c.phaDry); node.connect(c.phaAps[0]); node = c.phaOut; }
   // chorus
   c.choDry = G(1); c.choWet = G(0); c.choOut = G(1);
   c.choD1 = ctx.createDelay(0.1); c.choD1.delayTime.value = 0.014;
   c.choD2 = ctx.createDelay(0.1); c.choD2.delayTime.value = 0.021;
   A.choG1.connect(c.choD1.delayTime); A.choG2.connect(c.choD2.delayTime);
-  c.phaOut.connect(c.choDry).connect(c.choOut);
-  c.phaOut.connect(c.choD1).connect(PAN(-0.85)).connect(c.choWet);
-  c.phaOut.connect(c.choD2).connect(PAN(0.85)).connect(c.choWet);
+  c.choDry.connect(c.choOut); c.choD1.connect(PAN(-0.85)).connect(c.choWet); c.choD2.connect(PAN(0.85)).connect(c.choWet);
   c.choWet.connect(c.choOut);
+  if (has(16)) { node.connect(c.choDry); node.connect(c.choD1); node.connect(c.choD2); node = c.choOut; }
   // auto-pan
   c.apan = PAN(0);
   if (c.apan.pan) A.panLfoG.connect(c.apan.pan);
-  c.choOut.connect(c.apan);
+  node.connect(c.apan);
   c.out = c.apan;
   A.chains.push(c);
   modChain(c);
@@ -5104,7 +5117,7 @@ function mixParam(st, key) {
   if (!A.ctx) return;
   if (key === 'mute' || key === 'solo') { updSolo(); updSends(); return; }
   updStrip(st);
-  if (key === 'route' || key === 'dly' || key === 'rev' || st.fS && st.fS[key]) updSends();
+  if (key === 'route' || key === 'fxm' || key === 'dly' || key === 'rev' || st.fS && st.fS[key]) updSends();
 }
 // Solo: a soloed channel silences the other channels (dry and sends); echo and hall stay open so it keeps its space.
 // A soloed return plays only the effect: the channels go on feeding it, but their dry sound is muted.
@@ -5134,7 +5147,8 @@ function gates(st, set) {
 }
 // dry path: through the insert chain or straight into the sum; a move fades the channel out and back in
 function wireStrip(st) {
-  const want = () => (st.k === 'hxr' ? hxRoute() : st.k === 'fx' ? (P['fx.weg'] === 'kette' ? fxKetteIn() : A.masterSum) : !st.ret && P['x' + st.k + '.route'] !== 'dir' ? A.voiceBus : A.masterSum);   // Hexenring: never into A.masterSum; Wandel: its own way (effekt.js)
+  // (31.10.2026) a channel on „Kette“ with only some of its effects: into the chain of just those (wfxIn – wege-fx.js)
+  const want = () => (st.k === 'hxr' ? hxRoute() : st.k === 'fx' ? (P['fx.weg'] === 'kette' ? fxKetteIn() : A.masterSum) : st.ret ? A.masterSum : wfxIn(wfxOf(st.k)));   // Hexenring: never into A.masterSum; Wandel: its own way (effekt.js)
   if (st.dTo === want()) return;
   if (st.k === 'hxr' && IDLE.hxOff) hxGates(true);   // Ruhe: through the chain's copy, the processor's zeros run as before
   if (!st.dTo) { st.dTo = want(); st.dry.connect(st.dTo); return; }
@@ -5159,18 +5173,27 @@ function updSends(inst) {
   if (!A.send || !MIX.src.length) return;
   for (const fx of ['dly', 'rev', ...FX_RETS.map((x) => x[0])]) {
     const S = A.send[fx], node = (st) => (fx === 'dly' ? st.eS : fx === 'rev' ? st.hS : st.fS[fx]);
-    const viaFx = (st) => st.k !== 'hxr' && P['x' + st.k + '.route'] !== 'dir';   // (Hexenring: its sends take its own signal)
+    const viaFx = (st) => st.k !== 'hxr' && wfxOf(st.k) > 0;   // (Hexenring: its sends take its own signal)
     const copy = MIX.src.some((st) => viaFx(st) && (mp('x' + st.k + '.' + fx) !== 1 || st.dryOff));
-    if (copy && !S.copy) {
-      S.copy = makeChain();
-      updDrive(S.copy); updRing(S.copy); updFilter(S.copy); updPhaser(S.copy); updChorus(S.copy);
-      S.fromCopy = G(0); S.copy.out.connect(S.fromCopy).connect(S.target);
-    }
-    for (const st of MIX.src) sendTo(st, fx, node(st), !viaFx(st) ? S.target : copy ? S.copy.in : null);
+    // (31.10.2026) a copy per set of effects: a channel through only some of them sends what comes out of just those
+    const cp = (m) => {
+      S.copies = S.copies || {};
+      let C = m === FXM_ALL ? S.copy : S.copies[m];
+      if (C && C.in.context === A.ctx) return C;
+      C = makeChain(m); updDrive(C); updRing(C); updFilter(C); updPhaser(C); updChorus(C);
+      C.from = G(0); C.out.connect(C.from).connect(S.target);
+      if (S.mode === 'copy') C.from.gain.value = 1;   // (made while the copies already carry the sends)
+      if (m === FXM_ALL) { S.copy = C; S.fromCopy = C.from; } else S.copies[m] = C;
+      return C;
+    };
+    if (copy) for (const st of MIX.src) if (viaFx(st)) cp(wfxOf(st.k));
+    for (const st of MIX.src) sendTo(st, fx, node(st), !viaFx(st) ? S.target : copy ? cp(wfxOf(st.k)).in : null);
     if (copy !== (S.mode === 'copy')) {
       S.mode = copy ? 'copy' : 'fx';
       const set = inst ? setNow : (q, v) => setP(q, v, 0.01);
-      set(S.fromFx.gain, copy ? 0 : 1); set(S.fromCopy.gain, copy ? 1 : 0);
+      set(S.fromFx.gain, copy ? 0 : 1); if (S.fromCopy) set(S.fromCopy.gain, copy ? 1 : 0);
+      for (const m in S.copies || {}) set(S.copies[m].from.gain, copy ? 1 : 0);
+      for (const m in A.fxm || {}) { const g = A.fxm[m].from[fx]; if (g) set(g.gain, copy ? 0 : 1); }
     }
   }
 }
@@ -11637,7 +11660,7 @@ function myzelDsp() {
       this.gS = [0, 1, 2, 3].map(() => [[new Float32Array(this.CH), new Float32Array(this.CH)]]);
       this.gM = [0, 1, 2, 3].map(() => ({ n: 0, r: 0, p: 0, fr: 0, ch: [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], tot: new Float64Array(16), d: new Float64Array(16), g: new Float64Array(16) }));
       this.noSum = !!po.noSum; this.noDD = !!po.noDD; this.noMute = !!po.noMute; this.ddPool = !!po.ddPool; this.gvQ = []; this.dvF = 1; this.ddT = null; this.ddBlk = Math.max(16, po.ddBlk | 0 || 64);
-      this.wA = new Float32Array(S); this.wG = new Float32Array(S); this.sgA = new Float32Array(S); this.sndW = false;
+      this.wA = new Float32Array(S); this.wG = new Float32Array(S); this.sgA = new Float32Array(S); this.rgA = new Float32Array(S); this.sndW = false;
       this.bG = new Float32Array(S); this.gSl = new Float32Array(S); this.slQ = new Float64Array(3); this.AB = [new Float32Array(S), new Float32Array(S)];   // (step 2b: a stop's fade, a slice's gains, a worn Schicht's own sum)   // (step 1d: Schluss „welkend“, the sends to the loops' own webs)
       this.rep = 0; this.met = 0; this.nA = 0; this.late = 0; this.wpt = []; this.wrep = 0;   // (step 2a: the Werk-Rahmen's ports – the live frame every 0.1 s)
       this.gW = new WeakMap();   // (step 2b: a chunk given back – by what, at which frame – for the tripwire's report)
@@ -11695,6 +11718,9 @@ function myzelDsp() {
       if (m.ddGo) { const d = m.ddGo; if (d.stg != null) { d.dst = this.stg.get(d.stg) || []; this.stg.delete(d.stg); d.stg = null; } this.ddStart(d); }   // (step 1d) the page's chunks for a de-drifted version
       // (step 1d) Nähren: a loop's output, post level and state, into its own pair of output 2 (ch: 0…7; −1 off) – the send
       // that feeds its own web (no tap hears output 2); a fade of X frames either way
+      // (31.10.2026) the loop's own way (Kette with some effects – the page's chain behind its pair): its outputs give way to
+      // its pair (which then carries it whole, the send's gain at 1 – the page asks for both), a fade of X frames either way
+      if (m.rt) for (const d of [].concat(m.rt)) { const L = this.lp(d.loop); if (L) envGo(L.rg, d.on ? 1 : 0, this.xf(d.X)); }
       if (m.send) for (const d of [].concat(m.send)) { const L = this.lp(d.loop); if (!L) continue; const on = d.ch != null && d.ch >= 0; if (on) L.sendCh = d.ch | 0; envGo(L.sg, on ? (d.g != null ? +d.g : 1) : 0, this.xf(d.X)); }
       // (step 1d) Schluss „welkend“: from frame f0 to f1 the loop's gain falls (equal power), a one-pole low pass closes
       // from no filter to lo Hz, slices of sl frames drop out (seeded, ever more often, 3-ms edges); at f1 it is angehalten
@@ -11815,7 +11841,7 @@ function myzelDsp() {
       const L = { id: d.id, takt: d.lock !== 'frei', b0: +d.b0 || 0, beats: +d.beats || 4, Lf: Math.max(1, d.fr ? +d.L || SR : Math.round(d.L || SR)), ph0: d.fr ? +d.ph0 || 0 : Math.round(d.ph0 || 0),   // (step 4: a frei length may be fractional – Treffen setzen; its pass starts are rounded, as a Takt loop's)
         k: -1, s0: 0, s1: 0, pe: 0, q: 0, r: 1, rt: 1, rv: 0, re: true, sch: [], st: envNew(d.state === 'stumm' || d.state === 'angehalten' ? 0 : 1),
         lv: envNew(d.gain != null ? +d.gain : 1), pan: +d.pan || 0, out: d.out ? 1 : 0, state: d.state || 'spielt', dying: false, ms: 0, mp: 0, mn: 0,
-        sendCh: -1, sg: envNew(0), wk: null, lpS: new Float32Array(4),   // (step 1d: its send, a Schluss „welkend“ with its filter's state)
+        sendCh: -1, sg: envNew(0), rg: envNew(0), wk: null, lpS: new Float32Array(4),   // (step 1d: its send, a Schluss „welkend“ with its filter's state)
         vs: 1, vg: null, sl: null, slA: false,   // (step 2b: the tape's speed and its glide or stop; the slices)
         gap: !!d.gap, ps0: 0, acc: null, accTo: null };   // (step 4: gap – only the silence after the phrase changes (Treffen setzen); the pass start before s0; a Sammelschleife's recording, the ones this loop feeds)
       return L;
@@ -12815,6 +12841,7 @@ function myzelDsp() {
       const O2 = L.sendCh >= 0 && outs[2] && outs[2][2 * L.sendCh + 1] ? outs[2] : null, sgc = O2 ? !this.env(L.sg, this.sgA, o, n) : true, sgv = L.sg.v, SG = this.sgA;
       const SL = O2 ? O2[2 * L.sendCh] : null, SR2 = O2 ? O2[2 * L.sendCh + 1] : null;
       if (O2) this.sndW = true;
+      const rgc = !this.env(L.rg, this.rgA, o, n), rgv = L.rg.v, RG = this.rgA, rgo = !rgc || rgv !== 0;   // (its own way: the outputs give way)
       const BG = bgS ? this.bG : null, AT = L.accTo && L.accTo.length ? L.accTo : null;   // (step 4: the Sammelschleifen it feeds)
       if (BG) for (let k = o, F = X; k < o + n; k++, F++) { const x = (F - bgS.f0) / bgS.T; BG[k] = x < 0.8 ? 1 : x >= 1 ? 0 : Math.cos(HP * (0.5 - 0.5 * Math.cos(Math.PI * (x - 0.8) / 0.2))); }   // (step 2b: a stop fades over its last fifth – the tape near standstill only hums)
       let ms = 0, mp = 0;
@@ -12828,7 +12855,7 @@ function myzelDsp() {
           let yl = gl * (g * bL[k] + l * tL[k]), yr = gr * (g * bR[k] + l * tR[k]);
           if (W) { const a = WA[k]; if (a >= 1) { zl = yl; zr = yr; } else { zl += a * (yl - zl); zr += a * (yr - zr); } const w = WG[k]; yl = zl * w; yr = zr * w; }
           if (BG) { const w = BG[k]; yl *= w; yr *= w; }
-          OL[k] += yl; if (OR !== OL) OR[k] += yr;
+          if (rgo) { const q = 1 - (rgc ? rgv : RG[k]); OL[k] += q * yl; if (OR !== OL) OR[k] += q * yr; } else { OL[k] += yl; if (OR !== OL) OR[k] += yr; }
           if (O2) { const s = sgc ? sgv : SG[k]; SL[k] += s * yl; SR2[k] += s * yr; }
           if (AT) for (let q = 0; q < AT.length; q++) { const A2 = AT[q].acc; if (A2) { A2.L[k] += yl; A2.R[k] += yr; } }
           ms += yl * yl + yr * yr; const a = yl < 0 ? -yl : yl, b2 = yr < 0 ? -yr : yr; if (a > mp) mp = a; if (b2 > mp) mp = b2;
@@ -24383,7 +24410,7 @@ function onParamChanged(id) {
   if (pre === 'rec') return;
   if (PD[id].dev) { onDeviceChanged(id); return; }
   if (PD[id].live) { if (A.ctx && pre[0] === 'x' && MIX.s[pre.slice(1)]) mixParam(MIX.s[pre.slice(1)], 'solo'); if (A.ctx && /^e\d\.solo$/.test(id)) { updSolo(); updSends(); } ebUI(); return; }   // (an Ebene's solo – the Klang page)
-  if (pre === 'xhxr') { if (A.ctx) mixParam(MIX.s.hxr, id.slice(5)); if (id === 'xhxr.route' && A.ctx && HX.node) hxRouteAll(P[id]); return; }   // Hexenring: its strip is not the patch's; its way: every Schleife's (node.js)
+  if (pre === 'xhxr') { if (A.ctx) mixParam(MIX.s.hxr, id.slice(5)); if ((id === 'xhxr.route' || id === 'xhxr.fxm') && A.ctx && HX.node) hxRouteAll(P['xhxr.route']); return; }   // Hexenring: its strip is not the patch's; its way: every Schleife's (node.js)
   if (pre === 'hx') { hxParam(id); return; }
   markPresetDirty();
   if (!A.ctx) return;
@@ -25558,7 +25585,9 @@ function mxBuildPult(host) {
     if (g === 'spiel' && typeof hxmPultGroup === 'function') row.append(hxmPultGroup());   // (owner, 26.10.2026: the Schleifen one by one, beside the Hexenring)
   }
   // the five beads of the chain rail name themselves under the mouse (they are drawn on the still layer)
-  MX.beads = MX_FX.map(([, name]) => { const b = h('i', { class: 'mx-bead', 'aria-hidden': 'true' }); b.dataset.n = name; row.append(b); return b; });
+  // (31.10.2026) a tap on one: the effect view – which channels go through it (wege-fx.js)
+  MX.beads = MX_FX.map(([, name], i) => { const b = h('button', { type: 'button', class: 'mx-bead', 'aria-pressed': 'false', 'aria-label': name + ': welche Kanäle hindurchgehen' }); b.dataset.n = name; b.addEventListener('click', () => fxvSet(i)); row.append(b); return b; });
+  wfxWire(row);
   scroll.append(row);
   host.append(scroll);
   // a press inside the rack selects without scrolling – the strip must not slide away under the finger
@@ -25742,11 +25771,15 @@ function mxCapPlace(k) {
 // route node in the soil: tap to switch between the insert chain and straight into the sum
 function mxNode(c) {
   const k = c.k, id = 'x' + k + '.route';
-  const b = h('button', { type: 'button', class: 'mx-node', role: 'switch', 'data-pid': id, onclick: () => setParam(id, P[id] === 'dir' ? 'fx' : 'dir') });
+  // (31.10.2026) pressed: the whole chain on or off – in the effect view that one effect (wege-fx.js); a stroke paints
+  const b = h('button', { type: 'button', class: 'mx-node', role: 'switch', 'data-pid': id, 'data-fxk': k });
+  b.addEventListener('pointerdown', (e) => { if (e.button) return; e.preventDefault(); wfxPress(k, e); });
+  b.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); wfxPress(k, e); wfxRelease(); } });
+  if (PD['x' + k + '.fxm']) bindCtl('x' + k + '.fxm', () => { MX.dirtyStatic = true; b.title = wfxSay(k); });
   bindCtl(id, (v) => {
     b.setAttribute('aria-checked', String(v === 'dir'));
     b.setAttribute('aria-label', c.name + ': direkt in die Summe, an der Effektkette vorbei');
-    b.title = c.name + ': ' + (v === 'dir' ? 'direkt in die Summe' : 'durch die Effektkette') + ' – tippen zum Umschalten';
+    b.title = wfxSay(k) + ' – tippen zum Umschalten; ein Effekt rechts (V R F P S) wählt ihn einzeln';
     MX.dirtyStatic = true;
   });
   MX.ch[k].node = b;
@@ -25889,20 +25922,22 @@ function mxStatic() {
   // active, their initials inside where the soil has room, their names under the mouse
   const bx0 = MX.ch.dly.g.cx - 22, bx1 = MX.ch.rev.g.cx + 22, big = MX.soil >= 44, br = big ? 6.5 : 6;
   c.font = '600 7.5px ' + COL.fontNum; c.textAlign = 'center';
+  MX.bx = [];
   for (let i = 0; i < 5; i++) {
-    const x = bx0 + (bx1 - bx0) * i / 4, on = mxFxOn(i);
-    c.fillStyle = on ? 'rgba(255,179,92,.16)' : 'rgba(255,179,92,.05)'; c.beginPath(); c.arc(x, yK, br + 2, 0, MX_TAU); c.fill();
-    c.fillStyle = '#17110e'; c.beginPath(); c.arc(x, yK, big ? br : 2.6, 0, MX_TAU); c.fill();
-    c.strokeStyle = on ? 'rgba(255,179,92,.8)' : 'rgba(255,179,92,.3)'; c.lineWidth = 1; c.stroke();
-    if (big) { c.fillStyle = on ? 'rgba(255,200,140,.95)' : 'rgba(168,153,138,.6)'; c.fillText(MX_FX[i][2], x, yK + 0.5); }
+    const x = bx0 + (bx1 - bx0) * i / 4, on = mxFxOn(i), sel = FXV.j === i, dim = FXV.j >= 0 && !sel;
+    MX.bx.push(x);
+    c.fillStyle = sel ? 'rgba(255,179,92,.34)' : on ? 'rgba(255,179,92,' + (dim ? 0.07 : 0.16) + ')' : 'rgba(255,179,92,.05)'; c.beginPath(); c.arc(x, yK, br + (sel ? 4 : 2), 0, MX_TAU); c.fill();
+    c.fillStyle = sel ? '#ffb35c' : '#17110e'; c.beginPath(); c.arc(x, yK, big || sel ? br : 2.6, 0, MX_TAU); c.fill();
+    c.strokeStyle = sel ? '#ffd29c' : on ? 'rgba(255,179,92,' + (dim ? 0.4 : 0.8) + ')' : 'rgba(255,179,92,.3)'; c.lineWidth = 1; c.stroke();
+    if (big || sel) { c.fillStyle = sel ? '#140f0c' : on ? 'rgba(255,200,140,' + (dim ? 0.55 : 0.95) + ')' : 'rgba(168,153,138,.6)'; c.fillText(MX_FX[i][2], x, yK + 0.5); }
     const b = MX.beads && MX.beads[i];
-    if (b) { b.style.transform = 'translate(' + (x - 9).toFixed(1) + 'px,' + (yK - 9).toFixed(1) + 'px)'; b.title = MX_FX[i][1] + (on ? ' – an' : ' – aus') + ' (Effektkette)'; }
+    if (b) { b.style.transform = 'translate(' + (x - 9).toFixed(1) + 'px,' + (yK - 9).toFixed(1) + 'px)'; b.title = MX_FX[i][1] + (on ? ' – an' : ' – aus') + (sel ? ' · Effekt-Blick: Kanäle antippen oder überstreichen, Alt: nur dieser, Umschalt: nur solange gedrückt, Esc: zurück' : ' · antippen: welche Kanäle hindurchgehen'); }
   }
   // hyphae: from the base of each stem down to its rail; returns always go straight in
   c.lineCap = 'round';
   for (const cc of MXC) {
     if (cc.kind === 'sum' || cc.kind === 'puls' || MX.ch[cc.k].gone) continue;
-    const S = MX.ch[cc.k], g = S.g, dir = cc.kind === 'ret' || P['x' + cc.k + '.route'] === 'dir', ry = dir ? yD : yK;
+    const S = MX.ch[cc.k], g = S.g, fm = cc.kind === 'ret' ? 0 : wfxGet(cc.k), dir = !fm, ry = dir ? yD : yK;
     const y0 = g.yb + 9, a = S.dorm || S.srcoff ? 0.1 : 0.34;
     c.strokeStyle = mxRgba(cc.rgb, a); c.lineWidth = 1.1;
     c.beginPath(); c.moveTo(g.cx, y0); c.bezierCurveTo(g.cx - 2, y0 + (ry - y0) * 0.4, g.cx + 2, y0 + (ry - y0) * 0.7, g.cx, ry); c.stroke();
@@ -25913,6 +25948,18 @@ function mxStatic() {
     // the knot: the channel's colour; hollow when its source is off, grey when it is still
     c.fillStyle = S.dorm ? 'rgba(118,106,97,.9)' : S.srcoff ? '#17110e' : mxRgba(cc.rgb, 1); c.beginPath(); c.arc(g.cx, ry, 3.8, 0, MX_TAU); c.fill();
     c.strokeStyle = S.srcoff && !S.dorm ? mxRgba(cc.rgb, 0.6) : '#140f0c'; c.lineWidth = 1.2; c.stroke();
+    if (cc.kind !== 'ret') mxFxmMark(c, g.cx, yK, yD, fm, cc.rgb);
+  }
+  // (31.10.2026) the Schleifen's knots, under their strips in the group „Schleifen“ (wege-fx.js, hexenring/weg.js)
+  fxlSync();
+  for (const G2 of FXL.geo) {
+    const fm = wfxGet(G2.k), ry = fm ? yK : yD, rgb = mxRgb(G2.col), y0 = G2.yb + 4;
+    c.strokeStyle = mxRgba(rgb, 0.3); c.lineWidth = 1.1;
+    c.beginPath(); c.moveTo(G2.cx, y0); c.bezierCurveTo(G2.cx - 2, y0 + (ry - y0) * 0.4, G2.cx + 2, y0 + (ry - y0) * 0.7, G2.cx, ry); c.stroke();
+    c.strokeStyle = 'rgba(240,230,216,.22)'; c.lineWidth = 1; c.beginPath(); c.arc(G2.cx, fm ? yD : yK, 3.2, 0, MX_TAU); c.stroke();
+    c.fillStyle = mxRgba(rgb, G2.L.state === 'spielt' ? 1 : 0.55); c.beginPath(); c.arc(G2.cx, ry, 3.8, 0, MX_TAU); c.fill();
+    c.strokeStyle = '#140f0c'; c.lineWidth = 1.2; c.stroke();
+    mxFxmMark(c, G2.cx, yK, yD, fm, rgb);
   }
   // the Puls group is a VCA: a bracket over its four lanes
   const pg = MX.ch.puls.g, l0 = MX.ch.l0.g, by = soilY + 3;
@@ -26024,10 +26071,10 @@ function mxPulse(k) { const v = MXV.views[MX.view]; if (v && v.pulse) v.pulse(k)
 const MX_PATHS = [];
 function mxPaths() {
   for (const cc of MXC) {
-    const g = MX.ch[cc.k].g, p = MX_PATHS[cc.i] || (MX_PATHS[cc.i] = new Float32Array(5));
+    const g = MX.ch[cc.k].g, p = MX_PATHS[cc.i] || (MX_PATHS[cc.i] = new Float32Array(6));
     if (!g || MX.ch[cc.k].gone) continue;
-    const ry = cc.kind === 'ret' || P['x' + cc.k + '.route'] === 'dir' ? MX.yD : MX.yK, y0 = g.yb + 9;
-    p[0] = g.cx; p[1] = y0; p[2] = ry; p[3] = ry - y0; p[4] = MX.railEnd - g.cx;
+    const fm = cc.kind === 'ret' ? 0 : wfxGet(cc.k), ry = fm ? MX.yK : MX.yD, y0 = g.yb + 9;
+    p[0] = g.cx; p[1] = y0; p[2] = ry; p[3] = ry - y0; p[4] = MX.railEnd - g.cx; p[5] = fm;
   }
 }
 function mxPultFrame(dt, ts) {
@@ -26097,15 +26144,19 @@ function mxDrawRack(dt) {
     const L = p[3] + p[4];
     MXP.d[j] += MXP.v[j] * dt;
     if (MXP.d[j] >= L) { MXP.k[j] = -1; continue; }
-    const d = MXP.d[j], x = d < p[3] ? p[0] : p[0] + d - p[3], y = d < p[3] ? p[1] + d : p[2];
+    const d = MXP.d[j], x = d < p[3] ? p[0] : p[0] + d - p[3];
     if (x < x0 || x > x1) continue;
+    // (31.10.2026) on the chain rail through only some effects: a hop under the beads it skips, a light in those it passes
+    const [dy, lit] = d >= p[3] && p[5] > 0 && p[5] !== FXM_ALL ? mxFxmSpore(x, p[5]) : [0, -1], y = (d < p[3] ? p[1] + d : p[2]) + dy;
     const a = Math.min(1, d / 10, (L - d) / 30) * (MXP.f[j] ? 1 : 0.85), big = MXP.s[j] > 1, s = MXP.f[j] ? 14 : big ? 6 : 4.5;
+    if (lit >= 0) { c.globalAlpha = a * 0.5; c.drawImage(cc.spr.p2, MX.bx[lit] - 11, MX.yK - 11, 22, 22); }
     c.globalAlpha = a;
     c.drawImage(MXP.f[j] ? cc.spr.pulse : big ? cc.spr.p2 : cc.spr.p1, x - s, y - s, s * 2, s * 2);
     c.fillStyle = MXP.f[j] ? '#fff6ea' : cc.c1;
     c.fillRect(x - MXP.s[j] * 0.6, y - MXP.s[j] * 0.6, MXP.s[j] * 1.2, MXP.s[j] * 1.2);
   }
   c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+  mxLoopSpores(c, dt, x0, x1);
 }
 // Send threads of the selected (or hovered) channel: hyphae from its knot that dip below both rails and come up
 // under Echo and Hall, as thick as what it sends. They fade towards their middle and are at full strength only for a
@@ -26311,6 +26362,189 @@ function mxScrollTo(k, smooth) {
   MX.scroll.scrollTo({ left: x - (vis - w) / 2, behavior: smooth && !REDUCED ? 'smooth' : 'auto' });
 }
 
+/* ---------- Wege durch einzelne Effekte (owner, 31.10.2026) ---------- */
+// „Eine Schleife geht nur durch einen Effekt, wenn man das möchte – das soll unten im Pult alles zu setzen sein, ohne dass
+// es umständlich wird … das Design so behalten (die Punkte, die Animation), mit den Neuerungen.“ (dev/klang/routing-konzept.md)
+// Every channel on „Kette“ goes through a set of the chain's five effects (x<k>.fxm, a mask in MX_FX's order: 1 V, 2 R,
+// 4 F, 8 P, 16 S – 31 the whole chain, as before). The Pult keeps its rails and knots: a knot on Kette with only some
+// effects wears a fine ring of five ticks, lit where it passes; its spores hop under the beads it skips and light the ones
+// it goes through. A tap on a bead (V R F P S) is the effect view: every knot then says only „through this one – yes or
+// no“; a tap switches it, a stroke across the knots paints, Alt only this channel, Umschalt only while held, Esc back.
+// The Schleifen of the Hexenring have knots of their own under their strips (hexenring/weg.js).
+
+// ---- the sound: a chain per set of effects, shared by the channels that use it ----
+const wfxOf = (k) => { if (!PD['x' + k + '.route'] || P['x' + k + '.route'] === 'dir') return 0; const m = Math.round(P['x' + k + '.fxm'] != null ? P['x' + k + '.fxm'] : FXM_ALL) & FXM_ALL; return m; };
+const wfxNames = (m) => MX_FX.filter((_, j) => m & (1 << j)).map((f) => f[1]);
+const wfxWords = (m) => (!m ? 'direkt in die Summe' : m === FXM_ALL ? 'durch die ganze Effektkette' : 'nur durch ' + wfxNames(m).join(' → '));
+const wfxText = (v) => { const m = Math.round(v) & FXM_ALL; return m === FXM_ALL ? 'alle' : m ? wfxNames(m).join(', ') : 'keiner'; };
+// where a channel's dry path goes for a set of effects
+function wfxIn(m) { return !m ? A.masterSum : m === FXM_ALL ? A.voiceBus : wfxChain(m).in; }
+function wfxChain(m) {
+  A.fxm = A.fxm || {};
+  let c = A.fxm[m];
+  if (c && c.in.context === A.ctx) return c;
+  c = makeChain(m);
+  updDrive(c); updRing(c); updFilter(c); updPhaser(c); updChorus(c);
+  c.out.connect(A.masterSum);
+  // what it sends to Echo, Hall and the returns: its own output, as the whole chain's does – while the sends run plain
+  c.from = {};
+  for (const fx in A.send || {}) { const S = A.send[fx], g = G(S.mode === 'copy' ? 0 : 1); c.out.connect(g).connect(S.target); c.from[fx] = g; }
+  A.fxm[m] = c;
+  wfxGc();
+  return c;
+}
+// chains no channel uses any more go after a while (each costs what the chain costs)
+function wfxGc() {
+  clearTimeout(A.fxmGcT);
+  A.fxmGcT = setTimeout(() => {
+    if (!A.fxm) return;
+    const used = new Set(MIX.src.map((st) => wfxOf(st.k)));
+    for (const m in A.fxm) if (!used.has(+m)) { const c = A.fxm[m]; try { c.out.disconnect(); } catch (e) {} A.chains = A.chains.filter((x) => x !== c); delete A.fxm[m]; }
+  }, 4000);
+}
+
+// ---- the channels the Pult routes: its own (x<k>.route, x<k>.fxm) and the Schleifen ('hl:' + key) ----
+const wfxLoop = (k) => (k.startsWith('hl:') ? hxByKey(k.slice(3)) : null);
+function wfxGet(k) { const L = k.startsWith('hl:') ? wfxLoop(k) : null; return L ? hxWegM(L) : k === 'hxr' ? (P['xhxr.route'] === 'dir' ? 0 : Math.round(P['xhxr.fxm']) & FXM_ALL) : wfxOf(k); }
+function wfxSet(k, m) {
+  m &= FXM_ALL;
+  if (k.startsWith('hl:')) { const L = wfxLoop(k); if (L) hxWegSet(L, m ? 'fx' : 'dir', m || null); return; }
+  if (m) setParam('x' + k + '.fxm', m);
+  setParam('x' + k + '.route', m ? 'fx' : 'dir');
+  MX.dirtyStatic = true;
+}
+const wfxName = (k) => (k.startsWith('hl:') ? (wfxLoop(k) ? hxName(wfxLoop(k)) : 'Schleife') : MXK[k] ? MXK[k].name : k);
+function wfxSay(k) { const m = wfxGet(k); return wfxName(k) + ': ' + (k === 'hxr' ? (m ? 'alle Schleifen ' : 'alle Schleifen ') + wfxWords(m) : wfxWords(m)); }
+
+// ---- the effect view ----
+const FXV = { j: -1, paint: null, hold: null };
+function fxvSet(j) {
+  FXV.j = FXV.j === j ? -1 : j;
+  MX.dirtyStatic = true;
+  if (MX.beads) MX.beads.forEach((b, i) => b.setAttribute('aria-pressed', String(FXV.j === i)));
+  if (MX.root) MX.root.classList.toggle('fxv', FXV.j >= 0);
+  mxTipFlash(MX.root, MX.beads && MX.beads[j], FXV.j >= 0 ? { n: MX_FX[j][1], v: 'Kanäle antippen oder überstreichen · Alt: nur dieser · Esc: zurück' } : { n: 'Wege', v: 'Überblick' });
+}
+// a knot pressed: in the overview the whole chain on or off (as always); in the effect view this effect for this channel
+function wfxPress(k, e) {
+  const m = wfxGet(k);
+  if (FXV.j < 0) { wfxSet(k, m ? 0 : FXM_ALL); wfxTell(k); return; }
+  const b = 1 << FXV.j;
+  if (e && e.altKey) {   // only this channel goes through it
+    for (const kk of wfxKeys()) { const mm = wfxGet(kk), on = kk === k; if (!!(mm & b) !== on) wfxSet(kk, on ? mm | b : mm & ~b); }
+    wfxTell(k); return;
+  }
+  const on = !(m & b);
+  if (e && e.shiftKey) { FXV.hold = { k, m }; wfxSet(k, on ? m | b : m & ~b); wfxTell(k); return; }   // (only while held)
+  wfxSet(k, on ? m | b : m & ~b);
+  FXV.paint = { on, seen: new Set([k]) };
+  wfxTell(k);
+}
+function wfxPaintOver(k) {
+  const P0 = FXV.paint;
+  if (!P0 || FXV.j < 0 || P0.seen.has(k)) return;
+  P0.seen.add(k);
+  const b = 1 << FXV.j, m = wfxGet(k);
+  if (!!(m & b) !== P0.on) wfxSet(k, P0.on ? m | b : m & ~b);
+  wfxTell(k);
+}
+function wfxRelease() {
+  FXV.paint = null;
+  if (FXV.hold) { const H = FXV.hold; FXV.hold = null; wfxSet(H.k, H.m); wfxTell(H.k); }
+}
+function wfxTell(k) { const B = wfxNode(k); if (B) { B.title = wfxSay(k); B.setAttribute('aria-label', wfxSay(k)); } if (MX.root) mxTipFlash(MX.root, B, { n: wfxName(k), v: wfxWords(wfxGet(k)) }); }
+// every channel with a knot, in Pult order
+function wfxKeys() { const ks = MXC.filter((c) => c.kind !== 'sum' && c.kind !== 'ret' && c.kind !== 'puls' && !MX.ch[c.k].gone).map((c) => c.k); for (const S of (typeof HXMP !== 'undefined' && !HXMP.fold && HXMP.st) || []) ks.push('hl:' + S.key); return ks; }
+const wfxNode = (k) => (k.startsWith('hl:') ? FXL.nodes.get(k) : MX.ch[k] && MX.ch[k].node);
+// the stroke across the knots: whatever knot the pointer is over (buttons do not get the moves of another's press)
+function wfxWire(row) {
+  row.addEventListener('pointermove', (e) => {
+    if (!FXV.paint) return;
+    const el = document.elementFromPoint(e.clientX, e.clientY), b = el && el.closest && el.closest('[data-fxk]');
+    if (b) wfxPaintOver(b.dataset.fxk);
+  });
+  window.addEventListener('pointerup', wfxRelease); window.addEventListener('pointercancel', wfxRelease);
+  // (Esc leaves the effect view first – before the mixer's own Esc closes the panel)
+  window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && FXV.j >= 0 && MX.open) { e.preventDefault(); e.stopImmediatePropagation(); fxvSet(FXV.j); } }, true);
+}
+
+// ---- the Schleifen's knots in the Pult: a button under each loop strip, its place from the strip ----
+const FXL = { nodes: new Map(), geo: [] };
+function fxlSync() {
+  if (typeof HXMP === 'undefined' || !MX.row) return;
+  const want = new Set(HXMP.fold || HXMP.grp.hidden ? [] : HXMP.st.map((S) => 'hl:' + S.key));
+  for (const [k, b] of FXL.nodes) if (!want.has(k)) { b.remove(); FXL.nodes.delete(k); }
+  for (const k of want) if (!FXL.nodes.has(k)) {
+    const b = h('button', { type: 'button', class: 'mx-node fxl-node', 'data-fxk': k });
+    b.addEventListener('pointerdown', (e) => { if (e.button) return; e.preventDefault(); wfxPress(k, e); });
+    b.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); wfxPress(k, e); wfxRelease(); } });
+    MX.row.append(b); FXL.nodes.set(k, b);
+  }
+  // the geometry: each loop strip's stem centre and foot, in the row's coordinates (the rails' canvas shares them)
+  const rr = MX.row.getBoundingClientRect();
+  FXL.geo = [];
+  for (const S of want.size ? HXMP.st : []) {
+    const k = 'hl:' + S.key, b = FXL.nodes.get(k), L = hxByKey(S.key), r = (S.cv || S.el).getBoundingClientRect();
+    if (!b || !L || !r.width) continue;
+    const cx = r.left - rr.left + r.width / 2, yb = r.bottom - rr.top;
+    Object.assign(b.style, { left: (cx - 22).toFixed(1) + 'px', top: (MX.yK - 22 + MX.top * 0).toFixed(1) + 'px', height: Math.max(30, MX.yD - MX.yK + 44) + 'px' });
+    b.title = wfxSay(k); b.setAttribute('aria-label', wfxSay(k));
+    FXL.geo.push({ k, cx, yb, col: S.col ? S.col() : '#e9a35e', S, L });
+  }
+}
+
+// ---- drawing (the Pult's still layer and its live one, console-draw.js) ----
+// a knot's mark: in the overview a fine ring of five ticks only when it goes through some of the effects (the whole chain
+// and Direkt stay the plain dots they were); in the effect view a light ring where it goes through the chosen one and
+// a faint circle on Kette where it could
+function mxFxmMark(c, x, yK, yD, fm, rgb) {
+  if (FXV.j < 0) {
+    if (!fm || fm === FXM_ALL) return;
+    for (let j = 0; j < 5; j++) {
+      const a0 = -Math.PI / 2 + (j / 5) * MX_TAU + 0.2, a1 = -Math.PI / 2 + ((j + 1) / 5) * MX_TAU - 0.2, on = fm & (1 << j);
+      c.strokeStyle = on ? mxRgba(rgb, 0.9) : 'rgba(240,230,216,.14)'; c.lineWidth = on ? 1.4 : 1;
+      c.beginPath(); c.arc(x, yK, 6.8, a0, a1); c.stroke();
+    }
+    return;
+  }
+  if (fm & (1 << FXV.j)) {
+    c.fillStyle = mxRgba(rgb, 0.12); c.beginPath(); c.arc(x, yK, 9, 0, MX_TAU); c.fill();
+    c.strokeStyle = mxRgba(rgb, 0.9); c.lineWidth = 1.5; c.beginPath(); c.arc(x, yK, 7, 0, MX_TAU); c.stroke();
+  } else {
+    c.strokeStyle = 'rgba(240,230,216,.2)'; c.lineWidth = 1; c.setLineDash([2, 2.5]); c.beginPath(); c.arc(x, yK, 6.5, 0, MX_TAU); c.stroke(); c.setLineDash([]);
+  }
+}
+// a spore on the chain rail at x: under a bead its channel skips it hops (dy > 0); through one it passes it lights it
+// (the bead's index, or -1)
+function mxFxmSpore(x, fm) {
+  const B = MX.bx; if (!B || !fm) return [0, -1];
+  for (let j = 0; j < 5; j++) {
+    const d = x - B[j];
+    if (d > -11 && d < 11) { if (fm & (1 << j)) return [0, j]; const u = Math.cos((Math.PI / 2) * (d / 11)); return [8.5 * u * u, -1]; }
+  }
+  return [0, -1];
+}
+// the Schleifen's spores: down from their strip to their rail and on towards the sum, as many as they sound
+const FXLP = [];
+function mxLoopSpores(c, dt, x0, x1) {
+  if (REDUCED || !FXL.geo.length) return;
+  for (const G2 of FXL.geo) {
+    const lv = G2.S.lv ? G2.S.lv.lvl || 0 : 0;
+    if (G2.L.state === 'spielt' && FXLP.length < 60 && Math.random() < lv * dt * 9) FXLP.push({ G: G2, d: 0, v: 42 + Math.random() * 34, s: 0.7 + Math.random() * 0.6 });
+  }
+  c.globalCompositeOperation = 'lighter';
+  for (let i = FXLP.length - 1; i >= 0; i--) {
+    const Q = FXLP[i], G2 = Q.G, fm = wfxGet(G2.k), ry = fm ? MX.yK : MX.yD, y0 = G2.yb + 4, dn = ry - y0, L = dn + Math.max(0, MX.railEnd - G2.cx);
+    Q.d += Q.v * dt;
+    if (Q.d >= L || !FXL.nodes.has(G2.k)) { FXLP.splice(i, 1); continue; }
+    const d = Q.d, x = d < dn ? G2.cx : G2.cx + d - dn;
+    if (x < x0 || x > x1) continue;
+    const [dy, lit] = d < dn ? [0, -1] : fm === FXM_ALL ? [0, -1] : mxFxmSpore(x, fm), y = (d < dn ? y0 + d : ry) + dy, a = Math.min(1, d / 10, (L - d) / 30) * 0.85, g = mxGlow(G2.col);
+    c.globalAlpha = a; c.drawImage(g, x - 5, y - 5, 10, 10);
+    if (lit >= 0) { c.globalAlpha = a * 0.55; c.drawImage(g, MX.bx[lit] - 11, MX.yK - 11, 22, 22); }
+  }
+  c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+}
 /* =====================================================================
    The head: fruiting body, loudness, snapshots, second knob
    ===================================================================== */
@@ -26748,7 +26982,8 @@ function mxMorphApply(m) {
     const va = a[id], vb = b[id];
     if (va === vb || va === undefined || vb === undefined) continue;
     const d = PD[id];
-    const v = d.kind === 'num' ? fromNorm(d, toNorm(d, va) + (toNorm(d, vb) - toNorm(d, va)) * m) : m < 0.5 ? va : vb;
+    // (31.10.2026) the effects of a way switch at the middle like the way itself – a mask between two is no blend
+    const v = d.kind === 'num' && !id.endsWith('.fxm') ? fromNorm(d, toNorm(d, va) + (toNorm(d, vb) - toNorm(d, va)) * m) : m < 0.5 ? va : vb;
     if (P[id] !== v) setParam(id, v);
   }
   MX.applying = false;
@@ -28909,6 +29144,9 @@ function mxdBuildWege() {
   W.rFx = opt('fx', 'Kette', ''); W.rDir = opt('dir', 'Direkt', 'an der Kette vorbei');
   W.rDir.title = 'Direkt in die Summe – Echo und Hall bekommen den Kanal trocken';
   W.route = h('div', { class: 'mxd-route', role: 'radiogroup', 'aria-label': 'Weg in die Summe' }, W.rFx, W.rDir);
+  // (31.10.2026) on Kette: which of the chain's effects – a chip each (wege-fx.js; the same as the effect view in the Pult)
+  W.fxc = MX_FX.map(([, name, ini], j) => h('button', { type: 'button', class: 'chip', 'aria-pressed': 'false', title: name, onclick: () => { const k = MXD.k, m = wfxGet(k), b = 1 << j; wfxSet(k, m & b ? m & ~b : m | b); } }, ini + ' ' + name));
+  W.fxRow = h('div', { class: 'chips small mxd-fxc', role: 'group', 'aria-label': 'Effekte im Weg' }, ...W.fxc);
   W.route.addEventListener('keydown', (e) => {
     if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
     const id = rid();
@@ -28924,17 +29162,17 @@ function mxdBuildWege() {
     // balance left, M / S right under the value box; a lane's group link between them
     h('div', { class: 'mxd-wrow' }, h('div', { class: 'mxd-balw' }, W.bal.box), W.grp, h('div', { class: 'mxd-msw' }, W.mb, W.sb)),
     h('div', { class: 'mxd-snds' }, ...W.slots.map((S) => S.el)),
-    W.route, W.ret);
+    W.route, W.fxRow, W.ret);
 }
 function mxdWegeAim(k) {
   const W = MXD.wg, c = MXK[k];
   W.fd.set(k);
   mxdAim(W.bal, k, 'x' + k + '.pan', 'Balance', 'Balance', c.col);
-  mxdWatch('x' + k + '.mute', 'x' + k + '.solo', 'x' + k + '.route', 'fx.weg', 'x' + k + '.dly', 'x' + k + '.rev', ...FX_RETS.map(([r]) => 'x' + k + '.' + r));
-  // (30.10.2026) the Hexenring's way means its Schleifen's: Kette – all follow the live chain; Direkt – each as set (burnt in)
+  mxdWatch('x' + k + '.mute', 'x' + k + '.solo', 'x' + k + '.route', 'x' + k + '.fxm', 'fx.weg', 'x' + k + '.dly', 'x' + k + '.rev', ...FX_RETS.map(([r]) => 'x' + k + '.' + r));
+  // (31.10.2026) the Hexenring's way sets its Schleifen's: Kette – all through the chain (weg.js), Direkt – all as they sound
   const hx = k === 'hxr', wd = k === 'fx';
-  W.rFx.querySelector('small').textContent = hx ? 'alle Schleifen folgen ihr' : wd ? 'durch Filter, Phaser & Co.' : ''; W.rDir.querySelector('small').textContent = hx ? 'jede wie eingestellt' : 'an der Kette vorbei';
-  W.rFx.title = hx ? 'Kette: jede Schleife folgt der Effektkette – Regler und Presets wirken auf sie' : wd ? 'Durch eine Kopie der Effektkette (Verzerrung, Ring, Filter, Phaser, Schweben – dieselben Regler)' : ''; W.rDir.title = hx ? 'Direkt: jede Schleife wie in ihrem Kanal eingestellt (K) – eingebrannt klingt sie wie aufgenommen' : 'Direkt in die Summe – Echo und Hall bekommen den Kanal trocken';
+  W.rFx.querySelector('small').textContent = hx ? 'alle Schleifen durch die Kette' : wd ? 'durch Filter, Phaser & Co.' : ''; W.rDir.querySelector('small').textContent = hx ? 'alle Schleifen direkt' : 'an der Kette vorbei';
+  W.rFx.title = hx ? 'Kette: jede Schleife geht (noch einmal) durch die Effektkette – einzeln im Pult an ihrem Punkt' : wd ? 'Durch eine Kopie der Effektkette (Verzerrung, Ring, Filter, Phaser, Schweben – dieselben Regler)' : ''; W.rDir.title = hx ? 'Direkt: jede Schleife so, wie sie klingt – mit Effekten aufgenommen mit ihnen' : 'Direkt in die Summe – Echo und Hall bekommen den Kanal trocken';
   const [s0, s1, ...sx] = W.slots;
   if (c.kind === 'ret') {
     mxdAim(s0.K, k, k + '.mix', 'Anteil', 'Anteil – wie viel alle Kanäle hineinschicken', c.col);
@@ -28947,7 +29185,7 @@ function mxdWegeAim(k) {
   }
   s1.el.hidden = k === 'rev';
   for (const S of sx) S.el.hidden = c.kind === 'ret';
-  W.route.hidden = c.kind === 'ret' && k !== 'fx'; W.ret.hidden = c.kind !== 'ret'; W.grp.hidden = c.kind !== 'lane';
+  W.route.hidden = c.kind === 'ret' && k !== 'fx'; W.fxRow.hidden = c.kind === 'ret'; W.ret.hidden = c.kind !== 'ret'; W.grp.hidden = c.kind !== 'lane';
   W.mb.setAttribute('aria-label', c.name + ' stumm'); W.sb.setAttribute('aria-label', c.name + ' solo');
 }
 // the texts of the Wege: what a send really is ("140 % von 35 % Echo-Anteil = 49 %"), which way the channel takes
@@ -28980,8 +29218,10 @@ function mxdWegeText(k) {
     W.rFx.setAttribute('aria-checked', String(r !== 'dir')); W.rDir.setAttribute('aria-checked', String(r === 'dir'));
     W.rFx.tabIndex = r !== 'dir' ? 0 : -1; W.rDir.tabIndex = r === 'dir' ? 0 : -1;
     const fx = [['drv.mix', 'Verzerrung'], ['rng.mix', 'Ring'], [null, 'Filter'], ['pha.mix', 'Phaser'], ['cho.mix', 'Schweben']].filter(([id]) => !id || P[id] > 0).map((x) => x[1]);
-    W.rFx.lastChild.textContent = fx.length > 3 ? 'durch ' + fx.length + ' Effekte' : 'durch ' + fx.join(', ');
-    W.rFx.title = 'Durch die Effektkette: ' + fx.join(', ');
+    const fm = wfxGet(k) || (Math.round(P['x' + k + '.fxm']) & FXM_ALL);
+    W.fxc.forEach((b, j) => b.setAttribute('aria-pressed', String(r !== 'dir' && !!(fm & (1 << j)))));
+    W.rFx.lastChild.textContent = fm !== FXM_ALL && r !== 'dir' ? 'nur ' + wfxNames(fm).join(', ') : fx.length > 3 ? 'durch ' + fx.length + ' Effekte' : 'durch ' + fx.join(', ');
+    W.rFx.title = 'Durch die Effektkette: ' + (fm !== FXM_ALL ? wfxNames(fm).join(' → ') : fx.join(', '));
   }
   if (c.kind === 'lane') { W.grpV.textContent = P['mix.pulsMute'] ? 'stumm' : mxDbTxt(P['mix.pulsVol']) + ' dB'; W.grp.setAttribute('aria-label', 'über Puls gesamt: ' + W.grpV.textContent + ' – öffnen'); }
 }
@@ -35235,6 +35475,7 @@ function hxNode() {
   hxRailShow();
   hxwWportAll(); HX.tonP = { root: P['t.root'], scale: P['t.scale'] };
   hxHandLoad();   // (Etappe 3: the Handschrift, when it is on)   // (step 2a: the realms' pacing; the key the field plays in)
+  HXWG.r.clear(); HXWG.mk = {};   // (a new processor: the Schleifen's own ways are made again with them – weg.js)
   if (HX.restore) setTimeout(hxRestoreApply, 300);   // Hexenring: the Schleifen of the last session come back, angehalten
 }
 // which strips „Gespielt“ hears: the sources always, the Puls and the Bordun when asked
@@ -35266,6 +35507,7 @@ function hxMsg(m) {
     if (d.loop != null) {
       const L = HX.loops.get(d.loop); if (L) for (const id of L.sch) HX.sch.delete(id);
       for (const [id, S] of HX.sch) if (S.loop === d.loop) { HX.sch.delete(id); const ws = HX.wait.get('s' + id); if (ws) { HX.wait.delete('s' + id); ws(null); } }   // Hexenring: (step 1d) one taken back while it faded came back with its loop
+      { const X = HX.loops.get(d.loop); if (X) hxWegDrop(X); }   // (its own way goes with it – weg.js)
       HX.loops.delete(d.loop); hxCount(); hxStripSync();
     }
     if (w) { HX.wait.delete(key); w(d.chunks); } else if (!d.ws) HX.back.push(d.chunks);   // (kept for a redo; dropped once the next step's history knows better – step 2a: a stream's chunks never)
@@ -35310,8 +35552,6 @@ function hxMask(keys) {
 // the master; „Kette“ means: every Schleife follows the live chain (its dry audio through the chain's copy, out 1 –
 // hxFolgt), „Direkt“: each as set (burnt in by default) – and each Schleife has the switch of its own (hexenring/mixer.js)
 function hxRoute() { return hxGateM(); }
-// the strip's way set: every Schleife takes it (a new one takes it when it is made – ernten.js hxLoopMake)
-function hxRouteAll(route) { const on = route !== 'dir'; for (const L of hxLoopsLive()) if (!L.bew && !!L.folgt !== on) hxFolgt(L, on, true); if (MX.root) hxStripSync(); }
 // the Hexenring's way into the master's input, straight or through the chain's copy: a gate at 1 (Ruhe: at 0 while the
 // graph sleeps, so the master rests while what is before it runs on – hxGates)
 function hxGateM() { if (!HX.gM || HX.gM.context !== A.ctx) { HX.gM = G(1); HX.gM.connect(A.masterIn); } return HX.gM; }
@@ -35898,10 +36138,12 @@ function hxLoopMake(o) {
   const id = hxLoopNew(o.lock === 'frei' ? { lock: 'frei', len: o.Lf, f0: o.ph0, gain: o.gain, pan: o.pan, out: o.out, state: o.state, gap: o.gap } : { lock: 'takt', b0: o.b0, beats: o.beats, gain: o.gain, pan: o.pan, out: o.out, state: o.state });
   const L = HX.loops.get(id);
   Object.assign(L, { slot: o.slot, key: o.key || hxKey('l'), bpb: o.bpb || 4, notes: o.notes || [], mv: o.mv || null, cut: o.cut || null, eng: o.eng || 'neb', setTG: !!o.setTG,
-    gain: o.gain != null ? o.gain : 1, pan: o.pan || 0, made: Date.now(), ps: [], src: o.src || 0, bpm: o.bpm || tgBpm(hxNowT()), lv: [0, 0], taumeln: o.taumeln !== false, folgt: o.folgt != null ? !!o.folgt : o.eng !== 'bew' && P['xhxr.route'] !== 'dir', eig: HX_EIG.includes(o.eig) ? o.eig : 'treu',
+    gain: o.gain != null ? o.gain : 1, pan: o.pan || 0, made: Date.now(), ps: [], src: o.src || 0, bpm: o.bpm || tgBpm(hxNowT()), lv: [0, 0], taumeln: o.taumeln !== false, folgt: !!o.folgt, weg: o.weg === 'fx' ? 'fx' : 'dir', fxm: o.fxm != null ? o.fxm : FXM_ALL,   // (31.10.2026: a new Schleife plays Direkt – as recorded; weg.js)
+    eig: HX_EIG.includes(o.eig) ? o.eig : 'treu',
     // (step 2a) Wuchs: why it grows (wahl: hx.beginn for a new one), how it follows, the level it was played at, the patch
     wwhy: o.wwhy ? Object.assign({}, o.wwhy) : { wahl: !o.key && o.eng !== 'bew' && P['hx.beginn'] === 'wuchs', ph: o.key ? null : hxWPHashC() }, ton: o.ton || P['hx.folgen'] || 'fest', klang: o.klang || 'eigen', stufe: o.stufe || null, q: o.q || P['dev.q'], P: o.P || (o.key ? null : Object.assign({}, P)), mask: o.mask || [...HX.mask], chainRec: o.chainRec || null, jrg: o.jrg || { age: A.jrgAge || 0, season: A.season || 0 } });   // (jrg: the Jahresring's year as it was played – a Wuchs pass hits that bar, not today's; wwhy.ph: the field's sound a new loop was made in – hxKlangOf)
   HX.slot[o.slot] = id;
+  if (hxWegOn(L)) setTimeout(() => hxWegApply(L, true), 0);   // (a restored Schleife on its own way)
   if (o.eng !== 'bew' && (!HX.fokus || !HX.loops.has(HX.fokus) || HX.loops.get(HX.fokus).bew)) HX.fokus = id;   // Hexenring: (step 1d) never a Schleife of Bewegung
   if (o.fokus !== false && o.eng !== 'bew') HX.fokus = id;
   hxPersistAsk();
@@ -36362,7 +36604,7 @@ function hxSnapS(S) { return S && { key: S.key, len: S.len, pre: S.pre, n: S.n, 
   bak: S.bak, chain: S.chain, zo: S.zo, kc: S.kc, kcB: S.kcB, dr: S.dr, cold: S.cold, cutAus: S.cutAus, spliced: S.spliced, wn: S.wn || null, wseed: S.wseed || 0, wu: S.wu || null, anc: S.anc || null, gate: S.gate || null, rxB: S.rxB || null }; }   // (step 2a: its Wuchs; 30.10.2026: the Klangfarbe's base)
 function hxSnap(L) {
   return { key: L.key, slot: L.slot, d: Object.assign({}, L.d), bpb: L.bpb, notes: L.notes, mv: L.mv, cut: L.cut, eng: L.eng, setTG: L.setTG, gain: L.gain, pan: L.pan || 0, src: L.src, bpm: L.bpm, state: L.state, tk: L.tk,
-    folgt: !!L.folgt, taumeln: L.taumeln !== false, nudge: L.nudge || 0, eig: L.eig, sch: L.sch.map((id) => hxSnapS(HX.sch.get(id))).filter(Boolean),
+    folgt: !!L.folgt, weg: L.weg, fxm: L.fxm, taumeln: L.taumeln !== false, nudge: L.nudge || 0, eig: L.eig, sch: L.sch.map((id) => hxSnapS(HX.sch.get(id))).filter(Boolean),
     wwhy: Object.assign({}, L.wwhy || {}), krt: L.krea && L.krea.triebe.length ? L.krea.triebe.map(hxWsRecipe) : null, krs: L.krea && typeof L.krea.sel === 'string' ? L.krea.sel : null, ton: L.ton, klang: L.klang, stufe: L.stufe, q: L.q, P: L.P, mask: L.mask, chainRec: L.chainRec, jrg: L.jrg, tb: hxTbOf(L), tr0: L.tr0 || null,   // (step 2a; step 2b: its tools)
     hum: L.hum || null, col: L.col || null, colA: L.colA || null, rx: L.rx || null, bew: L.bew ? { lanes: L.bew.lanes.map((ln) => ({ k: ln.k, src: ln.src, v: ln.v })), disp: L.bew.disp, n: L.bew.n, g0: L.bew.g0, gs: L.bew.gs, fade: L.bew.fade, why: L.bew.why } : null, naehrt: L.naehrt || null, mi: hxMiSave(L), eco: hxEcoOf(L) };   // (step 4: its ecology)
 }
@@ -36385,7 +36627,7 @@ function hxRebuild(sn, o = {}) {
   if (sn.hum) L.hum = sn.hum;
   if (sn.krt && sn.krt.length) hxWsRestore(L, sn.krt, sn.krs);   // (28.10.2026: its Triebe – werkstatt.js)
   L.col = sn.col || null; L.colA = sn.colA || null; L.rx = sn.rx || null;   // (26.10.2026: its pigment; 30.10.2026: its Klangfarbe)   // (26.10.2026: its whole Ernte comes back with it)
-  L.tk = sn.tk; L.folgt = !!sn.folgt; L.taumeln = sn.taumeln !== false; if (sn.nudge) L.nudge = sn.nudge;
+  L.tk = sn.tk; L.folgt = !!sn.folgt; if (sn.weg) { L.weg = sn.weg; L.fxm = sn.fxm; hxWegApply(L, true); } L.taumeln = sn.taumeln !== false; if (sn.nudge) L.nudge = sn.nudge;
   if (sn.mi) L.mi = Object.assign({}, sn.mi);   // (Etappe 3)
   if (sn.tb) { Object.assign(L, sn.tb); if (sn.tr0) L.tr0 = sn.tr0; }   // (step 2b: its tools – sent once its Schichten are there)
   if (sn.bew) { const B = sn.bew; L.bew = { lanes: B.lanes.map((x) => ({ k: x.k, src: x.src, v: x.v, o: Object.assign({ at: 0 }, faeOpts(x.src)) })), disp: B.disp || null, n: B.n, g0: B.g0, gs: B.gs, fade: B.fade, why: B.why, next: null, re: true, on0: L.state === 'spielt', ev: [] }; HX.bewKey = L.key; }
@@ -38050,12 +38292,6 @@ function hxmStripOf(o) {
     if (o.pidS) mPid(S.sb, o.pidS);
     ms.append(S.sb);
   }
-  // (30.10.2026) the way: K lit – the Schleife follows the live chain (its dry audio through it); dark – its chain is burnt in
-  if (o.weg) {
-    S.wb = h('button', { type: 'button', class: 'mx-s hxm-weg', 'aria-pressed': 'false', 'aria-label': o.name + ' Weg: Effektkette', title: 'Weg: leuchtend folgt die Schleife der Effektkette (Regler und Presets wirken auf sie); dunkel ist ihre Kette eingebrannt – sie klingt wie aufgenommen' }, h('span', null, 'K'));
-    S.wb.addEventListener('click', () => o.weg.set(!o.weg.get()));
-    ms.append(S.wb);
-  }
   el.append(ms);
   // the stem: scale, meter (canvas), the cap as the fader's knob; the value under it (a double click: 0 dB)
   S.cv = h('canvas', { 'aria-hidden': 'true' });
@@ -38090,7 +38326,6 @@ function hxmStrip(L0) {
     pan: { get: () => { const L = hxmL(S); return L ? L.pan || 0 : 0; }, set: (v) => { const L = hxmL(S); if (L) hxPan(L, v); } },
     mute: { get: () => { const L = hxmL(S); return !!L && (L.pendTo || L.state) === 'stumm'; }, set: (on) => { const L = hxmL(S); if (L) hxmMute(L, on); } },
     solo: { get: () => !!(HX.solo && hxmL(S) && HX.solo.id === hxmL(S).id), set: () => { const L = hxmL(S); if (L) hxmSolo(L); } },
-    weg: { get: () => { const L = hxmL(S); return !!(L && L.folgt); }, set: (on) => { const L = hxmL(S); if (L) hxFolgt(L, on); } },
     pidV: 'hx.ring.' + n + '.pegel', pidS: 'hx.ring.' + n + '.solo', pidM: 'hx.ring.' + n + '.stumm', pidP: 'hx.ring.' + n + '.balance',
     muteTip: 'Stumm: die Schleife läuft lautlos im Takt weiter (sofort). Auf dem Ring wartet dasselbe auf die Eins.' });
   return S;
@@ -38146,7 +38381,6 @@ function hxmDrawR(R, dt) {
     hxmText(S, 'src', S.src, hxEngName(L) + ' · ' + (hxTakt(L) ? dec(+(L.d.beats / (L.bpb || 4)).toFixed(2)) + ' T' : dec(hxLen(L).toFixed(1)) + ' s'));   // (short: the strip is narrow – the card says it whole)
     hxmText(S, 'state', S.state, (pv ? 'Vorhören' : st === 'spielt' ? 'spielt' : st === 'stumm' ? 'stumm' : 'angehalten') + (pend ? ' → ' + (pend === 'stumm' ? 'stumm' : 'an') : '') + (HX.fokus === L.id ? ' · Fokus' : ''));
     S.el.classList.toggle('spielt', st === 'spielt'); S.el.classList.toggle('dormant', st !== 'spielt');
-    if (S.wb) { const w = String(!!L.folgt); if (S.wb.getAttribute('aria-pressed') !== w) S.wb.setAttribute('aria-pressed', w); }
     hxmLv(S, m ? m[1] : 0, m ? m[2] : 0, dt, st === 'spielt' || pv);
     try { hxmStrDraw(S); } catch (e) { if (!HXM.err) { HXM.err = 1; console.warn('Hexenring: ein Schleifen-Kanal ließ sich nicht zeichnen', e); } }   // (one strip never blanks the others)
   }
@@ -38231,7 +38465,7 @@ function hxmPultFold() {
   if (!HXMP.btn) return;
   HXMP.btn.replaceChildren(h('span', { class: 'hxmp-of' }, 'hexenring · '), f ? 'schleifen ' + n + ' ›' : 'schleifen ‹');   // (26.10.2026: whose they are)
   HXMP.btn.setAttribute('aria-expanded', String(!f));
-  HXMP.grp.classList.toggle('fold', f);
+  HXMP.grp.classList.toggle('fold', f); if (typeof MX !== 'undefined') MX.dirtyStatic = true;
   if (MX.view === 'pult' && MX.scroll) requestAnimationFrame(() => { mxLayout(); hxmLayoutR(HXMP); });
 }
 function hxmPultFrame(dt) {
@@ -38239,7 +38473,7 @@ function hxmPultFrame(dt) {
   const now = performance.now();
   if (now - HXMP.t > 250) {
     HXMP.t = now;
-    if (hxmSyncR(HXMP, false)) { HXMP.grp.hidden = !HXMP.st.length; hxmPultFold(); }
+    if (hxmSyncR(HXMP, false)) { HXMP.grp.hidden = !HXMP.st.length; hxmPultFold(); MX.dirtyStatic = true; }   // (their knots on the rails – wege-fx.js)
   }
   if (!HXMP.fold && !HXMP.grp.hidden) hxmDrawR(HXMP, dt);
 }
@@ -39852,7 +40086,7 @@ function hxEstimate() { try { if (navigator.storage && navigator.storage.estimat
 function hxRecOf(L) {
   const mv = L.mv ? { a: L.mv.a, b: L.mv.b, lanes: L.mv.lanes.map((x) => Object.assign({}, x, { v: Array.from(x.v) })) } : null;
   return { id: L.key, v: 1, col: L.col || null, colA: L.colA || null, slot: L.slot, lock: L.d.lock, b0: L.d.b0 - TG.o, beats: L.d.beats, L: L.d.L, ph0: L.d.ph0, bpb: L.bpb, notes: L.notes, mv, cut: L.cut, eng: L.eng, setTG: L.setTG, gain: L.gain, pan: L.pan || 0, src: L.src,
-    bpm: hxTakt(L) ? tgBpm(hxNowT()) : L.bpm, state: L.state, made: L.made, nudge: L.nudge || 0, rx: L.rx || null, sr: SR, tk: L.tk || null, plan: L.plan, folgt: !!L.folgt, taumeln: L.taumeln !== false, eig: L.eig || 'treu', naehrt: L.naehrt ? { gsp: !!L.naehrt.gsp, rhz: !!L.naehrt.rhz, rgn: !!L.naehrt.rgn, glt: !!L.naehrt.glt, shn: !!L.naehrt.shn } : null, mi: hxMiSave(L), eco: hxEcoOf(L), gap: !!L.d.gap,   // (step 4: Rhizom, Regen, Glut, Sehne; its ecology; gap – Treffen setzen)
+    bpm: hxTakt(L) ? tgBpm(hxNowT()) : L.bpm, state: L.state, made: L.made, nudge: L.nudge || 0, rx: L.rx || null, sr: SR, tk: L.tk || null, plan: L.plan, folgt: !!L.folgt, weg: L.weg === 'fx' ? 'fx' : 'dir', fxm: L.fxm != null ? L.fxm : FXM_ALL, taumeln: L.taumeln !== false, eig: L.eig || 'treu', naehrt: L.naehrt ? { gsp: !!L.naehrt.gsp, rhz: !!L.naehrt.rhz, rgn: !!L.naehrt.rgn, glt: !!L.naehrt.glt, shn: !!L.naehrt.shn } : null, mi: hxMiSave(L), eco: hxEcoOf(L), gap: !!L.d.gap,   // (step 4: Rhizom, Regen, Glut, Sehne; its ecology; gap – Treffen setzen)
     sch: L.sch.map((id) => HX.sch.get(id)).filter(Boolean).map((S) => ({ key: S.key, len: S.len, pre: S.pre, n: S.n, cut: S.cut, aus: S.aus, join: S.join, X: S.X, rho: S.rho, gain: S.gain, mute: S.mute, kind: S.kind, group: S.group, sr: S.sr, segs: hxSegs(S), saved: S.saved >= hxSegs(S),
       chain: !!S.chain, bakd: !!S.bak && (S.savedB || 0) >= hxSegs(S), zo: S.zo || 0, kc: S.kc ? Array.from(S.kc) : null, kcB: S.kcB ? Array.from(S.kcB) : null, dr: S.dr ? Array.from(S.dr) : null, cold: !!S.cold, cutAus: !!S.cutAus, spliced: !!S.spliced,
       // (step 2a) its notes for Wuchs, its throw, its Treu render and its anchor (audio beside, ~w and ~x), what it played
@@ -40016,7 +40250,7 @@ async function hxRecBuild(r, segsOf, o = {}) {
   if (!sch.length) return null;
   if (o.fresh) for (const x of sch) x.key = hxKey('s');   // (a Kreis loaded: new keys – it may come twice, beside the Schleifen it was made of)
   const k = r.sr && r.sr !== SR ? SR / r.sr : 1;
-  const sn = { key: o.fresh ? hxKey('l') : r.id, col: r.col || null, colA: r.colA || null, slot: r.slot, d: { lock: r.lock, b0: r.b0 + TG.o, beats: r.beats, L: r.L ? (k === 1 ? r.L : r.L * k) : r.L, ph0: 0, gap: !!r.gap }, bpb: r.bpb, eco: r.eco || null, notes: r.notes || [], mv: r.mv, cut: r.cut ? Object.assign({}, r.cut, { stale: true }) : null, eng: r.eng, setTG: r.setTG, gain: r.gain, pan: r.pan || 0, src: r.src, bpm: r.bpm, state: 'angehalten', tk: r.tk, folgt: r.folgt, taumeln: r.taumeln, eig: r.eig, naehrt: r.naehrt || null, sch,
+  const sn = { key: o.fresh ? hxKey('l') : r.id, col: r.col || null, colA: r.colA || null, slot: r.slot, d: { lock: r.lock, b0: r.b0 + TG.o, beats: r.beats, L: r.L ? (k === 1 ? r.L : r.L * k) : r.L, ph0: 0, gap: !!r.gap }, bpb: r.bpb, eco: r.eco || null, notes: r.notes || [], mv: r.mv, cut: r.cut ? Object.assign({}, r.cut, { stale: true }) : null, eng: r.eng, setTG: r.setTG, gain: r.gain, pan: r.pan || 0, src: r.src, bpm: r.bpm, state: 'angehalten', tk: r.tk, folgt: r.folgt, weg: r.weg, fxm: r.fxm, taumeln: r.taumeln, eig: r.eig, naehrt: r.naehrt || null, sch,
     wwhy: r.wwhy || {}, krt: r.krt || null, krs: r.krs || null, ton: r.ton, klang: r.klang, stufe: r.stufe, q: r.q, P: r.P, mask: r.mask, chainRec: r.chainRec, jrg: r.jrg, tb: r.tb || null, mi: r.mi || null, rx: r.rx || null };   // (step 2a; step 2b: its tools; Etappe 3: role, Gärtner, Wiederkehr)
   const L = hxRebuild(sn, { state: 'angehalten', fokus: false, noSave: true });
   if (L) { for (const id of L.sch) { const S = HX.sch.get(id), s = S && sch.find((x) => x.key === S.key); if (s) { S.sr0 = s.sr0; S.bakWhy = s.bakWhy || null; if (s.kcBnew && S.bak) S.kcB = S.join === 'xf' ? hxSeamOf(S, S.bak) : null; } } hxRebakeLater(L); }   // (28.10.2026: a Schicht without its baked version gets it again – bake.js)
@@ -42330,6 +42564,80 @@ function hxNaehrKor(L, on) {
   return true;
 }
 
+// ---- (owner, 31.10.2026) a Schleife's way, as every channel's: „Kette“ or „Direkt“ – and on Kette through just the effects
+// it should (a mask over V R F P S, mixer/wege-fx.js). „Ich möchte die Schleifen auch so regeln können wie die anderen
+// Spuren … ob eine Schleife mit oder ohne Effekte aufgenommen wird, kann man ja einstellen; wurde mit Effekten aufgenommen,
+// schaltet Myzel sie danach auf Direkt; auf Kette jagt der User sie noch einmal durch die Effekte.“
+// So the way is on top of what the Schleife sounds like (burnt in, or following the chain – its card): Direkt plays it as it
+// is; Kette sends that sound through a chain of its own (one per set of effects, shared by the Schleifen that use it) into
+// the strip „Hexenring“. The processor hands the Schleife whole to its own pair of output 2 (the pair Nähren uses – the
+// send at 1) and its usual outputs give way (rt), with a short fade; the page takes the pair into that chain. A new
+// Schleife plays Direkt; the Hexenring's channel sets every Schleife at once. ----
+const HXWG = { r: new Map(), mk: {} };
+const hxWegM = (L) => (!L || L.bew || L.weg !== 'fx' ? 0 : L.fxm == null ? FXM_ALL : L.fxm & FXM_ALL);   // (0: Direkt)
+const hxWegOn = (L) => hxWegM(L) > 0;
+// the chain for a set of effects: its output into the strip „Hexenring“ (built once, every knob reaches it)
+function hxWegChain(m) {
+  let c = HXWG.mk[m];
+  if (c && c.in.context === A.ctx) return c;
+  c = makeChain(m); c.ctx = A.ctx;
+  updDrive(c); updRing(c); updFilter(c); updPhaser(c); updChorus(c);
+  c.out.connect(stripIn('hxr'));
+  return (HXWG.mk[m] = c);
+}
+// a Schleife's way applied: its pair into the chain of its effects (a crossfade when the set changes), the processor told
+function hxWegApply(L, quiet) {
+  if (!L || !A.ctx || !HX.node) return;
+  const m = hxWegM(L), R = HXWG.r.get(L.id), X = Math.round(0.02 * SR);
+  if (!m) {
+    L.wegOn = false;
+    if (R) { hxPost({ rt: { loop: L.id, on: false, X } }); setP(R.g.gain, 0, 0.012); HXWG.r.delete(L.id); setTimeout(() => { try { R.mg.disconnect(); R.g.disconnect(); } catch (e) {} }, 200); }
+    hxSendSync(L);
+  } else {
+    L.wegOn = true; hxSendSync(L);
+    const ch = L.sendCh;
+    if (ch == null || ch < 0) { L.weg = 'dir'; if (!quiet) toast('Höchstens ' + HX_SENDS + ' Schleifen gehen gleichzeitig eigene Wege.', 3000); hxWegApply(L, true); return; }
+    if (R && R.m === m && R.ch === ch && R.g.context === A.ctx) { hxPost({ rt: { loop: L.id, on: true, X } }); return; }
+    const sp = hxSplit(), mg = A.ctx.createChannelMerger(2), g = G(0);
+    sp.connect(mg, 2 * ch, 0); sp.connect(mg, 2 * ch + 1, 1);
+    mg.connect(g).connect(hxWegChain(m).in);
+    setP(g.gain, 1, 0.012);
+    if (R) { setP(R.g.gain, 0, 0.012); setTimeout(() => { try { R.mg.disconnect(); R.g.disconnect(); } catch (e) {} }, 200); }
+    HXWG.r.set(L.id, { m, ch, mg, g });
+    hxPost({ rt: { loop: L.id, on: true, X } });
+  }
+  L.wegOn = m > 0;
+  hxWegGc();
+}
+// set by the Pult (a Schleife's knot, the effect view) or the Hexenring's channel: weg 'fx' | 'dir', m the effects on Kette
+function hxWegSet(L, weg, m, quiet) {
+  if (!L || L.bew) return;
+  L.weg = weg === 'fx' ? 'fx' : 'dir';
+  if (m != null) L.fxm = m & FXM_ALL;
+  if (L.weg === 'fx' && !L.fxm) L.fxm = FXM_ALL;
+  hxWegApply(L, quiet);
+  hxSaveMeta(L.id); hxCardDirty();
+  if (typeof MX !== 'undefined') MX.dirtyStatic = true;
+  if (!quiet) hxSay(hxName(L) + ': ' + wfxWords(hxWegM(L)));
+}
+// the Hexenring's channel: every Schleife takes its way (and a new one plays Direkt – it is as it was recorded)
+function hxRouteAll(route) {
+  const m = route === 'dir' ? 0 : wfxOf('hxr');
+  for (const L of hxLoopsLive()) if (!L.bew && hxWegM(L) !== m) hxWegSet(L, m ? 'fx' : 'dir', m || null, true);
+  if (MX.root) hxStripSync();
+}
+// chains no Schleife uses any more: taken out after a while (they cost what the chain costs)
+function hxWegGc() {
+  clearTimeout(HXWG.gcT);
+  HXWG.gcT = setTimeout(() => {
+    const used = new Set([...HXWG.r.values()].map((R) => R.m));
+    for (const m in HXWG.mk) if (!used.has(+m)) { const c = HXWG.mk[m]; try { c.out.disconnect(); } catch (e) {} A.chains = A.chains.filter((x) => x !== c); delete HXWG.mk[m]; }
+  }, 4000);
+}
+// a new processor (a restart of the sound) or the Schleifen restored: every way again
+function hxWegAll() { HXWG.r.clear(); HXWG.mk = {}; for (const L of hxLoopsLive()) if (hxWegOn(L)) hxWegApply(L, true); }
+// a Schleife gone: its way with it
+function hxWegDrop(L) { const R = HXWG.r.get(L.id); if (!R) return; HXWG.r.delete(L.id); try { R.mg.disconnect(); R.g.disconnect(); } catch (e) {} hxWegGc(); }
 // ---- Auslese (SPEC §12.1c, Etappe 1): k ≥ 3 repetitions of what was harvested, aligned by DTW on (onset, degree); the
 // clusters present in ≥ ⌈k/2⌉ of them survive with median timing and velocity – the consensus; agreement p = the mean
 // F-measure of each repetition against it. Offered (never automatic, only from p ≥ 80 %): the REAL repetition closest
@@ -45441,7 +45749,7 @@ function hxFeedRetune() {
 const hxFeedCost = () => { let c = 0; for (const F of HXN.feed.values()) if (F.ctx === A.ctx) c += F.cost; return c; };
 // the loop's send (output 2): on while it feeds a web or a Hof
 function hxSendSync(L) {
-  const n = L.naehrt || {}, on = !!(n.gsp || n.glt || n.shn) && L.slot != null;
+  const n = L.naehrt || {}, on = !!(n.gsp || n.glt || n.shn || L.wegOn) && L.slot != null;   // (31.10.2026: its own way rides the same pair – weg.js)
   if (on !== !!L.sendOn) { const ch = on ? hxSendCh(L) : -1; if (on && ch < 0) return; L.sendOn = on; hxPost({ send: on ? { loop: L.id, ch, g: 1, X: Math.round(0.03 * SR) } : { loop: L.id, ch: -1, X: Math.round(0.03 * SR) } }); if (!on) L.sendCh = null; }
 }
 // Nähren for one of rhz · rgn · glt · shn (gsp and kor: hxNaehrGsp, hxNaehrKor)

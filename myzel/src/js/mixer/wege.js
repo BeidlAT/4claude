@@ -18,6 +18,9 @@ function mxdBuildWege() {
   W.rFx = opt('fx', 'Kette', ''); W.rDir = opt('dir', 'Direkt', 'an der Kette vorbei');
   W.rDir.title = 'Direkt in die Summe – Echo und Hall bekommen den Kanal trocken';
   W.route = h('div', { class: 'mxd-route', role: 'radiogroup', 'aria-label': 'Weg in die Summe' }, W.rFx, W.rDir);
+  // (31.10.2026) on Kette: which of the chain's effects – a chip each (wege-fx.js; the same as the effect view in the Pult)
+  W.fxc = MX_FX.map(([, name, ini], j) => h('button', { type: 'button', class: 'chip', 'aria-pressed': 'false', title: name, onclick: () => { const k = MXD.k, m = wfxGet(k), b = 1 << j; wfxSet(k, m & b ? m & ~b : m | b); } }, ini + ' ' + name));
+  W.fxRow = h('div', { class: 'chips small mxd-fxc', role: 'group', 'aria-label': 'Effekte im Weg' }, ...W.fxc);
   W.route.addEventListener('keydown', (e) => {
     if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
     const id = rid();
@@ -33,17 +36,17 @@ function mxdBuildWege() {
     // balance left, M / S right under the value box; a lane's group link between them
     h('div', { class: 'mxd-wrow' }, h('div', { class: 'mxd-balw' }, W.bal.box), W.grp, h('div', { class: 'mxd-msw' }, W.mb, W.sb)),
     h('div', { class: 'mxd-snds' }, ...W.slots.map((S) => S.el)),
-    W.route, W.ret);
+    W.route, W.fxRow, W.ret);
 }
 function mxdWegeAim(k) {
   const W = MXD.wg, c = MXK[k];
   W.fd.set(k);
   mxdAim(W.bal, k, 'x' + k + '.pan', 'Balance', 'Balance', c.col);
-  mxdWatch('x' + k + '.mute', 'x' + k + '.solo', 'x' + k + '.route', 'fx.weg', 'x' + k + '.dly', 'x' + k + '.rev', ...FX_RETS.map(([r]) => 'x' + k + '.' + r));
-  // (30.10.2026) the Hexenring's way means its Schleifen's: Kette – all follow the live chain; Direkt – each as set (burnt in)
+  mxdWatch('x' + k + '.mute', 'x' + k + '.solo', 'x' + k + '.route', 'x' + k + '.fxm', 'fx.weg', 'x' + k + '.dly', 'x' + k + '.rev', ...FX_RETS.map(([r]) => 'x' + k + '.' + r));
+  // (31.10.2026) the Hexenring's way sets its Schleifen's: Kette – all through the chain (weg.js), Direkt – all as they sound
   const hx = k === 'hxr', wd = k === 'fx';
-  W.rFx.querySelector('small').textContent = hx ? 'alle Schleifen folgen ihr' : wd ? 'durch Filter, Phaser & Co.' : ''; W.rDir.querySelector('small').textContent = hx ? 'jede wie eingestellt' : 'an der Kette vorbei';
-  W.rFx.title = hx ? 'Kette: jede Schleife folgt der Effektkette – Regler und Presets wirken auf sie' : wd ? 'Durch eine Kopie der Effektkette (Verzerrung, Ring, Filter, Phaser, Schweben – dieselben Regler)' : ''; W.rDir.title = hx ? 'Direkt: jede Schleife wie in ihrem Kanal eingestellt (K) – eingebrannt klingt sie wie aufgenommen' : 'Direkt in die Summe – Echo und Hall bekommen den Kanal trocken';
+  W.rFx.querySelector('small').textContent = hx ? 'alle Schleifen durch die Kette' : wd ? 'durch Filter, Phaser & Co.' : ''; W.rDir.querySelector('small').textContent = hx ? 'alle Schleifen direkt' : 'an der Kette vorbei';
+  W.rFx.title = hx ? 'Kette: jede Schleife geht (noch einmal) durch die Effektkette – einzeln im Pult an ihrem Punkt' : wd ? 'Durch eine Kopie der Effektkette (Verzerrung, Ring, Filter, Phaser, Schweben – dieselben Regler)' : ''; W.rDir.title = hx ? 'Direkt: jede Schleife so, wie sie klingt – mit Effekten aufgenommen mit ihnen' : 'Direkt in die Summe – Echo und Hall bekommen den Kanal trocken';
   const [s0, s1, ...sx] = W.slots;
   if (c.kind === 'ret') {
     mxdAim(s0.K, k, k + '.mix', 'Anteil', 'Anteil – wie viel alle Kanäle hineinschicken', c.col);
@@ -56,7 +59,7 @@ function mxdWegeAim(k) {
   }
   s1.el.hidden = k === 'rev';
   for (const S of sx) S.el.hidden = c.kind === 'ret';
-  W.route.hidden = c.kind === 'ret' && k !== 'fx'; W.ret.hidden = c.kind !== 'ret'; W.grp.hidden = c.kind !== 'lane';
+  W.route.hidden = c.kind === 'ret' && k !== 'fx'; W.fxRow.hidden = c.kind === 'ret'; W.ret.hidden = c.kind !== 'ret'; W.grp.hidden = c.kind !== 'lane';
   W.mb.setAttribute('aria-label', c.name + ' stumm'); W.sb.setAttribute('aria-label', c.name + ' solo');
 }
 // the texts of the Wege: what a send really is ("140 % von 35 % Echo-Anteil = 49 %"), which way the channel takes
@@ -89,8 +92,10 @@ function mxdWegeText(k) {
     W.rFx.setAttribute('aria-checked', String(r !== 'dir')); W.rDir.setAttribute('aria-checked', String(r === 'dir'));
     W.rFx.tabIndex = r !== 'dir' ? 0 : -1; W.rDir.tabIndex = r === 'dir' ? 0 : -1;
     const fx = [['drv.mix', 'Verzerrung'], ['rng.mix', 'Ring'], [null, 'Filter'], ['pha.mix', 'Phaser'], ['cho.mix', 'Schweben']].filter(([id]) => !id || P[id] > 0).map((x) => x[1]);
-    W.rFx.lastChild.textContent = fx.length > 3 ? 'durch ' + fx.length + ' Effekte' : 'durch ' + fx.join(', ');
-    W.rFx.title = 'Durch die Effektkette: ' + fx.join(', ');
+    const fm = wfxGet(k) || (Math.round(P['x' + k + '.fxm']) & FXM_ALL);
+    W.fxc.forEach((b, j) => b.setAttribute('aria-pressed', String(r !== 'dir' && !!(fm & (1 << j)))));
+    W.rFx.lastChild.textContent = fm !== FXM_ALL && r !== 'dir' ? 'nur ' + wfxNames(fm).join(', ') : fx.length > 3 ? 'durch ' + fx.length + ' Effekte' : 'durch ' + fx.join(', ');
+    W.rFx.title = 'Durch die Effektkette: ' + (fm !== FXM_ALL ? wfxNames(fm).join(' → ') : fx.join(', '));
   }
   if (c.kind === 'lane') { W.grpV.textContent = P['mix.pulsMute'] ? 'stumm' : mxDbTxt(P['mix.pulsVol']) + ' dB'; W.grp.setAttribute('aria-label', 'über Puls gesamt: ' + W.grpV.textContent + ' – öffnen'); }
 }

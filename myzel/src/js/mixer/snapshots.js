@@ -23,7 +23,8 @@ function mxMorphApply(m) {
     const va = a[id], vb = b[id];
     if (va === vb || va === undefined || vb === undefined) continue;
     const d = PD[id];
-    const v = d.kind === 'num' ? fromNorm(d, toNorm(d, va) + (toNorm(d, vb) - toNorm(d, va)) * m) : m < 0.5 ? va : vb;
+    // (31.10.2026) the effects of a way switch at the middle like the way itself – a mask between two is no blend
+    const v = d.kind === 'num' && !id.endsWith('.fxm') ? fromNorm(d, toNorm(d, va) + (toNorm(d, vb) - toNorm(d, va)) * m) : m < 0.5 ? va : vb;
     if (P[id] !== v) setParam(id, v);
   }
   MX.applying = false;

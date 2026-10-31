@@ -127,6 +127,7 @@ function hxNode() {
   hxRailShow();
   hxwWportAll(); HX.tonP = { root: P['t.root'], scale: P['t.scale'] };
   hxHandLoad();   // (Etappe 3: the Handschrift, when it is on)   // (step 2a: the realms' pacing; the key the field plays in)
+  HXWG.r.clear(); HXWG.mk = {};   // (a new processor: the Schleifen's own ways are made again with them – weg.js)
   if (HX.restore) setTimeout(hxRestoreApply, 300);   // Hexenring: the Schleifen of the last session come back, angehalten
 }
 // which strips „Gespielt“ hears: the sources always, the Puls and the Bordun when asked
@@ -158,6 +159,7 @@ function hxMsg(m) {
     if (d.loop != null) {
       const L = HX.loops.get(d.loop); if (L) for (const id of L.sch) HX.sch.delete(id);
       for (const [id, S] of HX.sch) if (S.loop === d.loop) { HX.sch.delete(id); const ws = HX.wait.get('s' + id); if (ws) { HX.wait.delete('s' + id); ws(null); } }   // Hexenring: (step 1d) one taken back while it faded came back with its loop
+      { const X = HX.loops.get(d.loop); if (X) hxWegDrop(X); }   // (its own way goes with it – weg.js)
       HX.loops.delete(d.loop); hxCount(); hxStripSync();
     }
     if (w) { HX.wait.delete(key); w(d.chunks); } else if (!d.ws) HX.back.push(d.chunks);   // (kept for a redo; dropped once the next step's history knows better – step 2a: a stream's chunks never)
@@ -202,8 +204,6 @@ function hxMask(keys) {
 // the master; „Kette“ means: every Schleife follows the live chain (its dry audio through the chain's copy, out 1 –
 // hxFolgt), „Direkt“: each as set (burnt in by default) – and each Schleife has the switch of its own (hexenring/mixer.js)
 function hxRoute() { return hxGateM(); }
-// the strip's way set: every Schleife takes it (a new one takes it when it is made – ernten.js hxLoopMake)
-function hxRouteAll(route) { const on = route !== 'dir'; for (const L of hxLoopsLive()) if (!L.bew && !!L.folgt !== on) hxFolgt(L, on, true); if (MX.root) hxStripSync(); }
 // the Hexenring's way into the master's input, straight or through the chain's copy: a gate at 1 (Ruhe: at 0 while the
 // graph sleeps, so the master rests while what is before it runs on – hxGates)
 function hxGateM() { if (!HX.gM || HX.gM.context !== A.ctx) { HX.gM = G(1); HX.gM.connect(A.masterIn); } return HX.gM; }
