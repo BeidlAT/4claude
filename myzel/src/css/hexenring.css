@@ -230,7 +230,7 @@
 .hx-ed-row { display: grid; grid-template-columns: 80px 1fr; align-items: center; gap: 4px 10px; }
 .hx-ed-row .lab { color: var(--dim); }
 .hx-ed-instrow .hx-ed-inst { min-height: 30px; max-width: 220px; }
-.hx-ed-row .chip.hx-ein[aria-pressed="true"] { color: var(--rec); border-color: var(--rec); box-shadow: 0 0 8px rgba(255, 91, 77, .35); }
+.hx-ed-row .chip.hx-fu[aria-pressed="true"] { color: var(--rec); border-color: var(--rec); box-shadow: 0 0 8px rgba(255, 91, 77, .35); }
 .hx-ed-row .chips { padding: 0; gap: 4px; }
 .hx-ed-foot { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 4px; border-top: 1px solid var(--line); }
 @media (max-width: 640px) { .hx-ed-srow { grid-template-columns: 1fr 1fr; } .hx-ed-row { grid-template-columns: 1fr; } }

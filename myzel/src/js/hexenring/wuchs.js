@@ -255,7 +255,7 @@ function hxWUpdate(L, o = {}) {
   if (!L || L.bew || L.state === 'weg' || !HX.node) return;
   if (L.krea && L.krea.sel != null) { hxCardDirty(); hxRailDirty(); return; }   // (28.10.2026: a Werkstatt creation or a Trieb plays – werkstatt.js)
   hxWNotesAll(L);
-  if (HXW.st === 'kein' || L.live) { for (const id of L.sch) { const S = HX.sch.get(id); if (S && !S.wBusy) S.wAgain = null; } hxWLiveSync(L); hxCardDirty(); hxRailDirty(); return; }   // (no Werk-Rahmen: Live mode; step 4: or chosen – no wish left waiting)
+  if (HXW.st === 'kein' || L.live || L.fuehr) { for (const id of L.sch) { const S = HX.sch.get(id); if (S && !S.wBusy) S.wAgain = null; } hxWLiveSync(L); hxCardDirty(); hxRailDirty(); return; }   // (no Werk-Rahmen: Live mode; step 4: or chosen – no wish left waiting)
   if (L.sch.some((id) => { const S = HX.sch.get(id); return S && S.lm; })) hxWLiveSync(L);   // (back from Live: its versions sound again)
   HX.wFeld = hxLoopsLive().some((X) => hxKlangOf(X) === 'feld' && hxWAktiv(X));
   const on = hxWAktiv(L), F = HX.folge && HX.folge.loops.includes(L.key) ? HX.folge : null;

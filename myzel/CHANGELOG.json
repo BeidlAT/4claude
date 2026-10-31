@@ -2,11 +2,13 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
-      "id": "2026-10-31m",
+      "id": "2026-10-31n",
       "punkte": [
-        "Neu im Bearbeiten-Fenster einer Schleife: „● Einspielen“. Was du dann auf dem Spielfeld spielst – am Bildschirm oder per MIDI –, kommt am Ende jedes Durchgangs an derselben Stelle in die Schleife und klingt mit ihrem Instrument.",
-        "Jeder Durchgang mit neuen Noten ist ein eigener Schritt für ↶. Ein Durchgang, in dem du nichts spielst, ändert nichts.",
-        "Der Knopf „Spielfeld“ bei Instrument entfällt – das Instrument wählst du direkt aus der Liste."
+        "Neu im Bearbeiten-Fenster einer Schleife: „Führen“. Die Noten der Schleife bleiben die Basis, dein Spiel auf dem Spielfeld (Bildschirm, Tasten, Touché) lenkt sie – live, schon beim nächsten Ton.",
+        "Tonhöhe: Der Ton, den du hältst, führt ihre Melodie – ihr erster Ton wird zu deinem, die anderen wandern in der Tonart mit. Loslassen: wieder wie vorher.",
+        "Klang & Ausdruck: Ihre Noten klingen mit deinem Instrument und deinem Ausdruck (Höhe, Druck, Anschlag). Auslösen: Sie klingt nur, solange du spielst. Und Tonhöhe + Ausdruck zusammen.",
+        "„Spielfeld stumm“ (an): Deine eigenen Töne schweigen und klingen nur in der Schleife – aus, hörst du beides.",
+        "Das „Einspielen“ von vorhin (Noten in die Schleife schreiben) entfällt wieder."
       ]
     },
     {

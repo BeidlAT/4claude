@@ -1040,7 +1040,7 @@ body.mlearn #stage::after { content: ""; position: absolute; inset: 0; backgroun
 .hx-ed-row { display: grid; grid-template-columns: 80px 1fr; align-items: center; gap: 4px 10px; }
 .hx-ed-row .lab { color: var(--dim); }
 .hx-ed-instrow .hx-ed-inst { min-height: 30px; max-width: 220px; }
-.hx-ed-row .chip.hx-ein[aria-pressed="true"] { color: var(--rec); border-color: var(--rec); box-shadow: 0 0 8px rgba(255, 91, 77, .35); }
+.hx-ed-row .chip.hx-fu[aria-pressed="true"] { color: var(--rec); border-color: var(--rec); box-shadow: 0 0 8px rgba(255, 91, 77, .35); }
 .hx-ed-row .chips { padding: 0; gap: 4px; }
 .hx-ed-foot { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 4px; border-top: 1px solid var(--line); }
 @media (max-width: 640px) { .hx-ed-srow { grid-template-columns: 1fr 1fr; } .hx-ed-row { grid-template-columns: 1fr; } }
@@ -17389,7 +17389,7 @@ function onDown(e) {
   const pt = e.pt || stagePoint(e), n = e.note || noteAt(pt.x), now = e.at > A.ctx.currentTime ? e.at : A.ctx.currentTime;   // (a key: at its moment – midiAt)
   const tt = { id: e.pointerId, t0: now, x: pt.x, y: pt.y, px: pt.px, py: pt.py, col: n.idx, f: n.f, name: n.name, layers: layers(n.f, e.vel), voices: [], rollNext: null, hue: VIS.hueAt(pt.x), vel: e.vel, bend: e.bend || false, vn: e.vn, mb: e.mb || 0, mpe: e.mpe, seq: ++MOD.seq, stk: modStroke(e.stkT), ptype: e.pointerType || null };
   const y0 = (tt.my = modY(tt, tt));   // the newest note: Höhe's full share from its first moment
-  const arp = typeof arpTake === 'function' && arpTake(tt);   // (the Sporenwerk: the note joins its pool and does not sound itself – arp/sporenwerk.js)
+  const arp = (typeof arpTake === 'function' && arpTake(tt)) || (typeof hxFuTake === 'function' && hxFuTake(tt));   // (31.10.2026: a led Schleife sounds it instead – hexenring/fuehren.js)   // (the Sporenwerk: the note joins its pool and does not sound itself – arp/sporenwerk.js)
   if (!arp) for (const ly of tt.layers) {
     if (ENGINES[ly.eng].sustain) {
       const f = lyF(ly, n.f, n.idx);   // mb: an MPE note's own bend in semitones
@@ -37550,7 +37550,6 @@ function hxTick(horizon) {
   for (const L of HX.loops.values()) if (L.notesDue && now > L.notesDue + 0.05) hxNotesRefresh(L);
   hxTempoTick(now);
   hxFormTick(now);   // (step 1d)
-  hxEinTick(now);   // (31.10.2026: Einspielen – a pass's notes into the loop)
   hxWTick(now, horizon);   // (step 2a: Wuchs – the living passes, the key's bar line, the tempo)
   hxGdTick(now, horizon);   // (Etappe 3: the Gärtner, answers, Wiederkehr, Knospen)
   hxEcoTick(now, horizon);   // (step 4: Nähren, MIDI out, Ladung, Treffen, Zersetzung, the Sammelschleifen's tapes)
@@ -38603,7 +38602,8 @@ function hxCardWuchs(L, sch, chip, row, btn) {
     row('Eigensinn', ...HX_EIG.map((e) => chip(HX_EIGW[e], (L.eigWant || L.eig || 'treu') === e, () => hxWSet(L, 'eig', e), 'Eigensinn ' + HX_EIGW[e] + { treu: ': gleiche Noten, gleicher Wurf', lebendig: ': neuer Wurf in jedem Durchgang', variieren: ': Noten auf leichten Zeiten ändern sich', wandern: ': Halbtakte tauschen, immer zurück zum Anker' }[e])), L.eigWant ? h('span', { class: 'hx-ms' }, 'nach drei Runden') : null),
     row('Stufe', ...[['gespielt', 'wie gespielt'], ['1', '1'], ['2', '2'], ['3', '3']].map(([k, t]) => chip(t, (stufe || P['hx.stufe']) === k, () => hxWSet(L, 'stufe', k === P['hx.stufe'] ? null : k), 'Klangstufe ' + t + (k === 'gespielt' ? ' (' + (L.q || '?') + ')' : ''))), h('span', { class: 'hx-ms' }, on ? 'Stufe ' + st : '')),
     row('Folgen', ...[['diatonisch', 'diatonisch'], ['transponieren', 'transp.'], ['fest', 'fest']].map(([k, t]) => chip(t, (L.ton || 'diatonisch') === k, () => hxWSet(L, 'ton', k), 'Tonart: ' + k))),
-    row('Klang', chip('eigener', klang === 'eigen', () => hxWSet(L, 'klang', 'eigen'), 'Klang: der eigene'), sel, chip('● Einspielen', !!L.ein, () => hxEinSet(L, !L.ein), 'Einspielen: was du auf dem Spielfeld spielst, kommt am Ende jedes Durchgangs in diese Schleife – mit ihrem Instrument')),
+    row('Klang', chip('eigener', klang === 'eigen', () => hxWSet(L, 'klang', 'eigen'), 'Klang: der eigene'), sel),
+    row('Führen', chip('aus', !L.fuehr, () => hxFuSet(L, null), 'Führen aus'), ...HX_FU.map(([k2, t]) => chip(t, L.fuehr === k2, () => hxFuSet(L, L.fuehr === k2 ? null : k2), 'Führen: ' + t))),
     h('div', { class: 'hx-row end' }, btn('Neuer Wurf', () => hxWSet(L, 'wurf'), { aria: 'Neuer Wurf: die Noten mit neuem Zufall' }),
       lebt && !no ? btn('✓', () => hxWLob(L), { aria: 'Behalten: diese Runde gefällt dir – sie wird die neue Grundlage' }) : null, lebt && !no ? btn('✕', () => hxWNein(L), { aria: 'Ablehnen: zurück zur Runde, die du behalten hast' }) : null,
       on ? btn('⚓', () => hxWAnker(L), { aria: 'Zurück zur ursprünglichen Aufnahme' }) : null),
@@ -38841,7 +38841,7 @@ function hxmDrawR(R, dt) {
     let m = met.get(L.id); const st = L.state, pend = L.pendTo && L.pendTo !== st ? L.pendTo : null, pv = L.pvMute && HXE.pv && HXE.pv.key === L.key;
     if (pv && HXE.pv.out.an) m = hxmPvLv(HXE.pv.out.an, L.id);   // (owner, 27.10.2026, again 30.10.2026: „zeigt keinen Ausschlag“ – the editor listens to it: its strip shows what is heard)
     hxmText(S, 'src', S.src, hxEngName(L) + ' · ' + (hxTakt(L) ? dec(+(L.d.beats / (L.bpb || 4)).toFixed(2)) + ' T' : dec(hxLen(L).toFixed(1)) + ' s'));   // (short: the strip is narrow – the card says it whole)
-    hxmText(S, 'state', S.state, (pv ? 'Vorhören' : st === 'spielt' ? 'spielt' : st === 'stumm' ? 'stumm' : 'angehalten') + (pend ? ' → ' + (pend === 'stumm' ? 'stumm' : 'an') : '') + (HX.fokus === L.id ? ' · Fokus' : '') + (L.ein ? ' · Einspielen' : ''));
+    hxmText(S, 'state', S.state, (pv ? 'Vorhören' : st === 'spielt' ? 'spielt' : st === 'stumm' ? 'stumm' : 'angehalten') + (pend ? ' → ' + (pend === 'stumm' ? 'stumm' : 'an') : '') + (HX.fokus === L.id ? ' · Fokus' : '') + (L.fuehr ? ' · geführt' : ''));
     S.el.classList.toggle('spielt', st === 'spielt'); S.el.classList.toggle('dormant', st !== 'spielt');
     hxmLv(S, m ? m[1] : 0, m ? m[2] : 0, dt, st === 'spielt' || pv);
     try { hxmStrDraw(S); } catch (e) { if (!HXM.err) { HXM.err = 1; console.warn('Hexenring: ein Schleifen-Kanal ließ sich nicht zeichnen', e); } }   // (one strip never blanks the others)
@@ -39041,7 +39041,7 @@ function hxEdPlace() {
 // what the editor shows depends on: rebuilt when it changes (a frame compares it), the playhead drawn every frame
 // (the ↶ ↷ buttons follow the history, the state its words and colour: part of what is shown, not of what is rendered –
 // 30.10.2026: Stopp halts the loop, ▶ right after plays the same pass without rendering it again)
-const hxEdSig = (L) => hxEdRSig(L) + '|' + L.state + '|' + HX.hist.length + ':' + HX.redo.length + ':' + HX.pend.length + ':' + !!L.prev + '|' + P['t.root'] + P['t.scale'] + P['t.a4'] + '|' + hxRxSig(hxRxOf(L)) + (L.rxBusy ? 'b' : '') + (L.nudge || 0) + '|' + (L.klang || 'eigen') + hxKlangOf(L) + (L.ein ? 'E' : '');   // (31.10.2026: the Instrument row; 30.10.2026: the head names the key; the switches of the Klangfarbe and the shifts)
+const hxEdSig = (L) => hxEdRSig(L) + '|' + L.state + '|' + HX.hist.length + ':' + HX.redo.length + ':' + HX.pend.length + ':' + !!L.prev + '|' + P['t.root'] + P['t.scale'] + P['t.a4'] + '|' + hxRxSig(hxRxOf(L)) + (L.rxBusy ? 'b' : '') + (L.nudge || 0) + '|' + (L.klang || 'eigen') + hxKlangOf(L) + (L.fuehr || '') + (L.fuStumm === false ? 's' : '');   // (31.10.2026: the Instrument row; 30.10.2026: the head names the key; the switches of the Klangfarbe and the shifts)
 function hxEdRSig(L) {
   const sch = L.sch.map((id) => HX.sch.get(id)).filter(Boolean);
   return [L.key, L.hum ? 1 : L.humBusy ? 2 : 0, L.d.beats, L.d.L, L.bpb, L.sp || 1, !!L.rev, JSON.stringify(L.trim || 0), L.dbl || 1, HX.fokus === L.id, HX.solo ? HX.solo.id : 0, JSON.stringify(L.nt || 0), JSON.stringify(L.slc || 0), L.vb, JSON.stringify(L.ab || 0), L.notes.length,   // (26.10.2026: Lücken – its chips lit only after another change)
@@ -39077,8 +39077,9 @@ function hxEdRender() {
       (() => { const x = btn('✕', hxEdClose, 'Schließen (Esc)', 'ghost hx-ed-x'); x.setAttribute('aria-label', 'Schließen'); return x; })()));
   // (owner, 31.10.2026: „es würde Sinn machen, wenn man einzelnen Schleifen ein Instrument zuweisen kann – der Sound ist dann
   // der vom gewählten Instrument“) right under the head: its notes played anew with any source (hxWSet 'klang' – a history
-  // step, rendered like every Wuchs); „wie aufgenommen“ its own; ● Einspielen: what the field plays goes into it
-  // (owner, 31.10.2026: „der Button Spielfeld ist hinfällig … an der Stelle meine Interpretation einbauen“ – einspielen.js)
+  // step, rendered like every Wuchs); „wie aufgenommen“ its own. Below it: Führen – the field's hand leads its notes live
+  // (owner, 31.10.2026: „der Button Spielfeld ist hinfällig“ … „was ich spiele, erklingt in der Schleife, ihre Noten bleiben
+  // die Basis“ – fuehren.js)
   const kl = L.klang || 'eigen', klNow = hxKlangOf(L);
   const isel = h('select', { class: 'hx-eng hx-ed-inst', 'aria-label': 'Instrument dieser Schleife wählen', disabled: notes ? null : '' },
     h('option', { value: '' }, ENGINES[kl] ? 'Instrument …' : 'anderes Instrument …'), ...ENG_OPTS.map(([k2, n]) => h('option', { value: k2, selected: kl === k2 ? '' : null }, n)));
@@ -39086,9 +39087,13 @@ function hxEdRender() {
   const inst = h('div', { class: 'hx-ed-row hx-ed-instrow' }, h('span', { class: 'lab', title: 'Mit welchem Instrument diese Schleife ihre Noten spielt' }, 'Instrument'),
     notes ? h('div', { class: 'chips' },
       chip('wie aufgenommen', kl === 'eigen', () => hxWSet(L, 'klang', 'eigen'), 'Ihr eigener Klang (' + (ENG_NAME[L.eng] || '?') + ')' + (klNow === 'preset' ? ' – spielt gerade mit dem geladenen Preset („Instrument beim Preset-Wechsel“)' : '')),
-      isel,
-      chip('● Einspielen', !!L.ein, () => hxEinSet(L, !L.ein), 'Einspielen: was du jetzt auf dem Spielfeld spielst (Bildschirm oder MIDI), kommt am Ende jedes Durchgangs an derselben Stelle in diese Schleife – gespielt mit ihrem Instrument. Jeder Durchgang ist ein Schritt für ↶.', { cls: 'hx-ein' }))
+      isel)
       : h('span', { class: 'hx-ms' }, 'ohne Noten (aufgenommener Klang) – das Instrument lässt sich nicht tauschen'));
+  const fu = L.fuehr || '';
+  const fuRow = notes ? h('div', { class: 'hx-ed-row hx-ed-furow' }, h('span', { class: 'lab', title: 'Dein Spiel auf dem Spielfeld (Bildschirm, Tasten, Touché) lenkt die Schleife – ihre Noten bleiben die Basis' }, 'Führen'),
+    h('div', { class: 'chips' }, chip('aus', !fu, () => hxFuSet(L, null), 'Die Schleife spielt für sich'),
+      ...HX_FU.map(([k2, t]) => chip(t, fu === k2, () => hxFuSet(L, fu === k2 ? null : k2), { ton: 'Der Ton, den du hältst, führt ihre Melodie: ihr erster Ton wird zu deinem, alle anderen wandern mit, in der Tonart. Loslassen: wieder in ihrer Lage.', klang: 'Ihre Noten klingen mit deinem Instrument und deinem Ausdruck – Höhe, Druck, Anschlag; gehaltene Töne folgen deiner Hand.', ausl: 'Sie klingt nur, solange du spielst oder eine Taste hältst – mit deiner Stärke.', beides: 'Dein Ton führt ihre Melodie, dein Ausdruck formt ihre Noten.' }[k2], { cls: 'hx-fu' })),
+      fu ? chip('Spielfeld stumm', L.fuStumm !== false, () => { L.fuStumm = L.fuStumm === false; hxEdRender(); }, 'An: deine eigenen Töne schweigen, sie klingen nur in der Schleife. Aus: du hörst beides.') : null)) : null;
   // the waveform: drag over it to choose a stretch
   HXE.cv = h('canvas', { class: 'hx-ed-cv', role: 'img', 'aria-label': 'Wellenform von ' + hxName(L) + (tk ? ', ' + hxLenText(L) : '') });
   const wbox = h('div', { class: 'hx-ed-wave', tabindex: '0', title: 'Die Schleife, wie sie klingt. Türkise Striche: die gespielten Noten – wo sie liegen, wie hoch (oben hoch), wie lang. Klicken spielt ab dieser Stelle (Leertaste: Abspielen/Stopp). Ziehen wählt einen Teil (auf ganze Schläge, mit Alt feiner). Strg+Mausrad zoomt, Umschalt+Mausrad schiebt.' }, HXE.cv);
@@ -39193,7 +39198,7 @@ function hxEdRender() {
   // (30.10.2026) rebuilt while the waveform or ▶/■ has the focus (Stopp halts the loop – a new state): it stays there, so
   // Space plays again
   const fa = document.activeElement, fk = fa && ed.contains(fa) ? (fa.classList.contains('hx-ed-wave') ? wbox : fa.classList.contains('hx-pv-play') ? HXE.pvBtn : null) : null;
-  ed.replaceChildren(head, inst, tp, wbox, HXE.waitEl, selRow, ...(hum ? [hum] : []), ...(part ? [part] : []), h('div', { class: 'hx-ed-sec' }, h('div', { class: 'hx-ed-st' }, sch.length === 1 ? 'Schicht' : sch.length + ' Schichten'), ...schRows), h('div', { class: 'hx-ed-sec' }, h('div', { class: 'hx-ed-st' }, HXE.sel ? 'Ganze Schleife' : 'Bearbeiten'), ...tools), foot);
+  ed.replaceChildren(head, inst, ...(fuRow ? [fuRow] : []), tp, wbox, HXE.waitEl, selRow, ...(hum ? [hum] : []), ...(part ? [part] : []), h('div', { class: 'hx-ed-sec' }, h('div', { class: 'hx-ed-st' }, sch.length === 1 ? 'Schicht' : sch.length + ' Schichten'), ...schRows), h('div', { class: 'hx-ed-sec' }, h('div', { class: 'hx-ed-st' }, HXE.sel ? 'Ganze Schleife' : 'Bearbeiten'), ...tools), foot);
   if (fk) fk.focus({ preventScroll: true });
   HXE.wsig = '';
   requestAnimationFrame(() => { hxEdWave(true); for (const c of ed.querySelectorAll('.hx-ed-mini')) hxEdMini(c); hxHumDraw(); });
@@ -43530,7 +43535,7 @@ function hxWUpdate(L, o = {}) {
   if (!L || L.bew || L.state === 'weg' || !HX.node) return;
   if (L.krea && L.krea.sel != null) { hxCardDirty(); hxRailDirty(); return; }   // (28.10.2026: a Werkstatt creation or a Trieb plays – werkstatt.js)
   hxWNotesAll(L);
-  if (HXW.st === 'kein' || L.live) { for (const id of L.sch) { const S = HX.sch.get(id); if (S && !S.wBusy) S.wAgain = null; } hxWLiveSync(L); hxCardDirty(); hxRailDirty(); return; }   // (no Werk-Rahmen: Live mode; step 4: or chosen – no wish left waiting)
+  if (HXW.st === 'kein' || L.live || L.fuehr) { for (const id of L.sch) { const S = HX.sch.get(id); if (S && !S.wBusy) S.wAgain = null; } hxWLiveSync(L); hxCardDirty(); hxRailDirty(); return; }   // (no Werk-Rahmen: Live mode; step 4: or chosen – no wish left waiting)
   if (L.sch.some((id) => { const S = HX.sch.get(id); return S && S.lm; })) hxWLiveSync(L);   // (back from Live: its versions sound again)
   HX.wFeld = hxLoopsLive().some((X) => hxKlangOf(X) === 'feld' && hxWAktiv(X));
   const on = hxWAktiv(L), F = HX.folge && HX.folge.loops.includes(L.key) ? HX.folge : null;
@@ -43988,7 +43993,7 @@ const hxTauOn = (L) => L.taumeln !== false && !HX.tauRest;   // (what the proces
 // chain's copy and the strip „Hexenring“ (no tap hears them). Its Abdruck rests meanwhile. They cost what voices cost and
 // give way before any live note – a loop's note that does not fit the budget is not played (owner: never the live ones).
 // Lebendig: every pass its own randomness (the voices' own) and its breath; ✓ ✕ ⚓ need rendered passes (Werk-Rahmen). ----
-const hxWLm = (L) => !L.bew && L.state !== 'weg' && (L.live ? L.sch.some((id) => hxWCan(HX.sch.get(id))) : HXW.st === 'kein' && hxWAktiv(L));   // (step 4: or chosen – „Wiedergabe: Live“)
+const hxWLm = (L) => !L.bew && L.state !== 'weg' && (L.live || L.fuehr ? L.sch.some((id) => hxWCan(HX.sch.get(id))) : HXW.st === 'kein' && hxWAktiv(L));   // (step 4: or chosen – „Wiedergabe: Live“)
 function hxWLiveSync(L) {
   const on = hxWLm(L) && L.state === 'spielt', sw = hxNextSeam(L);
   for (const id of L.sch) {
@@ -44005,6 +44010,7 @@ function hxWLiveTick(now, horizon) {
     for (const id of L.sch) {
       const S = HX.sch.get(id); if (!S || !S.lm || L.state !== 'spielt') continue;
       if (S.mute) { S.lk = Math.max(S.lk, hxPassK(L, Math.round(fB))); continue; }
+      if (L.fuehr) { hxFuSched(L, S, now, horizon, out); continue; }   // (31.10.2026: Führen – note by note, fuehren.js)
       for (let k = Math.max(S.lk + 1, hxPassK(L, Math.round(fA))); hxPassF(L, k) < fB; k++) {
         const job = hxWPass(L, S, k, { live: hxEigN(L) >= 1, tail: 0 }); S.lk = k;
         if (!job) break;
@@ -44021,6 +44027,7 @@ function hxWLiveTick(now, horizon) {
       }
     }
   }
+  hxFuFollow();
   if (HX.wLq.length) { const due = HX.wLq.filter((x) => x[0] <= now + 0.012); if (due.length) { HX.wLq = HX.wLq.filter((x) => x[0] > now + 0.012); for (const [, fn] of due) try { fn(); } catch (e) {} } }
 }
 HX.wLq = [];
@@ -44596,57 +44603,97 @@ function hxAusleseCons(L, S, cycles, r, starts, P0) {
   return hxWNotesMk(L, S, w0, hxT(c.w1), evs);
 }
 
-// ---- Einspielen (owner, 31.10.2026: „Ich dachte, wenn das aktiviert ist, kann ich am Spielfeld was spielen – Bildschirm
-// oder MIDI – und dann wird das Gespielte in die Schleife transformiert“) ----
-// A Schleife set to Einspielen listens to the field: what is played on it (the screen, a keyboard, the Touché – the
-// sources the Korb would take) during one of its passes is laid into its notes at the same place in the pass, and at the
-// pass's end it plays anew with them – in its own instrument (or the one chosen for it), in its key, Wuchs. Each pass
-// that brought notes is one step of ↶. Nothing played: nothing changes.
-const HX_EIN_LEAD = 0.06;   // (a note hit just before the downbeat belongs to it)
-function hxEinCan(L) { return !!L && !L.bew && L.state !== 'weg' && L.sch.some((id) => hxWCan(HX.sch.get(id))); }
-function hxEinSet(L, on) {
+// ---- Führen (owner, 31.10.2026: „das, was ich spiele, erklingt dann in der Schleife – aber ihre MIDI-Noten bleiben als
+// Basis“; asked which way: „alle vier Optionen sind in Myzel verfügbar zum Einstellen“) ----
+// A Schleife with notes that is led plays them live (real voices, note by note just ahead – as Live does it, but one note
+// at a time, so a hand on the field is heard in the very next note), and what is played on the field (the screen, a key,
+// the Touché) leads them:
+//   ton      Tonhöhe führt – the note held transposes its melody: its first note becomes the one played, every other one
+//            moves with it in the key (scale steps; free tuning: semitones); let go and it plays where it was
+//   klang    Klang & Ausdruck – its notes sound with the field's instrument and the hand's expression: Höhe/brightness,
+//            pressure, the velocity of the key; held voices follow the hand as it moves
+//   ausl     Auslösen – it sounds only while a hand is on the field (or a key held), at that hand's strength
+//   beides   Tonhöhe + Ausdruck
+// With „Spielfeld stumm“ (on by default) the field's own notes are silent while they lead – they sound in the Schleife.
+const HX_FU = [['ton', 'Tonhöhe'], ['klang', 'Klang & Ausdruck'], ['ausl', 'Auslösen'], ['beides', 'Tonhöhe + Ausdruck']];
+const HX_FUW = Object.fromEntries(HX_FU);
+HX.fuLog = [];   // (the last notes a led loop played – what the tests read)
+const hxFuCan = (L) => !!L && !L.bew && L.state !== 'weg' && L.sch.some((id) => hxWCan(HX.sch.get(id)));
+const hxFuOn = (L) => !!(L && L.fuehr && hxFuCan(L));
+function hxFuSet(L, mode) {
   if (!L) return;
-  if (on && !hxEinCan(L)) { hxHint(hxName(L) + ' hat keine Noten – nur eine Schleife aus gespielten Noten kann Neues aufnehmen.'); return; }
-  L.ein = !!on; L.einK = null;
-  if (on) { const k = hxPassK(L, hxF(hxNowT() - HX_EIN_LEAD)); L.einK = k; }
-  hxSay(hxName(L) + (on ? ': Einspielen – spiel auf dem Spielfeld, am Ende jedes Durchgangs kommt es in die Schleife' : ': Einspielen aus'));
+  if (mode && !hxFuCan(L)) { hxHint(hxName(L) + ' hat keine Noten – führen lässt sich nur eine Schleife aus gespielten Noten.'); return; }
+  L.fuehr = mode || null; if (L.fuStumm == null) L.fuStumm = true;
+  for (const id of L.sch) { const S = HX.sch.get(id); if (S && S.fu) { S.lk = Math.max(S.lk, S.fu.k); S.fu = null; } }
+  if (!L.fuehr) hxWUpdate(L); else hxWLiveSync(L);
+  hxSay(hxName(L) + (L.fuehr ? ': geführt – ' + HX_FUW[L.fuehr] : ': nicht mehr geführt'));
   hxCardDirty(); hxRailDirty();
 }
-// every tick: a pass of an Einspielen loop that ended takes what was played in it
-function hxEinTick(now) {
-  for (const L of HX.loops.values()) {
-    if (!L.ein) continue;
-    if (L.state === 'weg' || L.slot == null || !hxEinCan(L)) { L.ein = false; continue; }
-    const k = hxPassK(L, hxF(now - HX_EIN_LEAD - 0.05));   // (late: the notes of the pass's last moment are logged)
-    if (L.einK == null) { L.einK = k; continue; }
-    if (k > L.einK) { const k0 = L.einK; L.einK = k; if (L.state === 'spielt') hxEinTake(L, k0); }
-    else if (k < L.einK) L.einK = k;   // (a new geometry: counted afresh)
+// the field's leading hand: the newest note held (screen, key, Touché) – its pitch index, frequency, expression, strength
+function hxFuLead() {
+  let tt = null; for (const x of touches.values()) if (!tt || x.t0 > tt.t0) tt = x;
+  if (!tt) return null;
+  return { f: tt.f, idx: tt.col, y: tt.my != null ? tt.my : tt.y, vel: tt.vel != null ? tt.vel : P['v.vel'] };
+}
+// a frequency's scale step (degNote's index), the nearest
+function hxFuIdx(f) {
+  const sc = SCALES[P['t.scale']] || SCALES.mpent, per = sc.r ? sc.r.length : sc.s.length;
+  let d = Math.round(Math.log2(Math.max(1e-6, f) / N.base) * per), best = d, bd = Infinity;
+  for (let i = d - 3; i <= d + 3; i++) { const e = Math.abs(Math.log2(degNote(i).f / f)); if (e < bd) { bd = e; best = i; } }
+  return best;
+}
+// a note moved by the steps from the loop's first note to the hand's
+function hxFuMove(L, S, f, lead) {
+  const W = S.wn, ref = W && W.n.length ? W.n.reduce((a, x) => (x.t < a.t ? x : a), W.n[0]).f : f;
+  if (N.free) return f * lead.f / ref;
+  const sh = lead.idx - hxFuIdx(ref), i = hxFuIdx(f);
+  return f * degNote(i + sh).f / degNote(i).f;
+}
+// the field's own notes are silent while a loop that keeps them silent is led (play/touch.js asks)
+function hxFuTake(tt) {
+  if (!hxLoopsLive().some((L) => hxFuOn(L) && L.fuStumm !== false && L.state === 'spielt')) return false;
+  tt.fu = true; return true;
+}
+// a led Schicht, note by note up to the horizon (hxWLiveTick hands it here)
+function hxFuSched(L, S, now, horizon, out) {
+  const fA = hxF(now + 0.005), lead = hxFuLead(), m = L.fuehr;
+  const pitch = m === 'ton' || m === 'beides', expr = m === 'klang' || m === 'beides';
+  if (!S.fu) S.fu = { k: S.lk, job: null, i: 0, t0: 0 };
+  const F = S.fu;
+  for (let g = 0; g < 4; g++) {
+    if (!F.job) {
+      const k = Math.max(F.k + 1, hxPassK(L, Math.round(fA)));
+      if (hxT(hxPassF(L, k)) >= horizon) return;
+      const job = hxWPass(L, S, k, { live: hxEigN(L) >= 1, tail: 0 }); if (!job) return;
+      F.k = k; S.lk = k; F.job = job; F.i = 0; F.t0 = hxT(hxPassF(L, k));
+    }
+    const ns = F.job.notes;
+    while (F.i < ns.length) {
+      const n = ns[F.i], t = F.t0 + n.t0;
+      if (t >= horizon) return;
+      F.i++;
+      if (t < now || n.eng === 'bor') continue;
+      if (m === 'ausl' && !lead) continue;
+      const eng = expr && ENGINES[P['v.eng']] ? P['v.eng'] : n.eng, E = ENGINES[eng]; if (!E) continue;
+      const r = pitch && lead ? hxFuMove(L, S, n.f, lead) / n.f : 1, f = n.f * r;
+      const y = expr && lead ? lead.y : n.y0 != null ? n.y0 : 0.5;
+      const vel = lead && (m === 'ausl' || expr) ? clamp(n.vel * lead.vel / Math.max(0.05, P['v.vel']), 0.02, 1) : n.vel;
+      const o = { pan: n.pan || 0, bus: out(), loop: true, hxSrc: 'hxr', amp: n.amp };
+      const gt = n.t1 != null ? n.t1 - n.t0 : null;
+      const v = n.burst || (E.sustain && gt != null) ? playNote(eng, t, f, y, vel, Object.assign(o, { burst: true, gate: n.burst ? n.gate || 0.22 : gt })) : E.sustain ? playNote(eng, t, f, y, vel, o) : hit(eng, t, f, y, vel, o);
+      HX.fuLog.push({ loop: L.id, t, f, nf: n.f, eng, vel, y, m }); if (HX.fuLog.length > 64) HX.fuLog.shift();
+      if (!v) continue;
+      if (!expr) for (const [tc, yy] of n.curves.y) HX.wLq.push([F.t0 + tc, () => v.alive && v.setY && v.setY(yy)]);
+      for (const [tc, ff] of n.curves.f) HX.wLq.push([F.t0 + tc, () => v.alive && v.setF && v.setF(ff * r, P['v.glide'])]);
+      if (expr && v.setY) (S.fuVs || (S.fuVs = [])).push(v);
+    }
+    F.job = null;
   }
 }
-// the notes played in pass k, into the loop's first Schicht with notes
-function hxEinTake(L, k) {
-  const S = L.sch.map((id) => HX.sch.get(id)).find(hxWCan); if (!S) return false;
-  const a = hxT(hxPassF(L, k)), b = hxT(hxPassF(L, k + 1)), w0 = a - HX_EIN_LEAD, w1 = b - HX_EIN_LEAD;
-  const evs = hxNotes(w0, w1, 0, false).filter((e) => ENGINES[e.eng] && !e.probe && !e.hx);
-  if (!evs.length) return false;
-  const W = S.wn, takt = W.u === 'b', b0 = takt ? tgBeat(a) : 0, passU = takt ? tgBeat(b) - b0 : b - a, sc = passU > 0 ? W.len / passU : 1;
-  const u = (t) => ((takt ? tgBeat(t) - b0 : t - a) * sc);
-  // its own instrument and channel: the ones most of its notes have (a chosen one plays over it – hxWEng)
-  const most = (key) => { const c = new Map(); for (const x of W.n) c.set(x[key], (c.get(x[key]) || 0) + 1); let m = null, v = -1; for (const [x, n] of c) if (n > v) { m = x; v = n; } return m; };
-  const eng = most('eng') || L.eng, src = most('src') || 'fin';
-  const neu = evs.map((e) => {
-    const t = clamp(u(e.t0), 0, Math.max(0, W.len - 1e-3)), rel = (p) => (p || []).map(([tt, v]) => [u(tt) - t, v]);
-    const d = e.t1 != null ? Math.max(0.01, u(e.t1) - t) : Math.max(0.05, W.len - t);
-    return { t, held: false, d, eng, f: e.f, deg: e.deg, oct: e.oct, alt: e.alt, y0: e.y0, vel: e.vel, pan: e.pan, amp: e.amp, src, burst: e.burst, gate: e.gate, hold: e.hold, cy: rel(e.curves.y), cf: rel(e.curves.f), ein: 1 };
-  });
-  const lk = L.key, sk = S.key, was = W, wasW = Object.assign({}, L.wwhy || {});
-  const to = Object.assign({}, W, { n: W.n.concat(neu).sort((x, y) => x.t - y.t) });
-  const put = (X, wn, ww) => { const S2 = hxSchByKey(sk); if (!S2) return; S2.wn = wn; S2.wnT = null; X.wwhy = ww; hxWUpdate(X); hxSaveMeta(X.id); hxCardDirty(); hxRailDirty(); };
-  const ww = Object.assign({}, wasW, { wahl: true, abdr: false });
-  put(L, to, ww);
-  hxHist({ kind: 'wuchs', label: neu.length + (neu.length === 1 ? ' Note' : ' Noten') + ' eingespielt (' + hxName(L) + ')', undo() { const X = hxByKey(lk); if (X) put(X, was, wasW); }, redo() { const X = hxByKey(lk); if (X) put(X, to, ww); } });
-  hxSay(hxName(L) + ': ' + neu.length + (neu.length === 1 ? ' Note' : ' Noten') + ' eingespielt');
-  return true;
+// held voices of a led loop follow the hand's expression as it moves
+function hxFuFollow() {
+  const lead = hxFuLead(); if (!lead) return;
+  for (const L of hxLoopsLive()) for (const id of L.sch) { const S = HX.sch.get(id); if (!S || !S.fuVs) continue; S.fuVs = S.fuVs.filter((v) => v.alive); for (const v of S.fuVs) v.setY(lead.y); }
 }
 // ---- §14 export: a loop as a take (its steady pass rendered by the processor – seams and Ausklänge as they sound –
 // seamless, so the take plays as a loop: WAV, ZIP, Körner from the Aufnahme panel), its notes as a Standard MIDI File

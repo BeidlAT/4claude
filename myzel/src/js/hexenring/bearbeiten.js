@@ -100,7 +100,7 @@ function hxEdPlace() {
 // what the editor shows depends on: rebuilt when it changes (a frame compares it), the playhead drawn every frame
 // (the ↶ ↷ buttons follow the history, the state its words and colour: part of what is shown, not of what is rendered –
 // 30.10.2026: Stopp halts the loop, ▶ right after plays the same pass without rendering it again)
-const hxEdSig = (L) => hxEdRSig(L) + '|' + L.state + '|' + HX.hist.length + ':' + HX.redo.length + ':' + HX.pend.length + ':' + !!L.prev + '|' + P['t.root'] + P['t.scale'] + P['t.a4'] + '|' + hxRxSig(hxRxOf(L)) + (L.rxBusy ? 'b' : '') + (L.nudge || 0) + '|' + (L.klang || 'eigen') + hxKlangOf(L) + (L.ein ? 'E' : '');   // (31.10.2026: the Instrument row; 30.10.2026: the head names the key; the switches of the Klangfarbe and the shifts)
+const hxEdSig = (L) => hxEdRSig(L) + '|' + L.state + '|' + HX.hist.length + ':' + HX.redo.length + ':' + HX.pend.length + ':' + !!L.prev + '|' + P['t.root'] + P['t.scale'] + P['t.a4'] + '|' + hxRxSig(hxRxOf(L)) + (L.rxBusy ? 'b' : '') + (L.nudge || 0) + '|' + (L.klang || 'eigen') + hxKlangOf(L) + (L.fuehr || '') + (L.fuStumm === false ? 's' : '');   // (31.10.2026: the Instrument row; 30.10.2026: the head names the key; the switches of the Klangfarbe and the shifts)
 function hxEdRSig(L) {
   const sch = L.sch.map((id) => HX.sch.get(id)).filter(Boolean);
   return [L.key, L.hum ? 1 : L.humBusy ? 2 : 0, L.d.beats, L.d.L, L.bpb, L.sp || 1, !!L.rev, JSON.stringify(L.trim || 0), L.dbl || 1, HX.fokus === L.id, HX.solo ? HX.solo.id : 0, JSON.stringify(L.nt || 0), JSON.stringify(L.slc || 0), L.vb, JSON.stringify(L.ab || 0), L.notes.length,   // (26.10.2026: Lücken – its chips lit only after another change)
@@ -136,8 +136,9 @@ function hxEdRender() {
       (() => { const x = btn('✕', hxEdClose, 'Schließen (Esc)', 'ghost hx-ed-x'); x.setAttribute('aria-label', 'Schließen'); return x; })()));
   // (owner, 31.10.2026: „es würde Sinn machen, wenn man einzelnen Schleifen ein Instrument zuweisen kann – der Sound ist dann
   // der vom gewählten Instrument“) right under the head: its notes played anew with any source (hxWSet 'klang' – a history
-  // step, rendered like every Wuchs); „wie aufgenommen“ its own; ● Einspielen: what the field plays goes into it
-  // (owner, 31.10.2026: „der Button Spielfeld ist hinfällig … an der Stelle meine Interpretation einbauen“ – einspielen.js)
+  // step, rendered like every Wuchs); „wie aufgenommen“ its own. Below it: Führen – the field's hand leads its notes live
+  // (owner, 31.10.2026: „der Button Spielfeld ist hinfällig“ … „was ich spiele, erklingt in der Schleife, ihre Noten bleiben
+  // die Basis“ – fuehren.js)
   const kl = L.klang || 'eigen', klNow = hxKlangOf(L);
   const isel = h('select', { class: 'hx-eng hx-ed-inst', 'aria-label': 'Instrument dieser Schleife wählen', disabled: notes ? null : '' },
     h('option', { value: '' }, ENGINES[kl] ? 'Instrument …' : 'anderes Instrument …'), ...ENG_OPTS.map(([k2, n]) => h('option', { value: k2, selected: kl === k2 ? '' : null }, n)));
@@ -145,9 +146,13 @@ function hxEdRender() {
   const inst = h('div', { class: 'hx-ed-row hx-ed-instrow' }, h('span', { class: 'lab', title: 'Mit welchem Instrument diese Schleife ihre Noten spielt' }, 'Instrument'),
     notes ? h('div', { class: 'chips' },
       chip('wie aufgenommen', kl === 'eigen', () => hxWSet(L, 'klang', 'eigen'), 'Ihr eigener Klang (' + (ENG_NAME[L.eng] || '?') + ')' + (klNow === 'preset' ? ' – spielt gerade mit dem geladenen Preset („Instrument beim Preset-Wechsel“)' : '')),
-      isel,
-      chip('● Einspielen', !!L.ein, () => hxEinSet(L, !L.ein), 'Einspielen: was du jetzt auf dem Spielfeld spielst (Bildschirm oder MIDI), kommt am Ende jedes Durchgangs an derselben Stelle in diese Schleife – gespielt mit ihrem Instrument. Jeder Durchgang ist ein Schritt für ↶.', { cls: 'hx-ein' }))
+      isel)
       : h('span', { class: 'hx-ms' }, 'ohne Noten (aufgenommener Klang) – das Instrument lässt sich nicht tauschen'));
+  const fu = L.fuehr || '';
+  const fuRow = notes ? h('div', { class: 'hx-ed-row hx-ed-furow' }, h('span', { class: 'lab', title: 'Dein Spiel auf dem Spielfeld (Bildschirm, Tasten, Touché) lenkt die Schleife – ihre Noten bleiben die Basis' }, 'Führen'),
+    h('div', { class: 'chips' }, chip('aus', !fu, () => hxFuSet(L, null), 'Die Schleife spielt für sich'),
+      ...HX_FU.map(([k2, t]) => chip(t, fu === k2, () => hxFuSet(L, fu === k2 ? null : k2), { ton: 'Der Ton, den du hältst, führt ihre Melodie: ihr erster Ton wird zu deinem, alle anderen wandern mit, in der Tonart. Loslassen: wieder in ihrer Lage.', klang: 'Ihre Noten klingen mit deinem Instrument und deinem Ausdruck – Höhe, Druck, Anschlag; gehaltene Töne folgen deiner Hand.', ausl: 'Sie klingt nur, solange du spielst oder eine Taste hältst – mit deiner Stärke.', beides: 'Dein Ton führt ihre Melodie, dein Ausdruck formt ihre Noten.' }[k2], { cls: 'hx-fu' })),
+      fu ? chip('Spielfeld stumm', L.fuStumm !== false, () => { L.fuStumm = L.fuStumm === false; hxEdRender(); }, 'An: deine eigenen Töne schweigen, sie klingen nur in der Schleife. Aus: du hörst beides.') : null)) : null;
   // the waveform: drag over it to choose a stretch
   HXE.cv = h('canvas', { class: 'hx-ed-cv', role: 'img', 'aria-label': 'Wellenform von ' + hxName(L) + (tk ? ', ' + hxLenText(L) : '') });
   const wbox = h('div', { class: 'hx-ed-wave', tabindex: '0', title: 'Die Schleife, wie sie klingt. Türkise Striche: die gespielten Noten – wo sie liegen, wie hoch (oben hoch), wie lang. Klicken spielt ab dieser Stelle (Leertaste: Abspielen/Stopp). Ziehen wählt einen Teil (auf ganze Schläge, mit Alt feiner). Strg+Mausrad zoomt, Umschalt+Mausrad schiebt.' }, HXE.cv);
@@ -252,7 +257,7 @@ function hxEdRender() {
   // (30.10.2026) rebuilt while the waveform or ▶/■ has the focus (Stopp halts the loop – a new state): it stays there, so
   // Space plays again
   const fa = document.activeElement, fk = fa && ed.contains(fa) ? (fa.classList.contains('hx-ed-wave') ? wbox : fa.classList.contains('hx-pv-play') ? HXE.pvBtn : null) : null;
-  ed.replaceChildren(head, inst, tp, wbox, HXE.waitEl, selRow, ...(hum ? [hum] : []), ...(part ? [part] : []), h('div', { class: 'hx-ed-sec' }, h('div', { class: 'hx-ed-st' }, sch.length === 1 ? 'Schicht' : sch.length + ' Schichten'), ...schRows), h('div', { class: 'hx-ed-sec' }, h('div', { class: 'hx-ed-st' }, HXE.sel ? 'Ganze Schleife' : 'Bearbeiten'), ...tools), foot);
+  ed.replaceChildren(head, inst, ...(fuRow ? [fuRow] : []), tp, wbox, HXE.waitEl, selRow, ...(hum ? [hum] : []), ...(part ? [part] : []), h('div', { class: 'hx-ed-sec' }, h('div', { class: 'hx-ed-st' }, sch.length === 1 ? 'Schicht' : sch.length + ' Schichten'), ...schRows), h('div', { class: 'hx-ed-sec' }, h('div', { class: 'hx-ed-st' }, HXE.sel ? 'Ganze Schleife' : 'Bearbeiten'), ...tools), foot);
   if (fk) fk.focus({ preventScroll: true });
   HXE.wsig = '';
   requestAnimationFrame(() => { hxEdWave(true); for (const c of ed.querySelectorAll('.hx-ed-mini')) hxEdMini(c); hxHumDraw(); });

@@ -34,12 +34,12 @@ Begründungen stehen in `dev/STAND-2026-10-29.md` (Abschnitte „Danach (30.10.)
 
 ## Für die nächste Sitzung zu tun (ohne weitere Rückfrage)
 ## Erledigt am 31.10.
-Einspielen (Besitzer: „Spielfeld-Knopf hinfällig – stattdessen: am Spielfeld spielen, das Gespielte wird in die Schleife
-transformiert“): `hexenring/einspielen.js` – `hxEinSet`, `hxEinTick` (in `hxTick`), `hxEinTake` legt die Noten eines
-Durchgangs (Humus, Quellen der Gespielt-Maske) in `S.wn` der ersten Notenschicht, mit dem Instrument/Kanal der Schleife,
-schaltet Wuchs ein; je Durchgang ein ↶-Schritt. Schalter im Bearbeiten-Fenster und in der Karte; Mixer zeigt „Einspielen“.
-`L.ein` wird nicht gespeichert (nach Neuladen aus). Test `t-hx-einspielen.js` (Chromium). Offen fürs Ohr: ob er beim
-Einspielen das Spielfeld-Instrument hören will oder gleich das der Schleife.
+Führen (Besitzer: „was ich spiele, erklingt in der Schleife – ihre MIDI-Noten bleiben die Basis“, alle vier Arten wählbar;
+das Noten-Einschreiben „Einspielen“ war ein Missverständnis und ist wieder raus): `hexenring/fuehren.js` – `L.fuehr`
+ton/klang/ausl/beides, `L.fuStumm`; die Schleife spielt live (`hxWLm`), Note für Note bis zum Horizont (`hxFuSched` aus
+`hxWLiveTick`), führende Hand = neueste Berührung/Taste (`hxFuLead`); Tonhöhe in Tonleiterstufen ab ihrem ersten Ton;
+Spielfeld stumm über `hxFuTake` in `onDown`. Zeile im Bearbeiten-Fenster und in der Karte. `L.fuehr` wird nicht gespeichert.
+Test `t-hx-fuehren.js` (Chromium). Offen fürs Ohr in Firefox: Ansprechzeit (Horizont des Planers), Bezugston (erster Ton).
 Bearbeiten-Fenster aus dem Mixer abgeschnitten → `hxEdPlace`: ist das Feld schmaler als 640 px (offenes Panel), reicht
 es übers Panel (bis 1000 px). Instrument je Schleife: Zeile „Instrument“ im Bearbeiten-Fenster (`hxWSet(L,'klang',…)`, gab
 es bisher nur versteckt in der Karte unter Wuchs); `hxEngName` nennt das klingende Instrument. Test `t-hx-inst-wahl.js` (Chromium).
