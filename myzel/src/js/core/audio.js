@@ -34,7 +34,7 @@ for (const [i, T] of [[0, VCOST1], [1, VCOST3]]) Object.defineProperty(T, 'zpf',
 const GLT_COST = { wk: [0.96, 1.74], nat: [1.48, 2.13] };
 for (const [i, T] of [[0, VCOST1], [1, VCOST3]]) Object.defineProperty(T, 'glt', { get: () => (A.ctx && gltNat() ? GLT_COST.nat : GLT_COST.wk)[i], enumerable: true });
 const QP = {
-  1: { budget: MOBILE ? 14 : 22, maxv: 32, grainMax: MOBILE ? 80 : 128, overlap: MOBILE ? 16 : 24, os: MOBILE ? '2x' : '4x', rich: false, korDens: 1, cost: VCOST1 },
+  1: { base: MOBILE ? 14 : 22, budget: MOBILE ? 14 : 22, maxv: 32, grainMax: MOBILE ? 80 : 128, overlap: MOBILE ? 16 : 24, os: MOBILE ? '2x' : '4x', rich: false, korDens: 1, cost: VCOST1 },
   2: { base: MOBILE ? 24 : 40, budget: MOBILE ? 24 : 40, maxv: 64, grainMax: MOBILE ? 128 : 224, overlap: 24, os: '4x', rich: false, korDens: 1, cost: VCOST1 },
   3: { budget: 48, maxv: 96, grainMax: 640, overlap: 40, os: '4x', rich: true, korDens: 1.75, cost: VCOST3 },
 };

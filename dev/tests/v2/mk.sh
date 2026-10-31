@@ -21,7 +21,7 @@ for old in ["const ctx = new AC({ latencyHint: L });","try { ctx = new AC({ late
 assert n==1, n
 exp = "A, P, PD, CAP, N, SEQ, VIS, ENGINES, KS_CACHE, playNote, hit, ksBuffer, setParam, applyAll, initAudio, setFreeze, panic, updDelay, texture, spawnGrain, grainTick, seqStart, seqStop, seqTick, start, noteAt, buildNotes, touches, takes, loadValues, PRESETS, regenIR, korSource, tick, Voice, dspJob, toBuffer, preloadTextures, updBordun, onDown, onUp, onMove, frame, updMaster, seqTick, updBordun"
 extra = []
-if 'function applyQuality' in s: extra = ['applyQuality', 'calibrate', 'CAL', 'MIDI', 'midiNote', 'onMidi', 'QP', 'getQ: () => Q', 'getBudget: () => [VBUDGET, MAXV]', 'voiceLoad', 'warmKS', 'graphLatency', 'updDrive', 'recToggle', 'beatAt', 'timeAt', 'MIC', 'USERTEX']
+if 'function applyQuality' in s: extra = ['applyQuality', 'qBudgets', 'calibrate', 'CAL', 'MIDI', 'midiNote', 'onMidi', 'QP', 'getQ: () => Q', 'getBudget: () => [VBUDGET, MAXV]', 'voiceLoad', 'warmKS', 'graphLatency', 'updDrive', 'recToggle', 'beatAt', 'timeAt', 'MIC', 'USERTEX']
 else: extra = ['warmKS']
 if 'function midiIn(' in s: extra += ['midiIn', 'midiSource', 'midiDrop', 'midiSync', 'midiAllOff', 'midiRescan', 'midiSetPort', 'midiSetClockOut', 'chState', 'CLK', 'CLKO', 'MTARGETS', 'midiParam', 'portPref', 'setPortPref', 'seqBpm', 'ctxAt', 'perfAt', 'loadPreset', 'userPresets', 'UI', 'openPanel', 'midiId', 'sameDev', 'MIDI_SECONDARY', 'ctl', 'fmt']
 if 'function bleDecode(' in s: extra += ['BLE', 'bleCI', 'bleDecode', 'bleEncode', 'bleClock', 'bleClockNew', 'bleAsk', 'bleAdd', 'bleOff', 'bleForget', 'bleConnect', 'bleWhy', 'bleKind', 'bleDedupe', 'bleSend', 'bleFlushAll', 'midiPlat', 'midiHelp', 'blePairFix', 'bleOk', 'bleAgainTap', 'updDevUI', 'midiSrcOff', 'midiInit']
