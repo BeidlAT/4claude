@@ -52,11 +52,11 @@ function hxWegSet(L, weg, m, quiet) {
   hxWegApply(L, quiet);
   hxSaveMeta(L.id); hxCardDirty();
   if (typeof MX !== 'undefined') MX.dirtyStatic = true;
-  if (!quiet) hxSay(hxName(L) + ': ' + fxmWords(hxWegM(L)));
+  if (!quiet) hxSay(hxName(L) + ': ' + wfxWords(hxWegM(L)));
 }
 // the Hexenring's channel: every Schleife takes its way (and a new one plays Direkt – it is as it was recorded)
 function hxRouteAll(route) {
-  const m = route === 'dir' ? 0 : fxmOf('hxr');
+  const m = route === 'dir' ? 0 : wfxOf('hxr');
   for (const L of hxLoopsLive()) if (!L.bew && hxWegM(L) !== m) hxWegSet(L, m ? 'fx' : 'dir', m || null, true);
   if (MX.root) hxStripSync();
 }

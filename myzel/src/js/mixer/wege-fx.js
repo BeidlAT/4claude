@@ -9,13 +9,13 @@
 // The Schleifen of the Hexenring have knots of their own under their strips (hexenring/weg.js).
 
 // ---- the sound: a chain per set of effects, shared by the channels that use it ----
-const fxmOf = (k) => { if (!PD['x' + k + '.route'] || P['x' + k + '.route'] === 'dir') return 0; const m = Math.round(P['x' + k + '.fxm'] != null ? P['x' + k + '.fxm'] : FXM_ALL) & FXM_ALL; return m; };
-const fxmNames = (m) => MX_FX.filter((_, j) => m & (1 << j)).map((f) => f[1]);
-const fxmWords = (m) => (!m ? 'direkt in die Summe' : m === FXM_ALL ? 'durch die ganze Effektkette' : 'nur durch ' + fxmNames(m).join(' → '));
-const fxmText = (v) => { const m = Math.round(v) & FXM_ALL; return m === FXM_ALL ? 'alle' : m ? fxmNames(m).join(', ') : 'keiner'; };
+const wfxOf = (k) => { if (!PD['x' + k + '.route'] || P['x' + k + '.route'] === 'dir') return 0; const m = Math.round(P['x' + k + '.fxm'] != null ? P['x' + k + '.fxm'] : FXM_ALL) & FXM_ALL; return m; };
+const wfxNames = (m) => MX_FX.filter((_, j) => m & (1 << j)).map((f) => f[1]);
+const wfxWords = (m) => (!m ? 'direkt in die Summe' : m === FXM_ALL ? 'durch die ganze Effektkette' : 'nur durch ' + wfxNames(m).join(' → '));
+const wfxText = (v) => { const m = Math.round(v) & FXM_ALL; return m === FXM_ALL ? 'alle' : m ? wfxNames(m).join(', ') : 'keiner'; };
 // where a channel's dry path goes for a set of effects
-function fxmIn(m) { return !m ? A.masterSum : m === FXM_ALL ? A.voiceBus : fxmChain(m).in; }
-function fxmChain(m) {
+function wfxIn(m) { return !m ? A.masterSum : m === FXM_ALL ? A.voiceBus : wfxChain(m).in; }
+function wfxChain(m) {
   A.fxm = A.fxm || {};
   let c = A.fxm[m];
   if (c && c.in.context === A.ctx) return c;
@@ -26,31 +26,31 @@ function fxmChain(m) {
   c.from = {};
   for (const fx in A.send || {}) { const S = A.send[fx], g = G(S.mode === 'copy' ? 0 : 1); c.out.connect(g).connect(S.target); c.from[fx] = g; }
   A.fxm[m] = c;
-  fxmGc();
+  wfxGc();
   return c;
 }
 // chains no channel uses any more go after a while (each costs what the chain costs)
-function fxmGc() {
+function wfxGc() {
   clearTimeout(A.fxmGcT);
   A.fxmGcT = setTimeout(() => {
     if (!A.fxm) return;
-    const used = new Set(MIX.src.map((st) => fxmOf(st.k)));
+    const used = new Set(MIX.src.map((st) => wfxOf(st.k)));
     for (const m in A.fxm) if (!used.has(+m)) { const c = A.fxm[m]; try { c.out.disconnect(); } catch (e) {} A.chains = A.chains.filter((x) => x !== c); delete A.fxm[m]; }
   }, 4000);
 }
 
 // ---- the channels the Pult routes: its own (x<k>.route, x<k>.fxm) and the Schleifen ('hl:' + key) ----
-const fxmLoop = (k) => (k.startsWith('hl:') ? hxByKey(k.slice(3)) : null);
-function fxmGet(k) { const L = k.startsWith('hl:') ? fxmLoop(k) : null; return L ? hxWegM(L) : k === 'hxr' ? (P['xhxr.route'] === 'dir' ? 0 : Math.round(P['xhxr.fxm']) & FXM_ALL) : fxmOf(k); }
-function fxmSet(k, m) {
+const wfxLoop = (k) => (k.startsWith('hl:') ? hxByKey(k.slice(3)) : null);
+function wfxGet(k) { const L = k.startsWith('hl:') ? wfxLoop(k) : null; return L ? hxWegM(L) : k === 'hxr' ? (P['xhxr.route'] === 'dir' ? 0 : Math.round(P['xhxr.fxm']) & FXM_ALL) : wfxOf(k); }
+function wfxSet(k, m) {
   m &= FXM_ALL;
-  if (k.startsWith('hl:')) { const L = fxmLoop(k); if (L) hxWegSet(L, m ? 'fx' : 'dir', m || null); return; }
+  if (k.startsWith('hl:')) { const L = wfxLoop(k); if (L) hxWegSet(L, m ? 'fx' : 'dir', m || null); return; }
   if (m) setParam('x' + k + '.fxm', m);
   setParam('x' + k + '.route', m ? 'fx' : 'dir');
   MX.dirtyStatic = true;
 }
-const fxmName = (k) => (k.startsWith('hl:') ? (fxmLoop(k) ? hxName(fxmLoop(k)) : 'Schleife') : MXK[k] ? MXK[k].name : k);
-function fxmSay(k) { const m = fxmGet(k); return fxmName(k) + ': ' + (k === 'hxr' ? (m ? 'alle Schleifen ' : 'alle Schleifen ') + fxmWords(m) : fxmWords(m)); }
+const wfxName = (k) => (k.startsWith('hl:') ? (wfxLoop(k) ? hxName(wfxLoop(k)) : 'Schleife') : MXK[k] ? MXK[k].name : k);
+function wfxSay(k) { const m = wfxGet(k); return wfxName(k) + ': ' + (k === 'hxr' ? (m ? 'alle Schleifen ' : 'alle Schleifen ') + wfxWords(m) : wfxWords(m)); }
 
 // ---- the effect view ----
 const FXV = { j: -1, paint: null, hold: null };
@@ -62,44 +62,44 @@ function fxvSet(j) {
   mxTipFlash(MX.root, MX.beads && MX.beads[j], FXV.j >= 0 ? { n: MX_FX[j][1], v: 'Kanäle antippen oder überstreichen · Alt: nur dieser · Esc: zurück' } : { n: 'Wege', v: 'Überblick' });
 }
 // a knot pressed: in the overview the whole chain on or off (as always); in the effect view this effect for this channel
-function fxmPress(k, e) {
-  const m = fxmGet(k);
-  if (FXV.j < 0) { fxmSet(k, m ? 0 : FXM_ALL); fxmTell(k); return; }
+function wfxPress(k, e) {
+  const m = wfxGet(k);
+  if (FXV.j < 0) { wfxSet(k, m ? 0 : FXM_ALL); wfxTell(k); return; }
   const b = 1 << FXV.j;
   if (e && e.altKey) {   // only this channel goes through it
-    for (const kk of fxmKeys()) { const mm = fxmGet(kk), on = kk === k; if (!!(mm & b) !== on) fxmSet(kk, on ? mm | b : mm & ~b); }
-    fxmTell(k); return;
+    for (const kk of wfxKeys()) { const mm = wfxGet(kk), on = kk === k; if (!!(mm & b) !== on) wfxSet(kk, on ? mm | b : mm & ~b); }
+    wfxTell(k); return;
   }
   const on = !(m & b);
-  if (e && e.shiftKey) { FXV.hold = { k, m }; fxmSet(k, on ? m | b : m & ~b); fxmTell(k); return; }   // (only while held)
-  fxmSet(k, on ? m | b : m & ~b);
+  if (e && e.shiftKey) { FXV.hold = { k, m }; wfxSet(k, on ? m | b : m & ~b); wfxTell(k); return; }   // (only while held)
+  wfxSet(k, on ? m | b : m & ~b);
   FXV.paint = { on, seen: new Set([k]) };
-  fxmTell(k);
+  wfxTell(k);
 }
-function fxmPaintOver(k) {
+function wfxPaintOver(k) {
   const P0 = FXV.paint;
   if (!P0 || FXV.j < 0 || P0.seen.has(k)) return;
   P0.seen.add(k);
-  const b = 1 << FXV.j, m = fxmGet(k);
-  if (!!(m & b) !== P0.on) fxmSet(k, P0.on ? m | b : m & ~b);
-  fxmTell(k);
+  const b = 1 << FXV.j, m = wfxGet(k);
+  if (!!(m & b) !== P0.on) wfxSet(k, P0.on ? m | b : m & ~b);
+  wfxTell(k);
 }
-function fxmRelease() {
+function wfxRelease() {
   FXV.paint = null;
-  if (FXV.hold) { const H = FXV.hold; FXV.hold = null; fxmSet(H.k, H.m); fxmTell(H.k); }
+  if (FXV.hold) { const H = FXV.hold; FXV.hold = null; wfxSet(H.k, H.m); wfxTell(H.k); }
 }
-function fxmTell(k) { const B = fxmNode(k); if (B) { B.title = fxmSay(k); B.setAttribute('aria-label', fxmSay(k)); } if (MX.root) mxTipFlash(MX.root, B, { n: fxmName(k), v: fxmWords(fxmGet(k)) }); }
+function wfxTell(k) { const B = wfxNode(k); if (B) { B.title = wfxSay(k); B.setAttribute('aria-label', wfxSay(k)); } if (MX.root) mxTipFlash(MX.root, B, { n: wfxName(k), v: wfxWords(wfxGet(k)) }); }
 // every channel with a knot, in Pult order
-function fxmKeys() { const ks = MXC.filter((c) => c.kind !== 'sum' && c.kind !== 'ret' && c.kind !== 'puls' && !MX.ch[c.k].gone).map((c) => c.k); for (const S of (typeof HXMP !== 'undefined' && !HXMP.fold && HXMP.st) || []) ks.push('hl:' + S.key); return ks; }
-const fxmNode = (k) => (k.startsWith('hl:') ? FXL.nodes.get(k) : MX.ch[k] && MX.ch[k].node);
+function wfxKeys() { const ks = MXC.filter((c) => c.kind !== 'sum' && c.kind !== 'ret' && c.kind !== 'puls' && !MX.ch[c.k].gone).map((c) => c.k); for (const S of (typeof HXMP !== 'undefined' && !HXMP.fold && HXMP.st) || []) ks.push('hl:' + S.key); return ks; }
+const wfxNode = (k) => (k.startsWith('hl:') ? FXL.nodes.get(k) : MX.ch[k] && MX.ch[k].node);
 // the stroke across the knots: whatever knot the pointer is over (buttons do not get the moves of another's press)
-function fxmWire(row) {
+function wfxWire(row) {
   row.addEventListener('pointermove', (e) => {
     if (!FXV.paint) return;
     const el = document.elementFromPoint(e.clientX, e.clientY), b = el && el.closest && el.closest('[data-fxk]');
-    if (b) fxmPaintOver(b.dataset.fxk);
+    if (b) wfxPaintOver(b.dataset.fxk);
   });
-  window.addEventListener('pointerup', fxmRelease); window.addEventListener('pointercancel', fxmRelease);
+  window.addEventListener('pointerup', wfxRelease); window.addEventListener('pointercancel', wfxRelease);
   window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && FXV.j >= 0 && MX.open) { e.preventDefault(); fxvSet(FXV.j); } });
 }
 
@@ -111,8 +111,8 @@ function fxlSync() {
   for (const [k, b] of FXL.nodes) if (!want.has(k)) { b.remove(); FXL.nodes.delete(k); }
   for (const k of want) if (!FXL.nodes.has(k)) {
     const b = h('button', { type: 'button', class: 'mx-node fxl-node', 'data-fxk': k });
-    b.addEventListener('pointerdown', (e) => { if (e.button) return; e.preventDefault(); fxmPress(k, e); });
-    b.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fxmPress(k, e); fxmRelease(); } });
+    b.addEventListener('pointerdown', (e) => { if (e.button) return; e.preventDefault(); wfxPress(k, e); });
+    b.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); wfxPress(k, e); wfxRelease(); } });
     MX.row.append(b); FXL.nodes.set(k, b);
   }
   // the geometry: each loop strip's stem centre and foot, in the row's coordinates (the rails' canvas shares them)
@@ -123,7 +123,7 @@ function fxlSync() {
     if (!b || !L || !r.width) continue;
     const cx = r.left - rr.left + r.width / 2, yb = r.bottom - rr.top;
     Object.assign(b.style, { left: (cx - 22).toFixed(1) + 'px', top: (MX.yK - 22 + MX.top * 0).toFixed(1) + 'px', height: Math.max(30, MX.yD - MX.yK + 44) + 'px' });
-    b.title = fxmSay(k); b.setAttribute('aria-label', fxmSay(k));
+    b.title = wfxSay(k); b.setAttribute('aria-label', wfxSay(k));
     FXL.geo.push({ k, cx, yb, col: S.col ? S.col() : '#e9a35e', S, L });
   }
 }
@@ -169,7 +169,7 @@ function mxLoopSpores(c, dt, x0, x1) {
   }
   c.globalCompositeOperation = 'lighter';
   for (let i = FXLP.length - 1; i >= 0; i--) {
-    const Q = FXLP[i], G2 = Q.G, fm = fxmGet(G2.k), ry = fm ? MX.yK : MX.yD, y0 = G2.yb + 4, dn = ry - y0, L = dn + Math.max(0, MX.railEnd - G2.cx);
+    const Q = FXLP[i], G2 = Q.G, fm = wfxGet(G2.k), ry = fm ? MX.yK : MX.yD, y0 = G2.yb + 4, dn = ry - y0, L = dn + Math.max(0, MX.railEnd - G2.cx);
     Q.d += Q.v * dt;
     if (Q.d >= L || !FXL.nodes.has(G2.k)) { FXLP.splice(i, 1); continue; }
     const d = Q.d, x = d < dn ? G2.cx : G2.cx + d - dn;

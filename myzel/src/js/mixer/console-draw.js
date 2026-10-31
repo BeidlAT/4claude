@@ -41,7 +41,7 @@ function mxStatic() {
   c.lineCap = 'round';
   for (const cc of MXC) {
     if (cc.kind === 'sum' || cc.kind === 'puls' || MX.ch[cc.k].gone) continue;
-    const S = MX.ch[cc.k], g = S.g, fm = cc.kind === 'ret' ? 0 : fxmGet(cc.k), dir = !fm, ry = dir ? yD : yK;
+    const S = MX.ch[cc.k], g = S.g, fm = cc.kind === 'ret' ? 0 : wfxGet(cc.k), dir = !fm, ry = dir ? yD : yK;
     const y0 = g.yb + 9, a = S.dorm || S.srcoff ? 0.1 : 0.34;
     c.strokeStyle = mxRgba(cc.rgb, a); c.lineWidth = 1.1;
     c.beginPath(); c.moveTo(g.cx, y0); c.bezierCurveTo(g.cx - 2, y0 + (ry - y0) * 0.4, g.cx + 2, y0 + (ry - y0) * 0.7, g.cx, ry); c.stroke();
@@ -57,7 +57,7 @@ function mxStatic() {
   // (31.10.2026) the Schleifen's knots, under their strips in the group „Schleifen“ (wege-fx.js, hexenring/weg.js)
   fxlSync();
   for (const G2 of FXL.geo) {
-    const fm = fxmGet(G2.k), ry = fm ? yK : yD, rgb = mxRgb(G2.col), y0 = G2.yb + 4;
+    const fm = wfxGet(G2.k), ry = fm ? yK : yD, rgb = mxRgb(G2.col), y0 = G2.yb + 4;
     c.strokeStyle = mxRgba(rgb, 0.3); c.lineWidth = 1.1;
     c.beginPath(); c.moveTo(G2.cx, y0); c.bezierCurveTo(G2.cx - 2, y0 + (ry - y0) * 0.4, G2.cx + 2, y0 + (ry - y0) * 0.7, G2.cx, ry); c.stroke();
     c.strokeStyle = 'rgba(240,230,216,.22)'; c.lineWidth = 1; c.beginPath(); c.arc(G2.cx, fm ? yD : yK, 3.2, 0, MX_TAU); c.stroke();
@@ -177,7 +177,7 @@ function mxPaths() {
   for (const cc of MXC) {
     const g = MX.ch[cc.k].g, p = MX_PATHS[cc.i] || (MX_PATHS[cc.i] = new Float32Array(6));
     if (!g || MX.ch[cc.k].gone) continue;
-    const fm = cc.kind === 'ret' ? 0 : fxmGet(cc.k), ry = fm ? MX.yK : MX.yD, y0 = g.yb + 9;
+    const fm = cc.kind === 'ret' ? 0 : wfxGet(cc.k), ry = fm ? MX.yK : MX.yD, y0 = g.yb + 9;
     p[0] = g.cx; p[1] = y0; p[2] = ry; p[3] = ry - y0; p[4] = MX.railEnd - g.cx; p[5] = fm;
   }
 }

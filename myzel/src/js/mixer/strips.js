@@ -84,8 +84,8 @@ function gates(st, set) {
 }
 // dry path: through the insert chain or straight into the sum; a move fades the channel out and back in
 function wireStrip(st) {
-  // (31.10.2026) a channel on „Kette“ with only some of its effects: into the chain of just those (fxmIn – wege-fx.js)
-  const want = () => (st.k === 'hxr' ? hxRoute() : st.k === 'fx' ? (P['fx.weg'] === 'kette' ? fxKetteIn() : A.masterSum) : st.ret ? A.masterSum : fxmIn(fxmOf(st.k)));   // Hexenring: never into A.masterSum; Wandel: its own way (effekt.js)
+  // (31.10.2026) a channel on „Kette“ with only some of its effects: into the chain of just those (wfxIn – wege-fx.js)
+  const want = () => (st.k === 'hxr' ? hxRoute() : st.k === 'fx' ? (P['fx.weg'] === 'kette' ? fxKetteIn() : A.masterSum) : st.ret ? A.masterSum : wfxIn(wfxOf(st.k)));   // Hexenring: never into A.masterSum; Wandel: its own way (effekt.js)
   if (st.dTo === want()) return;
   if (st.k === 'hxr' && IDLE.hxOff) hxGates(true);   // Ruhe: through the chain's copy, the processor's zeros run as before
   if (!st.dTo) { st.dTo = want(); st.dry.connect(st.dTo); return; }
@@ -110,7 +110,7 @@ function updSends(inst) {
   if (!A.send || !MIX.src.length) return;
   for (const fx of ['dly', 'rev', ...FX_RETS.map((x) => x[0])]) {
     const S = A.send[fx], node = (st) => (fx === 'dly' ? st.eS : fx === 'rev' ? st.hS : st.fS[fx]);
-    const viaFx = (st) => st.k !== 'hxr' && fxmOf(st.k) > 0;   // (Hexenring: its sends take its own signal)
+    const viaFx = (st) => st.k !== 'hxr' && wfxOf(st.k) > 0;   // (Hexenring: its sends take its own signal)
     const copy = MIX.src.some((st) => viaFx(st) && (mp('x' + st.k + '.' + fx) !== 1 || st.dryOff));
     // (31.10.2026) a copy per set of effects: a channel through only some of them sends what comes out of just those
     const cp = (m) => {
@@ -123,8 +123,8 @@ function updSends(inst) {
       if (m === FXM_ALL) { S.copy = C; S.fromCopy = C.from; } else S.copies[m] = C;
       return C;
     };
-    if (copy) for (const st of MIX.src) if (viaFx(st)) cp(fxmOf(st.k));
-    for (const st of MIX.src) sendTo(st, fx, node(st), !viaFx(st) ? S.target : copy ? cp(fxmOf(st.k)).in : null);
+    if (copy) for (const st of MIX.src) if (viaFx(st)) cp(wfxOf(st.k));
+    for (const st of MIX.src) sendTo(st, fx, node(st), !viaFx(st) ? S.target : copy ? cp(wfxOf(st.k)).in : null);
     if (copy !== (S.mode === 'copy')) {
       S.mode = copy ? 'copy' : 'fx';
       const set = inst ? setNow : (q, v) => setP(q, v, 0.01);

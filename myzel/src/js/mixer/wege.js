@@ -19,7 +19,7 @@ function mxdBuildWege() {
   W.rDir.title = 'Direkt in die Summe – Echo und Hall bekommen den Kanal trocken';
   W.route = h('div', { class: 'mxd-route', role: 'radiogroup', 'aria-label': 'Weg in die Summe' }, W.rFx, W.rDir);
   // (31.10.2026) on Kette: which of the chain's effects – a chip each (wege-fx.js; the same as the effect view in the Pult)
-  W.fxc = MX_FX.map(([, name, ini], j) => h('button', { type: 'button', class: 'chip', 'aria-pressed': 'false', title: name, onclick: () => { const k = MXD.k, m = fxmGet(k), b = 1 << j; fxmSet(k, m & b ? m & ~b : m | b); } }, ini + ' ' + name));
+  W.fxc = MX_FX.map(([, name, ini], j) => h('button', { type: 'button', class: 'chip', 'aria-pressed': 'false', title: name, onclick: () => { const k = MXD.k, m = wfxGet(k), b = 1 << j; wfxSet(k, m & b ? m & ~b : m | b); } }, ini + ' ' + name));
   W.fxRow = h('div', { class: 'chips small mxd-fxc', role: 'group', 'aria-label': 'Effekte im Weg' }, ...W.fxc);
   W.route.addEventListener('keydown', (e) => {
     if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
@@ -92,10 +92,10 @@ function mxdWegeText(k) {
     W.rFx.setAttribute('aria-checked', String(r !== 'dir')); W.rDir.setAttribute('aria-checked', String(r === 'dir'));
     W.rFx.tabIndex = r !== 'dir' ? 0 : -1; W.rDir.tabIndex = r === 'dir' ? 0 : -1;
     const fx = [['drv.mix', 'Verzerrung'], ['rng.mix', 'Ring'], [null, 'Filter'], ['pha.mix', 'Phaser'], ['cho.mix', 'Schweben']].filter(([id]) => !id || P[id] > 0).map((x) => x[1]);
-    const fm = fxmGet(k) || (Math.round(P['x' + k + '.fxm']) & FXM_ALL);
+    const fm = wfxGet(k) || (Math.round(P['x' + k + '.fxm']) & FXM_ALL);
     W.fxc.forEach((b, j) => b.setAttribute('aria-pressed', String(r !== 'dir' && !!(fm & (1 << j)))));
-    W.rFx.lastChild.textContent = fm !== FXM_ALL && r !== 'dir' ? 'nur ' + fxmNames(fm).join(', ') : fx.length > 3 ? 'durch ' + fx.length + ' Effekte' : 'durch ' + fx.join(', ');
-    W.rFx.title = 'Durch die Effektkette: ' + (fm !== FXM_ALL ? fxmNames(fm).join(' → ') : fx.join(', '));
+    W.rFx.lastChild.textContent = fm !== FXM_ALL && r !== 'dir' ? 'nur ' + wfxNames(fm).join(', ') : fx.length > 3 ? 'durch ' + fx.length + ' Effekte' : 'durch ' + fx.join(', ');
+    W.rFx.title = 'Durch die Effektkette: ' + (fm !== FXM_ALL ? wfxNames(fm).join(' → ') : fx.join(', '));
   }
   if (c.kind === 'lane') { W.grpV.textContent = P['mix.pulsMute'] ? 'stumm' : mxDbTxt(P['mix.pulsVol']) + ' dB'; W.grp.setAttribute('aria-label', 'über Puls gesamt: ' + W.grpV.textContent + ' – öffnen'); }
 }

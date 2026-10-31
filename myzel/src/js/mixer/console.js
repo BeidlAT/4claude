@@ -75,7 +75,7 @@ function mxBuildPult(host) {
   // the five beads of the chain rail name themselves under the mouse (they are drawn on the still layer)
   // (31.10.2026) a tap on one: the effect view – which channels go through it (wege-fx.js)
   MX.beads = MX_FX.map(([, name], i) => { const b = h('button', { type: 'button', class: 'mx-bead', 'aria-pressed': 'false', 'aria-label': name + ': welche Kanäle hindurchgehen' }); b.dataset.n = name; b.addEventListener('click', () => fxvSet(i)); row.append(b); return b; });
-  fxmWire(row);
+  wfxWire(row);
   scroll.append(row);
   host.append(scroll);
   // a press inside the rack selects without scrolling – the strip must not slide away under the finger
@@ -261,13 +261,13 @@ function mxNode(c) {
   const k = c.k, id = 'x' + k + '.route';
   // (31.10.2026) pressed: the whole chain on or off – in the effect view that one effect (wege-fx.js); a stroke paints
   const b = h('button', { type: 'button', class: 'mx-node', role: 'switch', 'data-pid': id, 'data-fxk': k });
-  b.addEventListener('pointerdown', (e) => { if (e.button) return; e.preventDefault(); fxmPress(k, e); });
-  b.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fxmPress(k, e); fxmRelease(); } });
-  if (PD['x' + k + '.fxm']) bindCtl('x' + k + '.fxm', () => { MX.dirtyStatic = true; b.title = fxmSay(k); });
+  b.addEventListener('pointerdown', (e) => { if (e.button) return; e.preventDefault(); wfxPress(k, e); });
+  b.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); wfxPress(k, e); wfxRelease(); } });
+  if (PD['x' + k + '.fxm']) bindCtl('x' + k + '.fxm', () => { MX.dirtyStatic = true; b.title = wfxSay(k); });
   bindCtl(id, (v) => {
     b.setAttribute('aria-checked', String(v === 'dir'));
     b.setAttribute('aria-label', c.name + ': direkt in die Summe, an der Effektkette vorbei');
-    b.title = fxmSay(k) + ' – tippen zum Umschalten; ein Effekt rechts (V R F P S) wählt ihn einzeln';
+    b.title = wfxSay(k) + ' – tippen zum Umschalten; ein Effekt rechts (V R F P S) wählt ihn einzeln';
     MX.dirtyStatic = true;
   });
   MX.ch[k].node = b;

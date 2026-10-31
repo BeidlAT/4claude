@@ -16,10 +16,10 @@ const { open, ok, close } = require('./hm');
     const f = new Float32Array(A.analyser.frequencyBinCount), bin = A.ctx.sampleRate / A.analyser.fftSize;
     const h3 = async () => { await sl(500); let a = -999, b = -999; for (let n = 0; n < 6; n++) { A.analyser.getFloatFrequencyData(f); const pk = (hz) => { const i = Math.round(hz / bin); return Math.max(f[i - 1], f[i], f[i + 1]); }; a = Math.max(a, pk(440)); b = Math.max(b, pk(1320)); await sl(60); } return +(b - a).toFixed(1); };
     o.all = await h3();
-    M.fxmSet('fin', 1); o.v = await h3(); o.vIn = M.MIX.s.fin.dTo === (A.fxm && A.fxm[1] && A.fxm[1].in);
-    M.fxmSet('fin', 4); o.f = await h3(); o.fIn = M.MIX.s.fin.dTo === (A.fxm && A.fxm[4] && A.fxm[4].in);
-    M.fxmSet('fin', 0); o.d = await h3(); o.dRoute = M.P['xfin.route'];
-    M.fxmSet('fin', 31); o.back = await h3(); o.bIn = M.MIX.s.fin.dTo === A.voiceBus;
+    M.wfxSet('fin', 1); o.v = await h3(); o.vIn = M.MIX.s.fin.dTo === (A.fxm && A.fxm[1] && A.fxm[1].in);
+    M.wfxSet('fin', 4); o.f = await h3(); o.fIn = M.MIX.s.fin.dTo === (A.fxm && A.fxm[4] && A.fxm[4].in);
+    M.wfxSet('fin', 0); o.d = await h3(); o.dRoute = M.P['xfin.route'];
+    M.wfxSet('fin', 31); o.back = await h3(); o.bIn = M.MIX.s.fin.dTo === A.voiceBus;
     osc.stop(); M.setParam('drv.mix', 0); M.setParam('drv.amt', 0.35);
     return o;
   });
@@ -29,7 +29,7 @@ const { open, ok, close } = require('./hm');
   // the Pult
   await page.evaluate(async () => { const M = window.__M; M.openPanel('mix'); await window.__sleep(500); if (M.mxSetView) M.mxSetView('pult'); await window.__sleep(700); });
   const box = async (sel) => page.evaluate((s) => { const e = document.querySelector(s); if (!e) return null; e.scrollIntoView({ block: 'nearest', inline: 'nearest' }); const b = e.getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2]; }, sel);
-  const mask = (k) => page.evaluate((k) => window.__M.fxmGet(k), k);
+  const mask = (k) => page.evaluate((k) => window.__M.wfxGet(k), k);
   const u = {};
   const fB = await box('.mx-bead[data-n="Filter"]');
   u.bead = !!fB;
@@ -40,7 +40,7 @@ const { open, ok, close } = require('./hm');
   const a = await box('[data-fxk="eb2"]'), b = await box('[data-fxk="eb3"]');
   if (a && b) { await page.mouse.move(a[0], a[1]); await page.mouse.down(); await page.mouse.move((a[0] + b[0]) / 2, a[1], { steps: 4 }); await page.mouse.move(b[0], b[1], { steps: 4 }); await page.mouse.up(); await page.waitForTimeout(150); u.eb2 = await mask('eb2'); u.eb3 = await mask('eb3'); }
   // Alt-click Klang: only it goes through the Filter
-  if (n0) { await page.keyboard.down('Alt'); await page.mouse.click(n0[0], n0[1]); await page.keyboard.up('Alt'); await page.waitForTimeout(150); u.only = await page.evaluate(() => window.__M.fxmKeys().filter((k) => window.__M.fxmGet(k) & 4)); }
+  if (n0) { await page.keyboard.down('Alt'); await page.mouse.click(n0[0], n0[1]); await page.keyboard.up('Alt'); await page.waitForTimeout(150); u.only = await page.evaluate(() => window.__M.wfxKeys().filter((k) => window.__M.wfxGet(k) & 4)); }
   await page.keyboard.press('Escape'); await page.waitForTimeout(150); u.esc = await page.evaluate(() => window.__M.FXV.j);
   if (n0) { await page.mouse.click(n0[0], n0[1]); await page.waitForTimeout(150); u.ov = await mask('fin'); await page.mouse.click(n0[0], n0[1]); await page.waitForTimeout(150); u.ov2 = await mask('fin'); }
   await page.screenshot({ path: __dirname + '/out/wege-fx.png' });
