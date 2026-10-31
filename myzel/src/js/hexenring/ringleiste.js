@@ -35,6 +35,22 @@ function hxLadeAdd(L, S) {
   if (!HXLD.on) { HXLD.on = true; HXLD.t0 = now; HXLD.est = 0; HXLD.ids.clear(); HXLD.endT = 0; }
   if (!HXLD.ids.has(S.id)) { const e = Math.max(0.4, hxWPredict(L, S, hxLen(L) + hxWTailEst(S))); HXLD.ids.set(S.id, { L: L.key, e }); HXLD.est += e; }
 }
+// (owner, 31.10.2026: „eine Option, um die Schleifen-Generierung zu beenden – rechts ein X“) every render under the bar
+// is let go: what comes back later is not played, the same wish is not asked again until something changes it; the
+// Schleifen play on what they played (their Abdruck or an earlier version)
+function hxLadeCancel() {
+  if (!HXLD.on) return;
+  let n = 0;
+  for (const [id, o] of HXLD.ids) {
+    const S = HX.sch.get(id), L = hxByKey(o.L); if (!S || !L) continue;
+    if (S.wBusy || S.wAgain) { n++; S.wSkip = S.wBusy || hxWSig(L, S); S.wGen = (S.wGen || 0) + 1; S.wBusy = null; S.wAgain = null; }
+  }
+  HXLD.on = false; HXLD.endT = performance.now() - 1200; HXLD.ids.clear();
+  const el = HXU.lade; if (el) { el.querySelector('.t').textContent = 'Abgebrochen'; el.classList.add('fertig'); }
+  hxwLog('lade:abgebrochen:' + n);
+  hxSay(n ? 'Neuer Klang abgebrochen – die Schleifen spielen weiter wie bisher' : 'Nichts mehr zu laden');
+  hxCardDirty(); hxRailDirty();
+}
 function hxLadeFrame() {
   const el = HXU.lade; if (!el) return;
   const now = performance.now();
@@ -42,12 +58,15 @@ function hxLadeFrame() {
   if (now - HXLD.drawT < 120) return;
   HXLD.drawT = now;
   let n = 0, done = 0; const loops = new Set();
-  for (const [id, o] of HXLD.ids) { n++; const S = HX.sch.get(id), L = hxByKey(o.L); if (!S || !L || L.state === 'weg' || !(S.wBusy || S.wAgain)) done++; else loops.add(L.slot + 1); }
-  if (done >= n) { HXLD.on = false; HXLD.endT = now; el.querySelector('.t').textContent = 'Neuer Klang da'; el.querySelector('i').style.width = '100%'; el.setAttribute('aria-valuenow', '100'); el.classList.add('fertig'); return; }
+  // (31.10.2026: „bleibt stecken“ – measured: 120 s at „0 von 2“ with nothing rendering) a Schicht is done once no render of it
+  // runs: a wish left behind (wAgain) by an update that went another way (Live, a creation playing) is no render – it is
+  // dropped here, else the bar waited for it for ever
+  for (const [id, o] of HXLD.ids) { n++; const S = HX.sch.get(id), L = hxByKey(o.L); if (S && !S.wBusy && S.wAgain) S.wAgain = null; if (!S || !L || L.state === 'weg' || !S.wBusy) done++; else loops.add(L.slot + 1); }
+  if (done >= n) { HXLD.on = false; HXLD.endT = now; el.querySelector('.t').textContent = 'Neuer Klang da'; el.querySelector('i').style.width = '100%'; el.querySelector('.p').setAttribute('aria-valuenow', '100'); el.classList.add('fertig'); return; }
   const x = (now - HXLD.t0) / 1000 / Math.max(0.4, HXLD.est), p = Math.max(done / n, x < 1 ? 0.9 * x : 0.9 + 0.09 * (1 - Math.exp(-(x - 1))));
   el.classList.remove('fertig'); el.hidden = false;
   el.querySelector('.t').textContent = 'Neuer Klang wird geladen: ' + (loops.size > 1 ? 'Schleifen ' : 'Schleife ') + [...loops].sort((a, b) => a - b).join(', ') + (n > 1 ? ' · ' + done + ' von ' + n + ' fertig' : '');
-  el.querySelector('i').style.width = Math.round(100 * p) + '%'; el.setAttribute('aria-valuenow', String(Math.round(100 * p)));
+  el.querySelector('i').style.width = Math.round(100 * p) + '%'; el.querySelector('.p').setAttribute('aria-valuenow', String(Math.round(100 * p)));
 }
 // a keyboard press (Enter or Space: a click without a pointer, detail 0) acts on click – the buttons that act at the press
 // act on pointerdown. Chromium also sends a click with detail 0 after a touch tap that changed the layout (UI audit B1,
@@ -62,6 +81,7 @@ function hxRailBuild() {
   if (!rail || HXU.rail) return;
   HXU.rail = rail; HXU.cv = $('#hxCv'); HXU.cx = HXU.cv.getContext('2d');
   HXU.korb = $('#hxKorb'); HXU.haupt = $('#hxHaupt'); HXU.mid = $('#hxMid'); HXU.pg = $('#hxPg'); HXU.undo = $('#hxUndo'); HXU.redo = $('#hxRedo'); HXU.fold = $('#hxFold'); HXU.live = $('#hxLive'); HXU.coach = $('#hxCoach'); HXU.msg = $('#hxMsg'); HXU.lade = $('#hxLade');
+  if (HXU.lade) HXU.lade.querySelector('.x').addEventListener('click', hxLadeCancel);   // (31.10.2026: abbrechen)
   HXU.form = $('#hxForm');   // (step 1d)
   HXU.len = $('#hxLen'); HXU.lenPop = $('#hxLenPop'); hxLenBuild();   // (owner, 25.10.2026: the length of a new loop)
   const ringBox = h('div', { class: 'hx-rings' });

@@ -9,6 +9,7 @@ function selectChannel(k) {
   if (!MXK[k]) return;
   if (MX.sel !== k) MX.sendT = performance.now();
   MX.sel = k;
+  if (typeof wfxAim === 'function') wfxAim(k, true);   // (31.10.2026: the beads V R F P S work on the channel selected)
   for (const key of mxViewKeys()) { const v = MXV.views[key]; if (v.select && v.built) v.select(k); }
   if (MX.open && MX.view === 'pult' && performance.now() - (MX.ptrT || 0) > 600) mxScrollTo(k, true);
 }

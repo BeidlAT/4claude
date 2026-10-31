@@ -63,6 +63,8 @@ function hxWerk(R0) {
       R.frame = null; R.port = null;
       for (const w of R.wait.values()) w(null);
       R.wait.clear(); res(false); hxCardDirty();
+      // (31.10.2026) a boot that failed for a passing reason (too slow while the page was busy, no answer) may try again
+      if (why !== 'ort' && why !== 'rahmen') setTimeout(() => { if (R.st === 'kein' && R.why === why && !(R.kills && R.kills.length >= 3)) { R.p = null; R.st = ''; hxwLog('rahmen-nochmal:' + why); } }, 20000);
     };
     let url = '';
     try { if (!/^(https?|file):$/.test(location.protocol)) throw new Error('ort'); const u = new URL(location.href); u.hash = ''; u.searchParams.set('werk', '1'); url = u.href; } catch (e) { fail('ort'); return; }
@@ -173,14 +175,36 @@ function hxwNs(ctx, pre, tap, port, n, body, from) {
 // (seeded, built afresh), so the sound does not change.
 const HX_WRENEW = +(window.__hxRenew || 0) || 12;   // (window.__hxRenew: tests only)
 const HX_WRENEW_S = 90;   // (… or this many seconds after its first render)
+// (owner, 31.10.2026: „die Neugenerierung bleibt stecken … sorge dafür, dass sie immer zuverlässig passiert“) a realm that
+// does not answer a job within its time (20 s and 8 s per second of audio – far beyond any render seen) is taken down and
+// booted afresh at its next job: every job still waiting on it gets its answer (none), so nothing waits for ever. A realm
+// that keeps hanging (three times in two minutes) stays down – the Schleifen play on as they did.
+function hxwKill(R, why) {
+  const now = performance.now();
+  R.kills = (R.kills || []).filter((t) => now - t < 120000); R.kills.push(now);
+  hxwLog('rahmen-haengt:' + why + (R.kills.length >= 3 ? ':bleibt-aus' : ':neu'));
+  const waits = [...R.wait.values()];
+  try { if (R.port) R.port.close(); } catch (e) {}
+  try { if (R.frame) R.frame.remove(); } catch (e) {}
+  if (R.wid != null) hxPost({ wportOff: R.wid });
+  for (const S of HX.sch.values()) if (S.wRe) for (const k in S.wRe) if (S.wRe[k] === R) delete S.wRe[k];
+  if (R.kills.length >= 3) Object.assign(R, { st: 'kein', why: 'haengt', p: Promise.resolve(false), frame: null, port: null, wait: new Map(), n: 0 });
+  else Object.assign(R, { st: '', p: null, frame: null, port: null, wait: new Map(), n: 0, used: 0, old: false, ms: [] });
+  for (const w of waits) w(null);
+  hxCardDirty();
+}
+const hxwLimit = (job, d) => { const sec = d && (d.dur || (d.n && d.sr ? d.n / d.sr : 0)) || 10; return (20000 + 8000 * Math.max(1, Math.min(600, sec))) * (HXW.limK || 1); };   // (limK: tests shorten it)
 function hxwCall(job, d, tr, R0) {
   const R = R0 || HXW;
   if (job === 'wuchs' || job === 'bake' || job === 'tail') { if (!R.used) R.t0 = performance.now(); R.used = (R.used || 0) + 1; if (R.used >= HX_WRENEW && !R.old) { R.old = true; R.oldT = performance.now(); } }
   return hxWerk(R).then((ok) => new Promise((res) => {
     if (!ok || !R.port) { hxwLog(job + ':kein-rahmen(' + (R.why || R.st) + ')'); res(null); return; }
     const id = ++R.id;
-    R.wait.set(id, res);
-    try { R.port.postMessage(Object.assign({ job, id }, d), tr || []); } catch (e) { hxwLog(job + ':senden:' + ((e && e.message) || e)); R.wait.delete(id); res(null); }
+    // (an answer that does not come within its time: the realm hangs – hxwKill answers every waiting job, this one too)
+    const tm = job === 'warm' ? 0 : setTimeout(() => { if (R.wait.get(id) === done) { hxwLog(job + ':keine-antwort:' + Math.round(hxwLimit(job, d) / 1000) + 's'); hxwKill(R, job); } }, hxwLimit(job, d));
+    const done = (m) => { clearTimeout(tm); res(m); };
+    R.wait.set(id, done);
+    try { R.port.postMessage(Object.assign({ job, id }, d), tr || []); } catch (e) { hxwLog(job + ':senden:' + ((e && e.message) || e)); R.wait.delete(id); done(null); }
   }));
 }
 

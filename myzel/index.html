@@ -897,7 +897,15 @@ body.mlearn #stage::after { content: ""; position: absolute; inset: 0; backgroun
 @keyframes hxBlitz { from { opacity: 1; } to { opacity: 0; } }
 /* (owner, 29.10.2026: „es macht nichts wenn es laden muss – dann einen Ladebalken, damit man sich auskennt“) the loops
    rendering a new sound: how far, how many done – over the rail, at its left (the message line keeps the middle) */
-.hx-lade { position: absolute; left: 8px; bottom: calc(100% + 6px); width: min(300px, calc(100% - 16px)); padding: 6px 10px 7px; border-radius: 10px; background: rgba(17, 13, 11, .94); border: 1px solid var(--line); color: var(--hypha); font: 500 12px/1.3 var(--font-ui); pointer-events: none; z-index: 3; box-shadow: 0 4px 18px rgba(0, 0, 0, .45); transition: opacity .3s; }
+.hx-lade { position: absolute; left: 8px; bottom: calc(100% + 6px); width: min(300px, calc(100% - 16px)); padding: 6px 10px 7px; border-radius: 10px; background: rgba(17, 13, 11, .94); border: 1px solid var(--line); color: var(--hypha); font: 500 12px/1.3 var(--font-ui); pointer-events: none; z-index: 3; box-shadow: 0 4px 18px rgba(0, 0, 0, .45); transition: opacity .3s; display: flex; align-items: center; gap: 8px; }
+.hx-lade[hidden] { display: none; }
+.hx-lade .p { display: block; flex: 1; min-width: 0; }
+/* (31.10.2026) abbrechen: the one part of the bar that takes a press */
+.hx-lade .x { pointer-events: auto; flex: none; width: 28px; height: 28px; margin: -4px -4px -4px 0; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--dim); font: 500 14px/1 var(--font-ui); cursor: pointer; }
+.hx-lade .x:hover { color: var(--hypha); background: rgba(240, 230, 216, .06); }
+.hx-lade .x:focus-visible { outline: 2px solid var(--lumen); outline-offset: -2px; }
+.hx-lade.fertig .x { visibility: hidden; }
+@media (pointer: coarse) { .hx-lade .x { width: 40px; height: 40px; margin: -10px -8px -10px 0; } }
 .hx-lade .t { display: block; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hx-lade .b { display: block; height: 5px; border-radius: 3px; background: var(--bark-2); overflow: hidden; }
 .hx-lade .b i { display: block; height: 100%; width: 0; border-radius: 3px; background: var(--lumen); transition: width .25s linear; }
@@ -2479,7 +2487,7 @@ input[type=range].dragging::-moz-range-thumb, input[type=range]:active::-moz-ran
       <button type="button" class="hxb hx-fold" id="hxFold" aria-label="Ringleiste einklappen" tabindex="-1"></button>
       <div class="hx-vh" id="hxLive" aria-live="polite"></div>
       <div class="hx-msg" id="hxMsg" aria-hidden="true"></div>
-      <div class="hx-lade" id="hxLade" role="progressbar" aria-label="Schleifen laden den neuen Klang" aria-valuemin="0" aria-valuemax="100" hidden><span class="t"></span><span class="b"><i></i></span></div>
+      <div class="hx-lade" id="hxLade" hidden><span class="p" role="progressbar" aria-label="Schleifen laden den neuen Klang" aria-valuemin="0" aria-valuemax="100"><span class="t"></span><span class="b"><i></i></span></span><button type="button" class="x" aria-label="Neuen Klang der Schleifen abbrechen" title="Abbrechen – die Schleifen spielen weiter wie bisher">✕</button></div>
       <div class="hx-lenpop" id="hxLenPop" role="dialog" aria-label="Neue Schleife: Länge, Tempo, Einzählen und Klick" hidden></div>
     </div>
     </div>
@@ -25585,8 +25593,8 @@ function mxBuildPult(host) {
     if (g === 'spiel' && typeof hxmPultGroup === 'function') row.append(hxmPultGroup());   // (owner, 26.10.2026: the Schleifen one by one, beside the Hexenring)
   }
   // the five beads of the chain rail name themselves under the mouse (they are drawn on the still layer)
-  // (31.10.2026) a tap on one: the effect view – which channels go through it (wege-fx.js)
-  MX.beads = MX_FX.map(([, name], i) => { const b = h('button', { type: 'button', class: 'mx-bead', 'aria-pressed': 'false', 'aria-label': name + ': welche Kanäle hindurchgehen' }); b.dataset.n = name; b.addEventListener('click', () => fxvSet(i)); row.append(b); return b; });
+  // (31.10.2026) the switches of the channel being worked on (wege-fx.js)
+  MX.beads = MX_FX.map(([, name], i) => { const b = h('button', { type: 'button', class: 'mx-bead', 'aria-pressed': 'false', 'aria-label': name }); b.dataset.n = name; b.addEventListener('pointerdown', (e) => { if (e.button) return; e.preventDefault(); wfxBead(i, e); }); b.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); wfxBead(i, e); wfxRelease(); } }); row.append(b); return b; });
   wfxWire(row);
   scroll.append(row);
   host.append(scroll);
@@ -25771,10 +25779,10 @@ function mxCapPlace(k) {
 // route node in the soil: tap to switch between the insert chain and straight into the sum
 function mxNode(c) {
   const k = c.k, id = 'x' + k + '.route';
-  // (31.10.2026) pressed: the whole chain on or off – in the effect view that one effect (wege-fx.js); a stroke paints
+  // (31.10.2026) pressed: Kette ↔ Direkt (its effects kept), and the beads work on this channel (wege-fx.js)
   const b = h('button', { type: 'button', class: 'mx-node', role: 'switch', 'data-pid': id, 'data-fxk': k });
-  b.addEventListener('pointerdown', (e) => { if (e.button) return; e.preventDefault(); wfxPress(k, e); });
-  b.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); wfxPress(k, e); wfxRelease(); } });
+  b.addEventListener('pointerdown', (e) => { if (e.button) return; e.preventDefault(); wfxPress(k); });
+  b.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); wfxPress(k); } });
   if (PD['x' + k + '.fxm']) bindCtl('x' + k + '.fxm', () => { MX.dirtyStatic = true; b.title = wfxSay(k); });
   if (k === 'puls') {   // (its four Spuren's ways, one knot – wege-fx.js)
     b.removeAttribute('data-pid'); b.removeAttribute('role');
@@ -25786,7 +25794,7 @@ function mxNode(c) {
   bindCtl(id, (v) => {
     b.setAttribute('aria-checked', String(v === 'dir'));
     b.setAttribute('aria-label', c.name + ': direkt in die Summe, an der Effektkette vorbei');
-    b.title = wfxSay(k) + ' – tippen zum Umschalten; ein Effekt rechts (V R F P S) wählt ihn einzeln';
+    b.title = wfxSay(k) + ' – tippen: Kette ↔ Direkt; welche Effekte: V R F P S auf der Kettenschiene';
     MX.dirtyStatic = true;
   });
   MX.ch[k].node = b;
@@ -25925,21 +25933,28 @@ function mxStatic() {
     c.strokeStyle = line; c.lineWidth = 1; c.setLineDash([1.5, 4]);
     c.beginPath(); c.moveTo(inline ? 5 + tw + 5 : 4, y + 0.5); c.lineTo(xe, y + 0.5); c.stroke(); c.setLineDash([]);
   }
-  // effect beads on the chain rail, under the returns: Verzerrung, Ring, Filter, Phaser, Schweben – lit while
-  // active, their initials inside where the soil has room, their names under the mouse
+  // effect beads on the chain rail, under the returns: Verzerrung, Ring, Filter, Phaser, Schweben (31.10.2026: the switches
+  // of the channel being worked on – lit in its colour where it goes through; dashed where the effect stands at 0 %; its
+  // name under them – wege-fx.js)
   const bx0 = MX.ch.dly.g.cx - 22, bx1 = MX.ch.rev.g.cx + 22, big = MX.soil >= 44, br = big ? 6.5 : 6;
+  const tk = wfxTarget(), trgb = mxRgb(wfxCol(tk));
   c.font = '600 7.5px ' + COL.fontNum; c.textAlign = 'center';
   MX.bx = [];
   for (let i = 0; i < 5; i++) {
-    const x = bx0 + (bx1 - bx0) * i / 4, on = mxFxOn(i), sel = FXV.j === i, dim = FXV.j >= 0 && !sel;
+    const x = bx0 + (bx1 - bx0) * i / 4, live = mxFxOn(i), on = wfxHas(tk, 1 << i);
     MX.bx.push(x);
-    c.fillStyle = sel ? 'rgba(255,179,92,.34)' : on ? 'rgba(255,179,92,' + (dim ? 0.07 : 0.16) + ')' : 'rgba(255,179,92,.05)'; c.beginPath(); c.arc(x, yK, br + (sel ? 4 : 2), 0, MX_TAU); c.fill();
-    c.fillStyle = sel ? '#ffb35c' : '#17110e'; c.beginPath(); c.arc(x, yK, big || sel ? br : 2.6, 0, MX_TAU); c.fill();
-    c.strokeStyle = sel ? '#ffd29c' : on ? 'rgba(255,179,92,' + (dim ? 0.4 : 0.8) + ')' : 'rgba(255,179,92,.3)'; c.lineWidth = 1; c.stroke();
-    if (big || sel) { c.fillStyle = sel ? '#140f0c' : on ? 'rgba(255,200,140,' + (dim ? 0.55 : 0.95) + ')' : 'rgba(168,153,138,.6)'; c.fillText(MX_FX[i][2], x, yK + 0.5); }
+    if (on) { c.fillStyle = mxRgba(trgb, 0.22); c.beginPath(); c.arc(x, yK, br + 4, 0, MX_TAU); c.fill(); }
+    c.fillStyle = on ? mxRgba(trgb, 0.92) : '#17110e'; c.beginPath(); c.arc(x, yK, br, 0, MX_TAU); c.fill();
+    c.strokeStyle = on ? mxRgba(trgb, 1) : 'rgba(255,179,92,.38)'; c.lineWidth = 1;
+    if (!live) c.setLineDash([1.6, 1.8]);
+    c.beginPath(); c.arc(x, yK, br + (live ? 0 : 1.5), 0, MX_TAU); c.stroke(); c.setLineDash([]);
+    c.fillStyle = on ? '#140f0c' : 'rgba(200,180,160,.62)'; c.fillText(MX_FX[i][2], x, yK + 0.5);
     const b = MX.beads && MX.beads[i];
-    if (b) { b.style.transform = 'translate(' + (x - 9).toFixed(1) + 'px,' + (yK - 9).toFixed(1) + 'px)'; b.title = MX_FX[i][1] + (on ? ' – an' : ' – aus') + (sel ? ' · Effekt-Blick: Kanäle antippen oder überstreichen, Alt: nur dieser, Umschalt: nur solange gedrückt, Esc: zurück' : ' · antippen: welche Kanäle hindurchgehen'); }
+    if (b) b.style.transform = 'translate(' + (x - 9).toFixed(1) + 'px,' + (yK - 9).toFixed(1) + 'px)';
   }
+  c.font = '400 8.5px ' + disp; c.textAlign = 'center'; c.fillStyle = mxRgba(trgb, 0.8);
+  c.fillText(wfxName(tk).toLowerCase(), (bx0 + bx1) / 2, yK + 13);
+  wfxBeadsSay();
   // hyphae: from the base of each stem down to its rail; returns always go straight in
   c.lineCap = 'round';
   for (const cc of MXC) {
@@ -25955,7 +25970,7 @@ function mxStatic() {
     // the knot: the channel's colour; hollow when its source is off, grey when it is still
     c.fillStyle = S.dorm ? 'rgba(118,106,97,.9)' : S.srcoff ? '#17110e' : mxRgba(cc.rgb, 1); c.beginPath(); c.arc(g.cx, ry, 3.8, 0, MX_TAU); c.fill();
     c.strokeStyle = S.srcoff && !S.dorm ? mxRgba(cc.rgb, 0.6) : '#140f0c'; c.lineWidth = 1.2; c.stroke();
-    if (cc.kind !== 'ret') mxFxmMark(c, g.cx, yK, yD, fm, cc.rgb);
+    if (cc.kind !== 'ret') mxFxmMark(c, g.cx, yK, yD, fm, cc.rgb, tk === cc.k);
   }
   // (31.10.2026) the Puls: one knot for its four Spuren (the VCA's column) – on Kette when they all are, hollow while
   // they go different ways; in the effect view lit when all four go through the effect
@@ -25968,7 +25983,7 @@ function mxStatic() {
       c.strokeStyle = 'rgba(240,230,216,.22)'; c.lineWidth = 1; c.beginPath(); c.arc(pg.cx, fm === 0 ? yK : yD, 3.2, 0, MX_TAU); c.stroke();
       c.fillStyle = fm < 0 ? '#17110e' : mxRgba(rgb, 1); c.beginPath(); c.arc(pg.cx, ry, 3.8, 0, MX_TAU); c.fill();
       c.strokeStyle = fm < 0 ? mxRgba(rgb, 0.8) : '#140f0c'; c.lineWidth = 1.2; c.stroke();
-      mxFxmMark(c, pg.cx, yK, yD, FXV.j >= 0 ? all : fm < 0 ? 0 : fm, rgb);
+      mxFxmMark(c, pg.cx, yK, yD, fm < 0 ? 0 : fm, rgb, tk === 'puls');
     }
   }
   // (31.10.2026) the Schleifen's knots, under their strips in the group „Schleifen“ (wege-fx.js, hexenring/weg.js)
@@ -25980,7 +25995,7 @@ function mxStatic() {
     c.strokeStyle = 'rgba(240,230,216,.22)'; c.lineWidth = 1; c.beginPath(); c.arc(G2.cx, fm ? yD : yK, 3.2, 0, MX_TAU); c.stroke();
     c.fillStyle = mxRgba(rgb, G2.L.state === 'spielt' ? 1 : 0.55); c.beginPath(); c.arc(G2.cx, ry, 3.8, 0, MX_TAU); c.fill();
     c.strokeStyle = '#140f0c'; c.lineWidth = 1.2; c.stroke();
-    mxFxmMark(c, G2.cx, yK, yD, fm, rgb);
+    mxFxmMark(c, G2.cx, yK, yD, fm, rgb, tk === G2.k);
   }
   // the Puls group is a VCA: a bracket over its four lanes
   const pg = MX.ch.puls.g, l0 = MX.ch.l0.g, by = soilY + 3;
@@ -26387,11 +26402,11 @@ function mxScrollTo(k, smooth) {
 // „Eine Schleife geht nur durch einen Effekt, wenn man das möchte – das soll unten im Pult alles zu setzen sein, ohne dass
 // es umständlich wird … das Design so behalten (die Punkte, die Animation), mit den Neuerungen.“ (dev/klang/routing-konzept.md)
 // Every channel on „Kette“ goes through a set of the chain's five effects (x<k>.fxm, a mask in MX_FX's order: 1 V, 2 R,
-// 4 F, 8 P, 16 S – 31 the whole chain, as before). The Pult keeps its rails and knots: a knot on Kette with only some
-// effects wears a fine ring of five ticks, lit where it passes; its spores hop under the beads it skips and light the ones
-// it goes through. A tap on a bead (V R F P S) is the effect view: every knot then says only „through this one – yes or
-// no“; a tap switches it, a stroke across the knots paints, Alt only this channel, Umschalt only while held, Esc back.
-// The Schleifen of the Hexenring have knots of their own under their strips (hexenring/weg.js).
+// 4 F, 8 P, 16 S – 31 the whole chain, as before). The Pult keeps its rails and knots: a knot switches Kette ↔ Direkt; the
+// beads V R F P S on the chain rail are the switches of the channel being worked on (selected in the mixer, or a
+// Schleife's strip or knot touched) – lit in its colour where it goes through, its name under them. A knot that goes
+// through only some effects wears a fine ring of five ticks; its spores hop under the beads it skips and light the ones
+// it goes through. The Schleifen of the Hexenring have knots of their own under their strips (hexenring/weg.js).
 
 // ---- the sound: a chain per set of effects, shared by the channels that use it ----
 const wfxOf = (k) => { if (!PD['x' + k + '.route'] || P['x' + k + '.route'] === 'dir') return 0; const m = Math.round(P['x' + k + '.fxm'] != null ? P['x' + k + '.fxm'] : FXM_ALL) & FXM_ALL; return m; };
@@ -26445,65 +26460,63 @@ function wfxSay(k) { const m = wfxGet(k); return wfxName(k) + ': ' + (k === 'hxr
 // one effect on or off for a channel (the Puls: for each of its Spuren, the rest of each kept)
 function wfxBit(k, b, on) { if (k === 'puls') { for (const l of WFX_LANES) wfxBit(l, b, on); return; } const m = wfxGet(k); if (!!(m & b) !== on) wfxSet(k, on ? m | b : m & ~b); }
 const wfxHas = (k, b) => (k === 'puls' ? WFX_LANES.every((l) => wfxOf(l) & b) : !!(wfxGet(k) & b));
-// ---- the effect view ----
-const FXV = { j: -1, paint: null, hold: null };
-function fxvSet(j) {
-  FXV.j = FXV.j === j ? -1 : j;
-  MX.dirtyStatic = true;
-  if (MX.beads) MX.beads.forEach((b, i) => b.setAttribute('aria-pressed', String(FXV.j === i)));
-  if (MX.root) MX.root.classList.toggle('fxv', FXV.j >= 0);
-  if (FXV.j >= 0) fxvHint(); else if (MX.root) mxTipHide(MX.root, 0);
+// ---- the beads are the switches (owner, 31.10.2026: „es macht keinen Unterschied, ob F angeklickt wurde … mehrere
+// aktivieren oder deaktivieren“): V R F P S on the chain rail show and switch the effects of the channel being worked on –
+// the one selected in the mixer (a strip, the Puls, the Hexenring), or a Schleife whose strip or knot was touched. Lit in its
+// colour: it goes through that effect. A tap switches one, as many as wanted; Alt: only this one; held with Umschalt:
+// only while held. A channel on Direkt that gets an effect goes on Kette with just it; the last one off: Direkt. The knots
+// keep Kette ↔ Direkt – and keep the choice of effects for the way back.
+const WFX = { t: 'fin', hold: null };
+const wfxCan = (k) => !!k && (k.startsWith('hl:') ? !!wfxLoop(k) : k === 'puls' || (MXK[k] && (MXK[k].kind === 'src' || MXK[k].kind === 'lane') && !!PD['x' + k + '.route']));
+const wfxTarget = () => (wfxCan(WFX.t) ? WFX.t : 'fin');
+// the channel the beads work on (quiet: no word – a selection in the mixer)
+function wfxAim(k, quiet) {
+  if (!wfxCan(k)) return false;
+  if (WFX.t !== k) { WFX.t = k; MX.dirtyStatic = true; wfxBeadsSay(); }
+  if (!quiet && MX.root && MX.beads) mxTipFlash(MX.root, MX.beads[2], { n: wfxName(k), v: 'die Effekte darunter gelten jetzt für ' + (k === 'puls' ? 'alle vier Spuren' : k === 'hxr' ? 'alle Schleifen' : 'diese Spur') });
+  return true;
 }
-// (owner, 31.10.2026: „anklicken von F hat keine Auswirkung“) the effect view says what it is as long as it is on – at its
-// bead: which channels go through, what a tap does, and whether the effect is set at all (an effect at 0 % changes nothing)
-function fxvHint(k) {
-  const j = FXV.j; if (j < 0 || !MX.root || !MX.beads) return;
-  const b = 1 << j, n = wfxKeys().filter((kk) => kk !== 'puls' && kk !== 'hxr' && wfxHas(kk, b)).length, off = !mxFxOn(j);
-  const v = (k ? wfxName(k) + ': ' + (wfxHas(k, b) ? 'geht hindurch' : 'nicht hindurch') + ' · ' : n + (n === 1 ? ' Spur geht' : ' Spuren gehen') + ' hindurch · ') +
-    (off ? MX_FX[j][1] + ' steht auf 0 % – unter „Effekte“ aufdrehen, dann hörst du es · ' : '') + 'Punkte antippen oder überstreichen · Alt: nur diese · Esc: fertig';
-  mxTip(MX.root, MX.beads[j], { n: MX_FX[j][1], v, c: '#ffb35c' }, false);
-  clearTimeout(MX.root.mxTipEl && MX.root.mxTipEl.tm);
+const wfxCol = (k) => (k.startsWith('hl:') ? (FXL.geo.find((G2) => G2.k === k) || {}).col || '#e9a35e' : MXK[k] ? MXK[k].col : '#ffb35c');
+function wfxBeadsSay() {
+  if (!MX.beads) return;
+  const t = wfxTarget();
+  MX.beads.forEach((B, j) => { const on = wfxHas(t, 1 << j), off = !mxFxOn(j); B.setAttribute('aria-pressed', String(on)); B.title = wfxName(t) + ' · ' + MX_FX[j][1] + (on ? ': an – die Spur geht hindurch' : ': aus') + (off ? ' (der Effekt steht auf 0 % – unter „Effekte“ aufdrehen)' : '') + ' · tippen: an/aus · Alt: nur dieser · Umschalt halten: nur solange'; B.setAttribute('aria-label', B.title); });
 }
-// a knot pressed: in the overview the whole chain on or off (as always); in the effect view this effect for this channel
-function wfxPress(k, e) {
-  const m = wfxGet(k);
-  if (FXV.j < 0) { wfxSet(k, m ? 0 : FXM_ALL); wfxTell(k); return; }
-  const b = 1 << FXV.j;
-  if (e && e.altKey) {   // only this channel goes through it
-    for (const kk of wfxKeys()) if (kk !== 'puls') wfxBit(kk, b, kk === k || (k === 'puls' && WFX_LANES.includes(kk)));
-    wfxTell(k); return;
+// a bead pressed: that effect on or off for the channel worked on
+function wfxBead(j, e) {
+  const t = wfxTarget(), b = 1 << j, was = wfxGet(t);
+  if (e && e.altKey) { if (t === 'puls') for (const l of WFX_LANES) wfxSet(l, b); else wfxSet(t, b); }
+  else {
+    const on = !wfxHas(t, b);
+    if (e && e.shiftKey) WFX.hold = { k: t, ms: t === 'puls' ? WFX_LANES.map((l) => [l, wfxGet(l)]) : [[t, was]] };
+    if (on && was <= 0 && t !== 'puls') wfxSet(t, b);   // (from Direkt: on Kette with just this one)
+    else wfxBit(t, b, on);
   }
-  const on = !wfxHas(k, b);
-  if (e && e.shiftKey) { FXV.hold = { k, ms: k === 'puls' ? WFX_LANES.map((l) => [l, wfxGet(l)]) : [[k, m]] }; wfxBit(k, b, on); wfxTell(k); return; }   // (only while held)
-  wfxBit(k, b, on);
-  FXV.paint = { on, seen: new Set([k]) };
-  wfxTell(k);
+  MX.dirtyStatic = true; wfxBeadsSay();
+  const on = wfxHas(t, b);
+  if (MX.root && MX.beads) mxTipFlash(MX.root, MX.beads[j], { n: wfxName(t), v: MX_FX[j][1] + (on ? ' an' : ' aus') + (on && !mxFxOn(j) ? ' – steht auf 0 %, unter „Effekte“ aufdrehen' : '') + ' · ' + wfxWords(wfxGet(t)), c: wfxCol(t) });
 }
-function wfxPaintOver(k) {
-  const P0 = FXV.paint;
-  if (!P0 || FXV.j < 0 || P0.seen.has(k)) return;
-  P0.seen.add(k);
-  wfxBit(k, 1 << FXV.j, P0.on);
-  wfxTell(k);
+function wfxRelease() { if (WFX.hold) { const H = WFX.hold; WFX.hold = null; for (const [kk, mm] of H.ms) wfxSet(kk, mm); MX.dirtyStatic = true; wfxBeadsSay(); } }
+// a knot pressed: Kette ↔ Direkt (its choice of effects kept for the way back), and it becomes the one the beads work on
+function wfxRoute(k, on) {
+  if (k === 'puls') { for (const l of WFX_LANES) wfxRoute(l, on); return; }
+  if (k.startsWith('hl:')) { const L = wfxLoop(k); if (L) hxWegSet(L, on ? 'fx' : 'dir'); return; }
+  if (on && !(Math.round(P['x' + k + '.fxm']) & FXM_ALL)) setParam('x' + k + '.fxm', FXM_ALL);
+  setParam('x' + k + '.route', on ? 'fx' : 'dir');
 }
-function wfxRelease() {
-  FXV.paint = null;
-  if (FXV.hold) { const H = FXV.hold; FXV.hold = null; for (const [kk, mm] of H.ms) wfxSet(kk, mm); wfxTell(H.k); }
+function wfxPress(k) {
+  wfxAim(k, true);
+  wfxRoute(k, !wfxGet(k));
+  MX.dirtyStatic = true; wfxBeadsSay(); wfxTell(k);
 }
-function wfxTell(k) { const B = wfxNode(k); if (B) { B.title = wfxSay(k); B.setAttribute('aria-label', wfxSay(k)); } if (!MX.root) return; if (FXV.j >= 0) fxvHint(k); else mxTipFlash(MX.root, B, { n: wfxName(k), v: wfxWords(wfxGet(k)) }); }
+function wfxTell(k) { const B = wfxNode(k); if (B) { B.title = wfxSay(k); B.setAttribute('aria-label', wfxSay(k)); } if (MX.root) mxTipFlash(MX.root, B, { n: wfxName(k), v: wfxWords(wfxGet(k)) + ' · die Effekte darunter: V R F P S' }); }
 // every channel with a knot, in Pult order
 function wfxKeys() { const ks = MXC.filter((c) => c.kind !== 'sum' && c.kind !== 'ret' && !MX.ch[c.k].gone).map((c) => c.k); for (const S of (typeof HXMP !== 'undefined' && !HXMP.fold && HXMP.st) || []) ks.push('hl:' + S.key); return ks; }
 const wfxNode = (k) => (k.startsWith('hl:') ? FXL.nodes.get(k) : MX.ch[k] && MX.ch[k].node);
-// the stroke across the knots: whatever knot the pointer is over (buttons do not get the moves of another's press)
 function wfxWire(row) {
-  row.addEventListener('pointermove', (e) => {
-    if (!FXV.paint) return;
-    const el = document.elementFromPoint(e.clientX, e.clientY), b = el && el.closest && el.closest('[data-fxk]');
-    if (b) wfxPaintOver(b.dataset.fxk);
-  });
-  window.addEventListener('pointerup', wfxRelease); window.addEventListener('pointercancel', wfxRelease);
-  // (Esc leaves the effect view first – before the mixer's own Esc closes the panel)
-  window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && FXV.j >= 0 && MX.open) { e.preventDefault(); e.stopImmediatePropagation(); fxvSet(FXV.j); } }, true);
+  window.addEventListener('pointerup', wfxRelease); window.addEventListener('pointercancel', wfxRelease); window.addEventListener('keyup', (e) => { if (e.key === 'Shift') wfxRelease(); });
+  // a Schleife's strip touched in the Pult: the beads work on it
+  row.addEventListener('pointerdown', (e) => { if (typeof HXMP === 'undefined') return; const S = HXMP.st.find((x) => x.el && x.el.contains(e.target)); if (S) wfxAim('hl:' + S.key, true); }, true);
 }
 
 // ---- the Schleifen's knots in the Pult: a button under each loop strip, its place from the strip ----
@@ -26514,8 +26527,8 @@ function fxlSync() {
   for (const [k, b] of FXL.nodes) if (!want.has(k)) { b.remove(); FXL.nodes.delete(k); }
   for (const k of want) if (!FXL.nodes.has(k)) {
     const b = h('button', { type: 'button', class: 'mx-node fxl-node', 'data-fxk': k });
-    b.addEventListener('pointerdown', (e) => { if (e.button) return; e.preventDefault(); wfxPress(k, e); });
-    b.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); wfxPress(k, e); wfxRelease(); } });
+    b.addEventListener('pointerdown', (e) => { if (e.button) return; e.preventDefault(); wfxPress(k); });
+    b.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); wfxPress(k); } });
     MX.row.append(b); FXL.nodes.set(k, b);
   }
   // the geometry: each loop strip's stem centre and foot, in the row's coordinates (the rails' canvas shares them)
@@ -26532,25 +26545,15 @@ function fxlSync() {
 }
 
 // ---- drawing (the Pult's still layer and its live one, console-draw.js) ----
-// a knot's mark: in the overview a fine ring of five ticks only when it goes through some of the effects (the whole chain
-// and Direkt stay the plain dots they were); in the effect view a light ring where it goes through the chosen one and
-// a faint circle on Kette where it could
-function mxFxmMark(c, x, yK, yD, fm, rgb) {
-  if (FXV.j < 0) {
-    if (!fm || fm === FXM_ALL) return;
-    for (let j = 0; j < 5; j++) {
-      const a0 = -Math.PI / 2 + (j / 5) * MX_TAU + 0.2, a1 = -Math.PI / 2 + ((j + 1) / 5) * MX_TAU - 0.2, on = fm & (1 << j);
-      c.strokeStyle = on ? mxRgba(rgb, 0.9) : 'rgba(240,230,216,.14)'; c.lineWidth = on ? 1.4 : 1;
-      c.beginPath(); c.arc(x, yK, 6.8, a0, a1); c.stroke();
-    }
-    return;
+// a knot's mark: a fine ring of five ticks when it goes through only some of the effects (the whole chain and Direkt stay
+// the plain dots they were); the channel the beads work on wears a soft halo in its colour, at the rail it is on
+function mxFxmMark(c, x, yK, yD, fm, rgb, tgt) {
+  if (fm > 0 && fm !== FXM_ALL) for (let j = 0; j < 5; j++) {
+    const a0 = -Math.PI / 2 + (j / 5) * MX_TAU + 0.2, a1 = -Math.PI / 2 + ((j + 1) / 5) * MX_TAU - 0.2, on = fm & (1 << j);
+    c.strokeStyle = on ? mxRgba(rgb, 0.9) : 'rgba(240,230,216,.14)'; c.lineWidth = on ? 1.4 : 1;
+    c.beginPath(); c.arc(x, yK, 6.8, a0, a1); c.stroke();
   }
-  if (fm & (1 << FXV.j)) {
-    c.fillStyle = mxRgba(rgb, 0.12); c.beginPath(); c.arc(x, yK, 9, 0, MX_TAU); c.fill();
-    c.strokeStyle = mxRgba(rgb, 0.9); c.lineWidth = 1.5; c.beginPath(); c.arc(x, yK, 7, 0, MX_TAU); c.stroke();
-  } else {
-    c.strokeStyle = 'rgba(240,230,216,.2)'; c.lineWidth = 1; c.setLineDash([2, 2.5]); c.beginPath(); c.arc(x, yK, 6.5, 0, MX_TAU); c.stroke(); c.setLineDash([]);
-  }
+  if (tgt) { const y = fm ? yK : yD; c.fillStyle = mxRgba(rgb, 0.1); c.beginPath(); c.arc(x, y, 10.5, 0, MX_TAU); c.fill(); c.strokeStyle = mxRgba(rgb, 0.55); c.lineWidth = 1; c.beginPath(); c.arc(x, y, 9.5, 0, MX_TAU); c.stroke(); }
 }
 // a spore on the chain rail at x: under a bead its channel skips it hops (dy > 0); through one it passes it lights it
 // (the bead's index, or -1)
@@ -27229,6 +27232,7 @@ function selectChannel(k) {
   if (!MXK[k]) return;
   if (MX.sel !== k) MX.sendT = performance.now();
   MX.sel = k;
+  if (typeof wfxAim === 'function') wfxAim(k, true);   // (31.10.2026: the beads V R F P S work on the channel selected)
   for (const key of mxViewKeys()) { const v = MXV.views[key]; if (v.select && v.built) v.select(k); }
   if (MX.open && MX.view === 'pult' && performance.now() - (MX.ptrT || 0) > 600) mxScrollTo(k, true);
 }
@@ -29849,7 +29853,7 @@ const MX_LEGEND = [
   ['cap', 'Hut = Regler', 'Ziehe den Hut oder irgendwo am Stiel: der Pegel folgt relativ und springt nie. Halte kurz still, dann wird es fein. Doppeltippe die Zahl unter dem Stiel für 0 dB.'],
   ['stem', 'Licht im Stiel = Pegel', 'Der leuchtende Körper ist der mittlere Pegel, der weiße Faden die Spitze, die kleine Spore die gehaltene Spitze – warmweiß um 0 dB, rot darüber. Die Zahl oben ist die höchste Spitze; nach einer Übersteuerung wird sie zu einem roten CLIP, bis du sie tippst. Der rosa Balken zeigt, wie weit Pumpen oder Verdichtung absenken.'],
   ['knob', 'Lamellen-Regler', 'Die Lamellen leuchten von der Mitte (Balance) oder vom Anfang bis zum Wert. Ziehe nach oben oder unten; die Mitte und 100 % rasten ein. Doppelklick oder Entf setzt den Grundwert. Was der zweite Regler jedes Kanals steuert, wählst du oben bei „2. Regler“.'],
-  ['rails', 'Schienen = Weg', '„kette“ führt durch Verzerrung (V), Ring (R), Filter (F), Phaser (P) und Schweben (S) – leuchtende Perlen sind an –, „direkt“ an ihnen vorbei in die Summe. Tippe den Knoten unter einem Kanal, um ihn umzustecken.'],
+  ['rails', 'Schienen = Weg', '„kette“ führt durch Verzerrung (V), Ring (R), Filter (F), Phaser (P) und Schweben (S), „direkt“ an ihnen vorbei in die Summe. Tippe den Knoten unter einem Kanal, um ihn umzustecken. Die Perlen V R F P S sind die Schalter des gewählten Kanals (sein Name steht darunter): leuchtend geht er durch diesen Effekt – tippen schaltet, auch mehrere; Alt: nur dieser; Umschalt halten: nur solange. Gestrichelt: der Effekt steht auf 0 %.'],
   ['spores', 'Sporen = Signal', 'Sporen fließen mit dem Signal; jeder Schlag einer Puls-Spur schickt einen Lichtpuls. Bögen unter den Schienen zeigen, wie viel der gewählte Kanal in Echo und Hall schickt.'],
   ['body', 'Fruchtkörper = Summe', 'Die Lamellen sind das Spektrum der Summe, jede in der Farbe des Kanals, der diese Frequenz füllt; was Echo und Hall beitragen – der Raum –, steht als Punkte an ihrer Spitze. Innen das Stereobild, unten die Korrelation: rechts gleichphasig, links gegenphasig.'],
   ['empty', 'Leerer Hut = Quelle aus', 'Nur der Umriss des Hutes und „aus“ im Stiel: die Klangquelle des Kanals ist ausgeschaltet (Ebene 2, eine Spur, der Bordun – beim Puls alle vier Spuren). Er bleibt einstellbar.'],
@@ -37256,6 +37260,22 @@ function hxLadeAdd(L, S) {
   if (!HXLD.on) { HXLD.on = true; HXLD.t0 = now; HXLD.est = 0; HXLD.ids.clear(); HXLD.endT = 0; }
   if (!HXLD.ids.has(S.id)) { const e = Math.max(0.4, hxWPredict(L, S, hxLen(L) + hxWTailEst(S))); HXLD.ids.set(S.id, { L: L.key, e }); HXLD.est += e; }
 }
+// (owner, 31.10.2026: „eine Option, um die Schleifen-Generierung zu beenden – rechts ein X“) every render under the bar
+// is let go: what comes back later is not played, the same wish is not asked again until something changes it; the
+// Schleifen play on what they played (their Abdruck or an earlier version)
+function hxLadeCancel() {
+  if (!HXLD.on) return;
+  let n = 0;
+  for (const [id, o] of HXLD.ids) {
+    const S = HX.sch.get(id), L = hxByKey(o.L); if (!S || !L) continue;
+    if (S.wBusy || S.wAgain) { n++; S.wSkip = S.wBusy || hxWSig(L, S); S.wGen = (S.wGen || 0) + 1; S.wBusy = null; S.wAgain = null; }
+  }
+  HXLD.on = false; HXLD.endT = performance.now() - 1200; HXLD.ids.clear();
+  const el = HXU.lade; if (el) { el.querySelector('.t').textContent = 'Abgebrochen'; el.classList.add('fertig'); }
+  hxwLog('lade:abgebrochen:' + n);
+  hxSay(n ? 'Neuer Klang abgebrochen – die Schleifen spielen weiter wie bisher' : 'Nichts mehr zu laden');
+  hxCardDirty(); hxRailDirty();
+}
 function hxLadeFrame() {
   const el = HXU.lade; if (!el) return;
   const now = performance.now();
@@ -37263,12 +37283,15 @@ function hxLadeFrame() {
   if (now - HXLD.drawT < 120) return;
   HXLD.drawT = now;
   let n = 0, done = 0; const loops = new Set();
-  for (const [id, o] of HXLD.ids) { n++; const S = HX.sch.get(id), L = hxByKey(o.L); if (!S || !L || L.state === 'weg' || !(S.wBusy || S.wAgain)) done++; else loops.add(L.slot + 1); }
-  if (done >= n) { HXLD.on = false; HXLD.endT = now; el.querySelector('.t').textContent = 'Neuer Klang da'; el.querySelector('i').style.width = '100%'; el.setAttribute('aria-valuenow', '100'); el.classList.add('fertig'); return; }
+  // (31.10.2026: „bleibt stecken“ – measured: 120 s at „0 von 2“ with nothing rendering) a Schicht is done once no render of it
+  // runs: a wish left behind (wAgain) by an update that went another way (Live, a creation playing) is no render – it is
+  // dropped here, else the bar waited for it for ever
+  for (const [id, o] of HXLD.ids) { n++; const S = HX.sch.get(id), L = hxByKey(o.L); if (S && !S.wBusy && S.wAgain) S.wAgain = null; if (!S || !L || L.state === 'weg' || !S.wBusy) done++; else loops.add(L.slot + 1); }
+  if (done >= n) { HXLD.on = false; HXLD.endT = now; el.querySelector('.t').textContent = 'Neuer Klang da'; el.querySelector('i').style.width = '100%'; el.querySelector('.p').setAttribute('aria-valuenow', '100'); el.classList.add('fertig'); return; }
   const x = (now - HXLD.t0) / 1000 / Math.max(0.4, HXLD.est), p = Math.max(done / n, x < 1 ? 0.9 * x : 0.9 + 0.09 * (1 - Math.exp(-(x - 1))));
   el.classList.remove('fertig'); el.hidden = false;
   el.querySelector('.t').textContent = 'Neuer Klang wird geladen: ' + (loops.size > 1 ? 'Schleifen ' : 'Schleife ') + [...loops].sort((a, b) => a - b).join(', ') + (n > 1 ? ' · ' + done + ' von ' + n + ' fertig' : '');
-  el.querySelector('i').style.width = Math.round(100 * p) + '%'; el.setAttribute('aria-valuenow', String(Math.round(100 * p)));
+  el.querySelector('i').style.width = Math.round(100 * p) + '%'; el.querySelector('.p').setAttribute('aria-valuenow', String(Math.round(100 * p)));
 }
 // a keyboard press (Enter or Space: a click without a pointer, detail 0) acts on click – the buttons that act at the press
 // act on pointerdown. Chromium also sends a click with detail 0 after a touch tap that changed the layout (UI audit B1,
@@ -37283,6 +37306,7 @@ function hxRailBuild() {
   if (!rail || HXU.rail) return;
   HXU.rail = rail; HXU.cv = $('#hxCv'); HXU.cx = HXU.cv.getContext('2d');
   HXU.korb = $('#hxKorb'); HXU.haupt = $('#hxHaupt'); HXU.mid = $('#hxMid'); HXU.pg = $('#hxPg'); HXU.undo = $('#hxUndo'); HXU.redo = $('#hxRedo'); HXU.fold = $('#hxFold'); HXU.live = $('#hxLive'); HXU.coach = $('#hxCoach'); HXU.msg = $('#hxMsg'); HXU.lade = $('#hxLade');
+  if (HXU.lade) HXU.lade.querySelector('.x').addEventListener('click', hxLadeCancel);   // (31.10.2026: abbrechen)
   HXU.form = $('#hxForm');   // (step 1d)
   HXU.len = $('#hxLen'); HXU.lenPop = $('#hxLenPop'); hxLenBuild();   // (owner, 25.10.2026: the length of a new loop)
   const ringBox = h('div', { class: 'hx-rings' });
@@ -40823,6 +40847,8 @@ function hxWerk(R0) {
       R.frame = null; R.port = null;
       for (const w of R.wait.values()) w(null);
       R.wait.clear(); res(false); hxCardDirty();
+      // (31.10.2026) a boot that failed for a passing reason (too slow while the page was busy, no answer) may try again
+      if (why !== 'ort' && why !== 'rahmen') setTimeout(() => { if (R.st === 'kein' && R.why === why && !(R.kills && R.kills.length >= 3)) { R.p = null; R.st = ''; hxwLog('rahmen-nochmal:' + why); } }, 20000);
     };
     let url = '';
     try { if (!/^(https?|file):$/.test(location.protocol)) throw new Error('ort'); const u = new URL(location.href); u.hash = ''; u.searchParams.set('werk', '1'); url = u.href; } catch (e) { fail('ort'); return; }
@@ -40933,14 +40959,36 @@ function hxwNs(ctx, pre, tap, port, n, body, from) {
 // (seeded, built afresh), so the sound does not change.
 const HX_WRENEW = +(window.__hxRenew || 0) || 12;   // (window.__hxRenew: tests only)
 const HX_WRENEW_S = 90;   // (… or this many seconds after its first render)
+// (owner, 31.10.2026: „die Neugenerierung bleibt stecken … sorge dafür, dass sie immer zuverlässig passiert“) a realm that
+// does not answer a job within its time (20 s and 8 s per second of audio – far beyond any render seen) is taken down and
+// booted afresh at its next job: every job still waiting on it gets its answer (none), so nothing waits for ever. A realm
+// that keeps hanging (three times in two minutes) stays down – the Schleifen play on as they did.
+function hxwKill(R, why) {
+  const now = performance.now();
+  R.kills = (R.kills || []).filter((t) => now - t < 120000); R.kills.push(now);
+  hxwLog('rahmen-haengt:' + why + (R.kills.length >= 3 ? ':bleibt-aus' : ':neu'));
+  const waits = [...R.wait.values()];
+  try { if (R.port) R.port.close(); } catch (e) {}
+  try { if (R.frame) R.frame.remove(); } catch (e) {}
+  if (R.wid != null) hxPost({ wportOff: R.wid });
+  for (const S of HX.sch.values()) if (S.wRe) for (const k in S.wRe) if (S.wRe[k] === R) delete S.wRe[k];
+  if (R.kills.length >= 3) Object.assign(R, { st: 'kein', why: 'haengt', p: Promise.resolve(false), frame: null, port: null, wait: new Map(), n: 0 });
+  else Object.assign(R, { st: '', p: null, frame: null, port: null, wait: new Map(), n: 0, used: 0, old: false, ms: [] });
+  for (const w of waits) w(null);
+  hxCardDirty();
+}
+const hxwLimit = (job, d) => { const sec = d && (d.dur || (d.n && d.sr ? d.n / d.sr : 0)) || 10; return (20000 + 8000 * Math.max(1, Math.min(600, sec))) * (HXW.limK || 1); };   // (limK: tests shorten it)
 function hxwCall(job, d, tr, R0) {
   const R = R0 || HXW;
   if (job === 'wuchs' || job === 'bake' || job === 'tail') { if (!R.used) R.t0 = performance.now(); R.used = (R.used || 0) + 1; if (R.used >= HX_WRENEW && !R.old) { R.old = true; R.oldT = performance.now(); } }
   return hxWerk(R).then((ok) => new Promise((res) => {
     if (!ok || !R.port) { hxwLog(job + ':kein-rahmen(' + (R.why || R.st) + ')'); res(null); return; }
     const id = ++R.id;
-    R.wait.set(id, res);
-    try { R.port.postMessage(Object.assign({ job, id }, d), tr || []); } catch (e) { hxwLog(job + ':senden:' + ((e && e.message) || e)); R.wait.delete(id); res(null); }
+    // (an answer that does not come within its time: the realm hangs – hxwKill answers every waiting job, this one too)
+    const tm = job === 'warm' ? 0 : setTimeout(() => { if (R.wait.get(id) === done) { hxwLog(job + ':keine-antwort:' + Math.round(hxwLimit(job, d) / 1000) + 's'); hxwKill(R, job); } }, hxwLimit(job, d));
+    const done = (m) => { clearTimeout(tm); res(m); };
+    R.wait.set(id, done);
+    try { R.port.postMessage(Object.assign({ job, id }, d), tr || []); } catch (e) { hxwLog(job + ':senden:' + ((e && e.message) || e)); R.wait.delete(id); done(null); }
   }));
 }
 
@@ -43048,7 +43096,7 @@ function hxWUpdate(L, o = {}) {
   if (!L || L.bew || L.state === 'weg' || !HX.node) return;
   if (L.krea && L.krea.sel != null) { hxCardDirty(); hxRailDirty(); return; }   // (28.10.2026: a Werkstatt creation or a Trieb plays – werkstatt.js)
   hxWNotesAll(L);
-  if (HXW.st === 'kein' || L.live) { hxWLiveSync(L); hxCardDirty(); hxRailDirty(); return; }   // (no Werk-Rahmen: Live mode; step 4: or chosen)
+  if (HXW.st === 'kein' || L.live) { for (const id of L.sch) { const S = HX.sch.get(id); if (S && !S.wBusy) S.wAgain = null; } hxWLiveSync(L); hxCardDirty(); hxRailDirty(); return; }   // (no Werk-Rahmen: Live mode; step 4: or chosen – no wish left waiting)
   if (L.sch.some((id) => { const S = HX.sch.get(id); return S && S.lm; })) hxWLiveSync(L);   // (back from Live: its versions sound again)
   HX.wFeld = hxLoopsLive().some((X) => hxKlangOf(X) === 'feld' && hxWAktiv(X));
   const on = hxWAktiv(L), F = HX.folge && HX.folge.loops.includes(L.key) ? HX.folge : null;
@@ -43069,15 +43117,30 @@ function hxWUpdate(L, o = {}) {
   hxCardDirty(); hxRailDirty();
 }
 // one Treu render a Schicht at a time; a newer wish waits for it and renders again
+// (owner, 31.10.2026: „die Neugenerierung bleibt stecken … sorge dafür, dass sie immer und unter allen Umständen
+// zuverlässig passiert“) a render that fails or throws never holds its Schicht: it is tried again (after 1.5 s, 3 s), then
+// the Schicht plays on as it did and says so; a render let go under the bar (✕ – hxLadeCancel) is not played when it
+// comes back, and the same wish is not asked again until something changes it (S.wSkip)
 function hxWRenderFor(L, S, sig, o = {}) {
+  if (S.wSkip === sig && !o.re) return;
   if (S.wBusy) { S.wAgain = o; return; }
-  S.wBusy = sig; S.wAgain = null; hxLadeAdd(L, S);
-  const ver = S.ver || 0, key = L.key;
+  S.wBusy = sig; S.wAgain = null; S.wSkip = null; hxLadeAdd(L, S);
+  const ver = S.ver || 0, key = L.key, gen = S.wGen || 0;
+  const done = () => { if ((S.wGen || 0) === gen) S.wBusy = null; hxCardDirty(); hxRailDirty(); };
   hxWRender(L, S, sig, o.key).then(async (V) => {
+    if ((S.wGen || 0) !== gen) return;   // (let go meanwhile)
     S.wBusy = null;
     let X = hxByKey(key);
     if (!X || !HX.sch.has(S.id) || (S.ver || 0) !== ver) return;
-    if (V && typeof hxRxOnV === 'function' && hxRxOn(hxRxOf(X))) { V = await hxRxOnV(X, V); X = hxByKey(key); if (!X || !HX.sch.has(S.id) || (S.ver || 0) !== ver) return; }   // (30.10.2026: the loop's Klangfarbe – klangebene.js)
+    if (V && typeof hxRxOnV === 'function' && hxRxOn(hxRxOf(X))) { V = await hxRxOnV(X, V); X = hxByKey(key); if (!X || !HX.sch.has(S.id) || (S.ver || 0) !== ver || (S.wGen || 0) !== gen) return; }   // (30.10.2026: the loop's Klangfarbe – klangebene.js)
+    if (!V && sig === hxWSig(X, S, o.key) && !S.wAgain) {   // (failed: again, twice, then as it was)
+      S.wFail = (S.wFail || 0) + 1;
+      hxwLog('wuchs:fehlschlag ' + hxName(X) + ' #' + S.wFail);
+      if (S.wFail < 3) { setTimeout(() => { const Y = hxByKey(key); if (Y && HX.sch.has(S.id) && !S.wBusy && (S.wGen || 0) === gen) hxWUpdate(Y, o); }, 1500 * S.wFail); }
+      else { S.wSkip = sig; S.wFail = 0; hxSay(hxName(X) + ': der neue Klang ließ sich nicht rechnen – sie spielt weiter wie bisher'); }
+      hxCardDirty(); hxRailDirty(); return;
+    }
+    if (V) S.wFail = 0;
     if (V && V.sig === hxWSig(X, S, o.key) && (S.wu || hxMemOk(V.n))) {   // (final pass: a first Treu version within the Speichergrenze, as every other buffer – else the Abdruck plays on)
       S.wu = V; S.wuSaved = 0;
       if (hxWAktiv(X) && !(S.anc && S.anc.sig === V.sig)) { const now = !!o.now && o.f == null && hxNowOk(X); hxWPlay(S, 'wu', o.f != null && o.f > hxF(hxNowT() + 0.05) ? o.f : now ? hxSwapAt(X).f : hxNextSeam(X).f, false, now); }
@@ -43085,7 +43148,7 @@ function hxWRenderFor(L, S, sig, o = {}) {
     }
     if (S.wAgain || (V && V.sig !== hxWSig(X, S, o.key))) hxWUpdate(X, S.wAgain || {});
     hxCardDirty(); hxRailDirty();
-  });
+  }).catch((e) => { console.warn('Hexenring: Wuchs', e); hxwLog('wuchs:ausnahme ' + String((e && e.message) || e).slice(0, 160)); done(); });
 }
 
 // ---- Lebendig: every pass a new throw, streamed – the page posts the pass's slot to the processor (its port) and the

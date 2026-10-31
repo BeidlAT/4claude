@@ -2,6 +2,24 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-31i",
+      "punkte": [
+        "Mixer: Die Perlen V, R, F, P, S unten auf der Kettenschiene sind jetzt die Effekt-Schalter der gewählten Spur – leuchtend in ihrer Farbe geht sie durch den Effekt, ein Tipp schaltet ihn ab oder an, beliebig viele. Unter den Perlen steht, welche Spur gerade dran ist.",
+        "Eine Spur wählst du wie immer im Mixer (auch den Puls für alle vier Spuren, den Hexenring für alle Schleifen); eine Schleife durch Antippen ihres Kanals.",
+        "Alt-Tipp auf eine Perle: nur dieser Effekt. Umschalt halten: der Effekt nur, solange du drückst.",
+        "Der Punkt unter einer Spur schaltet Kette ↔ Direkt und merkt sich dabei ihre Effekte; gestrichelte Perlen stehen auf 0 % – unter „Effekte“ aufdrehen, dann hörst du sie.",
+        "Der Effekt-Blick von vorhin entfällt."
+      ]
+    },
+    {
+      "id": "2026-10-31h",
+      "punkte": [
+        "Der neue Klang der Schleifen bleibt nicht mehr hängen: antwortet der Hintergrund-Rechner nicht, wird er neu gestartet und die Schleife versucht es noch einmal – klappt es dreimal nicht, spielt sie weiter wie bisher und sagt es.",
+        "Am Ladebalken „Neuer Klang wird geladen“ gibt es rechts ein ✕: Es bricht ab, die Schleifen spielen weiter wie bisher; erst eine neue Änderung lädt wieder.",
+        "Scheitert der Start des Hintergrund-Rechners einmal (etwa weil Myzel gerade beim Öffnen viel zu tun hat), versucht er es nach 20 Sekunden erneut."
+      ]
+    },
+    {
       "id": "2026-10-31g",
       "punkte": [
         "Der Puls hat im Pult jetzt einen eigenen Punkt auf Kette und Direkt – er setzt alle vier Spuren auf einmal, auch im Effekt-Blick.",

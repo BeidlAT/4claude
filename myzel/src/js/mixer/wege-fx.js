@@ -2,11 +2,11 @@
 // „Eine Schleife geht nur durch einen Effekt, wenn man das möchte – das soll unten im Pult alles zu setzen sein, ohne dass
 // es umständlich wird … das Design so behalten (die Punkte, die Animation), mit den Neuerungen.“ (dev/klang/routing-konzept.md)
 // Every channel on „Kette“ goes through a set of the chain's five effects (x<k>.fxm, a mask in MX_FX's order: 1 V, 2 R,
-// 4 F, 8 P, 16 S – 31 the whole chain, as before). The Pult keeps its rails and knots: a knot on Kette with only some
-// effects wears a fine ring of five ticks, lit where it passes; its spores hop under the beads it skips and light the ones
-// it goes through. A tap on a bead (V R F P S) is the effect view: every knot then says only „through this one – yes or
-// no“; a tap switches it, a stroke across the knots paints, Alt only this channel, Umschalt only while held, Esc back.
-// The Schleifen of the Hexenring have knots of their own under their strips (hexenring/weg.js).
+// 4 F, 8 P, 16 S – 31 the whole chain, as before). The Pult keeps its rails and knots: a knot switches Kette ↔ Direkt; the
+// beads V R F P S on the chain rail are the switches of the channel being worked on (selected in the mixer, or a
+// Schleife's strip or knot touched) – lit in its colour where it goes through, its name under them. A knot that goes
+// through only some effects wears a fine ring of five ticks; its spores hop under the beads it skips and light the ones
+// it goes through. The Schleifen of the Hexenring have knots of their own under their strips (hexenring/weg.js).
 
 // ---- the sound: a chain per set of effects, shared by the channels that use it ----
 const wfxOf = (k) => { if (!PD['x' + k + '.route'] || P['x' + k + '.route'] === 'dir') return 0; const m = Math.round(P['x' + k + '.fxm'] != null ? P['x' + k + '.fxm'] : FXM_ALL) & FXM_ALL; return m; };
@@ -60,65 +60,63 @@ function wfxSay(k) { const m = wfxGet(k); return wfxName(k) + ': ' + (k === 'hxr
 // one effect on or off for a channel (the Puls: for each of its Spuren, the rest of each kept)
 function wfxBit(k, b, on) { if (k === 'puls') { for (const l of WFX_LANES) wfxBit(l, b, on); return; } const m = wfxGet(k); if (!!(m & b) !== on) wfxSet(k, on ? m | b : m & ~b); }
 const wfxHas = (k, b) => (k === 'puls' ? WFX_LANES.every((l) => wfxOf(l) & b) : !!(wfxGet(k) & b));
-// ---- the effect view ----
-const FXV = { j: -1, paint: null, hold: null };
-function fxvSet(j) {
-  FXV.j = FXV.j === j ? -1 : j;
-  MX.dirtyStatic = true;
-  if (MX.beads) MX.beads.forEach((b, i) => b.setAttribute('aria-pressed', String(FXV.j === i)));
-  if (MX.root) MX.root.classList.toggle('fxv', FXV.j >= 0);
-  if (FXV.j >= 0) fxvHint(); else if (MX.root) mxTipHide(MX.root, 0);
+// ---- the beads are the switches (owner, 31.10.2026: „es macht keinen Unterschied, ob F angeklickt wurde … mehrere
+// aktivieren oder deaktivieren“): V R F P S on the chain rail show and switch the effects of the channel being worked on –
+// the one selected in the mixer (a strip, the Puls, the Hexenring), or a Schleife whose strip or knot was touched. Lit in its
+// colour: it goes through that effect. A tap switches one, as many as wanted; Alt: only this one; held with Umschalt:
+// only while held. A channel on Direkt that gets an effect goes on Kette with just it; the last one off: Direkt. The knots
+// keep Kette ↔ Direkt – and keep the choice of effects for the way back.
+const WFX = { t: 'fin', hold: null };
+const wfxCan = (k) => !!k && (k.startsWith('hl:') ? !!wfxLoop(k) : k === 'puls' || (MXK[k] && (MXK[k].kind === 'src' || MXK[k].kind === 'lane') && !!PD['x' + k + '.route']));
+const wfxTarget = () => (wfxCan(WFX.t) ? WFX.t : 'fin');
+// the channel the beads work on (quiet: no word – a selection in the mixer)
+function wfxAim(k, quiet) {
+  if (!wfxCan(k)) return false;
+  if (WFX.t !== k) { WFX.t = k; MX.dirtyStatic = true; wfxBeadsSay(); }
+  if (!quiet && MX.root && MX.beads) mxTipFlash(MX.root, MX.beads[2], { n: wfxName(k), v: 'die Effekte darunter gelten jetzt für ' + (k === 'puls' ? 'alle vier Spuren' : k === 'hxr' ? 'alle Schleifen' : 'diese Spur') });
+  return true;
 }
-// (owner, 31.10.2026: „anklicken von F hat keine Auswirkung“) the effect view says what it is as long as it is on – at its
-// bead: which channels go through, what a tap does, and whether the effect is set at all (an effect at 0 % changes nothing)
-function fxvHint(k) {
-  const j = FXV.j; if (j < 0 || !MX.root || !MX.beads) return;
-  const b = 1 << j, n = wfxKeys().filter((kk) => kk !== 'puls' && kk !== 'hxr' && wfxHas(kk, b)).length, off = !mxFxOn(j);
-  const v = (k ? wfxName(k) + ': ' + (wfxHas(k, b) ? 'geht hindurch' : 'nicht hindurch') + ' · ' : n + (n === 1 ? ' Spur geht' : ' Spuren gehen') + ' hindurch · ') +
-    (off ? MX_FX[j][1] + ' steht auf 0 % – unter „Effekte“ aufdrehen, dann hörst du es · ' : '') + 'Punkte antippen oder überstreichen · Alt: nur diese · Esc: fertig';
-  mxTip(MX.root, MX.beads[j], { n: MX_FX[j][1], v, c: '#ffb35c' }, false);
-  clearTimeout(MX.root.mxTipEl && MX.root.mxTipEl.tm);
+const wfxCol = (k) => (k.startsWith('hl:') ? (FXL.geo.find((G2) => G2.k === k) || {}).col || '#e9a35e' : MXK[k] ? MXK[k].col : '#ffb35c');
+function wfxBeadsSay() {
+  if (!MX.beads) return;
+  const t = wfxTarget();
+  MX.beads.forEach((B, j) => { const on = wfxHas(t, 1 << j), off = !mxFxOn(j); B.setAttribute('aria-pressed', String(on)); B.title = wfxName(t) + ' · ' + MX_FX[j][1] + (on ? ': an – die Spur geht hindurch' : ': aus') + (off ? ' (der Effekt steht auf 0 % – unter „Effekte“ aufdrehen)' : '') + ' · tippen: an/aus · Alt: nur dieser · Umschalt halten: nur solange'; B.setAttribute('aria-label', B.title); });
 }
-// a knot pressed: in the overview the whole chain on or off (as always); in the effect view this effect for this channel
-function wfxPress(k, e) {
-  const m = wfxGet(k);
-  if (FXV.j < 0) { wfxSet(k, m ? 0 : FXM_ALL); wfxTell(k); return; }
-  const b = 1 << FXV.j;
-  if (e && e.altKey) {   // only this channel goes through it
-    for (const kk of wfxKeys()) if (kk !== 'puls') wfxBit(kk, b, kk === k || (k === 'puls' && WFX_LANES.includes(kk)));
-    wfxTell(k); return;
+// a bead pressed: that effect on or off for the channel worked on
+function wfxBead(j, e) {
+  const t = wfxTarget(), b = 1 << j, was = wfxGet(t);
+  if (e && e.altKey) { if (t === 'puls') for (const l of WFX_LANES) wfxSet(l, b); else wfxSet(t, b); }
+  else {
+    const on = !wfxHas(t, b);
+    if (e && e.shiftKey) WFX.hold = { k: t, ms: t === 'puls' ? WFX_LANES.map((l) => [l, wfxGet(l)]) : [[t, was]] };
+    if (on && was <= 0 && t !== 'puls') wfxSet(t, b);   // (from Direkt: on Kette with just this one)
+    else wfxBit(t, b, on);
   }
-  const on = !wfxHas(k, b);
-  if (e && e.shiftKey) { FXV.hold = { k, ms: k === 'puls' ? WFX_LANES.map((l) => [l, wfxGet(l)]) : [[k, m]] }; wfxBit(k, b, on); wfxTell(k); return; }   // (only while held)
-  wfxBit(k, b, on);
-  FXV.paint = { on, seen: new Set([k]) };
-  wfxTell(k);
+  MX.dirtyStatic = true; wfxBeadsSay();
+  const on = wfxHas(t, b);
+  if (MX.root && MX.beads) mxTipFlash(MX.root, MX.beads[j], { n: wfxName(t), v: MX_FX[j][1] + (on ? ' an' : ' aus') + (on && !mxFxOn(j) ? ' – steht auf 0 %, unter „Effekte“ aufdrehen' : '') + ' · ' + wfxWords(wfxGet(t)), c: wfxCol(t) });
 }
-function wfxPaintOver(k) {
-  const P0 = FXV.paint;
-  if (!P0 || FXV.j < 0 || P0.seen.has(k)) return;
-  P0.seen.add(k);
-  wfxBit(k, 1 << FXV.j, P0.on);
-  wfxTell(k);
+function wfxRelease() { if (WFX.hold) { const H = WFX.hold; WFX.hold = null; for (const [kk, mm] of H.ms) wfxSet(kk, mm); MX.dirtyStatic = true; wfxBeadsSay(); } }
+// a knot pressed: Kette ↔ Direkt (its choice of effects kept for the way back), and it becomes the one the beads work on
+function wfxRoute(k, on) {
+  if (k === 'puls') { for (const l of WFX_LANES) wfxRoute(l, on); return; }
+  if (k.startsWith('hl:')) { const L = wfxLoop(k); if (L) hxWegSet(L, on ? 'fx' : 'dir'); return; }
+  if (on && !(Math.round(P['x' + k + '.fxm']) & FXM_ALL)) setParam('x' + k + '.fxm', FXM_ALL);
+  setParam('x' + k + '.route', on ? 'fx' : 'dir');
 }
-function wfxRelease() {
-  FXV.paint = null;
-  if (FXV.hold) { const H = FXV.hold; FXV.hold = null; for (const [kk, mm] of H.ms) wfxSet(kk, mm); wfxTell(H.k); }
+function wfxPress(k) {
+  wfxAim(k, true);
+  wfxRoute(k, !wfxGet(k));
+  MX.dirtyStatic = true; wfxBeadsSay(); wfxTell(k);
 }
-function wfxTell(k) { const B = wfxNode(k); if (B) { B.title = wfxSay(k); B.setAttribute('aria-label', wfxSay(k)); } if (!MX.root) return; if (FXV.j >= 0) fxvHint(k); else mxTipFlash(MX.root, B, { n: wfxName(k), v: wfxWords(wfxGet(k)) }); }
+function wfxTell(k) { const B = wfxNode(k); if (B) { B.title = wfxSay(k); B.setAttribute('aria-label', wfxSay(k)); } if (MX.root) mxTipFlash(MX.root, B, { n: wfxName(k), v: wfxWords(wfxGet(k)) + ' · die Effekte darunter: V R F P S' }); }
 // every channel with a knot, in Pult order
 function wfxKeys() { const ks = MXC.filter((c) => c.kind !== 'sum' && c.kind !== 'ret' && !MX.ch[c.k].gone).map((c) => c.k); for (const S of (typeof HXMP !== 'undefined' && !HXMP.fold && HXMP.st) || []) ks.push('hl:' + S.key); return ks; }
 const wfxNode = (k) => (k.startsWith('hl:') ? FXL.nodes.get(k) : MX.ch[k] && MX.ch[k].node);
-// the stroke across the knots: whatever knot the pointer is over (buttons do not get the moves of another's press)
 function wfxWire(row) {
-  row.addEventListener('pointermove', (e) => {
-    if (!FXV.paint) return;
-    const el = document.elementFromPoint(e.clientX, e.clientY), b = el && el.closest && el.closest('[data-fxk]');
-    if (b) wfxPaintOver(b.dataset.fxk);
-  });
-  window.addEventListener('pointerup', wfxRelease); window.addEventListener('pointercancel', wfxRelease);
-  // (Esc leaves the effect view first – before the mixer's own Esc closes the panel)
-  window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && FXV.j >= 0 && MX.open) { e.preventDefault(); e.stopImmediatePropagation(); fxvSet(FXV.j); } }, true);
+  window.addEventListener('pointerup', wfxRelease); window.addEventListener('pointercancel', wfxRelease); window.addEventListener('keyup', (e) => { if (e.key === 'Shift') wfxRelease(); });
+  // a Schleife's strip touched in the Pult: the beads work on it
+  row.addEventListener('pointerdown', (e) => { if (typeof HXMP === 'undefined') return; const S = HXMP.st.find((x) => x.el && x.el.contains(e.target)); if (S) wfxAim('hl:' + S.key, true); }, true);
 }
 
 // ---- the Schleifen's knots in the Pult: a button under each loop strip, its place from the strip ----
@@ -129,8 +127,8 @@ function fxlSync() {
   for (const [k, b] of FXL.nodes) if (!want.has(k)) { b.remove(); FXL.nodes.delete(k); }
   for (const k of want) if (!FXL.nodes.has(k)) {
     const b = h('button', { type: 'button', class: 'mx-node fxl-node', 'data-fxk': k });
-    b.addEventListener('pointerdown', (e) => { if (e.button) return; e.preventDefault(); wfxPress(k, e); });
-    b.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); wfxPress(k, e); wfxRelease(); } });
+    b.addEventListener('pointerdown', (e) => { if (e.button) return; e.preventDefault(); wfxPress(k); });
+    b.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); wfxPress(k); } });
     MX.row.append(b); FXL.nodes.set(k, b);
   }
   // the geometry: each loop strip's stem centre and foot, in the row's coordinates (the rails' canvas shares them)
@@ -147,25 +145,15 @@ function fxlSync() {
 }
 
 // ---- drawing (the Pult's still layer and its live one, console-draw.js) ----
-// a knot's mark: in the overview a fine ring of five ticks only when it goes through some of the effects (the whole chain
-// and Direkt stay the plain dots they were); in the effect view a light ring where it goes through the chosen one and
-// a faint circle on Kette where it could
-function mxFxmMark(c, x, yK, yD, fm, rgb) {
-  if (FXV.j < 0) {
-    if (!fm || fm === FXM_ALL) return;
-    for (let j = 0; j < 5; j++) {
-      const a0 = -Math.PI / 2 + (j / 5) * MX_TAU + 0.2, a1 = -Math.PI / 2 + ((j + 1) / 5) * MX_TAU - 0.2, on = fm & (1 << j);
-      c.strokeStyle = on ? mxRgba(rgb, 0.9) : 'rgba(240,230,216,.14)'; c.lineWidth = on ? 1.4 : 1;
-      c.beginPath(); c.arc(x, yK, 6.8, a0, a1); c.stroke();
-    }
-    return;
+// a knot's mark: a fine ring of five ticks when it goes through only some of the effects (the whole chain and Direkt stay
+// the plain dots they were); the channel the beads work on wears a soft halo in its colour, at the rail it is on
+function mxFxmMark(c, x, yK, yD, fm, rgb, tgt) {
+  if (fm > 0 && fm !== FXM_ALL) for (let j = 0; j < 5; j++) {
+    const a0 = -Math.PI / 2 + (j / 5) * MX_TAU + 0.2, a1 = -Math.PI / 2 + ((j + 1) / 5) * MX_TAU - 0.2, on = fm & (1 << j);
+    c.strokeStyle = on ? mxRgba(rgb, 0.9) : 'rgba(240,230,216,.14)'; c.lineWidth = on ? 1.4 : 1;
+    c.beginPath(); c.arc(x, yK, 6.8, a0, a1); c.stroke();
   }
-  if (fm & (1 << FXV.j)) {
-    c.fillStyle = mxRgba(rgb, 0.12); c.beginPath(); c.arc(x, yK, 9, 0, MX_TAU); c.fill();
-    c.strokeStyle = mxRgba(rgb, 0.9); c.lineWidth = 1.5; c.beginPath(); c.arc(x, yK, 7, 0, MX_TAU); c.stroke();
-  } else {
-    c.strokeStyle = 'rgba(240,230,216,.2)'; c.lineWidth = 1; c.setLineDash([2, 2.5]); c.beginPath(); c.arc(x, yK, 6.5, 0, MX_TAU); c.stroke(); c.setLineDash([]);
-  }
+  if (tgt) { const y = fm ? yK : yD; c.fillStyle = mxRgba(rgb, 0.1); c.beginPath(); c.arc(x, y, 10.5, 0, MX_TAU); c.fill(); c.strokeStyle = mxRgba(rgb, 0.55); c.lineWidth = 1; c.beginPath(); c.arc(x, y, 9.5, 0, MX_TAU); c.stroke(); }
 }
 // a spore on the chain rail at x: under a bead its channel skips it hops (dy > 0); through one it passes it lights it
 // (the bead's index, or -1)

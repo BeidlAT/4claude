@@ -22,21 +22,28 @@ function mxStatic() {
     c.strokeStyle = line; c.lineWidth = 1; c.setLineDash([1.5, 4]);
     c.beginPath(); c.moveTo(inline ? 5 + tw + 5 : 4, y + 0.5); c.lineTo(xe, y + 0.5); c.stroke(); c.setLineDash([]);
   }
-  // effect beads on the chain rail, under the returns: Verzerrung, Ring, Filter, Phaser, Schweben – lit while
-  // active, their initials inside where the soil has room, their names under the mouse
+  // effect beads on the chain rail, under the returns: Verzerrung, Ring, Filter, Phaser, Schweben (31.10.2026: the switches
+  // of the channel being worked on – lit in its colour where it goes through; dashed where the effect stands at 0 %; its
+  // name under them – wege-fx.js)
   const bx0 = MX.ch.dly.g.cx - 22, bx1 = MX.ch.rev.g.cx + 22, big = MX.soil >= 44, br = big ? 6.5 : 6;
+  const tk = wfxTarget(), trgb = mxRgb(wfxCol(tk));
   c.font = '600 7.5px ' + COL.fontNum; c.textAlign = 'center';
   MX.bx = [];
   for (let i = 0; i < 5; i++) {
-    const x = bx0 + (bx1 - bx0) * i / 4, on = mxFxOn(i), sel = FXV.j === i, dim = FXV.j >= 0 && !sel;
+    const x = bx0 + (bx1 - bx0) * i / 4, live = mxFxOn(i), on = wfxHas(tk, 1 << i);
     MX.bx.push(x);
-    c.fillStyle = sel ? 'rgba(255,179,92,.34)' : on ? 'rgba(255,179,92,' + (dim ? 0.07 : 0.16) + ')' : 'rgba(255,179,92,.05)'; c.beginPath(); c.arc(x, yK, br + (sel ? 4 : 2), 0, MX_TAU); c.fill();
-    c.fillStyle = sel ? '#ffb35c' : '#17110e'; c.beginPath(); c.arc(x, yK, big || sel ? br : 2.6, 0, MX_TAU); c.fill();
-    c.strokeStyle = sel ? '#ffd29c' : on ? 'rgba(255,179,92,' + (dim ? 0.4 : 0.8) + ')' : 'rgba(255,179,92,.3)'; c.lineWidth = 1; c.stroke();
-    if (big || sel) { c.fillStyle = sel ? '#140f0c' : on ? 'rgba(255,200,140,' + (dim ? 0.55 : 0.95) + ')' : 'rgba(168,153,138,.6)'; c.fillText(MX_FX[i][2], x, yK + 0.5); }
+    if (on) { c.fillStyle = mxRgba(trgb, 0.22); c.beginPath(); c.arc(x, yK, br + 4, 0, MX_TAU); c.fill(); }
+    c.fillStyle = on ? mxRgba(trgb, 0.92) : '#17110e'; c.beginPath(); c.arc(x, yK, br, 0, MX_TAU); c.fill();
+    c.strokeStyle = on ? mxRgba(trgb, 1) : 'rgba(255,179,92,.38)'; c.lineWidth = 1;
+    if (!live) c.setLineDash([1.6, 1.8]);
+    c.beginPath(); c.arc(x, yK, br + (live ? 0 : 1.5), 0, MX_TAU); c.stroke(); c.setLineDash([]);
+    c.fillStyle = on ? '#140f0c' : 'rgba(200,180,160,.62)'; c.fillText(MX_FX[i][2], x, yK + 0.5);
     const b = MX.beads && MX.beads[i];
-    if (b) { b.style.transform = 'translate(' + (x - 9).toFixed(1) + 'px,' + (yK - 9).toFixed(1) + 'px)'; b.title = MX_FX[i][1] + (on ? ' – an' : ' – aus') + (sel ? ' · Effekt-Blick: Kanäle antippen oder überstreichen, Alt: nur dieser, Umschalt: nur solange gedrückt, Esc: zurück' : ' · antippen: welche Kanäle hindurchgehen'); }
+    if (b) b.style.transform = 'translate(' + (x - 9).toFixed(1) + 'px,' + (yK - 9).toFixed(1) + 'px)';
   }
+  c.font = '400 8.5px ' + disp; c.textAlign = 'center'; c.fillStyle = mxRgba(trgb, 0.8);
+  c.fillText(wfxName(tk).toLowerCase(), (bx0 + bx1) / 2, yK + 13);
+  wfxBeadsSay();
   // hyphae: from the base of each stem down to its rail; returns always go straight in
   c.lineCap = 'round';
   for (const cc of MXC) {
@@ -52,7 +59,7 @@ function mxStatic() {
     // the knot: the channel's colour; hollow when its source is off, grey when it is still
     c.fillStyle = S.dorm ? 'rgba(118,106,97,.9)' : S.srcoff ? '#17110e' : mxRgba(cc.rgb, 1); c.beginPath(); c.arc(g.cx, ry, 3.8, 0, MX_TAU); c.fill();
     c.strokeStyle = S.srcoff && !S.dorm ? mxRgba(cc.rgb, 0.6) : '#140f0c'; c.lineWidth = 1.2; c.stroke();
-    if (cc.kind !== 'ret') mxFxmMark(c, g.cx, yK, yD, fm, cc.rgb);
+    if (cc.kind !== 'ret') mxFxmMark(c, g.cx, yK, yD, fm, cc.rgb, tk === cc.k);
   }
   // (31.10.2026) the Puls: one knot for its four Spuren (the VCA's column) – on Kette when they all are, hollow while
   // they go different ways; in the effect view lit when all four go through the effect
@@ -65,7 +72,7 @@ function mxStatic() {
       c.strokeStyle = 'rgba(240,230,216,.22)'; c.lineWidth = 1; c.beginPath(); c.arc(pg.cx, fm === 0 ? yK : yD, 3.2, 0, MX_TAU); c.stroke();
       c.fillStyle = fm < 0 ? '#17110e' : mxRgba(rgb, 1); c.beginPath(); c.arc(pg.cx, ry, 3.8, 0, MX_TAU); c.fill();
       c.strokeStyle = fm < 0 ? mxRgba(rgb, 0.8) : '#140f0c'; c.lineWidth = 1.2; c.stroke();
-      mxFxmMark(c, pg.cx, yK, yD, FXV.j >= 0 ? all : fm < 0 ? 0 : fm, rgb);
+      mxFxmMark(c, pg.cx, yK, yD, fm < 0 ? 0 : fm, rgb, tk === 'puls');
     }
   }
   // (31.10.2026) the Schleifen's knots, under their strips in the group „Schleifen“ (wege-fx.js, hexenring/weg.js)
@@ -77,7 +84,7 @@ function mxStatic() {
     c.strokeStyle = 'rgba(240,230,216,.22)'; c.lineWidth = 1; c.beginPath(); c.arc(G2.cx, fm ? yD : yK, 3.2, 0, MX_TAU); c.stroke();
     c.fillStyle = mxRgba(rgb, G2.L.state === 'spielt' ? 1 : 0.55); c.beginPath(); c.arc(G2.cx, ry, 3.8, 0, MX_TAU); c.fill();
     c.strokeStyle = '#140f0c'; c.lineWidth = 1.2; c.stroke();
-    mxFxmMark(c, G2.cx, yK, yD, fm, rgb);
+    mxFxmMark(c, G2.cx, yK, yD, fm, rgb, tk === G2.k);
   }
   // the Puls group is a VCA: a bracket over its four lanes
   const pg = MX.ch.puls.g, l0 = MX.ch.l0.g, by = soilY + 3;
