@@ -284,10 +284,15 @@ function hxWRenderFor(L, S, sig, o = {}) {
   if (S.wSkip === sig && !o.re) return;
   if (S.wBusy) { S.wAgain = o; return; }
   S.wBusy = sig; S.wAgain = null; S.wSkip = null; hxLadeAdd(L, S);
+  // (owner, 31.10.2026: „sind diese langen Wartezeiten unvermeidlich?“ – „da waren immer Sekunden angegeben“) how long it
+  // takes, said in seconds (the editor counts down); and a choice heard now does not wait for the whole render: the pass
+  // playing streams from a moment ahead (as a tempo change does it), the passes after it too, until the render is there
+  S.wT0 = performance.now(); S.wEst = Math.max(0.5, 1.3 * hxWPredict(L, S, hxLen(L) + hxWTailEst(S)) + (HX.wSetup || 0) / 1000 + 0.3);
+  if (o.now) hxWBridge(L, S, sig);
   const ver = S.ver || 0, key = L.key, gen = S.wGen || 0;
-  const done = () => { if ((S.wGen || 0) === gen) S.wBusy = null; hxCardDirty(); hxRailDirty(); };
+  const done = () => { if ((S.wGen || 0) === gen) S.wBusy = null; hxWBridgeEnd(S); hxCardDirty(); hxRailDirty(); };
   hxWRender(L, S, sig, o.key).then(async (V) => {
-    if ((S.wGen || 0) !== gen) return;   // (let go meanwhile)
+    if ((S.wGen || 0) !== gen) { hxWBridgeEnd(S); return; }   // (let go meanwhile)
     S.wBusy = null;
     let X = hxByKey(key);
     if (!X || !HX.sch.has(S.id) || (S.ver || 0) !== ver) return;
@@ -301,10 +306,11 @@ function hxWRenderFor(L, S, sig, o = {}) {
     }
     if (V) S.wFail = 0;
     if (V && V.sig === hxWSig(X, S, o.key) && (S.wu || hxMemOk(V.n))) {   // (final pass: a first Treu version within the Speichergrenze, as every other buffer – else the Abdruck plays on)
-      S.wu = V; S.wuSaved = 0;
+      S.wu = V; S.wuSaved = 0; hxWBridgeEnd(S);   // (the stream gives way to the whole render)
       if (hxWAktiv(X) && !(S.anc && S.anc.sig === V.sig)) { const now = !!o.now && o.f == null && hxNowOk(X); hxWPlay(S, 'wu', o.f != null && o.f > hxF(hxNowT() + 0.05) ? o.f : now ? hxSwapAt(X).f : hxNextSeam(X).f, false, now); }
       hxSaveSch(S, 'w');
     }
+    if (S.wBr && !S.wAgain) hxWBridgeEnd(S);   // (nothing to swap in: the fixed version comes back)
     if (S.wAgain || (V && V.sig !== hxWSig(X, S, o.key))) hxWUpdate(X, S.wAgain || {});
     hxCardDirty(); hxRailDirty();
   }).catch((e) => { console.warn('Hexenring: Wuchs', e); hxwLog('wuchs:ausnahme ' + String((e && e.message) || e).slice(0, 160)); done(); });
@@ -382,6 +388,11 @@ function hxWTick(now, horizon) {
       const S = HX.sch.get(id);
       if (!hxWCan(S)) continue;
       if (S.wPend && S.wPend.size) hxWDropPast(S, k);
+      if (S.wBr && !lebt) {   // (a render under way after a choice: its stream carries the passes until it is there)
+        if (!S.wBusy || L.state !== 'spielt') { hxWBridgeEnd(S); continue; }
+        if ((S.wk == null ? -1 : S.wk) < k1 && a1 - fNow <= hxWStartS() * SR) { S.wk = k1; hxWSlot(L, S, k1, { treu: true }); }
+        continue;
+      }
       if (!lebt && !hold) { if (S.wLive) { S.wLive = false; hxWStop(S); hxWUpdate(L, { re: true }); } continue; }
       if (!S.wLive) {
         if (hold) continue; if (!hxMemOk(Math.round(1.5 * (hxWTailEst(S) + 4) * SR))) { L.wMemT = pnow; continue; } L.wMemT = 0; S.wLive = true; S.wk = k; hxwWarm(2 * [...HX.sch.values()].filter((x) => x.wLive).length); }   // (final pass: its passes in the processor counted against the Speichergrenze before they stream)
@@ -396,5 +407,15 @@ function hxWTick(now, horizon) {
     }
   }
 }
+
+// the bridge: the pass playing from a moment ahead (the render's time foreseen), streamed; hxWTick adds the next ones
+function hxWBridge(L, S, sig) {
+  if (!L || L.state !== 'spielt' || S.wLive || HXW.st === 'kein' || hxWLebt(L) || !HX.node) return;
+  const now = hxNowT(), fN = hxF(now), k = hxPassK(L, Math.round(fN)), end = hxPassF(L, k + 1), lenS = (end - hxPassF(L, k)) / SR;
+  const at = Math.round(hxF(now + 0.25)) + Math.round(Math.min(lenS, 0.3 * hxWPredict(L, S, lenS) + (HX.wSetup || 0) / 1000) * SR);
+  S.wBr = sig; S.wk = k;
+  if ((end - at) / SR > 0.6) { hxWSlot(L, S, k, { at, treu: true }); S.wBrAt = at; } else S.wBrAt = end;
+}
+function hxWBridgeEnd(S) { if (!S.wBr) return; S.wBr = null; S.wBrAt = null; hxWStop(S); }
 
 hxPresetRestore();   // (the preset the loops took, before a reload)
