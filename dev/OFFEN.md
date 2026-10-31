@@ -34,6 +34,14 @@ Begründungen stehen in `dev/STAND-2026-10-29.md` (Abschnitte „Danach (30.10.)
 
 ## Für die nächste Sitzung zu tun (ohne weitere Rückfrage)
 ## Erledigt am 31.10.
+Bearbeiten-Fenster aus dem Mixer abgeschnitten → `hxEdPlace`: ist das Feld schmaler als 640 px (offenes Panel), reicht
+es übers Panel (bis 1000 px). Instrument je Schleife: Zeile „Instrument“ im Bearbeiten-Fenster (`hxWSet(L,'klang',…)`, gab
+es bisher nur versteckt in der Karte unter Wuchs); `hxEngName` nennt das klingende Instrument. Test `t-hx-inst-wahl.js` (Chromium).
+Offen: ob der Besitzer die Auswahl auch direkt am Mixer-Kanal der Schleife will.
+Besitzer: „wenn ich die Klangquelle ändere, ändern sich auch die Schleifen – soll weg; nur beim Preset-Wechsel mit der
+Option“ → `hxKlangOf` liefert dafür 'preset' (Klang `HX.preP`, festgehalten in `hxPresetTaken()` bei `loadPreset`, gespeichert
+in `myzel.hxPreset`; Schleifen merken `wwhy.pn`); der Regler-Auslöser in `onParamChanged` ist weg; eine eigens gewählte
+Quelle spielt mit `L.P`. Nur „Spielfeld“ (ausdrücklich je Schleife gewählt) folgt noch den Reglern.
 Puls/Bordun/Leiste (Besitzer: „Puls und Bordun spielen nicht mehr, auch wenn ich ein Preset lade … Puls starten soll auch
 spielen … das Symbol unten soll leuchten, wenn der Puls aktiv ist; dasselbe für das Sporenwerk … immer noch werden Schleifen
 neu berechnet, obwohl ich nur den Filter einstelle“): `loadPreset` startet den Puls, wenn das Preset Spuren hat (vorher nur

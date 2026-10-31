@@ -91,14 +91,17 @@ function hxWEng(L, n) {
   const k = hxKlangOf(L);
   const e = EB_OF[n.src];   // (Ebenen 1–8, 30.10.2026)
   if (k === 'eigen' || !e) return n.eng;
-  if (k === 'feld') return e.n > 1 && ENGINES[P[e.eng]] ? P[e.eng] : P['v.eng'];
+  if (k === 'feld' || k === 'preset') { const Q = k === 'preset' ? HX.preP : P; return e.n > 1 && ENGINES[Q[e.eng]] ? Q[e.eng] : Q['v.eng']; }
   return ENGINES[k] ? k : n.eng;
 }
 const hxWQ = (L) => { const s = L.stufe || P['hx.stufe'] || '3'; return s === 'gespielt' ? L.q || P['dev.q'] : s; };
 const hxWKeyNow = () => { const sig = P['t.root'] + '|' + P['t.scale'] + '|' + P['t.just']; if (HX.wKeyS !== sig) { HX.wKeyS = sig; HX.wKeyV = hxWScale(P['t.root'], P['t.scale']); } return HX.wKeyV; };   // (cached: the rail asks every frame)
 // the patch a pass is rendered with: the loop's own (as it was played), or the field's now – never a drift (Taumeln is the
 // processor's: a Wuchs version reads at the live drift), never an echo or a hall (they stay live)
-function hxWPat(L) { const p = Object.assign({}, hxKlangOf(L) === 'eigen' && L.P ? L.P : P); p['mov.drift'] = 0; return p; }
+// (owner, 31.10.2026: „wenn ich die Klangquelle ändere, ändern sich auch die Schleifen – das soll weg; nur beim Preset-Wechsel
+// mit der Option“) only the Spielfeld choice follows the knobs: an instrument chosen for it plays with the sound it had when
+// chosen (L.P), the preset's with the preset as loaded (HX.preP)
+function hxWPat(L) { const k = hxKlangOf(L), p = Object.assign({}, k === 'feld' ? P : k === 'preset' ? HX.preP : L.P || P); p['mov.drift'] = 0; return p; }
 // a throw: the Schicht's own seed (Treu, the anchor's when it has one), a pass's (Lebendig)
 const hxWSeedK = (S, k) => { let h = ((S.wseed | 0) ^ Math.imul(k + 7, 0x9e3779b1)) | 0; h ^= h >>> 16; h = Math.imul(h, 0x7feb352d); h ^= h >>> 15; return (h >>> 0) % 2147483646 + 1; };
 // Voss–McCartney pink noise, seeded: the breath of Lebendig wanders slowly from pass to pass (step n of the loop's notes)
@@ -233,7 +236,16 @@ const hxAbdr = (L) => !!(L.wwhy && L.wwhy.abdr);
 // sounds as it did when the loop was made (wwhy.ph: the sound's signature then, hxLoopNew), there is nothing to take:
 // the loop plays what was played, the Touché's hand and every note as it sounded; a preset or a knob that changes the
 // sound makes it follow
-const hxKlangOf = (L) => { const k = L.klang || 'eigen'; return k === 'eigen' && P['ui.instrument'] === 'preset' && !(L.mi && L.mi.from) && !(L.wwhy && L.wwhy.erst) && !hxAbdr(L) && !(L.wwhy && L.wwhy.ph != null && L.wwhy.ph === hxWPHashC()) && L.sch.some((id) => hxWCan(HX.sch.get(id))) ? 'feld' : k; };
+// (owner, 31.10.2026: a knob of the field – the Klangquelle too – leaves it alone: only a preset loaded after it was made
+// (HX.preN counts them, wwhy.pn the count it was made at) gives it that preset's sound, as the preset was loaded – 'preset')
+const hxKlangOf = (L) => { const k = L.klang || 'eigen', w = L.wwhy || {}; return k === 'eigen' && P['ui.instrument'] === 'preset' && HX.preP && (w.pn == null || w.pn < HX.preN) && !(L.mi && L.mi.from) && !w.erst && !hxAbdr(L) && !(w.ph != null && w.ph === HX.prePh) && L.sch.some((id) => hxWCan(HX.sch.get(id))) ? 'preset' : k; };
+// the preset just loaded: its sound kept (stored – the loops keep it after a reload), the loops that take it play anew
+function hxPresetTaken() {
+  HX.preN = (HX.preN || 0) + 1; HX.preP = Object.assign({}, P); HX.prePh = hxWPHashOf(HX.preP);
+  try { store.set('myzel.hxPreset', JSON.stringify({ n: HX.preN, P: HX.preP })); } catch (e) {}
+  if (A.ctx) for (const L of hxLoopsLive()) if (hxKlangOf(L) === 'preset' && hxWAktiv(L)) hxWUpdate(L);
+}
+function hxPresetRestore() { try { const d = JSON.parse(store.get('myzel.hxPreset') || 'null'); if (d && d.P) { HX.preN = +d.n || 1; HX.preP = d.P; HX.prePh = hxWPHashOf(HX.preP); } } catch (e) {} }
 const hxTonOf = (L) => { const t = L.ton || 'diatonisch'; return t === 'fest' && P['ui.tonart'] === 'schleifen' && !hxAbdr(L) && !(L.wwhy && L.wwhy.erst) ? 'diatonisch' : t; };   // (erstarrt: it plays as it sounded – in its key too)
 const hxWTonOff = (L) => { const t = hxTonOf(L); if (t === 'fest') return false; const k = hxWKeyNow(); return L.sch.some((id) => { const S = HX.sch.get(id); return hxWCan(S) && (t === 'transponieren' ? S.wn.key.root !== k.root : !hxWKeyEq(S.wn.key, k)); }); };
 const hxWLebt = (L) => hxEigN(L) >= 1 && !L.revW && !L.live && hxWAktiv(L) && !(L.treuBis != null && tgBeat(hxNowT()) < L.treuBis) && !(HX.wGuard.pause > performance.now()) && !L.wRefused;
@@ -385,3 +397,4 @@ function hxWTick(now, horizon) {
   }
 }
 
+hxPresetRestore();   // (the preset the loops took, before a reload)

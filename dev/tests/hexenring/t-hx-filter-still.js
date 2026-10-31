@@ -3,7 +3,7 @@
 // and a Schleife in the Leiste –
 //  1 the insert effects (Filter, Verzerrung, Ring, Phaser, Chorus), the sends and the Bordun are no part of the loop's
 //    sound signature: turned, no render starts (they act on it live, through its way in the mixer)
-//  2 a knob of the instrument itself still makes it follow (the field's sound, once the knob rests)
+//  2 nor do a knob of the instrument or the Klangquelle (owner, 31.10.2026) – only a preset loaded gives them its sound
 //                                                                                     node t-hx-filter-still.js
 const G = require('./hx-g'), H = require('./hx-h');
 const { ok } = H;
@@ -26,14 +26,27 @@ const BPM = 120;
     let seen = false; const watch = setInterval(() => { if (busy() || M.HX.wFeld) seen = true; }, 20);
     for (const id of ids) { const d = M.PD[id]; if (!d || d.kind !== 'num') continue; M.setParam(id, d.min + (d.max - d.min) * 0.37); await sl(120); }
     await sl(2500); clearInterval(watch); o.fx = seen;
+    // (owner, 31.10.2026: „wenn ich die Klangquelle ändere, ändern sich auch die Schleifen – das soll weg; nur beim
+    // Preset-Wechsel mit der Option“) a knob of the instrument, the Klangquelle itself: no render either
     const own = Object.keys(M.PD).find((id) => /^v\./.test(id) && M.PD[id].kind === 'num' && M.hxWPIn(id));
-    o.own = own; M.setParam(own, M.PD[own].min + (M.PD[own].max - M.PD[own].min) * 0.61); await sl(200);
-    o.follows = !!M.HX.wFeld || busy();
+    o.own = own; seen = false; const w2 = setInterval(() => { if (busy() || M.HX.wFeld) seen = true; }, 20);
+    M.setParam(own, M.PD[own].min + (M.PD[own].max - M.PD[own].min) * 0.61); await sl(300);
+    M.setParam('v.eng', M.P['v.eng'] === 'mem' ? 'glas' : 'mem'); await sl(3000); clearInterval(w2); o.knob = seen;
+    // a preset loaded: they take it – as it was loaded
+    const S = M.HX.sch.get(M.hxLoopsLive()[0].sch[0]), w0 = S.wu && S.wu.sig;
+    M.loadPreset(M.PRESETS.find((p) => p.name === 'Tiefsee')); M.seqStop();
+    let took = false; for (let i = 0; i < 400; i++) { await sl(100); if (!busy() && S.wu && S.wu.sig !== w0) { took = true; break; } }
+    o.took = took;
+    // and after it, a knob turned: they keep the preset's sound
+    seen = false; const w3 = setInterval(() => { if (busy()) seen = true; }, 20);
+    M.setParam('v.eng', 'glas'); await sl(3000); clearInterval(w3); o.after = seen;
     return o;
   }, BPM);
   ok(r.n >= 1 && r.calm, `a Schleife, calm, playing with the preset's instrument (${r.n})`);
   ok(!r.inSig.length && !r.fx, `Filter, Verzerrung, Ring, Phaser, Chorus, Hall, Echo, Bordun turned: no render (${r.inSig.join(',') || 'none in its signature'})`);
-  ok(r.follows, `a knob of the instrument (${r.own}): it follows`);
+  ok(!r.knob, `a knob of the instrument (${r.own}) and the Klangquelle changed: no render`);
+  ok(r.took, 'a preset loaded (Instrument beim Preset-Wechsel on): the loop takes its sound');
+  ok(!r.after, 'after it the Klangquelle changed again: the loop keeps the preset\'s sound');
   ok(!errors.length, 'no page errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
   await H.close();
   process.exit(H.summary() ? 1 : 0);
