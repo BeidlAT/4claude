@@ -118,7 +118,8 @@ function hxFuCommit(L) {
   const S = hxSchByKey(K.sk); const ww0 = Object.assign({}, L.wwhy); delete ww0.fuKeep;
   if (!S || !S.wn || !HX.node) return false;   // (a reload: its Schicht not back yet – the next tick)
   const lk = L.key, sk = S.key, was = { wn: S.wn, klang: L.klang, eig: L.eig, ww: Object.assign({}, ww0) }, to = { wn: K.wn, klang: 'eigen', eig: 'treu', ww: Object.assign({}, ww0, { wahl: true, abdr: false, erst: false }) };
-  const put = (X, s) => { const S2 = hxSchByKey(sk); if (!S2) return; S2.wn = s.wn; S2.wnT = null; X.klang = s.klang; if (X.eig !== s.eig) hxEigSet(X, s.eig); X.wwhy = Object.assign({}, s.ww); hxWUpdate(X); hxSaveMeta(X.id); hxCardDirty(); hxRailDirty(); };
+  if (!S.wn0) S.wn0 = S.wn;   // (the notes as harvested – „Original“ brings them back)
+  const put = (X, s) => { const S2 = hxSchByKey(sk); if (!S2) return; S2.wn = s.wn; S2.wnT = null; X.klang = s.klang; if (X.eig !== s.eig) hxEigSet(X, s.eig); X.wwhy = Object.assign({}, s.ww); hxWUpdate(X, { now: true }); hxSaveMeta(X.id); hxCardDirty(); hxRailDirty(); };
   put(L, to);
   hxHist({ kind: 'wuchs', label: 'Geführt übernommen (' + hxName(L) + ')', undo() { const X = hxByKey(lk); if (X) put(X, was); }, redo() { const X = hxByKey(lk); if (X) put(X, to); } });
   hxSay(hxName(L) + ': das Geführte bleibt');

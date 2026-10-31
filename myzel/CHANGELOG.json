@@ -2,6 +2,14 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-31p",
+      "punkte": [
+        "Ein anderes Instrument, Wuchs-Einstellungen oder Geführtes sind jetzt sofort zu hören, sobald der neue Klang gerechnet ist – mitten im Durchgang übergeblendet, statt bis zur nächsten Naht zu warten.",
+        "Neuer Knopf „Original“ im Bearbeiten-Fenster (statt „Grundeinstellung“): Die Schleife wieder so, wie sie geerntet wurde – Band, Abschnitte, Noten-Werkzeuge, Klang verwandeln, Instrument, Führen und Geführtes, Wiedergabe als Abdruck. Ein Schritt, ↶ holt alles wieder.",
+        "Länge und Band-Tempo einer Schleife wechseln weiterhin an der Naht – mitten im Durchgang würde sie aus dem Takt springen."
+      ]
+    },
+    {
       "id": "2026-10-31o",
       "punkte": [
         "Klang verwandeln (ganze Schleife): Tonhöhe und Verstimmen zählen jetzt bei jedem Klick weiter – dreimal −1 sind −3 Halbtöne. Daneben steht, wo du gerade bist; „0“ setzt die Zeile zurück.",

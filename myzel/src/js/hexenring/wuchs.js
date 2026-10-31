@@ -243,7 +243,7 @@ const hxKlangOf = (L) => { const k = L.klang || 'eigen', w = L.wwhy || {}; retur
 function hxPresetTaken() {
   HX.preN = (HX.preN || 0) + 1; HX.preP = Object.assign({}, P); HX.prePh = hxWPHashOf(HX.preP);
   try { store.set('myzel.hxPreset', JSON.stringify({ n: HX.preN, P: HX.preP })); } catch (e) {}
-  if (A.ctx) for (const L of hxLoopsLive()) if (hxKlangOf(L) === 'preset' && hxWAktiv(L)) hxWUpdate(L);
+  if (A.ctx) for (const L of hxLoopsLive()) if (hxKlangOf(L) === 'preset' && hxWAktiv(L)) hxWUpdate(L, { now: true });
 }
 function hxPresetRestore() { try { const d = JSON.parse(store.get('myzel.hxPreset') || 'null'); if (d && d.P) { HX.preN = +d.n || 1; HX.preP = d.P; HX.prePh = hxWPHashOf(HX.preP); } } catch (e) {} }
 const hxTonOf = (L) => { const t = L.ton || 'diatonisch'; return t === 'fest' && P['ui.tonart'] === 'schleifen' && !hxAbdr(L) && !(L.wwhy && L.wwhy.erst) ? 'diatonisch' : t; };   // (erstarrt: it plays as it sounded – in its key too)
