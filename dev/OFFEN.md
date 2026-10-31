@@ -33,6 +33,12 @@ Begründungen stehen in `dev/STAND-2026-10-29.md` (Abschnitte „Danach (30.10.)
 
 ## Für die nächste Sitzung zu tun (ohne weitere Rückfrage)
 ## Erledigt am 31.10.
+Touché-Spielweise „Gestik“ (Besitzer: „mit dem Touché die Gestik des Handys vollständig nachmachen“): `midi/touche-gestik.js`
+– ein künstlicher Funkstrecken-Sender (`TCHG.src`, `syn`, über `gkRemOn`/`gkrDue`/`gkRemIn`), 100 Hz: Neigen = Weg der Haut
+(×1,15 Weite), Bebung = 2,5–10 Hz im Druck, Drehen/Schwenken = Kreisen, Ladung = schnelle Bewegung (Gesetz des Handys),
+Schütteln = ≥3 Umkehrungen in 600 ms (+ Peaks), Wenden = zweimal kurz heran (Umschalter), Ruhe = Hand weg 1,5 s; Ruhelage
+bleibt die Null. Test `t-tch-gestik.js` 8/8. Offen fürs Gefühl: Schwellen (Bebung recht empfindlich, Doppel-Heran als
+Schlafen) mit dem echten Touché in Firefox; die Kupplung „Bei Tönen“ wirkt wie am Handy (Neigen nur bei gehaltenen Tönen).
 Eigene Touché-Spielweisen (Besitzer: „je Richtung Ziel, Stärke und Kurve; speichern und benennen“): `midi/touche-eigen.js`
 (TCHE, gespeichert `myzel.tch.eigen.v1`): Grundlage (eine der 16 oder keine) + je Richtung Zeilen {Ziel, Stärke −100…100 %,
 Kurve}; Ziele = Eingänge der Grundlage (`b:weg` …, Tauschen/Abschalten), alle Formen-Ziele (MODT), Gleiten, Vibrato,
