@@ -642,6 +642,12 @@ body:not(.mlearn) :is(.gk-ax, .gk-ev) { cursor: default; }
 }
 @media (max-width: 340px) { .gk-ico::before { inset: -3px -3px; } }
 .kc-pads { display: flex; align-items: center; gap: 8px; margin: 4px 0; } .kc-pads .lab { font-size: 12px; color: var(--dim); } .kc-pads .chips { padding: 0; }
+/* (31.10.2026) the Touché's sixteen Spielweisen: a grid, four families of four in rows (two columns where narrow) */
+.kc-tch { display: grid; grid-template-columns: 1fr; align-items: stretch; gap: 6px; container-type: inline-size; }
+.kc-tch .chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.kc-tch .chip { justify-content: center; text-align: center; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kc-tch > .chip { justify-self: start; }
+@container (max-width: 380px) { .kc-tch .chips { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .kc-pads .chip[aria-pressed="true"] { background: var(--spore); border-color: var(--spore); color: var(--ink); }
 .gk-fae { color: var(--lumen); }
 /* the Funkstrecke's dark view: only the Wasserwaage on black, touches swallowed */
@@ -5041,7 +5047,7 @@ function buildStrips() {
     st.in = G(1); st.in.channelCount = 2; st.in.channelCountMode = 'explicit'; st.in.channelInterpretation = 'speakers';
     st.byp = G(1); st.wet = G(0); st.mBy = G(1); st.mWet = G(0); st.duck = G(1); st.dry = G(1);
     // (owner, 26.10.2026) Klang and Ebene 2 (30.10.2026: every Ebene): the Touché's insert sits between the input and the strip's blocks – a dry
-    // gain at 1 and a wet one at 0 (nothing feeds it): exactly the strip as before until a Spielweise F5–F12 plays; st.pt is
+    // gain at 1 and a wet one at 0 (nothing feeds it): exactly the strip as before until a Spielweise Körner … Arpeggio plays; st.pt is
     // what follows it (the strip's own EQ takes its input there)
     if (d.eb) { st.tD = G(1); st.tW = G(0); st.pt = G(1); st.in.connect(st.tD).connect(st.pt); st.tW.connect(st.pt); } else st.pt = st.in;
     st.pt.connect(st.byp);
@@ -13105,7 +13111,7 @@ function myzelDsp() {
       // oberton: the 4× oversampler (a 64-tap windowed sinc at the 4× rate, polyphase) and its state
       this.os = this.osDesign(); this.uL = new Float32Array(16); this.uR = new Float32Array(16); this.dL = new Float32Array(64); this.dR = new Float32Array(64); this.ui = 0; this.di = 0; this.dcL = new DcBlock(12); this.dcR = new DcBlock(12); this.obMix = 0;
       // stottern
-      this.st = { on: false, start: 0, len: 0, ph: 0, rate: 1, mix: 0, g: 1, lp: 0, lpR: 0, n: 0 };
+      this.st = { on: false, at: 0, len: 0, ph: 0, rate: 1, mix: 0, g: 1, gT: 1, lp: 0, lpR: 0, n: 0 };
       // resonanz: six strings (delay line, loop low pass, a dispersion allpass)
       this.rs = [0, 1, 2, 3, 4, 5].map(() => ({ b: new Float32Array(4096), w: 0, z: 0, ap: 0, apx: 0, d: 200 })); this.rsLvl = 0; this.rsHp = 0; this.rsHpx = 0; this.rsEnv = 0;
       // (tests and offline renders: the Spielweise and the hand from the start)
@@ -13297,7 +13303,11 @@ function myzelDsp() {
       // the division of a beat: links a whole beat … rechts a sixteenth (in steps – a stutter is in time; from where the
       // hand is going, not the glide on its way there)
       const sd = ct[3] - ct[2], steps = [1, 0.5, 0.25, 0.125, 0.0625], k = Math.max(0, Math.min(4, Math.round((sd + 1) * 2))), len = Math.max(64, Math.round(steps[k] * this.beat * SR));
-      if (!S.on && p > 0.08) { S.on = true; S.len = len; S.start = w0 - len; S.ph = 0; S.g = 1; S.n = 0; }
+      // (31.10.2026, owner: „bei Chill-Hop Abend knackst Stottern, wenn ich stärker nach links oder rechts drücke“) the
+      // slice always ends at the moment of the press (S.at) and reaches back by its length: a longer division (links) used
+      // to read on past the ring's head into seconds-old sound, and a new length's seam joined at the wrong place. Pressed
+      // again while the last one still fades out: it goes on (a new moment there was a jump under the fading wet sound).
+      if (!S.on && p > 0.08) { S.on = true; if (S.mix < 1e-3) { S.len = len; S.at = w0; S.ph = 0; S.g = S.gT = 1; S.n = 0; } }
       else if (S.on && p < 0.04) S.on = false;
       const mg = 1 - Math.exp(-1 / (0.004 * SR)), X = Math.min(Math.round(0.003 * SR), S.len >> 2);
       let mix = S.mix;
@@ -13306,11 +13316,13 @@ function myzelDsp() {
       for (let i = 0; i < n; i++) {
         mix += ((S.on ? 1 : 0) - mix) * mg;
         S.rate += (rT - S.rate) * 0.0005;
-        // at a repetition's end: the next (a new division takes over there), its level a step down with heran
-        if (S.ph >= S.len) { S.ph -= S.len; S.n++; S.g *= dec; if (S.on && len !== S.len) S.len = len; }
-        const t = S.ph, pos = S.start + t;
+        // at a repetition's end: the next (a new division takes over there), its level a step down with heran – gliding
+        // (a step at full level clicked)
+        if (S.ph >= S.len) { S.ph -= S.len; S.n++; S.gT *= dec; if (S.on && len !== S.len) S.len = len; }
+        S.g += (S.gT - S.g) * mg;
+        const t = S.ph, pos = S.at - S.len + t;
         let x = this.rd(this.bL, pos), y = this.rd(this.bR, pos);
-        if (t < X) { const e = t / X; x = x * e + this.rd(this.bL, pos + S.len) * (1 - e); y = y * e + this.rd(this.bR, pos + S.len) * (1 - e); }   // (the seam: the slice's own continuation fades under its start)
+        if (t < X) { const e = t / X; x = x * e + this.rd(this.bL, S.at + t) * (1 - e); y = y * e + this.rd(this.bR, S.at + t) * (1 - e); }   // (the seam: what followed the slice's end fades under its start – the same place for every length)
         S.lp += (x - S.lp) * lpc; S.lpR += (y - S.lpR) * lpc;
         const g = S.g; x = S.lp * g; y = S.lpR * g;
         oL[i] = (iL ? iL[i] : 0) * (1 - mix) + x * mix; oR[i] = (iR ? iR[i] : 0) * (1 - mix) + y * mix;
@@ -17820,7 +17832,6 @@ function midiTake(src, ev) {
   if (ev.ch === 15 && gkrTake(src, ev)) return true;   // channel 16: a phone's Gestik over the Funkstrecke (only with its signature)
   if (CB.on && cbIn(src, ev)) return true;   // (26.10.2026: the Gerätebild – lights its controls; while calibrating it takes them)
   if (APC.src && apcIn(src, ev)) return true;   // (26.10.2026: the APC40 MK2's pads in one of its five modes)
-  if (tchIn(src, ev)) return true;   // (30.10.2026: the Touché's two buttons – its slots' Program Change – browse the presets)
   if (MIDI.take && MIDI.take(src, ev) === true) return true;
   if (LEARN.on && learnIn(src, ev)) return true;
   return mapTake(src, ev);
@@ -18277,9 +18288,9 @@ const MPROF = [
       ...range(30, 37).map((n, i) => PB('cc', 15, n, BANK8[i], 'abs', { name: 'Regler ' + (i + 1) }))] },
   // Expressive E Touché SE (owner, 25.10.2026): a hand on a wooden skin – four directions, factory standalone CC 17 rear
   // (pushed away), 16 front (pulled toward you), 18 left, 19 right, each resting at 0. What they do depends on the
-  // Spielweise (js/midi/touche.js): Finger, Atem, Raum, Verwandlung – the card's chips, F1–F4.
-  { id: 'tch', name: 'Expressive E Touché', re: /Touch[eé](?![a-z])/i, what: 'formt und spielt Töne – acht Spielweisen (F1–F4, Umschalt+F1–F4)',
-    hint: 'Ab Werk sendet es CC 16–19. Hast du in Lié andere Nummern eingestellt, leg die vier Richtungen unter „Zuweisen“ neu. Der Drehknopf am Gerät stellt nur die Empfindlichkeit ein (drücken friert ein); die Spielweise wählst du hier oder mit F1–F4 und Umschalt+F1–F4. Die zwei Schalter unten (sie wechseln den Slot, Program Change) blättern die Presets: rechts vor, links zurück – mit Touché liegen die Presets 1–10 auf Strg+F1–F10.',
+  // Spielweise (js/midi/touche.js): sixteen, the card's chips.
+  { id: 'tch', name: 'Expressive E Touché', re: /Touch[eé](?![a-z])/i, what: 'formt und spielt Töne – sechzehn Spielweisen',
+    hint: 'Ab Werk sendet es CC 16–19. Hast du in Lié andere Nummern eingestellt, leg die vier Richtungen unter „Zuweisen“ neu. Der Drehknopf am Gerät stellt nur die Empfindlichkeit ein (drücken friert ein); die Spielweise wählst du hier.',
     binds: [PB('cc', -1, 17, 'tch.weg', 'abs', { name: 'Weg drücken' }), PB('cc', -1, 16, 'tch.her', 'abs', { name: 'Heran ziehen' }),
       PB('cc', -1, 18, 'tch.li', 'abs', { name: 'Links' }), PB('cc', -1, 19, 'tch.re', 'abs', { name: 'Rechts' })],
     ctrls: [['Finger (F1)', 'weg/heran: Höhe hinauf/hinunter · links/rechts: Tonhöhe des neuesten Tons bis ±1 Halbton – wie Pitchbend'],
@@ -21715,8 +21726,8 @@ function fhX(tt, pt) {
 MOD.set = modSet; MOD.clear = modClear; MOD.val = modVal; MOD.route = gkRoute;
 
 /* ---------- Expressive E Touché: four Spielweisen (owner, 25.10.2026) ---------- */
-// Its knob sends nothing (sensitivity, push = freeze), so the Spielweise is chosen in Myzel: the device card's chips,
-// F1–F4, or any control learned to „Touché: Spielweise …“. Its four directions (0 at rest … 1 pressed) reach Formen as
+// Its knob sends nothing (sensitivity, push = freeze), so the Spielweise is chosen in Myzel: the device card's chips
+// or any control learned to „Touché: Spielweise …“. Its four directions (0 at rest … 1 pressed) reach Formen as
 // the sources 'map:tch:…' – never the preset, and the Fährte and the Hexenring's Bewegung write them down like any
 // controller's; a switch carries what the hand holds over into the new Spielweise.
 //   Finger       away/toward Höhe ±, left/right the newest note's pitch ±1 semitone (fine – the owner keeps it so)
@@ -21733,15 +21744,13 @@ MOD.set = modSet; MOD.clear = modClear; MOD.val = modVal; MOD.route = gkRoute;
 //                else the newest that plays; the ring's processor glides straight: band {lin})
 //   Vokal        a mouth over the sound (IDEEN Touché 10): any pressure opens it (three formants in the insert chain),
 //                away/toward the jaw (a ↔ i/u), left/right the tongue (u/o ↔ e/i)
-// F5–F12 (owner, 26.10.2026: „viel weitreichendere Klangformung – jede F-Taste klingt fundamental anders“), each shaping
+// the later eight (owner, 26.10.2026: „viel weitreichendere Klangformung – jede Taste klingt fundamental anders“), each shaping
 // the sound being played in depth – js/midi/touche-fx.js (the insert) and js/dsp/touche-fx.js (the processor):
-//   Körner (F5) a grain cloud of what was just played · Eis (F6) freeze and paint · Obertöne (F7) even/odd harmonics,
-//   drive, folding · Fächer (F8) detuned pair, octaves, fifth · Ort (F9) a place in space, binaural, far and near ·
-//   Stottern (F10) repeats in the Puls's tempo · Resonanz (F11) six strings tuned to the held notes · Arpeggio (F12)
+//   Körner a grain cloud of what was just played · Eis freeze and paint · Obertöne even/odd harmonics,
+//   drive, folding · Fächer detuned pair, octaves, fifth · Ort a place in space, binaural, far and near ·
+//   Stottern repeats in the Puls's tempo · Resonanz six strings tuned to the held notes · Arpeggio
 const TCH_W = [['finger', 'Finger'], ['atem', 'Atem'], ['raum', 'Raum'], ['verw', 'Verwandlung'], ['gleiten', 'Gleiten'], ['streichen', 'Streichen'], ['platte', 'Platte'], ['vokal', 'Vokal'],
   ['koerner', 'Körner'], ['eis', 'Eis'], ['oberton', 'Obertöne'], ['faecher', 'Fächer'], ['ort', 'Ort'], ['stottern', 'Stottern'], ['resonanz', 'Resonanz'], ['arp', 'Arpeggio']];
-// the key of a Spielweise: F1–F4, Umschalt+F1–F4, F5–F12
-const tchKey = (i) => (i < 4 ? 'F' + (i + 1) : i < 8 ? 'Umschalt+F' + (i - 3) : 'F' + (i - 3));
 const TCH = { v: { weg: 0, her: 0, li: 0, re: 0 }, ph: 0, t: 0, raf: 0, vib: 0, rate: 5.5 };
 const TCH_SRC = [['h', 'hoehe'], ['b', 'bend'], ['e', 'expr'], ['f', 'flt'], ['r', 'rev'], ['d', 'dly'], ['p', 'pan'], ['m', 'morph'], ['g', 'bend'], ['s', 'hoehe'], ['w', 'vok'], ['o', 'vokO'], ['u', 'vokV']];
 // Gleiten: the newest note, a fifth (700 cents) at full; Streichen: every held note's height set to the bow's (field units)
@@ -21759,7 +21768,7 @@ function tchApply() {
   else if (w === 'streichen') { const p = Math.max(weg, her); o.e = p - 1; TCH.sy = clamp(0.08 + 0.92 * weg, 0, 1); o.s = 0.5 + 0.5 * TCH.sy; o.b = 0.5 * (re - li); }   // (o.s only keeps the source alive and moving; its per sets the height)
   else if (w === 'vokal') { o.w = Math.max(weg, her, li, re); o.o = weg - her; o.u = re - li; }
   else if (w === 'ort') o.r = 0.8 * Math.pow(weg, 1.2) - 0.25 * her;   // (far away: the hall comes up; close: drier)
-  if (typeof tfxSet === 'function') tfxSet(w, { weg, her, li, re });   // (F5–F12: the insert, the place, the arpeggio)
+  if (typeof tfxSet === 'function') tfxSet(w, { weg, her, li, re });   // (Körner … Arpeggio: the insert, the place, the arpeggio)
   for (const [n, k] of TCH_SRC) modSet('map:tch:' + n, k, o[n] || 0, TCH_OPT[n]);
   tchPlatte(w === 'platte' ? (1 - 0.97 * weg) * (1 + her) * (1 + 0.3 * (re - li)) : 1);
   // Atem's vibrato: depth from the harder side, ±50 cents at most; its rate 3.5 … 7.5 Hz
@@ -21810,7 +21819,7 @@ function tchWeise(w, say) {
   if (say) toast('Touché: ' + TCH_W.find((x) => x[0] === w)[1] + note, 2600);
   for (const b of document.querySelectorAll('[data-kc*=":tch"]')) b.setAttribute('aria-pressed', String(b.dataset.kc.endsWith(':tch' + w)));   // (the card's chips)
 }
-// what a Spielweise of F5–F12 does, in a word (the toast; the device card says it whole)
+// what a Spielweise of Körner … Arpeggio does, in a word (the toast; the device card says it whole)
 const TCH_SAY = { koerner: 'eine Körnerwolke aus dem eben Gespielten', eis: 'Drücken friert den Klang ein, seitlich malst du ihn in der Höhe', oberton: 'Obertöne kneten: links gerade, rechts ungerade, weg Antrieb, heran falten',
   faecher: 'ein Ton fächert sich auf: Stimmen, Oktaven, Quinte', ort: 'der Klang an einem Ort im Raum – weit weg, nah am Ohr, rundherum', stottern: 'Drücken wiederholt den Moment im Tempo – links lang, rechts kurz',
   resonanz: 'Saiten, gestimmt auf deine Töne, schwingen mit', arp: 'ein Arpeggio aus der Hand über die gehaltenen Töne' };
@@ -21819,30 +21828,12 @@ for (const [dir, nm] of [['weg', 'weg drücken'], ['her', 'heran ziehen'], ['li'
   midiTarget('tch.' + dir, 'Touché: ' + nm + ' (je nach Spielweise)', null, { group: 'Spielweise', cont: true, noTake: true, get: () => (TCH.raw && TCH.raw[dir]) || 0, set: (n) => tchSet(dir, n) });
 TCH_W.forEach(([w, nm], i) => midiTarget('tch.' + (i + 1), 'Touché: Spielweise ' + nm, (v) => { if (v >= 0.5) tchWeise(w, true); }, { group: 'Spielweise', button: true }));
 midiTarget('tch.next', 'Touché: nächste Spielweise', (v) => { if (v >= 0.5) tchStep(1); }, { group: 'Spielweise', button: true });
-// (owner, 30.10.2026: „die zwei Schalter unten für den Preset-Wechsel“) the Touché's two buttons change its slot and send
-// a Program Change: up (the right one) the next preset, down (the left one) the one before – whatever the numbers are;
-// not while learning (the buttons can be assigned to anything else there)
-function tchIn(src, ev) {
-  if (ev.type !== 'pc' || !src.prof || src.prof.id !== 'tch' || !profOn(src) || LEARN.on) return false;
-  const was = TCH.pc; TCH.pc = ev.num;
-  if (was == null || was === ev.num) return true;
-  let d = ev.num - was; if (Math.abs(d) > 64) d = -d;   // (wrapped round the end of its slots)
-  presetStep(d > 0 ? 1 : -1);
-  return true;
-}
-// F1–F4 and Umschalt + F1–F4 on the computer keyboard, while a Touché is there (not while typing, not while learning)
-window.addEventListener('keydown', (e) => {
-  const m = /^F([1-9]|1[0-2])$/.exec(e.key), fk = m ? +m[1] : 0;
-  if (!m || (fk > 4 && e.shiftKey) || !TCH.live || e.ctrlKey || e.altKey || e.metaKey || LEARN.on || /^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || '') || (e.target && e.target.isContentEditable)) return;
-  e.preventDefault();
-  if (!e.repeat) tchWeise(TCH_W[fk <= 4 ? fk - 1 + (e.shiftKey ? 4 : 0) : fk + 3][0], true);   // (F5–F12: the browser's own uses of them – reload, full screen, tools – give way while a Touché is there)
-});
 // a Touché plugged in or out, the Spielweise chosen anywhere (the card, the settings): applied anew
 setInterval(() => {
   if (!TCH.bound && typeof bindCtl === 'function') { TCH.bound = true; bindCtl('midi.tch', () => tchApply()); }
   if (A.started && tchLive() !== !!TCH.live) { if (!TCH.live) TCH.v = { weg: 0, her: 0, li: 0, re: 0 }; tchApply(); }
 }, 1000);
-/* ---------- Touché F5–F12: the sound shaped in depth (owner, 26.10.2026) ---------- */
+/* ---------- Touché Körner … Arpeggio: the sound shaped in depth (owner, 26.10.2026) ---------- */
 // „Mit dem Touché viel weitreichendere Klangformung – acht weitere F-Tasten, jede klingt fundamental anders“ – chosen:
 // each shapes the sound being played (not a sound of its own). Five live in the processor myzel-tfx (js/dsp/touche-fx.js),
 // one is a place in space (the browser's own binaural panner), two play the instrument itself: Fächer (more voices of
@@ -27825,7 +27816,7 @@ function mxgKeys(C) {
     } else if (mxVolKey(e, mxVolId(k))) { if (MXG.geo) mxgGeo(); mxTipFlash(MX.root, el, mxTipVol(k)); return; }
     else if (key === 'Enter' || key === ' ') openDetail(k);
     else if ((key === 'Delete' || key === 'Backspace') && mxgHasPan(C)) setParam(pid, 0);
-    else if (key === 'ContextMenu' || (key === 'F10' && e.shiftKey)) mxgMenu(k);
+    else if (key === 'ContextMenu') mxgMenu(k);
     else if ((key === 'm' || key === 'M') && mid) setParam(mid, !P[mid]);
     else if ((key === 's' || key === 'S') && sid) setParam(sid, !P[sid]);
     else return;
@@ -31030,7 +31021,7 @@ function kbCard(p, i, onClick) {
   const cv = h('canvas', { class: 'kb-art', 'aria-hidden': 'true' });
   const sub = h('span', { class: 'kb-sc' }, NOTE_NAMES[S.root] + ' · ' + S.scale);
   const foot = h('span', { class: 'kb-foot' }, kbTonring(S), sub, h('span', { class: 'kb-sp' }), ...(S.on.length ? [kbPulsRows(S), h('span', { class: 'kb-bpm' }, String(Math.round(S.bpm)))] : []));
-  const el = h('button', { type: 'button', class: 'pcard kb', 'aria-current': 'false', style: '--a:' + S.a + ';--b:' + S.b, title: i >= 1 && i <= 10 ? 'Taste F' + i + ' (mit Touché: Strg+F' + i + ')' : null, onclick: onClick },   // (30.10.2026: the first ten on F1–F10 – presets.js)
+  const el = h('button', { type: 'button', class: 'pcard kb', 'aria-current': 'false', style: '--a:' + S.a + ';--b:' + S.b, onclick: onClick },
     h('span', { class: 'kb-frame' }, cv, h('span', { class: 'kb-nr', 'aria-hidden': 'true' }, i != null ? String(i).padStart(2, '0') : '')),
     h('b', null, p.name), h('span', { class: 'tags' }, p.tags || ''), p.desc ? h('small', null, p.desc) : null, foot);
   el.dataset.key = p.key;
@@ -32275,17 +32266,6 @@ function undo() {
 function updUndo() { if (undoBtn) undoBtn.disabled = !HIST.length; }
 const UNDO = { label: 'Rückgängig', fn: () => undo() };
 
-// (owner, 30.10.2026: „F1–F10 – da waren 10 Presets drauf“) the first ten presets of the list on F1–F10; with a Touché
-// (its Spielweisen sit on F1–F12 – touche.js) on Strg+F1–F10. Not while typing or learning. Capture: ahead of the Touché's handler
-window.addEventListener('keydown', (e) => {
-  const m = /^F([1-9]|10)$/.exec(e.key); if (!m || e.altKey || e.metaKey || e.shiftKey) return;
-  const tch = typeof TCH !== 'undefined' && TCH.live;
-  if (tch ? !e.ctrlKey : e.ctrlKey) return;
-  if ((typeof LEARN !== 'undefined' && LEARN.on) || /^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || '') || (e.target && e.target.isContentEditable)) return;
-  const p = PRESETS[+m[1] - 1]; if (!p) return;
-  e.preventDefault(); if (e.repeat) return;
-  loadPreset(p); toast((tch ? 'Strg+' : '') + 'F' + m[1] + ': ' + p.name, 1600);
-}, true);
 function loadPreset(p, own) {
   hxUprLeave();   // (the own preset it leaves keeps the Leiste it ends with – kreise.js)
   remember();
@@ -32850,8 +32830,9 @@ function kcCard(it) {
     }
     if (p && p.id === 'tch' && po) {   // (Touché, 25.10.2026: its Spielweise – the knob on the device sends nothing)
       const tip = { finger: 'weg/heran: Höhe · links/rechts: Tonhöhe', atem: 'weg: anschwellen · heran: dunkel · links/rechts: Vibrato', raum: 'weg: Hall · heran: Echo · links/rechts: Panorama', verw: 'weg/heran: Mixer-Szene B/A · links/rechts: Filter', gleiten: 'weg/heran: Höhe · links/rechts: Tonhöhe bis eine Quinte', streichen: 'ohne Druck still · weg: Bogen- oder Atemdruck · heran: leicht und luftig · links/rechts: Intonation', platte: 'Hand auf der Schleife: weg bremst · heran schiebt an · links/rechts kleine Schübe', vokal: 'Druck öffnet den Mund · weg/heran: a ↔ i/u · links/rechts: u/o ↔ e/i' , koerner: 'Körnerwolke aus dem eben Gespielten · weg: dichter · heran: Tonhöhen streuen, rückwärts · links: zurück in der Zeit · rechts: weit streuen', eis: 'Drücken friert ein (Druck = Lautstärke) · links/rechts: Tonhöhe ±1 Oktave · weg: verwischen · heran: dunkler, Oktave darunter', oberton: 'weg: Antrieb · links: gerade Obertöne (warm) · rechts: ungerade (hohl) · heran: Welle falten (rau, metallisch)', faecher: 'weg: verstimmtes Paar, breit · links: Oktave darunter · rechts: Oktave darüber · heran: Quinte', ort: 'weg: weit weg (verhallt, dumpfer, später) · heran: nah am Ohr · links/rechts: um den Kopf herum (Kopfhörer!)', stottern: 'Drücken wiederholt den Moment im Tempo · links: lang (ein Schlag) · rechts: kurz (1/16) · weg: Band langsamer · heran: ausklingen, dunkler', resonanz: 'Saiten auf deine Töne gestimmt · Druck: länger klingen · weg: heller · heran: glockig · links/rechts: Stimmung ±1 Oktave', arp: 'Druck startet das Arpeggio (und ist seine Stärke) · weg: schneller · heran: mehr Oktaven, kürzer · rechts: aufwärts · links: abwärts · beide: zufällig'};
-      el.append(h('div', { class: 'kc-pads' }, h('span', { class: 'lab' }, 'Spielweise:'), h('div', { class: 'chips small', role: 'group', 'aria-label': 'Touché-Spielweise' },
-        ...TCH_W.map(([w, nm], i) => h('button', { type: 'button', class: 'chip', 'aria-pressed': String(P['midi.tch'] === w), 'data-kc': it.key + ':tch' + w, title: nm + ' (' + tchKey(i) + '): ' + tip[w], onclick: () => tchWeise(w, true) }, nm + ' · ' + tchKey(i).replace('Umschalt+', '⇧')))),
+      // (owner, 31.10.2026: no keys on them any more; laid out as a grid – the four families of four in rows)
+      el.append(h('div', { class: 'kc-pads kc-tch' }, h('span', { class: 'lab' }, 'Spielweise'), h('div', { class: 'chips small', role: 'group', 'aria-label': 'Touché-Spielweise' },
+        ...TCH_W.map(([w, nm]) => h('button', { type: 'button', class: 'chip', 'aria-pressed': String(P['midi.tch'] === w), 'data-kc': it.key + ':tch' + w, title: nm + ': ' + tip[w], onclick: () => tchWeise(w, true) }, nm))),
         h('button', { type: 'button', class: 'chip', 'data-kc': it.key + ':tchcal', title: 'Myzel misst, wie weit du jede Richtung drückst – danach reicht jede über ihren ganzen Weg. Neu einmessen: jede Richtung einmal kräftig drücken.', onclick: () => tchEinmessen() }, 'Neu einmessen')));
     }
     if (p && p.id === 'nk2' && po) el.append(h('p', { class: 'kc-hint' }, s.nkHx ? 'Seite Hexenring (SET leuchtet) – SET noch einmal: Mixer.' : 'SET: Seite Hexenring (Schleifen statt Mixer).'));

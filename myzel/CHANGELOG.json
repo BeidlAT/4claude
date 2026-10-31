@@ -2,6 +2,15 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-31",
+      "punkte": [
+        "Die F-Tasten sind wieder frei: Myzel legt weder Presets noch Touché-Spielweisen darauf.",
+        "Die zwei Schalter am Touché wechseln keine Presets mehr.",
+        "Touché: Die sechzehn Spielweisen stehen auf der Gerätekarte geordnet im Raster, je vier in einer Reihe.",
+        "Touché-Stottern knackst nicht mehr, wenn du stärker nach links oder rechts drückst oder heranziehst."
+      ]
+    },
+    {
       "id": "2026-10-30n",
       "punkte": [
         "Statt „Effekt“ und „Effekt 2“ gibt es einen Rückweg „Wandel“ – mit kurzen Beschreibungen der Effekte, die nicht mehr abgeschnitten werden.",

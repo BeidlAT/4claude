@@ -1,6 +1,6 @@
 /* ---------- Expressive E Touché: four Spielweisen (owner, 25.10.2026) ---------- */
-// Its knob sends nothing (sensitivity, push = freeze), so the Spielweise is chosen in Myzel: the device card's chips,
-// F1–F4, or any control learned to „Touché: Spielweise …“. Its four directions (0 at rest … 1 pressed) reach Formen as
+// Its knob sends nothing (sensitivity, push = freeze), so the Spielweise is chosen in Myzel: the device card's chips
+// or any control learned to „Touché: Spielweise …“. Its four directions (0 at rest … 1 pressed) reach Formen as
 // the sources 'map:tch:…' – never the preset, and the Fährte and the Hexenring's Bewegung write them down like any
 // controller's; a switch carries what the hand holds over into the new Spielweise.
 //   Finger       away/toward Höhe ±, left/right the newest note's pitch ±1 semitone (fine – the owner keeps it so)
@@ -17,15 +17,13 @@
 //                else the newest that plays; the ring's processor glides straight: band {lin})
 //   Vokal        a mouth over the sound (IDEEN Touché 10): any pressure opens it (three formants in the insert chain),
 //                away/toward the jaw (a ↔ i/u), left/right the tongue (u/o ↔ e/i)
-// F5–F12 (owner, 26.10.2026: „viel weitreichendere Klangformung – jede F-Taste klingt fundamental anders“), each shaping
+// the later eight (owner, 26.10.2026: „viel weitreichendere Klangformung – jede Taste klingt fundamental anders“), each shaping
 // the sound being played in depth – js/midi/touche-fx.js (the insert) and js/dsp/touche-fx.js (the processor):
-//   Körner (F5) a grain cloud of what was just played · Eis (F6) freeze and paint · Obertöne (F7) even/odd harmonics,
-//   drive, folding · Fächer (F8) detuned pair, octaves, fifth · Ort (F9) a place in space, binaural, far and near ·
-//   Stottern (F10) repeats in the Puls's tempo · Resonanz (F11) six strings tuned to the held notes · Arpeggio (F12)
+//   Körner a grain cloud of what was just played · Eis freeze and paint · Obertöne even/odd harmonics,
+//   drive, folding · Fächer detuned pair, octaves, fifth · Ort a place in space, binaural, far and near ·
+//   Stottern repeats in the Puls's tempo · Resonanz six strings tuned to the held notes · Arpeggio
 const TCH_W = [['finger', 'Finger'], ['atem', 'Atem'], ['raum', 'Raum'], ['verw', 'Verwandlung'], ['gleiten', 'Gleiten'], ['streichen', 'Streichen'], ['platte', 'Platte'], ['vokal', 'Vokal'],
   ['koerner', 'Körner'], ['eis', 'Eis'], ['oberton', 'Obertöne'], ['faecher', 'Fächer'], ['ort', 'Ort'], ['stottern', 'Stottern'], ['resonanz', 'Resonanz'], ['arp', 'Arpeggio']];
-// the key of a Spielweise: F1–F4, Umschalt+F1–F4, F5–F12
-const tchKey = (i) => (i < 4 ? 'F' + (i + 1) : i < 8 ? 'Umschalt+F' + (i - 3) : 'F' + (i - 3));
 const TCH = { v: { weg: 0, her: 0, li: 0, re: 0 }, ph: 0, t: 0, raf: 0, vib: 0, rate: 5.5 };
 const TCH_SRC = [['h', 'hoehe'], ['b', 'bend'], ['e', 'expr'], ['f', 'flt'], ['r', 'rev'], ['d', 'dly'], ['p', 'pan'], ['m', 'morph'], ['g', 'bend'], ['s', 'hoehe'], ['w', 'vok'], ['o', 'vokO'], ['u', 'vokV']];
 // Gleiten: the newest note, a fifth (700 cents) at full; Streichen: every held note's height set to the bow's (field units)
@@ -43,7 +41,7 @@ function tchApply() {
   else if (w === 'streichen') { const p = Math.max(weg, her); o.e = p - 1; TCH.sy = clamp(0.08 + 0.92 * weg, 0, 1); o.s = 0.5 + 0.5 * TCH.sy; o.b = 0.5 * (re - li); }   // (o.s only keeps the source alive and moving; its per sets the height)
   else if (w === 'vokal') { o.w = Math.max(weg, her, li, re); o.o = weg - her; o.u = re - li; }
   else if (w === 'ort') o.r = 0.8 * Math.pow(weg, 1.2) - 0.25 * her;   // (far away: the hall comes up; close: drier)
-  if (typeof tfxSet === 'function') tfxSet(w, { weg, her, li, re });   // (F5–F12: the insert, the place, the arpeggio)
+  if (typeof tfxSet === 'function') tfxSet(w, { weg, her, li, re });   // (Körner … Arpeggio: the insert, the place, the arpeggio)
   for (const [n, k] of TCH_SRC) modSet('map:tch:' + n, k, o[n] || 0, TCH_OPT[n]);
   tchPlatte(w === 'platte' ? (1 - 0.97 * weg) * (1 + her) * (1 + 0.3 * (re - li)) : 1);
   // Atem's vibrato: depth from the harder side, ±50 cents at most; its rate 3.5 … 7.5 Hz
@@ -94,7 +92,7 @@ function tchWeise(w, say) {
   if (say) toast('Touché: ' + TCH_W.find((x) => x[0] === w)[1] + note, 2600);
   for (const b of document.querySelectorAll('[data-kc*=":tch"]')) b.setAttribute('aria-pressed', String(b.dataset.kc.endsWith(':tch' + w)));   // (the card's chips)
 }
-// what a Spielweise of F5–F12 does, in a word (the toast; the device card says it whole)
+// what a Spielweise of Körner … Arpeggio does, in a word (the toast; the device card says it whole)
 const TCH_SAY = { koerner: 'eine Körnerwolke aus dem eben Gespielten', eis: 'Drücken friert den Klang ein, seitlich malst du ihn in der Höhe', oberton: 'Obertöne kneten: links gerade, rechts ungerade, weg Antrieb, heran falten',
   faecher: 'ein Ton fächert sich auf: Stimmen, Oktaven, Quinte', ort: 'der Klang an einem Ort im Raum – weit weg, nah am Ohr, rundherum', stottern: 'Drücken wiederholt den Moment im Tempo – links lang, rechts kurz',
   resonanz: 'Saiten, gestimmt auf deine Töne, schwingen mit', arp: 'ein Arpeggio aus der Hand über die gehaltenen Töne' };
@@ -103,24 +101,6 @@ for (const [dir, nm] of [['weg', 'weg drücken'], ['her', 'heran ziehen'], ['li'
   midiTarget('tch.' + dir, 'Touché: ' + nm + ' (je nach Spielweise)', null, { group: 'Spielweise', cont: true, noTake: true, get: () => (TCH.raw && TCH.raw[dir]) || 0, set: (n) => tchSet(dir, n) });
 TCH_W.forEach(([w, nm], i) => midiTarget('tch.' + (i + 1), 'Touché: Spielweise ' + nm, (v) => { if (v >= 0.5) tchWeise(w, true); }, { group: 'Spielweise', button: true }));
 midiTarget('tch.next', 'Touché: nächste Spielweise', (v) => { if (v >= 0.5) tchStep(1); }, { group: 'Spielweise', button: true });
-// (owner, 30.10.2026: „die zwei Schalter unten für den Preset-Wechsel“) the Touché's two buttons change its slot and send
-// a Program Change: up (the right one) the next preset, down (the left one) the one before – whatever the numbers are;
-// not while learning (the buttons can be assigned to anything else there)
-function tchIn(src, ev) {
-  if (ev.type !== 'pc' || !src.prof || src.prof.id !== 'tch' || !profOn(src) || LEARN.on) return false;
-  const was = TCH.pc; TCH.pc = ev.num;
-  if (was == null || was === ev.num) return true;
-  let d = ev.num - was; if (Math.abs(d) > 64) d = -d;   // (wrapped round the end of its slots)
-  presetStep(d > 0 ? 1 : -1);
-  return true;
-}
-// F1–F4 and Umschalt + F1–F4 on the computer keyboard, while a Touché is there (not while typing, not while learning)
-window.addEventListener('keydown', (e) => {
-  const m = /^F([1-9]|1[0-2])$/.exec(e.key), fk = m ? +m[1] : 0;
-  if (!m || (fk > 4 && e.shiftKey) || !TCH.live || e.ctrlKey || e.altKey || e.metaKey || LEARN.on || /^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || '') || (e.target && e.target.isContentEditable)) return;
-  e.preventDefault();
-  if (!e.repeat) tchWeise(TCH_W[fk <= 4 ? fk - 1 + (e.shiftKey ? 4 : 0) : fk + 3][0], true);   // (F5–F12: the browser's own uses of them – reload, full screen, tools – give way while a Touché is there)
-});
 // a Touché plugged in or out, the Spielweise chosen anywhere (the card, the settings): applied anew
 setInterval(() => {
   if (!TCH.bound && typeof bindCtl === 'function') { TCH.bound = true; bindCtl('midi.tch', () => tchApply()); }

@@ -16,7 +16,7 @@ function buildStrips() {
     st.in = G(1); st.in.channelCount = 2; st.in.channelCountMode = 'explicit'; st.in.channelInterpretation = 'speakers';
     st.byp = G(1); st.wet = G(0); st.mBy = G(1); st.mWet = G(0); st.duck = G(1); st.dry = G(1);
     // (owner, 26.10.2026) Klang and Ebene 2 (30.10.2026: every Ebene): the Touché's insert sits between the input and the strip's blocks – a dry
-    // gain at 1 and a wet one at 0 (nothing feeds it): exactly the strip as before until a Spielweise F5–F12 plays; st.pt is
+    // gain at 1 and a wet one at 0 (nothing feeds it): exactly the strip as before until a Spielweise Körner … Arpeggio plays; st.pt is
     // what follows it (the strip's own EQ takes its input there)
     if (d.eb) { st.tD = G(1); st.tW = G(0); st.pt = G(1); st.in.connect(st.tD).connect(st.pt); st.tW.connect(st.pt); } else st.pt = st.in;
     st.pt.connect(st.byp);

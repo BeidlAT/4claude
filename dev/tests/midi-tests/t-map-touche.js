@@ -28,7 +28,7 @@ const { open, ok, close } = require('./hm');
   // the Spielweisen (the knob on the device sends nothing): Atem, Raum, Verwandlung – F1–F4, the card's chips
   const w = await page.evaluate(async () => {
     const M = window.__M, T = (b) => window.__send(b, 'k1'), sl = window.__sleep, mv = () => ({ h: +M.modVal('hoehe').toFixed(3), b: +M.modVal('bend').toFixed(3), e: +M.modVal('expr').toFixed(3), f: +M.modVal('flt').toFixed(3), r: +M.modVal('rev').toFixed(3), d: +M.modVal('dly').toFixed(3), p: +M.modVal('pan').toFixed(3), m: +M.modVal('morph').toFixed(3), w: +M.modVal('vok').toFixed(3), o: +M.modVal('vokO').toFixed(3), u: +M.modVal('vokV').toFixed(3) });
-    const key = (k, sh) => { document.body.dispatchEvent(new KeyboardEvent('keydown', { key: k, shiftKey: !!sh, bubbles: true, cancelable: true })); };
+    const key = (k, sh) => { const n = +k.slice(1); M.tchWeise(M.TCH_W[n <= 4 ? n - 1 + (sh ? 4 : 0) : n + 3][0]); };   // (31.10.2026: the F keys are unbound – the old numbering, chosen directly)
     const o = {};
     window.__send([0x90, 60, 100], 'k2'); await sl(60);
     key('F2'); await sl(60); o.atemW = M.P['midi.tch']; o.atem0 = mv();

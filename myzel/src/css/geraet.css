@@ -216,6 +216,12 @@ body:not(.mlearn) :is(.gk-ax, .gk-ev) { cursor: default; }
 }
 @media (max-width: 340px) { .gk-ico::before { inset: -3px -3px; } }
 .kc-pads { display: flex; align-items: center; gap: 8px; margin: 4px 0; } .kc-pads .lab { font-size: 12px; color: var(--dim); } .kc-pads .chips { padding: 0; }
+/* (31.10.2026) the Touché's sixteen Spielweisen: a grid, four families of four in rows (two columns where narrow) */
+.kc-tch { display: grid; grid-template-columns: 1fr; align-items: stretch; gap: 6px; container-type: inline-size; }
+.kc-tch .chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.kc-tch .chip { justify-content: center; text-align: center; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kc-tch > .chip { justify-self: start; }
+@container (max-width: 380px) { .kc-tch .chips { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .kc-pads .chip[aria-pressed="true"] { background: var(--spore); border-color: var(--spore); color: var(--ink); }
 .gk-fae { color: var(--lumen); }
 /* the Funkstrecke's dark view: only the Wasserwaage on black, touches swallowed */
