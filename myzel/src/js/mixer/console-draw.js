@@ -54,6 +54,20 @@ function mxStatic() {
     c.strokeStyle = S.srcoff && !S.dorm ? mxRgba(cc.rgb, 0.6) : '#140f0c'; c.lineWidth = 1.2; c.stroke();
     if (cc.kind !== 'ret') mxFxmMark(c, g.cx, yK, yD, fm, cc.rgb);
   }
+  // (31.10.2026) the Puls: one knot for its four Spuren (the VCA's column) – on Kette when they all are, hollow while
+  // they go different ways; in the effect view lit when all four go through the effect
+  {
+    const pg = MX.ch.puls.g, fm = wfxPulsGet(), all = WFX_LANES.reduce((a, l) => a & wfxOf(l), FXM_ALL), rgb = mxRgb('#f2cf86');
+    if (pg && !MX.ch.puls.gone) {
+      const ry = fm === 0 ? yD : yK, y0 = pg.yb + 9;
+      c.strokeStyle = mxRgba(rgb, 0.3); c.lineWidth = 1.1;
+      c.beginPath(); c.moveTo(pg.cx, y0); c.bezierCurveTo(pg.cx - 2, y0 + (ry - y0) * 0.4, pg.cx + 2, y0 + (ry - y0) * 0.7, pg.cx, ry); c.stroke();
+      c.strokeStyle = 'rgba(240,230,216,.22)'; c.lineWidth = 1; c.beginPath(); c.arc(pg.cx, fm === 0 ? yK : yD, 3.2, 0, MX_TAU); c.stroke();
+      c.fillStyle = fm < 0 ? '#17110e' : mxRgba(rgb, 1); c.beginPath(); c.arc(pg.cx, ry, 3.8, 0, MX_TAU); c.fill();
+      c.strokeStyle = fm < 0 ? mxRgba(rgb, 0.8) : '#140f0c'; c.lineWidth = 1.2; c.stroke();
+      mxFxmMark(c, pg.cx, yK, yD, FXV.j >= 0 ? all : fm < 0 ? 0 : fm, rgb);
+    }
+  }
   // (31.10.2026) the Schleifen's knots, under their strips in the group „Schleifen“ (wege-fx.js, hexenring/weg.js)
   fxlSync();
   for (const G2 of FXL.geo) {

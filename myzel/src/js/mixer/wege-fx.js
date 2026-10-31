@@ -11,7 +11,7 @@
 // ---- the sound: a chain per set of effects, shared by the channels that use it ----
 const wfxOf = (k) => { if (!PD['x' + k + '.route'] || P['x' + k + '.route'] === 'dir') return 0; const m = Math.round(P['x' + k + '.fxm'] != null ? P['x' + k + '.fxm'] : FXM_ALL) & FXM_ALL; return m; };
 const wfxNames = (m) => MX_FX.filter((_, j) => m & (1 << j)).map((f) => f[1]);
-const wfxWords = (m) => (!m ? 'direkt in die Summe' : m === FXM_ALL ? 'durch die ganze Effektkette' : 'nur durch ' + wfxNames(m).join(' → '));
+const wfxWords = (m) => (m < 0 ? 'die Spuren gehen verschiedene Wege' : !m ? 'direkt in die Summe' : m === FXM_ALL ? 'durch die ganze Effektkette' : 'nur durch ' + wfxNames(m).join(' → '));
 const wfxText = (v) => { const m = Math.round(v) & FXM_ALL; return m === FXM_ALL ? 'alle' : m ? wfxNames(m).join(', ') : 'keiner'; };
 // where a channel's dry path goes for a set of effects
 function wfxIn(m) { return !m ? A.masterSum : m === FXM_ALL ? A.voiceBus : wfxChain(m).in; }
@@ -41,17 +41,25 @@ function wfxGc() {
 
 // ---- the channels the Pult routes: its own (x<k>.route, x<k>.fxm) and the Schleifen ('hl:' + key) ----
 const wfxLoop = (k) => (k.startsWith('hl:') ? hxByKey(k.slice(3)) : null);
-function wfxGet(k) { const L = k.startsWith('hl:') ? wfxLoop(k) : null; return L ? hxWegM(L) : k === 'hxr' ? (P['xhxr.route'] === 'dir' ? 0 : Math.round(P['xhxr.fxm']) & FXM_ALL) : wfxOf(k); }
+// the Puls: its four Spuren as one – their common set, or -1 while they differ
+const WFX_LANES = ['l0', 'l1', 'l2', 'l3'];
+function wfxPulsGet() { const ms = WFX_LANES.map((l) => wfxOf(l)); return ms.every((m) => m === ms[0]) ? ms[0] : -1; }
+function wfxGet(k) {
+  if (k === 'puls') return wfxPulsGet(); const L = k.startsWith('hl:') ? wfxLoop(k) : null; return L ? hxWegM(L) : k === 'hxr' ? (P['xhxr.route'] === 'dir' ? 0 : Math.round(P['xhxr.fxm']) & FXM_ALL) : wfxOf(k); }
 function wfxSet(k, m) {
   m &= FXM_ALL;
+  if (k === 'puls') { for (const l of WFX_LANES) wfxSet(l, m); return; }
   if (k.startsWith('hl:')) { const L = wfxLoop(k); if (L) hxWegSet(L, m ? 'fx' : 'dir', m || null); return; }
   if (m) setParam('x' + k + '.fxm', m);
   setParam('x' + k + '.route', m ? 'fx' : 'dir');
   MX.dirtyStatic = true;
 }
 const wfxName = (k) => (k.startsWith('hl:') ? (wfxLoop(k) ? hxName(wfxLoop(k)) : 'Schleife') : MXK[k] ? MXK[k].name : k);
-function wfxSay(k) { const m = wfxGet(k); return wfxName(k) + ': ' + (k === 'hxr' ? (m ? 'alle Schleifen ' : 'alle Schleifen ') + wfxWords(m) : wfxWords(m)); }
+function wfxSay(k) { const m = wfxGet(k); return wfxName(k) + ': ' + (k === 'hxr' ? 'alle Schleifen ' : k === 'puls' && m >= 0 ? 'alle vier Spuren ' : '') + wfxWords(m); }
 
+// one effect on or off for a channel (the Puls: for each of its Spuren, the rest of each kept)
+function wfxBit(k, b, on) { if (k === 'puls') { for (const l of WFX_LANES) wfxBit(l, b, on); return; } const m = wfxGet(k); if (!!(m & b) !== on) wfxSet(k, on ? m | b : m & ~b); }
+const wfxHas = (k, b) => (k === 'puls' ? WFX_LANES.every((l) => wfxOf(l) & b) : !!(wfxGet(k) & b));
 // ---- the effect view ----
 const FXV = { j: -1, paint: null, hold: null };
 function fxvSet(j) {
@@ -59,7 +67,17 @@ function fxvSet(j) {
   MX.dirtyStatic = true;
   if (MX.beads) MX.beads.forEach((b, i) => b.setAttribute('aria-pressed', String(FXV.j === i)));
   if (MX.root) MX.root.classList.toggle('fxv', FXV.j >= 0);
-  mxTipFlash(MX.root, MX.beads && MX.beads[j], FXV.j >= 0 ? { n: MX_FX[j][1], v: 'Kanäle antippen oder überstreichen · Alt: nur dieser · Esc: zurück' } : { n: 'Wege', v: 'Überblick' });
+  if (FXV.j >= 0) fxvHint(); else if (MX.root) mxTipHide(MX.root, 0);
+}
+// (owner, 31.10.2026: „anklicken von F hat keine Auswirkung“) the effect view says what it is as long as it is on – at its
+// bead: which channels go through, what a tap does, and whether the effect is set at all (an effect at 0 % changes nothing)
+function fxvHint(k) {
+  const j = FXV.j; if (j < 0 || !MX.root || !MX.beads) return;
+  const b = 1 << j, n = wfxKeys().filter((kk) => kk !== 'puls' && kk !== 'hxr' && wfxHas(kk, b)).length, off = !mxFxOn(j);
+  const v = (k ? wfxName(k) + ': ' + (wfxHas(k, b) ? 'geht hindurch' : 'nicht hindurch') + ' · ' : n + (n === 1 ? ' Spur geht' : ' Spuren gehen') + ' hindurch · ') +
+    (off ? MX_FX[j][1] + ' steht auf 0 % – unter „Effekte“ aufdrehen, dann hörst du es · ' : '') + 'Punkte antippen oder überstreichen · Alt: nur diese · Esc: fertig';
+  mxTip(MX.root, MX.beads[j], { n: MX_FX[j][1], v, c: '#ffb35c' }, false);
+  clearTimeout(MX.root.mxTipEl && MX.root.mxTipEl.tm);
 }
 // a knot pressed: in the overview the whole chain on or off (as always); in the effect view this effect for this channel
 function wfxPress(k, e) {
@@ -67,12 +85,12 @@ function wfxPress(k, e) {
   if (FXV.j < 0) { wfxSet(k, m ? 0 : FXM_ALL); wfxTell(k); return; }
   const b = 1 << FXV.j;
   if (e && e.altKey) {   // only this channel goes through it
-    for (const kk of wfxKeys()) { const mm = wfxGet(kk), on = kk === k; if (!!(mm & b) !== on) wfxSet(kk, on ? mm | b : mm & ~b); }
+    for (const kk of wfxKeys()) if (kk !== 'puls') wfxBit(kk, b, kk === k || (k === 'puls' && WFX_LANES.includes(kk)));
     wfxTell(k); return;
   }
-  const on = !(m & b);
-  if (e && e.shiftKey) { FXV.hold = { k, m }; wfxSet(k, on ? m | b : m & ~b); wfxTell(k); return; }   // (only while held)
-  wfxSet(k, on ? m | b : m & ~b);
+  const on = !wfxHas(k, b);
+  if (e && e.shiftKey) { FXV.hold = { k, ms: k === 'puls' ? WFX_LANES.map((l) => [l, wfxGet(l)]) : [[k, m]] }; wfxBit(k, b, on); wfxTell(k); return; }   // (only while held)
+  wfxBit(k, b, on);
   FXV.paint = { on, seen: new Set([k]) };
   wfxTell(k);
 }
@@ -80,17 +98,16 @@ function wfxPaintOver(k) {
   const P0 = FXV.paint;
   if (!P0 || FXV.j < 0 || P0.seen.has(k)) return;
   P0.seen.add(k);
-  const b = 1 << FXV.j, m = wfxGet(k);
-  if (!!(m & b) !== P0.on) wfxSet(k, P0.on ? m | b : m & ~b);
+  wfxBit(k, 1 << FXV.j, P0.on);
   wfxTell(k);
 }
 function wfxRelease() {
   FXV.paint = null;
-  if (FXV.hold) { const H = FXV.hold; FXV.hold = null; wfxSet(H.k, H.m); wfxTell(H.k); }
+  if (FXV.hold) { const H = FXV.hold; FXV.hold = null; for (const [kk, mm] of H.ms) wfxSet(kk, mm); wfxTell(H.k); }
 }
-function wfxTell(k) { const B = wfxNode(k); if (B) { B.title = wfxSay(k); B.setAttribute('aria-label', wfxSay(k)); } if (MX.root) mxTipFlash(MX.root, B, { n: wfxName(k), v: wfxWords(wfxGet(k)) }); }
+function wfxTell(k) { const B = wfxNode(k); if (B) { B.title = wfxSay(k); B.setAttribute('aria-label', wfxSay(k)); } if (!MX.root) return; if (FXV.j >= 0) fxvHint(k); else mxTipFlash(MX.root, B, { n: wfxName(k), v: wfxWords(wfxGet(k)) }); }
 // every channel with a knot, in Pult order
-function wfxKeys() { const ks = MXC.filter((c) => c.kind !== 'sum' && c.kind !== 'ret' && c.kind !== 'puls' && !MX.ch[c.k].gone).map((c) => c.k); for (const S of (typeof HXMP !== 'undefined' && !HXMP.fold && HXMP.st) || []) ks.push('hl:' + S.key); return ks; }
+function wfxKeys() { const ks = MXC.filter((c) => c.kind !== 'sum' && c.kind !== 'ret' && !MX.ch[c.k].gone).map((c) => c.k); for (const S of (typeof HXMP !== 'undefined' && !HXMP.fold && HXMP.st) || []) ks.push('hl:' + S.key); return ks; }
 const wfxNode = (k) => (k.startsWith('hl:') ? FXL.nodes.get(k) : MX.ch[k] && MX.ch[k].node);
 // the stroke across the knots: whatever knot the pointer is over (buttons do not get the moves of another's press)
 function wfxWire(row) {

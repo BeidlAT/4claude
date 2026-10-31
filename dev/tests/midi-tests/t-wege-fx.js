@@ -44,7 +44,12 @@ const { open, ok, close } = require('./hm');
   if (a && b) { await page.mouse.move(a[0], a[1]); await page.mouse.down(); await page.mouse.move((a[0] + b[0]) / 2, a[1], { steps: 4 }); await page.mouse.move(b[0], b[1], { steps: 4 }); await page.mouse.up(); await page.waitForTimeout(150); u.eb2 = await mask(vis[0]); u.eb3 = await mask(vis[1]); u.vis = vis; }
   // Alt-click Klang: only it goes through the Filter
   if (n0) { await page.keyboard.down('Alt'); await page.mouse.click(n0[0], n0[1]); await page.keyboard.up('Alt'); await page.waitForTimeout(150); u.only = await page.evaluate(() => window.__M.wfxKeys().filter((k) => window.__M.wfxGet(k) & 4)); }
+  // the hint stays while the effect view is on; the Puls's knot: all four Spuren at once
+  u.hint = await page.evaluate(() => { const t = document.querySelector('.mx-tip.show'); return t ? t.textContent : ''; });
+  const pk = await box('[data-fxk="puls"]');
+  if (pk) { await page.mouse.click(pk[0], pk[1]); await page.waitForTimeout(150); u.pulsF = await page.evaluate(() => ['l0', 'l1', 'l2', 'l3'].map((l) => !!(window.__M.wfxGet(l) & 4))); }
   await page.keyboard.press('Escape'); await page.waitForTimeout(150); u.esc = await page.evaluate(() => window.__M.FXV.j);
+  if (pk) { await page.mouse.click(pk[0], pk[1]); await page.waitForTimeout(150); u.pulsDir = await page.evaluate(() => ['l0', 'l1', 'l2', 'l3'].map((l) => window.__M.wfxGet(l))); await page.mouse.click(pk[0], pk[1]); await page.waitForTimeout(150); u.pulsAll = await page.evaluate(() => window.__M.wfxGet('puls')); }
   if (n0) { await page.mouse.click(n0[0], n0[1]); await page.waitForTimeout(150); u.ov = await mask('fin'); await page.mouse.click(n0[0], n0[1]); await page.waitForTimeout(150); u.ov2 = await mask('fin'); }
   await page.screenshot({ path: __dirname + '/out/wege-fx.png' });
   ok(u.bead && u.view === 2, `a bead (Filter): the effect view (${u.view})`);
@@ -52,6 +57,8 @@ const { open, ok, close } = require('./hm');
   ok(u.eb2 === 27 && u.eb3 === 27, `a stroke across knots paints (${u.vis}: ${u.eb2}, ${u.eb3})`);
   ok(JSON.stringify(u.only) === '["fin"]', `Alt-click: only this channel through the Filter (${JSON.stringify(u.only)})`);
   ok(u.esc === -1 && u.ov === 0 && u.ov2 === 31, `Esc back (${u.esc}); in the overview a knot switches the whole chain (${u.ov} → ${u.ov2})`);
+  ok(/hindurch/.test(u.hint || '') && /Esc/.test(u.hint || ''), `the effect view says what it does while it is on („${(u.hint || '').slice(0, 90)}…“)`);
+  ok(!!u.pulsF && u.pulsF.every((x) => !x) !== u.pulsF.every((x) => x) && u.pulsDir && u.pulsDir.every((m) => m === 0) && u.pulsAll === 31, `the Puls's knot: all four Spuren – the Filter (${u.pulsF}), Direkt (${u.pulsDir}), the whole chain (${u.pulsAll})`);
   ok(!errors.length, 'no page errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
   await close();
 })();

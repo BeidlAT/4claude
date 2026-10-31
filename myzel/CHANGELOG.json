@@ -2,6 +2,13 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-31g",
+      "punkte": [
+        "Der Puls hat im Pult jetzt einen eigenen Punkt auf Kette und Direkt – er setzt alle vier Spuren auf einmal, auch im Effekt-Blick.",
+        "Der Effekt-Blick sagt, solange er an ist, was er tut: wie viele Spuren durch den Effekt gehen, was ein Tipp bewirkt – und wenn der Effekt auf 0 % steht, dass man ihn unter „Effekte“ aufdrehen muss, um etwas zu hören."
+      ]
+    },
+    {
       "id": "2026-10-31f",
       "punkte": [
         "Mixer: Jede Spur kann auf „Kette“ nur durch einzelne Effekte gehen. Tipp unten auf der Kettenschiene einen Effekt an (V, R, F, P, S) – dann schaltest du ihn je Spur mit einem Tipp auf ihren Punkt, oder streichst über mehrere. Alt-Klick: nur diese Spur, Umschalt: nur solange gedrückt, Esc: zurück.",
