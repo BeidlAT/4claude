@@ -113,6 +113,7 @@ function hxTick(horizon) {
   for (const L of HX.loops.values()) if (L.notesDue && now > L.notesDue + 0.05) hxNotesRefresh(L);
   hxTempoTick(now);
   hxFormTick(now);   // (step 1d)
+  hxEinTick(now);   // (31.10.2026: Einspielen – a pass's notes into the loop)
   hxWTick(now, horizon);   // (step 2a: Wuchs – the living passes, the key's bar line, the tempo)
   hxGdTick(now, horizon);   // (Etappe 3: the Gärtner, answers, Wiederkehr, Knospen)
   hxEcoTick(now, horizon);   // (step 4: Nähren, MIDI out, Ladung, Treffen, Zersetzung, the Sammelschleifen's tapes)

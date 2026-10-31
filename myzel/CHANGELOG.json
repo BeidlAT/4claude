@@ -2,6 +2,14 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-31m",
+      "punkte": [
+        "Neu im Bearbeiten-Fenster einer Schleife: „● Einspielen“. Was du dann auf dem Spielfeld spielst – am Bildschirm oder per MIDI –, kommt am Ende jedes Durchgangs an derselben Stelle in die Schleife und klingt mit ihrem Instrument.",
+        "Jeder Durchgang mit neuen Noten ist ein eigener Schritt für ↶. Ein Durchgang, in dem du nichts spielst, ändert nichts.",
+        "Der Knopf „Spielfeld“ bei Instrument entfällt – das Instrument wählst du direkt aus der Liste."
+      ]
+    },
+    {
       "id": "2026-10-31l",
       "punkte": [
         "Eine Schleife im Mixer angetippt: Das Bearbeiten-Fenster erscheint wieder in voller Breite (über dem Mixer) statt schmal abgeschnitten.",

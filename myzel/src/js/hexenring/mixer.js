@@ -163,7 +163,7 @@ function hxmDrawR(R, dt) {
     let m = met.get(L.id); const st = L.state, pend = L.pendTo && L.pendTo !== st ? L.pendTo : null, pv = L.pvMute && HXE.pv && HXE.pv.key === L.key;
     if (pv && HXE.pv.out.an) m = hxmPvLv(HXE.pv.out.an, L.id);   // (owner, 27.10.2026, again 30.10.2026: „zeigt keinen Ausschlag“ – the editor listens to it: its strip shows what is heard)
     hxmText(S, 'src', S.src, hxEngName(L) + ' · ' + (hxTakt(L) ? dec(+(L.d.beats / (L.bpb || 4)).toFixed(2)) + ' T' : dec(hxLen(L).toFixed(1)) + ' s'));   // (short: the strip is narrow – the card says it whole)
-    hxmText(S, 'state', S.state, (pv ? 'Vorhören' : st === 'spielt' ? 'spielt' : st === 'stumm' ? 'stumm' : 'angehalten') + (pend ? ' → ' + (pend === 'stumm' ? 'stumm' : 'an') : '') + (HX.fokus === L.id ? ' · Fokus' : ''));
+    hxmText(S, 'state', S.state, (pv ? 'Vorhören' : st === 'spielt' ? 'spielt' : st === 'stumm' ? 'stumm' : 'angehalten') + (pend ? ' → ' + (pend === 'stumm' ? 'stumm' : 'an') : '') + (HX.fokus === L.id ? ' · Fokus' : '') + (L.ein ? ' · Einspielen' : ''));
     S.el.classList.toggle('spielt', st === 'spielt'); S.el.classList.toggle('dormant', st !== 'spielt');
     hxmLv(S, m ? m[1] : 0, m ? m[2] : 0, dt, st === 'spielt' || pv);
     try { hxmStrDraw(S); } catch (e) { if (!HXM.err) { HXM.err = 1; console.warn('Hexenring: ein Schleifen-Kanal ließ sich nicht zeichnen', e); } }   // (one strip never blanks the others)
