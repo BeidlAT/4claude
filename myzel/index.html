@@ -26464,7 +26464,8 @@ function wfxWire(row) {
     if (b) wfxPaintOver(b.dataset.fxk);
   });
   window.addEventListener('pointerup', wfxRelease); window.addEventListener('pointercancel', wfxRelease);
-  window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && FXV.j >= 0 && MX.open) { e.preventDefault(); fxvSet(FXV.j); } });
+  // (Esc leaves the effect view first – before the mixer's own Esc closes the panel)
+  window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && FXV.j >= 0 && MX.open) { e.preventDefault(); e.stopImmediatePropagation(); fxvSet(FXV.j); } }, true);
 }
 
 // ---- the Schleifen's knots in the Pult: a button under each loop strip, its place from the strip ----

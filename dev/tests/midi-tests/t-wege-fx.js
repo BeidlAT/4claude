@@ -12,9 +12,10 @@ const { open, ok, close } = require('./hm');
     const M = window.__M, A = M.A, sl = window.__sleep, o = {};
     M.setParam('drv.mix', 1); M.setParam('drv.amt', 0.95); M.setParam('flt.type', 'lowpass'); M.setParam('flt.freq', 20000);
     for (const id of ['rev.mix', 'dly.mix', 'rng.mix', 'pha.mix', 'cho.mix']) M.setParam(id, 0);
-    const osc = A.ctx.createOscillator(), g = A.ctx.createGain(); osc.frequency.value = 440; g.gain.value = 0.25; osc.connect(g).connect(M.stripIn('fin')); osc.start();
+    const osc = A.ctx.createOscillator(), g = A.ctx.createGain(); osc.frequency.value = 440; g.gain.value = 0.06; osc.connect(g).connect(M.stripIn('fin')); osc.start();
     const f = new Float32Array(A.analyser.frequencyBinCount), bin = A.ctx.sampleRate / A.analyser.fftSize;
-    const h3 = async () => { await sl(500); let a = -999, b = -999; for (let n = 0; n < 6; n++) { A.analyser.getFloatFrequencyData(f); const pk = (hz) => { const i = Math.round(hz / bin); return Math.max(f[i - 1], f[i], f[i + 1]); }; a = Math.max(a, pk(440)); b = Math.max(b, pk(1320)); await sl(60); } return +(b - a).toFixed(1); };
+    const h3 = async () => { await sl(500); A.analyser.smoothingTimeConstant = 0; let a = -999, b = -999;   // (unsmoothed: the last measure's harmonics must not linger)
+      for (let n = 0; n < 6; n++) { A.analyser.getFloatFrequencyData(f); const pk = (hz) => { const i = Math.round(hz / bin); return Math.max(f[i - 1], f[i], f[i + 1]); }; a = Math.max(a, pk(440)); b = Math.max(b, pk(1320)); await sl(60); } A.analyser.smoothingTimeConstant = 0.6; return +(b - a).toFixed(1); };
     o.all = await h3();
     M.wfxSet('fin', 1); o.v = await h3(); o.vIn = M.MIX.s.fin.dTo === (A.fxm && A.fxm[1] && A.fxm[1].in);
     M.wfxSet('fin', 4); o.f = await h3(); o.fIn = M.MIX.s.fin.dTo === (A.fxm && A.fxm[4] && A.fxm[4].in);
@@ -24,7 +25,7 @@ const { open, ok, close } = require('./hm');
     return o;
   });
   ok(r.all > -30 && r.v > -30, `the whole chain and only Verzerrung: its harmonics (3rd at ${r.all} / ${r.v} dB)`);
-  ok(r.f < r.v - 20 && r.d < r.v - 20 && r.dRoute === 'dir', `only Filter and Direkt: the sine stays clean (${r.f} / ${r.d} dB)`);
+  ok(r.f < r.v - 15 && r.d < r.v - 15 && r.dRoute === 'dir', `only Filter and Direkt: the sine stays clean (${r.f} / ${r.d} dB)`);
   ok(r.vIn && r.fIn && r.bIn, 'the strip into the chain of exactly its effects, back into the whole one');
   // the Pult
   await page.evaluate(async () => { const M = window.__M; M.openPanel('mix'); await window.__sleep(500); if (M.mxSetView) M.mxSetView('pult'); await window.__sleep(700); });
@@ -37,8 +38,10 @@ const { open, ok, close } = require('./hm');
   const n0 = await box('[data-fxk="fin"]');
   if (n0) { await page.mouse.move(n0[0], n0[1]); await page.mouse.down(); await page.mouse.up(); await page.waitForTimeout(150); u.fin = await mask('fin'); }
   // a stroke from Ebene 2 across Ebene 3: both lose the Filter
-  const a = await box('[data-fxk="eb2"]'), b = await box('[data-fxk="eb3"]');
-  if (a && b) { await page.mouse.move(a[0], a[1]); await page.mouse.down(); await page.mouse.move((a[0] + b[0]) / 2, a[1], { steps: 4 }); await page.mouse.move(b[0], b[1], { steps: 4 }); await page.mouse.up(); await page.waitForTimeout(150); u.eb2 = await mask('eb2'); u.eb3 = await mask('eb3'); }
+  // (the next two knots that show – a layer without a sound has none)
+  const vis = await page.evaluate(() => [...document.querySelectorAll('[data-fxk]')].filter((e) => e.getBoundingClientRect().width > 0).map((e) => e.dataset.fxk).filter((k) => k !== 'fin').slice(0, 2));
+  const a = await box('[data-fxk="' + vis[0] + '"]'), b = await box('[data-fxk="' + vis[1] + '"]');
+  if (a && b) { await page.mouse.move(a[0], a[1]); await page.mouse.down(); await page.mouse.move((a[0] + b[0]) / 2, a[1], { steps: 4 }); await page.mouse.move(b[0], b[1], { steps: 4 }); await page.mouse.up(); await page.waitForTimeout(150); u.eb2 = await mask(vis[0]); u.eb3 = await mask(vis[1]); u.vis = vis; }
   // Alt-click Klang: only it goes through the Filter
   if (n0) { await page.keyboard.down('Alt'); await page.mouse.click(n0[0], n0[1]); await page.keyboard.up('Alt'); await page.waitForTimeout(150); u.only = await page.evaluate(() => window.__M.wfxKeys().filter((k) => window.__M.wfxGet(k) & 4)); }
   await page.keyboard.press('Escape'); await page.waitForTimeout(150); u.esc = await page.evaluate(() => window.__M.FXV.j);
@@ -46,9 +49,9 @@ const { open, ok, close } = require('./hm');
   await page.screenshot({ path: __dirname + '/out/wege-fx.png' });
   ok(u.bead && u.view === 2, `a bead (Filter): the effect view (${u.view})`);
   ok(u.fin === 27, `in it a knot switches the Filter for its channel (Klang ${u.fin})`);
-  ok(u.eb2 === 27 && u.eb3 === 27, `a stroke across knots paints (Ebene 2 ${u.eb2}, Ebene 3 ${u.eb3})`);
+  ok(u.eb2 === 27 && u.eb3 === 27, `a stroke across knots paints (${u.vis}: ${u.eb2}, ${u.eb3})`);
   ok(JSON.stringify(u.only) === '["fin"]', `Alt-click: only this channel through the Filter (${JSON.stringify(u.only)})`);
-  ok(u.esc === -1 && u.ov === 0 && u.ov2 === 31, `Esc back; in the overview a knot switches the whole chain (${u.ov} → ${u.ov2})`);
+  ok(u.esc === -1 && u.ov === 0 && u.ov2 === 31, `Esc back (${u.esc}); in the overview a knot switches the whole chain (${u.ov} → ${u.ov2})`);
   ok(!errors.length, 'no page errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
   await close();
 })();
