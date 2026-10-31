@@ -10,6 +10,7 @@ function buildUI() {
     tabs.append(b);
   }
   for (const p of PANELS) panelEls[p.key] = p.build();
+  setInterval(tabLive, 250); tabLive();
   midiDot = $('#midiDot');
   for (const k in panelEls) { panelEls[k].hidden = true; panelEls[k].classList.add('pnl-' + k); sheetBody.append(panelEls[k]); }   // (pnl-…: the panel's colour – css/modul.css)
   const q = $('#quick');
@@ -33,7 +34,7 @@ function buildUI() {
     kqClose();
   }, true);
   $('#startFingerLine').textContent = 'Mehrere gleichzeitig; Wischen schlägt ' + listDe(famPlay().strike) + ' an';
-  $('#btnPuls').addEventListener('click', () => { if (!A.started) return; SEQ.on ? seqStop() : seqStart(); });
+  $('#btnPuls').addEventListener('click', () => pulsGo());
   $('#btnStopAll').addEventListener('click', panic);   // (owner, 30.10.2026: „ein globaler Stopp-Knopf … alles beenden“ – the Puls starts on its own button)
   $('#btnFreeze').addEventListener('click', () => { if (A.started) setFreeze(!A.frozen); });
   $('#btnHold').addEventListener('click', () => holdSet(!HOLD.on));
@@ -95,4 +96,17 @@ function toast(msg, ms = 3200, action) {
   t.classList.toggle('act', !!action);
   t.classList.add('show');
   clearTimeout(toast.tm); toast.tm = setTimeout(() => t.classList.remove('show', 'act'), ms);
+}
+
+// (owner, 31.10.2026: „das Symbol unten in der Leiste soll leuchten, wenn der Puls aktiv ist – nicht das gleiche Leuchten wie
+// bei aktiver Auswahl; dasselbe für das Sporenwerk“) a tab whose part runs: its icon glows mint and breathes (the Puls in its
+// tempo), a thin line above it – the open panel stays amber
+const TAB_LIVE = [['puls', () => SEQ.on, 'Puls läuft'], ['arp', () => !!P['arp.on'], 'Sporenwerk ist an']];
+function tabLive() {
+  for (const [k, on, say] of TAB_LIVE) {
+    const b = document.getElementById('tab-' + k); if (!b) continue;
+    const v = !!on();
+    if (v !== b.hasAttribute('data-live')) { b.toggleAttribute('data-live', v); b.title = v ? say : ''; b.setAttribute('aria-description', v ? say : ''); }
+    if (k === 'puls' && v) { const s = (60 / (seqBpm() || 90)).toFixed(3) + 's'; if (b.style.getPropertyValue('--beat') !== s) b.style.setProperty('--beat', s); }
+  }
 }

@@ -92,6 +92,14 @@ function seqStart(b0 = 0, t0) {
   clkOutStart(b0);
   if (typeof fxTune === 'function') fxTune();   // (30.10.2026: the Flechtwerk's Takt)
 }
+// (owner, 31.10.2026: „wenn man auf Puls starten klickt, soll er auch spielen – nicht erst in den Einstellungen“) the
+// player's start: with no Spur on (Leere Erde, all switched off) it would run silent – Spur 1 comes on with it
+function pulsGo() {
+  if (!A.started) return;
+  if (SEQ.on) { seqStop(); return; }
+  if (![0, 1, 2, 3].some((i) => P['l' + i + '.on'])) { setParam('l0.on', true); toast('Keine Puls-Spur war an – Spur 1 spielt jetzt. Weitere schaltest du im Puls ein.', 4500); }
+  seqStart();
+}
 function seqStop() { SEQ.on = false; SEQ.stopB = null; SEQ.lanes.forEach((L) => (L.cur = -1)); barRecue(); updPulsUI(); clkOutStop(); if (typeof fxTune === 'function') fxTune(); }   // (30.10.2026: the Flechtwerk's Takt)
 
 function rollInterval() { return (4 / Number(P['v.roll'])) * 60 / seqBpm(); }

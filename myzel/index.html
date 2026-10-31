@@ -213,6 +213,11 @@ input[type=text] {
 .tab span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 460px) { .tab { padding-left: 0; padding-right: 0; font-size: 10px; letter-spacing: 0; } }
 .tab { position: relative; }
+/* a tab whose part runs (Puls, Sporenwerk): mint glow, breathing – not the amber of the open panel */
+.tab[data-live] svg { color: var(--lumen); filter: drop-shadow(0 0 3px var(--lumen)) drop-shadow(0 0 7px rgba(134, 240, 208, .45)); animation: tabLive var(--beat, 1.6s) ease-in-out infinite; }
+.tab[data-live]::before { content: ''; position: absolute; top: 0; left: 28%; right: 28%; height: 2px; border-radius: 0 0 2px 2px; background: var(--lumen); box-shadow: 0 0 6px var(--lumen); }
+@keyframes tabLive { 0%, 100% { opacity: 1; } 50% { opacity: .62; } }
+@media (prefers-reduced-motion: reduce) { .tab[data-live] svg { animation: none; } }
 .tab .mdot { position: absolute; top: 6px; left: calc(50% + 9px); width: 7px; height: 7px; border-radius: 50%; background: var(--lumen); opacity: 0; transition: opacity .12s; }
 .tab .mdot.conn { opacity: .4; }
 .tab .mdot.on { opacity: 1; transition: none; }
@@ -17239,6 +17244,14 @@ function seqStart(b0 = 0, t0) {
   clkOutStart(b0);
   if (typeof fxTune === 'function') fxTune();   // (30.10.2026: the Flechtwerk's Takt)
 }
+// (owner, 31.10.2026: „wenn man auf Puls starten klickt, soll er auch spielen – nicht erst in den Einstellungen“) the
+// player's start: with no Spur on (Leere Erde, all switched off) it would run silent – Spur 1 comes on with it
+function pulsGo() {
+  if (!A.started) return;
+  if (SEQ.on) { seqStop(); return; }
+  if (![0, 1, 2, 3].some((i) => P['l' + i + '.on'])) { setParam('l0.on', true); toast('Keine Puls-Spur war an – Spur 1 spielt jetzt. Weitere schaltest du im Puls ein.', 4500); }
+  seqStart();
+}
 function seqStop() { SEQ.on = false; SEQ.stopB = null; SEQ.lanes.forEach((L) => (L.cur = -1)); barRecue(); updPulsUI(); clkOutStop(); if (typeof fxTune === 'function') fxTune(); }   // (30.10.2026: the Flechtwerk's Takt)
 
 function rollInterval() { return (4 / Number(P['v.roll'])) * 60 / seqBpm(); }
@@ -18359,8 +18372,8 @@ function tName(T) {
 function onOff(key, label, group, get, set) {
   midiTarget(key, label, (v) => { if (v >= 0.5) set(!get()); }, { group, button: true, bool: true, get: () => (get() ? 1 : 0), set: (n) => { if ((n >= 0.5) !== !!get()) set(n >= 0.5); } });
 }
-onOff('puls', 'Puls starten/anhalten', 'Puls', () => SEQ.on, (on) => { if (!A.started) midiHint(); else if (on) seqStart(); else seqStop(); });
-midiTarget('puls.start', 'Puls starten', (v) => { if (v >= 0.5 && A.started && !SEQ.on) seqStart(); }, { group: 'Puls', button: true });
+onOff('puls', 'Puls starten/anhalten', 'Puls', () => SEQ.on, (on) => { if (!A.started) midiHint(); else if (on) { if (!SEQ.on) pulsGo(); } else seqStop(); });
+midiTarget('puls.start', 'Puls starten', (v) => { if (v >= 0.5 && A.started && !SEQ.on) pulsGo(); }, { group: 'Puls', button: true });
 midiTarget('puls.stop', 'Puls anhalten', (v) => { if (v >= 0.5 && SEQ.on) seqStop(); }, { group: 'Puls', button: true });
 // pairs that step through a list: a button steps its way, a relative encoder either way
 function stepPair(up, down, lu, ld, group, fn, tick) {
@@ -31480,7 +31493,7 @@ let ringCv = null, laneTabs = [], laneGrids = [], laneSec = null;
 const LANE_AC = ['var(--spore)', 'var(--lumen)', 'var(--lilac)', 'var(--rose)'];
 function buildPuls() {
   const box = h('div');
-  const play = h('button', { type: 'button', class: 'btn primary', id: 'pulsPlay', 'aria-pressed': 'false', 'data-act': 'puls', onclick: () => (SEQ.on ? seqStop() : seqStart()) });
+  const play = h('button', { type: 'button', class: 'btn primary', id: 'pulsPlay', 'aria-pressed': 'false', 'data-act': 'puls', onclick: () => pulsGo() });
   box.append(section('Puls', 'Euklidische Rhythmen, polymetrisch', h('div', { class: 'transport' }, play), grid(ctl('seq.bpm'), ctl('seq.swing')), hxPulsErnteSec()));   // (Hexenring step 2b: Puls ernten)
   // level, balance and pitch of every lane right under the transport (the mixer module adds it)
   if (typeof buildPulsMix === 'function') box.append(buildPulsMix());
@@ -33237,10 +33250,12 @@ function loadPreset(p, own) {
   kqUsed(P['v.eng']);
   const miss = engMissSay();
   const ton = keep ? ' Tonart der Schleifen behalten: ' + NOTE_NAMES[+P['t.root']] + ' ' + ((SCALES[P['t.scale']] || {}).n || P['t.scale']) + '.' : '';
-  // (owner, 30.10.2026: „Pilzregen … in der Beschreibung stehen vier Spuren, aber es ist nur eine eingestellt“) its Puls
-  // lanes sound only while the Puls runs – said when they are there and it stands
-  const nl = [0, 1, 2, 3].filter((i) => P['l' + i + '.on']).length, pl = nl && !SEQ.on ? ' ▶ startet ' + (nl === 1 ? 'seine Puls-Spur' : 'seine ' + nl + ' Puls-Spuren') + '.' : '';
-  toast('„' + p.name + '“ geladen.' + pl + ton + rzSay() + (miss ? ' ' + miss : ''), miss || keep || pl ? 8000 : 4500, UNDO);
+  // (owner, 31.10.2026: „jedes Preset hatte Puls und Bordun individuell auf das Preset abgestimmt“) a preset with Puls
+  // lanes starts its Puls (with Schleifen in the Leiste: on their next bar) – ■ in the bar or the Puls tab halts it
+  const nl = [0, 1, 2, 3].filter((i) => P['l' + i + '.on']).length, go = nl && !SEQ.on && A.started;
+  if (go) seqStart();
+  const pl = nl && SEQ.on ? ' Sein Puls ' + (go ? 'startet' : 'läuft') + ' (' + (nl === 1 ? '1 Spur' : nl + ' Spuren') + ').' : '';
+  toast('„' + p.name + '“ geladen.' + pl + ton + rzSay() + (miss ? ' ' + miss : ''), miss || keep ? 8000 : 4500, UNDO);
 }
 // (owner, 26.10.2026: „mit einem leeren Preset beginnen können“) Leere Erde: every setting at its plain start, the
 // effects dry, no second layer, no Bordun, no Puls lane, no Fährte – a sound to build from. Apart from PRESETS, whose
@@ -35066,6 +35081,7 @@ function buildUI() {
     tabs.append(b);
   }
   for (const p of PANELS) panelEls[p.key] = p.build();
+  setInterval(tabLive, 250); tabLive();
   midiDot = $('#midiDot');
   for (const k in panelEls) { panelEls[k].hidden = true; panelEls[k].classList.add('pnl-' + k); sheetBody.append(panelEls[k]); }   // (pnl-…: the panel's colour – css/modul.css)
   const q = $('#quick');
@@ -35089,7 +35105,7 @@ function buildUI() {
     kqClose();
   }, true);
   $('#startFingerLine').textContent = 'Mehrere gleichzeitig; Wischen schlägt ' + listDe(famPlay().strike) + ' an';
-  $('#btnPuls').addEventListener('click', () => { if (!A.started) return; SEQ.on ? seqStop() : seqStart(); });
+  $('#btnPuls').addEventListener('click', () => pulsGo());
   $('#btnStopAll').addEventListener('click', panic);   // (owner, 30.10.2026: „ein globaler Stopp-Knopf … alles beenden“ – the Puls starts on its own button)
   $('#btnFreeze').addEventListener('click', () => { if (A.started) setFreeze(!A.frozen); });
   $('#btnHold').addEventListener('click', () => holdSet(!HOLD.on));
@@ -35151,6 +35167,19 @@ function toast(msg, ms = 3200, action) {
   t.classList.toggle('act', !!action);
   t.classList.add('show');
   clearTimeout(toast.tm); toast.tm = setTimeout(() => t.classList.remove('show', 'act'), ms);
+}
+
+// (owner, 31.10.2026: „das Symbol unten in der Leiste soll leuchten, wenn der Puls aktiv ist – nicht das gleiche Leuchten wie
+// bei aktiver Auswahl; dasselbe für das Sporenwerk“) a tab whose part runs: its icon glows mint and breathes (the Puls in its
+// tempo), a thin line above it – the open panel stays amber
+const TAB_LIVE = [['puls', () => SEQ.on, 'Puls läuft'], ['arp', () => !!P['arp.on'], 'Sporenwerk ist an']];
+function tabLive() {
+  for (const [k, on, say] of TAB_LIVE) {
+    const b = document.getElementById('tab-' + k); if (!b) continue;
+    const v = !!on();
+    if (v !== b.hasAttribute('data-live')) { b.toggleAttribute('data-live', v); b.title = v ? say : ''; b.setAttribute('aria-description', v ? say : ''); }
+    if (k === 'puls' && v) { const s = (60 / (seqBpm() || 90)).toFixed(3) + 's'; if (b.style.getPropertyValue('--beat') !== s) b.style.setProperty('--beat', s); }
+  }
 }
 /* ---------- Wurzelwerk: the essentials in one place, from the bar (owner, 27.10.2026: „ein von der home gui aus
    erreichbares schnelle einstellmöglichkeit für all solche und ähnliche essentiellen dinge“) ----------
@@ -43387,7 +43416,11 @@ function hxWSig(L, S, key) {
 }
 // the signature of the field's sound, kept until a parameter changes (setParam, loadValues reset it)
 function hxWPHashC() { return HX.phH != null ? HX.phH : (HX.phH = hxWPHash()); }
-const hxWPIn = (id) => !!PD[id] && !PD[id].rec && !PD[id].dev && !PD[id].live && !id.startsWith('x') && !/^(rev|dly|mst|seq|l\d|rec|hx|mix|arp|ui|midi)\./.test(id);   // (a parameter of the field's sound)   // (owner, 30.10.2026: „Arp deaktiviert – die Schleifen werden neu berechnet, ohne Auswirkung auf den Klang“) the Sporenwerk only chooses the notes, ui/midi only how one plays – none of them is the sound a loop takes
+// (owner, 31.10.2026: „immer noch werden Schleifen neu berechnet, obwohl ich z. B. nur den Filter einstelle“) the insert chain
+// (Verzerrung, Ring, Filter, Phaser, Schweben, the auto-pan), the return Wandel and the Bordun are no part of what a
+// Schleife's notes are rendered with – the render taps before the chain (its own chain is the one recorded, chainRec) – so
+// they never make a Schleife render anew
+const hxWPIn = (id) => !!PD[id] && !PD[id].rec && !PD[id].dev && !PD[id].live && !id.startsWith('x') && !/^(rev|dly|mst|seq|l\d|rec|hx|mix|arp|ui|midi|drv|rng|flt|pha|cho|fx|bor)\./.test(id) && id !== 'mov.pan' && id !== 'mov.panRate';   // (a parameter of the field's sound)   // (owner, 30.10.2026: „Arp deaktiviert – die Schleifen werden neu berechnet, ohne Auswirkung auf den Klang“) the Sporenwerk only chooses the notes, ui/midi only how one plays – none of them is the sound a loop takes
 function hxWPHash() { return hxWPHashOf(P); }
 // (owner, 30.10.2026: „von behalten auf spielen geklickt – die Schleife wird fälschlicherweise neu berechnet“) a pass's
 // signature takes the sound it is really rendered with (hxWPat: the loop's own P, or the field's) – the same sound, the

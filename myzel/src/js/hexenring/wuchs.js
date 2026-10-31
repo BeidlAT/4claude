@@ -165,7 +165,11 @@ function hxWSig(L, S, key) {
 }
 // the signature of the field's sound, kept until a parameter changes (setParam, loadValues reset it)
 function hxWPHashC() { return HX.phH != null ? HX.phH : (HX.phH = hxWPHash()); }
-const hxWPIn = (id) => !!PD[id] && !PD[id].rec && !PD[id].dev && !PD[id].live && !id.startsWith('x') && !/^(rev|dly|mst|seq|l\d|rec|hx|mix|arp|ui|midi)\./.test(id);   // (a parameter of the field's sound)   // (owner, 30.10.2026: „Arp deaktiviert – die Schleifen werden neu berechnet, ohne Auswirkung auf den Klang“) the Sporenwerk only chooses the notes, ui/midi only how one plays – none of them is the sound a loop takes
+// (owner, 31.10.2026: „immer noch werden Schleifen neu berechnet, obwohl ich z. B. nur den Filter einstelle“) the insert chain
+// (Verzerrung, Ring, Filter, Phaser, Schweben, the auto-pan), the return Wandel and the Bordun are no part of what a
+// Schleife's notes are rendered with – the render taps before the chain (its own chain is the one recorded, chainRec) – so
+// they never make a Schleife render anew
+const hxWPIn = (id) => !!PD[id] && !PD[id].rec && !PD[id].dev && !PD[id].live && !id.startsWith('x') && !/^(rev|dly|mst|seq|l\d|rec|hx|mix|arp|ui|midi|drv|rng|flt|pha|cho|fx|bor)\./.test(id) && id !== 'mov.pan' && id !== 'mov.panRate';   // (a parameter of the field's sound)   // (owner, 30.10.2026: „Arp deaktiviert – die Schleifen werden neu berechnet, ohne Auswirkung auf den Klang“) the Sporenwerk only chooses the notes, ui/midi only how one plays – none of them is the sound a loop takes
 function hxWPHash() { return hxWPHashOf(P); }
 // (owner, 30.10.2026: „von behalten auf spielen geklickt – die Schleife wird fälschlicherweise neu berechnet“) a pass's
 // signature takes the sound it is really rendered with (hxWPat: the loop's own P, or the field's) – the same sound, the

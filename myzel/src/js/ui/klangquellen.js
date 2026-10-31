@@ -497,7 +497,7 @@ let ringCv = null, laneTabs = [], laneGrids = [], laneSec = null;
 const LANE_AC = ['var(--spore)', 'var(--lumen)', 'var(--lilac)', 'var(--rose)'];
 function buildPuls() {
   const box = h('div');
-  const play = h('button', { type: 'button', class: 'btn primary', id: 'pulsPlay', 'aria-pressed': 'false', 'data-act': 'puls', onclick: () => (SEQ.on ? seqStop() : seqStart()) });
+  const play = h('button', { type: 'button', class: 'btn primary', id: 'pulsPlay', 'aria-pressed': 'false', 'data-act': 'puls', onclick: () => pulsGo() });
   box.append(section('Puls', 'Euklidische Rhythmen, polymetrisch', h('div', { class: 'transport' }, play), grid(ctl('seq.bpm'), ctl('seq.swing')), hxPulsErnteSec()));   // (Hexenring step 2b: Puls ernten)
   // level, balance and pitch of every lane right under the transport (the mixer module adds it)
   if (typeof buildPulsMix === 'function') box.append(buildPulsMix());

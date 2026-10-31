@@ -112,8 +112,8 @@ function tName(T) {
 function onOff(key, label, group, get, set) {
   midiTarget(key, label, (v) => { if (v >= 0.5) set(!get()); }, { group, button: true, bool: true, get: () => (get() ? 1 : 0), set: (n) => { if ((n >= 0.5) !== !!get()) set(n >= 0.5); } });
 }
-onOff('puls', 'Puls starten/anhalten', 'Puls', () => SEQ.on, (on) => { if (!A.started) midiHint(); else if (on) seqStart(); else seqStop(); });
-midiTarget('puls.start', 'Puls starten', (v) => { if (v >= 0.5 && A.started && !SEQ.on) seqStart(); }, { group: 'Puls', button: true });
+onOff('puls', 'Puls starten/anhalten', 'Puls', () => SEQ.on, (on) => { if (!A.started) midiHint(); else if (on) { if (!SEQ.on) pulsGo(); } else seqStop(); });
+midiTarget('puls.start', 'Puls starten', (v) => { if (v >= 0.5 && A.started && !SEQ.on) pulsGo(); }, { group: 'Puls', button: true });
 midiTarget('puls.stop', 'Puls anhalten', (v) => { if (v >= 0.5 && SEQ.on) seqStop(); }, { group: 'Puls', button: true });
 // pairs that step through a list: a button steps its way, a relative encoder either way
 function stepPair(up, down, lu, ld, group, fn, tick) {

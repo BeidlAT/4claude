@@ -2,6 +2,15 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-31k",
+      "punkte": [
+        "Ein Preset mit Puls-Spuren startet seinen Puls jetzt gleich mit (mit Schleifen in der Leiste auf ihrem nächsten Takt) – und sein Bordun klingt wie gewohnt.",
+        "„Puls starten“ spielt immer: ist keine Spur an (etwa nach „Leere Erde“), schaltet sich Spur 1 dazu.",
+        "Unten in der Leiste leuchten Puls und Sporenwerk mintgrün, solange sie laufen – der Puls atmet im Tempo. Das Orange bleibt der geöffneten Seite.",
+        "Filter, Verzerrung, Ring, Phaser, Chorus, Hall, Echo und Bordun einstellen rechnet keine Schleife mehr neu – sie wirken auf die Schleifen direkt über ihren Weg im Mixer. (Einmalig nach dem Update kann der Klang der Schleifen noch einmal neu geladen werden.)"
+      ]
+    },
+    {
       "id": "2026-10-31j",
       "punkte": [
         "Verzerrung: vier neue Arten, von Grund auf gebaut – Vorstufe (zwei 12AX7-Trioden mit Gitterstrom: der Arbeitspunkt wandert, der Klang blüht auf), Endstufe (Gegentakt mit einsackendem Netzteil), Übertrager (Eisen, das die Bässe zuerst verdichtet) und Tonband (Hysterese, Kopfresonanz, Höhenverlust, ein Hauch Leiern).",
