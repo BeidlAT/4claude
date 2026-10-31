@@ -28,8 +28,9 @@ Begründungen stehen in `dev/STAND-2026-10-29.md` (Abschnitte „Danach (30.10.)
    playwright.download.prss.microsoft.com, playwright.azureedge.net, ftp.mozilla.org, download-installer.cdn.mozilla.net)
    – bis dahin laufen alle Tests nur in Chromium (immer dazusagen).
 
-11. **Latenz (31.10.):** Recherche `dev/klang/latenz-recherche.md` – er testet Treiber-„Mode“, Firefox-Pref, Chrome-Test;
-   große Lösung (native Hülle mit ASIO) nur auf seinen Entscheid.
+11. **Latenz (31.10.):** Im Browser ist mit seinem Steinberg-Treiber nichts mehr zu holen (Chrome-Bericht: 10 ms Puffer +
+   48–64 ms Ausgang; Exklusiv-Modus +50 ms). Firefox-Bericht steht aus. Entscheidung offen: eigenes Programm mit ASIO –
+   Konzept `dev/klang/nativ-asio-konzept.md` (zuerst Probe-Bau Electron + node-web-audio-api, 1–2 Sitzungen).
 
 ## Für die nächste Sitzung zu tun (ohne weitere Rückfrage)
 ## Erledigt am 31.10.
