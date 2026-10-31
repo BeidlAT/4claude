@@ -140,7 +140,8 @@ function onParamChanged(id) {
   if ((id === 't.root' || id === 't.scale') && hxWTonHold(id)) return;   // Hexenring: (step 2a) the field and the loops change key on the announced bar line
   const pre = id.slice(0, id.indexOf('.'));
   if (HX.wFeld && A.ctx && (ENGINES[pre] || EB_ENG.has(id))) HX.wKlang = performance.now() + 400;
-  else if (A.ctx && P['ui.instrument'] === 'preset' && hxWPIn(id) && hxLoopsLive().length) { HX.wFeld = true; HX.wKlang = performance.now() + 400; }   // (29.10.2026: a loop made in the field's sound follows it once that changes – hxKlangOf)   // Hexenring: (step 2a) loops that sound as the field: anew, once the knob rests
+  // (owner, 31.10.2026: „wenn ich die Klangquelle ändere, ändern sich auch die Schleifen – das soll weg“) a knob no longer
+  // makes the loops take the field's sound – only a preset loaded does (hxPresetTaken, ui.instrument)
   if (EB_ENG.has(id)) { refreshEngineUI(); }
   if (EB_ENG.has(id) || /^e\d\./.test(id) || EB_PIT.has(id) || id === 'v.layerLvl' || /^x(fin|eb\d)\.(mute|pan)$/.test(id)) ebUI();   // (the Klang page's Ebenen rows)
   if (id === 'ui.instrument' && A.ctx) for (const L of hxLoopsLive()) hxWUpdate(L);   // Hexenring: (28.10.2026) the loops take the preset's instrument, or their own again, from their next seam

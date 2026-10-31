@@ -357,6 +357,7 @@ function loadPreset(p, own) {
   const keep = P['ui.tonart'] === 'preset' && hxLoopsLive().some((L) => !L.bew) && (String(p.v['t.root'] ?? PD['t.root'].d) !== String(P['t.root']) || (p.v['t.scale'] ?? PD['t.scale'].d) !== P['t.scale']);
   const vals = keep ? Object.assign({}, p.v, { 't.root': P['t.root'], 't.scale': P['t.scale'] }) : p.v;
   UI.loading = true; loadValues(vals, false); UI.loading = false;
+  hxPresetTaken();   // (Hexenring: „Instrument beim Preset-Wechsel“ – the loops take this preset, as loaded)
   UI.preset = UI.presetBase = p.key || null;
   rzPreset(p);   // its Gestik recipe (none: the player's own settings) – before a user preset's own Gestik settings
   presetExtraLoad(p);

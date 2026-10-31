@@ -54,7 +54,7 @@ function hxLoopMake(o) {
     gain: o.gain != null ? o.gain : 1, pan: o.pan || 0, made: Date.now(), ps: [], src: o.src || 0, bpm: o.bpm || tgBpm(hxNowT()), lv: [0, 0], taumeln: o.taumeln !== false, folgt: !!o.folgt, weg: o.weg === 'fx' ? 'fx' : 'dir', fxm: o.fxm != null ? o.fxm : FXM_ALL,   // (31.10.2026: a new Schleife plays Direkt – as recorded; weg.js)
     eig: HX_EIG.includes(o.eig) ? o.eig : 'treu',
     // (step 2a) Wuchs: why it grows (wahl: hx.beginn for a new one), how it follows, the level it was played at, the patch
-    wwhy: o.wwhy ? Object.assign({}, o.wwhy) : { wahl: !o.key && o.eng !== 'bew' && P['hx.beginn'] === 'wuchs', ph: o.key ? null : hxWPHashC() }, ton: o.ton || P['hx.folgen'] || 'fest', klang: o.klang || 'eigen', stufe: o.stufe || null, q: o.q || P['dev.q'], P: o.P || (o.key ? null : Object.assign({}, P)), mask: o.mask || [...HX.mask], chainRec: o.chainRec || null, jrg: o.jrg || { age: A.jrgAge || 0, season: A.season || 0 } });   // (jrg: the Jahresring's year as it was played – a Wuchs pass hits that bar, not today's; wwhy.ph: the field's sound a new loop was made in – hxKlangOf)
+    wwhy: o.wwhy ? Object.assign({}, o.wwhy) : { wahl: !o.key && o.eng !== 'bew' && P['hx.beginn'] === 'wuchs', ph: o.key ? null : hxWPHashC(), pn: HX.preN || 0 }, ton: o.ton || P['hx.folgen'] || 'fest', klang: o.klang || 'eigen', stufe: o.stufe || null, q: o.q || P['dev.q'], P: o.P || (o.key ? null : Object.assign({}, P)), mask: o.mask || [...HX.mask], chainRec: o.chainRec || null, jrg: o.jrg || { age: A.jrgAge || 0, season: A.season || 0 } });   // (jrg: the Jahresring's year as it was played – a Wuchs pass hits that bar, not today's; wwhy.ph: the field's sound a new loop was made in – hxKlangOf)
   HX.slot[o.slot] = id;
   if (hxWegOn(L)) setTimeout(() => hxWegApply(L, true), 0);   // (a restored Schleife on its own way)
   if (o.eng !== 'bew' && (!HX.fokus || !HX.loops.has(HX.fokus) || HX.loops.get(HX.fokus).bew)) HX.fokus = id;   // Hexenring: (step 1d) never a Schleife of Bewegung
@@ -71,7 +71,8 @@ function hxLoopNotes(evs, t0, dur) {
 }
 const hxMainEng = (evs) => { const c = {}; for (const e of evs) c[e.eng] = (c[e.eng] || 0) + 1; let b = null; for (const k in c) if (!b || c[k] > c[b]) b = k; return b || P['v.eng']; };
 const hxName = (L) => 'Schleife ' + (L.slot + 1);
-const hxEngName = (L) => (L.bew ? 'Bewegung' : ENG_NAME[L.eng] || '');
+// the instrument it sounds with (31.10.2026: one chosen for it, or the field's – hxKlangOf), else the one it was played with
+const hxEngName = (L) => { if (L.bew) return 'Bewegung'; const k = typeof hxKlangOf === 'function' ? hxKlangOf(L) : 'eigen'; return (k === 'feld' ? ENG_NAME[P['v.eng']] : k === 'preset' ? ENG_NAME[HX.preP['v.eng']] : k !== 'eigen' && ENG_NAME[k]) || ENG_NAME[L.eng] || ''; };
 function hxLenText(L) {
   if (!hxTakt(L)) return 'frei · ' + dec(hxLen(L).toFixed(1)) + ' s';
   const bt = +L.d.beats.toFixed(4), bars = +(bt / (L.bpb || 4)).toFixed(4);   // (owner, 26.10.2026: a trim's „16.000000000000004 Schläge“ – 4 Takte)

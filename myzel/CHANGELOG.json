@@ -2,6 +2,15 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-31l",
+      "punkte": [
+        "Eine Schleife im Mixer angetippt: Das Bearbeiten-Fenster erscheint wieder in voller Breite (über dem Mixer) statt schmal abgeschnitten.",
+        "Neu im Bearbeiten-Fenster, gleich unter dem Kopf: „Instrument“ – jede Schleife spielt ihre Noten mit einer Klangquelle deiner Wahl, wie aufgenommen oder mit dem Instrument der Spielfläche. ↶ nimmt es zurück.",
+        "Im Mixer und im Fenster steht bei einer Schleife das Instrument, mit dem sie gerade klingt.",
+        "Klangquelle oder Regler am Spielfeld ändern lässt die Schleifen jetzt in Ruhe. Nur ein Preset-Wechsel gibt ihnen den neuen Klang – und nur, wenn „Instrument beim Preset-Wechsel“ auf „Schleifen spielen mit dem Instrument des Presets“ steht. Wer das will, wählt für eine Schleife „Spielfeld“."
+      ]
+    },
+    {
       "id": "2026-10-31k",
       "punkte": [
         "Ein Preset mit Puls-Spuren startet seinen Puls jetzt gleich mit (mit Schleifen in der Leiste auf ihrem nächsten Takt) – und sein Bordun klingt wie gewohnt.",
