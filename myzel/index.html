@@ -37283,7 +37283,10 @@ function hxLadeFrame() {
   if (now - HXLD.drawT < 120) return;
   HXLD.drawT = now;
   let n = 0, done = 0; const loops = new Set();
-  for (const [id, o] of HXLD.ids) { n++; const S = HX.sch.get(id), L = hxByKey(o.L); if (!S || !L || L.state === 'weg' || !(S.wBusy || S.wAgain)) done++; else loops.add(L.slot + 1); }
+  // (31.10.2026: „bleibt stecken“ – measured: 120 s at „0 von 2“ with nothing rendering) a Schicht is done once no render of it
+  // runs: a wish left behind (wAgain) by an update that went another way (Live, a creation playing) is no render – it is
+  // dropped here, else the bar waited for it for ever
+  for (const [id, o] of HXLD.ids) { n++; const S = HX.sch.get(id), L = hxByKey(o.L); if (S && !S.wBusy && S.wAgain) S.wAgain = null; if (!S || !L || L.state === 'weg' || !S.wBusy) done++; else loops.add(L.slot + 1); }
   if (done >= n) { HXLD.on = false; HXLD.endT = now; el.querySelector('.t').textContent = 'Neuer Klang da'; el.querySelector('i').style.width = '100%'; el.querySelector('.p').setAttribute('aria-valuenow', '100'); el.classList.add('fertig'); return; }
   const x = (now - HXLD.t0) / 1000 / Math.max(0.4, HXLD.est), p = Math.max(done / n, x < 1 ? 0.9 * x : 0.9 + 0.09 * (1 - Math.exp(-(x - 1))));
   el.classList.remove('fertig'); el.hidden = false;
@@ -43093,7 +43096,7 @@ function hxWUpdate(L, o = {}) {
   if (!L || L.bew || L.state === 'weg' || !HX.node) return;
   if (L.krea && L.krea.sel != null) { hxCardDirty(); hxRailDirty(); return; }   // (28.10.2026: a Werkstatt creation or a Trieb plays – werkstatt.js)
   hxWNotesAll(L);
-  if (HXW.st === 'kein' || L.live) { hxWLiveSync(L); hxCardDirty(); hxRailDirty(); return; }   // (no Werk-Rahmen: Live mode; step 4: or chosen)
+  if (HXW.st === 'kein' || L.live) { for (const id of L.sch) { const S = HX.sch.get(id); if (S && !S.wBusy) S.wAgain = null; } hxWLiveSync(L); hxCardDirty(); hxRailDirty(); return; }   // (no Werk-Rahmen: Live mode; step 4: or chosen – no wish left waiting)
   if (L.sch.some((id) => { const S = HX.sch.get(id); return S && S.lm; })) hxWLiveSync(L);   // (back from Live: its versions sound again)
   HX.wFeld = hxLoopsLive().some((X) => hxKlangOf(X) === 'feld' && hxWAktiv(X));
   const on = hxWAktiv(L), F = HX.folge && HX.folge.loops.includes(L.key) ? HX.folge : null;

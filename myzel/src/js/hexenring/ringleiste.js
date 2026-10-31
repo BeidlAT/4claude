@@ -58,7 +58,10 @@ function hxLadeFrame() {
   if (now - HXLD.drawT < 120) return;
   HXLD.drawT = now;
   let n = 0, done = 0; const loops = new Set();
-  for (const [id, o] of HXLD.ids) { n++; const S = HX.sch.get(id), L = hxByKey(o.L); if (!S || !L || L.state === 'weg' || !(S.wBusy || S.wAgain)) done++; else loops.add(L.slot + 1); }
+  // (31.10.2026: „bleibt stecken“ – measured: 120 s at „0 von 2“ with nothing rendering) a Schicht is done once no render of it
+  // runs: a wish left behind (wAgain) by an update that went another way (Live, a creation playing) is no render – it is
+  // dropped here, else the bar waited for it for ever
+  for (const [id, o] of HXLD.ids) { n++; const S = HX.sch.get(id), L = hxByKey(o.L); if (S && !S.wBusy && S.wAgain) S.wAgain = null; if (!S || !L || L.state === 'weg' || !S.wBusy) done++; else loops.add(L.slot + 1); }
   if (done >= n) { HXLD.on = false; HXLD.endT = now; el.querySelector('.t').textContent = 'Neuer Klang da'; el.querySelector('i').style.width = '100%'; el.querySelector('.p').setAttribute('aria-valuenow', '100'); el.classList.add('fertig'); return; }
   const x = (now - HXLD.t0) / 1000 / Math.max(0.4, HXLD.est), p = Math.max(done / n, x < 1 ? 0.9 * x : 0.9 + 0.09 * (1 - Math.exp(-(x - 1))));
   el.classList.remove('fertig'); el.hidden = false;

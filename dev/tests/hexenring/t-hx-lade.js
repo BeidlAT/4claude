@@ -13,7 +13,7 @@ const BPM = 120;
   const { page, errors } = await G.open({ w: 1400, h: 900 });
   const ev = (fn, a) => page.evaluate(fn, a);
   // waits until the bar is done (or s seconds): [done, seconds, Schichten still busy]
-  const barDone = (s) => ev(async (s) => { const M = window.__M, t0 = performance.now(); let seen = false; while (performance.now() - t0 < s * 1000) { if (M.HXLD.on) seen = true; if (seen && !M.HXLD.on) break; if (!seen && performance.now() - t0 > 4000) break; await window.__sleep(200); }
+  const barDone = (s) => ev(async (s) => { const M = window.__M, t0 = performance.now(); let seen = false; while (performance.now() - t0 < s * 1000) { if (M.HXLD.on) seen = true; if (seen && !M.HXLD.on) break; if (!seen && performance.now() - t0 > 4000) break; await new Promise((r) => setTimeout(r, 200)); }
     return [!M.HXLD.on, +((performance.now() - t0) / 1000).toFixed(1), [...M.HX.sch.values()].filter((S) => S.wBusy).length, seen]; }, s);
   const r1 = await ev(async (BPM) => {
     const M = window.__M, A = M.A, sl = window.__sleep;
@@ -32,7 +32,7 @@ const BPM = 120;
   // 2: reload, the Schleifen restored, Leere Erde
   await page.waitForTimeout(3000);
   await page.reload(); await page.waitForFunction(() => !!window.__M); await page.click('#btnStart'); await G.gtools(page); await page.waitForTimeout(2500);
-  const r2 = await ev(async () => { const M = window.__M; for (let i = 0; i < 50 && M.hxLoopsLive().length < 2; i++) await window.__sleep(200); M.loadPreset(M.PRESET_LEER); return { n: M.hxLoopsLive().length }; });
+  const r2 = await ev(async () => { const M = window.__M; for (let i = 0; i < 50 && M.hxLoopsLive().length < 2; i++) await new Promise((r) => setTimeout(r, 200)); M.loadPreset(M.PRESET_LEER); return { n: M.hxLoopsLive().length }; });
   const b2 = await barDone(150);
   ok(r2.n === 2 && b2[0] && b2[2] === 0, `after a reload (${r2.n} Schleifen back), Leere Erde: done in ${b2[1]} s (bar seen ${b2[3]}, ${b2[2]} still busy)`);
   // 3: a realm that swallows its jobs
@@ -48,7 +48,7 @@ const BPM = 120;
   await ev(() => { window.__M.HXW.limK = 1; });
   // 4: ✕
   const r4 = await ev(async () => {
-    const M = window.__M, sl = window.__sleep, o = {};
+    const M = window.__M, sl = (ms) => new Promise((r) => setTimeout(r, ms)), o = {};
     const pr = M.PRESETS.filter((p) => p.key !== 'leer' && p.v['v.eng'])[3]; M.loadPreset(pr);
     for (let i = 0; i < 40 && !M.HXLD.on; i++) await sl(100);
     o.on = M.HXLD.on; const x = document.querySelector('#hxLade .x'); o.btn = !!x && getComputedStyle(x).pointerEvents !== 'none';
