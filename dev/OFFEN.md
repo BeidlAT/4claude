@@ -36,7 +36,9 @@ Abend“ → F-Tasten frei (keine Presets F1–F10, keine Spielweisen F1–F12, 
 Raster (`.kc-tch`, 4 Spalten, schmal 2). Stottern (`dsp/touche-fx.js`): Ausschnitt endet immer am Druckmoment (`S.at`) –
 eine längere Teilung las vorher über den Ring-Kopf hinaus, die Naht passte bei Längenwechsel nicht; Pegelschritt (heran)
 gleitet; erneuter Druck im Ausklingen setzt fort. Neuer Prüfpunkt in `t-tch-fx.js` (Krümmung 0,071 → 0,003, Chromium).
-Offen fürs Ohr: Stottern im Chill-Hop Abend mit dem echten Touché in Firefox.
+Danach („Stottern ist generell nicht clean“): Naht 10 ms Hann statt 3 ms linear, Ein/Aus ~25 ms, weg/heran erst ab
+16 % (Mitdrücken verstimmte und dunkelte), Teilung mit Hysterese, Tiefpass erst mit heran. Prüfpunkt „Stottern clean“
+(Bass-Naht: Krümmung 180× → 1× der eigenen). Offen fürs Ohr: Stottern im Chill-Hop Abend mit dem echten Touché in Firefox.
 
 ## Erledigt am 30.10. (zur Orientierung)
 (ungemergt, Besitzer: „warte mit GitHub, es kommen noch Kleinigkeiten“) Punkt 11: ein Rückweg „Wandel“ statt
