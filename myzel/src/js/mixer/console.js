@@ -177,7 +177,7 @@ function mxStrip(c) {
   el.addEventListener('focusin', () => { if (MX.sel !== k) selectChannel(k); });
   // the route node stands in the soil under the strip but belongs to it: Tab reaches it after S, a screen reader
   // finds it in the channel's group
-  if (c.kind === 'src' || c.kind === 'lane') el.append(mxNode(c));
+  if (c.kind === 'src' || c.kind === 'lane' || c.kind === 'puls') el.append(mxNode(c));   // (31.10.2026: the Puls – its four Spuren at once)
   el.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') { MX.hov = k; MX.sendT = performance.now(); } });
   el.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse' && MX.hov === k) MX.hov = null; });
   return el;
@@ -264,6 +264,13 @@ function mxNode(c) {
   b.addEventListener('pointerdown', (e) => { if (e.button) return; e.preventDefault(); wfxPress(k, e); });
   b.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); wfxPress(k, e); wfxRelease(); } });
   if (PD['x' + k + '.fxm']) bindCtl('x' + k + '.fxm', () => { MX.dirtyStatic = true; b.title = wfxSay(k); });
+  if (k === 'puls') {   // (its four Spuren's ways, one knot – wege-fx.js)
+    b.removeAttribute('data-pid'); b.removeAttribute('role');
+    const sync = () => { MX.dirtyStatic = true; b.title = wfxSay(k) + ' – tippen: alle vier Spuren'; b.setAttribute('aria-label', wfxSay(k)); };
+    for (let i = 0; i < 4; i++) { bindCtl('xl' + i + '.route', sync); bindCtl('xl' + i + '.fxm', sync); }
+    MX.ch[k].node = b; sync();
+    return b;
+  }
   bindCtl(id, (v) => {
     b.setAttribute('aria-checked', String(v === 'dir'));
     b.setAttribute('aria-label', c.name + ': direkt in die Summe, an der Effektkette vorbei');
