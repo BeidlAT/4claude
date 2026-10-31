@@ -229,6 +229,11 @@ function updLatText() {
   lt += ' Der Klang ist in allen drei gleich (die Verzerrung mit Überabtastung nach der Qualitätsstufe, 2–4 ms).';
   // (Android, 24.10.2026: „Minimal“ by default, stepping back by itself – ui/leistung.js)
   if (ANDROID) lt += LAT.own ? ' Von dir eingestellt.' : LAT.auto ? ' Automatisch: nach wiederholten Aussetzern auf „' + LAT_NAME[LAT.auto] + '“ gestellt.' : ' Automatisch: setzt der Klang immer wieder aus, nimmt Myzel ab dem nächsten Start „Standard“, danach „Sicher“.';
+  // (31.10.2026, owner: „die Einstellungen am Interface haben keinen Einfluss“) Firefox takes no latencyHint (its
+  // AudioContextOptions hold only the sample rate) and always reports a buffer of 0: its output is the Windows audio
+  // engine's period (≈ 10 ms, WASAPI shared – never ASIO); said so, with what does act there
+  const FF = /Firefox\//.test(navigator.userAgent || '');
+  if (FF) lt += ' Firefox nimmt diese Wahl nicht an: es gibt den Klang immer mit dem Puffer des Windows-Audiosystems aus (meist 10 ms, nie über ASIO) und meldet keinen eigenen Puffer. Dort wirken: im Steinberg-Treiber „Mode: Low Latency“, 48 kHz überall gleich, und in about:config „media.cubeb_latency_mtg_frames“ (probeweise 384 oder 256 – bei Aussetzern zurücksetzen).';
   if (IOS) lt += ' iPhone und iPad wählen den Puffer selbst.';
   else if (!MOBILE && A.ctx && A.ctx.baseLatency) lt += ' Den Puffer bestimmt der Browser: hier ' + Math.round(A.ctx.baseLatency * A.ctx.sampleRate) + ' Samples (' + dec((A.ctx.baseLatency * 1000).toFixed(1)) + ' ms) – eine ASIO-Einstellung des Interfaces (etwa 128) gilt im Browser nicht.';   // (owner, 28.10.2026)
   if (A.ctx) lt += A.latMode !== mode ? ' Der neue Puffer gilt nach einem Neustart des Klangs.' : ' Nach Änderungen am Audiotreiber den Klang neu starten, dann misst der Browser neu.';
