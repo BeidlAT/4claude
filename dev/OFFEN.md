@@ -34,6 +34,11 @@ Begründungen stehen in `dev/STAND-2026-10-29.md` (Abschnitte „Danach (30.10.)
 
 ## Für die nächste Sitzung zu tun (ohne weitere Rückfrage)
 ## Erledigt am 31.10.
+Wartezeit + Original (Besitzer: „lange Wartezeiten unvermeidlich?“ / „komme nicht mehr auf den Original-Zustand“):
+`hxWSet`, `hxFuCommit`, `hxPresetTaken` rufen `hxWUpdate(…, { now: true })` – Überblenden mitten im Durchgang wie bei den
+Noten-Werkzeugen; Längen-/Band-Änderungen bleiben an der Naht (Geometrie). `hxOriginal` (band.js): Grundeinstellung +
+Klangfarbe aus + Führen/fuKeep weg + Noten wie geerntet (`S.wn0`, gespeichert) + Abdruck, eine Gruppe für ↶; Knopf ersetzt
+„Grundeinstellung“. Test `t-hx-original.js` (Chromium).
 Führen nachgebessert (Besitzer: „mega … nur laggy, der Sound hat Probleme; das Geführte ist beim nächsten Start
 verschwunden“): Vorlauf nur 50 ms (`HX_FU_LA`) statt des ganzen Planer-Horizonts, knapp verspätete Noten sofort; gehaltene
 Töne gleiten bei Tonhöhe mit (`hxFuFollow`), Ausdruck/Gleiten ins Protokoll; geführte Noten ohne `loop`-Vorrang (sein

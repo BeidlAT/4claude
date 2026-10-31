@@ -185,7 +185,7 @@ function hxWSet(L, what, v) {
     X.wwhy = Object.assign(X.wwhy || {}, { wahl: s.wahl, abdr: s.abdr }); X.ton = s.ton; X.klang = s.klang; X.stufe = s.stufe; X.live = !!s.live;   // (step 4: Live)
     for (const [sk, sd] of s.seeds) { const S = hxSchByKey(sk); if (S && S.wseed !== sd) { S.wseed = sd; S.anc = null; } }
     if (X.eig !== s.eig) { if (!hxEigSet(X, s.eig)) hxSay(hxName(X) + ': Eigensinn nach drei Runden'); }
-    hxWUpdate(X); hxSaveMeta(X.id); hxCardDirty(); hxRailDirty();
+    hxWUpdate(X, { now: true }); hxSaveMeta(X.id); hxCardDirty(); hxRailDirty();   // (owner, 31.10.2026: „sind diese langen Wartezeiten unvermeidlich?“ – a choice is heard at once, crossfaded mid-pass, as the notes' tools are)
   };
   const to = Object.assign({}, was);
   if (what === 'wahl') { to.wahl = !!v; to.live = false; if (v) to.abdr = false; }

@@ -232,6 +232,30 @@ function hxDefaults(L) {
   hxSay(hxName(L) + (did ? ': alles auf Grundeinstellung' : ': ist schon in der Grundeinstellung'));
   return did;
 }
+// (owner, 31.10.2026: „wenn ich mich in den Schleifen-Einstellungen zu viel spiele, komme ich nicht mehr auf den
+// Original-Zustand zurück“) Original: the Schleife as it was harvested – the Grundeinstellung (Band, Abschnitte, the notes'
+// tools, the window), its Klangfarbe off, Führen off (what was led not kept), the notes as harvested (a Führen pass laid in
+// taken back), its own instrument and Abdruck (plays its recording, nothing grown). Pegel, Balance, Schichten, Weg stay.
+// One step for ↶.
+function hxOriginal(L) {
+  if (!L || L.bew) return false;
+  const n0 = HX.hist.length;
+  if (L.fuehr) { if (L.wwhy) delete L.wwhy.fuKeep; L.fuehr = null; for (const id of L.sch) { const S = HX.sch.get(id); if (S && S.fu) { S.lk = Math.max(S.lk, S.fu.k); S.fu = null; } } }
+  else if (L.wwhy && L.wwhy.fuKeep) delete L.wwhy.fuKeep;
+  hxDefaults(L);
+  const rx0 = hxRxOf(L);
+  if (hxRxOn(rx0)) { const lk = L.key, z = { pitch: 0, ct: 0, verw: null, farb: null }; hxRxLayer(L, z, { noHist: true }); hxHist({ kind: 'rx', label: hxName(L) + ': Klangfarbe aus', undo() { const Y = hxByKey(lk); if (Y) hxRxLayer(Y, rx0, { noHist: true }); }, redo() { const Y = hxByKey(lk); if (Y) hxRxLayer(Y, z, { noHist: true }); } }); }
+  const back = L.sch.map((id) => HX.sch.get(id)).filter((S) => S && S.wn0 && S.wn !== S.wn0).map((S) => [S.key, S.wn, S.wn0]);
+  if (back.length) {
+    const lk = L.key, put = (i) => { const X = hxByKey(lk); if (!X) return; for (const b of back) { const S = hxSchByKey(b[0]); if (S) { S.wn = b[i]; S.wnT = null; } } hxWUpdate(X, { now: true }); hxSaveMeta(X.id); };
+    put(2); hxHist({ kind: 'wuchs', label: 'Noten wie geerntet (' + hxName(L) + ')', undo() { put(1); }, redo() { put(2); } });
+  }
+  if (hxWAktiv(L) || (L.klang || 'eigen') !== 'eigen' || L.live) hxAbdruck(L);
+  const did = hxHistGroup(n0, hxName(L) + ': Original');
+  hxSay(hxName(L) + (did ? ': wieder im Original' : ': ist schon im Original'));
+  hxCardDirty(); hxRailDirty(); hxEdRender();
+  return did;
+}
 // the steps pushed since n0 as one (↶ takes them back together, newest first)
 function hxHistGroup(n0, label) {
   const steps = HX.hist.splice(n0); if (!steps.length) return false;

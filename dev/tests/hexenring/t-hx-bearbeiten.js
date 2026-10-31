@@ -83,7 +83,7 @@ const { ok } = H;
     // Grundeinstellung: many at once, one step back
     M.hxRev(L); M.hxSlcSet(L, 'pd', 0.5); M.hxSlcSet(L, 'pw', 0.3); M.hxVbSet(L, 0.75); M.hxAbSet(L, 0.25); M.hxNtSet(L, 'umk'); await window.__sleep(400);
     const n0 = M.HX.hist.length;
-    [...document.querySelectorAll('.hx-ed-hb .btn')].find((x) => x.textContent === 'Grundeinstellung').click(); await window.__sleep(500);
+    [...document.querySelectorAll('.hx-ed-hb .btn')].find((x) => x.textContent === 'Original').click(); await window.__sleep(500);
     o.def = { rev: L.rev, pd: L.slc.pd, pw: L.slc.pw, vb: L.vb, ab: L.ab, umk: !!(L.nt && L.nt.umk), steps: M.HX.hist.length - n0, last: M.HX.hist[M.HX.hist.length - 1].label };
     await und(); await window.__sleep(300);
     o.back = { rev: L.rev, pd: L.slc.pd, pw: L.slc.pw, vb: L.vb, ab: L.ab && L.ab.rate, umk: !!(L.nt && L.nt.umk) };
@@ -92,7 +92,7 @@ const { ok } = H;
   });
   ok(u.t1[0] === 'true' && u.t1[1] === 0.15 && u.t0.join() === 'true,false,0' && u.w1[0] === 'true' && u.w1[1] === 0.3, `Tauschen on and off again, Weglassen on its own row (${JSON.stringify([u.t1, u.t0, u.w1])})`);
   ok(u.uw === 0 && u.vb === 0.9 && u.uvb === 1 && u.ab === 0.1 && !u.uab && u.m === true && u.um === false && u.nt === true && !u.unt && u.sp === 0.5 && u.usp === 1, `every edit undone at once by ↶: Weglassen, Verblassen, Abrieb, a Schicht stumm, Umkehrung, Band (${JSON.stringify(u)})`);
-  ok(!u.def.rev && u.def.pd === 0 && u.def.pw === 0 && u.def.vb === 1 && !u.def.ab && !u.def.umk && u.def.steps === 1 && /Grundeinstellung/.test(u.def.last), `„Grundeinstellung“: all back as one step (${JSON.stringify(u.def)})`);
+  ok(!u.def.rev && u.def.pd === 0 && u.def.pw === 0 && u.def.vb === 1 && !u.def.ab && !u.def.umk && u.def.steps === 1 && /Original/.test(u.def.last), `„Original“: all back as one step (${JSON.stringify(u.def)})`);
   ok(u.back.rev === true && u.back.pd === 0.5 && u.back.pw === 0.3 && u.back.vb === 0.75 && u.back.ab === 0.25 && u.back.umk === true, `… and ↶ gives every edit back (${JSON.stringify(u.back)})`);
   // 4c. the waveform shows what sounds: rendered by the processor, it changes with the edits
   const wv = await page.evaluate(async () => {

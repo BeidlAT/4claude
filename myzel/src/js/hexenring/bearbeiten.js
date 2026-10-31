@@ -131,7 +131,7 @@ function hxEdRender() {
       loops.length > 1 ? btn('‹', () => go(-1), 'Vorige Schleife', 'ghost') : null, loops.length > 1 ? btn('›', () => go(1), 'Nächste Schleife', 'ghost') : null,
       (() => { const u = btn('↶', hxUndoStep, HX.hist.length ? 'Rückgängig: ' + HX.hist[HX.hist.length - 1].label + ' (Strg+Z)' : 'Nichts rückgängig zu machen', 'ghost'); u.disabled = !HX.hist.length && !HX.pend.length; u.setAttribute('aria-label', 'Rückgängig'); return u; })(),
       (() => { const r = btn('↷', hxRedoStep, HX.redo.length ? 'Wiederholen: ' + HX.redo[HX.redo.length - 1].label + ' (Strg+Umschalt+Z)' : 'Nichts zu wiederholen', 'ghost'); r.disabled = !HX.redo.length; r.setAttribute('aria-label', 'Wiederholen'); return r; })(),
-      btn('Grundeinstellung', () => hxDefaults(L), 'Alle Bearbeitungen zurück: Band ×1, vorwärts, ganz, keine Lücken, kein Verblassen, kein Abrieb, Noten wie gespielt, bearbeitete Abschnitte wie aufgenommen – als ein Schritt (↶ holt sie zurück). Pegel, Balance und Schichten bleiben.', 'ghost'),
+      btn('Original', () => hxOriginal(L), 'Alles zurück wie geerntet: Band, Abschnitte, Noten-Werkzeuge, Klang verwandeln, Instrument, Führen und Geführtes, Wiedergabe als Abdruck – als ein Schritt (↶ holt alles wieder). Pegel, Balance, Schichten und Weg bleiben.', 'ghost'),
       btn('Karte', () => { hxEdClose(); hxCardOpen(L.slot); }, 'Die Karte mit allen Einstellungen dieser Schleife', 'ghost'),
       (() => { const x = btn('✕', hxEdClose, 'Schließen (Esc)', 'ghost hx-ed-x'); x.setAttribute('aria-label', 'Schließen'); return x; })()));
   // (owner, 31.10.2026: „es würde Sinn machen, wenn man einzelnen Schleifen ein Instrument zuweisen kann – der Sound ist dann

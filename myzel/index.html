@@ -37058,7 +37058,7 @@ function hxSchRebuild(loop, s, o = {}) {
   const id = hxSchNew(loop, s.aud ? c : s.cut, { aud: s.aud, bak: s.bak, chain: s.chain, zo: s.zo, kc: s.kc, kcB: s.kcB, dr: s.dr, cold: s.cold, cutAus: s.cutAus, spliced: s.spliced, key: s.key, gain: s.gain, mute: s.mute, join: s.join, X: s.X / SR, rho: s.rho, kind: s.kind, group: s.group, sr: s.sr, fin: o.fin != null ? o.fin : 0.01, seamK: o.seamK, probe: false });
   const S = HX.sch.get(id);
   if (S && S.aud && S.chain && !S.bak && !(HX.loops.get(loop) || {}).folgt) hxAfterFill(S);   // (a dry one: baked again)
-  if (S) { S.wn = s.wn || null; S.wseed = s.wseed || 0; S.wu = s.wu || null; S.anc = s.anc || null; S.gate = s.gate || null; S.rxB = s.rxB || null; }   // (step 2a: its Wuchs – played once the loop is made: hxRebuild)
+  if (S) { S.wn = s.wn || null; S.wn0 = s.wn0 || null; S.wseed = s.wseed || 0; S.wu = s.wu || null; S.anc = s.anc || null; S.gate = s.gate || null; S.rxB = s.rxB || null; }   // (step 2a: its Wuchs – played once the loop is made: hxRebuild)
   return id;
 }
 // a loop back from a snapshot: phase-correct where it would be (its geometry is its own beat or frame), fading in
@@ -39074,7 +39074,7 @@ function hxEdRender() {
       loops.length > 1 ? btn('‹', () => go(-1), 'Vorige Schleife', 'ghost') : null, loops.length > 1 ? btn('›', () => go(1), 'Nächste Schleife', 'ghost') : null,
       (() => { const u = btn('↶', hxUndoStep, HX.hist.length ? 'Rückgängig: ' + HX.hist[HX.hist.length - 1].label + ' (Strg+Z)' : 'Nichts rückgängig zu machen', 'ghost'); u.disabled = !HX.hist.length && !HX.pend.length; u.setAttribute('aria-label', 'Rückgängig'); return u; })(),
       (() => { const r = btn('↷', hxRedoStep, HX.redo.length ? 'Wiederholen: ' + HX.redo[HX.redo.length - 1].label + ' (Strg+Umschalt+Z)' : 'Nichts zu wiederholen', 'ghost'); r.disabled = !HX.redo.length; r.setAttribute('aria-label', 'Wiederholen'); return r; })(),
-      btn('Grundeinstellung', () => hxDefaults(L), 'Alle Bearbeitungen zurück: Band ×1, vorwärts, ganz, keine Lücken, kein Verblassen, kein Abrieb, Noten wie gespielt, bearbeitete Abschnitte wie aufgenommen – als ein Schritt (↶ holt sie zurück). Pegel, Balance und Schichten bleiben.', 'ghost'),
+      btn('Original', () => hxOriginal(L), 'Alles zurück wie geerntet: Band, Abschnitte, Noten-Werkzeuge, Klang verwandeln, Instrument, Führen und Geführtes, Wiedergabe als Abdruck – als ein Schritt (↶ holt alles wieder). Pegel, Balance, Schichten und Weg bleiben.', 'ghost'),
       btn('Karte', () => { hxEdClose(); hxCardOpen(L.slot); }, 'Die Karte mit allen Einstellungen dieser Schleife', 'ghost'),
       (() => { const x = btn('✕', hxEdClose, 'Schließen (Esc)', 'ghost hx-ed-x'); x.setAttribute('aria-label', 'Schließen'); return x; })()));
   // (owner, 31.10.2026: „es würde Sinn machen, wenn man einzelnen Schleifen ein Instrument zuweisen kann – der Sound ist dann
@@ -40584,7 +40584,7 @@ function hxRecOf(L) {
     sch: L.sch.map((id) => HX.sch.get(id)).filter(Boolean).map((S) => ({ key: S.key, len: S.len, pre: S.pre, n: S.n, cut: S.cut, aus: S.aus, join: S.join, X: S.X, rho: S.rho, gain: S.gain, mute: S.mute, kind: S.kind, group: S.group, sr: S.sr, segs: hxSegs(S), saved: S.saved >= hxSegs(S),
       chain: !!S.chain, bakd: !!S.bak && (S.savedB || 0) >= hxSegs(S), zo: S.zo || 0, kc: S.kc ? Array.from(S.kc) : null, kcB: S.kcB ? Array.from(S.kcB) : null, dr: S.dr ? Array.from(S.dr) : null, cold: !!S.cold, cutAus: !!S.cutAus, spliced: !!S.spliced,
       // (step 2a) its notes for Wuchs, its throw, its Treu render and its anchor (audio beside, ~w and ~x), what it played
-      wn: S.wn || null, wseed: S.wseed || 0, gate: S.gate || null, play: S.play || 'ab',
+      wn: S.wn || null, wn0: S.wn0 || null, wseed: S.wseed || 0, gate: S.gate || null, play: S.play || 'ab',
       wu: S.wu && (S.savedW || 0) >= hxSegsV(S, 'w') ? { n: S.wu.n, len: S.wu.len, sig: S.wu.sig, seed: S.wu.seed } : null,
       anc: S.anc && (S.savedX || 0) >= hxSegsV(S, 'x') ? { n: S.anc.n, len: S.anc.len, sig: S.anc.sig, seed: S.anc.seed, br: S.anc.br != null ? S.anc.br : null, vn: S.anc.vn || null } : null,
       rxb: S.rxB && (S.savedR || 0) >= hxSegsV(S, 'r') ? { n: S.rxB.n, b: !!S.rxB.bak && (S.savedQ || 0) >= hxSegsV(S, 'q') } : null })),   // (30.10.2026: the Klangfarbe's base – klangebene.js)
@@ -43532,7 +43532,7 @@ const hxKlangOf = (L) => { const k = L.klang || 'eigen', w = L.wwhy || {}; retur
 function hxPresetTaken() {
   HX.preN = (HX.preN || 0) + 1; HX.preP = Object.assign({}, P); HX.prePh = hxWPHashOf(HX.preP);
   try { store.set('myzel.hxPreset', JSON.stringify({ n: HX.preN, P: HX.preP })); } catch (e) {}
-  if (A.ctx) for (const L of hxLoopsLive()) if (hxKlangOf(L) === 'preset' && hxWAktiv(L)) hxWUpdate(L);
+  if (A.ctx) for (const L of hxLoopsLive()) if (hxKlangOf(L) === 'preset' && hxWAktiv(L)) hxWUpdate(L, { now: true });
 }
 function hxPresetRestore() { try { const d = JSON.parse(store.get('myzel.hxPreset') || 'null'); if (d && d.P) { HX.preN = +d.n || 1; HX.preP = d.P; HX.prePh = hxWPHashOf(HX.preP); } } catch (e) {} }
 const hxTonOf = (L) => { const t = L.ton || 'diatonisch'; return t === 'fest' && P['ui.tonart'] === 'schleifen' && !hxAbdr(L) && !(L.wwhy && L.wwhy.erst) ? 'diatonisch' : t; };   // (erstarrt: it plays as it sounded – in its key too)
@@ -43874,7 +43874,7 @@ function hxWSet(L, what, v) {
     X.wwhy = Object.assign(X.wwhy || {}, { wahl: s.wahl, abdr: s.abdr }); X.ton = s.ton; X.klang = s.klang; X.stufe = s.stufe; X.live = !!s.live;   // (step 4: Live)
     for (const [sk, sd] of s.seeds) { const S = hxSchByKey(sk); if (S && S.wseed !== sd) { S.wseed = sd; S.anc = null; } }
     if (X.eig !== s.eig) { if (!hxEigSet(X, s.eig)) hxSay(hxName(X) + ': Eigensinn nach drei Runden'); }
-    hxWUpdate(X); hxSaveMeta(X.id); hxCardDirty(); hxRailDirty();
+    hxWUpdate(X, { now: true }); hxSaveMeta(X.id); hxCardDirty(); hxRailDirty();   // (owner, 31.10.2026: „sind diese langen Wartezeiten unvermeidlich?“ – a choice is heard at once, crossfaded mid-pass, as the notes' tools are)
   };
   const to = Object.assign({}, was);
   if (what === 'wahl') { to.wahl = !!v; to.live = false; if (v) to.abdr = false; }
@@ -44453,6 +44453,30 @@ function hxDefaults(L) {
   hxSay(hxName(L) + (did ? ': alles auf Grundeinstellung' : ': ist schon in der Grundeinstellung'));
   return did;
 }
+// (owner, 31.10.2026: „wenn ich mich in den Schleifen-Einstellungen zu viel spiele, komme ich nicht mehr auf den
+// Original-Zustand zurück“) Original: the Schleife as it was harvested – the Grundeinstellung (Band, Abschnitte, the notes'
+// tools, the window), its Klangfarbe off, Führen off (what was led not kept), the notes as harvested (a Führen pass laid in
+// taken back), its own instrument and Abdruck (plays its recording, nothing grown). Pegel, Balance, Schichten, Weg stay.
+// One step for ↶.
+function hxOriginal(L) {
+  if (!L || L.bew) return false;
+  const n0 = HX.hist.length;
+  if (L.fuehr) { if (L.wwhy) delete L.wwhy.fuKeep; L.fuehr = null; for (const id of L.sch) { const S = HX.sch.get(id); if (S && S.fu) { S.lk = Math.max(S.lk, S.fu.k); S.fu = null; } } }
+  else if (L.wwhy && L.wwhy.fuKeep) delete L.wwhy.fuKeep;
+  hxDefaults(L);
+  const rx0 = hxRxOf(L);
+  if (hxRxOn(rx0)) { const lk = L.key, z = { pitch: 0, ct: 0, verw: null, farb: null }; hxRxLayer(L, z, { noHist: true }); hxHist({ kind: 'rx', label: hxName(L) + ': Klangfarbe aus', undo() { const Y = hxByKey(lk); if (Y) hxRxLayer(Y, rx0, { noHist: true }); }, redo() { const Y = hxByKey(lk); if (Y) hxRxLayer(Y, z, { noHist: true }); } }); }
+  const back = L.sch.map((id) => HX.sch.get(id)).filter((S) => S && S.wn0 && S.wn !== S.wn0).map((S) => [S.key, S.wn, S.wn0]);
+  if (back.length) {
+    const lk = L.key, put = (i) => { const X = hxByKey(lk); if (!X) return; for (const b of back) { const S = hxSchByKey(b[0]); if (S) { S.wn = b[i]; S.wnT = null; } } hxWUpdate(X, { now: true }); hxSaveMeta(X.id); };
+    put(2); hxHist({ kind: 'wuchs', label: 'Noten wie geerntet (' + hxName(L) + ')', undo() { put(1); }, redo() { put(2); } });
+  }
+  if (hxWAktiv(L) || (L.klang || 'eigen') !== 'eigen' || L.live) hxAbdruck(L);
+  const did = hxHistGroup(n0, hxName(L) + ': Original');
+  hxSay(hxName(L) + (did ? ': wieder im Original' : ': ist schon im Original'));
+  hxCardDirty(); hxRailDirty(); hxEdRender();
+  return did;
+}
 // the steps pushed since n0 as one (↶ takes them back together, newest first)
 function hxHistGroup(n0, label) {
   const steps = HX.hist.splice(n0); if (!steps.length) return false;
@@ -44732,7 +44756,8 @@ function hxFuCommit(L) {
   const S = hxSchByKey(K.sk); const ww0 = Object.assign({}, L.wwhy); delete ww0.fuKeep;
   if (!S || !S.wn || !HX.node) return false;   // (a reload: its Schicht not back yet – the next tick)
   const lk = L.key, sk = S.key, was = { wn: S.wn, klang: L.klang, eig: L.eig, ww: Object.assign({}, ww0) }, to = { wn: K.wn, klang: 'eigen', eig: 'treu', ww: Object.assign({}, ww0, { wahl: true, abdr: false, erst: false }) };
-  const put = (X, s) => { const S2 = hxSchByKey(sk); if (!S2) return; S2.wn = s.wn; S2.wnT = null; X.klang = s.klang; if (X.eig !== s.eig) hxEigSet(X, s.eig); X.wwhy = Object.assign({}, s.ww); hxWUpdate(X); hxSaveMeta(X.id); hxCardDirty(); hxRailDirty(); };
+  if (!S.wn0) S.wn0 = S.wn;   // (the notes as harvested – „Original“ brings them back)
+  const put = (X, s) => { const S2 = hxSchByKey(sk); if (!S2) return; S2.wn = s.wn; S2.wnT = null; X.klang = s.klang; if (X.eig !== s.eig) hxEigSet(X, s.eig); X.wwhy = Object.assign({}, s.ww); hxWUpdate(X, { now: true }); hxSaveMeta(X.id); hxCardDirty(); hxRailDirty(); };
   put(L, to);
   hxHist({ kind: 'wuchs', label: 'Geführt übernommen (' + hxName(L) + ')', undo() { const X = hxByKey(lk); if (X) put(X, was); }, redo() { const X = hxByKey(lk); if (X) put(X, to); } });
   hxSay(hxName(L) + ': das Geführte bleibt');

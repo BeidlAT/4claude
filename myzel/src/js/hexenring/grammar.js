@@ -236,7 +236,7 @@ function hxSchRebuild(loop, s, o = {}) {
   const id = hxSchNew(loop, s.aud ? c : s.cut, { aud: s.aud, bak: s.bak, chain: s.chain, zo: s.zo, kc: s.kc, kcB: s.kcB, dr: s.dr, cold: s.cold, cutAus: s.cutAus, spliced: s.spliced, key: s.key, gain: s.gain, mute: s.mute, join: s.join, X: s.X / SR, rho: s.rho, kind: s.kind, group: s.group, sr: s.sr, fin: o.fin != null ? o.fin : 0.01, seamK: o.seamK, probe: false });
   const S = HX.sch.get(id);
   if (S && S.aud && S.chain && !S.bak && !(HX.loops.get(loop) || {}).folgt) hxAfterFill(S);   // (a dry one: baked again)
-  if (S) { S.wn = s.wn || null; S.wseed = s.wseed || 0; S.wu = s.wu || null; S.anc = s.anc || null; S.gate = s.gate || null; S.rxB = s.rxB || null; }   // (step 2a: its Wuchs – played once the loop is made: hxRebuild)
+  if (S) { S.wn = s.wn || null; S.wn0 = s.wn0 || null; S.wseed = s.wseed || 0; S.wu = s.wu || null; S.anc = s.anc || null; S.gate = s.gate || null; S.rxB = s.rxB || null; }   // (step 2a: its Wuchs – played once the loop is made: hxRebuild)
   return id;
 }
 // a loop back from a snapshot: phase-correct where it would be (its geometry is its own beat or frame), fading in

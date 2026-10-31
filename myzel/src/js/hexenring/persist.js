@@ -16,7 +16,7 @@ function hxRecOf(L) {
     sch: L.sch.map((id) => HX.sch.get(id)).filter(Boolean).map((S) => ({ key: S.key, len: S.len, pre: S.pre, n: S.n, cut: S.cut, aus: S.aus, join: S.join, X: S.X, rho: S.rho, gain: S.gain, mute: S.mute, kind: S.kind, group: S.group, sr: S.sr, segs: hxSegs(S), saved: S.saved >= hxSegs(S),
       chain: !!S.chain, bakd: !!S.bak && (S.savedB || 0) >= hxSegs(S), zo: S.zo || 0, kc: S.kc ? Array.from(S.kc) : null, kcB: S.kcB ? Array.from(S.kcB) : null, dr: S.dr ? Array.from(S.dr) : null, cold: !!S.cold, cutAus: !!S.cutAus, spliced: !!S.spliced,
       // (step 2a) its notes for Wuchs, its throw, its Treu render and its anchor (audio beside, ~w and ~x), what it played
-      wn: S.wn || null, wseed: S.wseed || 0, gate: S.gate || null, play: S.play || 'ab',
+      wn: S.wn || null, wn0: S.wn0 || null, wseed: S.wseed || 0, gate: S.gate || null, play: S.play || 'ab',
       wu: S.wu && (S.savedW || 0) >= hxSegsV(S, 'w') ? { n: S.wu.n, len: S.wu.len, sig: S.wu.sig, seed: S.wu.seed } : null,
       anc: S.anc && (S.savedX || 0) >= hxSegsV(S, 'x') ? { n: S.anc.n, len: S.anc.len, sig: S.anc.sig, seed: S.anc.seed, br: S.anc.br != null ? S.anc.br : null, vn: S.anc.vn || null } : null,
       rxb: S.rxB && (S.savedR || 0) >= hxSegsV(S, 'r') ? { n: S.rxB.n, b: !!S.rxB.bak && (S.savedQ || 0) >= hxSegsV(S, 'q') } : null })),   // (30.10.2026: the Klangfarbe's base – klangebene.js)
