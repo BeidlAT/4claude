@@ -13152,7 +13152,7 @@ function myzelDsp() {
     setMode(m) {
       if (m === 'koerner' && !this.kr) this.kr = this.lpRings([Math.pow(2, 7 / 12), 2, Math.pow(2, 19 / 12), 4], 19);
       if (m === 'eis' && !this.er) { this.er = this.lpRings([Math.pow(2, 0.25), Math.pow(2, 0.5), Math.pow(2, 0.75), 2.03], 16); this.fC = this.er.map(() => [new Float32Array(this.fN), new Float32Array(this.fN)]); }
-      this.mode = m; this.gOn.fill(0); this.frozen = false; this.fLvl = 0; this.st.on = false; this.st.mix = 0; this.obMix = 0; this.rsLvl = 0; for (const r of this.rs) { r.b.fill(0); r.z = r.ap = r.apx = 0; } this.idle = false; this.idleN = 0; }
+      this.mode = m; this.gOn.fill(0); this.frozen = false; this.fLvl = 0; this.st.on = false; this.st.mix = 0; this.st.k = null; this.obMix = 0; this.rsLvl = 0; for (const r of this.rs) { r.b.fill(0); r.z = r.ap = r.apx = 0; } this.idle = false; this.idleN = 0; }
     // 4× windowed-sinc low pass (cut-off at 0.45 of the original Nyquist), as 4 phases of 16
     osDesign() {
       const T = 64, h = new Float32Array(T), fc = 0.45 / 4; let s = 0;
@@ -13299,30 +13299,39 @@ function myzelDsp() {
       return true;
     }
     stottern(iL, iR, oL, oR, n, w0, c0) {
-      const c = this.c, ct = this.ct, weg = c[0], her = c[1], p = Math.max(ct[0], ct[1], ct[2], ct[3]), S = this.st;
+      const c = this.c, ct = this.ct, p = Math.max(ct[0], ct[1], ct[2], ct[3]), S = this.st;
+      // (31.10.2026, owner: „Stottern ist generell nicht clean“) weg and heran only from a sixth of their way on: a hand
+      // pressing sideways leans a little into the skin – that slowed the tape (out of tune) and darkened the repetitions
+      const dz = (v) => Math.max(0, (v - 0.16) / 0.84), weg = dz(c[0]), her = dz(c[1]);
       // the division of a beat: links a whole beat … rechts a sixteenth (in steps – a stutter is in time; from where the
-      // hand is going, not the glide on its way there)
-      const sd = ct[3] - ct[2], steps = [1, 0.5, 0.25, 0.125, 0.0625], k = Math.max(0, Math.min(4, Math.round((sd + 1) * 2))), len = Math.max(64, Math.round(steps[k] * this.beat * SR));
+      // hand is going, not the glide on its way there). A step changes only once the hand is well past its border (the
+      // skin's tremor at a border changed the length from repetition to repetition – a limping rhythm)
+      const sd = ct[3] - ct[2], steps = [1, 0.5, 0.25, 0.125, 0.0625], u = (sd + 1) * 2;
+      if (S.k == null || Math.abs(u - S.k) > 0.7) S.k = Math.max(0, Math.min(4, Math.round(u)));
+      const len = Math.max(64, Math.round(steps[S.k] * this.beat * SR));
       // (31.10.2026, owner: „bei Chill-Hop Abend knackst Stottern, wenn ich stärker nach links oder rechts drücke“) the
       // slice always ends at the moment of the press (S.at) and reaches back by its length: a longer division (links) used
       // to read on past the ring's head into seconds-old sound, and a new length's seam joined at the wrong place. Pressed
       // again while the last one still fades out: it goes on (a new moment there was a jump under the fading wet sound).
       if (!S.on && p > 0.08) { S.on = true; if (S.mix < 1e-3) { S.len = len; S.at = w0; S.ph = 0; S.g = S.gT = 1; S.n = 0; } }
-      else if (S.on && p < 0.04) S.on = false;
-      const mg = 1 - Math.exp(-1 / (0.004 * SR)), X = Math.min(Math.round(0.003 * SR), S.len >> 2);
+      else if (S.on && p < 0.04) { S.on = false; S.k = null; }
+      // the seam 10 ms (a quarter of a short slice at most), a raised cosine (no corner at either end, no bump where the two
+      // are alike); 3 ms linear was shorter than a bass wave, a tick on every repetition. In and out over ~25 ms.
+      const mg = 1 - Math.exp(-1 / (0.008 * SR)), gg = 1 - Math.exp(-1 / (0.005 * SR)), X = Math.max(1, Math.min(Math.round(0.010 * SR), S.len >> 2));
       let mix = S.mix;
       if (!S.on && mix < 1e-5) { S.mix = 0; for (let i = 0; i < n; i++) { oL[i] = iL ? iL[i] : 0; oR[i] = iR ? iR[i] : 0; } return false; }
-      const rT = 1 - 0.75 * weg, dec = 1 - 0.55 * her, lpc = 1 - Math.exp(-2 * Math.PI * (200 + 18000 * Math.pow(1 - her, 2)) / SR);
+      // heran's low pass: none at all until heran is pressed (the one-pole near Nyquist dulled the top a little)
+      const rT = 1 - 0.75 * weg, dec = 1 - 0.55 * her, lpF = 1 - Math.exp(-2 * Math.PI * (200 + 18000 * Math.pow(1 - her, 2)) / SR), lpc = her < 0.05 ? 1 + (lpF - 1) * her / 0.05 : lpF;
       for (let i = 0; i < n; i++) {
         mix += ((S.on ? 1 : 0) - mix) * mg;
         S.rate += (rT - S.rate) * 0.0005;
         // at a repetition's end: the next (a new division takes over there), its level a step down with heran – gliding
         // (a step at full level clicked)
-        if (S.ph >= S.len) { S.ph -= S.len; S.n++; S.gT *= dec; if (S.on && len !== S.len) S.len = len; }
-        S.g += (S.gT - S.g) * mg;
+        if (S.ph >= S.len) { S.ph -= S.len; S.n++; S.gT *= dec; if (S.on && len !== S.len) { S.len = len; } }
+        S.g += (S.gT - S.g) * gg;
         const t = S.ph, pos = S.at - S.len + t;
         let x = this.rd(this.bL, pos), y = this.rd(this.bR, pos);
-        if (t < X) { const e = t / X; x = x * e + this.rd(this.bL, S.at + t) * (1 - e); y = y * e + this.rd(this.bR, S.at + t) * (1 - e); }   // (the seam: what followed the slice's end fades under its start – the same place for every length)
+        if (t < X) { const e = 0.5 - 0.5 * Math.cos(Math.PI * t / X), f = 1 - e; x = x * e + this.rd(this.bL, S.at + t) * f; y = y * e + this.rd(this.bR, S.at + t) * f; }   // (the seam: what followed the slice's end fades under its start – the same place for every length)
         S.lp += (x - S.lp) * lpc; S.lpR += (y - S.lpR) * lpc;
         const g = S.g; x = S.lp * g; y = S.lpR * g;
         oL[i] = (iL ? iL[i] : 0) * (1 - mix) + x * mix; oR[i] = (iR ? iR[i] : 0) * (1 - mix) + y * mix;

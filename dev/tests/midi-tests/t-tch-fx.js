@@ -19,6 +19,7 @@ const { open, ok, close } = require('./hm');
         else if (kind === 'sine' && t < 1) v = 0.5 * Math.sin(2 * Math.PI * 440 * t);
         else if (kind === 'sweep' && t < 1.2) v = 0.4 * Math.sin(2 * Math.PI * (200 * t + 300 * t * t));
         else if (kind === 'burst' && t < 0.04) v = 0.6 * (Math.random() * 2 - 1);
+        else if (kind === 'bass') v = 0.5 * Math.sin(2 * Math.PI * 82 * t) + 0.25 * Math.sin(2 * Math.PI * 123 * t + 1);
         else if (kind === 'tone') v = 0.5 * Math.sin(2 * Math.PI * 330 * t + 3 * Math.sin(2 * Math.PI * 0.7 * t));
         L[i] = v; R[i] = v * 0.9;
       }
@@ -60,6 +61,15 @@ const { open, ok, close } = require('./hm');
     // the output's curvature stays that of a gliding tone – no jump anywhere
     r = await run('stottern', 'tone', [0, 0, 0, 0], [[0.6, [0.3, 0, 0, 0]], [0.75, [0.3, 0, 1, 0]], [1.6, [0.3, 0, 0, 1]], [2.0, [0.3, 0.8, 0.2, 0.6]], [2.6, [0.3, 0, 0.7, 0]]], { beat: 0.5 });
     { let mx = 0, at = 0; for (let i = Math.round(0.5 * SR); i < n; i++) { const d = Math.abs(r.oL[i] - 2 * r.oL[i - 1] + r.oL[i - 2]); if (d > mx) { mx = d; at = i / SR; } } o.stClick = { bad: r.bad, d2: +mx.toFixed(4), at: +at.toFixed(3) }; }
+    // (31.10.2026, owner: „Stottern ist generell nicht clean“) a bass under a hand that leans a little into the skin while
+    // it presses sideways: every seam smooth (no tick – the curvature stays near a bass's own) and the repetition in tune
+    // (it is the moment before, sample for sample – a lean no longer slows the tape)
+    r = await run('stottern', 'bass', [0, 0, 0, 0], [[0.6, [0.1, 0.08, 0, 0.45]]], { beat: 0.5 });
+    { let mx = 0, s0 = 0; for (let i = Math.round(0.55 * SR); i < n; i++) { const d = Math.abs(r.oL[i] - 2 * r.oL[i - 1] + r.oL[i - 2]); if (d > mx) mx = d; }
+      for (let i = 1000; i < 20000; i++) s0 = Math.max(s0, Math.abs(r.L[i] - 2 * r.L[i - 1] + r.L[i - 2]));
+      const i0 = Math.round(0.9 * SR), N = Math.round(0.08 * SR), L0 = Math.round(0.125 * SR); let sxy = 0, sxx = 0, syy = 0;
+      for (let i = i0; i < i0 + N; i++) { const x = r.oL[i], y = r.oL[i - L0]; sxy += x * y; sxx += x * x; syy += y * y; }
+      o.stClean = { bad: r.bad, d2: +(mx / s0).toFixed(2), rep: +(sxy / Math.sqrt(sxx * syy + 1e-30)).toFixed(4) }; }
     // Resonanz: a short noise burst – the strings (tuned 220, 330 …) ring on long after it
     r = await run('resonanz', 'burst', [0.9, 0, 0, 0], [], { freqs: [220, 330, 440, 550, 660, 880] });
     o.res = { bad: r.bad, pk: r.pk, ring: +r.rms(0.5, 1.0).toFixed(4), a220: +r.gz(220, 0.4, 1.2).toFixed(1), a300: +r.gz(300, 0.4, 1.2).toFixed(1) };
@@ -73,6 +83,7 @@ const { open, ok, close } = require('./hm');
   ok(!off.odd.bad && off.odd.h3 > off.odd.h1 - 30 && off.odd.h3 > off.odd.h2 + 10 && off.even.h2 > off.even.h1 - 35 && off.clean.h3 < off.odd.h3 - 60, `Obertöne: rechts odd harmonics, links even ones, at rest none (${JSON.stringify([off.odd, off.even, off.clean])})`);
   ok(!off.stottern.bad && off.stottern.corrIn > 0.9 && off.stottern.corrRep > 0.9, `Stottern: the half second before is played again, and again (${JSON.stringify(off.stottern)})`);
   ok(!off.stottern.bad && off.stClick.d2 < 0.03, `Stottern: links/rechts/heran harder while it repeats – no click (${JSON.stringify(off.stClick)})`);
+  ok(!off.stClean.bad && off.stClean.d2 < 3 && off.stClean.rep > 0.995, `Stottern clean: smooth seams on a bass, a light lean keeps the repetition in tune (${JSON.stringify(off.stClean)})`);
   ok(!off.res.bad && off.res.ring > 0.005 && off.res.a220 > off.res.a300 + 15 && off.res.pk < 2, `Resonanz: strings tuned to the notes ring on after a short burst (${JSON.stringify(off.res)})`);
   // 2. with a Touché
   const live = await page.evaluate(async () => {
