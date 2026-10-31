@@ -28,13 +28,17 @@ Begründungen stehen in `dev/STAND-2026-10-29.md` (Abschnitte „Danach (30.10.)
    playwright.download.prss.microsoft.com, playwright.azureedge.net, ftp.mozilla.org, download-installer.cdn.mozilla.net)
    – bis dahin laufen alle Tests nur in Chromium (immer dazusagen).
 
-10. **Spielweisen bearbeiten (Idee des Besitzers, 31.10.):** die Touché-Spielweisen umfangreich selbst bearbeiten (je
-   Richtung Ziel, Stärke, Kurve; eigene Spielweisen speichern) – Umfang mit ihm klären, dann Konzept.
 11. **Latenz (31.10.):** Recherche `dev/klang/latenz-recherche.md` – er testet Treiber-„Mode“, Firefox-Pref, Chrome-Test;
    große Lösung (native Hülle mit ASIO) nur auf seinen Entscheid.
 
 ## Für die nächste Sitzung zu tun (ohne weitere Rückfrage)
 ## Erledigt am 31.10.
+Eigene Touché-Spielweisen (Besitzer: „je Richtung Ziel, Stärke und Kurve; speichern und benennen“): `midi/touche-eigen.js`
+(TCHE, gespeichert `myzel.tch.eigen.v1`): Grundlage (eine der 16 oder keine) + je Richtung Zeilen {Ziel, Stärke −100…100 %,
+Kurve}; Ziele = Eingänge der Grundlage (`b:weg` …, Tauschen/Abschalten), alle Formen-Ziele (MODT), Gleiten, Vibrato,
+Vibrato-Tempo, Band der Schleife. `tchApply` (touche.js) rechnet über `tchEigRoute`. Karte: Reihe „Eigene Spielweisen“ +
+„＋ Eigene aus dieser“/„Bearbeiten …“; Editor als Vollbild-Dialog mit Live-Anzeige je Richtung. Test `t-tch-eigen.js`.
+Offen fürs Ohr/Auge: Bedienung des Editors in Firefox, ob weitere Ziele (Insert-Parameter der Klangformung) gewünscht sind.
 Qualitätsstufen (Besitzer: „nicht nachvollziehbar, widersprüchlich“): ungemessen hatte Stufe 3 25 Nebel-Stimmen gegen
 40 in Stufe 2, auf langsameren Rechnern fiel Stufe 2 unter Stufe 1 – jetzt `qBudgets()` (quality.js): eine Messung, Stufe
 für Stufe nie weniger Rechenzeit, die Karte nennt alle drei Zahlen; Test `midi-tests/t-qstufen.js`. Latenz-Karte sagt in

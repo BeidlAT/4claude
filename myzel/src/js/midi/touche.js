@@ -32,7 +32,10 @@ const TCH_OPT = { g: { per: (tt, v, nw) => (nw ? v * 700 : 0) }, s: { per: (tt) 
 const tchLive = () => { for (const s of MIDI.srcs.values()) if (s.enabled && !s.dup && (mapOf(s), s.prof && s.prof.id === 'tch' && profOn(s))) return true; return false; };
 function tchApply() {
   const live = tchLive(); TCH.live = live;
-  const { weg, her, li, re } = TCH.v, w = live ? P['midi.tch'] : '', o = {};
+  // (owner, 31.10.2026: „je Richtung Ziel, Stärke und Kurve – eigene Spielweisen speichern und benennen“) an own Spielweise
+  // (touche-eigen.js): its routes give the Grundlage its four directions (b:…) and the other targets their sums
+  const E = live ? tchEigCur() : null, R = E ? tchEigRoute(E, TCH.v) : null;
+  const { weg, her, li, re } = R ? R.b : TCH.v, w = !live ? '' : E ? E.base || '' : P['midi.tch'], o = {};
   if (w === 'finger') { o.h = weg - her; o.b = 0.5 * (re - li); }
   else if (w === 'atem') { o.e = clamp(weg - 0.6 * her, -1, 1); o.h = 0.5 * weg; o.f = -0.85 * her; }
   else if (w === 'raum') { o.r = 0.85 * weg; o.d = 0.85 * her; o.p = re - li; }
@@ -43,9 +46,11 @@ function tchApply() {
   else if (w === 'ort') o.r = 0.8 * Math.pow(weg, 1.2) - 0.25 * her;   // (far away: the hall comes up; close: drier)
   if (typeof tfxSet === 'function') tfxSet(w, { weg, her, li, re });   // (Körner … Arpeggio: the insert, the place, the arpeggio)
   for (const [n, k] of TCH_SRC) modSet('map:tch:' + n, k, o[n] || 0, TCH_OPT[n]);
-  tchPlatte(w === 'platte' ? (1 - 0.97 * weg) * (1 + her) * (1 + 0.3 * (re - li)) : 1);
-  // Atem's vibrato: depth from the harder side, ±50 cents at most; its rate 3.5 … 7.5 Hz
-  TCH.vib = w === 'atem' ? Math.max(li, re) : 0; TCH.rate = 5.5 + 2 * (re - li);
+  tchEigMod(R);   // (the own routes' targets – none: they leave)
+  const pr = R ? R.t.platte || 0 : 0, kr = pr < 0 ? 1 + 0.97 * pr : 1 + pr;
+  tchPlatte((w === 'platte' ? (1 - 0.97 * weg) * (1 + her) * (1 + 0.3 * (re - li)) : 1) * kr);
+  // Atem's vibrato: depth from the harder side, ±50 cents at most; its rate 3.5 … 7.5 Hz (an own route: Vibrato, -Tempo)
+  TCH.vib = Math.min(1, (w === 'atem' ? Math.max(li, re) : 0) + Math.abs(R ? R.t.vib || 0 : 0)); TCH.rate = clamp(5.5 + (w === 'atem' ? 2 * (re - li) : 0) + 2 * (R ? R.t.vibR || 0 : 0), 2, 9);
   if (TCH.vib > 0.002) { if (!TCH.raf) { TCH.t = performance.now(); TCH.raf = requestAnimationFrame(tchVibFrame); } }
   else modSet('map:tch:v', 'bend', 0);
 }
@@ -67,7 +72,7 @@ function tchPlatte(k) {
 }
 function tchVibFrame(ts) {
   TCH.raf = 0;
-  if (!(TCH.vib > 0.002) || P['midi.tch'] !== 'atem') { modSet('map:tch:v', 'bend', 0); return; }
+  if (!(TCH.vib > 0.002) || !TCH.live) { modSet('map:tch:v', 'bend', 0); return; }
   const dt = Math.min(0.1, (ts - TCH.t) / 1000); TCH.t = ts;
   TCH.ph = (TCH.ph + dt * TCH.rate * Math.PI * 2) % (Math.PI * 2);
   modSet('map:tch:v', 'bend', 0.25 * TCH.vib * Math.sin(TCH.ph), { older: 1 });
@@ -85,18 +90,28 @@ function tchEinmessen() { TCH.pk = { weg: TCH_PK0, her: TCH_PK0, li: TCH_PK0, re
 function tchSet(dir, raw) { TCH.raw = TCH.raw || {}; TCH.raw[dir] = raw; const n = tchCal(dir, raw); if (TCH.v[dir] === n) return; TCH.v[dir] = n; tchApply(); }
 function tchWeise(w, say) {
   if (!TCH_W.some((x) => x[0] === w)) return;
+  if (typeof tchEigSel === 'function') tchEigSel(null, true);   // (a built-in chosen: an own Spielweise is left)
   if (P['midi.tch'] !== w) setParam('midi.tch', w);
   tchApply();
   const note = w === 'verw' && !((MX.snap.a || (mxSnapLoad(), MX.snap.a)) && MX.snap.b) ? ' – speichere im Mixer Szene A und B, dann verwandelt es zwischen ihnen'
     : w === 'streichen' ? ' – ohne Druck still: deine Hand bringt den Ton zum Klingen' : w === 'platte' ? ' – die Hand liegt auf der Fokus-Schleife (sonst der neuesten, die spielt)' : TCH_SAY[w] ? ' – ' + TCH_SAY[w] : '';
   if (say) toast('Touché: ' + TCH_W.find((x) => x[0] === w)[1] + note, 2600);
-  for (const b of document.querySelectorAll('[data-kc*=":tch"]')) b.setAttribute('aria-pressed', String(b.dataset.kc.endsWith(':tch' + w)));   // (the card's chips)
+  tchMark();
+}
+// the card's chips: the built-in or the own Spielweise that plays
+function tchMark() {
+  const own = typeof tchEigCur === 'function' && tchEigCur(), w = P['midi.tch'];
+  for (const b of document.querySelectorAll('[data-kc*=":tch"]')) { const k = b.dataset.kc.slice(b.dataset.kc.indexOf(':tch') + 4); if (k === 'cal' || k === 'edit') continue; b.setAttribute('aria-pressed', String(own ? k === 'e:' + own.id : k === w)); }
 }
 // what a Spielweise of Körner … Arpeggio does, in a word (the toast; the device card says it whole)
 const TCH_SAY = { koerner: 'eine Körnerwolke aus dem eben Gespielten', eis: 'Drücken friert den Klang ein, seitlich malst du ihn in der Höhe', oberton: 'Obertöne kneten: links gerade, rechts ungerade, weg Antrieb, heran falten',
   faecher: 'ein Ton fächert sich auf: Stimmen, Oktaven, Quinte', ort: 'der Klang an einem Ort im Raum – weit weg, nah am Ohr, rundherum', stottern: 'Drücken wiederholt den Moment im Tempo – links lang, rechts kurz',
   resonanz: 'Saiten, gestimmt auf deine Töne, schwingen mit', arp: 'ein Arpeggio aus der Hand über die gehaltenen Töne' };
-const tchStep = (d) => { const i = TCH_W.findIndex((x) => x[0] === P['midi.tch']); tchWeise(TCH_W[(i + d + TCH_W.length) % TCH_W.length][0], true); };
+// (the sixteen, then the own ones – touche-eigen.js)
+const tchStep = (d) => {
+  const L = TCH_W.map((x) => x[0]).concat(TCHE.list.map((E) => 'e:' + E.id)), own = tchEigCur(), i = L.indexOf(own ? 'e:' + own.id : P['midi.tch']), nx = L[(i + d + L.length) % L.length];
+  if (nx.startsWith('e:')) tchEigSel(nx.slice(2)); else tchWeise(nx, true);
+};
 for (const [dir, nm] of [['weg', 'weg drücken'], ['her', 'heran ziehen'], ['li', 'nach links'], ['re', 'nach rechts']])
   midiTarget('tch.' + dir, 'Touché: ' + nm + ' (je nach Spielweise)', null, { group: 'Spielweise', cont: true, noTake: true, get: () => (TCH.raw && TCH.raw[dir]) || 0, set: (n) => tchSet(dir, n) });
 TCH_W.forEach(([w, nm], i) => midiTarget('tch.' + (i + 1), 'Touché: Spielweise ' + nm, (v) => { if (v >= 0.5) tchWeise(w, true); }, { group: 'Spielweise', button: true }));

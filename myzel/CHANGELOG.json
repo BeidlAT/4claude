@@ -2,6 +2,15 @@
   "regel": "Neu in jeder Veröffentlichung: oben in „versionen“ einen Eintrag mit neuer id (Datum JJJJ-MM-TT, am selben Tag mit Buchstaben dahinter: 2026-10-23b) und 2–6 kurzen Punkten für Spielende, ohne interne Namen. Die installierte App zeigt die Punkte aller Einträge, die sie noch nicht kennt. build.py prüft das Format.",
   "versionen": [
     {
+      "id": "2026-10-31d",
+      "punkte": [
+        "Touché: eigene Spielweisen – auf der Gerätekarte „＋ Eigene aus dieser“ legt eine Kopie der gewählten Spielweise an, mit Namen.",
+        "Im Bearbeiten-Fenster bekommt jede Richtung (weg, heran, links, rechts) beliebig viele Ziele: Höhe, Tonhöhe, Vibrato, Filter, Hall, Echo, Panorama, Vokal, Szene A↔B, Band der Schleife und mehr – je mit Stärke (auch umgekehrt) und Kurve.",
+        "Eine Richtung kann auch eine andere Richtung der Grundlage treiben (etwa links wie rechts) oder gar nichts tun; jede Änderung klingt sofort.",
+        "Die eigenen Spielweisen bleiben auf dem Gerät gespeichert und lassen sich auch über „Zuweisen“ und „nächste Spielweise“ wählen."
+      ]
+    },
+    {
       "id": "2026-10-31c",
       "punkte": [
         "Qualitätsstufen nachvollziehbar: eine höhere Stufe bekommt nie weniger Rechenzeit als die darunter – vorher hatte „Gewaltig“ vor der Messung weniger Stimmen als „Voll“, und auf langsameren Rechnern fiel „Voll“ unter „Leicht“.",
